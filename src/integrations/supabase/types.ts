@@ -94,6 +94,171 @@ export type Database = {
           },
         ]
       }
+      call_queue: {
+        Row: {
+          agent_id: string | null
+          attempts: number
+          client_id: string | null
+          created_at: string
+          finished_at: string | null
+          id: string
+          loan_application_id: string | null
+          phone_normalized: string
+          raw_result: Json | null
+          result_summary: string | null
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          attempts?: number
+          client_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          loan_application_id?: string | null
+          phone_normalized: string
+          raw_result?: Json | null
+          result_summary?: string | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          attempts?: number
+          client_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          loan_application_id?: string | null
+          phone_normalized?: string
+          raw_result?: Json | null
+          result_summary?: string | null
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_queue_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_queue_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          blocked: boolean
+          body: string
+          body_filtered: string | null
+          created_at: string
+          id: string
+          moderation_flags: Json | null
+          sender_role: string
+          sender_user_id: string | null
+          thread_id: string
+        }
+        Insert: {
+          blocked?: boolean
+          body: string
+          body_filtered?: string | null
+          created_at?: string
+          id?: string
+          moderation_flags?: Json | null
+          sender_role: string
+          sender_user_id?: string | null
+          thread_id: string
+        }
+        Update: {
+          blocked?: boolean
+          body?: string
+          body_filtered?: string | null
+          created_at?: string
+          id?: string
+          moderation_flags?: Json | null
+          sender_role?: string
+          sender_user_id?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          investor_id: string
+          loan_application_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          investor_id: string
+          loan_application_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          investor_id?: string
+          loan_application_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_threads_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           consent_email: boolean
@@ -108,6 +273,9 @@ export type Database = {
           id: string
           last_name: string
           phone: string | null
+          phone_normalized: string | null
+          phone_raw: string | null
+          phone_valid: boolean | null
           source: string | null
           updated_at: string
           user_id: string | null
@@ -125,6 +293,9 @@ export type Database = {
           id?: string
           last_name: string
           phone?: string | null
+          phone_normalized?: string | null
+          phone_raw?: string | null
+          phone_valid?: boolean | null
           source?: string | null
           updated_at?: string
           user_id?: string | null
@@ -142,6 +313,9 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
+          phone_normalized?: string | null
+          phone_raw?: string | null
+          phone_valid?: boolean | null
           source?: string | null
           updated_at?: string
           user_id?: string | null
@@ -378,6 +552,8 @@ export type Database = {
           collection_protection: boolean | null
           collection_protection_settlement: string | null
           commission: number | null
+          counter_offer: boolean
+          counter_to_offer_id: string | null
           created_at: string
           estimated_monthly_payment: number | null
           estimated_total_cost: number | null
@@ -403,6 +579,8 @@ export type Database = {
           collection_protection?: boolean | null
           collection_protection_settlement?: string | null
           commission?: number | null
+          counter_offer?: boolean
+          counter_to_offer_id?: string | null
           created_at?: string
           estimated_monthly_payment?: number | null
           estimated_total_cost?: number | null
@@ -428,6 +606,8 @@ export type Database = {
           collection_protection?: boolean | null
           collection_protection_settlement?: string | null
           commission?: number | null
+          counter_offer?: boolean
+          counter_to_offer_id?: string | null
           created_at?: string
           estimated_monthly_payment?: number | null
           estimated_total_cost?: number | null
@@ -446,6 +626,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "investor_offers_counter_to_offer_id_fkey"
+            columns: ["counter_to_offer_id"]
+            isOneToOne: false
+            referencedRelation: "investor_offers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "investor_offers_investor_id_fkey"
             columns: ["investor_id"]
@@ -564,6 +751,7 @@ export type Database = {
           fast_decision: boolean | null
           id: string
           initial_score: number | null
+          investor_interest_count: number
           last_automation_error: string | null
           last_contact_at: string | null
           last_webhook_at: string | null
@@ -610,6 +798,7 @@ export type Database = {
           fast_decision?: boolean | null
           id?: string
           initial_score?: number | null
+          investor_interest_count?: number
           last_automation_error?: string | null
           last_contact_at?: string | null
           last_webhook_at?: string | null
@@ -656,6 +845,7 @@ export type Database = {
           fast_decision?: boolean | null
           id?: string
           initial_score?: number | null
+          investor_interest_count?: number
           last_automation_error?: string | null
           last_contact_at?: string | null
           last_webhook_at?: string | null
@@ -837,6 +1027,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_videos: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_seconds: number | null
+          external_url: string | null
+          file_path: string | null
+          id: string
+          is_published: boolean
+          sort_order: number
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          external_url?: string | null
+          file_path?: string | null
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          external_url?: string | null
+          file_path?: string | null
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
