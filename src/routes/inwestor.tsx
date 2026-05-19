@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { ListChecks, Tag, Calculator, CreditCard, User, LogOut } from "lucide-react";
+import { ListChecks, Tag, Calculator, CreditCard, User, LogOut, MessageSquare, GraduationCap } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor")({
   component: InwestorLayout,
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/inwestor")({
 const items = [
   { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
   { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+  { to: "/inwestor/wiadomosci", label: "Wiadomości", icon: MessageSquare },
+  { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
   { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
   { to: "/inwestor/abonament", label: "Abonament", icon: CreditCard },
   { to: "/inwestor/profil", label: "Profil", icon: User },
