@@ -19,7 +19,6 @@ function LoginPage() {
   const { refreshRoles } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [googleRole, setGoogleRole] = useState<"klient" | "inwestor">("klient");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: FormEvent) => {
