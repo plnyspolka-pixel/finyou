@@ -23,6 +23,7 @@ import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
 import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
 import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
+import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
@@ -114,6 +115,11 @@ const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
   id: '/dokumenty',
   path: '/dokumenty',
   getParentRoute: () => KlientRoute,
+} as any)
+const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
+  id: '/szkolenia',
+  path: '/szkolenia',
+  getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorProfilRoute = InwestorProfilRouteImport.update({
   id: '/profil',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -280,6 +287,7 @@ export interface FileRoutesByTo {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -318,6 +326,7 @@ export interface FileRoutesById {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -357,6 +366,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/oferty'
     | '/inwestor/profil'
+    | '/inwestor/szkolenia'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/oferty'
     | '/inwestor/profil'
+    | '/inwestor/szkolenia'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/oferty'
     | '/inwestor/profil'
+    | '/inwestor/szkolenia'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -552,6 +564,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/klient/dokumenty'
       preLoaderRoute: typeof KlientDokumentyRouteImport
       parentRoute: typeof KlientRoute
+    }
+    '/inwestor/szkolenia': {
+      id: '/inwestor/szkolenia'
+      path: '/szkolenia'
+      fullPath: '/inwestor/szkolenia'
+      preLoaderRoute: typeof InwestorSzkoleniaRouteImport
+      parentRoute: typeof InwestorRoute
     }
     '/inwestor/profil': {
       id: '/inwestor/profil'
@@ -768,6 +787,7 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
+  InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
 }
@@ -777,6 +797,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
+  InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
 }
