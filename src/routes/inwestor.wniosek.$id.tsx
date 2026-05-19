@@ -64,6 +64,7 @@ function InwestorWniosek() {
   const navigate = useNavigate();
   const [app, setApp] = useState<any | null>(null);
   const [investorId, setInvestorId] = useState<string | null>(null);
+  const openThread = useServerFn(openOrCreateThread);
   const [f, setF] = useState({
     proposed_amount: "", period_months: "", expected_yearly_yield: "10", commission: "2",
     collection_protection: false, collection_protection_settlement: "miesieczne",
