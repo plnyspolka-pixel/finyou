@@ -23,16 +23,23 @@ import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
 import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
 import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
+import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
+import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
+import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
+import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as AdminWnioskiRouteImport } from './routes/admin.wnioski'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
+import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminNieruchomosciRouteImport } from './routes/admin.nieruchomosci'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
+import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminFollowUpRouteImport } from './routes/admin.follow-up'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 
@@ -106,6 +113,26 @@ const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
   path: '/dokumenty',
   getParentRoute: () => KlientRoute,
 } as any)
+const InwestorProfilRoute = InwestorProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
+  id: '/oferty',
+  path: '/oferty',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorKalkulatorRoute = InwestorKalkulatorRouteImport.update({
+  id: '/kalkulator',
+  path: '/kalkulator',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorAbonamentRoute = InwestorAbonamentRouteImport.update({
+  id: '/abonament',
+  path: '/abonament',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const AdminWnioskiRoute = AdminWnioskiRouteImport.update({
   id: '/wnioski',
   path: '/wnioski',
@@ -119,6 +146,11 @@ const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
 const AdminRoleRoute = AdminRoleRouteImport.update({
   id: '/role',
   path: '/role',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOfertyRoute = AdminOfertyRouteImport.update({
+  id: '/oferty',
+  path: '/oferty',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminNieruchomosciRoute = AdminNieruchomosciRouteImport.update({
@@ -141,6 +173,11 @@ const AdminInwestorzyRoute = AdminInwestorzyRouteImport.update({
   path: '/inwestorzy',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminIntegracjeRoute = AdminIntegracjeRouteImport.update({
+  id: '/integracje',
+  path: '/integracje',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFollowUpRoute = AdminFollowUpRouteImport.update({
   id: '/follow-up',
   path: '/follow-up',
@@ -155,6 +192,11 @@ const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   id: '/dokumenty',
   path: '/dokumenty',
   getParentRoute: () => AdminRoute,
+} as any)
+const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
+  id: '/wniosek/$id',
+  path: '/wniosek/$id',
+  getParentRoute: () => InwestorRoute,
 } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/$id',
@@ -177,13 +219,19 @@ export interface FileRoutesByFullPath {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
+  '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
+  '/inwestor/abonament': typeof InwestorAbonamentRoute
+  '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/oferty': typeof InwestorOfertyRoute
+  '/inwestor/profil': typeof InwestorProfilRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -194,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/klient/': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -202,13 +251,19 @@ export interface FileRoutesByTo {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
+  '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
+  '/inwestor/abonament': typeof InwestorAbonamentRoute
+  '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/oferty': typeof InwestorOfertyRoute
+  '/inwestor/profil': typeof InwestorProfilRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -219,6 +274,7 @@ export interface FileRoutesByTo {
   '/klient': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -231,13 +287,19 @@ export interface FileRoutesById {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
+  '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
+  '/inwestor/abonament': typeof InwestorAbonamentRoute
+  '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/oferty': typeof InwestorOfertyRoute
+  '/inwestor/profil': typeof InwestorProfilRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -248,6 +310,7 @@ export interface FileRoutesById {
   '/klient/': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -261,13 +324,19 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/follow-up'
+    | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
     | '/admin/nieruchomosci'
+    | '/admin/oferty'
     | '/admin/role'
     | '/admin/ustawienia'
     | '/admin/wnioski'
+    | '/inwestor/abonament'
+    | '/inwestor/kalkulator'
+    | '/inwestor/oferty'
+    | '/inwestor/profil'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -278,6 +347,7 @@ export interface FileRouteTypes {
     | '/klient/'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/inwestor/wniosek/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -286,13 +356,19 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/follow-up'
+    | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
     | '/admin/nieruchomosci'
+    | '/admin/oferty'
     | '/admin/role'
     | '/admin/ustawienia'
     | '/admin/wnioski'
+    | '/inwestor/abonament'
+    | '/inwestor/kalkulator'
+    | '/inwestor/oferty'
+    | '/inwestor/profil'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -303,6 +379,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/inwestor/wniosek/$id'
   id:
     | '__root__'
     | '/'
@@ -314,13 +391,19 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/follow-up'
+    | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
     | '/admin/nieruchomosci'
+    | '/admin/oferty'
     | '/admin/role'
     | '/admin/ustawienia'
     | '/admin/wnioski'
+    | '/inwestor/abonament'
+    | '/inwestor/kalkulator'
+    | '/inwestor/oferty'
+    | '/inwestor/profil'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -331,6 +414,7 @@ export interface FileRouteTypes {
     | '/klient/'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/inwestor/wniosek/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -443,6 +527,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KlientDokumentyRouteImport
       parentRoute: typeof KlientRoute
     }
+    '/inwestor/profil': {
+      id: '/inwestor/profil'
+      path: '/profil'
+      fullPath: '/inwestor/profil'
+      preLoaderRoute: typeof InwestorProfilRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/oferty': {
+      id: '/inwestor/oferty'
+      path: '/oferty'
+      fullPath: '/inwestor/oferty'
+      preLoaderRoute: typeof InwestorOfertyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/kalkulator': {
+      id: '/inwestor/kalkulator'
+      path: '/kalkulator'
+      fullPath: '/inwestor/kalkulator'
+      preLoaderRoute: typeof InwestorKalkulatorRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/abonament': {
+      id: '/inwestor/abonament'
+      path: '/abonament'
+      fullPath: '/inwestor/abonament'
+      preLoaderRoute: typeof InwestorAbonamentRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/admin/wnioski': {
       id: '/admin/wnioski'
       path: '/wnioski'
@@ -462,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/role'
       fullPath: '/admin/role'
       preLoaderRoute: typeof AdminRoleRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/oferty': {
+      id: '/admin/oferty'
+      path: '/oferty'
+      fullPath: '/admin/oferty'
+      preLoaderRoute: typeof AdminOfertyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/nieruchomosci': {
@@ -492,6 +611,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInwestorzyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/integracje': {
+      id: '/admin/integracje'
+      path: '/integracje'
+      fullPath: '/admin/integracje'
+      preLoaderRoute: typeof AdminIntegracjeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/follow-up': {
       id: '/admin/follow-up'
       path: '/follow-up'
@@ -512,6 +638,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/dokumenty'
       preLoaderRoute: typeof AdminDokumentyRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/inwestor/wniosek/$id': {
+      id: '/inwestor/wniosek/$id'
+      path: '/wniosek/$id'
+      fullPath: '/inwestor/wniosek/$id'
+      preLoaderRoute: typeof InwestorWniosekIdRouteImport
+      parentRoute: typeof InwestorRoute
     }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
@@ -558,10 +691,12 @@ interface AdminRouteChildren {
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminFollowUpRoute: typeof AdminFollowUpRoute
+  AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
   AdminNieruchomosciRoute: typeof AdminNieruchomosciRoute
+  AdminOfertyRoute: typeof AdminOfertyRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminWnioskiRoute: typeof AdminWnioskiRouteWithChildren
@@ -572,10 +707,12 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminFollowUpRoute: AdminFollowUpRoute,
+  AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRoute,
   AdminLeadyRoute: AdminLeadyRoute,
   AdminNieruchomosciRoute: AdminNieruchomosciRoute,
+  AdminOfertyRoute: AdminOfertyRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminWnioskiRoute: AdminWnioskiRouteWithChildren,
@@ -585,11 +722,21 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface InwestorRouteChildren {
+  InwestorAbonamentRoute: typeof InwestorAbonamentRoute
+  InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
+  InwestorOfertyRoute: typeof InwestorOfertyRoute
+  InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorIndexRoute: typeof InwestorIndexRoute
+  InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
 }
 
 const InwestorRouteChildren: InwestorRouteChildren = {
+  InwestorAbonamentRoute: InwestorAbonamentRoute,
+  InwestorKalkulatorRoute: InwestorKalkulatorRoute,
+  InwestorOfertyRoute: InwestorOfertyRoute,
+  InwestorProfilRoute: InwestorProfilRoute,
   InwestorIndexRoute: InwestorIndexRoute,
+  InwestorWniosekIdRoute: InwestorWniosekIdRoute,
 }
 
 const InwestorRouteWithChildren = InwestorRoute._addFileChildren(

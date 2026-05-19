@@ -72,7 +72,7 @@ function InwestorWniosek() {
   useEffect(() => { void (async () => {
     const { data } = await supabase.from("loan_applications").select("*, properties(*)").eq("id", id).maybeSingle();
     setApp(data);
-    if (data?.loan_amount) setF((x) => ({ ...x, proposed_amount: data.loan_amount.toString(), period_months: data.preferred_period_months?.toString() ?? "12" }));
+    if (data?.loan_amount) setF((x) => ({ ...x, proposed_amount: String(data.loan_amount), period_months: data.preferred_period_months?.toString() ?? "12" }));
     if (user) {
       const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
       if (inv) setInvestorId(inv.id);
