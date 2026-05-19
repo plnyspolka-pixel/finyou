@@ -46,7 +46,7 @@ function WniosekDetail() {
 
   const changeStatus = async (newStatus: string) => {
     const prev = app?.status;
-    const { error } = await supabase.from("loan_applications").update({ status: newStatus }).eq("id", id);
+    const { error } = await supabase.from("loan_applications").update({ status: newStatus as any }).eq("id", id);
     if (error) { toast.error("Błąd", { description: error.message }); return; }
     await supabase.from("audit_logs").insert({ object_type: "loan_application", object_id: id, action: "status_change", previous_value: { status: prev }, new_value: { status: newStatus } });
     toast.success("Zmieniono status"); void load();

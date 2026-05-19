@@ -18,7 +18,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminWnioskiRouteImport } from './routes/admin.wnioski'
+import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
+import { Route as AdminNieruchomosciRouteImport } from './routes/admin.nieruchomosci'
+import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
+import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
+import { Route as AdminFollowUpRouteImport } from './routes/admin.follow-up'
+import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
@@ -65,10 +73,50 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWnioskiRoute = AdminWnioskiRouteImport.update({
+  id: '/wnioski',
+  path: '/wnioski',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
+  id: '/ustawienia',
+  path: '/ustawienia',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminRoleRoute = AdminRoleRouteImport.update({
   id: '/role',
   path: '/role',
   getParentRoute: () => AdminRoute,
+} as any)
+const AdminNieruchomosciRoute = AdminNieruchomosciRouteImport.update({
+  id: '/nieruchomosci',
+  path: '/nieruchomosci',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLeadyRoute = AdminLeadyRouteImport.update({
+  id: '/leady',
+  path: '/leady',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKlienciRoute = AdminKlienciRouteImport.update({
+  id: '/klienci',
+  path: '/klienci',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFollowUpRoute = AdminFollowUpRouteImport.update({
+  id: '/follow-up',
+  path: '/follow-up',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
+  id: '/dokumenty',
+  path: '/dokumenty',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminWnioskiRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -78,19 +126,35 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/admin/dokumenty': typeof AdminDokumentyRoute
+  '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/klienci': typeof AdminKlienciRoute
+  '/admin/leady': typeof AdminLeadyRoute
+  '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/admin/dokumenty': typeof AdminDokumentyRoute
+  '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/klienci': typeof AdminKlienciRoute
+  '/admin/leady': typeof AdminLeadyRoute
+  '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -100,10 +164,18 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/admin/dokumenty': typeof AdminDokumentyRoute
+  '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/klienci': typeof AdminKlienciRoute
+  '/admin/leady': typeof AdminLeadyRoute
+  '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -114,19 +186,35 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/admin/dokumenty'
+    | '/admin/follow-up'
+    | '/admin/klienci'
+    | '/admin/leady'
+    | '/admin/nieruchomosci'
     | '/admin/role'
+    | '/admin/ustawienia'
+    | '/admin/wnioski'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
+    | '/admin/wnioski/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/logowanie'
     | '/rejestracja'
+    | '/admin/dokumenty'
+    | '/admin/follow-up'
+    | '/admin/klienci'
+    | '/admin/leady'
+    | '/admin/nieruchomosci'
     | '/admin/role'
+    | '/admin/ustawienia'
+    | '/admin/wnioski'
     | '/admin'
     | '/inwestor'
     | '/klient'
+    | '/admin/wnioski/$id'
   id:
     | '__root__'
     | '/'
@@ -135,10 +223,18 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/admin/dokumenty'
+    | '/admin/follow-up'
+    | '/admin/klienci'
+    | '/admin/leady'
+    | '/admin/nieruchomosci'
     | '/admin/role'
+    | '/admin/ustawienia'
+    | '/admin/wnioski'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
+    | '/admin/wnioski/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -215,6 +311,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/wnioski': {
+      id: '/admin/wnioski'
+      path: '/wnioski'
+      fullPath: '/admin/wnioski'
+      preLoaderRoute: typeof AdminWnioskiRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ustawienia': {
+      id: '/admin/ustawienia'
+      path: '/ustawienia'
+      fullPath: '/admin/ustawienia'
+      preLoaderRoute: typeof AdminUstawieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/role': {
       id: '/admin/role'
       path: '/role'
@@ -222,16 +332,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRoleRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/nieruchomosci': {
+      id: '/admin/nieruchomosci'
+      path: '/nieruchomosci'
+      fullPath: '/admin/nieruchomosci'
+      preLoaderRoute: typeof AdminNieruchomosciRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/leady': {
+      id: '/admin/leady'
+      path: '/leady'
+      fullPath: '/admin/leady'
+      preLoaderRoute: typeof AdminLeadyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/klienci': {
+      id: '/admin/klienci'
+      path: '/klienci'
+      fullPath: '/admin/klienci'
+      preLoaderRoute: typeof AdminKlienciRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/follow-up': {
+      id: '/admin/follow-up'
+      path: '/follow-up'
+      fullPath: '/admin/follow-up'
+      preLoaderRoute: typeof AdminFollowUpRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dokumenty': {
+      id: '/admin/dokumenty'
+      path: '/dokumenty'
+      fullPath: '/admin/dokumenty'
+      preLoaderRoute: typeof AdminDokumentyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/wnioski/$id': {
+      id: '/admin/wnioski/$id'
+      path: '/$id'
+      fullPath: '/admin/wnioski/$id'
+      preLoaderRoute: typeof AdminWnioskiIdRouteImport
+      parentRoute: typeof AdminWnioskiRoute
+    }
   }
 }
 
+interface AdminWnioskiRouteChildren {
+  AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
+}
+
+const AdminWnioskiRouteChildren: AdminWnioskiRouteChildren = {
+  AdminWnioskiIdRoute: AdminWnioskiIdRoute,
+}
+
+const AdminWnioskiRouteWithChildren = AdminWnioskiRoute._addFileChildren(
+  AdminWnioskiRouteChildren,
+)
+
 interface AdminRouteChildren {
+  AdminDokumentyRoute: typeof AdminDokumentyRoute
+  AdminFollowUpRoute: typeof AdminFollowUpRoute
+  AdminKlienciRoute: typeof AdminKlienciRoute
+  AdminLeadyRoute: typeof AdminLeadyRoute
+  AdminNieruchomosciRoute: typeof AdminNieruchomosciRoute
   AdminRoleRoute: typeof AdminRoleRoute
+  AdminUstawieniaRoute: typeof AdminUstawieniaRoute
+  AdminWnioskiRoute: typeof AdminWnioskiRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminDokumentyRoute: AdminDokumentyRoute,
+  AdminFollowUpRoute: AdminFollowUpRoute,
+  AdminKlienciRoute: AdminKlienciRoute,
+  AdminLeadyRoute: AdminLeadyRoute,
+  AdminNieruchomosciRoute: AdminNieruchomosciRoute,
   AdminRoleRoute: AdminRoleRoute,
+  AdminUstawieniaRoute: AdminUstawieniaRoute,
+  AdminWnioskiRoute: AdminWnioskiRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
 
