@@ -74,7 +74,12 @@ export const Route = createFileRoute("/api/public/loan-application")({
               client_id: client.id,
               status: "nowy_lead",
               loan_amount: data.loan_amount,
+              annual_investor_rate: data.annual_investor_rate ?? null,
+              max_monthly_payment: data.max_monthly_payment ?? null,
               preferred_period_months: data.preferred_period_months,
+              business_status: data.business_status ?? null,
+              nip: data.nip ?? null,
+              kw_status: data.kw_status ?? null,
               situation_description: data.situation_description ?? null,
               source: data.source ?? "embed",
             })
@@ -86,7 +91,11 @@ export const Route = createFileRoute("/api/public/loan-application")({
             loan_application_id: loan.id,
             property_type: data.property_type,
             city: data.city ?? null,
+            street: data.street ?? null,
+            voivodeship: data.voivodeship ?? null,
+            land_register_number: data.land_register_number ?? null,
           });
+
 
           return new Response(JSON.stringify({ ok: true, id: loan.id }), {
             status: 200,
