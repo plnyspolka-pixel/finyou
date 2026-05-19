@@ -176,6 +176,13 @@ function InwestorWniosek() {
       </Card>
 
       <div className="flex gap-2 justify-end">
+        <Button variant="secondary" onClick={async () => {
+          if (!investorId || !app?.client_id) return toast.error("Brak danych");
+          try {
+            const r = await openThread({ data: { loanApplicationId: id, investorId, clientId: app.client_id }});
+            void navigate({ to: "/inwestor/wiadomosci" });
+          } catch (e: any) { toast.error(e.message); }
+        }}><MessageSquare className="mr-2 h-4 w-4"/>Czat z klientem</Button>
         <Button variant="outline" onClick={() => void submit("szkic")}>Zapisz jako szkic</Button>
         <Button onClick={() => void submit("zlozona")}><Send className="mr-2 h-4 w-4" />Złóż ofertę</Button>
       </div>
