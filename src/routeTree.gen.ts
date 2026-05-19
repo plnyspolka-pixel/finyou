@@ -23,6 +23,7 @@ import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
 import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
 import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
+import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
@@ -116,6 +117,11 @@ const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
   id: '/dokumenty',
   path: '/dokumenty',
   getParentRoute: () => KlientRoute,
+} as any)
+const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
+  id: '/wiadomosci',
+  path: '/wiadomosci',
+  getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
   id: '/szkolenia',
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
@@ -377,6 +386,7 @@ export interface FileRouteTypes {
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
+    | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
+    | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
+    | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
@@ -576,6 +588,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/klient/dokumenty'
       preLoaderRoute: typeof KlientDokumentyRouteImport
       parentRoute: typeof KlientRoute
+    }
+    '/inwestor/wiadomosci': {
+      id: '/inwestor/wiadomosci'
+      path: '/wiadomosci'
+      fullPath: '/inwestor/wiadomosci'
+      preLoaderRoute: typeof InwestorWiadomosciRouteImport
+      parentRoute: typeof InwestorRoute
     }
     '/inwestor/szkolenia': {
       id: '/inwestor/szkolenia'
@@ -809,6 +828,7 @@ interface InwestorRouteChildren {
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
+  InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
 }
@@ -819,6 +839,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
+  InwestorWiadomosciRoute: InwestorWiadomosciRoute,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
 }
@@ -859,3 +880,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
