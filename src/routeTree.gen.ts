@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminRoleRouteImport } from './routes/admin.role'
 
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
@@ -64,6 +65,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminRoleRoute = AdminRoleRouteImport.update({
+  id: '/role',
+  path: '/role',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/admin/role': typeof AdminRoleRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/admin/role': typeof AdminRoleRoute
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/admin/role': typeof AdminRoleRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
@@ -105,11 +114,19 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/admin/role'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/logowanie' | '/rejestracja' | '/admin' | '/inwestor' | '/klient'
+  to:
+    | '/'
+    | '/logowanie'
+    | '/rejestracja'
+    | '/admin/role'
+    | '/admin'
+    | '/inwestor'
+    | '/klient'
   id:
     | '__root__'
     | '/'
@@ -118,6 +135,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/admin/role'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
@@ -197,14 +215,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/role': {
+      id: '/admin/role'
+      path: '/role'
+      fullPath: '/admin/role'
+      preLoaderRoute: typeof AdminRoleRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminRoleRoute: typeof AdminRoleRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminRoleRoute: AdminRoleRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
