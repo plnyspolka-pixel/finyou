@@ -17,6 +17,7 @@ function Landing() {
   useEffect(() => {
     if (!user) return;
     const pending = typeof window !== "undefined" ? localStorage.getItem("pending_signup_role") : null;
+    if (typeof window !== "undefined") localStorage.removeItem("pending_signup_role");
     if (pending !== "inwestor") return;
     (async () => {
       try {
@@ -30,7 +31,6 @@ function Landing() {
           subscription_status: "nieaktywny",
         });
       } catch {}
-      localStorage.removeItem("pending_signup_role");
       await refreshRoles();
     })();
   }, [user, refreshRoles]);
