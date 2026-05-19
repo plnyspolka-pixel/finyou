@@ -54,23 +54,42 @@ function LoginPage() {
           <CardDescription>Wprowadź swoje dane, aby uzyskać dostęp do panelu.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={async () => {
-              const res = await lovable.auth.signInWithOAuth("google", {
-                redirect_uri: `${window.location.origin}/`,
-              });
-              if (res.error) {
-                toast.error("Logowanie Google nie powiodło się", {
-                  description: res.error.message,
+          <div className="grid gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                const res = await lovable.auth.signInWithOAuth("google", {
+                  redirect_uri: `${window.location.origin}/`,
                 });
-              }
-            }}
-          >
-            Kontynuuj z Google
-          </Button>
+                if (res.error) {
+                  const msg = res.error.message || "";
+                  if (/cancel/i.test(msg)) return;
+                  toast.error("Logowanie Google nie powiodło się", { description: msg });
+                }
+              }}
+            >
+              Kontynuuj z Google
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                const res = await lovable.auth.signInWithOAuth("apple", {
+                  redirect_uri: `${window.location.origin}/`,
+                });
+                if (res.error) {
+                  const msg = res.error.message || "";
+                  if (/cancel/i.test(msg)) return;
+                  toast.error("Logowanie Apple nie powiodło się", { description: msg });
+                }
+              }}
+            >
+              Kontynuuj z Apple
+            </Button>
+          </div>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
