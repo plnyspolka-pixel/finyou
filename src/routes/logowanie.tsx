@@ -97,23 +97,42 @@ function LoginPage() {
             Kontynuuj z Google
           </Button>
           <div className="relative">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">lub e-mailem</span></div>
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">lub e-mailem</span>
+            </div>
           </div>
           <form className="space-y-4" onSubmit={submit}>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Hasło</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logowanie…" : "Zaloguj się"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Nie masz konta? <Link to="/rejestracja" className="font-medium text-accent hover:underline">Zarejestruj się</Link>
+              Nie masz konta?{" "}
+              <Link to="/rejestracja" className="font-medium text-accent hover:underline">
+                Zarejestruj się
+              </Link>
             </p>
           </form>
         </CardContent>
