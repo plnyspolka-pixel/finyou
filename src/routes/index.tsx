@@ -1,8 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Building2, Users, LineChart, ShieldCheck } from "lucide-react";
 
@@ -11,32 +9,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const { user, roles, loading, refreshRoles } = useAuth();
-
-  // Po powrocie z Google OAuth: jeśli użytkownik wybrał rolę "inwestor", dopisz ją
-  useEffect(() => {
-    if (!user) return;
-    const pending =
-      typeof window !== "undefined" ? localStorage.getItem("pending_signup_role") : null;
-    if (typeof window !== "undefined") localStorage.removeItem("pending_signup_role");
-    if (pending !== "inwestor") return;
-    (async () => {
-      try {
-        await supabase.from("user_roles").insert({ user_id: user.id, role: "inwestor" });
-        await supabase.from("investors").insert({
-          user_id: user.id,
-          investor_type: "indywidualny",
-          first_name: user.user_metadata?.first_name ?? null,
-          last_name: user.user_metadata?.last_name ?? null,
-          email: user.email ?? null,
-          subscription_status: "nieaktywny",
-        });
-      } catch {
-        // Ignore duplicates or unavailable optional profile data.
-      }
-      await refreshRoles();
-    })();
-  }, [user, refreshRoles]);
+  const { user, roles, loading } = useAuth();
 
   if (loading) {
     return (
@@ -47,6 +20,17 @@ function Landing() {
   }
 
   if (user) {
+    // Po powrocie z OAuth podczas rejestracji – kieruj na wybór roli
+    const pending =
+      typeof window !== "undefined" ? localStorage.getItem("pending_role_selection") : null;
+    if (pending === "1") {
+      try {
+        localStorage.removeItem("pending_role_selection");
+      } catch {
+        /* noop */
+      }
+      return <Navigate to="/wybor-roli" />;
+    }
     return <Navigate to={defaultPathForRoles(roles)} />;
   }
 
