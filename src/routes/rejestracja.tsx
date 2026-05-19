@@ -83,7 +83,11 @@ function RegisterPage() {
               const res = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/`,
               });
-              if (res.error) toast.error("Rejestracja Google nie powiodła się", { description: res.error.message });
+              if (res.error) {
+                const msg = res.error.message || "";
+                if (/cancel/i.test(msg)) return; // użytkownik zamknął okno – nie pokazuj błędu
+                toast.error("Rejestracja Google nie powiodła się", { description: msg });
+              }
             }}
           >
             Zarejestruj się przez Google
