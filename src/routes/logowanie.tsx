@@ -54,29 +54,11 @@ function LoginPage() {
           <CardDescription>Wprowadź swoje dane, aby uzyskać dostęp do panelu.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Rola dla logowania Google</Label>
-            <RadioGroup
-              value={googleRole}
-              onValueChange={(v) => setGoogleRole(v as "klient" | "inwestor")}
-              className="grid grid-cols-2 gap-2"
-            >
-              <label className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer text-sm">
-                <RadioGroupItem value="klient" id="google-r-klient" />
-                <span>Klient</span>
-              </label>
-              <label className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer text-sm">
-                <RadioGroupItem value="inwestor" id="google-r-inwestor" />
-                <span>Inwestor</span>
-              </label>
-            </RadioGroup>
-          </div>
           <Button
             type="button"
             variant="outline"
             className="w-full"
             onClick={async () => {
-              localStorage.setItem("pending_signup_role", googleRole);
               const res = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/`,
               });
