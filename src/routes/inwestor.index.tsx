@@ -19,7 +19,7 @@ function InwestorList() {
   useEffect(() => { if (!user) return; void (async () => {
     const { data: inv } = await supabase.from("investors").select("subscription_status").eq("user_id", user.id).maybeSingle();
     if (!inv || inv.subscription_status !== "aktywny") { setPaywall(true); setLoading(false); return; }
-    const { data } = await supabase.from("loan_applications").select("id, loan_amount, preferred_period_months, estimated_ltv, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm)").eq("available_to_investors", true).order("created_at", { ascending: false });
+    const { data } = await supabase.from("loan_applications").select("id, loan_amount, preferred_period_months, estimated_ltv, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos)").eq("available_to_investors", true).order("created_at", { ascending: false });
     setApps(data ?? []); setLoading(false);
   })(); }, [user]);
 
