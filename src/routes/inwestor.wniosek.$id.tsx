@@ -11,8 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare } from "lucide-react";
 import { formatPLN, propertyTypeLabels, repaymentTypeLabels } from "@/lib/labels";
+import { useServerFn } from "@tanstack/react-start";
+import { openOrCreateThread } from "@/lib/chat.functions";
 
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
