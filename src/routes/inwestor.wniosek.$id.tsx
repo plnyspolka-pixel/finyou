@@ -11,8 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare } from "lucide-react";
 import { formatPLN, propertyTypeLabels, repaymentTypeLabels } from "@/lib/labels";
+import { useServerFn } from "@tanstack/react-start";
+import { openOrCreateThread } from "@/lib/chat.functions";
 
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
@@ -62,6 +64,7 @@ function InwestorWniosek() {
   const navigate = useNavigate();
   const [app, setApp] = useState<any | null>(null);
   const [investorId, setInvestorId] = useState<string | null>(null);
+  const openThread = useServerFn(openOrCreateThread);
   const [f, setF] = useState({
     proposed_amount: "", period_months: "", expected_yearly_yield: "10", commission: "2",
     collection_protection: false, collection_protection_settlement: "miesieczne",
@@ -174,6 +177,13 @@ function InwestorWniosek() {
       </Card>
 
       <div className="flex gap-2 justify-end">
+        <Button variant="secondary" onClick={async () => {
+          if (!investorId || !app?.client_id) return toast.error("Brak danych");
+          try {
+            const r = await openThread({ data: { loanApplicationId: id, investorId, clientId: app.client_id }});
+            void navigate({ to: "/inwestor/wiadomosci" });
+          } catch (e: any) { toast.error(e.message); }
+        }}><MessageSquare className="mr-2 h-4 w-4"/>Czat z klientem</Button>
         <Button variant="outline" onClick={() => void submit("szkic")}>Zapisz jako szkic</Button>
         <Button onClick={() => void submit("zlozona")}><Send className="mr-2 h-4 w-4" />Złóż ofertę</Button>
       </div>

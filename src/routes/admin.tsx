@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, Building, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Building, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -15,10 +15,12 @@ const items = [
   { to: "/admin/klienci", label: "Klienci", icon: Users },
   { to: "/admin/nieruchomosci", label: "Nieruchomości", icon: Building },
   { to: "/admin/dokumenty", label: "Dokumenty", icon: FolderOpen },
+  { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
   { to: "/admin/follow-up", label: "Follow-up", icon: PhoneCall },
   { to: "/admin/inwestorzy", label: "Inwestorzy", icon: Briefcase },
   { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
   { to: "/admin/oferty", label: "Oferty", icon: Tag },
+  { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
   { to: "/admin/integracje", label: "Integracje", icon: Plug },
   { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
   { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },

@@ -19,16 +19,21 @@ import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
 import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
 import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
 import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
+import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
+import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as AdminWnioskiRouteImport } from './routes/admin.wnioski'
+import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
+import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminNieruchomosciRouteImport } from './routes/admin.nieruchomosci'
@@ -40,6 +45,7 @@ import { Route as AdminFollowUpRouteImport } from './routes/admin.follow-up'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
+import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 
@@ -93,6 +99,11 @@ const WniosekTokenRoute = WniosekTokenRouteImport.update({
   path: '/wniosek/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KlientWiadomosciRoute = KlientWiadomosciRouteImport.update({
+  id: '/wiadomosci',
+  path: '/wiadomosci',
+  getParentRoute: () => KlientRoute,
+} as any)
 const KlientStatusRoute = KlientStatusRouteImport.update({
   id: '/status',
   path: '/status',
@@ -112,6 +123,16 @@ const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
   id: '/dokumenty',
   path: '/dokumenty',
   getParentRoute: () => KlientRoute,
+} as any)
+const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
+  id: '/wiadomosci',
+  path: '/wiadomosci',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
+  id: '/szkolenia',
+  path: '/szkolenia',
+  getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorProfilRoute = InwestorProfilRouteImport.update({
   id: '/profil',
@@ -138,9 +159,19 @@ const AdminWnioskiRoute = AdminWnioskiRouteImport.update({
   path: '/wnioski',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
+  id: '/voicebot',
+  path: '/voicebot',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
   id: '/ustawienia',
   path: '/ustawienia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
+  id: '/szkolenia',
+  path: '/szkolenia',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminRoleRoute = AdminRoleRouteImport.update({
@@ -198,6 +229,12 @@ const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   path: '/wniosek/$id',
   getParentRoute: () => InwestorRoute,
 } as any)
+const ApiPublicElevenlabsWebhookRoute =
+  ApiPublicElevenlabsWebhookRouteImport.update({
+    id: '/api/public/elevenlabs-webhook',
+    path: '/api/public/elevenlabs-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -226,22 +263,28 @@ export interface FileRoutesByFullPath {
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
   '/klient/status': typeof KlientStatusRoute
+  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRoutesByTo {
@@ -258,22 +301,28 @@ export interface FileRoutesByTo {
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
   '/klient/status': typeof KlientStatusRoute
+  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRoutesById {
@@ -294,22 +343,28 @@ export interface FileRoutesById {
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
+  '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
   '/klient/status': typeof KlientStatusRoute
+  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRouteTypes {
@@ -331,22 +386,28 @@ export interface FileRouteTypes {
     | '/admin/nieruchomosci'
     | '/admin/oferty'
     | '/admin/role'
+    | '/admin/szkolenia'
     | '/admin/ustawienia'
+    | '/admin/voicebot'
     | '/admin/wnioski'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
     | '/inwestor/oferty'
     | '/inwestor/profil'
+    | '/inwestor/szkolenia'
+    | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
     | '/klient/status'
+    | '/klient/wiadomosci'
     | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/api/public/elevenlabs-webhook'
     | '/inwestor/wniosek/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -363,22 +424,28 @@ export interface FileRouteTypes {
     | '/admin/nieruchomosci'
     | '/admin/oferty'
     | '/admin/role'
+    | '/admin/szkolenia'
     | '/admin/ustawienia'
+    | '/admin/voicebot'
     | '/admin/wnioski'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
     | '/inwestor/oferty'
     | '/inwestor/profil'
+    | '/inwestor/szkolenia'
+    | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
     | '/klient/status'
+    | '/klient/wiadomosci'
     | '/wniosek/$token'
     | '/admin'
     | '/inwestor'
     | '/klient'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/api/public/elevenlabs-webhook'
     | '/inwestor/wniosek/$id'
   id:
     | '__root__'
@@ -398,22 +465,28 @@ export interface FileRouteTypes {
     | '/admin/nieruchomosci'
     | '/admin/oferty'
     | '/admin/role'
+    | '/admin/szkolenia'
     | '/admin/ustawienia'
+    | '/admin/voicebot'
     | '/admin/wnioski'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
     | '/inwestor/oferty'
     | '/inwestor/profil'
+    | '/inwestor/szkolenia'
+    | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
     | '/klient/status'
+    | '/klient/wiadomosci'
     | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/api/public/elevenlabs-webhook'
     | '/inwestor/wniosek/$id'
   fileRoutesById: FileRoutesById
 }
@@ -425,6 +498,7 @@ export interface RootRouteChildren {
   LogowanieRoute: typeof LogowanieRoute
   RejestracjaRoute: typeof RejestracjaRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
+  ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -499,6 +573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WniosekTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/klient/wiadomosci': {
+      id: '/klient/wiadomosci'
+      path: '/wiadomosci'
+      fullPath: '/klient/wiadomosci'
+      preLoaderRoute: typeof KlientWiadomosciRouteImport
+      parentRoute: typeof KlientRoute
+    }
     '/klient/status': {
       id: '/klient/status'
       path: '/status'
@@ -526,6 +607,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/klient/dokumenty'
       preLoaderRoute: typeof KlientDokumentyRouteImport
       parentRoute: typeof KlientRoute
+    }
+    '/inwestor/wiadomosci': {
+      id: '/inwestor/wiadomosci'
+      path: '/wiadomosci'
+      fullPath: '/inwestor/wiadomosci'
+      preLoaderRoute: typeof InwestorWiadomosciRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/szkolenia': {
+      id: '/inwestor/szkolenia'
+      path: '/szkolenia'
+      fullPath: '/inwestor/szkolenia'
+      preLoaderRoute: typeof InwestorSzkoleniaRouteImport
+      parentRoute: typeof InwestorRoute
     }
     '/inwestor/profil': {
       id: '/inwestor/profil'
@@ -562,11 +657,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWnioskiRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/voicebot': {
+      id: '/admin/voicebot'
+      path: '/voicebot'
+      fullPath: '/admin/voicebot'
+      preLoaderRoute: typeof AdminVoicebotRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ustawienia': {
       id: '/admin/ustawienia'
       path: '/ustawienia'
       fullPath: '/admin/ustawienia'
       preLoaderRoute: typeof AdminUstawieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/szkolenia': {
+      id: '/admin/szkolenia'
+      path: '/szkolenia'
+      fullPath: '/admin/szkolenia'
+      preLoaderRoute: typeof AdminSzkoleniaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/role': {
@@ -646,6 +755,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorWniosekIdRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/api/public/elevenlabs-webhook': {
+      id: '/api/public/elevenlabs-webhook'
+      path: '/api/public/elevenlabs-webhook'
+      fullPath: '/api/public/elevenlabs-webhook'
+      preLoaderRoute: typeof ApiPublicElevenlabsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
       path: '/$id'
@@ -698,7 +814,9 @@ interface AdminRouteChildren {
   AdminNieruchomosciRoute: typeof AdminNieruchomosciRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminRoleRoute: typeof AdminRoleRoute
+  AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
+  AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiRoute: typeof AdminWnioskiRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -714,7 +832,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminNieruchomosciRoute: AdminNieruchomosciRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminRoleRoute: AdminRoleRoute,
+  AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
+  AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiRoute: AdminWnioskiRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -726,6 +846,8 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
+  InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
+  InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
 }
@@ -735,6 +857,8 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
+  InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
+  InwestorWiadomosciRoute: InwestorWiadomosciRoute,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
 }
@@ -748,6 +872,7 @@ interface KlientRouteChildren {
   KlientKontaktRoute: typeof KlientKontaktRoute
   KlientOfertaRoute: typeof KlientOfertaRoute
   KlientStatusRoute: typeof KlientStatusRoute
+  KlientWiadomosciRoute: typeof KlientWiadomosciRoute
   KlientIndexRoute: typeof KlientIndexRoute
 }
 
@@ -756,6 +881,7 @@ const KlientRouteChildren: KlientRouteChildren = {
   KlientKontaktRoute: KlientKontaktRoute,
   KlientOfertaRoute: KlientOfertaRoute,
   KlientStatusRoute: KlientStatusRoute,
+  KlientWiadomosciRoute: KlientWiadomosciRoute,
   KlientIndexRoute: KlientIndexRoute,
 }
 
@@ -770,6 +896,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogowanieRoute: LogowanieRoute,
   RejestracjaRoute: RejestracjaRoute,
   WniosekTokenRoute: WniosekTokenRoute,
+  ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
