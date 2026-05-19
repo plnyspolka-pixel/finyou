@@ -79,7 +79,7 @@ function KlientWniosek() {
   const [docs, setDocs] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [docCategory, setDocCategory] = useState("ogolne");
+
 
   // Wyliczenia
   const rata = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
