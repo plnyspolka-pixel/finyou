@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 
@@ -18,6 +19,7 @@ function LoginPage() {
   const { refreshRoles } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [googleRole, setGoogleRole] = useState<"klient" | "inwestor">("klient");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: FormEvent) => {
@@ -46,11 +48,25 @@ function LoginPage() {
           <CardDescription>Wprowadź swoje dane, aby uzyskać dostęp do panelu.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Rola dla logowania Google</Label>
+            <RadioGroup value={googleRole} onValueChange={(v) => setGoogleRole(v as "klient" | "inwestor")} className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer text-sm">
+                <RadioGroupItem value="klient" id="google-r-klient" />
+                <span>Klient</span>
+              </label>
+              <label className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer text-sm">
+                <RadioGroupItem value="inwestor" id="google-r-inwestor" />
+                <span>Inwestor</span>
+              </label>
+            </RadioGroup>
+          </div>
           <Button
             type="button"
             variant="outline"
             className="w-full"
             onClick={async () => {
+              try { localStorage.setItem("pending_signup_role", googleRole); } catch {}
               const res = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/`,
               });
