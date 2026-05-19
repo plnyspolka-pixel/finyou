@@ -30,7 +30,9 @@ function Landing() {
           email: user.email ?? null,
           subscription_status: "nieaktywny",
         });
-      } catch {}
+      } catch {
+        // Ignore duplicates or unavailable optional profile data.
+      }
       await refreshRoles();
     })();
   }, [user, refreshRoles]);
