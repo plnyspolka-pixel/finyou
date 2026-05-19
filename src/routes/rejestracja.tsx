@@ -108,6 +108,10 @@ function RegisterPage() {
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="phone">Telefon</Label>
+              <Input id="phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="password">Hasło</Label>
               <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
