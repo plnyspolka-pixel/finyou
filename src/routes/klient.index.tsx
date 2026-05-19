@@ -78,7 +78,7 @@ function KlientWniosek() {
   const [otherDescription, setOtherDescription] = useState("");
   const [docs, setDocs] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  
 
 
   // Wyliczenia
