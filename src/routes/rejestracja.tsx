@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +64,26 @@ function RegisterPage() {
           <CardTitle>Załóż konto</CardTitle>
           <CardDescription>Wybierz, jako kto się rejestrujesz.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={async () => {
+              // Zapamiętaj wybraną rolę, by przypisać ją po powrocie z OAuth
+              try { localStorage.setItem("pending_signup_role", role); } catch {}
+              const res = await lovable.auth.signInWithOAuth("google", {
+                redirect_uri: `${window.location.origin}/`,
+              });
+              if (res.error) toast.error("Rejestracja Google nie powiodła się", { description: res.error.message });
+            }}
+          >
+            Zarejestruj się przez Google
+          </Button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">lub e-mailem</span></div>
+          </div>
           <form className="space-y-4" onSubmit={submit}>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

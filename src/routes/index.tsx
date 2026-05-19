@@ -1,6 +1,8 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Building2, Users, LineChart, ShieldCheck } from "lucide-react";
 
@@ -9,7 +11,29 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const { user, roles, loading } = useAuth();
+  const { user, roles, loading, refreshRoles } = useAuth();
+
+  // Po powrocie z Google OAuth: jeśli użytkownik wybrał rolę "inwestor", dopisz ją
+  useEffect(() => {
+    if (!user) return;
+    const pending = typeof window !== "undefined" ? localStorage.getItem("pending_signup_role") : null;
+    if (pending !== "inwestor") return;
+    (async () => {
+      try {
+        await supabase.from("user_roles").insert({ user_id: user.id, role: "inwestor" });
+        await supabase.from("investors").insert({
+          user_id: user.id,
+          investor_type: "indywidualny",
+          first_name: user.user_metadata?.first_name ?? null,
+          last_name: user.user_metadata?.last_name ?? null,
+          email: user.email ?? null,
+          subscription_status: "nieaktywny",
+        });
+      } catch {}
+      localStorage.removeItem("pending_signup_role");
+      await refreshRoles();
+    })();
+  }, [user, refreshRoles]);
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Ładowanie…</div>;
