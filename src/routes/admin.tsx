@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, Building, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Building, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
