@@ -18,15 +18,23 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as KlientStatusRouteImport } from './routes/klient.status'
+import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
+import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
+import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
 import { Route as AdminWnioskiRouteImport } from './routes/admin.wnioski'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminNieruchomosciRouteImport } from './routes/admin.nieruchomosci'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
+import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminFollowUpRouteImport } from './routes/admin.follow-up'
+import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
+import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
@@ -73,6 +81,31 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const WniosekTokenRoute = WniosekTokenRouteImport.update({
+  id: '/wniosek/$token',
+  path: '/wniosek/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KlientStatusRoute = KlientStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientOfertaRoute = KlientOfertaRouteImport.update({
+  id: '/oferta',
+  path: '/oferta',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientKontaktRoute = KlientKontaktRouteImport.update({
+  id: '/kontakt',
+  path: '/kontakt',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
+  id: '/dokumenty',
+  path: '/dokumenty',
+  getParentRoute: () => KlientRoute,
+} as any)
 const AdminWnioskiRoute = AdminWnioskiRouteImport.update({
   id: '/wnioski',
   path: '/wnioski',
@@ -103,9 +136,19 @@ const AdminKlienciRoute = AdminKlienciRouteImport.update({
   path: '/klienci',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminInwestorzyRoute = AdminInwestorzyRouteImport.update({
+  id: '/inwestorzy',
+  path: '/inwestorzy',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFollowUpRoute = AdminFollowUpRouteImport.update({
   id: '/follow-up',
   path: '/follow-up',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDystrybucjaRoute = AdminDystrybucjaRouteImport.update({
+  id: '/dystrybucja',
+  path: '/dystrybucja',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
@@ -118,6 +161,11 @@ const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminWnioskiRoute,
 } as any)
+const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminInwestorzyRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,16 +175,24 @@ export interface FileRoutesByFullPath {
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
+  '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
+  '/klient/dokumenty': typeof KlientDokumentyRoute
+  '/klient/kontakt': typeof KlientKontaktRoute
+  '/klient/oferta': typeof KlientOfertaRoute
+  '/klient/status': typeof KlientStatusRoute
+  '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
 }
 export interface FileRoutesByTo {
@@ -144,16 +200,24 @@ export interface FileRoutesByTo {
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
+  '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
+  '/klient/dokumenty': typeof KlientDokumentyRoute
+  '/klient/kontakt': typeof KlientKontaktRoute
+  '/klient/oferta': typeof KlientOfertaRoute
+  '/klient/status': typeof KlientStatusRoute
+  '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
 }
 export interface FileRoutesById {
@@ -165,16 +229,24 @@ export interface FileRoutesById {
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
+  '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
+  '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
+  '/klient/dokumenty': typeof KlientDokumentyRoute
+  '/klient/kontakt': typeof KlientKontaktRoute
+  '/klient/oferta': typeof KlientOfertaRoute
+  '/klient/status': typeof KlientStatusRoute
+  '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
 }
 export interface FileRouteTypes {
@@ -187,16 +259,24 @@ export interface FileRouteTypes {
     | '/logowanie'
     | '/rejestracja'
     | '/admin/dokumenty'
+    | '/admin/dystrybucja'
     | '/admin/follow-up'
+    | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
     | '/admin/nieruchomosci'
     | '/admin/role'
     | '/admin/ustawienia'
     | '/admin/wnioski'
+    | '/klient/dokumenty'
+    | '/klient/kontakt'
+    | '/klient/oferta'
+    | '/klient/status'
+    | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
+    | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -204,16 +284,24 @@ export interface FileRouteTypes {
     | '/logowanie'
     | '/rejestracja'
     | '/admin/dokumenty'
+    | '/admin/dystrybucja'
     | '/admin/follow-up'
+    | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
     | '/admin/nieruchomosci'
     | '/admin/role'
     | '/admin/ustawienia'
     | '/admin/wnioski'
+    | '/klient/dokumenty'
+    | '/klient/kontakt'
+    | '/klient/oferta'
+    | '/klient/status'
+    | '/wniosek/$token'
     | '/admin'
     | '/inwestor'
     | '/klient'
+    | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
   id:
     | '__root__'
@@ -224,16 +312,24 @@ export interface FileRouteTypes {
     | '/logowanie'
     | '/rejestracja'
     | '/admin/dokumenty'
+    | '/admin/dystrybucja'
     | '/admin/follow-up'
+    | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
     | '/admin/nieruchomosci'
     | '/admin/role'
     | '/admin/ustawienia'
     | '/admin/wnioski'
+    | '/klient/dokumenty'
+    | '/klient/kontakt'
+    | '/klient/oferta'
+    | '/klient/status'
+    | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
+    | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
   fileRoutesById: FileRoutesById
 }
@@ -244,6 +340,7 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   RejestracjaRoute: typeof RejestracjaRoute
+  WniosekTokenRoute: typeof WniosekTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -311,6 +408,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/wniosek/$token': {
+      id: '/wniosek/$token'
+      path: '/wniosek/$token'
+      fullPath: '/wniosek/$token'
+      preLoaderRoute: typeof WniosekTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/klient/status': {
+      id: '/klient/status'
+      path: '/status'
+      fullPath: '/klient/status'
+      preLoaderRoute: typeof KlientStatusRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/oferta': {
+      id: '/klient/oferta'
+      path: '/oferta'
+      fullPath: '/klient/oferta'
+      preLoaderRoute: typeof KlientOfertaRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/kontakt': {
+      id: '/klient/kontakt'
+      path: '/kontakt'
+      fullPath: '/klient/kontakt'
+      preLoaderRoute: typeof KlientKontaktRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/dokumenty': {
+      id: '/klient/dokumenty'
+      path: '/dokumenty'
+      fullPath: '/klient/dokumenty'
+      preLoaderRoute: typeof KlientDokumentyRouteImport
+      parentRoute: typeof KlientRoute
+    }
     '/admin/wnioski': {
       id: '/admin/wnioski'
       path: '/wnioski'
@@ -353,11 +485,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKlienciRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/inwestorzy': {
+      id: '/admin/inwestorzy'
+      path: '/inwestorzy'
+      fullPath: '/admin/inwestorzy'
+      preLoaderRoute: typeof AdminInwestorzyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/follow-up': {
       id: '/admin/follow-up'
       path: '/follow-up'
       fullPath: '/admin/follow-up'
       preLoaderRoute: typeof AdminFollowUpRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dystrybucja': {
+      id: '/admin/dystrybucja'
+      path: '/dystrybucja'
+      fullPath: '/admin/dystrybucja'
+      preLoaderRoute: typeof AdminDystrybucjaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dokumenty': {
@@ -374,8 +520,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWnioskiIdRouteImport
       parentRoute: typeof AdminWnioskiRoute
     }
+    '/admin/inwestorzy/$id': {
+      id: '/admin/inwestorzy/$id'
+      path: '/$id'
+      fullPath: '/admin/inwestorzy/$id'
+      preLoaderRoute: typeof AdminInwestorzyIdRouteImport
+      parentRoute: typeof AdminInwestorzyRoute
+    }
   }
 }
+
+interface AdminInwestorzyRouteChildren {
+  AdminInwestorzyIdRoute: typeof AdminInwestorzyIdRoute
+}
+
+const AdminInwestorzyRouteChildren: AdminInwestorzyRouteChildren = {
+  AdminInwestorzyIdRoute: AdminInwestorzyIdRoute,
+}
+
+const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
+  AdminInwestorzyRouteChildren,
+)
 
 interface AdminWnioskiRouteChildren {
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
@@ -391,7 +556,9 @@ const AdminWnioskiRouteWithChildren = AdminWnioskiRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminDokumentyRoute: typeof AdminDokumentyRoute
+  AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminFollowUpRoute: typeof AdminFollowUpRoute
+  AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
   AdminNieruchomosciRoute: typeof AdminNieruchomosciRoute
@@ -403,7 +570,9 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDokumentyRoute: AdminDokumentyRoute,
+  AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminFollowUpRoute: AdminFollowUpRoute,
+  AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRoute,
   AdminLeadyRoute: AdminLeadyRoute,
   AdminNieruchomosciRoute: AdminNieruchomosciRoute,
@@ -428,10 +597,18 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 )
 
 interface KlientRouteChildren {
+  KlientDokumentyRoute: typeof KlientDokumentyRoute
+  KlientKontaktRoute: typeof KlientKontaktRoute
+  KlientOfertaRoute: typeof KlientOfertaRoute
+  KlientStatusRoute: typeof KlientStatusRoute
   KlientIndexRoute: typeof KlientIndexRoute
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
+  KlientDokumentyRoute: KlientDokumentyRoute,
+  KlientKontaktRoute: KlientKontaktRoute,
+  KlientOfertaRoute: KlientOfertaRoute,
+  KlientStatusRoute: KlientStatusRoute,
   KlientIndexRoute: KlientIndexRoute,
 }
 
@@ -445,6 +622,7 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   RejestracjaRoute: RejestracjaRoute,
+  WniosekTokenRoute: WniosekTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
