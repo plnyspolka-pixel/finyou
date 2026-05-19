@@ -19,6 +19,7 @@ import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
 import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
 import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
@@ -97,6 +98,11 @@ const WniosekTokenRoute = WniosekTokenRouteImport.update({
   id: '/wniosek/$token',
   path: '/wniosek/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const KlientWiadomosciRoute = KlientWiadomosciRouteImport.update({
+  id: '/wiadomosci',
+  path: '/wiadomosci',
+  getParentRoute: () => KlientRoute,
 } as any)
 const KlientStatusRoute = KlientStatusRouteImport.update({
   id: '/status',
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
   '/klient/status': typeof KlientStatusRoute
+  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
   '/klient/status': typeof KlientStatusRoute
+  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
   '/klient/status': typeof KlientStatusRoute
+  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/klient/kontakt'
     | '/klient/oferta'
     | '/klient/status'
+    | '/klient/wiadomosci'
     | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/klient/kontakt'
     | '/klient/oferta'
     | '/klient/status'
+    | '/klient/wiadomosci'
     | '/wniosek/$token'
     | '/admin'
     | '/inwestor'
@@ -468,6 +479,7 @@ export interface FileRouteTypes {
     | '/klient/kontakt'
     | '/klient/oferta'
     | '/klient/status'
+    | '/klient/wiadomosci'
     | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
@@ -560,6 +572,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/wniosek/$token'
       preLoaderRoute: typeof WniosekTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/klient/wiadomosci': {
+      id: '/klient/wiadomosci'
+      path: '/wiadomosci'
+      fullPath: '/klient/wiadomosci'
+      preLoaderRoute: typeof KlientWiadomosciRouteImport
+      parentRoute: typeof KlientRoute
     }
     '/klient/status': {
       id: '/klient/status'
@@ -853,6 +872,7 @@ interface KlientRouteChildren {
   KlientKontaktRoute: typeof KlientKontaktRoute
   KlientOfertaRoute: typeof KlientOfertaRoute
   KlientStatusRoute: typeof KlientStatusRoute
+  KlientWiadomosciRoute: typeof KlientWiadomosciRoute
   KlientIndexRoute: typeof KlientIndexRoute
 }
 
@@ -861,6 +881,7 @@ const KlientRouteChildren: KlientRouteChildren = {
   KlientKontaktRoute: KlientKontaktRoute,
   KlientOfertaRoute: KlientOfertaRoute,
   KlientStatusRoute: KlientStatusRoute,
+  KlientWiadomosciRoute: KlientWiadomosciRoute,
   KlientIndexRoute: KlientIndexRoute,
 }
 
