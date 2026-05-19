@@ -20,9 +20,10 @@ function NieruchomosciPage() {
       <h1 className="text-2xl font-bold">Nieruchomości</h1>
       <Card><CardHeader><CardTitle>Lista ({rows.length})</CardTitle></CardHeader>
         <CardContent><div className="overflow-x-auto"><Table>
-          <TableHeader><TableRow><TableHead>Typ</TableHead><TableHead>Lokalizacja</TableHead><TableHead>Powierzchnia</TableHead><TableHead>Wartość</TableHead><TableHead>KW</TableHead><TableHead>Klient</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Zdjęcie</TableHead><TableHead>Typ</TableHead><TableHead>Lokalizacja</TableHead><TableHead>Powierzchnia</TableHead><TableHead>Wartość</TableHead><TableHead>KW</TableHead><TableHead>Klient</TableHead><TableHead></TableHead></TableRow></TableHeader>
           <TableBody>{rows.map((r) => (
             <TableRow key={r.id}>
+              <TableCell>{r.photos?.[0] ? <img src={r.photos[0]} alt="" className="h-14 w-20 object-cover rounded" loading="lazy" /> : <div className="h-14 w-20 bg-muted rounded" />}</TableCell>
               <TableCell>{propertyTypeLabels[r.property_type] ?? r.property_type}</TableCell>
               <TableCell>{[r.city, r.voivodeship].filter(Boolean).join(", ") || "—"}</TableCell>
               <TableCell>{r.area_sqm ? `${r.area_sqm} m²` : "—"}</TableCell>
