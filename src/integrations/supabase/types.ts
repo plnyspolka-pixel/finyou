@@ -730,12 +730,14 @@ export type Database = {
       loan_applications: {
         Row: {
           admin_decision: string | null
+          annual_investor_rate: number | null
           assigned_operator: string | null
           automation_paused: boolean
           automation_status:
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors: boolean
+          business_status: string | null
           client_id: string
           completeness_percent: number
           contact_attempts_email: number
@@ -751,15 +753,19 @@ export type Database = {
           fast_decision: boolean | null
           id: string
           initial_score: number | null
+          interest_score: number | null
           investor_interest_count: number
+          kw_status: string | null
           last_automation_error: string | null
           last_contact_at: string | null
           last_webhook_at: string | null
           loan_amount: number | null
           location_quality: string | null
           make_scenario_id: string | null
+          max_monthly_payment: number | null
           missing_fields: Json | null
           next_contact_at: string | null
+          nip: string | null
           preferred_contact_channel:
             | Database["public"]["Enums"]["contact_channel"]
             | null
@@ -777,12 +783,14 @@ export type Database = {
         }
         Insert: {
           admin_decision?: string | null
+          annual_investor_rate?: number | null
           assigned_operator?: string | null
           automation_paused?: boolean
           automation_status?:
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors?: boolean
+          business_status?: string | null
           client_id: string
           completeness_percent?: number
           contact_attempts_email?: number
@@ -798,15 +806,19 @@ export type Database = {
           fast_decision?: boolean | null
           id?: string
           initial_score?: number | null
+          interest_score?: number | null
           investor_interest_count?: number
+          kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
           last_webhook_at?: string | null
           loan_amount?: number | null
           location_quality?: string | null
           make_scenario_id?: string | null
+          max_monthly_payment?: number | null
           missing_fields?: Json | null
           next_contact_at?: string | null
+          nip?: string | null
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
@@ -824,12 +836,14 @@ export type Database = {
         }
         Update: {
           admin_decision?: string | null
+          annual_investor_rate?: number | null
           assigned_operator?: string | null
           automation_paused?: boolean
           automation_status?:
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors?: boolean
+          business_status?: string | null
           client_id?: string
           completeness_percent?: number
           contact_attempts_email?: number
@@ -845,15 +859,19 @@ export type Database = {
           fast_decision?: boolean | null
           id?: string
           initial_score?: number | null
+          interest_score?: number | null
           investor_interest_count?: number
+          kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
           last_webhook_at?: string | null
           loan_amount?: number | null
           location_quality?: string | null
           make_scenario_id?: string | null
+          max_monthly_payment?: number | null
           missing_fields?: Json | null
           next_contact_at?: string | null
+          nip?: string | null
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
@@ -978,9 +996,12 @@ export type Database = {
           has_mortgage: boolean | null
           id: string
           land_register_number: string | null
+          land_registry_extract: string | null
           loan_application_id: string
+          mpzp_info: string | null
           photos: string[]
           property_type: Database["public"]["Enums"]["property_type"]
+          street: string | null
           updated_at: string
           voivodeship: string | null
         }
@@ -995,9 +1016,12 @@ export type Database = {
           has_mortgage?: boolean | null
           id?: string
           land_register_number?: string | null
+          land_registry_extract?: string | null
           loan_application_id: string
+          mpzp_info?: string | null
           photos?: string[]
           property_type: Database["public"]["Enums"]["property_type"]
+          street?: string | null
           updated_at?: string
           voivodeship?: string | null
         }
@@ -1012,9 +1036,12 @@ export type Database = {
           has_mortgage?: boolean | null
           id?: string
           land_register_number?: string | null
+          land_registry_extract?: string | null
           loan_application_id?: string
+          mpzp_info?: string | null
           photos?: string[]
           property_type?: Database["public"]["Enums"]["property_type"]
+          street?: string | null
           updated_at?: string
           voivodeship?: string | null
         }
