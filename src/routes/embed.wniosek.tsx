@@ -1,12 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { propertyTypeLabels } from "@/lib/labels";
+import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SecurityTypePicker } from "@/components/security-type-picker";
+import { InvestorInterestMeter } from "@/components/investor-interest-meter";
+import {
+  monthlyPayment, totalRepayment, investorTotalCompensation, interestScore, formatPLN,
+  securityTypeLabels, type SecurityType,
+} from "@/lib/loan-math";
+import { AlertTriangle, Calculator } from "lucide-react";
 
 export const Route = createFileRoute("/embed/wniosek")({
   component: EmbedWniosek,
@@ -18,42 +26,71 @@ export const Route = createFileRoute("/embed/wniosek")({
   }),
 });
 
+type BizStatus = "prowadzi" | "zamierza" | "nie_zamierza" | "";
+type KwStatus = "znam" | "nie_znam" | "brak" | "";
+
 function EmbedWniosek() {
   const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const source = params?.get("source") ?? "embed";
 
+  const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    loan_amount: "",
-    preferred_period_months: "",
-    property_type: "mieszkanie",
-    city: "",
-    situation_description: "",
-    consent_rodo: false,
-  });
 
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
-    setForm((p) => ({ ...p, [k]: v }));
+  const [amount, setAmount] = useState(200_000);
+  const [annualRate, setAnnualRate] = useState(20);
+  const [months, setMonths] = useState(24);
+  const [maxPayment, setMaxPayment] = useState(5000);
+  const [secType, setSecType] = useState<SecurityType | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [biz, setBiz] = useState<BizStatus>("");
+  const [nip, setNip] = useState("");
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const [city, setCity] = useState("");
+  const [voivodeship, setVoivodeship] = useState("");
+  const [street, setStreet] = useState("");
+  const [kwStatus, setKwStatus] = useState<KwStatus>("");
+  const [kwNumber, setKwNumber] = useState("");
+  const [situationDescription, setSituationDescription] = useState("");
+  const [consent, setConsent] = useState(false);
+
+  const rata = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
+  const totalPay = useMemo(() => totalRepayment(rata, months), [rata, months]);
+  const investorComp = useMemo(() => investorTotalCompensation(rata, months, amount), [rata, months, amount]);
+  const score = useMemo(() => (secType ? interestScore(secType, annualRate) : 0), [secType, annualRate]);
+  const exceedsMax = rata > maxPayment && maxPayment > 0;
+
+  const submit = async () => {
     setErr(null);
-    if (!form.consent_rodo) { setErr("Wymagana zgoda RODO."); return; }
+    if (!consent) { setErr("Wymagana zgoda RODO."); return; }
+    if (!secType) { setErr("Wybierz rodzaj zabezpieczenia."); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/public/loan-application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          loan_amount: Number(form.loan_amount),
-          preferred_period_months: Number(form.preferred_period_months),
+          first_name: firstName, last_name: lastName, email, phone,
+          loan_amount: amount,
+          annual_investor_rate: annualRate,
+          max_monthly_payment: maxPayment,
+          preferred_period_months: months,
+          business_status: biz || null,
+          nip: nip || null,
+          property_type: secType,
+          city: city || null,
+          street: street || null,
+          voivodeship: voivodeship || null,
+          kw_status: kwStatus || null,
+          land_register_number: kwStatus === "znam" ? kwNumber : null,
+          situation_description: situationDescription || null,
+          consent_rodo: true,
           source,
         }),
       });
@@ -71,81 +108,138 @@ function EmbedWniosek() {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-xl rounded-xl border bg-card p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-semibold text-foreground">Dziękujemy!</h1>
-          <p className="mt-2 text-muted-foreground">
-            Wniosek został przyjęty. Skontaktujemy się wkrótce.
-          </p>
+          <h1 className="text-2xl font-semibold">Dziękujemy!</h1>
+          <p className="mt-2 text-muted-foreground">Wniosek został przyjęty. Skontaktujemy się wkrótce.</p>
         </div>
       </div>
     );
   }
 
+  const canNext1 = secType !== null;
+  const canNext2 = biz === "prowadzi" ? nip.trim().length > 0 : biz === "zamierza";
+  const canNext3 = firstName && lastName && email && phone;
+  const canSubmit = city && voivodeship && kwStatus && (kwStatus !== "znam" || kwNumber) && consent;
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
-      <form onSubmit={submit} className="mx-auto max-w-xl space-y-5 rounded-xl border bg-card p-6 shadow-sm">
+      <div className="mx-auto max-w-2xl space-y-4 rounded-xl border bg-card p-6 shadow-sm">
         <header>
-          <h1 className="text-2xl font-bold text-foreground">Wniosek o pożyczkę pod zastaw nieruchomości</h1>
-          <p className="text-sm text-muted-foreground">Wypełnij formularz — oddzwonimy.</p>
+          <h1 className="text-xl font-bold">Sprawdź orientacyjne warunki pożyczki pod zastaw nieruchomości</h1>
+          <p className="text-xs text-muted-foreground">Krok {step} z 4</p>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Imię *</Label>
-            <Input required value={form.first_name} onChange={(e) => set("first_name", e.target.value)} />
+        {step === 1 && (
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <div className="flex justify-between"><Label className="flex items-center gap-2"><Calculator className="h-4 w-4" /> Kwota</Label>
+                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-32" /></div>
+              <Slider min={20000} max={1_000_000} step={5000} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between"><Label>Wynagrodzenie roczne</Label>
+                <div className="flex items-center gap-1"><Input type="number" step="0.5" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-20" /><span className="text-sm">%</span></div></div>
+              <Slider min={15} max={36} step={0.5} value={[Math.min(36, annualRate)]} onValueChange={(v) => setAnnualRate(v[0])} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between"><Label>Okres</Label><span className="text-sm">{months} mies.</span></div>
+              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between"><Label>Maksymalna rata</Label>
+                <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-32" /></div>
+              <Slider min={500} max={50000} step={250} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
+            </div>
+            <div className="space-y-2">
+              <Label>Co ma być zabezpieczeniem?</Label>
+              <SecurityTypePicker value={secType} onChange={setSecType} />
+            </div>
+            {secType && <InvestorInterestMeter score={score} />}
+            <div className="rounded border bg-muted/30 p-3 space-y-1 text-sm">
+              <div className="flex justify-between"><span>Orientacyjna rata</span><b>{formatPLN(rata)}</b></div>
+              <div className="flex justify-between"><span>Łączne wynagrodzenie inwestora</span><b>{formatPLN(investorComp)}</b></div>
+              <div className="flex justify-between"><span>Łączna kwota do spłaty</span><b>{formatPLN(totalPay)}</b></div>
+              <p className="text-xs text-muted-foreground pt-1">To jest kalkulacja orientacyjna. Nie stanowi oferty ani decyzji pożyczkowej.</p>
+            </div>
+            {exceedsMax && (
+              <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Orientacyjna rata może być wyższa niż wskazana przez Ciebie maksymalna rata.</AlertDescription></Alert>
+            )}
+            <Button className="w-full" disabled={!canNext1} onClick={() => setStep(2)}>Dalej — sprawdź możliwość finansowania</Button>
           </div>
-          <div className="space-y-2">
-            <Label>Nazwisko *</Label>
-            <Input required value={form.last_name} onChange={(e) => set("last_name", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>E-mail *</Label>
-            <Input type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Telefon *</Label>
-            <Input required value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+48 ..." />
-          </div>
-          <div className="space-y-2">
-            <Label>Kwota pożyczki (PLN) *</Label>
-            <Input type="number" min={1000} required value={form.loan_amount} onChange={(e) => set("loan_amount", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Okres (miesiące) *</Label>
-            <Input type="number" min={1} required value={form.preferred_period_months} onChange={(e) => set("preferred_period_months", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Typ nieruchomości *</Label>
-            <Select value={form.property_type} onValueChange={(v) => set("property_type", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(propertyTypeLabels).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Miasto</Label>
-            <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
-          </div>
-        </div>
+        )}
 
-        <div className="space-y-2">
-          <Label>Opis sytuacji</Label>
-          <Textarea rows={4} value={form.situation_description} onChange={(e) => set("situation_description", e.target.value)} />
-        </div>
+        {step === 2 && (
+          <div className="space-y-4">
+            <Label>Czy prowadzisz działalność gospodarczą albo zamierzasz ją założyć?</Label>
+            <RadioGroup value={biz} onValueChange={(v) => setBiz(v as BizStatus)}>
+              <label className="flex items-center gap-2 border rounded p-3 cursor-pointer"><RadioGroupItem value="prowadzi" /><span>Tak, prowadzę działalność</span></label>
+              <label className="flex items-center gap-2 border rounded p-3 cursor-pointer"><RadioGroupItem value="zamierza" /><span>Nie prowadzę, ale zamierzam ją założyć</span></label>
+              <label className="flex items-center gap-2 border rounded p-3 cursor-pointer"><RadioGroupItem value="nie_zamierza" /><span>Nie prowadzę i nie zamierzam</span></label>
+            </RadioGroup>
+            {biz === "prowadzi" && (<div><Label>NIP *</Label><Input value={nip} onChange={(e) => setNip(e.target.value)} /></div>)}
+            {biz === "nie_zamierza" && (
+              <Alert variant="destructive"><AlertDescription>
+                Na ten moment nie możemy przyjąć wniosku. Finansowanie w tym modelu jest przeznaczone dla osób prowadzących działalność gospodarczą albo deklarujących gotowość jej założenia.
+              </AlertDescription></Alert>
+            )}
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(1)}>Wstecz</Button>
+              {biz === "nie_zamierza" ? (
+                <Button variant="outline" onClick={() => setStep(1)}>Wróć do kalkulatora</Button>
+              ) : (
+                <Button disabled={!canNext2} onClick={() => setStep(3)}>Dalej</Button>
+              )}
+            </div>
+          </div>
+        )}
 
-        <label className="flex items-start gap-3 text-sm text-muted-foreground">
-          <Checkbox checked={form.consent_rodo} onCheckedChange={(v) => set("consent_rodo", v === true)} />
-          <span>Wyrażam zgodę na przetwarzanie moich danych osobowych w celu rozpatrzenia wniosku (RODO). *</span>
-        </label>
+        {step === 3 && (
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+              <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+              <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+            </div>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(2)}>Wstecz</Button>
+              <Button disabled={!canNext3} onClick={() => setStep(4)}>Dalej</Button>
+            </div>
+          </div>
+        )}
 
-        {err && <p className="text-sm text-destructive">{err}</p>}
-
-        <Button type="submit" disabled={submitting} className="w-full">
-          {submitting ? "Wysyłanie…" : "Wyślij wniosek"}
-        </Button>
-      </form>
+        {step === 4 && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Zabezpieczenie: <b>{secType ? securityTypeLabels[secType] : "—"}</b></p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div><Label>Województwo *</Label><Input value={voivodeship} onChange={(e) => setVoivodeship(e.target.value)} /></div>
+              <div><Label>Miejscowość *</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
+              <div className="md:col-span-2"><Label>Ulica</Label><Input value={street} onChange={(e) => setStreet(e.target.value)} /></div>
+            </div>
+            <div className="space-y-2">
+              <Label>Czy znasz numer księgi wieczystej?</Label>
+              <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)}>
+                <label className="flex items-center gap-2 border rounded p-2 cursor-pointer"><RadioGroupItem value="znam" /><span>Tak, znam</span></label>
+                <label className="flex items-center gap-2 border rounded p-2 cursor-pointer"><RadioGroupItem value="nie_znam" /><span>Nie znam / nie mam teraz przy sobie</span></label>
+                <label className="flex items-center gap-2 border rounded p-2 cursor-pointer"><RadioGroupItem value="brak" /><span>Nieruchomość nie ma KW</span></label>
+              </RadioGroup>
+            </div>
+            {kwStatus === "znam" && (<div><Label>Numer KW *</Label><Input value={kwNumber} onChange={(e) => setKwNumber(e.target.value)} /></div>)}
+            <div><Label>Opis sytuacji (opcjonalnie)</Label><Textarea rows={3} value={situationDescription} onChange={(e) => setSituationDescription(e.target.value)} /></div>
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} />
+              <span>Wyrażam zgodę na przetwarzanie moich danych osobowych w celu rozpatrzenia wniosku (RODO). *</span>
+            </label>
+            <p className="text-xs text-muted-foreground">Pełen wniosek z dokumentami uzupełnisz po kontakcie z naszej strony.</p>
+            {err && <p className="text-sm text-destructive">{err}</p>}
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(3)}>Wstecz</Button>
+              <Button disabled={!canSubmit || submitting} onClick={() => void submit()}>
+                {submitting ? "Wysyłanie…" : "Wyślij wniosek"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

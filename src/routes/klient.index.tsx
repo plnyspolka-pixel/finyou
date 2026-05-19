@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,264 +7,605 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { propertyTypeLabels, contactChannelLabels } from "@/lib/labels";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SecurityTypePicker } from "@/components/security-type-picker";
+import { InvestorInterestMeter } from "@/components/investor-interest-meter";
+import {
+  monthlyPayment,
+  totalRepayment,
+  investorTotalCompensation,
+  interestScore,
+  formatPLN,
+  securityTypeLabels,
+  type SecurityType,
+} from "@/lib/loan-math";
+import { ArrowLeft, ArrowRight, Send, Loader2, Upload, AlertTriangle, Calculator } from "lucide-react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Send, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/klient/")({
   component: KlientWniosek,
 });
 
-type ClientF = { first_name: string; last_name: string; phone: string; email: string; consent_rodo: boolean; consent_email: boolean; consent_phone: boolean; consent_sms: boolean };
-type LoanF = { loan_amount: string; preferred_period_months: string; fast_decision: boolean; preferred_contact_channel: string; situation_description: string };
-type PropF = { property_type: string; voivodeship: string; city: string; address: string; area_sqm: string; estimated_value: string; land_register_number: string; has_mortgage: boolean; has_co_owners: boolean; description: string };
+const STEPS = ["Kalkulator", "Działalność", "Dane kontaktowe", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
-const STEPS = ["Dane kontaktowe", "Zgody", "Wniosek", "Nieruchomość", "Szczegóły nieruchomości", "Dokumenty", "Podsumowanie"];
+type BusinessStatus = "prowadzi" | "zamierza" | "nie_zamierza" | "";
+type KwStatus = "znam" | "nie_znam" | "brak" | "";
 
 function KlientWniosek() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [loanId, setLoanId] = useState<string | null>(null);
-  const [clientId, setClientId] = useState<string | null>(null);
-  const [propertyId, setPropertyId] = useState<string | null>(null);
-  const [returnToken, setReturnToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [loanId, setLoanId] = useState<string | null>(null);
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+
+  // Kalkulator
+  const [amount, setAmount] = useState<number>(200_000);
+  const [annualRate, setAnnualRate] = useState<number>(20);
+  const [rateAboveCap, setRateAboveCap] = useState(false);
+  const [months, setMonths] = useState<number>(24);
+  const [maxPayment, setMaxPayment] = useState<number>(5000);
+  const [secType, setSecType] = useState<SecurityType | null>(null);
+
+  // Działalność
+  const [bizStatus, setBizStatus] = useState<BusinessStatus>("");
+  const [nip, setNip] = useState("");
+
+  // Kontakt
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  // Nieruchomość
+  const [voivodeship, setVoivodeship] = useState("");
+  const [city, setCity] = useState("");
+  const [street, setStreet] = useState("");
+  const [kwStatus, setKwStatus] = useState<KwStatus>("");
+  const [kwNumber, setKwNumber] = useState("");
+  const [kwDescription, setKwDescription] = useState("");
+
+  // Dokumenty
+  const [areaSqm, setAreaSqm] = useState("");
+  const [mpzpInfo, setMpzpInfo] = useState("");
+  const [landRegistryExtract, setLandRegistryExtract] = useState("");
+  const [otherDescription, setOtherDescription] = useState("");
   const [docs, setDocs] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  
 
-  const [client, setClient] = useState<ClientF>({ first_name: "", last_name: "", phone: "", email: "", consent_rodo: false, consent_email: false, consent_phone: false, consent_sms: false });
-  const [loan, setLoan] = useState<LoanF>({ loan_amount: "", preferred_period_months: "", fast_decision: false, preferred_contact_channel: "telefon", situation_description: "" });
-  const [prop, setProp] = useState<PropF>({ property_type: "mieszkanie", voivodeship: "", city: "", address: "", area_sqm: "", estimated_value: "", land_register_number: "", has_mortgage: false, has_co_owners: false, description: "" });
 
-  // Load existing
+  // Wyliczenia
+  const rata = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
+  const totalPay = useMemo(() => totalRepayment(rata, months), [rata, months]);
+  const investorComp = useMemo(() => investorTotalCompensation(rata, months, amount), [rata, months, amount]);
+  const score = useMemo(() => (secType ? interestScore(secType, annualRate) : 0), [secType, annualRate]);
+  const exceedsMax = rata > maxPayment && maxPayment > 0;
+
   useEffect(() => {
     if (!user) return;
+    setEmail((e) => e || user.email || "");
     void (async () => {
       const { data: c } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
       if (c) {
         setClientId(c.id);
-        setClient({ first_name: c.first_name ?? "", last_name: c.last_name ?? "", phone: c.phone ?? "", email: c.email ?? user.email ?? "", consent_rodo: !!c.consent_rodo, consent_email: !!c.consent_email, consent_phone: !!c.consent_phone, consent_sms: !!c.consent_sms });
-        const { data: l } = await supabase.from("loan_applications").select("*").eq("client_id", c.id).order("created_at", { ascending: false }).maybeSingle();
-        if (l) {
-          setLoanId(l.id); setReturnToken(l.return_link_token); setStep(l.current_form_step ?? 1);
-          setLoan({ loan_amount: l.loan_amount?.toString() ?? "", preferred_period_months: l.preferred_period_months?.toString() ?? "", fast_decision: !!l.fast_decision, preferred_contact_channel: l.preferred_contact_channel ?? "telefon", situation_description: l.situation_description ?? "" });
-          const { data: p } = await supabase.from("properties").select("*").eq("loan_application_id", l.id).maybeSingle();
-          if (p) {
-            setPropertyId(p.id);
-            setProp({ property_type: p.property_type, voivodeship: p.voivodeship ?? "", city: p.city ?? "", address: p.address ?? "", area_sqm: p.area_sqm?.toString() ?? "", estimated_value: p.estimated_value?.toString() ?? "", land_register_number: p.land_register_number ?? "", has_mortgage: !!p.has_mortgage, has_co_owners: !!p.has_co_owners, description: p.description ?? "" });
-          }
-          const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", l.id);
-          setDocs(ds ?? []);
-        }
-      } else {
-        setClient((c) => ({ ...c, email: user.email ?? "" }));
+        setFirstName(c.first_name ?? "");
+        setLastName(c.last_name ?? "");
+        setPhone(c.phone ?? "");
+        setEmail(c.email ?? user.email ?? "");
       }
     })();
   }, [user]);
 
-  const ensureLoan = async (): Promise<{ cid: string; lid: string } | null> => {
+  const ensureClient = async (): Promise<string | null> => {
     if (!user) return null;
-    let cid = clientId;
-    if (!cid) {
-      const { data, error } = await supabase.from("clients").insert({ user_id: user.id, first_name: client.first_name || "—", last_name: client.last_name || "—", email: client.email || user.email, phone: client.phone || null, source: "panel_klienta" }).select("id").single();
-      if (error || !data) { toast.error("Błąd zapisu klienta", { description: error?.message }); return null; }
-      cid = data.id; setClientId(cid);
+    if (clientId) {
+      await supabase.from("clients").update({
+        first_name: firstName || "—", last_name: lastName || "—",
+        phone: phone || null, email: email || user.email,
+        consent_rodo: true,
+      }).eq("id", clientId);
+      return clientId;
     }
-    let lid = loanId;
-    if (!lid) {
-      const token = crypto.randomUUID().replace(/-/g, "");
-      const { data, error } = await supabase.from("loan_applications").insert({ client_id: cid, status: "w_trakcie_uzupelniania", source: "panel_klienta", current_form_step: step, return_link_token: token, return_link: `${window.location.origin}/wniosek/${token}` }).select("id, return_link_token").single();
-      if (error || !data) { toast.error("Błąd zapisu wniosku", { description: error?.message }); return null; }
-      lid = data.id; setLoanId(lid); setReturnToken(data.return_link_token);
-    }
-    return { cid, lid };
+    const { data, error } = await supabase.from("clients").insert({
+      user_id: user.id, first_name: firstName || "—", last_name: lastName || "—",
+      email: email || user.email, phone: phone || null, source: "panel_klienta", consent_rodo: true,
+    }).select("id").single();
+    if (error || !data) { toast.error("Błąd zapisu klienta", { description: error?.message }); return null; }
+    setClientId(data.id);
+    return data.id;
   };
 
-  const saveStep = async (next: number) => {
+  const ensureLoan = async (cid: string): Promise<string | null> => {
+    if (loanId) return loanId;
+    const token = crypto.randomUUID().replace(/-/g, "");
+    const { data, error } = await supabase.from("loan_applications").insert({
+      client_id: cid, status: "w_trakcie_uzupelniania", source: "panel_klienta",
+      current_form_step: step, return_link_token: token,
+      return_link: `${window.location.origin}/wniosek/${token}`,
+    }).select("id").single();
+    if (error || !data) { toast.error("Błąd zapisu wniosku", { description: error?.message }); return null; }
+    setLoanId(data.id);
+    return data.id;
+  };
+
+  const persistAll = async (nextStep: number) => {
     setSaving(true);
-    const ids = await ensureLoan();
-    if (!ids) { setSaving(false); return; }
-    await supabase.from("clients").update({
-      first_name: client.first_name, last_name: client.last_name, phone: client.phone, email: client.email,
-      consent_rodo: client.consent_rodo, consent_email: client.consent_email, consent_phone: client.consent_phone, consent_sms: client.consent_sms,
-    }).eq("id", ids.cid);
-    const completeness = computeCompleteness();
-    await supabase.from("loan_applications").update({
-      loan_amount: loan.loan_amount ? Number(loan.loan_amount) : null,
-      preferred_period_months: loan.preferred_period_months ? Number(loan.preferred_period_months) : null,
-      fast_decision: loan.fast_decision, preferred_contact_channel: loan.preferred_contact_channel as any,
-      situation_description: loan.situation_description, current_form_step: next, completeness_percent: completeness,
-    }).eq("id", ids.lid);
-    if (step >= 4 || propertyId) {
-      const payload = { loan_application_id: ids.lid, property_type: prop.property_type as any, voivodeship: prop.voivodeship || null, city: prop.city || null, address: prop.address || null, area_sqm: prop.area_sqm ? Number(prop.area_sqm) : null, estimated_value: prop.estimated_value ? Number(prop.estimated_value) : null, land_register_number: prop.land_register_number || null, has_mortgage: prop.has_mortgage, has_co_owners: prop.has_co_owners, description: prop.description || null };
-      if (propertyId) await supabase.from("properties").update(payload).eq("id", propertyId);
-      else {
-        const { data } = await supabase.from("properties").insert(payload).select("id").single();
-        if (data) setPropertyId(data.id);
-      }
-    }
-    setSaving(false);
-    setStep(next);
-  };
+    try {
+      const cid = await ensureClient();
+      if (!cid) return;
+      const lid = await ensureLoan(cid);
+      if (!lid) return;
 
-  const computeCompleteness = (): number => {
-    let filled = 0; const total = 14;
-    if (client.first_name) filled++; if (client.last_name) filled++; if (client.phone) filled++; if (client.email) filled++;
-    if (client.consent_rodo) filled++;
-    if (loan.loan_amount) filled++; if (loan.preferred_period_months) filled++; if (loan.situation_description) filled++;
-    if (prop.property_type) filled++; if (prop.city) filled++; if (prop.estimated_value) filled++; if (prop.area_sqm) filled++;
-    if (docs.length > 0) filled++; if (prop.land_register_number) filled++;
-    return Math.round((filled / total) * 100);
+      await supabase.from("loan_applications").update({
+        loan_amount: amount,
+        annual_investor_rate: annualRate,
+        max_monthly_payment: maxPayment,
+        preferred_period_months: months,
+        business_status: bizStatus || null,
+        nip: nip || null,
+        kw_status: kwStatus || null,
+        interest_score: secType ? score : null,
+        current_form_step: nextStep,
+      }).eq("id", lid);
+
+      if (secType) {
+        const propPayload = {
+          loan_application_id: lid,
+          property_type: secType as any,
+          voivodeship: voivodeship || null,
+          city: city || null,
+          street: street || null,
+          land_register_number: kwStatus === "znam" ? kwNumber || null : null,
+          description: kwStatus === "brak" ? kwDescription || null : (otherDescription || null),
+          area_sqm: areaSqm ? Number(areaSqm) : null,
+          mpzp_info: mpzpInfo || null,
+          land_registry_extract: landRegistryExtract || null,
+        };
+        if (propertyId) {
+          await supabase.from("properties").update(propPayload).eq("id", propertyId);
+        } else {
+          const { data: p } = await supabase.from("properties").insert(propPayload).select("id").single();
+          if (p) setPropertyId(p.id);
+        }
+      }
+      setStep(nextStep);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const uploadDoc = async (file: File, docType: string) => {
-    if (!loanId || !user) { toast.error("Najpierw zapisz wniosek"); return; }
+    if (!loanId || !user) { toast.error("Najpierw przejdź dalej, aby utworzyć wniosek"); return; }
     setUploading(true);
     const path = `${user.id}/${loanId}/${Date.now()}-${file.name}`;
     const { error: ue } = await supabase.storage.from("documents").upload(path, file);
     if (ue) { toast.error("Błąd uploadu", { description: ue.message }); setUploading(false); return; }
-    const { error: ie } = await supabase.from("documents").insert({ loan_application_id: loanId, file_name: file.name, file_path: path, document_type: docType, uploaded_by: user.id });
+    const { error: ie } = await supabase.from("documents").insert({
+      loan_application_id: loanId, file_name: file.name, file_path: path,
+      document_type: docType, uploaded_by: user.id,
+    });
     if (ie) { toast.error("Błąd zapisu", { description: ie.message }); setUploading(false); return; }
-    toast.success("Dodano dokument");
     const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", loanId);
-    setDocs(ds ?? []); setUploading(false);
+    setDocs(ds ?? []);
+    setUploading(false);
+    toast.success("Dodano dokument");
   };
 
-  const removeDoc = async (d: any) => {
-    if (d.file_path) await supabase.storage.from("documents").remove([d.file_path]);
-    await supabase.from("documents").delete().eq("id", d.id);
-    setDocs((cur) => cur.filter((x) => x.id !== d.id));
+  const docsByType = (t: string) => docs.filter((d) => d.document_type === t);
+
+  // Walidacja kroków
+  const canNext = (): { ok: boolean; msg?: string } => {
+    if (step === 1) {
+      if (!secType) return { ok: false, msg: "Wybierz rodzaj zabezpieczenia." };
+      if (!amount || !months || !annualRate) return { ok: false, msg: "Uzupełnij parametry kalkulatora." };
+      return { ok: true };
+    }
+    if (step === 2) {
+      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
+      if (bizStatus === "nie_zamierza") return { ok: false, msg: "Nie możemy przyjąć wniosku w tej ścieżce." };
+      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
+      return { ok: true };
+    }
+    if (step === 3) {
+      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
+      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
+      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
+      return { ok: true };
+    }
+    if (step === 4) {
+      if (!city.trim() || !voivodeship.trim()) return { ok: false, msg: "Podaj miejscowość i województwo." };
+      if (!kwStatus) return { ok: false, msg: "Wskaż status księgi wieczystej." };
+      if (kwStatus === "znam" && !kwNumber.trim()) return { ok: false, msg: "Podaj numer KW." };
+      if (kwStatus === "nie_znam" && docsByType("dokument_wlasnosci").length === 0)
+        return { ok: false, msg: "Wgraj zdjęcia dokumentu własności." };
+      if (kwStatus === "brak") {
+        if (!kwDescription.trim()) return { ok: false, msg: "Opisz sytuację nieruchomości." };
+        if (docsByType("dokument_wlasnosci").length === 0) return { ok: false, msg: "Wgraj dokumenty potwierdzające prawa." };
+      }
+      return { ok: true };
+    }
+    if (step === 5) {
+      if (!secType) return { ok: false, msg: "Brak typu zabezpieczenia." };
+      if (secType === "mieszkanie" && docsByType("zdjecia_pomieszczen").length === 0)
+        return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
+      if (secType === "dom") {
+        if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową domu." };
+        if (docsByType("zdjecia_pomieszczen").length === 0) return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
+        if (docsByType("zdjecia_bryly").length === 0) return { ok: false, msg: "Wgraj zdjęcia bryły budynku." };
+      }
+      if (secType === "lokal_uslugowy") {
+        if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową lokalu." };
+        if (docsByType("zdjecia_lokalu").length === 0) return { ok: false, msg: "Wgraj zdjęcia lokalu." };
+      }
+      if (secType === "dzialka_budowlana" && !mpzpInfo.trim() && docsByType("mpzp").length === 0)
+        return { ok: false, msg: "Dodaj informację o MPZP / warunkach zabudowy." };
+      if (secType === "grunt_rolny" && !landRegistryExtract.trim() && docsByType("wypis_rejestru").length === 0)
+        return { ok: false, msg: "Dodaj wypis z rejestru gruntów." };
+      if (secType === "inna") {
+        if (!otherDescription.trim()) return { ok: false, msg: "Opisz nieruchomość." };
+        if (docsByType("inne").length === 0) return { ok: false, msg: "Wgraj dokumenty lub zdjęcia." };
+      }
+      return { ok: true };
+    }
+    return { ok: true };
   };
 
-  const submitFinal = async () => {
+  const goNext = async () => {
+    const v = canNext();
+    if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
+    await persistAll(step + 1);
+  };
+
+  const submit = async () => {
     if (!loanId) { toast.error("Brak wniosku"); return; }
-    if (!client.consent_rodo) { toast.error("Wymagana zgoda RODO"); return; }
-    await saveStep(7);
-    await supabase.from("loan_applications").update({ status: "wniosek_kompletny" as any, completeness_percent: 100 }).eq("id", loanId);
-    toast.success("Wniosek wysłany");
-    void navigate({ to: "/klient/status" });
+    setSubmitting(true);
+    try {
+      await persistAll(6);
+      await supabase.from("loan_applications").update({
+        status: "wniosek_kompletny" as any,
+        completeness_percent: 100,
+        available_to_investors: false,
+      }).eq("id", loanId);
+      toast.success("Wniosek wysłany do analizy");
+      void navigate({ to: "/klient/status" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const requiredDocsByType: Record<string, string[]> = {
-    mieszkanie: ["Dowód osobisty", "Odpis z księgi wieczystej", "Zdjęcia mieszkania"],
-    dom: ["Dowód osobisty", "Odpis z księgi wieczystej", "Zdjęcia domu", "Wypis z rejestru gruntów"],
-    lokal_uslugowy: ["Dowód osobisty", "Odpis KW", "Umowy najmu", "Zdjęcia"],
-    dzialka_budowlana: ["Dowód osobisty", "Wypis i wyrys", "Decyzja o warunkach zabudowy"],
-    grunt_rolny: ["Dowód osobisty", "Wypis z rejestru gruntów", "Mapa"],
-    udzial_w_nieruchomosci: ["Dowód osobisty", "Odpis KW", "Akt notarialny"],
-    inna: ["Dowód osobisty", "Dokumenty własności"],
-  };
-
-  const completeness = computeCompleteness();
+  const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Mój wniosek</h1>
+        <h1 className="text-2xl font-bold">Wniosek o pożyczkę pod zastaw nieruchomości</h1>
         <p className="text-sm text-muted-foreground">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></p>
       </div>
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Kompletność</span><span>{completeness}%</span></div>
-        <Progress value={completeness} />
-      </div>
-      {returnToken && <Card className="bg-muted/50"><CardContent className="py-3 text-xs"><span className="text-muted-foreground">Twój link powrotny: </span><code className="break-all">{window.location.origin}/wniosek/{returnToken}</code></CardContent></Card>}
+      <Progress value={progress} />
 
-      <Card>
-        <CardHeader><CardTitle>{STEPS[step - 1]}</CardTitle><CardDescription>Dane zapisują się automatycznie po kliknięciu „Dalej".</CardDescription></CardHeader>
-        <CardContent className="space-y-4">
-          {step === 1 && <div className="grid gap-3 md:grid-cols-2">
-            <div><Label>Imię *</Label><Input value={client.first_name} onChange={(e) => setClient({ ...client, first_name: e.target.value })} /></div>
-            <div><Label>Nazwisko *</Label><Input value={client.last_name} onChange={(e) => setClient({ ...client, last_name: e.target.value })} /></div>
-            <div><Label>Telefon *</Label><Input value={client.phone} onChange={(e) => setClient({ ...client, phone: e.target.value })} /></div>
-            <div><Label>E-mail *</Label><Input type="email" value={client.email} onChange={(e) => setClient({ ...client, email: e.target.value })} /></div>
-          </div>}
-          {step === 2 && <div className="space-y-3 text-sm">
-            <label className="flex items-start gap-2"><Checkbox checked={client.consent_rodo} onCheckedChange={(v) => setClient({ ...client, consent_rodo: !!v })} /><span>Zgoda na przetwarzanie danych osobowych (RODO) *</span></label>
-            <label className="flex items-start gap-2"><Checkbox checked={client.consent_email} onCheckedChange={(v) => setClient({ ...client, consent_email: !!v })} /><span>Zgoda na kontakt e-mail</span></label>
-            <label className="flex items-start gap-2"><Checkbox checked={client.consent_phone} onCheckedChange={(v) => setClient({ ...client, consent_phone: !!v })} /><span>Zgoda na kontakt telefoniczny</span></label>
-            <label className="flex items-start gap-2"><Checkbox checked={client.consent_sms} onCheckedChange={(v) => setClient({ ...client, consent_sms: !!v })} /><span>Zgoda na SMS</span></label>
-          </div>}
-          {step === 3 && <div className="grid gap-3 md:grid-cols-2">
-            <div><Label>Kwota pożyczki (PLN) *</Label><Input type="number" value={loan.loan_amount} onChange={(e) => setLoan({ ...loan, loan_amount: e.target.value })} /></div>
-            <div><Label>Okres (miesiące) *</Label><Input type="number" value={loan.preferred_period_months} onChange={(e) => setLoan({ ...loan, preferred_period_months: e.target.value })} /></div>
-            <div><Label>Preferowany kanał kontaktu</Label>
-              <Select value={loan.preferred_contact_channel} onValueChange={(v) => setLoan({ ...loan, preferred_contact_channel: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(contactChannelLabels).filter(([k]) => k !== "system" && k !== "notatka").map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <label className="flex items-end gap-2 pb-2"><Checkbox checked={loan.fast_decision} onCheckedChange={(v) => setLoan({ ...loan, fast_decision: !!v })} /><span>Potrzebuję szybkiej decyzji</span></label>
-            <div className="md:col-span-2"><Label>Opis sytuacji</Label><Textarea rows={4} value={loan.situation_description} onChange={(e) => setLoan({ ...loan, situation_description: e.target.value })} /></div>
-          </div>}
-          {step === 4 && <div className="grid gap-3 md:grid-cols-2">
-            <div className="md:col-span-2"><Label>Typ nieruchomości *</Label>
-              <Select value={prop.property_type} onValueChange={(v) => setProp({ ...prop, property_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(propertyTypeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Województwo</Label><Input value={prop.voivodeship} onChange={(e) => setProp({ ...prop, voivodeship: e.target.value })} /></div>
-            <div><Label>Miasto *</Label><Input value={prop.city} onChange={(e) => setProp({ ...prop, city: e.target.value })} /></div>
-            <div className="md:col-span-2"><Label>Adres</Label><Input value={prop.address} onChange={(e) => setProp({ ...prop, address: e.target.value })} /></div>
-          </div>}
-          {step === 5 && <div className="grid gap-3 md:grid-cols-2">
-            <div><Label>Powierzchnia (m²)</Label><Input type="number" value={prop.area_sqm} onChange={(e) => setProp({ ...prop, area_sqm: e.target.value })} /></div>
-            <div><Label>Szacowana wartość (PLN) *</Label><Input type="number" value={prop.estimated_value} onChange={(e) => setProp({ ...prop, estimated_value: e.target.value })} /></div>
-            <div className="md:col-span-2"><Label>Numer KW</Label><Input value={prop.land_register_number} onChange={(e) => setProp({ ...prop, land_register_number: e.target.value })} /></div>
-            <label className="flex items-center gap-2"><Checkbox checked={prop.has_mortgage} onCheckedChange={(v) => setProp({ ...prop, has_mortgage: !!v })} /><span>Hipoteka na nieruchomości</span></label>
-            <label className="flex items-center gap-2"><Checkbox checked={prop.has_co_owners} onCheckedChange={(v) => setProp({ ...prop, has_co_owners: !!v })} /><span>Współwłaściciele</span></label>
-            <div className="md:col-span-2"><Label>Opis</Label><Textarea rows={3} value={prop.description} onChange={(e) => setProp({ ...prop, description: e.target.value })} /></div>
-          </div>}
-          {step === 6 && <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Wymagane dokumenty dla typu „{propertyTypeLabels[prop.property_type]}":</p>
-            <ul className="text-sm list-disc pl-5 text-muted-foreground">{(requiredDocsByType[prop.property_type] ?? []).map((d) => <li key={d}>{d}</li>)}</ul>
-            <div className="border-2 border-dashed rounded-lg p-4">
-              <Label>Dodaj dokument</Label>
-              <div className="grid gap-2 md:grid-cols-[1fr_auto] mt-2">
-                <Input ref={fileRef} type="file" />
-                <Button disabled={uploading} onClick={() => {
-                  const f = fileRef.current?.files?.[0]; if (!f) return;
-                  void uploadDoc(f, "klient_upload");
-                  if (fileRef.current) fileRef.current.value = "";
-                }}>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Wyślij"}</Button>
+      {step === 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" /> Sprawdź orientacyjne warunki pożyczki pod zastaw nieruchomości
+            </CardTitle>
+            <CardDescription>Ustaw parametry — od razu zobaczysz orientacyjną ratę i wskaźnik zainteresowania inwestora.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Jakiej kwoty potrzebujesz?</Label>
+                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
               </div>
+              <Slider min={20000} max={1_000_000} step={5000} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Jakie wynagrodzenie roczne oferujesz inwestorowi?</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="number" step="0.5" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24" />
+                  <span className="text-sm">%</span>
+                </div>
+              </div>
+              <Slider min={15} max={36} step={0.5} value={[Math.min(36, annualRate)]} onValueChange={(v) => { setAnnualRate(v[0]); setRateAboveCap(false); }} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>36%</span></div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={rateAboveCap} onChange={(e) => { setRateAboveCap(e.target.checked); if (e.target.checked) setAnnualRate(40); }} />
+                <span>Powyżej 36% — do indywidualnego ustalenia</span>
+              </label>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Na jaki okres chcesz zaciągnąć zobowiązanie?</Label>
+                <span className="text-sm tabular-nums">{months} mies.</span>
+              </div>
+              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Jaką maksymalną ratę miesięczną możesz płacić?</Label>
+                <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
+              </div>
+              <Slider min={500} max={50000} step={250} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
+            </div>
+
+            <div className="space-y-3">
+              <Label>Co ma być zabezpieczeniem?</Label>
+              <SecurityTypePicker value={secType} onChange={setSecType} />
+            </div>
+
+            {secType && <InvestorInterestMeter score={score} />}
+
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+              <div className="flex justify-between text-sm"><span>Orientacyjna rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
+              <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
+              <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
+              <p className="text-xs text-muted-foreground pt-2">
+                To jest kalkulacja orientacyjna. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
+              </p>
+            </div>
+
+            {exceedsMax && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Przy wybranych parametrach orientacyjna rata może być wyższa niż wskazana przez Ciebie maksymalna rata. Możesz wydłużyć okres, zmniejszyć kwotę albo zmienić oferowane wynagrodzenie.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Czy prowadzisz działalność gospodarczą albo zamierzasz ją założyć?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup value={bizStatus} onValueChange={(v) => setBizStatus(v as BusinessStatus)}>
+              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
+                <RadioGroupItem value="prowadzi" className="mt-0.5" />
+                <span>Tak, prowadzę działalność gospodarczą</span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
+                <RadioGroupItem value="zamierza" className="mt-0.5" />
+                <span>Nie prowadzę, ale zamierzam ją założyć</span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
+                <RadioGroupItem value="nie_zamierza" className="mt-0.5" />
+                <span>Nie prowadzę i nie zamierzam zakładać działalności</span>
+              </label>
+            </RadioGroup>
+
+            {bizStatus === "prowadzi" && (
+              <div>
+                <Label>Podaj NIP *</Label>
+                <Input value={nip} onChange={(e) => setNip(e.target.value)} placeholder="np. 1234567890" />
+              </div>
+            )}
+
+            {bizStatus === "nie_zamierza" && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Na ten moment nie możemy przyjąć wniosku w tym formularzu. Finansowanie w tym modelu jest przeznaczone dla osób prowadzących działalność gospodarczą albo deklarujących gotowość jej założenia.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 3 && (
+        <Card>
+          <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+            <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+            <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 4 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gdzie leży ta nieruchomość?</CardTitle>
+            <CardDescription>Wybrany typ: <b>{secType ? securityTypeLabels[secType] : "—"}</b>{" "}
+              <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setStep(1)}>Zmień rodzaj zabezpieczenia</Button>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div><Label>Województwo *</Label><Input value={voivodeship} onChange={(e) => setVoivodeship(e.target.value)} /></div>
+              <div><Label>Miejscowość *</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
+              <div className="md:col-span-2"><Label>Ulica</Label><Input value={street} onChange={(e) => setStreet(e.target.value)} /></div>
+            </div>
+
             <div className="space-y-2">
-              {docs.length === 0 ? <p className="text-sm text-muted-foreground">Brak dokumentów.</p> :
-                docs.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-2">
-                    <span>{d.file_name}</span>
-                    <Button variant="ghost" size="sm" onClick={() => removeDoc(d)}>Usuń</Button>
-                  </div>
-                ))}
+              <Label>Czy znasz numer księgi wieczystej?</Label>
+              <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)}>
+                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="znam" /><span>Tak, znam</span></label>
+                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_znam" /><span>Nie znam / nie mam teraz przy sobie</span></label>
+                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="brak" /><span>Nieruchomość nie ma księgi wieczystej</span></label>
+              </RadioGroup>
             </div>
-          </div>}
-          {step === 7 && <div className="space-y-3 text-sm">
-            <p className="text-muted-foreground">Sprawdź dane i wyślij wniosek do analizy.</p>
-            <div className="grid gap-1 rounded-md border p-3">
-              <div><b>{client.first_name} {client.last_name}</b> · {client.phone} · {client.email}</div>
-              <div>Kwota: <b>{loan.loan_amount} PLN</b> · Okres: <b>{loan.preferred_period_months} mies.</b></div>
-              <div>Nieruchomość: <b>{propertyTypeLabels[prop.property_type]}</b>, {prop.city} · wartość: <b>{prop.estimated_value} PLN</b></div>
-              <div>Dokumenty: <b>{docs.length}</b> · Kompletność: <b>{completeness}%</b></div>
-            </div>
-            {!client.consent_rodo && <p className="text-destructive">Musisz zaakceptować zgodę RODO (krok 2).</p>}
-          </div>}
-        </CardContent>
-      </Card>
+
+            {kwStatus === "znam" && (
+              <div><Label>Numer księgi wieczystej *</Label><Input value={kwNumber} onChange={(e) => setKwNumber(e.target.value)} placeholder="np. WA1M/00000000/0" /></div>
+            )}
+
+            {kwStatus === "nie_znam" && (
+              <DocUploader
+                label="Wgraj zdjęcia dokumentu, na podstawie którego stałeś/aś się właścicielem nieruchomości *"
+                docType="dokument_wlasnosci"
+                docs={docsByType("dokument_wlasnosci")}
+                uploading={uploading}
+                onUpload={uploadDoc}
+              />
+            )}
+
+            {kwStatus === "brak" && (
+              <>
+                <div><Label>Opisz sytuację nieruchomości *</Label><Textarea rows={3} value={kwDescription} onChange={(e) => setKwDescription(e.target.value)} /></div>
+                <DocUploader label="Wgraj dokumenty potwierdzające Twoje prawa do nieruchomości *"
+                  docType="dokument_wlasnosci" docs={docsByType("dokument_wlasnosci")} uploading={uploading} onUpload={uploadDoc} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 5 && secType && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dokumenty — {securityTypeLabels[secType]}</CardTitle>
+            <CardDescription>Uzupełnij wymagane informacje i załączniki.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {secType === "mieszkanie" && (
+              <DocUploader label="Zdjęcia każdego pomieszczenia *" docType="zdjecia_pomieszczen"
+                docs={docsByType("zdjecia_pomieszczen")} uploading={uploading} onUpload={uploadDoc} multiple />
+            )}
+
+            {secType === "dom" && (
+              <>
+                <div><Label>Powierzchnia użytkowa domu (m²) *</Label><Input type="number" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} /></div>
+                <DocUploader label="Zdjęcia każdego pomieszczenia *" docType="zdjecia_pomieszczen"
+                  docs={docsByType("zdjecia_pomieszczen")} uploading={uploading} onUpload={uploadDoc} multiple />
+                <DocUploader label="Zdjęcia bryły budynku z zewnątrz *" docType="zdjecia_bryly"
+                  docs={docsByType("zdjecia_bryly")} uploading={uploading} onUpload={uploadDoc} multiple />
+              </>
+            )}
+
+            {secType === "lokal_uslugowy" && (
+              <>
+                <div><Label>Powierzchnia użytkowa lokalu (m²) *</Label><Input type="number" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} /></div>
+                <DocUploader label="Zdjęcia lokalu z zewnątrz i wewnątrz *" docType="zdjecia_lokalu"
+                  docs={docsByType("zdjecia_lokalu")} uploading={uploading} onUpload={uploadDoc} multiple />
+              </>
+            )}
+
+            {secType === "dzialka_budowlana" && (
+              <>
+                <div><Label>Zaświadczenie z MPZP albo warunki zabudowy — informacja *</Label>
+                  <Textarea rows={3} value={mpzpInfo} onChange={(e) => setMpzpInfo(e.target.value)} placeholder="Opisz lub załącz dokument" />
+                </div>
+                <DocUploader label="Załącz dokument (MPZP / warunki zabudowy)" docType="mpzp"
+                  docs={docsByType("mpzp")} uploading={uploading} onUpload={uploadDoc} multiple />
+              </>
+            )}
+
+            {secType === "grunt_rolny" && (
+              <>
+                <div><Label>Wypis z rejestru gruntów — informacja *</Label>
+                  <Textarea rows={3} value={landRegistryExtract} onChange={(e) => setLandRegistryExtract(e.target.value)} />
+                </div>
+                <DocUploader label="Załącz wypis z rejestru gruntów" docType="wypis_rejestru"
+                  docs={docsByType("wypis_rejestru")} uploading={uploading} onUpload={uploadDoc} multiple />
+              </>
+            )}
+
+            {secType === "inna" && (
+              <>
+                <div><Label>Opis nieruchomości *</Label><Textarea rows={4} value={otherDescription} onChange={(e) => setOtherDescription(e.target.value)} /></div>
+                <DocUploader label="Dokumenty lub zdjęcia nieruchomości *" docType="inne"
+                  docs={docsByType("inne")} uploading={uploading} onUpload={uploadDoc} multiple />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 6 && (
+        <Card>
+          <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Row k="Kwota pożyczki" v={formatPLN(amount)} />
+            <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
+            <Row k="Okres finansowania" v={`${months} mies.`} />
+            <Row k="Orientacyjna rata" v={formatPLN(rata)} />
+            <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
+            <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
+            <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
+            <Row k="Status działalności" v={bizStatus === "prowadzi" ? "Prowadzi działalność" : bizStatus === "zamierza" ? "Zamierza założyć" : "—"} />
+            {nip && <Row k="NIP" v={nip} />}
+            <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
+            <Row k="E-mail" v={email} />
+            <Row k="Telefon" v={phone} />
+            <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
+            <Row k="Lokalizacja" v={`${voivodeship}, ${city}${street ? ", " + street : ""}`} />
+            <Row k="Księga wieczysta" v={kwStatus === "znam" ? kwNumber : kwStatus === "nie_znam" ? "Dokument własności (załączony)" : kwStatus === "brak" ? "Brak KW — opis i dokumenty" : "—"} />
+            <Row k="Załączone dokumenty" v={`${docs.length}`} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex justify-between">
-        <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}><ArrowLeft className="mr-2 h-4 w-4" /> Wstecz</Button>
-        {step < 7 ? (
-          <Button disabled={saving} onClick={() => void saveStep(step + 1)}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}</Button>
+        <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+        </Button>
+        {step === 2 && bizStatus === "nie_zamierza" ? (
+          <Button variant="outline" onClick={() => setStep(1)}>Wróć do kalkulatora</Button>
+        ) : step < STEPS.length ? (
+          <Button disabled={saving} onClick={() => void goNext()}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2 h-4 w-4" /></>}
+          </Button>
         ) : (
-          <Button disabled={saving || !client.consent_rodo} onClick={() => void submitFinal()}><Send className="mr-2 h-4 w-4" /> Wyślij wniosek</Button>
+          <Button disabled={submitting} onClick={() => void submit()}>
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Wyślij kompletny wniosek do analizy</>}
+          </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between border-b py-1.5"><span className="text-muted-foreground">{k}</span><b className="text-right">{v}</b></div>
+  );
+}
+
+function DocUploader({
+  label, docType, docs, uploading, onUpload, multiple,
+}: {
+  label: string; docType: string; docs: any[]; uploading: boolean;
+  onUpload: (f: File, t: string) => Promise<void>; multiple?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input ref={ref} type="file" multiple={multiple} />
+        <Button type="button" disabled={uploading} onClick={async () => {
+          const files = ref.current?.files;
+          if (!files || !files.length) return;
+          for (const f of Array.from(files)) await onUpload(f, docType);
+          if (ref.current) ref.current.value = "";
+        }}>
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1" /> Wyślij</>}
+        </Button>
+      </div>
+      {docs.length > 0 && (
+        <ul className="text-xs text-muted-foreground space-y-1">
+          {docs.map((d) => <li key={d.id}>• {d.file_name}</li>)}
+        </ul>
+      )}
     </div>
   );
 }
