@@ -9,7 +9,11 @@ const Schema = z.object({
   email: z.string().email().max(255),
   phone: z.string().min(6).max(30),
   loan_amount: z.number().min(1000).max(100_000_000),
+  annual_investor_rate: z.number().min(1).max(100).optional().nullable(),
+  max_monthly_payment: z.number().min(0).max(10_000_000).optional().nullable(),
   preferred_period_months: z.number().int().min(1).max(600),
+  business_status: z.enum(["prowadzi", "zamierza", "nie_zamierza"]).optional().nullable(),
+  nip: z.string().max(20).optional().nullable(),
   property_type: z.enum([
     "mieszkanie",
     "dom",
@@ -20,10 +24,15 @@ const Schema = z.object({
     "inna",
   ]),
   city: z.string().max(120).optional().nullable(),
+  street: z.string().max(200).optional().nullable(),
+  voivodeship: z.string().max(120).optional().nullable(),
+  kw_status: z.enum(["znam", "nie_znam", "brak"]).optional().nullable(),
+  land_register_number: z.string().max(60).optional().nullable(),
   situation_description: z.string().max(2000).optional().nullable(),
   consent_rodo: z.literal(true),
   source: z.string().max(120).optional().nullable(),
 });
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
