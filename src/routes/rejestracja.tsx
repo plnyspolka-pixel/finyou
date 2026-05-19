@@ -17,6 +17,7 @@ function RegisterPage() {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"klient" | "inwestor">("klient");
@@ -24,6 +25,10 @@ function RegisterPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim() || !password) {
+      toast.error("Uzupełnij wszystkie pola");
+      return;
+    }
     setLoading(true);
     const redirectUrl = `${window.location.origin}/`;
     const { data, error } = await supabase.auth.signUp({
@@ -31,7 +36,7 @@ function RegisterPage() {
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: { first_name: firstName, last_name: lastName },
+        data: { first_name: firstName, last_name: lastName, phone },
       },
     });
     if (error) {
@@ -39,18 +44,21 @@ function RegisterPage() {
       toast.error("Rejestracja nie powiodła się", { description: error.message });
       return;
     }
-    // Jeśli rola inna niż domyślna „klient", dopisz dodatkową rolę
-    if (data.user && role === "inwestor") {
-      await supabase.from("user_roles").insert({ user_id: data.user.id, role });
-      // Utwórz wpis inwestora indywidualnego
-      await supabase.from("investors").insert({
-        user_id: data.user.id,
-        investor_type: "indywidualny",
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        subscription_status: "nieaktywny",
-      });
+    if (data.user) {
+      // Zapisz telefon w profilu
+      await supabase.from("profiles").update({ phone }).eq("user_id", data.user.id);
+      if (role === "inwestor") {
+        await supabase.from("user_roles").insert({ user_id: data.user.id, role });
+        await supabase.from("investors").insert({
+          user_id: data.user.id,
+          investor_type: "indywidualny",
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          subscription_status: "nieaktywny",
+        });
+      }
     }
     setLoading(false);
     toast.success("Konto utworzone", { description: "Możesz się teraz zalogować." });
