@@ -29,6 +29,7 @@ import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as AdminWnioskiRouteImport } from './routes/admin.wnioski'
+import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
@@ -146,6 +147,11 @@ const AdminWnioskiRoute = AdminWnioskiRouteImport.update({
   path: '/wnioski',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
+  id: '/voicebot',
+  path: '/voicebot',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
   id: '/ustawienia',
   path: '/ustawienia',
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -321,6 +329,7 @@ export interface FileRoutesById {
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
+  '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/ustawienia'
+    | '/admin/voicebot'
     | '/admin/wnioski'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/ustawienia'
+    | '/admin/voicebot'
     | '/admin/wnioski'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -434,6 +445,7 @@ export interface FileRouteTypes {
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/ustawienia'
+    | '/admin/voicebot'
     | '/admin/wnioski'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -607,6 +619,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWnioskiRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/voicebot': {
+      id: '/admin/voicebot'
+      path: '/voicebot'
+      fullPath: '/admin/voicebot'
+      preLoaderRoute: typeof AdminVoicebotRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ustawienia': {
       id: '/admin/ustawienia'
       path: '/ustawienia'
@@ -759,6 +778,7 @@ interface AdminRouteChildren {
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
+  AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiRoute: typeof AdminWnioskiRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -776,6 +796,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminRoleRoute: AdminRoleRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
+  AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiRoute: AdminWnioskiRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
