@@ -5,7 +5,13 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
@@ -34,9 +40,16 @@ function LoginPage() {
     toast.success("Zalogowano");
     const { data } = await supabase.auth.getUser();
     const { data: roleRows } = await supabase
-      .from("user_roles").select("role").eq("user_id", data.user!.id);
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user!.id);
     await refreshRoles();
-    const roles = (roleRows ?? []).map((r) => r.role) as ("administrator" | "operator" | "klient" | "inwestor")[];
+    const roles = (roleRows ?? []).map((r) => r.role) as (
+      | "administrator"
+      | "operator"
+      | "klient"
+      | "inwestor"
+    )[];
     navigate({ to: defaultPathForRoles(roles) });
   };
 
