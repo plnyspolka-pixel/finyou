@@ -40,6 +40,7 @@ import { Route as AdminFollowUpRouteImport } from './routes/admin.follow-up'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
+import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 
@@ -198,6 +199,12 @@ const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   path: '/wniosek/$id',
   getParentRoute: () => InwestorRoute,
 } as any)
+const ApiPublicElevenlabsWebhookRoute =
+  ApiPublicElevenlabsWebhookRouteImport.update({
+    id: '/api/public/elevenlabs-webhook',
+    path: '/api/public/elevenlabs-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -242,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/klient/': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRoutesByTo {
@@ -274,6 +282,7 @@ export interface FileRoutesByTo {
   '/klient': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRoutesById {
@@ -310,6 +319,7 @@ export interface FileRoutesById {
   '/klient/': typeof KlientIndexRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
 }
 export interface FileRouteTypes {
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/klient/'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/api/public/elevenlabs-webhook'
     | '/inwestor/wniosek/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/api/public/elevenlabs-webhook'
     | '/inwestor/wniosek/$id'
   id:
     | '__root__'
@@ -414,6 +426,7 @@ export interface FileRouteTypes {
     | '/klient/'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
+    | '/api/public/elevenlabs-webhook'
     | '/inwestor/wniosek/$id'
   fileRoutesById: FileRoutesById
 }
@@ -425,6 +438,7 @@ export interface RootRouteChildren {
   LogowanieRoute: typeof LogowanieRoute
   RejestracjaRoute: typeof RejestracjaRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
+  ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -646,6 +660,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorWniosekIdRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/api/public/elevenlabs-webhook': {
+      id: '/api/public/elevenlabs-webhook'
+      path: '/api/public/elevenlabs-webhook'
+      fullPath: '/api/public/elevenlabs-webhook'
+      preLoaderRoute: typeof ApiPublicElevenlabsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
       path: '/$id'
@@ -770,6 +791,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogowanieRoute: LogowanieRoute,
   RejestracjaRoute: RejestracjaRoute,
   WniosekTokenRoute: WniosekTokenRoute,
+  ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
