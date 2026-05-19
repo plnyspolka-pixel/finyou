@@ -52,6 +52,7 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
@@ -270,6 +271,12 @@ const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminInwestorzyRoute,
 } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -357,6 +365,7 @@ export interface FileRoutesByTo {
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -403,6 +412,7 @@ export interface FileRoutesById {
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -450,6 +460,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
     | '/inwestor/wniosek/$id'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -492,6 +503,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
     | '/inwestor/wniosek/$id'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -537,6 +549,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
     | '/inwestor/wniosek/$id'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -551,6 +564,7 @@ export interface RootRouteChildren {
   WniosekTokenRoute: typeof WniosekTokenRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -856,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInwestorzyIdRouteImport
       parentRoute: typeof AdminInwestorzyRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -982,6 +1003,7 @@ const rootRouteChildren: RootRouteChildren = {
   WniosekTokenRoute: WniosekTokenRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

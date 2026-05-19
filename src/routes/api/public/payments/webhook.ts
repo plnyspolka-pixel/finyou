@@ -38,9 +38,8 @@ async function handleCheckoutCompleted(session: any) {
   }
 
   const days = PLAN_DURATION_DAYS[plan];
-  const supabase = getSupabase();
+  const supabase = getSupabase() as any;
 
-  // Find existing investor row
   const { data: existing } = await supabase
     .from("investors")
     .select("id, subscription_active_until")
@@ -48,14 +47,13 @@ async function handleCheckoutCompleted(session: any) {
     .maybeSingle();
 
   const now = new Date();
-  const currentEnd = (existing?.subscription_active_until as string | null)
-    ? new Date(existing!.subscription_active_until as string)
+  const currentEnd = existing?.subscription_active_until
+    ? new Date(existing.subscription_active_until as string)
     : null;
-  // Extend from later of (now, currentEnd) — so a renewal stacks on remaining time
   const base = currentEnd && currentEnd > now ? currentEnd : now;
   const newEnd = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
 
-  const payload: Record<string, unknown> = {
+  const payload = {
     subscription_plan: PLAN_TO_DB[plan],
     subscription_status: "aktywny",
     subscription_source: "stripe",
@@ -68,7 +66,6 @@ async function handleCheckoutCompleted(session: any) {
   if (existing?.id) {
     await supabase.from("investors").update(payload).eq("id", existing.id);
   } else {
-    // Look up profile for name/email backfill
     const { data: profile } = await supabase
       .from("profiles")
       .select("first_name, last_name, email, phone")
@@ -77,20 +74,18 @@ async function handleCheckoutCompleted(session: any) {
     await supabase.from("investors").insert({
       user_id: userId,
       investor_type: "indywidualny",
-      first_name: (profile?.first_name as string | null) ?? null,
-      last_name: (profile?.last_name as string | null) ?? null,
-      email: (profile?.email as string | null) ?? null,
-      phone: (profile?.phone as string | null) ?? null,
+      first_name: profile?.first_name ?? null,
+      last_name: profile?.last_name ?? null,
+      email: profile?.email ?? null,
+      phone: profile?.phone ?? null,
       ...payload,
     });
   }
 
-  // Ensure user has 'inwestor' role
   await supabase
     .from("user_roles")
-    .upsert({ user_id: userId, role: "inwestor" }, { onConflict: "user_id,role" } as any);
+    .upsert({ user_id: userId, role: "inwestor" }, { onConflict: "user_id,role" });
 
-  // Audit log
   await supabase.from("audit_logs").insert({
     user_id: userId,
     object_type: "investor_subscription",
