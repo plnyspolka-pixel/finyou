@@ -63,7 +63,11 @@ function LoginPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Rola dla logowania Google</Label>
-            <RadioGroup value={googleRole} onValueChange={(v) => setGoogleRole(v as "klient" | "inwestor")} className="grid grid-cols-2 gap-2">
+            <RadioGroup
+              value={googleRole}
+              onValueChange={(v) => setGoogleRole(v as "klient" | "inwestor")}
+              className="grid grid-cols-2 gap-2"
+            >
               <label className="flex items-center gap-2 rounded-md border border-input p-3 cursor-pointer text-sm">
                 <RadioGroupItem value="klient" id="google-r-klient" />
                 <span>Klient</span>
@@ -79,11 +83,15 @@ function LoginPage() {
             variant="outline"
             className="w-full"
             onClick={async () => {
-              try { localStorage.setItem("pending_signup_role", googleRole); } catch {}
+              localStorage.setItem("pending_signup_role", googleRole);
               const res = await lovable.auth.signInWithOAuth("google", {
                 redirect_uri: `${window.location.origin}/`,
               });
-              if (res.error) toast.error("Logowanie Google nie powiodło się", { description: res.error.message });
+              if (res.error) {
+                toast.error("Logowanie Google nie powiodło się", {
+                  description: res.error.message,
+                });
+              }
             }}
           >
             Kontynuuj z Google
