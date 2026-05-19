@@ -20,6 +20,7 @@ const items = [
   { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
   { to: "/admin/oferty", label: "Oferty", icon: Tag },
   { to: "/admin/integracje", label: "Integracje", icon: Plug },
+  { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
   { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
 ];
 
