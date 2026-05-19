@@ -120,11 +120,20 @@ function InwestorWniosek() {
       <h1 className="text-2xl font-bold">Wniosek {formatPLN(app.loan_amount)} · {app.preferred_period_months} mies.</h1>
 
       {p && <Card><CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
-        <CardContent className="text-sm grid gap-1 md:grid-cols-2">
-          <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
-          <div><span className="text-muted-foreground">Lokalizacja:</span> {[p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
-          <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
-          <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>
+        <CardContent className="space-y-4">
+          {p.photos?.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {p.photos.map((src: string, i: number) => (
+                <img key={i} src={src} alt="" className="aspect-[4/3] w-full object-cover rounded-md" loading="lazy" />
+              ))}
+            </div>
+          )}
+          <div className="text-sm grid gap-1 md:grid-cols-2">
+            <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
+            <div><span className="text-muted-foreground">Lokalizacja:</span> {[p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
+            <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
+            <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>
+          </div>
         </CardContent>
       </Card>}
 

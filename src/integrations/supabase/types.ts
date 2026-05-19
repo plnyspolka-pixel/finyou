@@ -789,6 +789,7 @@ export type Database = {
           id: string
           land_register_number: string | null
           loan_application_id: string
+          photos: string[]
           property_type: Database["public"]["Enums"]["property_type"]
           updated_at: string
           voivodeship: string | null
@@ -805,6 +806,7 @@ export type Database = {
           id?: string
           land_register_number?: string | null
           loan_application_id: string
+          photos?: string[]
           property_type: Database["public"]["Enums"]["property_type"]
           updated_at?: string
           voivodeship?: string | null
@@ -821,6 +823,7 @@ export type Database = {
           id?: string
           land_register_number?: string | null
           loan_application_id?: string
+          photos?: string[]
           property_type?: Database["public"]["Enums"]["property_type"]
           updated_at?: string
           voivodeship?: string | null
