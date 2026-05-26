@@ -72,15 +72,53 @@ function DokumentyPage() {
     if (error) toast.error(error.message); else { toast.success("Usunięto"); void load(); }
   };
 
+  const openWithContent = (name: string, html: string) => {
+    setEditing({ ...newTemplate(), name, content_html: html });
+  };
+
+  const onFilePicked = async (file: File) => {
+    if (!file) return;
+    const name = file.name.replace(/\.[^.]+$/, "");
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["txt", "html", "htm", "md"].includes(ext || "")) {
+      toast.error("Obsługiwane formaty: .txt, .html, .md (dla .docx/.pdf użyj Google Docs)");
+      return;
+    }
+    const text = await file.text();
+    let html = text;
+    if (ext === "txt" || ext === "md") {
+      html = text.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`).join("");
+    }
+    openWithContent(name, html);
+    toast.success("Wczytano plik — uzupełnij dane i zapisz");
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Dokumenty — szablony</h1>
           <p className="text-sm text-muted-foreground">Twórz szablony z placeholderami; AI pomoże wskazać miejsca do zamiany.</p>
         </div>
-        <Button onClick={() => setEditing(newTemplate())}><Plus className="mr-2 h-4 w-4" /> Nowy szablon</Button>
+        <div className="flex gap-2 flex-wrap">
+          <input ref={fileInputRef} type="file" accept=".txt,.html,.htm,.md" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFilePicked(f); e.target.value = ""; }} />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" /> Wgraj plik
+          </Button>
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <FileText className="mr-2 h-4 w-4" /> Importuj z Google Docs
+          </Button>
+          <Button onClick={() => setEditing(newTemplate())}><Plus className="mr-2 h-4 w-4" /> Nowy szablon</Button>
+        </div>
       </div>
+
+      {importOpen && (
+        <GoogleDocsImportDialog
+          onClose={() => setImportOpen(false)}
+          onImported={(name, html) => { setImportOpen(false); openWithContent(name, html); }}
+        />
+      )}
 
       <Card>
         <CardHeader><CardTitle>Lista szablonów ({templates.length})</CardTitle></CardHeader>
