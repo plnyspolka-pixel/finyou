@@ -109,13 +109,44 @@ function KlientWniosek() {
     setEmail((e) => e || user.email || "");
     void (async () => {
       const { data: c } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
-      if (c) {
-        setClientId(c.id);
-        setFirstName(c.first_name ?? "");
-        setLastName(c.last_name ?? "");
-        setPhone(c.phone ?? "");
-        setEmail(c.email ?? user.email ?? "");
+      if (!c) return;
+      setClientId(c.id);
+      setFirstName(c.first_name ?? "");
+      setLastName(c.last_name ?? "");
+      setPhone(c.phone ?? "");
+      setEmail(c.email ?? user.email ?? "");
+
+      const { data: la } = await supabase.from("loan_applications").select("*")
+        .eq("client_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!la) return;
+      setLoanId(la.id);
+      setLoanStatus(la.status);
+      if (la.loan_amount) setAmount(Number(la.loan_amount));
+      if (la.annual_investor_rate) setAnnualRate(Number(la.annual_investor_rate));
+      if (la.max_monthly_payment) setMaxPayment(Number(la.max_monthly_payment));
+      if (la.preferred_period_months) setMonths(la.preferred_period_months);
+      if (la.business_status) setBizStatus(la.business_status as BusinessStatus);
+      if (la.nip) setNip(la.nip);
+      if (la.kw_status) setKwStatus(la.kw_status as KwStatus);
+
+      const { data: prop } = await supabase.from("properties").select("*")
+        .eq("loan_application_id", la.id).maybeSingle();
+      if (prop) {
+        setPropertyId(prop.id);
+        setSecType((prop.property_type as SecurityType) ?? null);
+        setVoivodeship(prop.voivodeship ?? "");
+        setCity(prop.city ?? "");
+        setStreet(prop.street ?? "");
+        setKwNumber(prop.land_register_number ?? "");
+        setKwDescription(prop.description ?? "");
+        setAreaSqm(prop.area_sqm ? String(prop.area_sqm) : "");
+        setMpzpInfo(prop.mpzp_info ?? "");
+        setLandRegistryExtract(prop.land_registry_extract ?? "");
       }
+
+      const { data: ds } = await supabase.from("documents").select("*")
+        .eq("loan_application_id", la.id).order("created_at", { ascending: false });
+      setDocs(ds ?? []);
     })();
   }, [user]);
 
