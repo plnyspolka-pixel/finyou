@@ -344,6 +344,9 @@ function KlientWniosek() {
 
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
               <div className="flex justify-between text-sm"><span>Orientacyjna rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
+              {balloon > 0 && (
+                <div className="flex justify-between text-sm"><span>Rata balonowa na koniec ({months} mies.)</span><b className="tabular-nums">{formatPLN(balloon)}</b></div>
+              )}
               <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
               <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
               <p className="text-xs text-muted-foreground pt-2">
@@ -355,7 +358,7 @@ function KlientWniosek() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Przy wybranych parametrach orientacyjna rata może być wyższa niż wskazana przez Ciebie maksymalna rata. Możesz wydłużyć okres, zmniejszyć kwotę albo zmienić oferowane wynagrodzenie.
+                  Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu umowy.
                 </AlertDescription>
               </Alert>
             )}
