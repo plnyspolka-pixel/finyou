@@ -60,11 +60,12 @@ function EmbedWniosek() {
   const [situationDescription, setSituationDescription] = useState("");
   const [consent, setConsent] = useState(false);
 
-  const rata = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
-  const totalPay = useMemo(() => totalRepayment(rata, months), [rata, months]);
-  const investorComp = useMemo(() => investorTotalCompensation(rata, months, amount), [rata, months, amount]);
-  const score = useMemo(() => (secType ? interestScore(secType, annualRate) : 0), [secType, annualRate]);
-  const exceedsMax = rata > maxPayment && maxPayment > 0;
+  const rataNominal = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
+  const rata = useMemo(() => (maxPayment > 0 ? Math.min(rataNominal, maxPayment) : rataNominal), [rataNominal, maxPayment]);
+  const balloon = useMemo(() => Math.max(0, (rataNominal - rata) * months), [rataNominal, rata, months]);
+  const totalPay = useMemo(() => rata * months + balloon, [rata, months, balloon]);
+  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
+  const exceedsMax = balloon > 0;
 
   const submit = async () => {
     setErr(null);
