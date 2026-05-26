@@ -263,9 +263,12 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 4) {
-      if (!city.trim() || !voivodeship.trim()) return { ok: false, msg: "Podaj miejscowość i województwo." };
       if (!kwStatus) return { ok: false, msg: "Wskaż status księgi wieczystej." };
-      if (kwStatus === "znam" && !kwNumber.trim()) return { ok: false, msg: "Podaj numer KW." };
+      if (kwStatus === "znam") {
+        if (!kwNumber.trim()) return { ok: false, msg: "Podaj numer KW." };
+        if (!/^[A-Z]{2}[A-Z0-9]{2}\/\d{8}\/\d$/.test(kwNumber.trim()))
+          return { ok: false, msg: "Niepoprawny format KW. Wzór: AAAA/00000000/0 (np. WA1M/00000000/0)." };
+      }
       if (kwStatus === "nie_znam" && docsByType("dokument_wlasnosci").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia dokumentu własności." };
       if (kwStatus === "brak") {
@@ -503,12 +506,6 @@ function KlientWniosek() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <div><Label>Województwo *</Label><Input value={voivodeship} onChange={(e) => setVoivodeship(e.target.value)} /></div>
-              <div><Label>Miejscowość *</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
-              <div className="md:col-span-2"><Label>Ulica</Label><Input value={street} onChange={(e) => setStreet(e.target.value)} /></div>
-            </div>
-
             <div className="space-y-2">
               <Label>Czy znasz numer księgi wieczystej?</Label>
               <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)}>
@@ -518,9 +515,32 @@ function KlientWniosek() {
               </RadioGroup>
             </div>
 
-            {kwStatus === "znam" && (
-              <div><Label>Numer księgi wieczystej *</Label><Input value={kwNumber} onChange={(e) => setKwNumber(e.target.value)} placeholder="np. WA1M/00000000/0" /></div>
-            )}
+            {kwStatus === "znam" && (() => {
+              const kwValid = /^[A-Z]{2}[A-Z0-9]{2}\/\d{8}\/\d$/.test(kwNumber.trim());
+              return (
+                <div className="space-y-1">
+                  <Label>Numer księgi wieczystej *</Label>
+                  <Input
+                    value={kwNumber}
+                    onChange={(e) => {
+                      // Format: AAAA/00000000/0 — auto-uppercase, tylko dozwolone znaki, auto slashe
+                      const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 13);
+                      let out = raw;
+                      if (raw.length > 4) out = raw.slice(0, 4) + "/" + raw.slice(4);
+                      if (raw.length > 12) out = raw.slice(0, 4) + "/" + raw.slice(4, 12) + "/" + raw.slice(12);
+                      setKwNumber(out);
+                    }}
+                    placeholder="np. WA1M/00000000/0"
+                    inputMode="text"
+                    maxLength={15}
+                    aria-invalid={kwNumber.length > 0 && !kwValid}
+                  />
+                  <p className={`text-xs ${kwNumber.length > 0 && !kwValid ? "text-destructive" : "text-muted-foreground"}`}>
+                    Format: 4 znaki kodu sądu (litery/cyfry) / 8 cyfr / 1 cyfra kontrolna — np. WA1M/00000000/0
+                  </p>
+                </div>
+              );
+            })()}
 
             {kwStatus === "nie_znam" && (
               <DocUploader
@@ -621,7 +641,7 @@ function KlientWniosek() {
             <Row k="E-mail" v={email} />
             <Row k="Telefon" v={phone} />
             <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
-            <Row k="Lokalizacja" v={`${voivodeship}, ${city}${street ? ", " + street : ""}`} />
+            
             <Row k="Księga wieczysta" v={kwStatus === "znam" ? kwNumber : kwStatus === "nie_znam" ? "Dokument własności (załączony)" : kwStatus === "brak" ? "Brak KW — opis i dokumenty" : "—"} />
             <Row k="Załączone dokumenty" v={`${docs.length}`} />
           </CardContent>
