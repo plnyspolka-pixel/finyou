@@ -7,570 +7,640 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, Check } from "lucide-react";
+import { Copy } from "lucide-react";
 
 export const Route = createFileRoute("/admin/kreator-pozyczki")({
   component: KreatorPozyczki,
 });
 
-type FormState = {
-  pb_nazwa: string; pb_pesel_nip: string; pb_doc: string; pb_adres: string; pb_tel: string; pb_email: string;
-  has_poreczyciel: boolean;
-  por_nazwa: string; por_adres: string;
-  pd_nazwa: string; pd_adres: string; pd_administrator: string; pd_konto: string;
-  has_posrednik: boolean; pos_nazwa: string;
-  not_nazwisko: string; not_kancelaria: string;
-  kwota: string; prowizja: string; kwota_wyplata: string;
-  wyplata_przelew: string; wyplata_konto_pb: string;
-  wyplata_gotowka: string;
-  wyplata_posrednik: string; wyplata_konto_pos: string; wyplata_faktura: string;
-  wyplata_notar: string; wyplata_konto_not: string;
-  oprocentowanie: string; oplata_ryzyka: string;
+// ───────────────────────────── helpers
+const n = (v: string | number) => {
+  const x = typeof v === "number" ? v : parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", "."));
+  return Number.isFinite(x) ? x : 0;
+};
+const fmtPLN = (v: number) =>
+  new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 2 }).format(v || 0);
+const fmtNum = (v: number, d = 2) =>
+  new Intl.NumberFormat("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d }).format(v || 0);
+const addMonths = (iso: string, m: number) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const nd = new Date(d.getFullYear(), d.getMonth() + m, d.getDate());
+  return nd.toISOString().slice(0, 10);
+};
+const plDate = (iso: string) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("pl-PL");
+};
+
+// ───────────────────────────── types
+type Client = {
+  imie: string; nip: string; pesel: string; doc: string; adres: string; tel: string; email: string;
+  forma: string; cel: string;
+  // nieruchomość
+  np_typ: string; np_kw: string; np_adres: string; np_wartosc: string;
+  np_hipoteka_jest: boolean; np_hipoteka_kwota: string;
+  np_wlasciciel: string; np_wlasciciel_jest_pb: boolean; np_potrzebny_poreczyciel: boolean;
+  // preferencje
+  pref_na_reke: string; pref_max_rata: string; pref_okres: string; pref_data_wyplaty: string;
+  wyplata_sposob: string; wyplata_konto: string;
+  // oświadczenia
+  ośw_b2b: boolean; ośw_przedsiebiorca: boolean; ośw_niekonsument: boolean; ośw_prawda: boolean; ośw_warunki: boolean;
+};
+type Investor = {
+  nazwa: string; adres: string; nip_pesel: string; konto: string; rodo_admin: string; email: string; tel: string;
+  // decyzja
+  kwota_na_reke: string;
+  wyn_typ: "amount" | "percent";
+  wyn_kwota: string; wyn_proc: string;
+  prowizja: string;
   okres: string;
-  data_zawarcia: string; miejsce_zawarcia: string;
-  data_wyplaty: string;
-  hipoteka_kwota: string; hipoteka_kw: string;
-  egzekucja_kwota: string; egzekucja_data: string;
-  por_hipoteka_kwota: string; por_hipoteka_kw: string;
-  por_egzekucja_kwota: string; por_egzekucja_data: string;
-  neg_od: string; neg_do: string; neg_tel: string;
-  cel: string;
+  data_wyplaty: string; data_zawarcia: string;
+  oproc_roczne: string;
+};
+type Offer = {
+  netAmountToClient: number;
+  creditedCommission: number;
+  nominalLoanAmount: number;
+  maxMonthlyPaymentByClient: number;
+  loanTermMonths: number;
+  expectedMonthlyInvestorReturn: number;
+  annualInterestPercent: number;
+  monthlyInterestAmount: number;
+  monthlyRiskFeeAmount: number;
+  monthlyRiskFeePercent: number;
+  warnings: string[];
+};
+type ScheduleRow = {
+  lp: number; date: string; rata: number; kapital: number; odsetki: number; ryzyko: number; saldo: number; balon?: boolean;
 };
 
-const empty: FormState = {
-  pb_nazwa: "", pb_pesel_nip: "", pb_doc: "", pb_adres: "", pb_tel: "", pb_email: "",
-  has_poreczyciel: false,
-  por_nazwa: "", por_adres: "",
-  pd_nazwa: "", pd_adres: "", pd_administrator: "", pd_konto: "",
-  has_posrednik: false, pos_nazwa: "",
-  not_nazwisko: "", not_kancelaria: "",
-  kwota: "", prowizja: "", kwota_wyplata: "",
-  wyplata_przelew: "", wyplata_konto_pb: "",
-  wyplata_gotowka: "",
-  wyplata_posrednik: "", wyplata_konto_pos: "", wyplata_faktura: "",
-  wyplata_notar: "", wyplata_konto_not: "",
-  oprocentowanie: "", oplata_ryzyka: "",
-  okres: "12",
-  data_zawarcia: "", miejsce_zawarcia: "",
-  data_wyplaty: "",
-  hipoteka_kwota: "", hipoteka_kw: "",
-  egzekucja_kwota: "", egzekucja_data: "",
-  por_hipoteka_kwota: "", por_hipoteka_kw: "",
-  por_egzekucja_kwota: "", por_egzekucja_data: "",
-  neg_od: "", neg_do: "", neg_tel: "",
-  cel: "",
-};
-
-const fmt = (n: string | number) =>
-  (parseFloat(String(n || 0)) || 0).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const slownie = (n: string | number) => `${fmt(n)} złotych`;
-
-type Row = { nr: number; data: string; kapital: number; odsetki: number; oplata: number; rata: number; saldo: number };
-
-function buildHarmonogram(kwota: string, oproc: string, oplata: string, okres: string, dataWyplaty: string): Row[] {
-  const k = parseFloat(kwota) || 0;
-  const r = (parseFloat(oproc) || 0) / 100 / 12;
-  const or = (parseFloat(oplata) || 0) / 100;
-  const n = parseInt(okres) || 12;
-  const rows: Row[] = [];
-  let saldo = k;
-  const kapitalRata = n > 0 ? k / n : 0;
-  const startDate = dataWyplaty ? new Date(dataWyplaty) : new Date();
-  for (let i = 1; i <= n; i++) {
-    const d = new Date(startDate);
-    d.setMonth(d.getMonth() + i);
-    const odsetki = saldo * r;
-    const oplataMies = k * or;
-    const rata = kapitalRata + odsetki + oplataMies;
-    saldo -= kapitalRata;
-    rows.push({
-      nr: i, data: d.toLocaleDateString("pl-PL"),
-      kapital: kapitalRata, odsetki, oplata: oplataMies, rata,
-      saldo: Math.max(0, saldo),
-    });
+// ───────────────────────────── core logic
+function computeOffer(c: Client, inv: Investor): Offer {
+  const netAmountToClient = n(inv.kwota_na_reke) || n(c.pref_na_reke);
+  const creditedCommission = n(inv.prowizja);
+  const nominalLoanAmount = netAmountToClient + creditedCommission;
+  const loanTermMonths = Math.max(0, Math.round(n(inv.okres) || n(c.pref_okres)));
+  const maxMonthlyPaymentByClient = n(c.pref_max_rata);
+  const expectedMonthlyInvestorReturn =
+    inv.wyn_typ === "percent"
+      ? netAmountToClient * (n(inv.wyn_proc) / 100)
+      : n(inv.wyn_kwota);
+  const annualInterestPercent = n(inv.oproc_roczne);
+  const monthlyInterestAmount = (nominalLoanAmount * annualInterestPercent) / 100 / 12;
+  let monthlyRiskFeeAmount = expectedMonthlyInvestorReturn - monthlyInterestAmount;
+  const warnings: string[] = [];
+  if (monthlyRiskFeeAmount < 0) {
+    warnings.push("Oprocentowanie roczne generuje odsetki wyższe niż oczekiwane miesięczne wynagrodzenie inwestora.");
+    monthlyRiskFeeAmount = 0;
   }
-  return rows;
+  const monthlyRiskFeePercent = nominalLoanAmount > 0 ? (monthlyRiskFeeAmount / nominalLoanAmount) * 100 : 0;
+
+  if (maxMonthlyPaymentByClient > expectedMonthlyInvestorReturn && expectedMonthlyInvestorReturn > 0) {
+    warnings.push("Nadwyżka ponad wynagrodzenie inwestora pomniejsza kapitał bieżąco.");
+  } else if (maxMonthlyPaymentByClient === expectedMonthlyInvestorReturn && expectedMonthlyInvestorReturn > 0) {
+    warnings.push("Kapitał będzie spłacany w racie balonowej.");
+  } else if (expectedMonthlyInvestorReturn > 0 && maxMonthlyPaymentByClient > 0) {
+    warnings.push("Część wynagrodzenia inwestora zostanie rozliczona w racie balonowej.");
+  }
+
+  return {
+    netAmountToClient, creditedCommission, nominalLoanAmount,
+    maxMonthlyPaymentByClient, loanTermMonths, expectedMonthlyInvestorReturn,
+    annualInterestPercent, monthlyInterestAmount, monthlyRiskFeeAmount, monthlyRiskFeePercent,
+    warnings,
+  };
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, hint }: {
-  label: string; value: string; onChange: (v: string) => void;
-  type?: string; placeholder?: string; hint?: string;
-}) {
+function buildDirectorSchedule(o: Offer, startDate: string): { rows: ScheduleRow[]; balloon: number; totals: { rata: number; kap: number; ods: number; ryz: number; } } {
+  const rows: ScheduleRow[] = [];
+  if (!o.loanTermMonths || !o.nominalLoanAmount) return { rows, balloon: 0, totals: { rata: 0, kap: 0, ods: 0, ryz: 0 } };
+
+  let saldo = o.nominalLoanAmount;
+  let nierozliczoneOds = 0;
+  let nierozliczoneRyz = 0;
+
+  const totalInterestRatio =
+    o.monthlyInterestAmount + o.monthlyRiskFeeAmount > 0
+      ? o.monthlyInterestAmount / (o.monthlyInterestAmount + o.monthlyRiskFeeAmount)
+      : 1;
+
+  // raty 1..N-1 (bieżące), ostatni wiersz to balon
+  const regularMonths = Math.max(0, o.loanTermMonths - 1);
+  for (let i = 1; i <= regularMonths; i++) {
+    const date = addMonths(startDate, i);
+    const rata = o.maxMonthlyPaymentByClient;
+    let odsThis = 0;
+    let ryzThis = 0;
+    let kapThis = 0;
+
+    if (rata >= o.expectedMonthlyInvestorReturn) {
+      odsThis = o.monthlyInterestAmount;
+      ryzThis = o.monthlyRiskFeeAmount;
+      kapThis = rata - (odsThis + ryzThis);
+      if (kapThis > saldo) kapThis = saldo;
+      saldo -= kapThis;
+    } else {
+      // rata < wynagrodzenie inwestora — alokacja proporcjonalna: najpierw odsetki, potem ryzyko
+      let remaining = rata;
+      odsThis = Math.min(remaining, o.monthlyInterestAmount);
+      remaining -= odsThis;
+      ryzThis = Math.min(remaining, o.monthlyRiskFeeAmount);
+      nierozliczoneOds += o.monthlyInterestAmount - odsThis;
+      nierozliczoneRyz += o.monthlyRiskFeeAmount - ryzThis;
+      kapThis = 0;
+    }
+
+    rows.push({ lp: i, date, rata: odsThis + ryzThis + kapThis, kapital: kapThis, odsetki: odsThis, ryzyko: ryzThis, saldo });
+  }
+
+  // rata balonowa
+  const balloonDate = addMonths(startDate, o.loanTermMonths);
+  // ostatni miesiąc — także generuje wynagrodzenie inwestora
+  const lastMonthOds = o.monthlyInterestAmount;
+  const lastMonthRyz = o.monthlyRiskFeeAmount;
+  nierozliczoneOds += lastMonthOds;
+  nierozliczoneRyz += lastMonthRyz;
+
+  const balloonKapital = saldo;
+  const balloonOds = nierozliczoneOds;
+  const balloonRyz = nierozliczoneRyz;
+  const balloonRata = balloonKapital + balloonOds + balloonRyz;
+  rows.push({
+    lp: o.loanTermMonths, date: balloonDate, rata: balloonRata,
+    kapital: balloonKapital, odsetki: balloonOds, ryzyko: balloonRyz, saldo: 0, balon: true,
+  });
+
+  const totals = rows.reduce(
+    (acc, r) => ({ rata: acc.rata + r.rata, kap: acc.kap + r.kapital, ods: acc.ods + r.odsetki, ryz: acc.ryz + r.ryzyko }),
+    { rata: 0, kap: 0, ods: 0, ryz: 0 }
+  );
+  return { rows, balloon: balloonRata, totals };
+}
+
+// ───────────────────────────── component
+function KreatorPozyczki() {
+  const [client, setClient] = useState<Client>({
+    imie: "", nip: "", pesel: "", doc: "", adres: "", tel: "", email: "",
+    forma: "Działalność gospodarcza", cel: "",
+    np_typ: "mieszkanie", np_kw: "", np_adres: "", np_wartosc: "",
+    np_hipoteka_jest: false, np_hipoteka_kwota: "",
+    np_wlasciciel: "", np_wlasciciel_jest_pb: true, np_potrzebny_poreczyciel: false,
+    pref_na_reke: "", pref_max_rata: "", pref_okres: "12", pref_data_wyplaty: "",
+    wyplata_sposob: "przelew_klient", wyplata_konto: "",
+    ośw_b2b: true, ośw_przedsiebiorca: true, ośw_niekonsument: true, ośw_prawda: true, ośw_warunki: true,
+  });
+  const [investor, setInvestor] = useState<Investor>({
+    nazwa: "", adres: "", nip_pesel: "", konto: "", rodo_admin: "", email: "", tel: "",
+    kwota_na_reke: "", wyn_typ: "amount", wyn_kwota: "", wyn_proc: "",
+    prowizja: "0", okres: "12", data_wyplaty: "", data_zawarcia: "",
+    oproc_roczne: "10",
+  });
+  const [nbpRate, setNbpRate] = useState<string>("5.75");
+  const [nbpDate, setNbpDate] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  const offer = useMemo(() => computeOffer(client, investor), [client, investor]);
+  const startDate = investor.data_wyplaty || investor.data_zawarcia || client.pref_data_wyplaty || new Date().toISOString().slice(0, 10);
+  const sched = useMemo(() => buildDirectorSchedule(offer, startDate), [offer, startDate]);
+
+  const totalClientObligation = sched.totals.rata;
+  const totalInvestorProfit = sched.totals.ods + sched.totals.ryz + offer.creditedCommission;
+  const annualizedInvestorProfitAmount = offer.loanTermMonths > 0 ? (totalInvestorProfit / offer.loanTermMonths) * 12 : 0;
+  const annualizedInvestorProfitPercent = offer.netAmountToClient > 0 ? (annualizedInvestorProfitAmount / offer.netAmountToClient) * 100 : 0;
+
+  const minMortgage = totalClientObligation * 1.5;
+  const min777 = totalClientObligation * 1.5;
+  const okres777End = addMonths(investor.data_zawarcia, offer.loanTermMonths + 36);
+
+  const nbpAnnual = (n(nbpRate) + 3.5) * 2;
+  const nbpMonthly = nbpAnnual / 12;
+
+  const canCompute = offer.netAmountToClient > 0 && offer.maxMonthlyPaymentByClient > 0 && offer.loanTermMonths > 0 && offer.expectedMonthlyInvestorReturn > 0;
+
+  // documents
+  const docWniosek = useMemo(() => buildWniosek(client, investor, offer), [client, investor, offer]);
+  const docUmowa = useMemo(() => buildUmowa(client, investor, offer, sched.balloon, totalClientObligation), [client, investor, offer, sched.balloon, totalClientObligation]);
+  const docHarmonogram = useMemo(() => buildHarmonogramDoc(sched.rows, offer), [sched.rows, offer]);
+  const docProtokol = useMemo(() => buildProtokol(client, investor, offer), [client, investor, offer]);
+
+  const copy = (txt: string, label: string) => {
+    navigator.clipboard.writeText(txt).then(() => toast.success(`Skopiowano: ${label}`));
+  };
+
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-      {hint && <p className="text-xs text-muted-foreground/80">{hint}</p>}
+    <div className="space-y-6">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">Kreator umów pożyczkowych B2B</h1>
+          <p className="text-sm text-muted-foreground">Sekretarka finansowa inwestora prywatnego — pożyczki zabezpieczone hipoteką.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {canCompute
+            ? <Badge variant="secondary">Harmonogram kompletny</Badge>
+            : <Badge variant="outline">Uzupełnij wymagane dane</Badge>}
+          <Button variant="outline" onClick={() => toast.success("Oferta przeliczona")}>Przelicz ofertę</Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="klient" className="w-full">
+        <TabsList className="flex flex-wrap h-auto">
+          <TabsTrigger value="klient">Klient</TabsTrigger>
+          <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
+          <TabsTrigger value="inwestor">Inwestor</TabsTrigger>
+          <TabsTrigger value="oferta">Oferta finansowa</TabsTrigger>
+          <TabsTrigger value="harmonogram">Harmonogram</TabsTrigger>
+          <TabsTrigger value="zabezp">Zabezpieczenia</TabsTrigger>
+          <TabsTrigger value="dokumenty">Dokumenty</TabsTrigger>
+        </TabsList>
+
+        {/* ────── KLIENT ────── */}
+        <TabsContent value="klient" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Dane pożyczkobiorcy (widok klienta)</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <Field label="Imię i nazwisko / firma"><Input value={client.imie} onChange={e=>setClient({...client, imie: e.target.value})}/></Field>
+              <Field label="NIP"><Input value={client.nip} onChange={e=>setClient({...client, nip: e.target.value})}/></Field>
+              <Field label="PESEL (jeśli os. fiz. prowadząca DG)"><Input value={client.pesel} onChange={e=>setClient({...client, pesel: e.target.value})}/></Field>
+              <Field label="Numer dokumentu tożsamości"><Input value={client.doc} onChange={e=>setClient({...client, doc: e.target.value})}/></Field>
+              <Field label="Adres zamieszkania / siedziby"><Input value={client.adres} onChange={e=>setClient({...client, adres: e.target.value})}/></Field>
+              <Field label="Telefon"><Input value={client.tel} onChange={e=>setClient({...client, tel: e.target.value})}/></Field>
+              <Field label="E-mail"><Input value={client.email} onChange={e=>setClient({...client, email: e.target.value})}/></Field>
+              <Field label="Forma działalności"><Input value={client.forma} onChange={e=>setClient({...client, forma: e.target.value})}/></Field>
+              <Field label="Cel pożyczki (związany z działalnością gospodarczą)" className="md:col-span-2">
+                <Textarea value={client.cel} onChange={e=>setClient({...client, cel: e.target.value})}/>
+              </Field>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Preferencje finansowe klienta</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <Field label="Kwota potrzebna „na rękę” (PLN)"><Input type="number" value={client.pref_na_reke} onChange={e=>setClient({...client, pref_na_reke: e.target.value})}/></Field>
+              <Field label="Maksymalna miesięczna rata bieżąca (PLN)"><Input type="number" value={client.pref_max_rata} onChange={e=>setClient({...client, pref_max_rata: e.target.value})}/></Field>
+              <Field label="Preferowany okres pożyczki (m-cy)"><Input type="number" value={client.pref_okres} onChange={e=>setClient({...client, pref_okres: e.target.value})}/></Field>
+              <Field label="Preferowana data wypłaty"><Input type="date" value={client.pref_data_wyplaty} onChange={e=>setClient({...client, pref_data_wyplaty: e.target.value})}/></Field>
+              <Field label="Sposób wypłaty środków">
+                <Select value={client.wyplata_sposob} onValueChange={v=>setClient({...client, wyplata_sposob: v})}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="przelew_klient">Przelew do klienta</SelectItem>
+                    <SelectItem value="gotowka">Gotówka</SelectItem>
+                    <SelectItem value="przelew_posrednik">Przelew do pośrednika</SelectItem>
+                    <SelectItem value="przelew_notar">Przelew do kancelarii notarialnej</SelectItem>
+                    <SelectItem value="podzial">Podział na kilka pozycji</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Rachunek bankowy do wypłaty"><Input value={client.wyplata_konto} onChange={e=>setClient({...client, wyplata_konto: e.target.value})}/></Field>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Oświadczenia klienta (B2B)</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <Toggle checked={client.ośw_b2b} onChange={v=>setClient({...client, ośw_b2b: v})}>Pożyczka jest związana z działalnością gospodarczą.</Toggle>
+              <Toggle checked={client.ośw_przedsiebiorca} onChange={v=>setClient({...client, ośw_przedsiebiorca: v})}>Klient działa jako przedsiębiorca.</Toggle>
+              <Toggle checked={client.ośw_niekonsument} onChange={v=>setClient({...client, ośw_niekonsument: v})}>Pożyczka nie ma charakteru konsumenckiego.</Toggle>
+              <Toggle checked={client.ośw_prawda} onChange={v=>setClient({...client, ośw_prawda: v})}>Klient potwierdza prawdziwość danych.</Toggle>
+              <Toggle checked={client.ośw_warunki} onChange={v=>setClient({...client, ośw_warunki: v})}>Klient rozumie, że ostateczne warunki zależą od decyzji inwestora.</Toggle>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ────── NIERUCHOMOŚĆ ────── */}
+        <TabsContent value="nieruchomosc" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Nieruchomość — zabezpieczenie hipoteczne</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <Field label="Typ nieruchomości">
+                <Select value={client.np_typ} onValueChange={v=>setClient({...client, np_typ: v})}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mieszkanie">Mieszkanie</SelectItem>
+                    <SelectItem value="dom">Dom</SelectItem>
+                    <SelectItem value="lokal_uslugowy">Lokal usługowy</SelectItem>
+                    <SelectItem value="dzialka_budowlana">Działka budowlana</SelectItem>
+                    <SelectItem value="grunt_rolny">Grunt rolny</SelectItem>
+                    <SelectItem value="inna">Inna</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Numer księgi wieczystej"><Input value={client.np_kw} onChange={e=>setClient({...client, np_kw: e.target.value})}/></Field>
+              <Field label="Adres nieruchomości" className="md:col-span-2"><Input value={client.np_adres} onChange={e=>setClient({...client, np_adres: e.target.value})}/></Field>
+              <Field label="Szacunkowa wartość (PLN)"><Input type="number" value={client.np_wartosc} onChange={e=>setClient({...client, np_wartosc: e.target.value})}/></Field>
+              <Field label="Właściciel nieruchomości"><Input value={client.np_wlasciciel} onChange={e=>setClient({...client, np_wlasciciel: e.target.value})}/></Field>
+              <Toggle checked={client.np_hipoteka_jest} onChange={v=>setClient({...client, np_hipoteka_jest: v})}>Istnieje już hipoteka na nieruchomości</Toggle>
+              {client.np_hipoteka_jest && (
+                <Field label="Kwota istniejącego zadłużenia (PLN)"><Input type="number" value={client.np_hipoteka_kwota} onChange={e=>setClient({...client, np_hipoteka_kwota: e.target.value})}/></Field>
+              )}
+              <Toggle checked={client.np_wlasciciel_jest_pb} onChange={v=>setClient({...client, np_wlasciciel_jest_pb: v})}>Właściciel jest pożyczkobiorcą</Toggle>
+              <Toggle checked={client.np_potrzebny_poreczyciel} onChange={v=>setClient({...client, np_potrzebny_poreczyciel: v})}>Potrzebny poręczyciel / właściciel zabezpieczenia</Toggle>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ────── INWESTOR ────── */}
+        <TabsContent value="inwestor" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Dane pożyczkodawcy (widok inwestora)</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <Field label="Imię i nazwisko / firma"><Input value={investor.nazwa} onChange={e=>setInvestor({...investor, nazwa: e.target.value})}/></Field>
+              <Field label="Adres"><Input value={investor.adres} onChange={e=>setInvestor({...investor, adres: e.target.value})}/></Field>
+              <Field label="NIP / PESEL"><Input value={investor.nip_pesel} onChange={e=>setInvestor({...investor, nip_pesel: e.target.value})}/></Field>
+              <Field label="Rachunek bankowy do spłat"><Input value={investor.konto} onChange={e=>setInvestor({...investor, konto: e.target.value})}/></Field>
+              <Field label="Administrator danych (RODO)"><Input value={investor.rodo_admin} onChange={e=>setInvestor({...investor, rodo_admin: e.target.value})}/></Field>
+              <Field label="E-mail"><Input value={investor.email} onChange={e=>setInvestor({...investor, email: e.target.value})}/></Field>
+              <Field label="Telefon"><Input value={investor.tel} onChange={e=>setInvestor({...investor, tel: e.target.value})}/></Field>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Decyzja inwestora</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <Field label="Kwota wypłacona klientowi „na rękę” (PLN)"><Input type="number" value={investor.kwota_na_reke} onChange={e=>setInvestor({...investor, kwota_na_reke: e.target.value})}/></Field>
+              <Field label="Prowizja kredytowana (PLN)"><Input type="number" value={investor.prowizja} onChange={e=>setInvestor({...investor, prowizja: e.target.value})}/></Field>
+              <Field label="Okres pożyczki (m-cy)"><Input type="number" value={investor.okres} onChange={e=>setInvestor({...investor, okres: e.target.value})}/></Field>
+              <Field label="Oprocentowanie roczne (%)"><Input type="number" step="0.01" value={investor.oproc_roczne} onChange={e=>setInvestor({...investor, oproc_roczne: e.target.value})}/></Field>
+              <Field label="Typ oczekiwanego wynagrodzenia">
+                <Select value={investor.wyn_typ} onValueChange={(v: any)=>setInvestor({...investor, wyn_typ: v})}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="amount">Kwotowo (PLN/m-c)</SelectItem>
+                    <SelectItem value="percent">Procentowo (% od kwoty „na rękę”/m-c)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              {investor.wyn_typ === "amount"
+                ? <Field label="Oczekiwane wynagrodzenie miesięczne (PLN)"><Input type="number" value={investor.wyn_kwota} onChange={e=>setInvestor({...investor, wyn_kwota: e.target.value})}/></Field>
+                : <Field label="Oczekiwane wynagrodzenie miesięczne (%)"><Input type="number" step="0.01" value={investor.wyn_proc} onChange={e=>setInvestor({...investor, wyn_proc: e.target.value})}/></Field>}
+              <Field label="Data wypłaty"><Input type="date" value={investor.data_wyplaty} onChange={e=>setInvestor({...investor, data_wyplaty: e.target.value})}/></Field>
+              <Field label="Data zawarcia umowy"><Input type="date" value={investor.data_zawarcia} onChange={e=>setInvestor({...investor, data_zawarcia: e.target.value})}/></Field>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ────── OFERTA ────── */}
+        <TabsContent value="oferta" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Oferta finansowa (źródło prawdy)</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <ReadOnly label="Kwota wypłacona klientowi „na rękę”" value={fmtPLN(offer.netAmountToClient)}/>
+              <ReadOnly label="Prowizja kredytowana" value={fmtPLN(offer.creditedCommission)}/>
+              <ReadOnly label="Nominalna kwota pożyczki" value={fmtPLN(offer.nominalLoanAmount)}/>
+              <ReadOnly label="Maksymalna miesięczna rata klienta" value={fmtPLN(offer.maxMonthlyPaymentByClient)}/>
+              <ReadOnly label="Okres pożyczki" value={`${offer.loanTermMonths} m-cy`}/>
+              <ReadOnly label="Oczekiwane miesięczne wynagrodzenie inwestora" value={fmtPLN(offer.expectedMonthlyInvestorReturn)}/>
+              <ReadOnly label="Oprocentowanie roczne" value={`${fmtNum(offer.annualInterestPercent)} %`}/>
+              <ReadOnly label="Odsetki miesięczne (od kwoty nominalnej)" value={fmtPLN(offer.monthlyInterestAmount)}/>
+              <ReadOnly label="Opłata za ryzyko miesięcznie" value={fmtPLN(offer.monthlyRiskFeeAmount)}/>
+              <ReadOnly label="Opłata za ryzyko miesięcznie (%)" value={`${fmtNum(offer.monthlyRiskFeePercent, 3)} %`}/>
+            </CardContent>
+          </Card>
+
+          {offer.warnings.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>Informacje techniczne</CardTitle></CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                {offer.warnings.map((w, i) => <div key={i} className="text-muted-foreground">• {w}</div>)}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* ────── HARMONOGRAM ────── */}
+        <TabsContent value="harmonogram" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Benchmark prawny (NBP)</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-4 gap-3">
+              <Field label="Data weryfikacji"><Input type="date" value={nbpDate} onChange={e=>setNbpDate(e.target.value)}/></Field>
+              <Field label="Stopa referencyjna NBP (%)"><Input type="number" step="0.01" value={nbpRate} onChange={e=>setNbpRate(e.target.value)}/></Field>
+              <ReadOnly label="Roczny poziom odsetek ustawowych" value={`${fmtNum(nbpAnnual)} %`}/>
+              <ReadOnly label="Miesięczny ekwiwalent" value={`${fmtNum(nbpMonthly, 3)} %`}/>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Harmonogram spłat</CardTitle></CardHeader>
+            <CardContent>
+              {!canCompute ? (
+                <p className="text-sm text-muted-foreground">Uzupełnij kwotę „na rękę”, maksymalną ratę, okres i wynagrodzenie inwestora aby zobaczyć harmonogram.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Lp.</TableHead>
+                      <TableHead>Data raty</TableHead>
+                      <TableHead className="text-right">Kwota raty</TableHead>
+                      <TableHead className="text-right">Kapitał</TableHead>
+                      <TableHead className="text-right">Odsetki</TableHead>
+                      <TableHead className="text-right">Opłata za ryzyko</TableHead>
+                      <TableHead className="text-right">Kapitał pozostały</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sched.rows.map(r => (
+                      <TableRow key={r.lp} className={r.balon ? "bg-muted/50 font-medium" : ""}>
+                        <TableCell>{r.balon ? `${r.lp} (balon)` : r.lp}</TableCell>
+                        <TableCell>{plDate(r.date)}</TableCell>
+                        <TableCell className="text-right">{fmtPLN(r.rata)}</TableCell>
+                        <TableCell className="text-right">{fmtPLN(r.kapital)}</TableCell>
+                        <TableCell className="text-right">{fmtPLN(r.odsetki)}</TableCell>
+                        <TableCell className="text-right">{fmtPLN(r.ryzyko)}</TableCell>
+                        <TableCell className="text-right">{fmtPLN(r.saldo)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Podsumowanie dla inwestora</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <ReadOnly label="Czas trwania umowy" value={`${offer.loanTermMonths} m-cy`}/>
+              <ReadOnly label="Oprocentowanie roczne" value={`${fmtNum(offer.annualInterestPercent)} %`}/>
+              <ReadOnly label="Procent miesięczny opłaty za ryzyko" value={`${fmtNum(offer.monthlyRiskFeePercent, 3)} %`}/>
+              <ReadOnly label="Wysokość prowizji" value={fmtPLN(offer.creditedCommission)}/>
+              <ReadOnly label="Nominalna kwota pożyczki" value={fmtPLN(offer.nominalLoanAmount)}/>
+              <ReadOnly label="Kwota wypłacona klientowi „na rękę”" value={fmtPLN(offer.netAmountToClient)}/>
+              <ReadOnly label="Całkowite zobowiązanie klienta" value={fmtPLN(totalClientObligation)}/>
+              <ReadOnly label="Całkowity zysk inwestora" value={fmtPLN(totalInvestorProfit)}/>
+              <ReadOnly label="Roczny zysk inwestora (kwota)" value={fmtPLN(annualizedInvestorProfitAmount)}/>
+              <ReadOnly label="Roczny zysk inwestora (% od kwoty „na rękę”)" value={`${fmtNum(annualizedInvestorProfitPercent)} %`}/>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ────── ZABEZPIECZENIA ────── */}
+        <TabsContent value="zabezp" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Rekomendacja zabezpieczenia</CardTitle></CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-3">
+              <ReadOnly label="Minimalna rekomendowana kwota hipoteki" value={fmtPLN(minMortgage)}/>
+              <ReadOnly label="Rekomendowana kwota egzekucji z art. 777 k.p.c." value={fmtPLN(min777)}/>
+              <ReadOnly label="Termin obowiązywania klauzuli wykonalności" value={`${offer.loanTermMonths + 36} m-cy`}/>
+              <ReadOnly label="Data końcowa terminu art. 777" value={plDate(okres777End)}/>
+              <ReadOnly label="Numer KW" value={client.np_kw || "—"}/>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ────── DOKUMENTY ────── */}
+        <TabsContent value="dokumenty" className="space-y-4">
+          <DocCard title="Wniosek klienta" text={docWniosek} onCopy={()=>copy(docWniosek, "Wniosek")}/>
+          <DocCard title="Umowa pożyczki" text={docUmowa} onCopy={()=>copy(docUmowa, "Umowa")}/>
+          <DocCard title="Załącznik nr 1 — Harmonogram" text={docHarmonogram} onCopy={()=>copy(docHarmonogram, "Harmonogram")}/>
+          <DocCard title="Załącznik nr 2 — Protokół negocjacji" text={docProtokol} onCopy={()=>copy(docProtokol, "Protokół")}/>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
-function DocView({ title, content }: { title: string; content: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    toast.success("Skopiowano");
-    setTimeout(() => setCopied(false), 2000);
-  };
+// ───────────────────────────── small UI helpers
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`space-y-1 ${className}`}>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+function ReadOnly({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="h-9 px-3 flex items-center rounded-md border bg-muted/30 text-sm">{value}</div>
+    </div>
+  );
+}
+function Toggle({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3">
+      <span className="text-sm">{children}</span>
+      <Switch checked={checked} onCheckedChange={onChange}/>
+    </div>
+  );
+}
+function DocCard({ title, text, onCopy }: { title: string; text: string; onCopy: () => void }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
-        <CardTitle className="text-base">{title}</CardTitle>
-        <Button variant="outline" size="sm" onClick={copy}>
-          {copied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
-          {copied ? "Skopiowano" : "Kopiuj"}
-        </Button>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>{title}</CardTitle>
+        <Button variant="outline" size="sm" onClick={onCopy}><Copy className="h-4 w-4 mr-1"/>Kopiuj</Button>
       </CardHeader>
       <CardContent>
-        <Textarea readOnly value={content} className="font-mono text-xs leading-relaxed min-h-[420px]" />
+        <pre className="text-xs whitespace-pre-wrap font-mono bg-muted/30 p-4 rounded-md max-h-[480px] overflow-auto">{text}</pre>
       </CardContent>
     </Card>
   );
 }
 
-function KreatorPozyczki() {
-  const [d, setD] = useState<FormState>(empty);
-  const [activeDoc, setActiveDoc] = useState("wniosek");
-  const set = <K extends keyof FormState>(k: K) => (v: FormState[K] | string) => setD((p) => ({ ...p, [k]: v as FormState[K] }));
+// ───────────────────────────── document builders
+function buildWniosek(c: Client, _i: Investor, o: Offer): string {
+  return [
+    `WNIOSEK O UDZIELENIE POŻYCZKI (B2B)`,
+    ``,
+    `POŻYCZKOBIORCA: ${c.imie || "—"}`,
+    `NIP: ${c.nip || "—"}    PESEL: ${c.pesel || "—"}`,
+    `Adres: ${c.adres || "—"}`,
+    `Telefon: ${c.tel || "—"}   E-mail: ${c.email || "—"}`,
+    `Forma działalności: ${c.forma}`,
+    `Cel pożyczki: ${c.cel || "—"}`,
+    ``,
+    `NIERUCHOMOŚĆ STANOWIĄCA ZABEZPIECZENIE`,
+    `Typ: ${c.np_typ}   KW: ${c.np_kw || "—"}`,
+    `Adres: ${c.np_adres || "—"}`,
+    `Wartość szacunkowa: ${fmtPLN(n(c.np_wartosc))}`,
+    `Istniejąca hipoteka: ${c.np_hipoteka_jest ? `TAK (${fmtPLN(n(c.np_hipoteka_kwota))})` : "NIE"}`,
+    `Właściciel: ${c.np_wlasciciel || "—"} (${c.np_wlasciciel_jest_pb ? "jest pożyczkobiorcą" : "osoba trzecia"})`,
+    ``,
+    `PREFERENCJE FINANSOWE KLIENTA`,
+    `Kwota „na rękę”: ${fmtPLN(o.netAmountToClient)}`,
+    `Maksymalna rata bieżąca: ${fmtPLN(o.maxMonthlyPaymentByClient)}`,
+    `Okres: ${o.loanTermMonths} m-cy`,
+    `Data wypłaty: ${plDate(c.pref_data_wyplaty)}`,
+    `Sposób wypłaty: ${c.wyplata_sposob}`,
+    ``,
+    `OŚWIADCZENIA`,
+    `• Pożyczka związana z działalnością gospodarczą: ${c.ośw_b2b ? "TAK" : "NIE"}`,
+    `• Klient działa jako przedsiębiorca: ${c.ośw_przedsiebiorca ? "TAK" : "NIE"}`,
+    `• Pożyczka nie ma charakteru konsumenckiego: ${c.ośw_niekonsument ? "TAK" : "NIE"}`,
+    `• Dane prawdziwe: ${c.ośw_prawda ? "TAK" : "NIE"}`,
+    `• Akceptacja, że warunki zależą od decyzji inwestora: ${c.ośw_warunki ? "TAK" : "NIE"}`,
+  ].join("\n");
+}
 
-  const harmonogram = useMemo(
-    () => buildHarmonogram(d.kwota, d.oprocentowanie, d.oplata_ryzyka, d.okres, d.data_wyplaty),
-    [d.kwota, d.oprocentowanie, d.oplata_ryzyka, d.okres, d.data_wyplaty],
-  );
-  const sumaKapital = harmonogram.reduce((s, r) => s + r.kapital, 0);
-  const sumaOdsetki = harmonogram.reduce((s, r) => s + r.odsetki, 0);
-  const sumaOplata = harmonogram.reduce((s, r) => s + r.oplata, 0);
-  const sumaRazem = harmonogram.reduce((s, r) => s + r.rata, 0);
+function buildUmowa(c: Client, i: Investor, o: Offer, balloon: number, total: number): string {
+  return [
+    `UMOWA POŻYCZKI (B2B) ZABEZPIECZONA HIPOTECZNIE`,
+    `Zawarta dnia ${plDate(i.data_zawarcia)}`,
+    ``,
+    `POŻYCZKODAWCA: ${i.nazwa || "—"}, ${i.adres || "—"}, NIP/PESEL: ${i.nip_pesel || "—"}`,
+    `Rachunek do spłat: ${i.konto || "—"}`,
+    ``,
+    `POŻYCZKOBIORCA: ${c.imie || "—"}, ${c.adres || "—"}, NIP: ${c.nip || "—"}`,
+    ``,
+    `§1. PRZEDMIOT UMOWY`,
+    `1. Nominalna kwota pożyczki: ${fmtPLN(o.nominalLoanAmount)}`,
+    `2. Kwota wypłacona Pożyczkobiorcy „na rękę”: ${fmtPLN(o.netAmountToClient)}`,
+    `3. Prowizja kredytowana: ${fmtPLN(o.creditedCommission)} (spłacana wraz z kapitałem).`,
+    `4. Data wypłaty: ${plDate(i.data_wyplaty)}`,
+    ``,
+    `§2. OPROCENTOWANIE I OPŁATA ZA RYZYKO`,
+    `1. Oprocentowanie roczne: ${fmtNum(o.annualInterestPercent)} % od kwoty nominalnej.`,
+    `2. Miesięczna opłata za ryzyko: ${fmtPLN(o.monthlyRiskFeeAmount)} (${fmtNum(o.monthlyRiskFeePercent, 3)} % od kwoty nominalnej miesięcznie).`,
+    ``,
+    `§3. WARUNKI SPŁATY`,
+    `1. Maksymalna miesięczna rata bieżąca: ${fmtPLN(o.maxMonthlyPaymentByClient)}.`,
+    `2. Okres umowy: ${o.loanTermMonths} miesięcy.`,
+    `3. Rata balonowa (ostatnia): ${fmtPLN(balloon)}.`,
+    `4. Całkowita kwota zobowiązań Pożyczkobiorcy: ${fmtPLN(total)}.`,
+    `5. Szczegółowy harmonogram stanowi Załącznik nr 1.`,
+    ``,
+    `§4. ZABEZPIECZENIE`,
+    `1. Hipoteka umowna na nieruchomości KW ${c.np_kw || "—"} (${c.np_adres || "—"}).`,
+    `2. Oświadczenie o poddaniu się egzekucji w trybie art. 777 § 1 pkt 5 k.p.c.`,
+    ``,
+    `§5. POSTANOWIENIA KOŃCOWE`,
+    `Umowa ma charakter B2B i nie jest umową o kredyt konsumencki.`,
+  ].join("\n");
+}
 
-  const wniosek = `WNIOSEK O UDZIELENIE POŻYCZKI PIENIĘŻNEJ
+function buildHarmonogramDoc(rows: ScheduleRow[], o: Offer): string {
+  const head = `ZAŁĄCZNIK NR 1 — HARMONOGRAM SPŁAT\nNominalna kwota pożyczki: ${fmtPLN(o.nominalLoanAmount)}\n`;
+  const cols = `Lp. | Data raty | Kwota raty | Kapitał | Odsetki | Opłata za ryzyko | Kapitał pozostały`;
+  const body = rows.map(r =>
+    `${r.balon ? `${r.lp} (Rata balonowa)` : r.lp} | ${plDate(r.date)} | ${fmtPLN(r.rata)} | ${fmtPLN(r.kapital)} | ${fmtPLN(r.odsetki)} | ${fmtPLN(r.ryzyko)} | ${fmtPLN(r.saldo)}`
+  ).join("\n");
+  return `${head}\n${cols}\n${body}`;
+}
 
-I. DANE WNIOSKODAWCY
-Imię i nazwisko / Firma: ${d.pb_nazwa || "....................."}
-PESEL / NIP: ${d.pb_pesel_nip || "....................."}
-Seria i numer dokumentu tożsamości: ${d.pb_doc || "....................."}
-Adres zamieszkania / siedziby: ${d.pb_adres || "....................."}
-Telefon: ${d.pb_tel || "....................."}
-E-mail: ${d.pb_email || "....................."}
-
-II. CHARAKTER POŻYCZKI
-• Wnioskuję o udzielenie pożyczki pieniężnej na cele związane z prowadzoną działalnością gospodarczą.
-• Oświadczam, że pożyczka nie ma charakteru konsumenckiego.
-
-III. WARUNKI POŻYCZKI
-Wnioskowana kwota: ${d.kwota ? fmt(d.kwota) + " zł" : "....................."}
-Okres pożyczki: ${d.okres || "..."} miesięcy
-Cel pożyczki: ${d.cel || "....................."}
-Zabezpieczenie: Hipoteka na nieruchomości (KW: ${d.hipoteka_kw || "..."})
-
-IV. OŚWIADCZENIA FINANSOWE (AML)
-• Osiągam stały i rzeczywisty dochód umożliwiający spłatę pożyczki.
-• Nie posiadam przeterminowanych zobowiązań pieniężnych.
-• Żadne moje zobowiązanie kredytowe ani pożyczkowe nie zostało wypowiedziane.
-• Wszystkie moje zobowiązania reguluję terminowo.
-• Nie toczy się wobec mnie postępowanie egzekucyjne.
-
-V. OŚWIADCZENIE PEP
-[ ] Nie jestem osobą PEP ani osobą z nią powiązaną.
-[ ] Jestem osobą PEP lub osobą powiązaną z PEP.
-
-VI. AML – DO WYPEŁNIENIA PRZEZ POŻYCZKODAWCĘ
-Ocena ryzyka: [ ] niskie  [ ] średnie  [ ] wysokie
-[ ] Transakcja przekracza równowartość 15 000 EUR
-[ ] Transakcja nie przekracza równowartości 15 000 EUR
-
-VII. ODPOWIEDZIALNOŚĆ KARNA
-Oświadczam, że jestem świadomy/a, iż podanie nieprawdziwych danych stanowi przestępstwo
-z art. 286 §1 oraz art. 297 §1 Kodeksu karnego.
-
-Miejscowość: ${d.miejsce_zawarcia || ".................."}
-Data: ${d.data_zawarcia || ".................."}
-
-..............................................
-Czytelny podpis Wnioskodawcy`;
-
-  const umowa = `UMOWA POŻYCZKI
-zawarta dnia ${d.data_zawarcia || "..............."}, w ${d.miejsce_zawarcia || "..............."} pomiędzy:
-
-${d.pb_nazwa || "POŻYCZKOBIORCA"}, ${d.pb_adres || "adres"}
-zwany/a dalej „Pożyczkobiorcą"
-${d.has_poreczyciel ? `\n${d.por_nazwa || "PORĘCZYCIEL"}, ${d.por_adres || "adres"}\nzwany/a dalej „Poręczycielem"\n` : ""}
-${d.pd_nazwa || "POŻYCZKODAWCA"}, ${d.pd_adres || "adres"}
-zwana dalej „Pożyczkodawcą"
-
-§ 1
-1. Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla Pożyczkobiorcy prowadzącego działalność gospodarczą na cele związane bezpośrednio z działalnością zawodową Pożyczkobiorcy.
-2. Pożyczkobiorca oświadcza, iż uzyskane środki przeznaczy w całości na: ${d.cel || "bieżące finansowanie działalności zawodowej"}.
-3. Kwota pożyczki nie może zostać przeznaczona na zakup, remont lub spłatę zobowiązań dotyczących nieruchomości.
-
-§ 2
-1. Pożyczkodawca udziela Pożyczkobiorcy pożyczki w kwocie ${d.kwota ? fmt(d.kwota) + " zł (słownie: " + slownie(d.kwota) + ")" : "............... zł"} z przeznaczeniem wyłącznie na cele wskazane w § 1.${d.has_poreczyciel ? " Poręczyciel poręcza spłatę tej pożyczki w całości wraz z odsetkami, prowizją i wszelkimi innymi należnościami." : ""}
-2. Pożyczkodawca pobiera prowizję w wysokości ${d.prowizja ? fmt(d.prowizja) + " zł (słownie: " + slownie(d.prowizja) + ")" : "............... zł"}, obejmującą koszt weryfikacji wniosku, oszacowania zabezpieczenia hipotecznego, oceny ryzyka, przygotowania i zawarcia Umowy. Kwota prowizji pomniejszy kwotę do wypłaty.
-3. Pożyczkodawca wypłaci Pożyczkobiorcy, po potrąceniu prowizji, kwotę ${d.kwota_wyplata ? fmt(d.kwota_wyplata) + " zł" : "............... zł"} w ciągu dwóch dni roboczych od ustanowienia zabezpieczeń, w następujący sposób:
-${d.wyplata_przelew ? `   a) ${fmt(d.wyplata_przelew)} zł – przelewem na rachunek Pożyczkobiorcy nr ${d.wyplata_konto_pb || "..."}` : ""}
-${d.wyplata_gotowka ? `   b) ${fmt(d.wyplata_gotowka)} zł – gotówką do rąk własnych Pożyczkobiorcy w dniu podpisania Umowy` : ""}
-${d.has_posrednik && d.wyplata_posrednik ? `   c) ${fmt(d.wyplata_posrednik)} zł – na rachunek ${d.pos_nazwa || "pośrednika"} nr ${d.wyplata_konto_pos || "..."} tytułem faktury ${d.wyplata_faktura || "..."} za pośrednictwo finansowe` : ""}
-${d.wyplata_notar ? `   d) ${fmt(d.wyplata_notar)} zł – na rachunek Kancelarii Notarialnej ${d.not_kancelaria || "..."} nr ${d.wyplata_konto_not || "..."} tytułem kosztów sporządzenia aktu notarialnego` : ""}
-4. Oprocentowanie pożyczki wynosi ${d.oprocentowanie || "..."}% w stosunku rocznym, naliczane od niespłaconej części zadłużenia od dnia wypłaty do dnia zwrotu.
-5. Pożyczkobiorca zobowiązuje się zwrócić pożyczkę z odsetkami przelewami na rachunek Pożyczkodawcy nr ${d.pd_konto || "..............."} zgodnie z Harmonogramem spłat (Załącznik nr 1).
-6. Umowa wchodzi w życie z dniem przekazania Pożyczkodawcy: a) podpisanego oryginału Umowy z podpisem poświadczonym notarialnie; b) wypisu aktów notarialnych zawierających żądanie wpisu hipoteki i poddanie się rygorowi egzekucji; c) kompletu oryginałów dokumentów.
-7. Niezależnie od odsetek i prowizji, Pożyczkobiorca uiszczać będzie Opłatę Podwyższonego Ryzyka w wysokości ${d.oplata_ryzyka || "..."}% wartości pożyczki za każdy rozpoczęty miesiąc, płatną zgodnie z Harmonogramem spłat. Opłata stanowi odrębne wynagrodzenie Pożyczkodawcy, nie stanowi odsetek w rozumieniu art. 359 k.c. i nie ma charakteru sankcyjnego.
-8. Opłata Podwyższonego Ryzyka stanowi wynagrodzenie za przyjęcie podwyższonego ryzyka ekonomicznego wynikającego z: a) udzielenia pożyczki wyłącznie na podstawie oświadczeń Pożyczkobiorcy; b) zaniechania weryfikacji w BIK, KRD, ERIF, BIG InfoMonitor; c) braku wizji lokalnej nieruchomości; d) braku operatu szacunkowego; e) braku ubezpieczenia nieruchomości; f) przyspieszonej procedury rozpoznania wniosku i wypłaty środków.
-
-§ 3
-1. Pożyczkobiorca złoży notarialne oświadczenie o żądaniu ustanowienia hipoteki do kwoty ${d.hipoteka_kwota ? fmt(d.hipoteka_kwota) + " zł" : "............... zł"} w KW nr ${d.hipoteka_kw || "..............."}, zabezpieczającej wszelkie wierzytelności z niniejszej Umowy.
-2. Pożyczkobiorca podda się rygorowi egzekucji z art. 777 § 1 pkt 5 k.p.c. do kwoty ${d.egzekucja_kwota ? fmt(d.egzekucja_kwota) + " zł" : "............... zł"}. Wierzyciel może wystąpić o klauzulę wykonalności do dnia ${d.egzekucja_data || "..............."}.
-${d.has_poreczyciel ? `3. Poręczyciel złoży notarialne oświadczenie o żądaniu ustanowienia hipoteki do kwoty ${d.por_hipoteka_kwota ? fmt(d.por_hipoteka_kwota) + " zł" : "............... zł"} w KW nr ${d.por_hipoteka_kw || "..."}.
-4. Poręczyciel podda się rygorowi egzekucji z art. 777 § 1 pkt 5 k.p.c. do kwoty ${d.por_egzekucja_kwota ? fmt(d.por_egzekucja_kwota) + " zł" : "............... zł"}. Wierzyciel może wystąpić o klauzulę do dnia ${d.por_egzekucja_data || "..."}.` : ""}
-
-§ 4
-1. W przypadku braku spłaty Pożyczkodawca może skierować sprawę do firmy windykacyjnej. Koszty windykacji (do 10% pożyczki miesięcznie) obciążają Pożyczkobiorcę.
-2. W przypadku opóźnienia Pożyczkobiorca zapłaci odsetki za opóźnienie w wysokości dwukrotności odsetek ustawowych za opóźnienie.
-3. Kolejność zaliczania wpłat: a) prowizja; b) koszty windykacyjne; c) odsetki za opóźnienie; d) odsetki kapitałowe; e) kapitał.
-
-§ 5
-1. Pożyczkobiorca oświadcza, że: a) zawiera Umowę jako przedsiębiorca w rozumieniu art. 4 ust. 1 Prawa przedsiębiorców; b) przepisy ustawy o kredycie konsumenckim nie mają zastosowania; c) wszelkie dane są kompletne i zgodne z prawdą; d) w pełni zrozumiał treść i skutki prawne Umowy; e) nie znajduje się w przymusowym położeniu (art. 388 k.c.); f) wyraża zgodę na cesję wierzytelności; g) wyraża zgodę na dostarczanie korespondencji e-mailem: ${d.pb_email || "....................."}
-2. Pożyczkodawca – administrator danych (${d.pd_administrator || d.pd_nazwa || "..."}): dane przetwarzane na podstawie art. 6 ust. 1 lit. b RODO; przechowywane przez 10 lat.
-3. Strony oświadczają, że zapisy Umowy są efektem indywidualnych negocjacji.
-
-§ 6
-1. Wszelkie zmiany Umowy wymagają formy pisemnej pod rygorem nieważności.
-2. Umowę sporządzono w 2 jednobrzmiących egzemplarzach.
-3. W sprawach nieobjętych Umową stosuje się przepisy Kodeksu cywilnego.
-4. Właściwy sąd: sąd miejscowo właściwy dla siedziby Pożyczkodawcy.
-
-§ 7
-1. Pożyczkodawca może wypowiedzieć Umowę ze skutkiem natychmiastowym gdy Pożyczkobiorca: a) opóźnia się z zapłatą raty ponad 14 dni; b) używa pożyczki niezgodnie z celem; c) podał nieprawdziwe dane; d) utrudnia wykonanie praw Pożyczkodawcy; e) narusza istotne postanowienia Umowy; f) wszczęto wobec niego egzekucję lub upadłość.
-2. Po wypowiedzeniu Pożyczkobiorca spłaci całość w terminie 7 dni.
-
-....................................     ....................................
-Pożyczkodawca                           Pożyczkobiorca
-${d.has_poreczyciel ? "\n....................................\nPoręczyciel" : ""}`;
-
-  const pad = (s: string, n: number, right = false) =>
-    right ? s.padStart(n) : s.padEnd(n);
-
-  const harmonogramDoc = `ZAŁĄCZNIK NR 1 – HARMONOGRAM SPŁAT
-
-Kwota pożyczki:          ${d.kwota ? fmt(d.kwota) + " zł" : "....................."}
-Data wypłaty:            ${d.data_wyplaty || "....................."}
-Oprocentowanie umowne:   ${d.oprocentowanie || "..."}% w skali roku
-Opłata Podwyższonego Ryzyka: ${d.oplata_ryzyka || "..."}% miesięcznie
-
-${pad("Nr", 4)} ${pad("Data", 14)} ${pad("Kapitał", 12, true)} ${pad("Odsetki", 12, true)} ${pad("Opl. Ryz.", 12, true)} ${pad("Rata", 12, true)} ${pad("Saldo", 14, true)}
-${"-".repeat(82)}
-${harmonogram.map((r) =>
-  `${pad(String(r.nr), 4)} ${pad(r.data, 14)} ${pad(fmt(r.kapital), 12, true)} ${pad(fmt(r.odsetki), 12, true)} ${pad(fmt(r.oplata), 12, true)} ${pad(fmt(r.rata), 12, true)} ${pad(fmt(r.saldo), 14, true)}`
-).join("\n")}
-${"-".repeat(82)}
-Łączny kapitał:          ${fmt(sumaKapital)} zł
-Łączne odsetki:          ${fmt(sumaOdsetki)} zł
-Łączna Opł. Ryzyka:      ${fmt(sumaOplata)} zł
-ŁĄCZNA SUMA:             ${fmt(sumaRazem)} zł
-
-Pożyczkodawca: ....................................
-Pożyczkobiorca: ...................................
-${d.has_poreczyciel ? "Poręczyciel: ......................................" : ""}`;
-
-  const protokol = `ZAŁĄCZNIK NR 2 – PROTOKÓŁ Z NEGOCJACJI INDYWIDUALNYCH
-
-1. DANE STRON
-Pożyczkodawca: ${d.pd_nazwa || "....................."}
-Pożyczkobiorca: ${d.pb_nazwa || "....................."}
-Numer telefonu użyty w negocjacjach: ${d.neg_tel || d.pb_tel || "....................."}
-${d.has_poreczyciel ? `Poręczyciel: ${d.por_nazwa || "....................."}` : ""}
-${d.has_posrednik ? `Pośrednik finansowy: ${d.pos_nazwa || "....................."}` : ""}
-Notariusz: ${d.not_nazwisko || "....................."}
-Kancelaria: ${d.not_kancelaria || "....................."}
-
-2. MIEJSCE, FORMY I PRZEBIEG NEGOCJACJI
-Negocjacje prowadzone były w trybie indywidualnym, w szczególności:
-- telefonicznie (${d.neg_tel || d.pb_tel || "..."}),
-${d.has_posrednik ? `- za pośrednictwem pośrednika finansowego: ${d.pos_nazwa || "..."},` : ""}
-- drogą elektroniczną (${d.pb_email || "..."}),
-- osobiście podczas czynności notarialnych u ${d.not_nazwisko || "..."}
-
-Negocjacje trwały: od ${d.neg_od || "............"} do ${d.neg_do || "............"}
-
-3. ZAKRES NEGOCJOWANYCH INDYWIDUALNIE WARUNKÓW
-Strony potwierdzają, że indywidualnie negocjowane były:
-• Kwota pożyczki i jej przeznaczenie
-• Wysokość prowizji
-• Sposób i terminy wypłaty pożyczki
-• Wysokość oprocentowania umownego
-• Wysokość Opłaty Podwyższonego Ryzyka
-• Rezygnacja z weryfikacji BIK/KRD/ERIF/BIG InfoMonitor
-• Rezygnacja z operatu szacunkowego i wizji lokalnej
-• Rezygnacja z obowiązku ubezpieczenia nieruchomości
-• Ustanowienie zabezpieczeń (hipoteka, egzekucja z aktu)
-• Harmonogram spłat
-• Postanowienia dotyczące windykacji
-• Prawo Pożyczkodawcy do wypowiedzenia Umowy
-• Forma doręczeń
-
-4. POTWIERDZENIA STRON
-Pożyczkobiorca potwierdza, że wszystkie warunki były negocjowane indywidualnie, są jasne
-i zrozumiałe, treść Umowy nie została mu narzucona.
-
-Pożyczkobiorca: ....................................
-${d.has_poreczyciel ? "Poręczyciel: ......................................" : ""}
-Pożyczkodawca: ....................................`;
-
-  const docs = {
-    wniosek: { title: "Wniosek o udzielenie pożyczki", content: wniosek },
-    umowa: { title: "Umowa pożyczki", content: umowa },
-    harmonogram: { title: "Zał. 1 – Harmonogram spłat", content: harmonogramDoc },
-    protokol: { title: "Zał. 2 – Protokół z negocjacji", content: protokol },
-  } as const;
-
-  const complete = [d.pb_nazwa, d.pd_nazwa, d.kwota, d.oprocentowanie, d.oplata_ryzyka, d.hipoteka_kw].filter(Boolean).length;
-  const pct = Math.round((complete / 6) * 100);
-
-  return (
-    <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold">Kreator kompletu pożyczkowego</h1>
-        <p className="text-sm text-muted-foreground">Uzupełnij dane w zakładkach — dokumenty generują się na bieżąco.</p>
-      </div>
-
-      <Card>
-        <CardContent className="flex items-center gap-4 pt-6">
-          <Progress value={pct} className="flex-1" />
-          <span className="text-sm text-muted-foreground min-w-24 text-right">Kompletność: {pct}%</span>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="strony">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="strony">Dane stron</TabsTrigger>
-          <TabsTrigger value="finanse">Warunki finansowe</TabsTrigger>
-          <TabsTrigger value="zabezpieczenia">Zabezpieczenia</TabsTrigger>
-          <TabsTrigger value="podglad">Podgląd dokumentów</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="strony" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Pożyczkobiorca</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Imię i nazwisko / firma" value={d.pb_nazwa} onChange={set("pb_nazwa")} />
-              <Field label="PESEL / NIP" value={d.pb_pesel_nip} onChange={set("pb_pesel_nip")} />
-              <Field label="Seria i numer dokumentu tożsamości" value={d.pb_doc} onChange={set("pb_doc")} />
-              <Field label="Adres zamieszkania / siedziby" value={d.pb_adres} onChange={set("pb_adres")} />
-              <Field label="Telefon" value={d.pb_tel} onChange={set("pb_tel")} type="tel" />
-              <Field label="E-mail" value={d.pb_email} onChange={set("pb_email")} type="email" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Pożyczkodawca</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Nazwa / firma" value={d.pd_nazwa} onChange={set("pd_nazwa")} />
-              <Field label="Adres" value={d.pd_adres} onChange={set("pd_adres")} />
-              <Field label="Administrator danych (RODO)" value={d.pd_administrator} onChange={set("pd_administrator")} hint="Jeśli inny niż nazwa firmy" />
-              <Field label="Numer rachunku bankowego" value={d.pd_konto} onChange={set("pd_konto")} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Poręczyciel</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Switch checked={d.has_poreczyciel} onCheckedChange={(v) => setD((p) => ({ ...p, has_poreczyciel: v }))} />
-                <Label className="text-sm">Umowa zawiera poręczyciela</Label>
-              </div>
-              {d.has_poreczyciel && (
-                <div className="grid md:grid-cols-2 gap-3">
-                  <Field label="Imię i nazwisko / firma poręczyciela" value={d.por_nazwa} onChange={set("por_nazwa")} />
-                  <Field label="Adres poręczyciela" value={d.por_adres} onChange={set("por_adres")} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Pośrednik i notariusz</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Switch checked={d.has_posrednik} onCheckedChange={(v) => setD((p) => ({ ...p, has_posrednik: v }))} />
-                <Label className="text-sm">Uczestniczy pośrednik finansowy</Label>
-              </div>
-              <div className="grid md:grid-cols-2 gap-3">
-                {d.has_posrednik && <Field label="Nazwa / imię i nazwisko pośrednika" value={d.pos_nazwa} onChange={set("pos_nazwa")} />}
-                <Field label="Notariusz – imię i nazwisko" value={d.not_nazwisko} onChange={set("not_nazwisko")} />
-                <Field label="Kancelaria notarialna" value={d.not_kancelaria} onChange={set("not_kancelaria")} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Miejsce i data zawarcia</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Miejsce zawarcia umowy" value={d.miejsce_zawarcia} onChange={set("miejsce_zawarcia")} />
-              <Field label="Data zawarcia umowy" value={d.data_zawarcia} onChange={set("data_zawarcia")} type="date" />
-              <Field label="Cel pożyczki (krótko)" value={d.cel} onChange={set("cel")} placeholder="np. bieżące finansowanie działalności" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="finanse" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Kwoty</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-3">
-              <Field label="Kwota pożyczki (zł)" value={d.kwota} onChange={set("kwota")} type="number" hint="Kwota brutto przed potrąceniem prowizji" />
-              <Field label="Prowizja (zł)" value={d.prowizja} onChange={set("prowizja")} type="number" />
-              <Field label="Kwota do wypłaty (zł)" value={d.kwota_wyplata} onChange={set("kwota_wyplata")} type="number" hint="= kwota pożyczki – prowizja" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Wypłata – podział</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Przelew na konto pożyczkobiorcy (zł)" value={d.wyplata_przelew} onChange={set("wyplata_przelew")} type="number" />
-              <Field label="Numer konta pożyczkobiorcy" value={d.wyplata_konto_pb} onChange={set("wyplata_konto_pb")} />
-              <Field label="Gotówka do rąk własnych (zł)" value={d.wyplata_gotowka} onChange={set("wyplata_gotowka")} type="number" />
-              {d.has_posrednik && (
-                <>
-                  <Field label="Przelew dla pośrednika (zł)" value={d.wyplata_posrednik} onChange={set("wyplata_posrednik")} type="number" />
-                  <Field label="Konto pośrednika" value={d.wyplata_konto_pos} onChange={set("wyplata_konto_pos")} />
-                  <Field label="Numer faktury za pośrednictwo" value={d.wyplata_faktura} onChange={set("wyplata_faktura")} />
-                </>
-              )}
-              <Field label="Przelew dla kancelarii notarialnej (zł)" value={d.wyplata_notar} onChange={set("wyplata_notar")} type="number" />
-              <Field label="Konto kancelarii notarialnej" value={d.wyplata_konto_not} onChange={set("wyplata_konto_not")} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Oprocentowanie i harmonogram</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Oprocentowanie umowne (% rocznie)" value={d.oprocentowanie} onChange={set("oprocentowanie")} type="number" />
-              <Field label="Opłata Podwyższonego Ryzyka (% miesięcznie)" value={d.oplata_ryzyka} onChange={set("oplata_ryzyka")} type="number" />
-              <Field label="Okres pożyczki (miesiące)" value={d.okres} onChange={set("okres")} type="number" />
-              <Field label="Data wypłaty pożyczki" value={d.data_wyplaty} onChange={set("data_wyplaty")} type="date" />
-            </CardContent>
-          </Card>
-
-          {d.kwota && d.oprocentowanie && d.oplata_ryzyka && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">Podgląd harmonogramu</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-muted">
-                        {["Nr","Data","Kapitał","Odsetki","Opl. Ryz.","Rata","Saldo"].map((h) => (
-                          <th key={h} className="px-2 py-1.5 text-right font-medium text-muted-foreground border-b">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {harmonogram.map((r) => (
-                        <tr key={r.nr} className="border-b">
-                          <td className="px-2 py-1 text-right">{r.nr}</td>
-                          <td className="px-2 py-1 text-right">{r.data}</td>
-                          <td className="px-2 py-1 text-right">{fmt(r.kapital)}</td>
-                          <td className="px-2 py-1 text-right">{fmt(r.odsetki)}</td>
-                          <td className="px-2 py-1 text-right">{fmt(r.oplata)}</td>
-                          <td className="px-2 py-1 text-right font-medium">{fmt(r.rata)}</td>
-                          <td className="px-2 py-1 text-right text-muted-foreground">{fmt(r.saldo)}</td>
-                        </tr>
-                      ))}
-                      <tr className="bg-muted font-medium">
-                        <td colSpan={2} className="px-2 py-1.5">RAZEM</td>
-                        <td className="px-2 py-1.5 text-right">{fmt(sumaKapital)}</td>
-                        <td className="px-2 py-1.5 text-right">{fmt(sumaOdsetki)}</td>
-                        <td className="px-2 py-1.5 text-right">{fmt(sumaOplata)}</td>
-                        <td className="px-2 py-1.5 text-right">{fmt(sumaRazem)}</td>
-                        <td />
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    ["Koszt odsetek", fmt(sumaOdsetki) + " zł"],
-                    ["Koszt Opł. Ryzyka", fmt(sumaOplata) + " zł"],
-                    ["Całkowity koszt pożyczki", fmt(sumaOdsetki + sumaOplata + (parseFloat(d.prowizja) || 0)) + " zł"],
-                    ["RRSO (szacunkowe)", d.kwota && parseInt(d.okres) > 0 ? (((sumaRazem - parseFloat(d.kwota)) / parseFloat(d.kwota)) * (12 / parseInt(d.okres)) * 100).toFixed(1) + "%" : "—"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="rounded-md bg-muted px-3 py-2">
-                      <p className="text-xs text-muted-foreground">{k}</p>
-                      <p className="text-sm font-semibold">{v}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Negocjacje (do protokołu)</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-3">
-              <Field label="Negocjacje od (data)" value={d.neg_od} onChange={set("neg_od")} type="date" />
-              <Field label="Negocjacje do (data)" value={d.neg_do} onChange={set("neg_do")} type="date" />
-              <Field label="Telefon użyty w negocjacjach" value={d.neg_tel} onChange={set("neg_tel")} hint="Jeśli inny niż telefon pożyczkobiorcy" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="zabezpieczenia" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Hipoteka – Pożyczkobiorca</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Kwota hipoteki (zł)" value={d.hipoteka_kwota} onChange={set("hipoteka_kwota")} type="number" hint="Zazwyczaj 150–200% kwoty pożyczki" />
-              <Field label="Numer księgi wieczystej (KW)" value={d.hipoteka_kw} onChange={set("hipoteka_kw")} placeholder="np. LU1L/00012345/6" />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="text-base">Egzekucja z art. 777 k.p.c. – Pożyczkobiorca</CardTitle></CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-3">
-              <Field label="Kwota egzekucji (zł)" value={d.egzekucja_kwota} onChange={set("egzekucja_kwota")} type="number" hint="Zazwyczaj 150–200% kwoty pożyczki" />
-              <Field label="Termin klauzuli wykonalności (data)" value={d.egzekucja_data} onChange={set("egzekucja_data")} type="date" />
-            </CardContent>
-          </Card>
-          {d.has_poreczyciel && (
-            <>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Hipoteka – Poręczyciel</CardTitle></CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-3">
-                  <Field label="Kwota hipoteki poręczyciela (zł)" value={d.por_hipoteka_kwota} onChange={set("por_hipoteka_kwota")} type="number" />
-                  <Field label="Numer KW poręczyciela" value={d.por_hipoteka_kw} onChange={set("por_hipoteka_kw")} />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Egzekucja z art. 777 k.p.c. – Poręczyciel</CardTitle></CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-3">
-                  <Field label="Kwota egzekucji poręczyciela (zł)" value={d.por_egzekucja_kwota} onChange={set("por_egzekucja_kwota")} type="number" />
-                  <Field label="Termin klauzuli wykonalności" value={d.por_egzekucja_data} onChange={set("por_egzekucja_data")} type="date" />
-                </CardContent>
-              </Card>
-            </>
-          )}
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
-            ⚠ Standardowa praktyka: hipoteka i kwota egzekucji na poziomie 150–200% kwoty pożyczki. Kwota egzekucji powinna pokryć kapitał + odsetki + prowizję + koszty windykacji.
-          </div>
-        </TabsContent>
-
-        <TabsContent value="podglad" className="space-y-4">
-          <Tabs value={activeDoc} onValueChange={setActiveDoc}>
-            <TabsList className="flex flex-wrap h-auto">
-              {Object.entries(docs).map(([k, doc]) => (
-                <TabsTrigger key={k} value={k}>{doc.title}</TabsTrigger>
-              ))}
-            </TabsList>
-            {Object.entries(docs).map(([k, doc]) => (
-              <TabsContent key={k} value={k}>
-                <DocView title={doc.title} content={doc.content} />
-              </TabsContent>
-            ))}
-          </Tabs>
-          <p className="text-xs text-muted-foreground">
-            Załącznik nr 3 (tabela opłat windykacyjnych) pozostaje niezmienny — użyj wersji z oryginalnego szablonu.
-          </p>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+function buildProtokol(c: Client, i: Investor, o: Offer): string {
+  return [
+    `ZAŁĄCZNIK NR 2 — PROTOKÓŁ NEGOCJACJI`,
+    `Strony: ${i.nazwa || "—"} oraz ${c.imie || "—"}`,
+    `Data: ${plDate(i.data_zawarcia)}`,
+    ``,
+    `Strony oświadczają, że indywidualnie negocjowały i uzgodniły:`,
+    `• kwotę wypłacaną klientowi „na rękę”: ${fmtPLN(o.netAmountToClient)}`,
+    `• maksymalną miesięczną ratę klienta: ${fmtPLN(o.maxMonthlyPaymentByClient)}`,
+    `• okres pożyczki: ${o.loanTermMonths} m-cy`,
+    `• prowizję kredytowaną: ${fmtPLN(o.creditedCommission)}`,
+    `• oczekiwane miesięczne wynagrodzenie inwestora: ${fmtPLN(o.expectedMonthlyInvestorReturn)}`,
+    `• oprocentowanie roczne: ${fmtNum(o.annualInterestPercent)} %`,
+    `• miesięczną opłatę za ryzyko: ${fmtPLN(o.monthlyRiskFeeAmount)}`,
+    `• ratę balonową wynikającą z relacji raty klienta do wynagrodzenia inwestora`,
+    `• zabezpieczenia: hipoteka oraz egzekucja z art. 777 k.p.c.`,
+    `• terminy wypłaty i spłaty.`,
+    ``,
+    `Negocjacje miały charakter indywidualny i obie strony akceptują uzgodnione warunki.`,
+  ].join("\n");
 }
