@@ -30,12 +30,15 @@ export const Route = createFileRoute("/klient/status")({
 
 function KlientOpis() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const assist = useServerFn(assistBusinessDescription);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [loanId, setLoanId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [hint, setHint] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [aiBusy, setAiBusy] = useState<"draft" | "improve" | "expand" | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,7 @@ function KlientOpis() {
       setLoading(true);
       const { data: c } = await supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle();
       if (c) {
+        setClientId(c.id);
         const { data: l } = await supabase
           .from("loan_applications")
           .select("id, situation_description")
@@ -59,16 +63,42 @@ function KlientOpis() {
     })();
   }, [user]);
 
+  const ensureLoan = async (): Promise<string | null> => {
+    if (loanId) return loanId;
+    if (!clientId) { toast.error("Brak profilu klienta"); return null; }
+    const { data, error } = await supabase
+      .from("loan_applications")
+      .insert({ client_id: clientId, situation_description: text })
+      .select("id")
+      .single();
+    if (error) { toast.error(error.message); return null; }
+    setLoanId(data.id);
+    return data.id;
+  };
+
   const save = async () => {
-    if (!loanId) { toast.error("Brak aktywnego wniosku"); return; }
     setSaving(true);
+    const id = await ensureLoan();
+    if (!id) { setSaving(false); return; }
     const { error } = await supabase
       .from("loan_applications")
       .update({ situation_description: text })
-      .eq("id", loanId);
+      .eq("id", id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Opis zapisany");
+  };
+
+  const removeLoan = async () => {
+    if (!loanId) return;
+    setDeleting(true);
+    const { error } = await supabase.from("loan_applications").delete().eq("id", loanId);
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Wniosek usunięty");
+    setLoanId(null);
+    setText("");
+    void navigate({ to: "/klient" });
   };
 
   const runAi = async (mode: "draft" | "improve" | "expand") => {
