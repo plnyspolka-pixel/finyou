@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, LogIn } from "lucide-react";
+import { loginAsUser } from "@/lib/impersonate-client";
 import { investorTypeLabels, subscriptionPlanLabels, subscriptionStatusLabels } from "@/lib/labels";
 
 export const Route = createFileRoute("/admin/inwestorzy")({
@@ -85,7 +86,12 @@ function InwestorzyAdmin() {
               <TableCell className="text-sm"><div>{r.email ?? "—"}</div><div className="text-xs text-muted-foreground">{r.phone ?? "—"}</div></TableCell>
               <TableCell>{r.subscription_plan ? subscriptionPlanLabels[r.subscription_plan] : "—"}</TableCell>
               <TableCell><Badge variant={r.subscription_status === "aktywny" ? "default" : "secondary"}>{r.subscription_status ? subscriptionStatusLabels[r.subscription_status] : "—"}</Badge></TableCell>
-              <TableCell><Link to="/admin/inwestorzy/$id" params={{ id: r.id }} className="text-sm text-primary hover:underline">Otwórz</Link></TableCell>
+              <TableCell className="space-x-2 whitespace-nowrap">
+                <Button size="sm" variant="outline" disabled={!r.email} onClick={() => void loginAsUser(r.email)}>
+                  <LogIn className="mr-1 h-3 w-3" /> Zaloguj jako
+                </Button>
+                <Link to="/admin/inwestorzy/$id" params={{ id: r.id }} className="text-sm text-primary hover:underline">Otwórz</Link>
+              </TableCell>
             </TableRow>
           ))}</TableBody>
         </Table></div></CardContent>
