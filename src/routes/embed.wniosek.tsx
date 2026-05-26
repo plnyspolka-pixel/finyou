@@ -125,7 +125,7 @@ function EmbedWniosek() {
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="mx-auto max-w-2xl space-y-4 rounded-xl border bg-card p-6 shadow-sm">
         <header>
-          <h1 className="text-xl font-bold">Sprawdź orientacyjne warunki pożyczki pod zastaw nieruchomości</h1>
+          <h1 className="text-xl font-bold">Sprawdź warunki pożyczki pod zastaw nieruchomości</h1>
           <p className="text-xs text-muted-foreground">Krok {step} z 4</p>
         </header>
 
