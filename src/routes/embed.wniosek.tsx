@@ -9,9 +9,9 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { InvestorInterestMeter } from "@/components/investor-interest-meter";
 import {
-  monthlyPayment, totalRepayment, investorTotalCompensation, interestScore, formatPLN,
+  monthlyPayment, formatPLN,
+
   securityTypeLabels, type SecurityType,
 } from "@/lib/loan-math";
 import { AlertTriangle, Calculator } from "lucide-react";
@@ -60,11 +60,12 @@ function EmbedWniosek() {
   const [situationDescription, setSituationDescription] = useState("");
   const [consent, setConsent] = useState(false);
 
-  const rata = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
-  const totalPay = useMemo(() => totalRepayment(rata, months), [rata, months]);
-  const investorComp = useMemo(() => investorTotalCompensation(rata, months, amount), [rata, months, amount]);
-  const score = useMemo(() => (secType ? interestScore(secType, annualRate) : 0), [secType, annualRate]);
-  const exceedsMax = rata > maxPayment && maxPayment > 0;
+  const rataNominal = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
+  const rata = useMemo(() => (maxPayment > 0 ? Math.min(rataNominal, maxPayment) : rataNominal), [rataNominal, maxPayment]);
+  const balloon = useMemo(() => Math.max(0, (rataNominal - rata) * months), [rataNominal, rata, months]);
+  const totalPay = useMemo(() => rata * months + balloon, [rata, months, balloon]);
+  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
+  const exceedsMax = balloon > 0;
 
   const submit = async () => {
     setErr(null);
@@ -138,7 +139,8 @@ function EmbedWniosek() {
             <div className="space-y-2">
               <div className="flex justify-between"><Label>Wynagrodzenie roczne</Label>
                 <div className="flex items-center gap-1"><Input type="number" step="0.5" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-20" /><span className="text-sm">%</span></div></div>
-              <Slider min={15} max={36} step={0.5} value={[Math.min(36, annualRate)]} onValueChange={(v) => setAnnualRate(v[0])} />
+              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between"><Label>Okres</Label><span className="text-sm">{months} mies.</span></div>
@@ -153,15 +155,17 @@ function EmbedWniosek() {
               <Label>Co ma być zabezpieczeniem?</Label>
               <SecurityTypePicker value={secType} onChange={setSecType} />
             </div>
-            {secType && <InvestorInterestMeter score={score} />}
             <div className="rounded border bg-muted/30 p-3 space-y-1 text-sm">
               <div className="flex justify-between"><span>Orientacyjna rata</span><b>{formatPLN(rata)}</b></div>
+              {balloon > 0 && (
+                <div className="flex justify-between"><span>Rata balonowa na koniec</span><b>{formatPLN(balloon)}</b></div>
+              )}
               <div className="flex justify-between"><span>Łączne wynagrodzenie inwestora</span><b>{formatPLN(investorComp)}</b></div>
               <div className="flex justify-between"><span>Łączna kwota do spłaty</span><b>{formatPLN(totalPay)}</b></div>
               <p className="text-xs text-muted-foreground pt-1">To jest kalkulacja orientacyjna. Nie stanowi oferty ani decyzji pożyczkowej.</p>
             </div>
             {exceedsMax && (
-              <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Orientacyjna rata może być wyższa niż wskazana przez Ciebie maksymalna rata.</AlertDescription></Alert>
+              <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu.</AlertDescription></Alert>
             )}
             <Button className="w-full" disabled={!canNext1} onClick={() => setStep(2)}>Dalej — sprawdź możliwość finansowania</Button>
           </div>

@@ -12,12 +12,8 @@ import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { InvestorInterestMeter } from "@/components/investor-interest-meter";
 import {
   monthlyPayment,
-  totalRepayment,
-  investorTotalCompensation,
-  interestScore,
   formatPLN,
   securityTypeLabels,
   type SecurityType,
@@ -48,7 +44,7 @@ function KlientWniosek() {
   // Kalkulator
   const [amount, setAmount] = useState<number>(200_000);
   const [annualRate, setAnnualRate] = useState<number>(20);
-  const [rateAboveCap, setRateAboveCap] = useState(false);
+  // slider wynagrodzenia: 15-60%
   const [months, setMonths] = useState<number>(24);
   const [maxPayment, setMaxPayment] = useState<number>(5000);
   const [secType, setSecType] = useState<SecurityType | null>(null);
@@ -82,11 +78,13 @@ function KlientWniosek() {
 
 
   // Wyliczenia
-  const rata = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
-  const totalPay = useMemo(() => totalRepayment(rata, months), [rata, months]);
-  const investorComp = useMemo(() => investorTotalCompensation(rata, months, amount), [rata, months, amount]);
-  const score = useMemo(() => (secType ? interestScore(secType, annualRate) : 0), [secType, annualRate]);
-  const exceedsMax = rata > maxPayment && maxPayment > 0;
+  // Wyliczenia: nadwyżka ponad maks. ratę trafia do raty balonowej na koniec
+  const rataNominal = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
+  const rata = useMemo(() => (maxPayment > 0 ? Math.min(rataNominal, maxPayment) : rataNominal), [rataNominal, maxPayment]);
+  const balloon = useMemo(() => Math.max(0, (rataNominal - rata) * months), [rataNominal, rata, months]);
+  const totalPay = useMemo(() => rata * months + balloon, [rata, months, balloon]);
+  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
+  const exceedsMax = balloon > 0;
 
   useEffect(() => {
     if (!user) return;
@@ -151,7 +149,7 @@ function KlientWniosek() {
         business_status: bizStatus || null,
         nip: nip || null,
         kw_status: kwStatus || null,
-        interest_score: secType ? score : null,
+        interest_score: null,
         current_form_step: nextStep,
       }).eq("id", lid);
 
@@ -316,12 +314,8 @@ function KlientWniosek() {
                   <span className="text-sm">%</span>
                 </div>
               </div>
-              <Slider min={15} max={36} step={0.5} value={[Math.min(36, annualRate)]} onValueChange={(v) => { setAnnualRate(v[0]); setRateAboveCap(false); }} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>36%</span></div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={rateAboveCap} onChange={(e) => { setRateAboveCap(e.target.checked); if (e.target.checked) setAnnualRate(40); }} />
-                <span>Powyżej 36% — do indywidualnego ustalenia</span>
-              </label>
+              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
             </div>
 
             <div className="space-y-3">
@@ -346,10 +340,13 @@ function KlientWniosek() {
               <SecurityTypePicker value={secType} onChange={setSecType} />
             </div>
 
-            {secType && <InvestorInterestMeter score={score} />}
+
 
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
               <div className="flex justify-between text-sm"><span>Orientacyjna rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
+              {balloon > 0 && (
+                <div className="flex justify-between text-sm"><span>Rata balonowa na koniec ({months} mies.)</span><b className="tabular-nums">{formatPLN(balloon)}</b></div>
+              )}
               <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
               <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
               <p className="text-xs text-muted-foreground pt-2">
@@ -361,7 +358,7 @@ function KlientWniosek() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Przy wybranych parametrach orientacyjna rata może być wyższa niż wskazana przez Ciebie maksymalna rata. Możesz wydłużyć okres, zmniejszyć kwotę albo zmienić oferowane wynagrodzenie.
+                  Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu umowy.
                 </AlertDescription>
               </Alert>
             )}
