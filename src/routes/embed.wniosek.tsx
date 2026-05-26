@@ -156,13 +156,13 @@ function EmbedWniosek() {
               <SecurityTypePicker value={secType} onChange={setSecType} />
             </div>
             <div className="rounded border bg-muted/30 p-3 space-y-1 text-sm">
-              <div className="flex justify-between"><span>Orientacyjna rata</span><b>{formatPLN(rata)}</b></div>
+              <div className="flex justify-between"><span>Rata miesięczna</span><b>{formatPLN(rata)}</b></div>
               {balloon > 0 && (
-                <div className="flex justify-between"><span>Rata balonowa na koniec</span><b>{formatPLN(balloon)}</b></div>
+                <div className="flex justify-between"><span>Ostatnia rata (z nadwyżką balonową)</span><b>{formatPLN(rata + balloon)}</b></div>
               )}
               <div className="flex justify-between"><span>Łączne wynagrodzenie inwestora</span><b>{formatPLN(investorComp)}</b></div>
               <div className="flex justify-between"><span>Łączna kwota do spłaty</span><b>{formatPLN(totalPay)}</b></div>
-              <p className="text-xs text-muted-foreground pt-1">To jest kalkulacja orientacyjna. Nie stanowi oferty ani decyzji pożyczkowej.</p>
+              <p className="text-xs text-muted-foreground pt-1">Kalkulacja poglądowa. Nie stanowi oferty ani decyzji pożyczkowej.</p>
             </div>
             {exceedsMax && (
               <Alert><AlertTriangle className="h-4 w-4" /><AlertDescription>Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu.</AlertDescription></Alert>
