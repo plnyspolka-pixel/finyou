@@ -9,9 +9,9 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { InvestorInterestMeter } from "@/components/investor-interest-meter";
 import {
-  monthlyPayment, totalRepayment, investorTotalCompensation, interestScore, formatPLN,
+  monthlyPayment, formatPLN,
+
   securityTypeLabels, type SecurityType,
 } from "@/lib/loan-math";
 import { AlertTriangle, Calculator } from "lucide-react";
