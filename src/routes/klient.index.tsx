@@ -353,12 +353,45 @@ function KlientWniosek() {
         completeness_percent: 100,
         available_to_investors: false,
       }).eq("id", loanId);
+      setLoanStatus("wniosek_kompletny");
+      setEditing(false);
+      setStep(1);
       toast.success("Wniosek wysłany do analizy");
-      void navigate({ to: "/klient/status" });
     } finally {
       setSubmitting(false);
     }
   };
+
+  const incomeDocs = useMemo(() => docs.filter((d) => d.document_type === "dochod"), [docs]);
+  const isSubmitted = loanStatus !== null && loanStatus !== "w_trakcie_uzupelniania";
+
+  if (isSubmitted && !editing) {
+    return (
+      <SubmittedView
+        loanStatus={loanStatus!}
+        amount={amount}
+        annualRate={annualRate}
+        months={months}
+        rata={rata}
+        balloon={balloon}
+        totalPay={totalPay}
+        investorComp={investorComp}
+        firstName={firstName}
+        lastName={lastName}
+        email={email}
+        phone={phone}
+        secType={secType}
+        kwStatus={kwStatus}
+        kwNumber={kwNumber}
+        docs={docs}
+        incomeDocs={incomeDocs}
+        uploading={uploading}
+        onUpload={uploadDoc}
+        onEdit={() => { setEditing(true); setStep(1); }}
+      />
+    );
+  }
+
 
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
