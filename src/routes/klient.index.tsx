@@ -381,7 +381,7 @@ function KlientWniosek() {
             {schedule.length > 0 && (
               <div className="rounded-lg border bg-card">
                 <div className="px-4 py-3 border-b">
-                  <h3 className="font-semibold text-sm">Orientacyjny harmonogram spłat</h3>
+                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
                   <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
                 </div>
                 <div className="max-h-72 overflow-auto">
@@ -391,8 +391,6 @@ function KlientWniosek() {
                         <th className="px-3 py-2 font-medium">#</th>
                         <th className="px-3 py-2 font-medium">Data spłaty</th>
                         <th className="px-3 py-2 font-medium text-right">Rata</th>
-                        {balloon > 0 && <th className="px-3 py-2 font-medium text-right">Balon</th>}
-                        <th className="px-3 py-2 font-medium text-right">Razem</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -400,11 +398,7 @@ function KlientWniosek() {
                         <tr key={r.idx} className="border-t">
                           <td className="px-3 py-2 tabular-nums">{r.idx}</td>
                           <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                          <td className="px-3 py-2 text-right tabular-nums">{formatPLN(r.payment)}</td>
-                          {balloon > 0 && (
-                            <td className="px-3 py-2 text-right tabular-nums">{r.balloon > 0 ? formatPLN(r.balloon) : "—"}</td>
-                          )}
-                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment + r.balloon)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
                         </tr>
                       ))}
                     </tbody>
