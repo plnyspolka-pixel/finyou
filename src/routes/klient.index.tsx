@@ -307,9 +307,9 @@ function KlientWniosek() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" /> Sprawdź orientacyjne warunki pożyczki pod zastaw nieruchomości
+              <Calculator className="h-5 w-5" /> Sprawdź warunki pożyczki pod zastaw nieruchomości
             </CardTitle>
-            <CardDescription>Ustaw parametry — od razu zobaczysz orientacyjną ratę i wskaźnik zainteresowania inwestora.</CardDescription>
+            <CardDescription>Ustaw parametry — od razu zobaczysz wysokość raty i koszt finansowania.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
