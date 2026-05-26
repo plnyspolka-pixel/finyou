@@ -15,21 +15,56 @@ function gwHeaders(kind: "drive" | "docs") {
 
 export const listGoogleDocs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ search: z.string().max(200).optional() }).parse(input))
+  .inputValidator((input) =>
+    z.object({
+      search: z.string().max(200).optional(),
+      scope: z.enum(["all", "mine", "shared", "drives"]).optional(),
+    }).parse(input),
+  )
   .handler(async ({ data }) => {
     try {
-      const q = [
+      const scope = data.scope ?? "all";
+      const parts = [
+        // Google Docs + uploaded Word documents
         "mimeType='application/vnd.google-apps.document'",
         "trashed=false",
-        data.search ? `name contains '${String(data.search).replace(/'/g, "\\'")}'` : "",
-      ].filter(Boolean).join(" and ");
-      const url = `${DRIVE_GW}/files?q=${encodeURIComponent(q)}&pageSize=50&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime,owners(displayName,emailAddress),webViewLink)`;
+      ];
+      if (data.search) parts.push(`name contains '${String(data.search).replace(/'/g, "\\'")}'`);
+      if (scope === "mine") parts.push("'me' in owners");
+      if (scope === "shared") parts.push("sharedWithMe=true");
+      const q = parts.join(" and ");
+      const params = new URLSearchParams({
+        q,
+        pageSize: "100",
+        orderBy: "modifiedTime desc",
+        fields: "files(id,name,mimeType,modifiedTime,owners(displayName,emailAddress),webViewLink,driveId,shared)",
+        includeItemsFromAllDrives: "true",
+        supportsAllDrives: "true",
+        corpora: scope === "drives" ? "allDrives" : "allDrives",
+      });
+      const url = `${DRIVE_GW}/files?${params.toString()}`;
       const res = await fetch(url, { headers: gwHeaders("drive") });
       const json: any = await res.json();
       if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
-      return { ok: true, files: json.files || [] };
+      let files = (json.files || []) as Array<any>;
+      if (scope === "drives") files = files.filter((f) => !!f.driveId);
+      return { ok: true, files };
     } catch (e: any) {
       return { ok: false, error: String(e?.message || e), files: [] };
+    }
+  });
+
+export const getConnectedGoogleAccount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    try {
+      const url = `${DRIVE_GW}/about?fields=user(displayName,emailAddress,photoLink),storageQuota(usage,limit)`;
+      const res = await fetch(url, { headers: gwHeaders("drive") });
+      const json: any = await res.json();
+      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
+      return { ok: true, user: json.user };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e) };
     }
   });
 

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { suggestPlaceholders, listGoogleDocs, importGoogleDoc } from "@/lib/document-templates.functions";
+import { suggestPlaceholders, listGoogleDocs, importGoogleDoc, getConnectedGoogleAccount } from "@/lib/document-templates.functions";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -330,22 +330,27 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
 
 function GoogleDocsImportDialog({ onClose, onImported }: { onClose: () => void; onImported: (name: string, html: string) => void }) {
   const [search, setSearch] = useState("");
+  const [scope, setScope] = useState<"all" | "mine" | "shared" | "drives">("all");
   const [loading, setLoading] = useState(false);
-  const [files, setFiles] = useState<Array<{ id: string; name: string; modifiedTime: string; webViewLink?: string; owners?: Array<{ displayName?: string }> }>>([]);
+  const [files, setFiles] = useState<Array<{ id: string; name: string; modifiedTime: string; webViewLink?: string; owners?: Array<{ displayName?: string; emailAddress?: string }>; driveId?: string }>>([]);
   const [importingId, setImportingId] = useState<string | null>(null);
+  const [account, setAccount] = useState<{ displayName?: string; emailAddress?: string; photoLink?: string } | null>(null);
   const listFn = useServerFn(listGoogleDocs);
   const importFn = useServerFn(importGoogleDoc);
+  const accountFn = useServerFn(getConnectedGoogleAccount);
 
-  const refresh = async (q?: string) => {
+  const refresh = async (q?: string, s?: typeof scope) => {
     setLoading(true);
     try {
-      const res: any = await listFn({ data: { search: q || undefined } });
+      const res: any = await listFn({ data: { search: q || undefined, scope: s ?? scope } });
       if (!res?.ok) toast.error(res?.error || "Nie udało się pobrać listy");
       else setFiles(res.files || []);
     } catch (e: any) { toast.error(String(e?.message || e)); }
     finally { setLoading(false); }
   };
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { void refresh(); void (async () => {
+    const r: any = await accountFn({}); if (r?.ok) setAccount(r.user);
+  })(); }, []);
 
   const doImport = async (id: string, name: string) => {
     setImportingId(id);
@@ -358,12 +363,42 @@ function GoogleDocsImportDialog({ onClose, onImported }: { onClose: () => void; 
     finally { setImportingId(null); }
   };
 
+  const scopeTabs: Array<{ id: typeof scope; label: string }> = [
+    { id: "all", label: "Wszystkie" },
+    { id: "mine", label: "Moje" },
+    { id: "shared", label: "Udostępnione mi" },
+    { id: "drives", label: "Dyski współdzielone" },
+  ];
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Importuj szablon z Google Docs</DialogTitle>
         </DialogHeader>
+
+        <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 p-2 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            {account?.photoLink && <img src={account.photoLink} alt="" className="h-6 w-6 rounded-full" />}
+            <div className="min-w-0">
+              <div className="font-medium truncate">{account?.displayName || "Konto Google"}</div>
+              <div className="text-muted-foreground truncate">{account?.emailAddress || "—"}</div>
+            </div>
+          </div>
+          <a href="/admin/integracje" className="shrink-0 underline text-muted-foreground hover:text-foreground">
+            Zmień konto
+          </a>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {scopeTabs.map((t) => (
+            <Button key={t.id} size="sm" variant={scope === t.id ? "default" : "outline"}
+              onClick={() => { setScope(t.id); void refresh(search, t.id); }}>
+              {t.label}
+            </Button>
+          ))}
+        </div>
+
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -379,14 +414,17 @@ function GoogleDocsImportDialog({ onClose, onImported }: { onClose: () => void; 
           {loading && files.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Ładowanie…</div>
           ) : files.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">Brak dokumentów na podłączonym koncie Google.</div>
+            <div className="p-6 text-center text-sm text-muted-foreground space-y-2">
+              <div>Brak dokumentów w tym zakresie.</div>
+              <div className="text-xs">Jeśli plik jest w formacie .docx, otwórz go w Google Docs i zapisz jako Dokument Google, aby się tu pojawił.</div>
+            </div>
           ) : files.map((f) => (
             <div key={f.id} className="p-3 flex items-center gap-3 hover:bg-muted/40">
               <FileText className="h-5 w-5 text-primary shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-sm truncate">{f.name}</div>
                 <div className="text-[11px] text-muted-foreground truncate">
-                  {f.owners?.[0]?.displayName || "—"} · {formatDate(f.modifiedTime)}
+                  {f.owners?.[0]?.displayName || (f.driveId ? "Dysk współdzielony" : "—")} · {formatDate(f.modifiedTime)}
                 </div>
               </div>
               {f.webViewLink && (
