@@ -23,7 +23,7 @@ function KlientOferta() {
     const { data: ls } = await supabase.from("loan_applications").select("id").eq("client_id", c.id);
     const ids = (ls ?? []).map((l) => l.id);
     if (ids.length === 0) return;
-    const { data } = await supabase.from("investor_offers").select("*").in("loan_application_id", ids).in("offer_status", ["wyslana_do_klienta", "zaakceptowana_przez_klienta", "odrzucona_przez_klienta"]);
+    const { data } = await supabase.from("investor_offers").select("*").in("loan_application_id", ids).in("offer_status", ["zlozona", "wyslana_do_klienta", "zaakceptowana_przez_klienta", "odrzucona_przez_klienta"]).order("created_at", { ascending: false });
     setOffers(data ?? []);
   };
   useEffect(() => { void load(); }, [user]);
