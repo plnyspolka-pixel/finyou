@@ -147,64 +147,91 @@ function KlientOpis() {
         </AlertDescription>
       </Alert>
 
-      {!loanId ? (
-        <Card><CardContent className="pt-6 text-sm text-muted-foreground">Najpierw rozpocznij wniosek, aby zapisać opis.</CardContent></Card>
-      ) : (
-        <>
-          <Card>
-            <CardHeader><CardTitle className="text-base">Twój opis</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Np. Środki przeznaczę na zakup maszyny CNC za 180 000 zł, która pozwoli realizować dodatkowe zamówienia w branży meblarskiej. Spodziewam się wzrostu przychodów o 25% w pierwszych 6 miesiącach. Spłata z bieżącej sprzedaży i nowych kontraktów."
-                rows={10}
-                className="resize-y"
-              />
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{text.trim().length} znaków</span>
-                <Button onClick={() => void save()} disabled={saving} size="sm">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                  Zapisz
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Twój opis</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Np. Środki przeznaczę na zakup maszyny CNC za 180 000 zł, która pozwoli realizować dodatkowe zamówienia w branży meblarskiej. Spodziewam się wzrostu przychodów o 25% w pierwszych 6 miesiącach. Spłata z bieżącej sprzedaży i nowych kontraktów."
+            rows={10}
+            className="resize-y"
+          />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{text.trim().length} znaków{!loanId ? " · wersja robocza" : ""}</span>
+            <Button onClick={() => void save()} disabled={saving} size="sm">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+              Zapisz
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary"/> Asystent AI</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Wskazówki dla AI (opcjonalnie)</label>
-                <Input
-                  value={hint}
-                  onChange={(e) => setHint(e.target.value)}
-                  placeholder="Np. branża: gastronomia, cel: otwarcie drugiego lokalu, kwota 250 000 zł"
-                />
-                <p className="text-xs text-muted-foreground">Im więcej szczegółów podasz, tym lepszy opis.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => void runAi("draft")} disabled={aiBusy !== null}>
-                  {aiBusy === "draft" ? <Loader2 className="h-4 w-4 animate-spin"/> : <PencilLine className="h-4 w-4"/>}
-                  Napisz wstępny opis
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary"/> Asystent AI</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Wskazówki dla AI (opcjonalnie)</label>
+            <Input
+              value={hint}
+              onChange={(e) => setHint(e.target.value)}
+              placeholder="Np. branża: gastronomia, cel: otwarcie drugiego lokalu, kwota 250 000 zł"
+            />
+            <p className="text-xs text-muted-foreground">Im więcej szczegółów podasz, tym lepszy opis.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => void runAi("draft")} disabled={aiBusy !== null}>
+              {aiBusy === "draft" ? <Loader2 className="h-4 w-4 animate-spin"/> : <PencilLine className="h-4 w-4"/>}
+              Napisz wstępny opis
+            </Button>
+            <Button variant="outline" onClick={() => void runAi("improve")} disabled={aiBusy !== null}>
+              {aiBusy === "improve" ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+              Popraw mój tekst
+            </Button>
+            <Button variant="outline" onClick={() => void runAi("expand")} disabled={aiBusy !== null}>
+              {aiBusy === "expand" ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
+              Rozwiń opis
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            AI nadpisze treść w polu wyżej — przejrzyj wynik, popraw co trzeba i kliknij „Zapisz”.
+          </p>
+        </CardContent>
+      </Card>
+
+      {loanId && (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">Strefa niebezpieczna</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Usunięcie wniosku jest nieodwracalne. Załączone dokumenty pozostaną w sekcji „Dokumenty”.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={deleting}>
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                  Usuń wniosek
                 </Button>
-                <Button variant="outline" onClick={() => void runAi("improve")} disabled={aiBusy !== null}>
-                  {aiBusy === "improve" ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
-                  Popraw mój tekst
-                </Button>
-                <Button variant="outline" onClick={() => void runAi("expand")} disabled={aiBusy !== null}>
-                  {aiBusy === "expand" ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
-                  Rozwiń opis
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                AI nadpisze treść w polu wyżej — przejrzyj wynik, popraw co trzeba i kliknij „Zapisz”.
-              </p>
-            </CardContent>
-          </Card>
-        </>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Usunąć wniosek?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tej operacji nie da się cofnąć. Wniosek wraz z opisem zostanie trwale usunięty.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void removeLoan()}>Usuń</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
