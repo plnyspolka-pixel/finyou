@@ -39,6 +39,7 @@ import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
+import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
@@ -204,6 +205,11 @@ const AdminLeadyRoute = AdminLeadyRouteImport.update({
   path: '/leady',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
+  id: '/kreator-pozyczki',
+  path: '/kreator-pozyczki',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminKlienciRoute = AdminKlienciRouteImport.update({
   id: '/klienci',
   path: '/klienci',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
+  '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -337,6 +344,7 @@ export interface FileRoutesByTo {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
+  '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
+  '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -432,6 +441,7 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
+    | '/admin/kreator-pozyczki'
     | '/admin/leady'
     | '/admin/oferty'
     | '/admin/role'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
+    | '/admin/kreator-pozyczki'
     | '/admin/leady'
     | '/admin/oferty'
     | '/admin/role'
@@ -521,6 +532,7 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
+    | '/admin/kreator-pozyczki'
     | '/admin/leady'
     | '/admin/oferty'
     | '/admin/role'
@@ -781,6 +793,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLeadyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/kreator-pozyczki': {
+      id: '/admin/kreator-pozyczki'
+      path: '/kreator-pozyczki'
+      fullPath: '/admin/kreator-pozyczki'
+      preLoaderRoute: typeof AdminKreatorPozyczkiRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/klienci': {
       id: '/admin/klienci'
       path: '/klienci'
@@ -914,6 +933,7 @@ interface AdminRouteChildren {
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRoute
+  AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -932,6 +952,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRoute,
+  AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
   AdminLeadyRoute: AdminLeadyRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminRoleRoute: AdminRoleRoute,
