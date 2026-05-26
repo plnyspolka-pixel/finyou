@@ -53,7 +53,7 @@ function KlientOferta() {
                 <div><span className="text-muted-foreground">Spłata:</span> {o.repayment_type}</div>
                 {o.has_balloon && <div><span className="text-muted-foreground">Balon:</span> {formatPLN(o.balloon_amount)}</div>}
               </div>
-              {o.offer_status === "wyslana_do_klienta" && (
+              {(o.offer_status === "wyslana_do_klienta" || o.offer_status === "zlozona") && (
                 <div className="flex gap-2 pt-2">
                   <Button onClick={() => void decide(o.id, "zaakceptowana_przez_klienta")} className="bg-emerald-600 hover:bg-emerald-600/90"><Check className="mr-2 h-4 w-4" />Akceptuję</Button>
                   <Button variant="outline" onClick={() => toast.info("Skontaktujemy się z Tobą wkrótce")}><MessageCircle className="mr-2 h-4 w-4" />Mam pytania</Button>
