@@ -1,53 +1,169 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { loanStatusLabels, formatDateTime } from "@/lib/labels";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, Sparkles, Save, Wand2, PencilLine } from "lucide-react";
+import { toast } from "sonner";
+import { assistBusinessDescription } from "@/lib/ai-assist.functions";
 
 export const Route = createFileRoute("/klient/status")({
-  component: KlientStatus,
+  component: KlientOpis,
 });
 
-const TIMELINE = ["nowy_lead", "w_trakcie_uzupelniania", "wniosek_kompletny", "do_analizy", "rokuje", "wyslany_do_inwestorow", "oferta_przekazana_klientowi", "zaakceptowany_przez_klienta", "do_umowy", "zamkniety"];
-
-function KlientStatus() {
+function KlientOpis() {
   const { user } = useAuth();
-  const [app, setApp] = useState<any | null>(null);
-  useEffect(() => { if (!user) return; void (async () => {
-    const { data: c } = await supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle();
-    if (!c) return;
-    const { data } = await supabase.from("loan_applications").select("*").eq("client_id", c.id).order("created_at", { ascending: false }).maybeSingle();
-    setApp(data);
-  })(); }, [user]);
+  const assist = useServerFn(assistBusinessDescription);
+  const [loanId, setLoanId] = useState<string | null>(null);
+  const [text, setText] = useState("");
+  const [hint, setHint] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [aiBusy, setAiBusy] = useState<"draft" | "improve" | "expand" | null>(null);
 
-  if (!app) return <div className="max-w-2xl"><h1 className="text-2xl font-bold">Status</h1><p className="text-sm text-muted-foreground mt-4">Brak aktywnego wniosku.</p></div>;
-  const idx = TIMELINE.indexOf(app.status);
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      setLoading(true);
+      const { data: c } = await supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle();
+      if (c) {
+        const { data: l } = await supabase
+          .from("loan_applications")
+          .select("id, situation_description")
+          .eq("client_id", c.id)
+          .order("created_at", { ascending: false })
+          .maybeSingle();
+        if (l) {
+          setLoanId(l.id);
+          setText(l.situation_description ?? "");
+        }
+      }
+      setLoading(false);
+    })();
+  }, [user]);
+
+  const save = async () => {
+    if (!loanId) { toast.error("Brak aktywnego wniosku"); return; }
+    setSaving(true);
+    const { error } = await supabase
+      .from("loan_applications")
+      .update({ situation_description: text })
+      .eq("id", loanId);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Opis zapisany");
+  };
+
+  const runAi = async (mode: "draft" | "improve" | "expand") => {
+    if (mode !== "draft" && !text.trim()) {
+      toast.error("Najpierw napisz coś od siebie albo użyj „Napisz wstępny opis”.");
+      return;
+    }
+    setAiBusy(mode);
+    try {
+      const res = await assist({ data: { currentText: text, hint, mode } });
+      if (res?.text) {
+        setText(res.text);
+        toast.success("Gotowe — sprawdź i zapisz");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd AI");
+    } finally {
+      setAiBusy(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="max-w-3xl"><div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/> Ładowanie…</div></div>;
+  }
 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Status wniosku</h1>
-        <p className="text-sm text-muted-foreground">Aktualizacja: {formatDateTime(app.updated_at)}</p>
+        <h1 className="text-2xl font-bold">Opis celu biznesowego</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Powiedz inwestorom, na co konkretnie przeznaczysz środki i jaki efekt biznesowy chcesz osiągnąć.
+        </p>
       </div>
-      <Card><CardHeader><CardTitle>Obecny status</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <Badge className="text-base">{loanStatusLabels[app.status] ?? app.status}</Badge>
-          <div className="space-y-1.5"><div className="flex justify-between text-xs text-muted-foreground"><span>Kompletność</span><span>{app.completeness_percent}%</span></div><Progress value={app.completeness_percent} /></div>
-        </CardContent>
-      </Card>
-      <Card><CardHeader><CardTitle>Etapy</CardTitle></CardHeader>
-        <CardContent><ol className="space-y-2 text-sm">
-          {TIMELINE.map((s, i) => (
-            <li key={s} className="flex items-center gap-3">
-              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${i <= idx ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
-              <span className={i <= idx ? "font-medium" : "text-muted-foreground"}>{loanStatusLabels[s]}</span>
-            </li>
-          ))}
-        </ol></CardContent>
-      </Card>
+
+      <Alert>
+        <Sparkles className="h-4 w-4" />
+        <AlertTitle>Dobry opis = wyższa szansa finansowania</AlertTitle>
+        <AlertDescription className="text-sm space-y-1">
+          <p>Napisz w kilku zdaniach:</p>
+          <ul className="list-disc pl-5 space-y-0.5">
+            <li>na co konkretnie pójdą środki (zakup, remont, kapitał obrotowy, spłata zobowiązań…),</li>
+            <li>jaki efekt biznesowy chcesz osiągnąć i w jakim czasie,</li>
+            <li>z czego planujesz spłacać pożyczkę.</li>
+          </ul>
+          <p className="pt-1">Nie wiesz, jak to ująć? Skorzystaj z asystenta AI poniżej — możesz go używać tak często, jak chcesz.</p>
+        </AlertDescription>
+      </Alert>
+
+      {!loanId ? (
+        <Card><CardContent className="pt-6 text-sm text-muted-foreground">Najpierw rozpocznij wniosek, aby zapisać opis.</CardContent></Card>
+      ) : (
+        <>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Twój opis</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Np. Środki przeznaczę na zakup maszyny CNC za 180 000 zł, która pozwoli realizować dodatkowe zamówienia w branży meblarskiej. Spodziewam się wzrostu przychodów o 25% w pierwszych 6 miesiącach. Spłata z bieżącej sprzedaży i nowych kontraktów."
+                rows={10}
+                className="resize-y"
+              />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{text.trim().length} znaków</span>
+                <Button onClick={() => void save()} disabled={saving} size="sm">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                  Zapisz
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary"/> Asystent AI</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Wskazówki dla AI (opcjonalnie)</label>
+                <Input
+                  value={hint}
+                  onChange={(e) => setHint(e.target.value)}
+                  placeholder="Np. branża: gastronomia, cel: otwarcie drugiego lokalu, kwota 250 000 zł"
+                />
+                <p className="text-xs text-muted-foreground">Im więcej szczegółów podasz, tym lepszy opis.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => void runAi("draft")} disabled={aiBusy !== null}>
+                  {aiBusy === "draft" ? <Loader2 className="h-4 w-4 animate-spin"/> : <PencilLine className="h-4 w-4"/>}
+                  Napisz wstępny opis
+                </Button>
+                <Button variant="outline" onClick={() => void runAi("improve")} disabled={aiBusy !== null}>
+                  {aiBusy === "improve" ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4"/>}
+                  Popraw mój tekst
+                </Button>
+                <Button variant="outline" onClick={() => void runAi("expand")} disabled={aiBusy !== null}>
+                  {aiBusy === "expand" ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
+                  Rozwiń opis
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                AI nadpisze treść w polu wyżej — przejrzyj wynik, popraw co trzeba i kliknij „Zapisz”.
+              </p>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

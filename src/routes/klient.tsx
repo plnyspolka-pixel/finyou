@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderOpen, Activity, Tag, Mail, LogOut, MessageSquare } from "lucide-react";
+import { FileText, FolderOpen, Sparkles, Tag, Mail, LogOut, MessageSquare } from "lucide-react";
 
 export const Route = createFileRoute("/klient")({
   component: KlientLayout,
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/klient")({
 const items = [
   { to: "/klient", label: "Mój wniosek", icon: FileText, exact: true },
   { to: "/klient/dokumenty", label: "Dokumenty", icon: FolderOpen },
-  { to: "/klient/status", label: "Status", icon: Activity },
+  { to: "/klient/status", label: "Opis", icon: Sparkles },
   { to: "/klient/oferta", label: "Oferta", icon: Tag },
   { to: "/klient/wiadomosci", label: "Wiadomości", icon: MessageSquare },
   { to: "/klient/kontakt", label: "Kontakt", icon: Mail },
