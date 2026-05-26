@@ -3,9 +3,81 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePolishPhone } from "@/lib/phone";
 
-// Synchronizacja leadów z Google Sheets przez connector gateway.
-// `configuration.sheets` na `integration_settings` (name='google_sheets') zawiera tablicę:
-// [{ id, label, spreadsheetId, range, columnMap: { phone, first_name, last_name, email, source } }]
+const SHEETS_GW = "https://connector-gateway.lovable.dev/google_sheets/v4";
+const DRIVE_GW = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
+
+function authHeaders(kind: "sheets" | "drive") {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const apiKey = kind === "sheets" ? process.env.GOOGLE_SHEETS_API_KEY : process.env.GOOGLE_DRIVE_API_KEY;
+  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
+  if (!apiKey) throw new Error(`${kind === "sheets" ? "GOOGLE_SHEETS_API_KEY" : "GOOGLE_DRIVE_API_KEY"} not configured`);
+  return {
+    Authorization: `Bearer ${lovableKey}`,
+    "X-Connection-Api-Key": apiKey,
+  };
+}
+
+// Lista arkuszy z Google Drive (mimeType = spreadsheet)
+export const listDriveSpreadsheets = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ search: z.string().max(200).optional() }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const q = [
+        "mimeType='application/vnd.google-apps.spreadsheet'",
+        "trashed=false",
+        data.search ? `name contains '${String(data.search).replace(/'/g, "\\'")}'` : "",
+      ].filter(Boolean).join(" and ");
+      const url = `${DRIVE_GW}/files?q=${encodeURIComponent(q)}&pageSize=50&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime,owners(displayName,emailAddress),webViewLink)`;
+      const res = await fetch(url, { headers: authHeaders("drive") });
+      const json: any = await res.json();
+      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
+      return { ok: true, files: json.files || [] };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e), files: [] };
+    }
+  });
+
+// Metadane arkusza (lista zakładek / sheets)
+export const getSpreadsheetMeta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ spreadsheetId: z.string().min(1) }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const url = `${SHEETS_GW}/spreadsheets/${data.spreadsheetId}?fields=properties.title,sheets(properties(sheetId,title,gridProperties))`;
+      const res = await fetch(url, { headers: authHeaders("sheets") });
+      const json: any = await res.json();
+      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
+      return { ok: true, title: json?.properties?.title, sheets: (json.sheets || []).map((s: any) => s.properties) };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  });
+
+// Podgląd N pierwszych wierszy z arkusza
+export const previewSheetRange = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    spreadsheetId: z.string().min(1),
+    range: z.string().min(1).max(200),
+    limit: z.number().int().min(1).max(200).optional(),
+  }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const url = `${SHEETS_GW}/spreadsheets/${data.spreadsheetId}/values/${data.range}`;
+      const res = await fetch(url, { headers: authHeaders("sheets") });
+      const json: any = await res.json();
+      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, header: [], rows: [] };
+      const values: any[][] = json.values || [];
+      const header = values[0] || [];
+      const rows = values.slice(1, 1 + (data.limit ?? 20));
+      return { ok: true, header, rows, totalRows: Math.max(0, values.length - 1) };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e), header: [], rows: [] };
+    }
+  });
+
+// Synchronizacja leadów z Google Sheets
 export const syncGoogleSheet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ sheetConfigId: z.string().min(1) }).parse(input))
@@ -21,28 +93,25 @@ export const syncGoogleSheet = createServerFn({ method: "POST" })
     const sheet = sheets.find((s: any) => s.id === data.sheetConfigId);
     if (!sheet) return { ok: false, error: "Nie znaleziono arkusza" };
 
-    const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
-    const lovableKey = process.env.LOVABLE_API_KEY;
     let rows: any[][] = [];
     try {
-      const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheet.spreadsheetId}/values/${sheet.range || "Sheet1!A:Z"}`;
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${lovableKey}`,
-          ...(apiKey ? { "X-Connector-Api-Key": apiKey } : {}),
-        },
-      });
+      const url = `${SHEETS_GW}/spreadsheets/${sheet.spreadsheetId}/values/${sheet.range || "Sheet1!A:Z"}`;
+      const res = await fetch(url, { headers: authHeaders("sheets") });
       const json: any = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message || `HTTP ${res.status}`);
       rows = json.values || [];
     } catch (e: any) {
-      await supabase.from("integration_settings").update({ last_error: String(e?.message || e), last_sync_at: new Date().toISOString() }).eq("id", integ.id);
+      await supabase.from("integration_settings").update({ last_error: String(e?.message || e), last_sync_at: new Date().toISOString(), status: "blad" }).eq("id", integ.id);
       return { ok: false, error: "Gateway error: " + String(e?.message || e) };
     }
 
-    if (rows.length === 0) return { ok: true, imported: 0, skipped: 0 };
+    if (rows.length === 0) {
+      await supabase.from("integration_settings").update({ last_sync_at: new Date().toISOString(), last_error: null, status: "polaczona" }).eq("id", integ.id);
+      return { ok: true, imported: 0, skipped: 0 };
+    }
     const header = rows[0].map((h: string) => String(h).trim().toLowerCase());
     const map = sheet.columnMap || {};
-    const idx = (key: string) => header.indexOf((map[key] || key).toLowerCase());
+    const idx = (key: string) => header.indexOf(String(map[key] || key).toLowerCase());
 
     let imported = 0, skipped = 0;
     for (const row of rows.slice(1)) {
