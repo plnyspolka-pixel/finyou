@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { suggestPlaceholders, listGoogleDocs, importGoogleDoc } from "@/lib/document-templates.functions";
+import { suggestPlaceholders, listGoogleDocs, importGoogleDoc, getConnectedGoogleAccount } from "@/lib/document-templates.functions";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
