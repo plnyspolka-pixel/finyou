@@ -86,6 +86,22 @@ function KlientWniosek() {
   const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
   const exceedsMax = balloon > 0;
 
+  const schedule = useMemo(() => {
+    if (!months || !rata) return [];
+    const today = new Date();
+    const rows: { idx: number; date: string; payment: number; balloon: number }[] = [];
+    for (let i = 1; i <= months; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
+      rows.push({
+        idx: i,
+        date: d.toLocaleDateString("pl-PL"),
+        payment: rata,
+        balloon: i === months ? balloon : 0,
+      });
+    }
+    return rows;
+  }, [months, rata, balloon]);
+
   useEffect(() => {
     if (!user) return;
     setEmail((e) => e || user.email || "");
@@ -361,6 +377,41 @@ function KlientWniosek() {
                   Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu umowy.
                 </AlertDescription>
               </Alert>
+            )}
+
+            {schedule.length > 0 && (
+              <div className="rounded-lg border bg-card">
+                <div className="px-4 py-3 border-b">
+                  <h3 className="font-semibold text-sm">Orientacyjny harmonogram spłat</h3>
+                  <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
+                </div>
+                <div className="max-h-72 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 sticky top-0">
+                      <tr className="text-left">
+                        <th className="px-3 py-2 font-medium">#</th>
+                        <th className="px-3 py-2 font-medium">Data spłaty</th>
+                        <th className="px-3 py-2 font-medium text-right">Rata</th>
+                        {balloon > 0 && <th className="px-3 py-2 font-medium text-right">Balon</th>}
+                        <th className="px-3 py-2 font-medium text-right">Razem</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedule.map((r) => (
+                        <tr key={r.idx} className="border-t">
+                          <td className="px-3 py-2 tabular-nums">{r.idx}</td>
+                          <td className="px-3 py-2 tabular-nums">{r.date}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{formatPLN(r.payment)}</td>
+                          {balloon > 0 && (
+                            <td className="px-3 py-2 text-right tabular-nums">{r.balloon > 0 ? formatPLN(r.balloon) : "—"}</td>
+                          )}
+                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment + r.balloon)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
