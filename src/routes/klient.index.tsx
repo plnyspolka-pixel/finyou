@@ -263,9 +263,12 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 4) {
-      if (!city.trim() || !voivodeship.trim()) return { ok: false, msg: "Podaj miejscowość i województwo." };
       if (!kwStatus) return { ok: false, msg: "Wskaż status księgi wieczystej." };
-      if (kwStatus === "znam" && !kwNumber.trim()) return { ok: false, msg: "Podaj numer KW." };
+      if (kwStatus === "znam") {
+        if (!kwNumber.trim()) return { ok: false, msg: "Podaj numer KW." };
+        if (!/^[A-Z]{2}[A-Z0-9]{2}\/\d{8}\/\d$/.test(kwNumber.trim()))
+          return { ok: false, msg: "Niepoprawny format KW. Wzór: AAAA/00000000/0 (np. WA1M/00000000/0)." };
+      }
       if (kwStatus === "nie_znam" && docsByType("dokument_wlasnosci").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia dokumentu własności." };
       if (kwStatus === "brak") {
