@@ -358,14 +358,14 @@ function KlientWniosek() {
 
 
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>Orientacyjna rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
+              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
               {balloon > 0 && (
-                <div className="flex justify-between text-sm"><span>Rata balonowa na koniec ({months} mies.)</span><b className="tabular-nums">{formatPLN(balloon)}</b></div>
+                <div className="flex justify-between text-sm"><span>Ostatnia rata (zawiera nadwyżkę balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
               )}
               <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
               <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
               <p className="text-xs text-muted-foreground pt-2">
-                To jest kalkulacja orientacyjna. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
+                Kalkulacja poglądowa. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
               </p>
             </div>
 
