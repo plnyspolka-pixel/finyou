@@ -49,13 +49,13 @@ function KlientDokumenty() {
     if (!user) return;
     const { data: c } = await supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle();
     if (!c) return;
-    const { data: l } = await supabase.from("loan_applications").select("id").eq("client_id", c.id).order("created_at", { ascending: false }).maybeSingle();
-    if (!l) return;
-    setLoanId(l.id);
-    const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", l.id).order("created_at", { ascending: false });
+    const { data: ls } = await supabase.from("loan_applications").select("id").eq("client_id", c.id).order("created_at", { ascending: false });
+    const loanIds = (ls ?? []).map((x: any) => x.id);
+    if (loanIds.length === 0) return;
+    setLoanId(loanIds[0]);
+    const { data: ds } = await supabase.from("documents").select("*").in("loan_application_id", loanIds).order("created_at", { ascending: false });
     const list = ds ?? [];
     setDocs(list);
-    // Sign URLs for images for thumbnails
     const imgs = list.filter((d: any) => d.file_path && isImage(d.file_name ?? ""));
     const next: Record<string, string> = {};
     await Promise.all(imgs.map(async (d: any) => {
