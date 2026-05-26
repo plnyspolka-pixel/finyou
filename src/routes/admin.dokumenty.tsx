@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { suggestPlaceholders, listGoogleDocs, importGoogleDoc } from "@/lib/document-templates.functions";
