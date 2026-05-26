@@ -175,7 +175,7 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
         borrower_type: profile.borrowerType,
         nip: profile.borrowerData.nip ?? null,
         completion_percent: 0,
-        data: profile as any,
+        data: profile as unknown as Record<string, unknown> as any,
       })
       .select("id")
       .single();
