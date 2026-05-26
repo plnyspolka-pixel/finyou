@@ -581,7 +581,7 @@ function KlientWniosek() {
             <Row k="Kwota pożyczki" v={formatPLN(amount)} />
             <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
             <Row k="Okres finansowania" v={`${months} mies.`} />
-            <Row k="Orientacyjna rata" v={formatPLN(rata)} />
+            <Row k="Rata miesięczna" v={formatPLN(rata)} />
             <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
             <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
             <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
