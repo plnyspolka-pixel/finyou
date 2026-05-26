@@ -12,12 +12,8 @@ import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { InvestorInterestMeter } from "@/components/investor-interest-meter";
 import {
   monthlyPayment,
-  totalRepayment,
-  investorTotalCompensation,
-  interestScore,
   formatPLN,
   securityTypeLabels,
   type SecurityType,
