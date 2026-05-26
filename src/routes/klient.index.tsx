@@ -89,14 +89,13 @@ function KlientWniosek() {
   const schedule = useMemo(() => {
     if (!months || !rata) return [];
     const today = new Date();
-    const rows: { idx: number; date: string; payment: number; balloon: number }[] = [];
+    const rows: { idx: number; date: string; payment: number }[] = [];
     for (let i = 1; i <= months; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
       rows.push({
         idx: i,
         date: d.toLocaleDateString("pl-PL"),
-        payment: rata,
-        balloon: i === months ? balloon : 0,
+        payment: i === months ? rata + balloon : rata,
       });
     }
     return rows;
