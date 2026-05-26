@@ -461,17 +461,8 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 99 && (
-        <Card>
-          <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-            <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-          </CardContent>
-        </Card>
-      )}
+
+
 
       {step === 4 && (
         <Card>
