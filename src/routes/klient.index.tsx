@@ -602,7 +602,7 @@ function KlientWniosek() {
         <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
         </Button>
-        {step === 2 && bizStatus === "nie_zamierza" ? (
+        {step === 3 && bizStatus === "nie_zamierza" ? (
           <Button variant="outline" onClick={() => setStep(1)}>Wróć do kalkulatora</Button>
         ) : step < STEPS.length ? (
           <Button disabled={saving} onClick={() => void goNext()}>
