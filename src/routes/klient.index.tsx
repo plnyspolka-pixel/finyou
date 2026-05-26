@@ -25,7 +25,7 @@ export const Route = createFileRoute("/klient/")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Działalność", "Dane kontaktowe", "Nieruchomość", "Dokumenty", "Podsumowanie"];
+const STEPS = ["Kalkulator", "Dane kontaktowe", "Działalność", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "nie_zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "brak" | "";
