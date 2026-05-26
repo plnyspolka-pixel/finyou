@@ -23,7 +23,7 @@ function KlientOferta() {
     const { data: ls } = await supabase.from("loan_applications").select("id").eq("client_id", c.id);
     const ids = (ls ?? []).map((l) => l.id);
     if (ids.length === 0) return;
-    const { data } = await supabase.from("investor_offers").select("*").in("loan_application_id", ids).in("offer_status", ["wyslana_do_klienta", "zaakceptowana_przez_klienta", "odrzucona_przez_klienta"]);
+    const { data } = await supabase.from("investor_offers").select("*").in("loan_application_id", ids).in("offer_status", ["zlozona", "wyslana_do_klienta", "zaakceptowana_przez_klienta", "odrzucona_przez_klienta"]).order("created_at", { ascending: false });
     setOffers(data ?? []);
   };
   useEffect(() => { void load(); }, [user]);
@@ -53,7 +53,7 @@ function KlientOferta() {
                 <div><span className="text-muted-foreground">Spłata:</span> {o.repayment_type}</div>
                 {o.has_balloon && <div><span className="text-muted-foreground">Balon:</span> {formatPLN(o.balloon_amount)}</div>}
               </div>
-              {o.offer_status === "wyslana_do_klienta" && (
+              {(o.offer_status === "wyslana_do_klienta" || o.offer_status === "zlozona") && (
                 <div className="flex gap-2 pt-2">
                   <Button onClick={() => void decide(o.id, "zaakceptowana_przez_klienta")} className="bg-emerald-600 hover:bg-emerald-600/90"><Check className="mr-2 h-4 w-4" />Akceptuję</Button>
                   <Button variant="outline" onClick={() => toast.info("Skontaktujemy się z Tobą wkrótce")}><MessageCircle className="mr-2 h-4 w-4" />Mam pytania</Button>
