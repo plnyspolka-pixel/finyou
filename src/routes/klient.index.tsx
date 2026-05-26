@@ -194,6 +194,36 @@ function KlientWniosek() {
     }
   };
 
+  // Auto-zapis formularza (debounce) — utworzy klienta i wniosek po wprowadzeniu danych kontaktowych
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    // Wymagamy minimum danych do utworzenia rekordu klienta
+    const hasContact = firstName.trim() && lastName.trim() && (email.trim() || phone.trim());
+    if (!hasContact && !clientId) return;
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      void (async () => {
+        const cid = await ensureClient();
+        if (!cid) return;
+        const lid = await ensureLoan(cid);
+        if (!lid) return;
+        await supabase.from("loan_applications").update({
+          loan_amount: amount,
+          annual_investor_rate: annualRate,
+          max_monthly_payment: maxPayment,
+          preferred_period_months: months,
+          business_status: bizStatus || null,
+          nip: nip || null,
+          kw_status: kwStatus || null,
+          current_form_step: step,
+        }).eq("id", lid);
+      })();
+    }, 1200);
+    return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, firstName, lastName, email, phone, amount, annualRate, months, maxPayment, bizStatus, nip, kwStatus, secType, step]);
+
   const uploadDoc = async (file: File, docType: string) => {
     if (!loanId || !user) { toast.error("Najpierw przejdź dalej, aby utworzyć wniosek"); return; }
     setUploading(true);
