@@ -2,6 +2,86 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const DRIVE_GW = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
+const DOCS_GW = "https://connector-gateway.lovable.dev/google_docs/v1";
+
+function gwHeaders(kind: "drive" | "docs") {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const apiKey = kind === "drive" ? process.env.GOOGLE_DRIVE_API_KEY : process.env.GOOGLE_DOCS_API_KEY;
+  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
+  if (!apiKey) throw new Error(`${kind === "drive" ? "GOOGLE_DRIVE_API_KEY" : "GOOGLE_DOCS_API_KEY"} not configured`);
+  return { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": apiKey };
+}
+
+export const listGoogleDocs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ search: z.string().max(200).optional() }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const q = [
+        "mimeType='application/vnd.google-apps.document'",
+        "trashed=false",
+        data.search ? `name contains '${String(data.search).replace(/'/g, "\\'")}'` : "",
+      ].filter(Boolean).join(" and ");
+      const url = `${DRIVE_GW}/files?q=${encodeURIComponent(q)}&pageSize=50&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime,owners(displayName,emailAddress),webViewLink)`;
+      const res = await fetch(url, { headers: gwHeaders("drive") });
+      const json: any = await res.json();
+      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
+      return { ok: true, files: json.files || [] };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e), files: [] };
+    }
+  });
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+function gdocsToHtml(doc: any): { html: string; title: string } {
+  const out: string[] = [];
+  const elements: any[] = doc?.body?.content ?? [];
+  for (const el of elements) {
+    const p = el.paragraph;
+    if (!p) continue;
+    const style = p.paragraphStyle?.namedStyleType ?? "NORMAL_TEXT";
+    const runs: string[] = [];
+    for (const e of p.elements ?? []) {
+      const tr = e.textRun;
+      if (!tr) continue;
+      let txt = escapeHtml((tr.content ?? "").replace(/\n$/, ""));
+      const ts = tr.textStyle ?? {};
+      if (ts.bold) txt = `<strong>${txt}</strong>`;
+      if (ts.italic) txt = `<em>${txt}</em>`;
+      if (ts.underline) txt = `<u>${txt}</u>`;
+      if (ts.strikethrough) txt = `<s>${txt}</s>`;
+      runs.push(txt);
+    }
+    const inner = runs.join("");
+    if (!inner.trim()) { out.push("<p></p>"); continue; }
+    const m = /^HEADING_(\d)$/.exec(style);
+    if (m) out.push(`<h${m[1]}>${inner}</h${m[1]}>`);
+    else if (style === "TITLE") out.push(`<h1>${inner}</h1>`);
+    else if (style === "SUBTITLE") out.push(`<h2>${inner}</h2>`);
+    else out.push(`<p>${inner}</p>`);
+  }
+  return { html: out.join("\n") || "<p></p>", title: doc?.title ?? "Dokument" };
+}
+
+export const importGoogleDoc = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ documentId: z.string().min(5).max(200) }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const res = await fetch(`${DOCS_GW}/documents/${data.documentId}`, { headers: gwHeaders("docs") });
+      const json: any = await res.json();
+      if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
+      const { html, title } = gdocsToHtml(json);
+      return { ok: true, html, title };
+    } catch (e: any) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  });
+
 const KNOWN_PLACEHOLDERS = [
   "klient.imie", "klient.nazwisko", "klient.pelne_imie", "klient.email", "klient.telefon",
   "klient.pesel", "klient.adres",
