@@ -1,51 +1,289 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { suggestPlaceholders } from "@/lib/document-templates.functions";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, visibilityLabels } from "@/lib/labels";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { Bold, Italic, List, ListOrdered, Heading2, Plus, Sparkles, Printer, Trash2, Pencil, Loader2, Save } from "lucide-react";
+import { formatDate } from "@/lib/labels";
 
 export const Route = createFileRoute("/admin/dokumenty")({
   component: DokumentyPage,
 });
 
-function DokumentyPage() {
-  const [rows, setRows] = useState<any[]>([]);
-  useEffect(() => { void (async () => {
-    const { data } = await supabase.from("documents").select("*, loan:loan_applications(id, client:clients(first_name,last_name))").order("created_at", { ascending: false });
-    setRows(data ?? []);
-  })(); }, []);
+type Template = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  content_html: string;
+  placeholders: string[];
+  output_format: string;
+  created_at: string;
+  updated_at: string;
+};
 
-  const openFile = async (path: string | null, url: string | null) => {
-    if (url) { window.open(url, "_blank"); return; }
-    if (!path) return;
-    const { data } = await supabase.storage.from("documents").createSignedUrl(path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+function extractPlaceholders(html: string): string[] {
+  const matches = html.match(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g) ?? [];
+  return Array.from(new Set(matches.map((m) => m.replace(/[{}\s]/g, ""))));
+}
+
+function DokumentyPage() {
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [editing, setEditing] = useState<Template | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("document_templates").select("*").order("updated_at", { ascending: false });
+    if (error) toast.error(error.message);
+    setTemplates((data as any) ?? []);
+    setLoading(false);
+  };
+  useEffect(() => { void load(); }, []);
+
+  const newTemplate = (): Template => ({
+    id: "",
+    name: "",
+    description: "",
+    category: "",
+    content_html: "<p>Treść szablonu… Użyj {{klient.imie}} aby wstawić zmienną.</p>",
+    placeholders: [],
+    output_format: "pdf",
+    created_at: "",
+    updated_at: "",
+  });
+
+  const remove = async (id: string) => {
+    if (!confirm("Usunąć szablon?")) return;
+    const { error } = await supabase.from("document_templates").delete().eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Usunięto"); void load(); }
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dokumenty</h1>
-      <Card><CardHeader><CardTitle>Lista ({rows.length})</CardTitle></CardHeader>
-        <CardContent><div className="overflow-x-auto"><Table>
-          <TableHeader><TableRow><TableHead>Plik</TableHead><TableHead>Typ</TableHead><TableHead>Klient</TableHead><TableHead>Widoczność</TableHead><TableHead>Status</TableHead><TableHead>Dodano</TableHead><TableHead></TableHead></TableRow></TableHeader>
-          <TableBody>{rows.map((d) => (
-            <TableRow key={d.id}>
-              <TableCell className="font-medium">{d.file_name}</TableCell>
-              <TableCell>{d.document_type}</TableCell>
-              <TableCell>{d.loan?.client ? `${d.loan.client.first_name} ${d.loan.client.last_name}` : "—"}</TableCell>
-              <TableCell><Badge variant="outline">{visibilityLabels[d.visibility_level]}</Badge></TableCell>
-              <TableCell>{d.status ?? "—"}</TableCell>
-              <TableCell>{formatDate(d.created_at)}</TableCell>
-              <TableCell><div className="flex gap-3">
-                {(d.file_path || d.file_url) && <button onClick={() => openFile(d.file_path, d.file_url)} className="text-sm text-primary hover:underline">Otwórz</button>}
-                {d.loan?.id && <Link to="/admin/wnioski/$id" params={{ id: d.loan.id }} className="text-sm text-primary hover:underline">Wniosek</Link>}
-              </div></TableCell>
-            </TableRow>
-          ))}</TableBody>
-        </Table></div></CardContent>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Dokumenty — szablony</h1>
+          <p className="text-sm text-muted-foreground">Twórz szablony z placeholderami; AI pomoże wskazać miejsca do zamiany.</p>
+        </div>
+        <Button onClick={() => setEditing(newTemplate())}><Plus className="mr-2 h-4 w-4" /> Nowy szablon</Button>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Lista szablonów ({templates.length})</CardTitle></CardHeader>
+        <CardContent>
+          {loading ? <p className="text-sm text-muted-foreground">Ładowanie…</p> :
+            templates.length === 0 ? <p className="text-sm text-muted-foreground">Brak szablonów. Dodaj pierwszy.</p> :
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {templates.map((t) => (
+                  <Card key={t.id} className="flex flex-col">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-base">{t.name}</CardTitle>
+                        <Badge variant="outline">{t.output_format.toUpperCase()}</Badge>
+                      </div>
+                      {t.category && <p className="text-xs text-muted-foreground">{t.category}</p>}
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col gap-2">
+                      <p className="text-xs text-muted-foreground line-clamp-2">{t.description || "—"}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {(t.placeholders ?? []).slice(0, 4).map((p) => (
+                          <Badge key={p} variant="secondary" className="text-[10px] font-mono">{p}</Badge>
+                        ))}
+                        {(t.placeholders?.length ?? 0) > 4 && <Badge variant="secondary" className="text-[10px]">+{t.placeholders.length - 4}</Badge>}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-auto pt-2">Zmodyfikowano: {formatDate(t.updated_at)}</div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditing(t)}><Pencil className="mr-2 h-3 w-3" />Edytuj</Button>
+                        <Button size="sm" variant="ghost" onClick={() => void remove(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+          }
+        </CardContent>
       </Card>
+
+      {editing && (
+        <TemplateEditor
+          template={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); void load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function TemplateEditor({ template, onClose, onSaved }: { template: Template; onClose: () => void; onSaved: () => void }) {
+  const [meta, setMeta] = useState({
+    name: template.name,
+    description: template.description ?? "",
+    category: template.category ?? "",
+    output_format: template.output_format,
+  });
+  const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ original: string; placeholder: string; reason: string }>>([]);
+  const suggestFn = useServerFn(suggestPlaceholders);
+
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: template.content_html,
+  });
+
+  const html = editor?.getHTML() ?? template.content_html;
+  const text = editor?.getText() ?? "";
+  const placeholders = useMemo(() => extractPlaceholders(html), [html]);
+
+  const save = async () => {
+    if (!meta.name) { toast.error("Nazwa jest wymagana"); return; }
+    setSaving(true);
+    const payload = {
+      name: meta.name,
+      description: meta.description || null,
+      category: meta.category || null,
+      output_format: meta.output_format,
+      content_html: editor?.getHTML() ?? template.content_html,
+      placeholders: extractPlaceholders(editor?.getHTML() ?? template.content_html),
+    };
+    const { error } = template.id
+      ? await supabase.from("document_templates").update(payload).eq("id", template.id)
+      : await supabase.from("document_templates").insert(payload);
+    setSaving(false);
+    if (error) toast.error(error.message); else { toast.success("Zapisano"); onSaved(); }
+  };
+
+  const askAI = async () => {
+    if (!editor) return;
+    const content = editor.getText();
+    if (content.length < 20) { toast.error("Wpisz najpierw treść szablonu (min. 20 znaków)"); return; }
+    setAiLoading(true);
+    try {
+      const res: any = await suggestFn({ data: { content } });
+      if (!res?.ok) toast.error(res?.error || "AI niedostępne");
+      else {
+        setSuggestions(res.placeholders);
+        if (res.placeholders.length === 0) toast.info("AI nie znalazło sugestii");
+      }
+    } catch (e: any) {
+      toast.error(String(e?.message || e));
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applySuggestion = (s: { original: string; placeholder: string }) => {
+    if (!editor) return;
+    const current = editor.getHTML();
+    if (!current.includes(s.original)) {
+      toast.error("Nie znaleziono oryginalnego fragmentu — pewnie został zmieniony");
+      return;
+    }
+    editor.commands.setContent(current.split(s.original).join(s.placeholder));
+    setSuggestions((prev) => prev.filter((x) => x !== s));
+    toast.success("Wstawiono placeholder");
+  };
+
+  const print = () => {
+    const w = window.open("", "_blank");
+    if (!w || !editor) return;
+    w.document.write(`<html><head><title>${meta.name}</title><style>body{font-family:Georgia,serif;max-width:780px;margin:40px auto;padding:0 20px;line-height:1.6;}h1,h2,h3{font-family:system-ui;}</style></head><body><h1>${meta.name}</h1>${editor.getHTML()}</body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 200);
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{template.id ? "Edytuj szablon" : "Nowy szablon"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-4 md:grid-cols-[1fr_320px] overflow-y-auto px-1">
+          <div className="space-y-3 min-w-0">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Nazwa *</Label><Input value={meta.name} onChange={(e) => setMeta({ ...meta, name: e.target.value })} /></div>
+              <div><Label>Kategoria</Label><Input value={meta.category} onChange={(e) => setMeta({ ...meta, category: e.target.value })} placeholder="np. Umowy" /></div>
+            </div>
+            <div><Label>Opis</Label><Textarea rows={2} value={meta.description} onChange={(e) => setMeta({ ...meta, description: e.target.value })} /></div>
+            <div>
+              <Label>Format wyjściowy</Label>
+              <Select value={meta.output_format} onValueChange={(v) => setMeta({ ...meta, output_format: v })}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="docx">DOCX</SelectItem>
+                  <SelectItem value="html">HTML</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {editor && (
+              <div className="border rounded-md">
+                <div className="flex flex-wrap gap-1 border-b p-2 bg-muted/40">
+                  <Button type="button" size="sm" variant={editor.isActive("bold") ? "default" : "ghost"} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="h-4 w-4" /></Button>
+                  <Button type="button" size="sm" variant={editor.isActive("italic") ? "default" : "ghost"} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="h-4 w-4" /></Button>
+                  <Button type="button" size="sm" variant={editor.isActive("heading", { level: 2 }) ? "default" : "ghost"} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 className="h-4 w-4" /></Button>
+                  <Button type="button" size="sm" variant={editor.isActive("bulletList") ? "default" : "ghost"} onClick={() => editor.chain().focus().toggleBulletList().run()}><List className="h-4 w-4" /></Button>
+                  <Button type="button" size="sm" variant={editor.isActive("orderedList") ? "default" : "ghost"} onClick={() => editor.chain().focus().toggleOrderedList().run()}><ListOrdered className="h-4 w-4" /></Button>
+                </div>
+                <EditorContent editor={editor} className="prose prose-sm max-w-none p-4 min-h-[300px] focus:outline-none [&_*]:outline-none" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Wykryte placeholdery ({placeholders.length})</CardTitle></CardHeader>
+              <CardContent>
+                {placeholders.length === 0 ? <p className="text-xs text-muted-foreground">Brak. Wpisz np. <code>{"{{klient.imie}}"}</code></p> :
+                  <div className="flex flex-wrap gap-1">{placeholders.map((p) => <Badge key={p} variant="secondary" className="font-mono text-[10px]">{p}</Badge>)}</div>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> AI: sugestie</CardTitle>
+                <Button size="sm" variant="outline" disabled={aiLoading} onClick={() => void askAI()}>
+                  {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Analizuj"}
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {suggestions.length === 0 ? <p className="text-xs text-muted-foreground">Kliknij „Analizuj", aby AI zaproponowało placeholdery.</p> :
+                  suggestions.map((s, i) => (
+                    <div key={i} className="border rounded p-2 space-y-1">
+                      <div className="text-xs">„<span className="italic">{s.original}</span>" → <code className="text-primary">{s.placeholder}</code></div>
+                      <div className="text-[10px] text-muted-foreground">{s.reason}</div>
+                      <Button size="sm" variant="outline" className="w-full h-7" onClick={() => applySuggestion(s)}>Wstaw</Button>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <DialogFooter className="border-t pt-3">
+          <Button variant="ghost" onClick={print}><Printer className="mr-2 h-4 w-4" /> Podgląd / Druk</Button>
+          <Button variant="outline" onClick={onClose}>Anuluj</Button>
+          <Button onClick={() => void save()} disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Zapisz szablon
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

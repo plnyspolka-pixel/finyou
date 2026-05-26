@@ -38,7 +38,6 @@ import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
-import { Route as AdminNieruchomosciRouteImport } from './routes/admin.nieruchomosci'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
@@ -200,11 +199,6 @@ const AdminOfertyRoute = AdminOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminNieruchomosciRoute = AdminNieruchomosciRouteImport.update({
-  id: '/nieruchomosci',
-  path: '/nieruchomosci',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminLeadyRoute = AdminLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
@@ -301,7 +295,6 @@ export interface FileRoutesByFullPath {
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
-  '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
@@ -345,7 +338,6 @@ export interface FileRoutesByTo {
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
-  '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
@@ -393,7 +385,6 @@ export interface FileRoutesById {
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/leady': typeof AdminLeadyRoute
-  '/admin/nieruchomosci': typeof AdminNieruchomosciRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
@@ -442,7 +433,6 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
-    | '/admin/nieruchomosci'
     | '/admin/oferty'
     | '/admin/role'
     | '/admin/szkolenia'
@@ -486,7 +476,6 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
-    | '/admin/nieruchomosci'
     | '/admin/oferty'
     | '/admin/role'
     | '/admin/szkolenia'
@@ -533,7 +522,6 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/leady'
-    | '/admin/nieruchomosci'
     | '/admin/oferty'
     | '/admin/role'
     | '/admin/szkolenia'
@@ -786,13 +774,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOfertyRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/nieruchomosci': {
-      id: '/admin/nieruchomosci'
-      path: '/nieruchomosci'
-      fullPath: '/admin/nieruchomosci'
-      preLoaderRoute: typeof AdminNieruchomosciRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/leady': {
       id: '/admin/leady'
       path: '/leady'
@@ -934,7 +915,6 @@ interface AdminRouteChildren {
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
-  AdminNieruchomosciRoute: typeof AdminNieruchomosciRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
@@ -953,7 +933,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRoute,
   AdminLeadyRoute: AdminLeadyRoute,
-  AdminNieruchomosciRoute: AdminNieruchomosciRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
