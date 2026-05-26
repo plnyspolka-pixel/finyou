@@ -2,29 +2,46 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, Building, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2 } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const items = [
-  { to: "/admin", label: "Pulpit", icon: LayoutDashboard, exact: true },
-  { to: "/admin/leady", label: "Leady", icon: Users },
-  { to: "/admin/wnioski", label: "Wnioski", icon: FileText },
-  { to: "/admin/klienci", label: "Klienci", icon: Users },
-  { to: "/admin/nieruchomosci", label: "Nieruchomości", icon: Building },
-  { to: "/admin/dokumenty", label: "Dokumenty", icon: FolderOpen },
-  { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
-  { to: "/admin/follow-up", label: "Follow-up", icon: PhoneCall },
-  { to: "/admin/inwestorzy", label: "Inwestorzy", icon: Briefcase },
-  { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
-  { to: "/admin/oferty", label: "Oferty", icon: Tag },
-  { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
-  { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
-  { to: "/admin/integracje", label: "Integracje", icon: Plug },
-  { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
-  { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
+type Item = { to: string; label: string; icon: any; exact?: boolean };
+type Group = { label?: string; items: Item[] };
+
+const groups: Group[] = [
+  { items: [{ to: "/admin", label: "Pulpit", icon: LayoutDashboard, exact: true }] },
+  {
+    label: "Klienci pożyczkowi",
+    items: [
+      { to: "/admin/leady", label: "Leady", icon: Users },
+      { to: "/admin/wnioski", label: "Wnioski", icon: FileText },
+      { to: "/admin/klienci", label: "Klienci", icon: Users },
+      { to: "/admin/dokumenty", label: "Dokumenty", icon: FolderOpen },
+      { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
+      { to: "/admin/follow-up", label: "Follow-up", icon: PhoneCall },
+    ],
+  },
+  {
+    label: "Inwestorzy",
+    items: [
+      { to: "/admin/inwestorzy", label: "Lista inwestorów", icon: Briefcase },
+      { to: "/admin/oferty", label: "Oferty", icon: Tag },
+      { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
+      { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Konfiguracja",
+    items: [
+      { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
+      { to: "/admin/integracje", label: "Integracje", icon: Plug },
+      { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
+      { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
+    ],
+  },
 ];
 
 function AdminLayout() {
