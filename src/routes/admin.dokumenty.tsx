@@ -42,6 +42,8 @@ function DokumentyPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [editing, setEditing] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
