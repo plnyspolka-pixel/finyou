@@ -19,7 +19,7 @@ function InwestorList() {
   useEffect(() => { if (!user) return; void (async () => {
     const { data: inv } = await supabase.from("investors").select("subscription_status").eq("user_id", user.id).maybeSingle();
     if (!inv || inv.subscription_status !== "aktywny") { setPaywall(true); setLoading(false); return; }
-    const { data } = await supabase.from("loan_applications").select("id, loan_amount, preferred_period_months, estimated_ltv, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos)").eq("available_to_investors", true).order("created_at", { ascending: false });
+    const { data } = await supabase.from("loan_applications").select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos)").eq("available_to_investors", true).order("created_at", { ascending: false });
     setApps(data ?? []); setLoading(false);
   })(); }, [user]);
 
@@ -46,9 +46,17 @@ function InwestorList() {
           return (
             <Link key={a.id} to="/inwestor/wniosek/$id" params={{ id: a.id }}>
               <Card className="hover:border-primary transition cursor-pointer h-full overflow-hidden">
-                {p?.photos?.[0] ? (
-                  <img src={p.photos[0]} alt="" className="h-40 w-full object-cover" loading="lazy" />
-                ) : <div className="h-40 w-full bg-muted" />}
+                <div className="relative">
+                  {p?.photos?.[0] ? (
+                    <img src={p.photos[0]} alt="" className="h-40 w-full object-cover" loading="lazy" />
+                  ) : <div className="h-40 w-full bg-gradient-to-br from-muted to-muted-foreground/20" />}
+                  {a.annual_investor_rate != null && (
+                    <div className="absolute top-2 right-2 rounded-lg bg-primary/95 text-primary-foreground px-3 py-1.5 shadow-lg backdrop-blur-sm">
+                      <div className="text-[10px] uppercase tracking-wide opacity-80 leading-none">Zysk roczny</div>
+                      <div className="text-xl font-bold leading-tight tabular-nums">{Number(a.annual_investor_rate)}%</div>
+                    </div>
+                  )}
+                </div>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between"><CardTitle className="text-lg">{formatPLN(a.loan_amount)}</CardTitle><Badge variant="outline">{visibilityLabels[a.visibility_level]}</Badge></div>
                 </CardHeader>
