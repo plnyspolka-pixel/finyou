@@ -314,12 +314,8 @@ function KlientWniosek() {
                   <span className="text-sm">%</span>
                 </div>
               </div>
-              <Slider min={15} max={36} step={0.5} value={[Math.min(36, annualRate)]} onValueChange={(v) => { setAnnualRate(v[0]); setRateAboveCap(false); }} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>36%</span></div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={rateAboveCap} onChange={(e) => { setRateAboveCap(e.target.checked); if (e.target.checked) setAnnualRate(40); }} />
-                <span>Powyżej 36% — do indywidualnego ustalenia</span>
-              </label>
+              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
             </div>
 
             <div className="space-y-3">
@@ -344,7 +340,7 @@ function KlientWniosek() {
               <SecurityTypePicker value={secType} onChange={setSecType} />
             </div>
 
-            {secType && <InvestorInterestMeter score={score} />}
+
 
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
               <div className="flex justify-between text-sm"><span>Orientacyjna rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
