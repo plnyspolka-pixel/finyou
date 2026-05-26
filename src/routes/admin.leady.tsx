@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { formatDate, loanStatusLabels } from "@/lib/labels";
+import { GoogleSheetsLeadsPanel } from "@/components/GoogleSheetsLeadsPanel";
 
 export const Route = createFileRoute("/admin/leady")({
   component: LeadyPage,
@@ -77,6 +78,7 @@ function LeadyPage() {
           </DialogContent>
         </Dialog>
       </div>
+      <GoogleSheetsLeadsPanel onSynced={() => void load()} />
       <Card>
         <CardHeader><CardTitle>Lista ({rows.length})</CardTitle></CardHeader>
         <CardContent>
