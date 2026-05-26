@@ -44,6 +44,7 @@ function KlientWniosek() {
   // Kalkulator
   const [amount, setAmount] = useState<number>(200_000);
   const [annualRate, setAnnualRate] = useState<number>(20);
+  // rateAboveCap removed; slider now spans 15-60%
   const [rateAboveCap, setRateAboveCap] = useState(false);
   const [months, setMonths] = useState<number>(24);
   const [maxPayment, setMaxPayment] = useState<number>(5000);
