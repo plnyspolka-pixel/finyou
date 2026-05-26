@@ -516,14 +516,14 @@ function KlientWniosek() {
             </div>
 
             {kwStatus === "znam" && (() => {
-              const kwValid = /^[A-Z]{2}[A-Z0-9]{2}\/\d{8}\/\d$/.test(kwNumber.trim());
+              const kwValid = /^[A-Z]{2}\d[A-Z]\/\d{8}\/\d$/.test(kwNumber.trim());
               return (
                 <div className="space-y-1">
                   <Label>Numer księgi wieczystej *</Label>
                   <Input
                     value={kwNumber}
                     onChange={(e) => {
-                      // Format: AAAA/00000000/0 — auto-uppercase, tylko dozwolone znaki, auto slashe
+                      // Format: AAcyfraA/00000000/0 — auto-uppercase, tylko dozwolone znaki, auto slashe
                       const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 13);
                       let out = raw;
                       if (raw.length > 4) out = raw.slice(0, 4) + "/" + raw.slice(4);
@@ -536,7 +536,7 @@ function KlientWniosek() {
                     aria-invalid={kwNumber.length > 0 && !kwValid}
                   />
                   <p className={`text-xs ${kwNumber.length > 0 && !kwValid ? "text-destructive" : "text-muted-foreground"}`}>
-                    Format: 4 znaki kodu sądu (litery/cyfry) / 8 cyfr / 1 cyfra kontrolna — np. WA1M/00000000/0
+                    Format: 2 litery + cyfra + litera / 8 cyfr / 1 cyfra — np. WA1M/00000000/0
                   </p>
                 </div>
               );
