@@ -2,29 +2,46 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, Building, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2 } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const items = [
-  { to: "/admin", label: "Pulpit", icon: LayoutDashboard, exact: true },
-  { to: "/admin/leady", label: "Leady", icon: Users },
-  { to: "/admin/wnioski", label: "Wnioski", icon: FileText },
-  { to: "/admin/klienci", label: "Klienci", icon: Users },
-  { to: "/admin/nieruchomosci", label: "Nieruchomości", icon: Building },
-  { to: "/admin/dokumenty", label: "Dokumenty", icon: FolderOpen },
-  { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
-  { to: "/admin/follow-up", label: "Follow-up", icon: PhoneCall },
-  { to: "/admin/inwestorzy", label: "Inwestorzy", icon: Briefcase },
-  { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
-  { to: "/admin/oferty", label: "Oferty", icon: Tag },
-  { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
-  { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
-  { to: "/admin/integracje", label: "Integracje", icon: Plug },
-  { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
-  { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
+type Item = { to: string; label: string; icon: any; exact?: boolean };
+type Group = { label?: string; items: Item[] };
+
+const groups: Group[] = [
+  { items: [{ to: "/admin", label: "Pulpit", icon: LayoutDashboard, exact: true }] },
+  {
+    label: "Klienci pożyczkowi",
+    items: [
+      { to: "/admin/leady", label: "Leady", icon: Users },
+      { to: "/admin/wnioski", label: "Wnioski", icon: FileText },
+      { to: "/admin/klienci", label: "Klienci", icon: Users },
+      { to: "/admin/dokumenty", label: "Dokumenty", icon: FolderOpen },
+      { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
+      { to: "/admin/follow-up", label: "Follow-up", icon: PhoneCall },
+    ],
+  },
+  {
+    label: "Inwestorzy",
+    items: [
+      { to: "/admin/inwestorzy", label: "Lista inwestorów", icon: Briefcase },
+      { to: "/admin/oferty", label: "Oferty", icon: Tag },
+      { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
+      { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Konfiguracja",
+    items: [
+      { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
+      { to: "/admin/integracje", label: "Integracje", icon: Plug },
+      { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
+      { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
+    ],
+  },
 ];
 
 function AdminLayout() {
@@ -53,16 +70,25 @@ function AdminLayout() {
             Panel administratora
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-          {items.map((it) => {
-            const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
-            return (
-              <Link key={it.to} to={it.to}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/60"}`}>
-                <it.icon className="h-4 w-4" /> {it.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          {groups.map((g, gi) => (
+            <div key={gi} className="space-y-1">
+              {g.label && (
+                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                  {g.label}
+                </div>
+              )}
+              {g.items.map((it) => {
+                const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
+                return (
+                  <Link key={it.to} to={it.to}
+                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/60"}`}>
+                    <it.icon className="h-4 w-4" /> {it.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => { void signOut(); void navigate({ to: "/" }); }}>
