@@ -49,7 +49,7 @@ export const saveClientProfile = createServerFn({ method: "POST" })
       borrower_type: data.borrowerType,
       nip: data.borrowerData?.nip ?? null,
       completion_percent: 0, // klient liczy lokalnie; pole pomocnicze
-      data,
+      data: data as any,
     };
     if (data.id) {
       const { data: row, error } = await supabase
@@ -175,7 +175,7 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
         borrower_type: profile.borrowerType,
         nip: profile.borrowerData.nip ?? null,
         completion_percent: 0,
-        data: profile,
+        data: profile as any,
       })
       .select("id")
       .single();
