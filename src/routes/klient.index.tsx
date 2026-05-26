@@ -770,3 +770,115 @@ function DocUploader({
     </div>
   );
 }
+
+function SubmittedView(props: {
+  loanStatus: string;
+  amount: number; annualRate: number; months: number;
+  rata: number; balloon: number; totalPay: number; investorComp: number;
+  firstName: string; lastName: string; email: string; phone: string;
+  secType: SecurityType | null; kwStatus: string; kwNumber: string;
+  docs: any[]; incomeDocs: any[]; uploading: boolean;
+  onUpload: (f: File, t: string) => Promise<void>;
+  onEdit: () => void;
+}) {
+  const { loanStatus, amount, annualRate, months, rata, balloon, totalPay, investorComp,
+    firstName, lastName, email, phone, secType, kwStatus, kwNumber, docs, incomeDocs, uploading, onUpload, onEdit } = props;
+  const otherDocs = docs.filter((d) => d.document_type !== "dochod");
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold">Twój wniosek został złożony</h1>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Status: <Badge variant="secondary">{loanStatusLabels[loanStatus] ?? loanStatus}</Badge>
+          </p>
+        </div>
+        <Button variant="outline" onClick={onEdit}>
+          <Pencil className="h-4 w-4 mr-2" /> Edytuj wniosek
+        </Button>
+      </div>
+
+      <Alert>
+        <Sparkles className="h-4 w-4" />
+        <AlertTitle>Zwiększ szansę na pozytywną decyzję — dodaj dokumenty dochodowe</AlertTitle>
+        <AlertDescription className="text-sm leading-relaxed">
+          Dodaj dokumenty pokazujące Twoje dochody lub wpływy na konto. Może to być
+          wyciąg bankowy, PIT, zaświadczenie od pracodawcy, dokument od księgowej albo
+          inne potwierdzenie dochodu. Im więcej dokumentów dodasz, tym szybciej inwestor
+          będzie mógł przeanalizować wniosek i podjąć decyzję.
+          <div className="mt-2 text-xs text-muted-foreground">
+            Nie musisz dodawać wszystkiego — wystarczy, że dodasz dokumenty, które posiadasz.
+            Przykłady: wyciąg z konta za ostatnie 3–6 miesięcy, PIT, zaświadczenie od pracodawcy,
+            umowa, decyzja o emeryturze / rencie, podsumowanie od księgowej, KPiR, ewidencja
+            przychodów, dokumenty finansowe spółki.
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Dokumenty dochodowe</CardTitle>
+          <CardDescription>
+            Dodaj dowolne dokumenty potwierdzające Twoje dochody lub wpływy. Możesz wgrać kilka plików naraz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DocUploader
+            label={`Wgraj dokumenty dochodowe (dodano: ${incomeDocs.length})`}
+            docType="dochod"
+            docs={incomeDocs}
+            uploading={uploading}
+            onUpload={onUpload}
+            multiple
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Row k="Kwota pożyczki" v={formatPLN(amount)} />
+          <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
+          <Row k="Okres finansowania" v={`${months} mies.`} />
+          <Row k="Rata miesięczna" v={formatPLN(rata)} />
+          {balloon > 0 && <Row k="Rata balonowa (ostatnia)" v={formatPLN(rata + balloon)} />}
+          <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
+          <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
+          <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
+          <Row k="E-mail" v={email} />
+          <Row k="Telefon" v={phone} />
+          <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
+          <Row k="Księga wieczysta" v={kwStatus === "znam" ? kwNumber : kwStatus === "nie_znam" ? "Dokument własności (załączony)" : kwStatus === "brak" ? "Brak KW — opis i dokumenty" : "—"} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pozostałe dokumenty ({otherDocs.length})</CardTitle>
+          <CardDescription>
+            Dokumenty załączone w trakcie składania wniosku. Możesz dodawać kolejne w zakładce{" "}
+            <Link to="/klient/dokumenty" className="underline">Dokumenty</Link>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {otherDocs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Brak dodatkowych dokumentów.</p>
+          ) : (
+            <ul className="text-sm space-y-1">
+              {otherDocs.map((d) => (
+                <li key={d.id} className="flex justify-between border-b py-1.5">
+                  <span>{d.file_name}</span>
+                  <span className="text-xs text-muted-foreground">{d.document_type}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
