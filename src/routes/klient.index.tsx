@@ -221,15 +221,15 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 2) {
-      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
-      if (bizStatus === "nie_zamierza") return { ok: false, msg: "Nie możemy przyjąć wniosku w tej ścieżce." };
-      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
-      return { ok: true };
-    }
-    if (step === 3) {
       if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
       if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
+      return { ok: true };
+    }
+    if (step === 3) {
+      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
+      if (bizStatus === "nie_zamierza") return { ok: false, msg: "Nie możemy przyjąć wniosku w tej ścieżce." };
+      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
       return { ok: true };
     }
     if (step === 4) {
