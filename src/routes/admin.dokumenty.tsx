@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Bold, Italic, List, ListOrdered, Heading2, Plus, Sparkles, Printer, Trash2, Pencil, Loader2, Save } from "lucide-react";
+import { Bold, Italic, List, ListOrdered, Heading2, Plus, Sparkles, Printer, Trash2, Pencil, Loader2, Save, FileText, Upload, Search, ExternalLink } from "lucide-react";
 import { formatDate } from "@/lib/labels";
 
 export const Route = createFileRoute("/admin/dokumenty")({
