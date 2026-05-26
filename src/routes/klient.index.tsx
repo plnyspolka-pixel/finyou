@@ -351,7 +351,7 @@ function KlientWniosek() {
       await supabase.from("loan_applications").update({
         status: "wniosek_kompletny" as any,
         completeness_percent: 100,
-        available_to_investors: false,
+        available_to_investors: true,
       }).eq("id", loanId);
       setLoanStatus("wniosek_kompletny");
       setEditing(false);
