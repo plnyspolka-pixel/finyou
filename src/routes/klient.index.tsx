@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import {
   monthlyPayment,
@@ -18,7 +19,8 @@ import {
   securityTypeLabels,
   type SecurityType,
 } from "@/lib/loan-math";
-import { ArrowLeft, ArrowRight, Send, Loader2, Upload, AlertTriangle, Calculator } from "lucide-react";
+import { loanStatusLabels } from "@/lib/labels";
+import { ArrowLeft, ArrowRight, Send, Loader2, Upload, AlertTriangle, Calculator, CheckCircle2, Pencil, Sparkles, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
@@ -32,13 +34,14 @@ type KwStatus = "znam" | "nie_znam" | "brak" | "";
 
 function KlientWniosek() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [clientId, setClientId] = useState<string | null>(null);
   const [loanId, setLoanId] = useState<string | null>(null);
+  const [loanStatus, setLoanStatus] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [propertyId, setPropertyId] = useState<string | null>(null);
 
   // Kalkulator
@@ -106,13 +109,44 @@ function KlientWniosek() {
     setEmail((e) => e || user.email || "");
     void (async () => {
       const { data: c } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
-      if (c) {
-        setClientId(c.id);
-        setFirstName(c.first_name ?? "");
-        setLastName(c.last_name ?? "");
-        setPhone(c.phone ?? "");
-        setEmail(c.email ?? user.email ?? "");
+      if (!c) return;
+      setClientId(c.id);
+      setFirstName(c.first_name ?? "");
+      setLastName(c.last_name ?? "");
+      setPhone(c.phone ?? "");
+      setEmail(c.email ?? user.email ?? "");
+
+      const { data: la } = await supabase.from("loan_applications").select("*")
+        .eq("client_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!la) return;
+      setLoanId(la.id);
+      setLoanStatus(la.status);
+      if (la.loan_amount) setAmount(Number(la.loan_amount));
+      if (la.annual_investor_rate) setAnnualRate(Number(la.annual_investor_rate));
+      if (la.max_monthly_payment) setMaxPayment(Number(la.max_monthly_payment));
+      if (la.preferred_period_months) setMonths(la.preferred_period_months);
+      if (la.business_status) setBizStatus(la.business_status as BusinessStatus);
+      if (la.nip) setNip(la.nip);
+      if (la.kw_status) setKwStatus(la.kw_status as KwStatus);
+
+      const { data: prop } = await supabase.from("properties").select("*")
+        .eq("loan_application_id", la.id).maybeSingle();
+      if (prop) {
+        setPropertyId(prop.id);
+        setSecType((prop.property_type as SecurityType) ?? null);
+        setVoivodeship(prop.voivodeship ?? "");
+        setCity(prop.city ?? "");
+        setStreet(prop.street ?? "");
+        setKwNumber(prop.land_register_number ?? "");
+        setKwDescription(prop.description ?? "");
+        setAreaSqm(prop.area_sqm ? String(prop.area_sqm) : "");
+        setMpzpInfo(prop.mpzp_info ?? "");
+        setLandRegistryExtract(prop.land_registry_extract ?? "");
       }
+
+      const { data: ds } = await supabase.from("documents").select("*")
+        .eq("loan_application_id", la.id).order("created_at", { ascending: false });
+      setDocs(ds ?? []);
     })();
   }, [user]);
 
@@ -319,12 +353,45 @@ function KlientWniosek() {
         completeness_percent: 100,
         available_to_investors: false,
       }).eq("id", loanId);
+      setLoanStatus("wniosek_kompletny");
+      setEditing(false);
+      setStep(1);
       toast.success("Wniosek wysłany do analizy");
-      void navigate({ to: "/klient/status" });
     } finally {
       setSubmitting(false);
     }
   };
+
+  const incomeDocs = useMemo(() => docs.filter((d) => d.document_type === "dochod"), [docs]);
+  const isSubmitted = loanStatus !== null && loanStatus !== "w_trakcie_uzupelniania";
+
+  if (isSubmitted && !editing) {
+    return (
+      <SubmittedView
+        loanStatus={loanStatus!}
+        amount={amount}
+        annualRate={annualRate}
+        months={months}
+        rata={rata}
+        balloon={balloon}
+        totalPay={totalPay}
+        investorComp={investorComp}
+        firstName={firstName}
+        lastName={lastName}
+        email={email}
+        phone={phone}
+        secType={secType}
+        kwStatus={kwStatus}
+        kwNumber={kwNumber}
+        docs={docs}
+        incomeDocs={incomeDocs}
+        uploading={uploading}
+        onUpload={uploadDoc}
+        onEdit={() => { setEditing(true); setStep(1); }}
+      />
+    );
+  }
+
 
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
@@ -700,6 +767,118 @@ function DocUploader({
           {docs.map((d) => <li key={d.id}>• {d.file_name}</li>)}
         </ul>
       )}
+    </div>
+  );
+}
+
+function SubmittedView(props: {
+  loanStatus: string;
+  amount: number; annualRate: number; months: number;
+  rata: number; balloon: number; totalPay: number; investorComp: number;
+  firstName: string; lastName: string; email: string; phone: string;
+  secType: SecurityType | null; kwStatus: string; kwNumber: string;
+  docs: any[]; incomeDocs: any[]; uploading: boolean;
+  onUpload: (f: File, t: string) => Promise<void>;
+  onEdit: () => void;
+}) {
+  const { loanStatus, amount, annualRate, months, rata, balloon, totalPay, investorComp,
+    firstName, lastName, email, phone, secType, kwStatus, kwNumber, docs, incomeDocs, uploading, onUpload, onEdit } = props;
+  const otherDocs = docs.filter((d) => d.document_type !== "dochod");
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold">Twój wniosek został złożony</h1>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Status: <Badge variant="secondary">{loanStatusLabels[loanStatus] ?? loanStatus}</Badge>
+          </p>
+        </div>
+        <Button variant="outline" onClick={onEdit}>
+          <Pencil className="h-4 w-4 mr-2" /> Edytuj wniosek
+        </Button>
+      </div>
+
+      <Alert>
+        <Sparkles className="h-4 w-4" />
+        <AlertTitle>Zwiększ szansę na pozytywną decyzję — dodaj dokumenty dochodowe</AlertTitle>
+        <AlertDescription className="text-sm leading-relaxed">
+          Dodaj dokumenty pokazujące Twoje dochody lub wpływy na konto. Może to być
+          wyciąg bankowy, PIT, zaświadczenie od pracodawcy, dokument od księgowej albo
+          inne potwierdzenie dochodu. Im więcej dokumentów dodasz, tym szybciej inwestor
+          będzie mógł przeanalizować wniosek i podjąć decyzję.
+          <div className="mt-2 text-xs text-muted-foreground">
+            Nie musisz dodawać wszystkiego — wystarczy, że dodasz dokumenty, które posiadasz.
+            Przykłady: wyciąg z konta za ostatnie 3–6 miesięcy, PIT, zaświadczenie od pracodawcy,
+            umowa, decyzja o emeryturze / rencie, podsumowanie od księgowej, KPiR, ewidencja
+            przychodów, dokumenty finansowe spółki.
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Dokumenty dochodowe</CardTitle>
+          <CardDescription>
+            Dodaj dowolne dokumenty potwierdzające Twoje dochody lub wpływy. Możesz wgrać kilka plików naraz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DocUploader
+            label={`Wgraj dokumenty dochodowe (dodano: ${incomeDocs.length})`}
+            docType="dochod"
+            docs={incomeDocs}
+            uploading={uploading}
+            onUpload={onUpload}
+            multiple
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Row k="Kwota pożyczki" v={formatPLN(amount)} />
+          <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
+          <Row k="Okres finansowania" v={`${months} mies.`} />
+          <Row k="Rata miesięczna" v={formatPLN(rata)} />
+          {balloon > 0 && <Row k="Rata balonowa (ostatnia)" v={formatPLN(rata + balloon)} />}
+          <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
+          <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
+          <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
+          <Row k="E-mail" v={email} />
+          <Row k="Telefon" v={phone} />
+          <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
+          <Row k="Księga wieczysta" v={kwStatus === "znam" ? kwNumber : kwStatus === "nie_znam" ? "Dokument własności (załączony)" : kwStatus === "brak" ? "Brak KW — opis i dokumenty" : "—"} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pozostałe dokumenty ({otherDocs.length})</CardTitle>
+          <CardDescription>
+            Dokumenty załączone w trakcie składania wniosku. Możesz dodawać kolejne w zakładce{" "}
+            <Link to="/klient/dokumenty" className="underline">Dokumenty</Link>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {otherDocs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Brak dodatkowych dokumentów.</p>
+          ) : (
+            <ul className="text-sm space-y-1">
+              {otherDocs.map((d) => (
+                <li key={d.id} className="flex justify-between border-b py-1.5">
+                  <span>{d.file_name}</span>
+                  <span className="text-xs text-muted-foreground">{d.document_type}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
