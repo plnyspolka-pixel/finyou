@@ -641,7 +641,7 @@ function KlientWniosek() {
             <Row k="E-mail" v={email} />
             <Row k="Telefon" v={phone} />
             <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
-            <Row k="Lokalizacja" v={`${voivodeship}, ${city}${street ? ", " + street : ""}`} />
+            
             <Row k="Księga wieczysta" v={kwStatus === "znam" ? kwNumber : kwStatus === "nie_znam" ? "Dokument własności (załączony)" : kwStatus === "brak" ? "Brak KW — opis i dokumenty" : "—"} />
             <Row k="Załączone dokumenty" v={`${docs.length}`} />
           </CardContent>
