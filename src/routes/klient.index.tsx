@@ -86,6 +86,22 @@ function KlientWniosek() {
   const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
   const exceedsMax = balloon > 0;
 
+  const schedule = useMemo(() => {
+    if (!months || !rata) return [];
+    const today = new Date();
+    const rows: { idx: number; date: string; payment: number; balloon: number }[] = [];
+    for (let i = 1; i <= months; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
+      rows.push({
+        idx: i,
+        date: d.toLocaleDateString("pl-PL"),
+        payment: rata,
+        balloon: i === months ? balloon : 0,
+      });
+    }
+    return rows;
+  }, [months, rata, balloon]);
+
   useEffect(() => {
     if (!user) return;
     setEmail((e) => e || user.email || "");
