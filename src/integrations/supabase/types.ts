@@ -259,6 +259,47 @@ export type Database = {
           },
         ]
       }
+      client_profiles: {
+        Row: {
+          borrower_type: string | null
+          completion_percent: number
+          created_at: string
+          data: Json
+          id: string
+          nip: string | null
+          source_application_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          borrower_type?: string | null
+          completion_percent?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          nip?: string | null
+          source_application_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          borrower_type?: string | null
+          completion_percent?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          nip?: string | null
+          source_application_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_profiles_source_application_id_fkey"
+            columns: ["source_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           consent_email: boolean
