@@ -327,3 +327,81 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
     </Dialog>
   );
 }
+
+function GoogleDocsImportDialog({ onClose, onImported }: { onClose: () => void; onImported: (name: string, html: string) => void }) {
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState<Array<{ id: string; name: string; modifiedTime: string; webViewLink?: string; owners?: Array<{ displayName?: string }> }>>([]);
+  const [importingId, setImportingId] = useState<string | null>(null);
+  const listFn = useServerFn(listGoogleDocs);
+  const importFn = useServerFn(importGoogleDoc);
+
+  const refresh = async (q?: string) => {
+    setLoading(true);
+    try {
+      const res: any = await listFn({ data: { search: q || undefined } });
+      if (!res?.ok) toast.error(res?.error || "Nie udało się pobrać listy");
+      else setFiles(res.files || []);
+    } catch (e: any) { toast.error(String(e?.message || e)); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void refresh(); }, []);
+
+  const doImport = async (id: string, name: string) => {
+    setImportingId(id);
+    try {
+      const res: any = await importFn({ data: { documentId: id } });
+      if (!res?.ok) { toast.error(res?.error || "Import nieudany"); return; }
+      onImported(res.title || name, res.html);
+      toast.success("Zaimportowano z Google Docs");
+    } catch (e: any) { toast.error(String(e?.message || e)); }
+    finally { setImportingId(null); }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> Importuj szablon z Google Docs</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input className="pl-8" placeholder="Szukaj po nazwie…" value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void refresh(search); }} />
+          </div>
+          <Button variant="outline" onClick={() => void refresh(search)} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Szukaj"}
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto border rounded-md divide-y">
+          {loading && files.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Ładowanie…</div>
+          ) : files.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Brak dokumentów na podłączonym koncie Google.</div>
+          ) : files.map((f) => (
+            <div key={f.id} className="p-3 flex items-center gap-3 hover:bg-muted/40">
+              <FileText className="h-5 w-5 text-primary shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-sm truncate">{f.name}</div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {f.owners?.[0]?.displayName || "—"} · {formatDate(f.modifiedTime)}
+                </div>
+              </div>
+              {f.webViewLink && (
+                <a href={f.webViewLink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+              <Button size="sm" disabled={!!importingId} onClick={() => void doImport(f.id, f.name)}>
+                {importingId === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Importuj"}
+              </Button>
+            </div>
+          ))}
+        </div>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Zamknij</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
