@@ -149,7 +149,7 @@ function KlientWniosek() {
         business_status: bizStatus || null,
         nip: nip || null,
         kw_status: kwStatus || null,
-        interest_score: secType ? score : null,
+        interest_score: null,
         current_form_step: nextStep,
       }).eq("id", lid);
 
