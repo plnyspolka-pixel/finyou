@@ -34,13 +34,14 @@ type KwStatus = "znam" | "nie_znam" | "brak" | "";
 
 function KlientWniosek() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [clientId, setClientId] = useState<string | null>(null);
   const [loanId, setLoanId] = useState<string | null>(null);
+  const [loanStatus, setLoanStatus] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [propertyId, setPropertyId] = useState<string | null>(null);
 
   // Kalkulator
