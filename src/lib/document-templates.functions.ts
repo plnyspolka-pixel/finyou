@@ -26,7 +26,7 @@ export const listGoogleDocs = createServerFn({ method: "POST" })
       const scope = data.scope ?? "all";
       const parts = [
         // Google Docs + uploaded Word documents
-        "(mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document')",
+        "mimeType='application/vnd.google-apps.document'",
         "trashed=false",
       ];
       if (data.search) parts.push(`name contains '${String(data.search).replace(/'/g, "\\'")}'`);
