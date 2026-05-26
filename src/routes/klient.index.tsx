@@ -25,7 +25,7 @@ export const Route = createFileRoute("/klient/")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Działalność", "Dane kontaktowe", "Nieruchomość", "Dokumenty", "Podsumowanie"];
+const STEPS = ["Kalkulator", "Dane kontaktowe", "Działalność", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "nie_zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "brak" | "";
@@ -89,14 +89,13 @@ function KlientWniosek() {
   const schedule = useMemo(() => {
     if (!months || !rata) return [];
     const today = new Date();
-    const rows: { idx: number; date: string; payment: number; balloon: number }[] = [];
+    const rows: { idx: number; date: string; payment: number }[] = [];
     for (let i = 1; i <= months; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
       rows.push({
         idx: i,
         date: d.toLocaleDateString("pl-PL"),
-        payment: rata,
-        balloon: i === months ? balloon : 0,
+        payment: i === months ? rata + balloon : rata,
       });
     }
     return rows;
@@ -195,6 +194,36 @@ function KlientWniosek() {
     }
   };
 
+  // Auto-zapis formularza (debounce) — utworzy klienta i wniosek po wprowadzeniu danych kontaktowych
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    // Wymagamy minimum danych do utworzenia rekordu klienta
+    const hasContact = firstName.trim() && lastName.trim() && (email.trim() || phone.trim());
+    if (!hasContact && !clientId) return;
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      void (async () => {
+        const cid = await ensureClient();
+        if (!cid) return;
+        const lid = await ensureLoan(cid);
+        if (!lid) return;
+        await supabase.from("loan_applications").update({
+          loan_amount: amount,
+          annual_investor_rate: annualRate,
+          max_monthly_payment: maxPayment,
+          preferred_period_months: months,
+          business_status: bizStatus || null,
+          nip: nip || null,
+          kw_status: kwStatus || null,
+          current_form_step: step,
+        }).eq("id", lid);
+      })();
+    }, 1200);
+    return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, firstName, lastName, email, phone, amount, annualRate, months, maxPayment, bizStatus, nip, kwStatus, secType, step]);
+
   const uploadDoc = async (file: File, docType: string) => {
     if (!loanId || !user) { toast.error("Najpierw przejdź dalej, aby utworzyć wniosek"); return; }
     setUploading(true);
@@ -222,15 +251,15 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 2) {
-      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
-      if (bizStatus === "nie_zamierza") return { ok: false, msg: "Nie możemy przyjąć wniosku w tej ścieżce." };
-      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
-      return { ok: true };
-    }
-    if (step === 3) {
       if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
       if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
+      return { ok: true };
+    }
+    if (step === 3) {
+      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
+      if (bizStatus === "nie_zamierza") return { ok: false, msg: "Nie możemy przyjąć wniosku w tej ścieżce." };
+      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
       return { ok: true };
     }
     if (step === 4) {
@@ -308,9 +337,9 @@ function KlientWniosek() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" /> Sprawdź orientacyjne warunki pożyczki pod zastaw nieruchomości
+              <Calculator className="h-5 w-5" /> Sprawdź warunki pożyczki pod zastaw nieruchomości
             </CardTitle>
-            <CardDescription>Ustaw parametry — od razu zobaczysz orientacyjną ratę i wskaźnik zainteresowania inwestora.</CardDescription>
+            <CardDescription>Ustaw parametry — od razu zobaczysz wysokość raty i koszt finansowania.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-3">
@@ -359,14 +388,14 @@ function KlientWniosek() {
 
 
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>Orientacyjna rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
+              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
               {balloon > 0 && (
-                <div className="flex justify-between text-sm"><span>Rata balonowa na koniec ({months} mies.)</span><b className="tabular-nums">{formatPLN(balloon)}</b></div>
+                <div className="flex justify-between text-sm"><span>Ostatnia rata (zawiera nadwyżkę balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
               )}
               <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
               <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
               <p className="text-xs text-muted-foreground pt-2">
-                To jest kalkulacja orientacyjna. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
+                Kalkulacja poglądowa. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
               </p>
             </div>
 
@@ -382,7 +411,7 @@ function KlientWniosek() {
             {schedule.length > 0 && (
               <div className="rounded-lg border bg-card">
                 <div className="px-4 py-3 border-b">
-                  <h3 className="font-semibold text-sm">Orientacyjny harmonogram spłat</h3>
+                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
                   <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
                 </div>
                 <div className="max-h-72 overflow-auto">
@@ -392,8 +421,6 @@ function KlientWniosek() {
                         <th className="px-3 py-2 font-medium">#</th>
                         <th className="px-3 py-2 font-medium">Data spłaty</th>
                         <th className="px-3 py-2 font-medium text-right">Rata</th>
-                        {balloon > 0 && <th className="px-3 py-2 font-medium text-right">Balon</th>}
-                        <th className="px-3 py-2 font-medium text-right">Razem</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -401,11 +428,7 @@ function KlientWniosek() {
                         <tr key={r.idx} className="border-t">
                           <td className="px-3 py-2 tabular-nums">{r.idx}</td>
                           <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                          <td className="px-3 py-2 text-right tabular-nums">{formatPLN(r.payment)}</td>
-                          {balloon > 0 && (
-                            <td className="px-3 py-2 text-right tabular-nums">{r.balloon > 0 ? formatPLN(r.balloon) : "—"}</td>
-                          )}
-                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment + r.balloon)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -418,6 +441,18 @@ function KlientWniosek() {
       )}
 
       {step === 2 && (
+        <Card>
+          <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+            <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+            <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 3 && (
         <Card>
           <CardHeader>
             <CardTitle>Czy prowadzisz działalność gospodarczą albo zamierzasz ją założyć?</CardTitle>
@@ -456,17 +491,8 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 3 && (
-        <Card>
-          <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-            <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-          </CardContent>
-        </Card>
-      )}
+
+
 
       {step === 4 && (
         <Card>
@@ -585,7 +611,7 @@ function KlientWniosek() {
             <Row k="Kwota pożyczki" v={formatPLN(amount)} />
             <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
             <Row k="Okres finansowania" v={`${months} mies.`} />
-            <Row k="Orientacyjna rata" v={formatPLN(rata)} />
+            <Row k="Rata miesięczna" v={formatPLN(rata)} />
             <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
             <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
             <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
@@ -606,7 +632,7 @@ function KlientWniosek() {
         <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
         </Button>
-        {step === 2 && bizStatus === "nie_zamierza" ? (
+        {step === 3 && bizStatus === "nie_zamierza" ? (
           <Button variant="outline" onClick={() => setStep(1)}>Wróć do kalkulatora</Button>
         ) : step < STEPS.length ? (
           <Button disabled={saving} onClick={() => void goNext()}>
