@@ -73,6 +73,7 @@ function DokumentyPage() {
     content_html: "<p>Treść szablonu… Użyj {{klient.imie}} aby wstawić zmienną.</p>",
     placeholders: [],
     output_format: "pdf",
+    use_case: "kreator_umow",
     created_at: "",
     updated_at: "",
   });
