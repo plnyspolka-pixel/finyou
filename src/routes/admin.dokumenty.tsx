@@ -274,16 +274,30 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
               <div><Label>Kategoria</Label><Input value={meta.category} onChange={(e) => setMeta({ ...meta, category: e.target.value })} placeholder="np. Umowy" /></div>
             </div>
             <div><Label>Opis</Label><Textarea rows={2} value={meta.description} onChange={(e) => setMeta({ ...meta, description: e.target.value })} /></div>
-            <div>
-              <Label>Format wyjściowy</Label>
-              <Select value={meta.output_format} onValueChange={(v) => setMeta({ ...meta, output_format: v })}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pdf">PDF</SelectItem>
-                  <SelectItem value="docx">DOCX</SelectItem>
-                  <SelectItem value="html">HTML</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Przeznaczenie szablonu *</Label>
+                <Select value={meta.use_case} onValueChange={(v) => setMeta({ ...meta, use_case: v as UseCase })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {USE_CASE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">Decyduje, w którym kreatorze szablon będzie dostępny.</p>
+              </div>
+              <div>
+                <Label>Format wyjściowy</Label>
+                <Select value={meta.output_format} onValueChange={(v) => setMeta({ ...meta, output_format: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="docx">DOCX</SelectItem>
+                    <SelectItem value="html">HTML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {editor && (
