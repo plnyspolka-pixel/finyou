@@ -21,6 +21,16 @@ export const Route = createFileRoute("/admin/dokumenty")({
   component: DokumentyPage,
 });
 
+type UseCase = "kreator_umow" | "kreator_compliance" | "kreator_pism_windykacyjnych";
+
+const USE_CASE_OPTIONS: Array<{ value: UseCase; label: string }> = [
+  { value: "kreator_umow", label: "Kreator umów" },
+  { value: "kreator_compliance", label: "Kreator compliance" },
+  { value: "kreator_pism_windykacyjnych", label: "Kreator pism windykacyjnych" },
+];
+const useCaseLabel = (v?: string | null) =>
+  USE_CASE_OPTIONS.find((o) => o.value === v)?.label ?? "—";
+
 type Template = {
   id: string;
   name: string;
@@ -29,6 +39,7 @@ type Template = {
   content_html: string;
   placeholders: string[];
   output_format: string;
+  use_case: UseCase;
   created_at: string;
   updated_at: string;
 };
