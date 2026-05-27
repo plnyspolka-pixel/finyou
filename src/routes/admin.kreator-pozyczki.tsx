@@ -49,6 +49,9 @@ import {
 } from "@/lib/client-profile.functions";
 
 export const Route = createFileRoute("/admin/kreator-pozyczki")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    profileId: typeof s.profileId === "string" ? s.profileId : undefined,
+  }),
   component: KreatorPozyczki,
 });
 
@@ -759,7 +762,14 @@ function DocBlock({ title, text, filename }: { title: string; text: string; file
 // ════════════════════════════════════════════════════════════════════
 
 function KreatorPozyczki() {
-  const [view, setView] = useState<{ mode: "list" } | { mode: "edit"; id: string | null }>({ mode: "list" });
+  const search = Route.useSearch();
+  const [view, setView] = useState<{ mode: "list" } | { mode: "edit"; id: string | null }>(
+    search.profileId ? { mode: "edit", id: search.profileId } : { mode: "list" },
+  );
+
+  useEffect(() => {
+    if (search.profileId) setView({ mode: "edit", id: search.profileId });
+  }, [search.profileId]);
 
   return (
     <div className="space-y-4">
