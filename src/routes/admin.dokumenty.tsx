@@ -146,6 +146,7 @@ function DokumentyPage() {
                         <Badge variant="outline">{t.output_format.toUpperCase()}</Badge>
                       </div>
                       {t.category && <p className="text-xs text-muted-foreground">{t.category}</p>}
+                      <Badge variant="secondary" className="mt-1 w-fit text-[10px]">{useCaseLabel(t.use_case)}</Badge>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-2">
                       <p className="text-xs text-muted-foreground line-clamp-2">{t.description || "—"}</p>
