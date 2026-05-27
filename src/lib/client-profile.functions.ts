@@ -183,6 +183,142 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
     return { id: row.id };
   });
 
+// ─── Utwórz / zaktualizuj profil z zaakceptowanej oferty ──────────────
+// Łączy dane z wniosku (klient, nieruchomość), istniejącego profilu
+// klienta oraz oferty (inwestor + warunki). Nie nadpisuje pól oznaczonych
+// jako "Ręcznie".
+
+export const createProfileFromOffer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ offerId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: offer, error: offerErr } = await supabase
+      .from("investor_offers")
+      .select(
+        "*, investor:investors(*), loan:loan_applications(*, client:clients(*), properties(*))",
+      )
+      .eq("id", data.offerId)
+      .single();
+    if (offerErr || !offer) {
+      throw new Error(offerErr?.message ?? "Oferta nie została znaleziona");
+    }
+    if (
+      offer.offer_status !== "zaakceptowana_przez_klienta" &&
+      offer.offer_status !== "wyslana_do_klienta"
+    ) {
+      throw new Error("Oferta nie została jeszcze zaakceptowana przez klienta");
+    }
+
+    const app: any = (offer as any).loan ?? {};
+    const c: any = app.client ?? {};
+    const prop: any = (app.properties ?? [])[0] ?? {};
+    const inv: any = (offer as any).investor ?? {};
+
+    let existingId: string | undefined;
+    let existingProfile: ClientProfile | undefined;
+    if (app.id) {
+      const { data: existing } = await supabase
+        .from("client_profiles")
+        .select("id, data")
+        .eq("source_application_id", app.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        existingId = existing.id as string;
+        existingProfile = existing.data as ClientProfile;
+      }
+    }
+
+    const sources: Record<string, FieldSource> = {
+      ...(existingProfile?.fieldSources ?? {}),
+    };
+    const isManual = (path: string) => sources[path] === "Ręcznie";
+    const setIfAuto = <T,>(path: string, current: T | undefined, value: T | undefined, src: FieldSource): T | undefined => {
+      if (value === undefined || value === null || value === "") return current;
+      if (isManual(path)) return current;
+      sources[path] = src;
+      return value;
+    };
+
+    const borrower = { ...(existingProfile?.borrowerData ?? {}) };
+    borrower.firstName = setIfAuto("borrowerData.firstName", borrower.firstName, c.first_name, "Wniosek");
+    borrower.lastName = setIfAuto("borrowerData.lastName", borrower.lastName, c.last_name, "Wniosek");
+    borrower.email = setIfAuto("borrowerData.email", borrower.email, c.email, "Wniosek");
+    borrower.phone = setIfAuto("borrowerData.phone", borrower.phone, c.phone, "Wniosek");
+    borrower.nip = setIfAuto("borrowerData.nip", borrower.nip, app.nip, "Wniosek");
+    borrower.loanPurpose = setIfAuto("borrowerData.loanPurpose", borrower.loanPurpose, app.situation_description, "Wniosek");
+
+    const property = { ...(existingProfile?.propertyData ?? {}) };
+    property.type = setIfAuto("propertyData.type", property.type, prop.property_type, "Wniosek") as any;
+    property.landRegisterNumber = setIfAuto("propertyData.landRegisterNumber", property.landRegisterNumber, prop.land_register_number, "Wniosek");
+    const propAddr = [prop.street, prop.city, prop.voivodeship].filter(Boolean).join(", ") || undefined;
+    property.address = setIfAuto("propertyData.address", property.address, propAddr, "Wniosek");
+    property.city = setIfAuto("propertyData.city", property.city, prop.city, "Wniosek");
+    property.voivodeship = setIfAuto("propertyData.voivodeship", property.voivodeship, prop.voivodeship, "Wniosek");
+    property.estimatedValue = setIfAuto("propertyData.estimatedValue", property.estimatedValue, prop.estimated_value, "Wniosek");
+    property.hasExistingMortgage = property.hasExistingMortgage ?? !!prop.has_mortgage;
+    property.description = setIfAuto("propertyData.description", property.description, prop.description, "Wniosek");
+    property.owner = property.owner ?? { isBorrower: true };
+
+    const investorData = { ...(existingProfile?.investorData ?? {}) };
+    const invFullName = `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim() || undefined;
+    investorData.fullName = setIfAuto("investorData.fullName", investorData.fullName, invFullName, "Wniosek");
+    investorData.companyName = setIfAuto("investorData.companyName", investorData.companyName, inv.company_name, "Wniosek");
+    investorData.email = setIfAuto("investorData.email", investorData.email, inv.email, "Wniosek");
+    investorData.phone = setIfAuto("investorData.phone", investorData.phone, inv.phone, "Wniosek");
+
+    const offerData = { ...(existingProfile?.offerData ?? {}) };
+    offerData.netAmountToClient = setIfAuto("offerData.netAmountToClient", offerData.netAmountToClient, Number(offer.proposed_amount ?? app.loan_amount) || undefined, "Wniosek");
+    offerData.loanTermMonths = setIfAuto("offerData.loanTermMonths", offerData.loanTermMonths, offer.period_months ?? app.preferred_period_months, "Wniosek");
+    offerData.maxMonthlyPaymentByClient = setIfAuto("offerData.maxMonthlyPaymentByClient", offerData.maxMonthlyPaymentByClient, app.max_monthly_payment ?? Number(offer.estimated_monthly_payment) || undefined, "Wniosek");
+    offerData.annualInterestPercent = setIfAuto("offerData.annualInterestPercent", offerData.annualInterestPercent, Number(offer.expected_yearly_yield) || undefined, "Wniosek");
+    offerData.investorMonthlyReturnAmount = setIfAuto("offerData.investorMonthlyReturnAmount", offerData.investorMonthlyReturnAmount, Number(offer.estimated_monthly_payment) || undefined, "Wniosek");
+    offerData.investorMonthlyReturnType = offerData.investorMonthlyReturnType ?? "amount";
+
+    const profile: ClientProfile = {
+      ...(existingProfile ?? { uploadedPhotos: [], uploadedDocuments: [], securityData: {} }),
+      sourceApplicationId: app.id,
+      borrowerType: existingProfile?.borrowerType ?? "JDG",
+      borrowerData: borrower,
+      propertyData: property,
+      investorData,
+      offerData,
+      securityData: existingProfile?.securityData ?? {},
+      uploadedPhotos: existingProfile?.uploadedPhotos ?? [],
+      uploadedDocuments: existingProfile?.uploadedDocuments ?? [],
+      fieldSources: sources,
+    };
+
+    const payload = {
+      source_application_id: app.id ?? null,
+      borrower_type: profile.borrowerType,
+      nip: profile.borrowerData.nip ?? null,
+      completion_percent: 0,
+      data: profile as any,
+    };
+
+    if (existingId) {
+      const { error: upErr2 } = await supabase
+        .from("client_profiles")
+        .update(payload)
+        .eq("id", existingId);
+      if (upErr2) throw new Error(upErr2.message);
+      return { id: existingId };
+    }
+    const { data: row2, error: insErr } = await supabase
+      .from("client_profiles")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+    return { id: row2.id };
+  });
+
 // ─── CEIDG / GUS / KRS ────────────────────────────────────────────────
 
 type StageName =
