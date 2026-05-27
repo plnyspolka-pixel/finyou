@@ -210,6 +210,7 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
       description: meta.description || null,
       category: meta.category || null,
       output_format: meta.output_format,
+      use_case: meta.use_case,
       content_html: editor?.getHTML() ?? template.content_html,
       placeholders: extractPlaceholders(editor?.getHTML() ?? template.content_html),
     };
