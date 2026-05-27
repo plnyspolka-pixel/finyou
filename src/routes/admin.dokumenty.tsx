@@ -21,6 +21,16 @@ export const Route = createFileRoute("/admin/dokumenty")({
   component: DokumentyPage,
 });
 
+type UseCase = "kreator_umow" | "kreator_compliance" | "kreator_pism_windykacyjnych";
+
+const USE_CASE_OPTIONS: Array<{ value: UseCase; label: string }> = [
+  { value: "kreator_umow", label: "Kreator umów" },
+  { value: "kreator_compliance", label: "Kreator compliance" },
+  { value: "kreator_pism_windykacyjnych", label: "Kreator pism windykacyjnych" },
+];
+const useCaseLabel = (v?: string | null) =>
+  USE_CASE_OPTIONS.find((o) => o.value === v)?.label ?? "—";
+
 type Template = {
   id: string;
   name: string;
@@ -29,6 +39,7 @@ type Template = {
   content_html: string;
   placeholders: string[];
   output_format: string;
+  use_case: UseCase;
   created_at: string;
   updated_at: string;
 };
@@ -62,6 +73,7 @@ function DokumentyPage() {
     content_html: "<p>Treść szablonu… Użyj {{klient.imie}} aby wstawić zmienną.</p>",
     placeholders: [],
     output_format: "pdf",
+    use_case: "kreator_umow",
     created_at: "",
     updated_at: "",
   });
@@ -134,6 +146,7 @@ function DokumentyPage() {
                         <Badge variant="outline">{t.output_format.toUpperCase()}</Badge>
                       </div>
                       {t.category && <p className="text-xs text-muted-foreground">{t.category}</p>}
+                      <Badge variant="secondary" className="mt-1 w-fit text-[10px]">{useCaseLabel(t.use_case)}</Badge>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-2">
                       <p className="text-xs text-muted-foreground line-clamp-2">{t.description || "—"}</p>
@@ -173,6 +186,7 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
     description: template.description ?? "",
     category: template.category ?? "",
     output_format: template.output_format,
+    use_case: (template.use_case ?? "kreator_umow") as UseCase,
   });
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -196,6 +210,7 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
       description: meta.description || null,
       category: meta.category || null,
       output_format: meta.output_format,
+      use_case: meta.use_case,
       content_html: editor?.getHTML() ?? template.content_html,
       placeholders: extractPlaceholders(editor?.getHTML() ?? template.content_html),
     };
@@ -259,16 +274,30 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
               <div><Label>Kategoria</Label><Input value={meta.category} onChange={(e) => setMeta({ ...meta, category: e.target.value })} placeholder="np. Umowy" /></div>
             </div>
             <div><Label>Opis</Label><Textarea rows={2} value={meta.description} onChange={(e) => setMeta({ ...meta, description: e.target.value })} /></div>
-            <div>
-              <Label>Format wyjściowy</Label>
-              <Select value={meta.output_format} onValueChange={(v) => setMeta({ ...meta, output_format: v })}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pdf">PDF</SelectItem>
-                  <SelectItem value="docx">DOCX</SelectItem>
-                  <SelectItem value="html">HTML</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Przeznaczenie szablonu *</Label>
+                <Select value={meta.use_case} onValueChange={(v) => setMeta({ ...meta, use_case: v as UseCase })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {USE_CASE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">Decyduje, w którym kreatorze szablon będzie dostępny.</p>
+              </div>
+              <div>
+                <Label>Format wyjściowy</Label>
+                <Select value={meta.output_format} onValueChange={(v) => setMeta({ ...meta, output_format: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="docx">DOCX</SelectItem>
+                    <SelectItem value="html">HTML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {editor && (
