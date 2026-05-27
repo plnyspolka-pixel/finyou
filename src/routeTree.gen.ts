@@ -22,6 +22,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
 import { Route as KlientStatusRouteImport } from './routes/klient.status'
+import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
 import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
 import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
@@ -121,6 +122,11 @@ const KlientWiadomosciRoute = KlientWiadomosciRouteImport.update({
 const KlientStatusRoute = KlientStatusRouteImport.update({
   id: '/status',
   path: '/status',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientProfilRoute = KlientProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
   getParentRoute: () => KlientRoute,
 } as any)
 const KlientOfertaRoute = KlientOfertaRouteImport.update({
@@ -337,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
+  '/klient/profil': typeof KlientProfilRoute
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -384,6 +391,7 @@ export interface FileRoutesByTo {
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
+  '/klient/profil': typeof KlientProfilRoute
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -435,6 +443,7 @@ export interface FileRoutesById {
   '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/kontakt': typeof KlientKontaktRoute
   '/klient/oferta': typeof KlientOfertaRoute
+  '/klient/profil': typeof KlientProfilRoute
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
+    | '/klient/profil'
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/wniosek/$token'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
+    | '/klient/profil'
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/wniosek/$token'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/klient/dokumenty'
     | '/klient/kontakt'
     | '/klient/oferta'
+    | '/klient/profil'
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/wniosek/$token'
@@ -708,6 +720,13 @@ declare module '@tanstack/react-router' {
       path: '/status'
       fullPath: '/klient/status'
       preLoaderRoute: typeof KlientStatusRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/profil': {
+      id: '/klient/profil'
+      path: '/profil'
+      fullPath: '/klient/profil'
+      preLoaderRoute: typeof KlientProfilRouteImport
       parentRoute: typeof KlientRoute
     }
     '/klient/oferta': {
@@ -1056,6 +1075,7 @@ interface KlientRouteChildren {
   KlientDokumentyRoute: typeof KlientDokumentyRoute
   KlientKontaktRoute: typeof KlientKontaktRoute
   KlientOfertaRoute: typeof KlientOfertaRoute
+  KlientProfilRoute: typeof KlientProfilRoute
   KlientStatusRoute: typeof KlientStatusRoute
   KlientWiadomosciRoute: typeof KlientWiadomosciRoute
   KlientIndexRoute: typeof KlientIndexRoute
@@ -1066,6 +1086,7 @@ const KlientRouteChildren: KlientRouteChildren = {
   KlientDokumentyRoute: KlientDokumentyRoute,
   KlientKontaktRoute: KlientKontaktRoute,
   KlientOfertaRoute: KlientOfertaRoute,
+  KlientProfilRoute: KlientProfilRoute,
   KlientStatusRoute: KlientStatusRoute,
   KlientWiadomosciRoute: KlientWiadomosciRoute,
   KlientIndexRoute: KlientIndexRoute,

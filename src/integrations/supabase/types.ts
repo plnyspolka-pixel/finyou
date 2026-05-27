@@ -302,6 +302,8 @@ export type Database = {
       }
       clients: {
         Row: {
+          address: string | null
+          bank_account: string | null
           consent_email: boolean
           consent_marketing: boolean
           consent_phone: boolean
@@ -313,6 +315,7 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          pesel: string | null
           phone: string | null
           phone_normalized: string | null
           phone_raw: string | null
@@ -322,6 +325,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          address?: string | null
+          bank_account?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
           consent_phone?: boolean
@@ -333,6 +338,7 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
+          pesel?: string | null
           phone?: string | null
           phone_normalized?: string | null
           phone_raw?: string | null
@@ -342,6 +348,8 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          address?: string | null
+          bank_account?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
           consent_phone?: boolean
@@ -353,6 +361,7 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          pesel?: string | null
           phone?: string | null
           phone_normalized?: string | null
           phone_raw?: string | null
@@ -941,6 +950,8 @@ export type Database = {
       }
       investors: {
         Row: {
+          address: string | null
+          bank_account: string | null
           company_name: string | null
           created_at: string
           email: string | null
@@ -949,6 +960,7 @@ export type Database = {
           investor_type: Database["public"]["Enums"]["investor_type"]
           is_active: boolean
           last_name: string | null
+          nip: string | null
           phone: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -966,6 +978,8 @@ export type Database = {
           web2learn_user_id: string | null
         }
         Insert: {
+          address?: string | null
+          bank_account?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -974,6 +988,7 @@ export type Database = {
           investor_type: Database["public"]["Enums"]["investor_type"]
           is_active?: boolean
           last_name?: string | null
+          nip?: string | null
           phone?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -991,6 +1006,8 @@ export type Database = {
           web2learn_user_id?: string | null
         }
         Update: {
+          address?: string | null
+          bank_account?: string | null
           company_name?: string | null
           created_at?: string
           email?: string | null
@@ -999,6 +1016,7 @@ export type Database = {
           investor_type?: Database["public"]["Enums"]["investor_type"]
           is_active?: boolean
           last_name?: string | null
+          nip?: string | null
           phone?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
