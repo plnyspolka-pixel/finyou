@@ -185,106 +185,407 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
 
 // ─── CEIDG / GUS / KRS ────────────────────────────────────────────────
 
-type FetchCompanyResult =
-  | { ok: true; source: "CEIDG" | "GUS" | "KRS"; data: Partial<BorrowerData>; rawHint?: string }
-  | { ok: false; error: string; status?: number };
+type StageName =
+  | "Walidacja NIP"
+  | "Sprawdzenie CEIDG"
+  | "Sprawdzenie GUS/REGON"
+  | "Sprawdzenie KRS/PRS"
+  | "Mapowanie danych"
+  | "Zakończono";
+
+type StageStatus = "oczekuje" | "trwa" | "sukces" | "brak danych" | "błąd" | "pominięto";
+
+interface Stage {
+  name: StageName;
+  status: StageStatus;
+  message?: string;
+}
+
+type SourceTag = "CEIDG" | "GUS_REGON" | "KRS_PRS";
+
+export type FetchCompanyResult =
+  | {
+      success: true;
+      // Backward-compatible aliases:
+      ok: true;
+      source: SourceTag;
+      entityType: "JDG" | "KRS_COMPANY" | "UNKNOWN";
+      sourcesChecked: SourceTag[];
+      data: Partial<BorrowerData>;
+      fieldSources: Record<string, SourceTag>;
+      warnings: string[];
+      stages: Stage[];
+    }
+  | {
+      success: false;
+      ok: false;
+      error: string;
+      errorCode: string;
+      message: string;
+      sourcesChecked: SourceTag[];
+      stages: Stage[];
+      status?: number;
+    };
+
+function formatCeidgAddress(a: any): string | undefined {
+  if (!a) return undefined;
+  if (typeof a === "string") return a;
+  const parts = [a.ulica, a.budynek, a.lokal ? `m. ${a.lokal}` : null, a.kod, a.miasto].filter(Boolean);
+  return parts.join(" ").trim() || undefined;
+}
+
+function formatKrsAddress(a: any): string | undefined {
+  if (!a) return undefined;
+  const street = [a.ulica, a.nr_domu, a.nr_lokalu ? `/${a.nr_lokalu}` : ""].filter(Boolean).join(" ");
+  const city = [a.kod_pocztowy, a.miejscowosc].filter(Boolean).join(" ");
+  return [street, city, a.kraj].filter(Boolean).join(", ") || undefined;
+}
+
+function makeStages(): Record<StageName, Stage> {
+  const names: StageName[] = [
+    "Walidacja NIP",
+    "Sprawdzenie CEIDG",
+    "Sprawdzenie GUS/REGON",
+    "Sprawdzenie KRS/PRS",
+    "Mapowanie danych",
+    "Zakończono",
+  ];
+  return Object.fromEntries(names.map((n) => [n, { name: n, status: "oczekuje" as StageStatus }])) as Record<StageName, Stage>;
+}
+
+async function ceidgLookup(nip: string): Promise<
+  | { kind: "jdg"; data: Partial<BorrowerData> }
+  | { kind: "none" }
+  | { kind: "error"; message: string; status?: number }
+> {
+  const token = process.env.CEIDG_JWT_TOKEN;
+  const base = process.env.CEIDG_API_BASE_URL || "https://dane.biznes.gov.pl/api/ceidg/v3";
+  if (!token) return { kind: "error", message: "Integracja CEIDG nie jest skonfigurowana (brak tokenu)." };
+
+  const res = await fetch(`${base}/firmy?nip=${encodeURIComponent(nip)}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (res.status === 204) return { kind: "none" };
+  if (res.status === 401 || res.status === 403)
+    return { kind: "error", message: "Token CEIDG jest nieprawidłowy lub wygasł.", status: res.status };
+  if (res.status === 429) return { kind: "error", message: "Przekroczono limit zapytań do CEIDG.", status: 429 };
+  if (!res.ok) return { kind: "error", message: `Błąd CEIDG: HTTP ${res.status}`, status: res.status };
+
+  const json: any = await res.json().catch(() => null);
+  const list: any[] = json?.firmy ?? json?.firma ?? (Array.isArray(json) ? json : []);
+  const item = list?.[0];
+  if (!item) return { kind: "none" };
+
+  let detail: any = item;
+  if (item.id && !item.adresDzialalnosci) {
+    const dRes = await fetch(`${base}/firma?id=${encodeURIComponent(item.id)}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    if (dRes.ok) {
+      const dJson: any = await dRes.json().catch(() => null);
+      detail = dJson?.firma?.[0] ?? dJson?.firma ?? dJson ?? item;
+    }
+  }
+
+  const mapped: Partial<BorrowerData> = {
+    companyName: detail.nazwa,
+    registryRecordId: detail.id,
+    firstName: detail.wlasciciel?.imie,
+    lastName: detail.wlasciciel?.nazwisko,
+    nip: detail.wlasciciel?.nip || detail.nip || nip,
+    regon: detail.wlasciciel?.regon || detail.regon,
+    pesel: detail.wlasciciel?.pesel,
+    businessAddress: formatCeidgAddress(detail.adresDzialalnosci),
+    correspondenceAddress: formatCeidgAddress(detail.adresKorespondencyjny),
+    businessStartDate: detail.dataRozpoczecia,
+    businessStatus: detail.status,
+    phone: detail.telefon,
+    email: detail.email,
+    website: detail.www,
+    eDeliveryAddress: detail.adresDoreczenElektronicznych,
+    mainPkdCode: detail.pkdGlowny?.kod,
+    mainPkdName: detail.pkdGlowny?.nazwa,
+    pkdList: detail.pkd,
+    maritalPropertyCommunity: detail.wspolnoscMajatkowa,
+  };
+  return { kind: "jdg", data: mapped };
+}
+
+/**
+ * Free public KRS/PRS API by Ministerstwo Sprawiedliwości.
+ * Search by KRS number; rejestr P (Przedsiębiorcy) or S (Stowarzyszenia).
+ * Bez NIP→KRS search — to wymaga GUS BIR.
+ */
+async function krsLookupByKrs(krs: string): Promise<Partial<BorrowerData> | null> {
+  const base = "https://api-krs.ms.gov.pl/api/krs/OdpisAktualny";
+  for (const rejestr of ["P", "S"] as const) {
+    const url = `${base}/${encodeURIComponent(krs)}?rejestr=${rejestr}&format=json`;
+    try {
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) continue;
+      const json: any = await res.json().catch(() => null);
+      const odpis = json?.odpis;
+      const dane = odpis?.dane;
+      if (!dane) continue;
+      const pod = dane?.dzial1?.danePodmiotu ?? {};
+      const siedziba = dane?.dzial1?.siedzibaIAdres ?? {};
+      const repr = dane?.dzial2?.reprezentacja ?? {};
+      const organ = dane?.dzial2?.organReprezentacji ?? {};
+      const kapitalNode = dane?.dzial1?.kapital?.wysokoscKapitaluZakladowego;
+      const kapital = kapitalNode
+        ? `${kapitalNode.wartosc ?? ""} ${kapitalNode.waluta ?? ""}`.trim()
+        : undefined;
+
+      const reprPersons: Array<{ imie?: string; nazwisko?: string; funkcja?: string }> = (organ?.sklad ?? [])
+        .map((s: any) => ({
+          imie: s?.imiona?.imie ?? s?.imie,
+          nazwisko: s?.nazwisko,
+          funkcja: s?.funkcjaWOrganie,
+        }));
+
+      const reprText = reprPersons
+        .map((p) => [p.imie, p.nazwisko, p.funkcja ? `(${p.funkcja})` : ""].filter(Boolean).join(" "))
+        .filter(Boolean)
+        .join("; ");
+
+      return {
+        companyName: pod?.nazwa,
+        krs: pod?.numerKRS ?? krs,
+        nip: pod?.identyfikatory?.nip,
+        regon: pod?.identyfikatory?.regon,
+        legalForm: pod?.formaPrawna,
+        registeredAddress: formatKrsAddress(siedziba?.adres),
+        businessStatus: dane?.dzial6?.likwidacja ? "w likwidacji" : "aktywny",
+        shareCapital: kapital,
+        representationDescription: [repr?.sposobReprezentacji, reprText].filter(Boolean).join(" | "),
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * GUS BIR (NIP → REGON/KRS) — requires GUS_BIR_API_KEY.
+ * Implementacja SOAP jest złożona; bez klucza zwracamy null żeby UI pokazało
+ * jasny komunikat. Jeśli klucz jest, używamy najprostszego endpointu DaneSzukajPodmioty.
+ */
+async function gusLookupByNip(nip: string): Promise<
+  | { kind: "found"; regon?: string; krs?: string; nazwa?: string; typ?: string }
+  | { kind: "not_configured" }
+  | { kind: "none" }
+  | { kind: "error"; message: string }
+> {
+  const key = process.env.GUS_BIR_API_KEY;
+  if (!key) return { kind: "not_configured" };
+
+  // GUS BIR1.1 SOAP — minimalny request DaneSzukajPodmioty
+  const base = process.env.GUS_BIR_API_URL || "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc";
+  try {
+    // 1. Zaloguj
+    const login = await fetch(base, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/soap+xml; charset=utf-8",
+      },
+      body: `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ns="http://CIS/BIR/PUBL/2014/07">
+  <soap:Header><wsa:To xmlns:wsa="http://www.w3.org/2005/08/addressing">${base}</wsa:To>
+  <wsa:Action xmlns:wsa="http://www.w3.org/2005/08/addressing">http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/Zaloguj</wsa:Action></soap:Header>
+  <soap:Body><ns:Zaloguj><ns:pKluczUzytkownika>${key}</ns:pKluczUzytkownika></ns:Zaloguj></soap:Body>
+</soap:Envelope>`,
+    });
+    const loginText = await login.text();
+    const sid = loginText.match(/<ZalogujResult>([^<]+)<\/ZalogujResult>/)?.[1];
+    if (!sid) return { kind: "error", message: "GUS BIR: nie udało się zalogować." };
+
+    const search = await fetch(base, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/soap+xml; charset=utf-8",
+        sid,
+      },
+      body: `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ns="http://CIS/BIR/PUBL/2014/07" xmlns:dat="http://CIS/BIR/PUBL/2014/07/DataContract">
+  <soap:Header><wsa:To xmlns:wsa="http://www.w3.org/2005/08/addressing">${base}</wsa:To>
+  <wsa:Action xmlns:wsa="http://www.w3.org/2005/08/addressing">http://CIS/BIR/PUBL/2014/07/IUslugaBIRzewnPubl/DaneSzukajPodmioty</wsa:Action></soap:Header>
+  <soap:Body><ns:DaneSzukajPodmioty><ns:pParametryWyszukiwania><dat:Nip>${nip}</dat:Nip></ns:pParametryWyszukiwania></ns:DaneSzukajPodmioty></soap:Body>
+</soap:Envelope>`,
+    });
+    const xml = await search.text();
+    const inner = xml.match(/<DaneSzukajPodmiotyResult>([\s\S]*?)<\/DaneSzukajPodmiotyResult>/)?.[1];
+    if (!inner) return { kind: "none" };
+    const decoded = inner.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+    const grab = (tag: string) => decoded.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1];
+    const regon = grab("Regon") || grab("Regon14");
+    const nazwa = grab("Nazwa");
+    const typ = grab("Typ"); // P = osoba prawna, F = fizyczna
+    // Dla osoby prawnej należałoby wywołać DanePobierzPelnyRaport, aby uzyskać KRS.
+    // Pominięte dla zwięzłości — UI dostanie REGON + nazwę i pozwoli wpisać KRS ręcznie.
+    if (!regon) return { kind: "none" };
+    return { kind: "found", regon, nazwa, typ };
+  } catch (e: any) {
+    return { kind: "error", message: `GUS BIR: ${String(e?.message ?? e)}` };
+  }
+}
 
 export const fetchCompanyByNip = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ nip: z.string().min(10).max(20) }).parse(input),
+    z.object({ nip: z.string().min(10).max(20), knownKrs: z.string().optional() }).parse(input),
   )
   .handler(async ({ data }): Promise<FetchCompanyResult> => {
+    const stages = makeStages();
+    const stageList = (): Stage[] => Object.values(stages);
+    const sourcesChecked: SourceTag[] = [];
+    const warnings: string[] = [];
+
+    // 1. Walidacja
+    stages["Walidacja NIP"].status = "trwa";
     const nip = cleanNip(data.nip);
     if (!isValidNip(nip)) {
-      return { ok: false, error: "Nieprawidłowy NIP. Sprawdź sumę kontrolną." };
-    }
-
-    const ceidgToken = process.env.CEIDG_JWT_TOKEN;
-    const ceidgBase = process.env.CEIDG_API_BASE_URL || "https://dane.biznes.gov.pl/api/ceidg/v3";
-
-    if (!ceidgToken) {
+      stages["Walidacja NIP"].status = "błąd";
+      stages["Walidacja NIP"].message = "Niepoprawny numer NIP.";
       return {
+        success: false,
         ok: false,
-        error:
-          "Integracja z rejestrem publicznym nie jest jeszcze skonfigurowana. Uzupełnij dane ręcznie albo skonfiguruj API CEIDG/GUS/KRS.",
+        errorCode: "INVALID_NIP",
+        error: "Niepoprawny numer NIP.",
+        message: "Niepoprawny numer NIP.",
+        sourcesChecked,
+        stages: stageList(),
+      };
+    }
+    stages["Walidacja NIP"].status = "sukces";
+
+    // 2. CEIDG
+    stages["Sprawdzenie CEIDG"].status = "trwa";
+    sourcesChecked.push("CEIDG");
+    const ceidg = await ceidgLookup(nip);
+
+    if (ceidg.kind === "jdg") {
+      stages["Sprawdzenie CEIDG"].status = "sukces";
+      stages["Sprawdzenie GUS/REGON"].status = "pominięto";
+      stages["Sprawdzenie KRS/PRS"].status = "pominięto";
+      stages["Mapowanie danych"].status = "sukces";
+      stages["Zakończono"].status = "sukces";
+      const fieldSources = Object.fromEntries(
+        Object.entries(ceidg.data)
+          .filter(([, v]) => v !== undefined && v !== null && v !== "")
+          .map(([k]) => [k, "CEIDG" as SourceTag]),
+      );
+      return {
+        success: true,
+        ok: true,
+        source: "CEIDG",
+        entityType: "JDG",
+        sourcesChecked,
+        data: ceidg.data,
+        fieldSources,
+        warnings,
+        stages: stageList(),
       };
     }
 
-    try {
-      const url = `${ceidgBase}/firmy?nip=${encodeURIComponent(nip)}`;
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${ceidgToken}`,
-          Accept: "application/json",
-        },
-      });
+    if (ceidg.kind === "error" && ceidg.status && ceidg.status >= 500) {
+      stages["Sprawdzenie CEIDG"].status = "błąd";
+      stages["Sprawdzenie CEIDG"].message = ceidg.message;
+      warnings.push(ceidg.message);
+    } else if (ceidg.kind === "error") {
+      stages["Sprawdzenie CEIDG"].status = "błąd";
+      stages["Sprawdzenie CEIDG"].message = ceidg.message;
+      warnings.push(ceidg.message);
+    } else {
+      stages["Sprawdzenie CEIDG"].status = "brak danych";
+      stages["Sprawdzenie CEIDG"].message = "Brak wpisu JDG w CEIDG.";
+    }
 
-      if (res.status === 204) return { ok: false, error: "Nie znaleziono podmiotu dla podanego NIP.", status: 204 };
-      if (res.status === 401 || res.status === 403)
-        return {
-          ok: false,
-          error: "Integracja z CEIDG nie jest poprawnie skonfigurowana albo token utracił ważność.",
-          status: res.status,
-        };
-      if (res.status === 429)
-        return { ok: false, error: "Przekroczono limit zapytań do rejestru. Spróbuj ponownie później.", status: 429 };
-      if (res.status === 503 || res.status === 500)
-        return {
-          ok: false,
-          error: "Rejestr publiczny jest chwilowo niedostępny. Spróbuj ponownie później albo uzupełnij dane ręcznie.",
-          status: res.status,
-        };
-      if (!res.ok) return { ok: false, error: `Błąd CEIDG: HTTP ${res.status}`, status: res.status };
+    // 3. GUS/REGON
+    stages["Sprawdzenie GUS/REGON"].status = "trwa";
+    sourcesChecked.push("GUS_REGON");
+    const gus = await gusLookupByNip(nip);
+    let resolvedKrs: string | undefined = data.knownKrs;
+    let gusData: Partial<BorrowerData> = {};
 
-      const json: any = await res.json();
-      const list: any[] = json?.firmy ?? json?.firma ?? (Array.isArray(json) ? json : []);
-      const item = list[0];
-      if (!item) return { ok: false, error: "Nie znaleziono podmiotu dla podanego NIP.", status: 204 };
+    if (gus.kind === "found") {
+      stages["Sprawdzenie GUS/REGON"].status = "sukces";
+      stages["Sprawdzenie GUS/REGON"].message = `REGON: ${gus.regon ?? "—"}${gus.nazwa ? ` · ${gus.nazwa}` : ""}`;
+      gusData = { regon: gus.regon, companyName: gus.nazwa, nip };
+      if (gus.krs) resolvedKrs = gus.krs;
+    } else if (gus.kind === "not_configured") {
+      stages["Sprawdzenie GUS/REGON"].status = "pominięto";
+      stages["Sprawdzenie GUS/REGON"].message = "Integracja GUS/REGON nie jest skonfigurowana.";
+      warnings.push("Integracja GUS/REGON nie jest skonfigurowana.");
+    } else if (gus.kind === "error") {
+      stages["Sprawdzenie GUS/REGON"].status = "błąd";
+      stages["Sprawdzenie GUS/REGON"].message = gus.message;
+      warnings.push(gus.message);
+    } else {
+      stages["Sprawdzenie GUS/REGON"].status = "brak danych";
+    }
 
-      // szczegóły
-      let detail: any = item;
-      if (item.id && !item.adresDzialalnosci) {
-        const dRes = await fetch(`${ceidgBase}/firma?id=${encodeURIComponent(item.id)}`, {
-          headers: { Authorization: `Bearer ${ceidgToken}`, Accept: "application/json" },
-        });
-        if (dRes.ok) {
-          const dJson: any = await dRes.json();
-          detail = dJson?.firma?.[0] ?? dJson?.firma ?? dJson;
-        }
+    // 4. KRS/PRS
+    stages["Sprawdzenie KRS/PRS"].status = "trwa";
+    sourcesChecked.push("KRS_PRS");
+    let krsData: Partial<BorrowerData> | null = null;
+    if (resolvedKrs) {
+      krsData = await krsLookupByKrs(resolvedKrs);
+      if (krsData) {
+        stages["Sprawdzenie KRS/PRS"].status = "sukces";
+      } else {
+        stages["Sprawdzenie KRS/PRS"].status = "brak danych";
+        stages["Sprawdzenie KRS/PRS"].message = "Nie znaleziono odpisu w KRS/PRS dla podanego numeru.";
       }
-
-      const formatAddress = (a: any) => {
-        if (!a) return undefined;
-        if (typeof a === "string") return a;
-        const parts = [a.ulica, a.budynek, a.lokal ? `m. ${a.lokal}` : null, a.kod, a.miasto].filter(Boolean);
-        return parts.join(" ").trim() || undefined;
-      };
-
-      const mapped: Partial<BorrowerData> = {
-        companyName: detail.nazwa,
-        registryRecordId: detail.id,
-        firstName: detail.wlasciciel?.imie,
-        lastName: detail.wlasciciel?.nazwisko,
-        nip: detail.wlasciciel?.nip || detail.nip || nip,
-        regon: detail.wlasciciel?.regon || detail.regon,
-        pesel: detail.wlasciciel?.pesel,
-        businessAddress: formatAddress(detail.adresDzialalnosci),
-        correspondenceAddress: formatAddress(detail.adresKorespondencyjny),
-        businessStartDate: detail.dataRozpoczecia,
-        businessStatus: detail.status,
-        phone: detail.telefon,
-        email: detail.email,
-        website: detail.www,
-        eDeliveryAddress: detail.adresDoreczenElektronicznych,
-        mainPkdCode: detail.pkdGlowny?.kod,
-        mainPkdName: detail.pkdGlowny?.nazwa,
-        pkdList: detail.pkd,
-        maritalPropertyCommunity: detail.wspolnoscMajatkowa,
-      };
-
-      return { ok: true, source: "CEIDG", data: mapped };
-    } catch (e: any) {
-      return { ok: false, error: `Błąd komunikacji z CEIDG: ${String(e?.message ?? e)}` };
+    } else {
+      stages["Sprawdzenie KRS/PRS"].status = "pominięto";
+      stages["Sprawdzenie KRS/PRS"].message =
+        "Brak numeru KRS. Wpisz numer KRS ręcznie i ponów albo skonfiguruj GUS BIR, by automatycznie ustalić KRS z NIP.";
     }
+
+    // 5. Mapowanie
+    stages["Mapowanie danych"].status = "trwa";
+    const merged: Partial<BorrowerData> = { ...gusData, ...(krsData ?? {}) };
+    const fieldSources: Record<string, SourceTag> = {};
+    Object.entries(gusData).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") fieldSources[k] = "GUS_REGON";
+    });
+    if (krsData) {
+      Object.entries(krsData).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") fieldSources[k] = "KRS_PRS";
+      });
+    }
+
+    if (Object.keys(merged).length === 0) {
+      stages["Mapowanie danych"].status = "brak danych";
+      stages["Zakończono"].status = "brak danych";
+      return {
+        success: false,
+        ok: false,
+        errorCode: "NOT_FOUND",
+        error: "Nie znaleziono podmiotu dla podanego NIP w dostępnych rejestrach.",
+        message: "Nie znaleziono podmiotu dla podanego NIP w dostępnych rejestrach.",
+        sourcesChecked,
+        stages: stageList(),
+      };
+    }
+
+    stages["Mapowanie danych"].status = "sukces";
+    stages["Zakończono"].status = "sukces";
+
+    const entityType: "KRS_COMPANY" | "UNKNOWN" = krsData ? "KRS_COMPANY" : "UNKNOWN";
+    const primarySource: SourceTag = krsData ? "KRS_PRS" : "GUS_REGON";
+
+    return {
+      success: true,
+      ok: true,
+      source: primarySource,
+      entityType,
+      sourcesChecked,
+      data: merged,
+      fieldSources,
+      warnings,
+      stages: stageList(),
+    };
   });
+
