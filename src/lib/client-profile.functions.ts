@@ -230,7 +230,7 @@ export const createProfileFromOffer = createServerFn({ method: "POST" })
         .maybeSingle();
       if (existing) {
         existingId = existing.id as string;
-        existingProfile = existing.data as ClientProfile;
+        existingProfile = existing.data as unknown as ClientProfile;
       }
     }
 
