@@ -48,7 +48,9 @@ import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
+import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
@@ -251,9 +253,19 @@ const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   path: '/dokumenty',
   getParentRoute: () => AdminRoute,
 } as any)
+const KlientUmowaOfferIdRoute = KlientUmowaOfferIdRouteImport.update({
+  id: '/umowa/$offerId',
+  path: '/umowa/$offerId',
+  getParentRoute: () => KlientRoute,
+} as any)
 const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   id: '/wniosek/$id',
   path: '/wniosek/$id',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
+  id: '/umowa/$offerId',
+  path: '/umowa/$offerId',
   getParentRoute: () => InwestorRoute,
 } as any)
 const ApiPublicLoanApplicationRoute =
@@ -335,7 +347,9 @@ export interface FileRoutesByFullPath {
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -380,7 +394,9 @@ export interface FileRoutesByTo {
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -429,7 +445,9 @@ export interface FileRoutesById {
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -479,7 +497,9 @@ export interface FileRouteTypes {
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
+    | '/klient/umowa/$offerId'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -524,7 +544,9 @@ export interface FileRouteTypes {
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
+    | '/klient/umowa/$offerId'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -572,7 +594,9 @@ export interface FileRouteTypes {
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
+    | '/klient/umowa/$offerId'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -868,11 +892,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDokumentyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/klient/umowa/$offerId': {
+      id: '/klient/umowa/$offerId'
+      path: '/umowa/$offerId'
+      fullPath: '/klient/umowa/$offerId'
+      preLoaderRoute: typeof KlientUmowaOfferIdRouteImport
+      parentRoute: typeof KlientRoute
+    }
     '/inwestor/wniosek/$id': {
       id: '/inwestor/wniosek/$id'
       path: '/wniosek/$id'
       fullPath: '/inwestor/wniosek/$id'
       preLoaderRoute: typeof InwestorWniosekIdRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/umowa/$offerId': {
+      id: '/inwestor/umowa/$offerId'
+      path: '/umowa/$offerId'
+      fullPath: '/inwestor/umowa/$offerId'
+      preLoaderRoute: typeof InwestorUmowaOfferIdRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/api/public/loan-application': {
@@ -994,6 +1032,7 @@ interface InwestorRouteChildren {
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
   InwestorIndexRoute: typeof InwestorIndexRoute
+  InwestorUmowaOfferIdRoute: typeof InwestorUmowaOfferIdRoute
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
 }
 
@@ -1005,6 +1044,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
   InwestorIndexRoute: InwestorIndexRoute,
+  InwestorUmowaOfferIdRoute: InwestorUmowaOfferIdRoute,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
 }
 
@@ -1019,6 +1059,7 @@ interface KlientRouteChildren {
   KlientStatusRoute: typeof KlientStatusRoute
   KlientWiadomosciRoute: typeof KlientWiadomosciRoute
   KlientIndexRoute: typeof KlientIndexRoute
+  KlientUmowaOfferIdRoute: typeof KlientUmowaOfferIdRoute
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
@@ -1028,6 +1069,7 @@ const KlientRouteChildren: KlientRouteChildren = {
   KlientStatusRoute: KlientStatusRoute,
   KlientWiadomosciRoute: KlientWiadomosciRoute,
   KlientIndexRoute: KlientIndexRoute,
+  KlientUmowaOfferIdRoute: KlientUmowaOfferIdRoute,
 }
 
 const KlientRouteWithChildren =
