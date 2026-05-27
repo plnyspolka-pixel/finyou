@@ -1,10 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { FileSignature } from "lucide-react";
 import { formatPLN, offerStatusLabels, formatDate } from "@/lib/labels";
 
 export const Route = createFileRoute("/inwestor/oferty")({
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/inwestor/oferty")({
 
 function InwestorOferty() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [offers, setOffers] = useState<any[]>([]);
   useEffect(() => { if (!user) return; void (async () => {
     const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
@@ -26,18 +29,27 @@ function InwestorOferty() {
       <h1 className="text-2xl font-bold">Moje oferty ({offers.length})</h1>
       {accepted.length > 0 && (
         <Card className="border-emerald-500/40 bg-emerald-500/5">
-          <CardContent className="pt-6 text-sm">
-            <p className="font-medium text-emerald-700 dark:text-emerald-300">
-              {accepted.length === 1 ? "Klient zaakceptował Twoją ofertę." : `Klienci zaakceptowali ${accepted.length} Twoich ofert.`}
-            </p>
-            <p className="text-muted-foreground mt-1">
-              Operator Finance You przygotuje umowę pożyczki w kreatorze umów na podstawie warunków oferty oraz danych z wniosku i Twojego profilu. Skontaktujemy się aby uzgodnić termin podpisania.
-            </p>
+          <CardContent className="pt-6 text-sm space-y-3">
+            <div>
+              <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                {accepted.length === 1 ? "Klient zaakceptował Twoją ofertę — uzupełnij dane do umowy." : `Klienci zaakceptowali ${accepted.length} Twoich ofert — uzupełnij dane do umów.`}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                Uzupełnij swoje dane (adres, rachunek bankowy, reprezentacja). Klient uzupełnia swoje pola równolegle. Gdy obie strony skończą — umowa będzie gotowa do podpisu.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {accepted.map((o) => (
+                <Button key={o.id} size="sm" variant="default" onClick={() => void navigate({ to: "/inwestor/umowa/$offerId", params: { offerId: o.id } })}>
+                  <FileSignature className="mr-2 h-4 w-4" />Umowa {formatPLN(o.proposed_amount)}
+                </Button>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
       <Card><CardContent className="pt-6"><div className="overflow-x-auto"><Table>
-        <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Kwota</TableHead><TableHead>Okres</TableHead><TableHead>Zysk</TableHead><TableHead>Rata</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Kwota</TableHead><TableHead>Okres</TableHead><TableHead>Zysk</TableHead><TableHead>Rata</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
         <TableBody>{offers.map((o) => (
           <TableRow key={o.id}>
             <TableCell>{formatDate(o.created_at)}</TableCell>
@@ -46,6 +58,13 @@ function InwestorOferty() {
             <TableCell>{o.expected_yearly_yield ?? "—"}%</TableCell>
             <TableCell>{formatPLN(o.estimated_monthly_payment)}</TableCell>
             <TableCell><Badge variant={o.offer_status === "zaakceptowana_przez_klienta" ? "default" : "secondary"}>{offerStatusLabels[o.offer_status]}</Badge></TableCell>
+            <TableCell>
+              {o.offer_status === "zaakceptowana_przez_klienta" && (
+                <Button size="sm" variant="outline" onClick={() => void navigate({ to: "/inwestor/umowa/$offerId", params: { offerId: o.id } })}>
+                  <FileSignature className="mr-1 h-3.5 w-3.5" />Umowa
+                </Button>
+              )}
+            </TableCell>
           </TableRow>
         ))}</TableBody>
       </Table></div></CardContent></Card>

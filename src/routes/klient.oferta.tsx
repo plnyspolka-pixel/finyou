@@ -1,13 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useServerFn } from "@tanstack/react-start";
+import { prepareContractForParties } from "@/lib/contract-prep.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { formatPLN, offerStatusLabels } from "@/lib/labels";
-import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, ChevronDown, ChevronUp, FileSignature } from "lucide-react";
 
 export const Route = createFileRoute("/klient/oferta")({
   component: KlientOferta,
@@ -15,6 +17,8 @@ export const Route = createFileRoute("/klient/oferta")({
 
 function KlientOferta() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const prepare = useServerFn(prepareContractForParties);
   const [offers, setOffers] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const load = async () => {
@@ -32,7 +36,18 @@ function KlientOferta() {
   const decide = async (id: string, status: "zaakceptowana_przez_klienta" | "odrzucona_przez_klienta") => {
     const { error } = await supabase.from("investor_offers").update({ offer_status: status as any, client_decision_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Zapisano decyzję"); void load();
+    toast.success("Zapisano decyzję");
+    if (status === "zaakceptowana_przez_klienta") {
+      try {
+        await prepare({ data: { offerId: id } });
+        toast.success("Przechodzimy do uzupełnienia danych umowy");
+        void navigate({ to: "/klient/umowa/$offerId", params: { offerId: id } });
+        return;
+      } catch (e: any) {
+        toast.error(e?.message ?? "Nie udało się utworzyć profilu umowy");
+      }
+    }
+    void load();
   };
 
   const toggleSchedule = (id: string) => {
@@ -100,11 +115,14 @@ function KlientOferta() {
                   </div>
                 )}
                 {o.offer_status === "zaakceptowana_przez_klienta" && (
-                  <div className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm">
-                    <p className="font-medium text-emerald-700 dark:text-emerald-300">Oferta zaakceptowana — przechodzimy do umowy.</p>
-                    <p className="text-muted-foreground mt-1">
-                      Operator Finance You przygotuje umowę pożyczki w kreatorze umów. Dane z Twojego wniosku oraz z profilu inwestora zostaną zaciągnięte automatycznie. Skontaktujemy się aby uzgodnić termin podpisania.
+                  <div className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm space-y-2">
+                    <p className="font-medium text-emerald-700 dark:text-emerald-300">Oferta zaakceptowana — uzupełnij dane do umowy.</p>
+                    <p className="text-muted-foreground">
+                      System automatycznie zaciągnął dane z Twojego wniosku. Uzupełnij brakujące pola — równolegle robi to inwestor. Gdy obie strony skończą, umowa będzie gotowa do podpisu.
                     </p>
+                    <Button size="sm" onClick={() => void navigate({ to: "/klient/umowa/$offerId", params: { offerId: o.id } })}>
+                      <FileSignature className="mr-2 h-4 w-4" />Przejdź do danych umowy
+                    </Button>
                   </div>
                 )}
               </CardContent>
