@@ -392,6 +392,44 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                 </Button>
               </div>
             </CardHeader>
+            {(nipStages.length > 0 || nipWarnings.length > 0) && (
+              <div className="px-6 pb-3 -mt-2">
+                <div className="rounded border bg-muted/30 p-3 text-xs space-y-2">
+                  <div className="font-semibold text-foreground">Diagnostyka pobierania danych po NIP</div>
+                  <ol className="space-y-1">
+                    {nipStages.map((s) => {
+                      const color =
+                        s.status === "sukces"
+                          ? "text-green-700"
+                          : s.status === "błąd"
+                            ? "text-red-700"
+                            : s.status === "brak danych"
+                              ? "text-amber-700"
+                              : s.status === "pominięto"
+                                ? "text-muted-foreground"
+                                : s.status === "trwa"
+                                  ? "text-blue-700"
+                                  : "text-muted-foreground";
+                      return (
+                        <li key={s.name} className="flex flex-wrap items-baseline gap-2">
+                          <span className="font-medium">{s.name}:</span>
+                          <span className={color}>{s.status}</span>
+                          {s.message && <span className="text-muted-foreground">— {s.message}</span>}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                  {nipWarnings.length > 0 && (
+                    <div className="text-amber-700">
+                      <div className="font-medium">Ostrzeżenia:</div>
+                      <ul className="list-disc ml-5">
+                        {nipWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <CardContent className="grid md:grid-cols-3 gap-4">
               <div><Label>NIP</Label><Input value={b.nip ?? ""} onChange={(e) => set("borrowerData.nip")(e.target.value)} /></div>
               <div><Label>REGON</Label><Input value={b.regon ?? ""} onChange={(e) => set("borrowerData.regon")(e.target.value)} /></div>
