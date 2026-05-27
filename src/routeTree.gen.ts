@@ -44,6 +44,7 @@ import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminFollowUpRouteImport } from './routes/admin.follow-up'
+import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
@@ -230,6 +231,11 @@ const AdminFollowUpRoute = AdminFollowUpRouteImport.update({
   path: '/follow-up',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFakturowoRoute = AdminFakturowoRouteImport.update({
+  id: '/fakturowo',
+  path: '/fakturowo',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEmbedRoute = AdminEmbedRouteImport.update({
   id: '/embed',
   path: '/embed',
@@ -296,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -388,6 +396,7 @@ export interface FileRoutesById {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/follow-up': typeof AdminFollowUpRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/fakturowo'
     | '/admin/follow-up'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/fakturowo'
     | '/admin/follow-up'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/fakturowo'
     | '/admin/follow-up'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -828,6 +840,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFollowUpRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/fakturowo': {
+      id: '/admin/fakturowo'
+      path: '/fakturowo'
+      fullPath: '/admin/fakturowo'
+      preLoaderRoute: typeof AdminFakturowoRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/embed': {
       id: '/admin/embed'
       path: '/embed'
@@ -929,6 +948,7 @@ interface AdminRouteChildren {
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
+  AdminFakturowoRoute: typeof AdminFakturowoRoute
   AdminFollowUpRoute: typeof AdminFollowUpRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
@@ -948,6 +968,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
+  AdminFakturowoRoute: AdminFakturowoRoute,
   AdminFollowUpRoute: AdminFollowUpRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
