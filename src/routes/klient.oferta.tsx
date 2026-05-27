@@ -17,6 +17,8 @@ export const Route = createFileRoute("/klient/oferta")({
 
 function KlientOferta() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const prepare = useServerFn(prepareContractForParties);
   const [offers, setOffers] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const load = async () => {
@@ -34,7 +36,18 @@ function KlientOferta() {
   const decide = async (id: string, status: "zaakceptowana_przez_klienta" | "odrzucona_przez_klienta") => {
     const { error } = await supabase.from("investor_offers").update({ offer_status: status as any, client_decision_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Zapisano decyzję"); void load();
+    toast.success("Zapisano decyzję");
+    if (status === "zaakceptowana_przez_klienta") {
+      try {
+        await prepare({ data: { offerId: id } });
+        toast.success("Przechodzimy do uzupełnienia danych umowy");
+        void navigate({ to: "/klient/umowa/$offerId", params: { offerId: id } });
+        return;
+      } catch (e: any) {
+        toast.error(e?.message ?? "Nie udało się utworzyć profilu umowy");
+      }
+    }
+    void load();
   };
 
   const toggleSchedule = (id: string) => {
