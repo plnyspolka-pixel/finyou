@@ -186,6 +186,7 @@ function TemplateEditor({ template, onClose, onSaved }: { template: Template; on
     description: template.description ?? "",
     category: template.category ?? "",
     output_format: template.output_format,
+    use_case: (template.use_case ?? "kreator_umow") as UseCase,
   });
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
