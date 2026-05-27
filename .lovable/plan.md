@@ -1,57 +1,79 @@
 ## Cel
 
-Przebudować `admin.kreator-pozyczki.tsx` w pełny kreator profilu klienta pożyczkowego B2B z integracją CEIDG/GUS/KRS (backend), 7 zakładkami, jednym centralnym obiektem `clientProfile`, automatycznym harmonogramem „Dyrektor Finansowy", oraz powiązaniem z istniejącym wnioskiem ze strony (`loan_applications`).
+Gdy klient akceptuje ofertę inwestora, system automatycznie tworzy „pakiet umowy" i prowadzi **obie strony** (klienta i inwestora) do uzupełnienia brakujących danych potrzebnych do podpisania umowy. **Bez kroku admina** — admin może podglądać, ale nie blokuje przepływu.
 
-## Zakres zmian
+## Co się zmienia
 
-### 1. Baza danych (migracja)
-Nowa tabela `client_profiles` przechowująca cały `clientProfile` jako JSONB + kolumny indeksowe:
-- `id`, `source_application_id` (FK → `loan_applications`), `borrower_type`, `nip`, `completion_percent`, `data` (JSONB z całym profilem), `created_at`, `updated_at`
-- RLS: tylko `admin`/`inwestor` (operator) — odczyt/zapis przez `has_role`
-- GRANT dla `authenticated` + `service_role`
+```text
+Inwestor składa ofertę
+        ↓
+Klient akceptuje ofertę   ← /klient/oferta (przycisk „Akceptuję")
+        ↓
+[AUTOMAT] backend tworzy client_profile z danych wniosku + oferty + profilu inwestora
+        ↓
+Klient → /klient/umowa/$offerId   (uzupełnia dane pożyczkobiorcy + nieruchomości + dokument tożsamości)
+Inwestor → /inwestor/umowa/$offerId (uzupełnia dane do przelewu + reprezentacja + adres)
+        ↓
+Każda strona widzi postęp drugiej strony („Inwestor uzupełnił 4/5 pól")
+Gdy oba komplety = 100% → status „Gotowe do podpisu"
+```
 
-### 2. Backend — server functions (`src/lib/client-profile.functions.ts`)
-- `createProfileFromApplication(applicationId)` — mapuje wniosek → `clientProfile`
-- `getClientProfile(id)` / `listClientProfiles()`
-- `saveClientProfile(profile)` — upsert całego JSONB
-- `fetchCompanyByNip(nip)` — odpytuje CEIDG v3 z `process.env.CEIDG_JWT_TOKEN`; obsługa statusów 200/204/400/401/403/404/429/500/503; zwraca dane z `source: "CEIDG"` lub typowany błąd. GUS/KRS przygotowane jako stuby z czytelnym komunikatem „integracja nie skonfigurowana" jeśli brak kluczy. **Bez mocków.**
+## Implementacja
 
-### 3. Sekrety
-Poprosić użytkownika o `CEIDG_JWT_TOKEN` (opcjonalnie później `GUS_BIR_API_KEY`, `KRS_API_BASE_URL`).
+### 1. Backend — nowa funkcja `prepareContractForParties`
+- Plik: `src/lib/contract-prep.functions.ts`
+- `createServerFn` + `requireSupabaseAuth`
+- Wewnątrz używa `supabaseAdmin` (service role), ale najpierw waliduje, że wywołujący to: klient z `offer.loan.client.user_id` LUB inwestor z `offer.investor.user_id`
+- Tworzy/aktualizuje `client_profiles` (analogicznie do istniejącego `createProfileFromOffer`, ale dostępne dla obu stron)
+- Zwraca `{ profileId }`
 
-### 4. Frontend — przebudowa `admin.kreator-pozyczki.tsx`
-Jedna strona z 7 zakładkami, jeden stan `clientProfile`:
+### 2. Backend — `saveContractPartyData`
+- Ta sama funkcja przyjmuje `{ offerId, side: "client" | "investor", patch }`
+- Aktualizuje odpowiednie sekcje w `client_profiles.data` (klient → `borrowerData` + `propertyData` + `idDocument`; inwestor → `investorData` + `bankAccount` + `representativeName`)
+- Waliduje że caller ma prawo edytować swoją sekcję
+- Zwraca aktualne `completion` po stronie klienta i inwestora
 
-1. **Profil klienta** — typ pożyczkobiorcy (JDG / spółki), dane osobowe/firmy, dokument tożsamości (rodzaj + numer), reprezentant dla spółek, przycisk „Pobierz dane po NIP" + status integracji + etykiety źródła pól (CEIDG/GUS/KRS/Ręcznie), konflikty edycji
-2. **Nieruchomość** — typ, KW, adres, wartość, właściciel (jeśli inny niż klient — z dokumentem tożsamości), istniejące hipoteki, opis, upload zdjęć (kategorie zależne od typu — wykorzystać bucket `property-photos`), upload dokumentów (bucket `documents`)
-3. **Inwestor** — dane inwestora, rachunek do wypłaty/spłat
-4. **Oferta** — wszystkie pola z `offerData`, prowizja kredytowana, wynagrodzenie inwestora kwota/procent, data wypłaty, automatyczne wyliczenia read-only
-5. **Harmonogram** — `buildDirectorSchedule()` z modelem A/B/C (rata vs wynagrodzenie inwestora → balon), tabela z kolumnami wg specyfikacji, blok „Benchmark prawny NBP" (ręczna stopa referencyjna), „Podsumowanie inwestora"
-6. **Zabezpieczenia** — automatyczne rekomendacje (1.5× zobowiązania, okres +36mc), data końcowa art. 777, dane poręczyciela
-7. **Dokumenty** — Wniosek, Umowa (z paragrafem „Oświadczenia Pożyczkobiorcy" + warunkami finansowymi), Załącznik 1 (harmonogram), Załącznik 2 (protokół negocjacji); przyciski Kopiuj / Kopiuj wszystkie / Pobierz TXT / Drukuj
+### 3. Backend — `getContractPrepStatus`
+- Zwraca: dane profilu, jakie pola brakujące dla każdej strony, % uzupełnienia obu stron
 
-Górny pasek: **wskaźnik kompletności profilu %**, lista brakujących pól, blokada generowania finalnych dokumentów przy brakach krytycznych (przeglądanie nie blokowane).
+### 4. Auto-trigger w `klient.oferta.tsx`
+- W `decide(...zaakceptowana_przez_klienta)`: zaraz po sukcesie zaktualizowania statusu wywołać `prepareContractForParties({ offerId })` i nawigować do `/klient/umowa/$offerId`
+- Banner „Oferta zaakceptowana" zastąpić linkiem „Przejdź do uzupełnienia danych umowy"
 
-### 5. Powiązanie z wnioskiem
-- W `admin.wnioski.$id.tsx` dodać przycisk „Utwórz profil klienta" → wywołuje `createProfileFromApplication` → redirect na `/admin/kreator-pozyczki?profileId=...`
-- Kreator wczytuje `profileId` z query lub tworzy pusty profil
+### 5. Nowa trasa `/klient/umowa/$offerId`
+- Pokazuje:
+  - Sekcję „Twoje dane do umowy" — formularz tylko pól klienta (imię, nazwisko, PESEL, dowód, adres, dane nieruchomości, KW)
+  - Listę brakujących pól z licznikiem
+  - Pasek postępu inwestora (read-only) i Twój
+  - Status: „Czekamy na inwestora" / „Gotowe do podpisu"
 
-### 6. Czego NIE robię
-- Bez mocków, bez przykładowych firm, bez seed data
-- Nie pytam o typ harmonogramu / balon / metodę spłaty / ocenę ryzyka
-- Nie dodaję checkboxów B2B w formularzu (tylko w umowie)
-- Cel pożyczki = jedno pole tekstowe
-- Bez DOCX export (tylko TXT + Drukuj — DOCX wymagałby biblioteki Node-only ryzykownej dla Workera; mogę dodać później na żądanie)
+### 6. Nowa trasa `/inwestor/umowa/$offerId`
+- Analogicznie, formularz dla inwestora:
+  - Pełna nazwa / firma + NIP
+  - Adres
+  - Numer rachunku bankowego
+  - Reprezentant (dla spółek)
+- Widzi też postęp klienta
 
-## Kolejność wykonania
+### 7. Banner w `inwestor.oferty.tsx`
+- Dla ofert ze statusem `zaakceptowana_przez_klienta` zamiast tekstu „operator przygotuje" — przycisk **„Uzupełnij dane do umowy"** linkujący do `/inwestor/umowa/$offerId`
 
-1. Migracja DB (`client_profiles`)
-2. Prośba o sekret `CEIDG_JWT_TOKEN`
-3. `client-profile.functions.ts` (server functions + CEIDG)
-4. Helpery: `loan-math` (rozszerzenie o `buildDirectorSchedule`), `profile-completion`, generatory dokumentów
-5. Przebudowa `admin.kreator-pozyczki.tsx` z 7 zakładkami
-6. Przycisk „Utwórz profil" w `admin.wnioski.$id.tsx`
+### 8. Co zostaje po stronie admina
+- Strona `/admin/oferty` nadal pokazuje przycisk „Kreator umów" — admin może w każdej chwili wejść i sprawdzić/dograć dane (np. zabezpieczenia, NBP, harmonogram)
+- Profil jest jeden i ten sam dla wszystkich stron; admin widzi pełną wersję w `/admin/kreator-pozyczki`
 
-## Pytanie kontrolne
+## Pliki
+**Nowe**
+- `src/lib/contract-prep.functions.ts`
+- `src/routes/klient.umowa.$offerId.tsx`
+- `src/routes/inwestor.umowa.$offerId.tsx`
 
-Czy mogę poprosić Cię o `CEIDG_JWT_TOKEN` zaraz po zatwierdzeniu planu (sekret backendowy)? Bez niego przycisk „Pobierz dane po NIP" zwróci komunikat „Integracja CEIDG nie jest skonfigurowana" — reszta aplikacji będzie działać i pozwoli uzupełnić dane ręcznie.
+**Edytowane**
+- `src/routes/klient.oferta.tsx` — auto-trigger + link
+- `src/routes/inwestor.oferty.tsx` — przycisk „Uzupełnij dane do umowy"
+- `src/routes/klient.tsx` / `src/routes/inwestor.tsx` — opcjonalnie pozycja w menu „Umowy w toku"
+
+## Poza zakresem (na później)
+- Wymuszanie KYC / weryfikacji dokumentów
+- Generowanie PDF umowy po 100% (już istnieje w `document-templates.functions.ts` — wystarczy spiąć w osobnym kroku)
+- Notyfikacje email do drugiej strony przy uzupełnieniu danych
