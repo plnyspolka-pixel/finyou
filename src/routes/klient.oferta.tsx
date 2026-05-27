@@ -99,6 +99,14 @@ function KlientOferta() {
                     <Button variant="destructive" onClick={() => void decide(o.id, "odrzucona_przez_klienta")}><X className="mr-2 h-4 w-4" />Odrzucam</Button>
                   </div>
                 )}
+                {o.offer_status === "zaakceptowana_przez_klienta" && (
+                  <div className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm">
+                    <p className="font-medium text-emerald-700 dark:text-emerald-300">Oferta zaakceptowana — przechodzimy do umowy.</p>
+                    <p className="text-muted-foreground mt-1">
+                      Operator Finance You przygotuje umowę pożyczki w kreatorze umów. Dane z Twojego wniosku oraz z profilu inwestora zostaną zaciągnięte automatycznie. Skontaktujemy się aby uzgodnić termin podpisania.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
