@@ -115,11 +115,14 @@ function KlientOferta() {
                   </div>
                 )}
                 {o.offer_status === "zaakceptowana_przez_klienta" && (
-                  <div className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm">
-                    <p className="font-medium text-emerald-700 dark:text-emerald-300">Oferta zaakceptowana — przechodzimy do umowy.</p>
-                    <p className="text-muted-foreground mt-1">
-                      Operator Finance You przygotuje umowę pożyczki w kreatorze umów. Dane z Twojego wniosku oraz z profilu inwestora zostaną zaciągnięte automatycznie. Skontaktujemy się aby uzgodnić termin podpisania.
+                  <div className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm space-y-2">
+                    <p className="font-medium text-emerald-700 dark:text-emerald-300">Oferta zaakceptowana — uzupełnij dane do umowy.</p>
+                    <p className="text-muted-foreground">
+                      System automatycznie zaciągnął dane z Twojego wniosku. Uzupełnij brakujące pola — równolegle robi to inwestor. Gdy obie strony skończą, umowa będzie gotowa do podpisu.
                     </p>
+                    <Button size="sm" onClick={() => void navigate({ to: "/klient/umowa/$offerId", params: { offerId: o.id } })}>
+                      <FileSignature className="mr-2 h-4 w-4" />Przejdź do danych umowy
+                    </Button>
                   </div>
                 )}
               </CardContent>
