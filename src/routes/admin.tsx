@@ -38,6 +38,7 @@ const groups: Group[] = [
     label: "Konfiguracja",
     items: [
       { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
+      { to: "/admin/fakturowo", label: "Fakturowo", icon: Receipt },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
       { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
