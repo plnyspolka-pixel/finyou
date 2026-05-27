@@ -6,71 +6,60 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { investorTypeLabels } from "@/lib/labels";
 
-export const Route = createFileRoute("/inwestor/profil")({
-  component: InwestorProfil,
+export const Route = createFileRoute("/klient/profil")({
+  component: KlientProfil,
 });
 
-function InwestorProfil() {
+function KlientProfil() {
   const { user } = useAuth();
-  const [inv, setInv] = useState<any | null>(null);
+  const [row, setRow] = useState<any | null>(null);
   const [f, setF] = useState({
-    first_name: "", last_name: "", company_name: "", nip: "",
-    phone: "", email: "", investor_type: "indywidualny",
-    address: "", bank_account: "",
+    first_name: "", last_name: "", email: "", phone: "",
+    pesel: "", address: "", bank_account: "",
   });
 
   useEffect(() => { if (!user) return; void (async () => {
-    const { data } = await supabase.from("investors").select("*").eq("user_id", user.id).maybeSingle();
-    setInv(data);
+    const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
+    setRow(data);
     if (data) setF({
       first_name: data.first_name ?? "", last_name: data.last_name ?? "",
-      company_name: data.company_name ?? "", nip: data.nip ?? "",
-      phone: data.phone ?? "", email: data.email ?? user.email ?? "",
-      investor_type: data.investor_type ?? "indywidualny",
-      address: data.address ?? "", bank_account: data.bank_account ?? "",
+      email: data.email ?? user.email ?? "", phone: data.phone ?? "",
+      pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
     });
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
 
   const save = async () => {
     if (!user) return;
-    if (f.nip && !/^\d{10}$/.test(f.nip.replace(/\D/g, ""))) { toast.error("NIP musi mieć 10 cyfr"); return; }
+    if (f.pesel && !/^\d{11}$/.test(f.pesel)) { toast.error("PESEL musi mieć 11 cyfr"); return; }
     const payload = {
-      first_name: f.first_name.trim() || null, last_name: f.last_name.trim() || null,
-      company_name: f.company_name.trim() || null, nip: f.nip.replace(/\D/g, "") || null,
-      phone: f.phone.trim() || null, email: f.email.trim() || null,
-      investor_type: f.investor_type as any,
+      first_name: f.first_name.trim() || "",
+      last_name: f.last_name.trim() || "",
+      email: f.email.trim() || null,
+      phone: f.phone.trim() || null,
+      pesel: f.pesel.trim() || null,
       address: f.address.trim() || null,
       bank_account: f.bank_account.replace(/\s+/g, "") || null,
     };
-    const { error } = inv
-      ? await supabase.from("investors").update(payload).eq("id", inv.id)
-      : await supabase.from("investors").insert({ ...payload, user_id: user.id });
+    const { error } = row
+      ? await supabase.from("clients").update(payload).eq("id", row.id)
+      : await supabase.from("clients").insert({ ...payload, user_id: user.id });
     if (error) { toast.error(error.message); return; }
     toast.success("Zapisano");
   };
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">Profil inwestora</h1>
+      <h1 className="text-2xl font-bold">Mój profil</h1>
 
       <Card>
-        <CardHeader><CardTitle>Dane osobowe / firmowe</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Dane osobowe</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
-          <div><Label>Typ</Label>
-            <Select value={f.investor_type} onValueChange={(v) => setF({ ...f, investor_type: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{Object.entries(investorTypeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div><Label>Firma</Label><Input maxLength={200} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
           <div><Label>Imię</Label><Input maxLength={100} value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></div>
           <div><Label>Nazwisko</Label><Input maxLength={100} value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></div>
-          <div className="md:col-span-2"><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value.replace(/\D/g, "") })} /></div>
         </CardContent>
       </Card>
 
