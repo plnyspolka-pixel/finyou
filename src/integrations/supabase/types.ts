@@ -438,6 +438,7 @@ export type Database = {
           output_format: string
           placeholders: Json
           updated_at: string
+          use_case: string
         }
         Insert: {
           category?: string | null
@@ -450,6 +451,7 @@ export type Database = {
           output_format?: string
           placeholders?: Json
           updated_at?: string
+          use_case?: string
         }
         Update: {
           category?: string | null
@@ -462,6 +464,7 @@ export type Database = {
           output_format?: string
           placeholders?: Json
           updated_at?: string
+          use_case?: string
         }
         Relationships: []
       }

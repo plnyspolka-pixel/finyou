@@ -1,0 +1,1 @@
+ALTER TABLE public.document_templates ADD COLUMN IF NOT EXISTS use_case text NOT NULL DEFAULT 'kreator_umow';
