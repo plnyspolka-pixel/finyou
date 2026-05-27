@@ -30,7 +30,7 @@ export const idDocumentTypeLabels: Record<IdDocumentType, string> = {
   inny: "Inny",
 };
 
-export type FieldSource = "CEIDG" | "GUS" | "KRS" | "Ręcznie" | "Wniosek";
+export type FieldSource = "CEIDG" | "GUS" | "GUS_REGON" | "KRS" | "KRS_PRS" | "Ręcznie" | "Wniosek";
 
 export interface IdDocument {
   type?: IdDocumentType;
