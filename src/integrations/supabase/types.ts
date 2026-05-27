@@ -612,6 +612,126 @@ export type Database = {
         }
         Relationships: []
       }
+      fakturowo_documents: {
+        Row: {
+          buyer_building: string | null
+          buyer_city: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_nip: string | null
+          buyer_postal_code: string | null
+          buyer_street: string | null
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          document_kind_code: string | null
+          document_number: string | null
+          document_type: string | null
+          error_message: string | null
+          fakturowo_api_number: string | null
+          gross_amount: number | null
+          html_url: string | null
+          id: string
+          investor_id: string | null
+          is_test: boolean
+          net_amount: number | null
+          payment_id: string | null
+          pdf_filename: string | null
+          pdf_url: string | null
+          product_name: string | null
+          product_quantity: number
+          product_unit: string
+          raw_response: string | null
+          related_id: string | null
+          related_type: string | null
+          seller_name: string | null
+          seller_nip: string | null
+          status: string
+          updated_at: string
+          vat_amount: number | null
+          vat_rate: string | null
+        }
+        Insert: {
+          buyer_building?: string | null
+          buyer_city?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          document_kind_code?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          error_message?: string | null
+          fakturowo_api_number?: string | null
+          gross_amount?: number | null
+          html_url?: string | null
+          id?: string
+          investor_id?: string | null
+          is_test?: boolean
+          net_amount?: number | null
+          payment_id?: string | null
+          pdf_filename?: string | null
+          pdf_url?: string | null
+          product_name?: string | null
+          product_quantity?: number
+          product_unit?: string
+          raw_response?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          seller_name?: string | null
+          seller_nip?: string | null
+          status?: string
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: string | null
+        }
+        Update: {
+          buyer_building?: string | null
+          buyer_city?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          document_kind_code?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          error_message?: string | null
+          fakturowo_api_number?: string | null
+          gross_amount?: number | null
+          html_url?: string | null
+          id?: string
+          investor_id?: string | null
+          is_test?: boolean
+          net_amount?: number | null
+          payment_id?: string | null
+          pdf_filename?: string | null
+          pdf_url?: string | null
+          product_name?: string | null
+          product_quantity?: number
+          product_unit?: string
+          raw_response?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          seller_name?: string | null
+          seller_nip?: string | null
+          status?: string
+          updated_at?: string
+          vat_amount?: number | null
+          vat_rate?: string | null
+        }
+        Relationships: []
+      }
       institutional_investor_settings: {
         Row: {
           created_at: string
