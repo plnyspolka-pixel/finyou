@@ -182,6 +182,8 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
   const [profile, setProfile] = useState<ClientProfile>(() => emptyProfile());
   const [loading, setLoading] = useState(!!profileId);
   const [nipBusy, setNipBusy] = useState(false);
+  const [nipStages, setNipStages] = useState<Array<{ name: string; status: string; message?: string }>>([]);
+  const [nipWarnings, setNipWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -205,6 +207,22 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
   const setBool = (path: string) => (v: boolean) => set(path)(v);
   const setNum = (path: string) => (v: string) => set(path)(numOrUndef(v));
 
+  // mark field as manually edited
+  const setManual = (path: string) => (value: any) => {
+    setProfile((prev) => {
+      const next: any = structuredClone(prev);
+      const parts = path.split(".");
+      let cursor = next;
+      for (let i = 0; i < parts.length - 1; i++) {
+        cursor[parts[i]] = cursor[parts[i]] ?? {};
+        cursor = cursor[parts[i]];
+      }
+      cursor[parts[parts.length - 1]] = value;
+      next.fieldSources = { ...(next.fieldSources ?? {}), [path]: "Ręcznie" };
+      return next;
+    });
+  };
+
   // ── derived ──────────────────────────────────────────────
   const schedule = useMemo(() => buildDirectorSchedule(profile.offerData), [profile.offerData]);
   const completion = useMemo(() => calculateProfileCompletion(profile), [profile]);
@@ -227,27 +245,65 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
       return;
     }
     setNipBusy(true);
+    setNipStages([]);
+    setNipWarnings([]);
     try {
-      const res = await nipFn({ data: { nip } });
-      if (!res.ok) {
-        toast.error(res.error);
+      const res: any = await nipFn({ data: { nip, knownKrs: profile.borrowerData.krs || undefined } });
+      setNipStages(res.stages ?? []);
+      setNipWarnings(res.warnings ?? []);
+      if (!res.success) {
+        toast.error(res.message ?? res.error ?? "Nie znaleziono danych");
         return;
       }
-      setProfile((prev) => ({
-        ...prev,
-        borrowerData: { ...prev.borrowerData, ...res.data },
-        fieldSources: {
-          ...(prev.fieldSources ?? {}),
-          ...Object.fromEntries(Object.keys(res.data).map((k) => [`borrowerData.${k}`, res.source])),
-        },
-      }));
-      toast.success(`Pobrano dane z ${res.source}`);
+      // detect manual conflicts
+      const prevSources = profile.fieldSources ?? {};
+      const incoming: Record<string, any> = res.data ?? {};
+      const conflicts: string[] = [];
+      for (const [k, v] of Object.entries(incoming)) {
+        const path = `borrowerData.${k}`;
+        const current = (profile.borrowerData as any)[k];
+        if (prevSources[path] === "Ręcznie" && current && current !== v) {
+          conflicts.push(k);
+        }
+      }
+      let overwriteManual = true;
+      if (conflicts.length > 0) {
+        overwriteManual = window.confirm(
+          `Niektóre pola były edytowane ręcznie (${conflicts.join(", ")}). Czy zastąpić je danymi z rejestru?`,
+        );
+      }
+
+      setProfile((prev) => {
+        const nextBorrower: any = { ...prev.borrowerData };
+        const nextSources: Record<string, any> = { ...(prev.fieldSources ?? {}) };
+        for (const [k, v] of Object.entries(incoming)) {
+          const path = `borrowerData.${k}`;
+          if (!overwriteManual && nextSources[path] === "Ręcznie") continue;
+          if (v === undefined || v === null || v === "") continue;
+          nextBorrower[k] = v;
+          nextSources[path] = (res.fieldSources?.[k] ?? res.source) as any;
+        }
+        // auto-pick borrower type for KRS company on first run
+        let borrowerType = prev.borrowerType;
+        if (res.entityType === "KRS_COMPANY" && prev.borrowerType === "JDG") {
+          borrowerType = "sp_zoo";
+        }
+        return { ...prev, borrowerType, borrowerData: nextBorrower, fieldSources: nextSources };
+      });
+      toast.success(
+        res.entityType === "JDG"
+          ? "Pobrano dane JDG z CEIDG"
+          : res.entityType === "KRS_COMPANY"
+            ? "Pobrano dane spółki z KRS/PRS"
+            : `Pobrano dane z ${res.source}`,
+      );
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd pobierania danych");
     } finally {
       setNipBusy(false);
     }
   }
+
 
   if (loading) return <p className="text-sm text-muted-foreground">Ładowanie profilu…</p>;
 
