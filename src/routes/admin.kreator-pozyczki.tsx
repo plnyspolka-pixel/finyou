@@ -49,6 +49,9 @@ import {
 } from "@/lib/client-profile.functions";
 
 export const Route = createFileRoute("/admin/kreator-pozyczki")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    profileId: typeof s.profileId === "string" ? s.profileId : undefined,
+  }),
   component: KreatorPozyczki,
 });
 
