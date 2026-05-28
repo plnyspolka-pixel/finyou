@@ -40,6 +40,7 @@ import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
+import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
@@ -214,6 +215,11 @@ const AdminLeadyRoute = AdminLeadyRouteImport.update({
   path: '/leady',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminKwRoute = AdminKwRouteImport.update({
+  id: '/kw',
+  path: '/kw',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
   id: '/kreator-pozyczki',
   path: '/kreator-pozyczki',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByTo {
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -426,6 +434,7 @@ export interface FileRoutesById {
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/leady': typeof AdminLeadyRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -479,6 +488,7 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/leady'
     | '/admin/oferty'
     | '/admin/role'
@@ -527,6 +537,7 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/leady'
     | '/admin/oferty'
     | '/admin/role'
@@ -578,6 +589,7 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy'
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/leady'
     | '/admin/oferty'
     | '/admin/role'
@@ -848,6 +860,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLeadyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/kw': {
+      id: '/admin/kw'
+      path: '/kw'
+      fullPath: '/admin/kw'
+      preLoaderRoute: typeof AdminKwRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/kreator-pozyczki': {
       id: '/admin/kreator-pozyczki'
       path: '/kreator-pozyczki'
@@ -1011,6 +1030,7 @@ interface AdminRouteChildren {
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
+  AdminKwRoute: typeof AdminKwRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -1031,6 +1051,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
+  AdminKwRoute: AdminKwRoute,
   AdminLeadyRoute: AdminLeadyRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminRoleRoute: AdminRoleRoute,
@@ -1114,13 +1135,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

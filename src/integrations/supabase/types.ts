@@ -1167,10 +1167,11 @@ export type Database = {
       kw_analysis: {
         Row: {
           analysis_warning: string | null
-          application_id: string
+          application_id: string | null
           created_at: string
           id: string
           investor_summary: string | null
+          job_id: string | null
           kw_number: string
           legal_risk_score: number | null
           owners_json: Json | null
@@ -1185,10 +1186,11 @@ export type Database = {
         }
         Insert: {
           analysis_warning?: string | null
-          application_id: string
+          application_id?: string | null
           created_at?: string
           id?: string
           investor_summary?: string | null
+          job_id?: string | null
           kw_number: string
           legal_risk_score?: number | null
           owners_json?: Json | null
@@ -1203,10 +1205,11 @@ export type Database = {
         }
         Update: {
           analysis_warning?: string | null
-          application_id?: string
+          application_id?: string | null
           created_at?: string
           id?: string
           investor_summary?: string | null
+          job_id?: string | null
           kw_number?: string
           legal_risk_score?: number | null
           owners_json?: Json | null
@@ -1223,11 +1226,14 @@ export type Database = {
       }
       kw_fetch_attempts: {
         Row: {
-          application_id: string
+          application_id: string | null
           attempt_number: number
           error_message: string | null
           failure_reason: string | null
+          fetch_provider: string
           finished_at: string | null
+          firecrawl_request: Json | null
+          firecrawl_response: Json | null
           id: string
           job_id: string
           kw_number: string
@@ -1235,11 +1241,14 @@ export type Database = {
           status: string
         }
         Insert: {
-          application_id: string
+          application_id?: string | null
           attempt_number: number
           error_message?: string | null
           failure_reason?: string | null
+          fetch_provider?: string
           finished_at?: string | null
+          firecrawl_request?: Json | null
+          firecrawl_response?: Json | null
           id?: string
           job_id: string
           kw_number: string
@@ -1247,11 +1256,14 @@ export type Database = {
           status: string
         }
         Update: {
-          application_id?: string
+          application_id?: string | null
           attempt_number?: number
           error_message?: string | null
           failure_reason?: string | null
+          fetch_provider?: string
           finished_at?: string | null
+          firecrawl_request?: Json | null
+          firecrawl_response?: Json | null
           id?: string
           job_id?: string
           kw_number?: string
@@ -1262,11 +1274,13 @@ export type Database = {
       }
       kw_fetch_jobs: {
         Row: {
-          application_id: string
+          application_id: string | null
           attempts: number
           created_at: string
+          created_by: string | null
           error_message: string | null
           failure_reason: string | null
+          fetch_provider: string
           fetched_at: string | null
           id: string
           kw_number: string
@@ -1284,11 +1298,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          application_id: string
+          application_id?: string | null
           attempts?: number
           created_at?: string
+          created_by?: string | null
           error_message?: string | null
           failure_reason?: string | null
+          fetch_provider?: string
           fetched_at?: string | null
           id?: string
           kw_number: string
@@ -1306,11 +1322,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          application_id?: string
+          application_id?: string | null
           attempts?: number
           created_at?: string
+          created_by?: string | null
           error_message?: string | null
           failure_reason?: string | null
+          fetch_provider?: string
           fetched_at?: string | null
           id?: string
           kw_number?: string
@@ -1331,45 +1349,51 @@ export type Database = {
       }
       kw_section_sources: {
         Row: {
-          application_id: string
+          application_id: string | null
           error_message: string | null
           fetched_at: string
           id: string
           job_id: string
           kw_number: string
+          markdown: string | null
           raw_html: string | null
           raw_text: string | null
           screenshot_path: string | null
+          screenshot_url: string | null
           section_key: string
           section_label: string
           success: boolean
           url: string | null
         }
         Insert: {
-          application_id: string
+          application_id?: string | null
           error_message?: string | null
           fetched_at?: string
           id?: string
           job_id: string
           kw_number: string
+          markdown?: string | null
           raw_html?: string | null
           raw_text?: string | null
           screenshot_path?: string | null
+          screenshot_url?: string | null
           section_key: string
           section_label: string
           success?: boolean
           url?: string | null
         }
         Update: {
-          application_id?: string
+          application_id?: string | null
           error_message?: string | null
           fetched_at?: string
           id?: string
           job_id?: string
           kw_number?: string
+          markdown?: string | null
           raw_html?: string | null
           raw_text?: string | null
           screenshot_path?: string | null
+          screenshot_url?: string | null
           section_key?: string
           section_label?: string
           success?: boolean
