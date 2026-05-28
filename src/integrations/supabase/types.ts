@@ -1495,6 +1495,57 @@ export type Database = {
           },
         ]
       }
+      representation_web_enrichment_cache: {
+        Row: {
+          cache_key: string
+          company_name: string | null
+          expires_at: string
+          fetched_at: string
+          final_display_value: string
+          full_name: string | null
+          function: string | null
+          id: string
+          krs: string | null
+          masked_person: string
+          nip: string | null
+          original_value: string
+          raw_internal_results: Json | null
+          was_auto_enriched: boolean
+        }
+        Insert: {
+          cache_key: string
+          company_name?: string | null
+          expires_at?: string
+          fetched_at?: string
+          final_display_value: string
+          full_name?: string | null
+          function?: string | null
+          id?: string
+          krs?: string | null
+          masked_person: string
+          nip?: string | null
+          original_value: string
+          raw_internal_results?: Json | null
+          was_auto_enriched?: boolean
+        }
+        Update: {
+          cache_key?: string
+          company_name?: string | null
+          expires_at?: string
+          fetched_at?: string
+          final_display_value?: string
+          full_name?: string | null
+          function?: string | null
+          id?: string
+          krs?: string | null
+          masked_person?: string
+          nip?: string | null
+          original_value?: string
+          raw_internal_results?: Json | null
+          was_auto_enriched?: boolean
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
