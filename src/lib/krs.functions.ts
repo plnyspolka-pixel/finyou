@@ -140,6 +140,13 @@ function mapKrs(raw: any, normalizedKrs: string): KrsCompany {
   const shareCapital = kapitalSrc?.wysokoscKapitaluZakladowego
     ? `${kapitalSrc.wysokoscKapitaluZakladowego.wartosc ?? ""} ${kapitalSrc.wysokoscKapitaluZakladowego.waluta ?? ""}`.trim()
     : "";
+  const court = naglowek?.nazwaSaduRejestrowego ?? naglowek?.oznaczenieSaduRejestrowego ?? "";
+  const registrationDate = naglowek?.dataRejestracjiWKRS ?? podmiot?.dataRejestracji ?? "";
+  const deletionDate = naglowek?.dataDokonaniaWpisuWykreslenia ?? "";
+  const status = deletionDate
+    ? "Wykreślony z KRS"
+    : (d6?.likwidacja ? "W likwidacji" : (d6?.postepowanieUpadlosciowe ? "W upadłości" : "Aktywny"));
+
   // Dział 2 – reprezentacja / zarząd
   // Realne API KRS używa klucza `reprezentacja`; zostawiamy fallback do `organReprezentacji` na wszelki wypadek.
   const organReprezentacji = d2?.reprezentacja ?? d2?.organReprezentacji ?? {};
@@ -151,14 +158,6 @@ function mapKrs(raw: any, normalizedKrs: string): KrsCompany {
   const zarzadSrc = organReprezentacji?.sklad ?? d2?.zarzad?.sklad ?? organReprezentacji?.czlonkowieOrganu ?? [];
   const managementBoard: KrsPerson[] = (Array.isArray(zarzadSrc) ? zarzadSrc : []).map(pickPersonInOrgan);
 
-  const organReprezentacji = d2?.organReprezentacji ?? {};
-  const repMethod = organReprezentacji?.sposobReprezentacji ?? "";
-  const repBody = organReprezentacji?.nazwaOrganu ?? "";
-  const repMembersRaw = organReprezentacji?.sklad ?? organReprezentacji?.czlonkowieOrganu ?? [];
-  const repMembers: KrsPerson[] = (Array.isArray(repMembersRaw) ? repMembersRaw : []).map(pickPersonInOrgan);
-
-  const zarzadSrc = d2?.organReprezentacji?.sklad ?? d2?.zarzad?.sklad ?? d2?.organReprezentacji?.czlonkowieOrganu ?? [];
-  const managementBoard: KrsPerson[] = (Array.isArray(zarzadSrc) ? zarzadSrc : []).map(pickPersonInOrgan);
 
   const nadzorSrc = d2?.organNadzoru?.sklad ?? d2?.organNadzoru?.czlonkowieOrganu ?? [];
   const supervisoryBoard: KrsPerson[] = (Array.isArray(nadzorSrc) ? nadzorSrc : []).map(pickPersonInOrgan);
