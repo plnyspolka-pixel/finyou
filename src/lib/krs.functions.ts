@@ -78,12 +78,18 @@ function pickAddress(adr: any): KrsAddress {
   };
 }
 
+function readLastName(n: any): string {
+  if (!n) return "";
+  if (typeof n === "string") return n;
+  return n.nazwiskoICzlon ?? n.nazwisko ?? n.pierwszyCzlonNazwiska ?? "";
+}
+
 function pickPersonOsoba(o: any): KrsPerson {
   const dane = o?.daneOsoby ?? o ?? {};
   return {
     firstName: [dane.imiona?.imie, dane.imiona?.imieDrugie].filter(Boolean).join(" ").trim() || dane.imiePierwsze || "",
-    lastName: dane.nazwisko ?? dane.nazwiskoIPierwszyCzlonNazwiskaZlozonego ?? "",
-    pesel: dane.pesel ?? undefined,
+    lastName: readLastName(dane.nazwisko) || dane.nazwiskoIPierwszyCzlonNazwiskaZlozonego || "",
+    pesel: dane.pesel ?? dane.identyfikator?.pesel ?? undefined,
   };
 }
 
@@ -92,10 +98,12 @@ function pickPersonInOrgan(c: any): KrsPerson {
   return {
     firstName: [dane.imiona?.imie, dane.imiona?.imieDrugie].filter(Boolean).join(" ").trim()
       || dane.imiePierwsze || dane.imie || "",
-    lastName: dane.nazwisko ?? "",
-    role: c?.funkcjaWOrganie ?? c?.funkcja ?? undefined,
+    lastName: readLastName(dane.nazwisko),
+    role: c?.funkcjaWOrganie ?? c?.funkcja ?? dane?.funkcjaWOrganie ?? undefined,
+    pesel: dane?.identyfikator?.pesel ?? dane?.pesel ?? undefined,
   };
 }
+
 
 function nonEmpty(v: any): boolean {
   if (v == null) return false;
