@@ -176,8 +176,9 @@ function mapKrs(raw: any, normalizedKrs: string): KrsCompany {
   const partnersOrShareholders = (Array.isArray(wspolnicySrc) ? wspolnicySrc : []).map((w: any) => {
     const dn = w?.daneOsoby ?? w?.daneSpolki ?? w ?? {};
     const fullName = dn?.nazwa
-      || [dn?.imiona?.imie, dn?.imiona?.imieDrugie, dn?.nazwisko].filter(Boolean).join(" ").trim()
+      || [dn?.imiona?.imie, dn?.imiona?.imieDrugie, readLastName(dn?.nazwisko)].filter(Boolean).join(" ").trim()
       || "";
+
     const share = w?.udzialy?.wartoscUdzialow
       ? `${w.udzialy.wartoscUdzialow.wartosc ?? ""} ${w.udzialy.wartoscUdzialow.waluta ?? ""}`.trim()
       : "";
