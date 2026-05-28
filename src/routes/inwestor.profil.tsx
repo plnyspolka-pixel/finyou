@@ -104,6 +104,47 @@ function InwestorProfil() {
     } finally { setFetching(false); }
   };
 
+  const autoFillKrs = async (forceRefresh = false) => {
+    const raw = (f.krs ?? "").trim();
+    if (!raw) { toast.error("Wpisz numer KRS"); return; }
+    setFetchingKrs(true);
+    const t = toast.loading(forceRefresh ? "Odświeżam dane z KRS…" : "Pobieram dane z KRS…");
+    try {
+      const res: any = await lookupKrs({ data: { krs: raw, forceRefresh } });
+      if (!res?.success) {
+        toast.error(res?.message ?? "Nie udało się pobrać danych z KRS.", { id: t });
+        return;
+      }
+      const c: KrsCompany = res.company;
+      setKrsData(c);
+      const street = [c.address.street, c.address.buildingNumber].filter(Boolean).join(" ")
+        + (c.address.apartmentNumber ? `/${c.address.apartmentNumber}` : "");
+      // sposób reprezentacji — krótki opis do pola "representative_role"
+      const repSummary = c.representation.method
+        || (c.managementBoard[0] ? `Reprezentacja przez ${c.managementBoard[0].role ?? "członka zarządu"}` : "");
+      const firstBoardMember = c.managementBoard[0];
+      setF((x) => ({
+        ...x,
+        company_name: c.name || x.company_name,
+        krs: c.krs || x.krs,
+        nip: c.nip || x.nip,
+        regon: c.regon || x.regon,
+        legal_form: c.legalForm || x.legal_form,
+        street: street || x.street,
+        postal_code: c.address.postalCode || x.postal_code,
+        city: c.address.city || x.city,
+        country: c.address.country || x.country,
+        representative_first_name: firstBoardMember?.firstName || x.representative_first_name,
+        representative_last_name: firstBoardMember?.lastName || x.representative_last_name,
+        representative_role: repSummary || x.representative_role,
+      }));
+      toast.success(res.cached && !forceRefresh ? "Dane spółki z cache KRS." : "Dane spółki zostały pobrane z KRS.", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się połączyć z API KRS.", { id: t });
+    } finally { setFetchingKrs(false); }
+  };
+
+
 
   const save = async () => {
     if (!user) return;
