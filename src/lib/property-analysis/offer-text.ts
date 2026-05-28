@@ -57,6 +57,8 @@ function locationQualityWord(score: number): string {
 
 export interface OfferTextInput {
   input: PropertyAnalysisInput;
+export interface OfferTextInput {
+  input: PropertyAnalysisInput;
   valuation: ValuationBenchmark;
   location: LocationScoreResult;
   legal: LegalRiskResult;
@@ -65,9 +67,10 @@ export interface OfferTextInput {
   rcnCount: number;
   rcnRadiusKm: number | null;
   weakData: boolean;
+  floodRisk?: FloodRiskResult;
+  floodAvailable?: boolean;
 }
 
-export function generateOfferText(args: OfferTextInput): InvestmentOfferText {
   const { input, valuation, location, legal, collateralScore, sourcesUsed, rcnCount, rcnRadiusKm, weakData } = args;
   const typeLabel = PROPERTY_TYPE_LABELS[input.propertyType as string] ?? "nieruchomość";
 
@@ -115,17 +118,25 @@ export function generateOfferText(args: OfferTextInput): InvestmentOfferText {
 
   const result: InvestmentOfferText = {
     propertySummary,
+  const floodText = args.floodRisk
+    ? floodRiskInvestorText(args.floodRisk, !!args.floodAvailable)
+    : null;
+
+  const result: InvestmentOfferText = {
+    propertySummary,
     valuationSummary: valuationParts.join(" "),
     locationSummary,
     legalRiskSummary,
     collateralScoreSummary,
-    investorShortSummary,
+    investorShortSummary: floodText
+      ? `${investorShortSummary} ${floodText.shortInvestorBullet}`
+      : investorShortSummary,
+    floodRiskSummary: floodText?.floodRiskSummary,
   };
   assertNoForbiddenWords(result);
   return result;
 }
 
-export function assertNoForbiddenWords(text: InvestmentOfferText): void {
   const joined = Object.values(text).join(" ").toLowerCase();
   for (const w of FORBIDDEN_WORDS) {
     if (joined.includes(w)) {
@@ -143,9 +154,20 @@ export function buildAnalysisResult(args: {
   market: PropertyAnalysisResult["marketLiquidity"];
   collateralScore: CollateralScore;
   sourcesUsed: DataSourceUsage[];
+export function buildAnalysisResult(args: {
+  input: PropertyAnalysisInput;
+  valuation: ValuationBenchmark;
+  ltv: PropertyAnalysisResult["ltv"];
+  location: LocationScoreResult;
+  legal: LegalRiskResult;
+  market: PropertyAnalysisResult["marketLiquidity"];
+  collateralScore: CollateralScore;
+  sourcesUsed: DataSourceUsage[];
   warnings: string[];
   offerText: InvestmentOfferText;
-  raw: Record<string, unknown>;
+  raw: Record<string, any>;
+  floodRisk?: FloodRiskResult;
+  floodAlerts?: string[];
 }): PropertyAnalysisResult {
   const { input } = args;
   return {
@@ -171,6 +193,8 @@ export function buildAnalysisResult(args: {
     marketLiquidity: args.market,
     collateralScore: args.collateralScore,
     investmentOfferText: args.offerText,
+    floodRisk: args.floodRisk,
+    floodAlerts: args.floodAlerts,
     warnings: args.warnings,
     raw: args.raw,
   };
