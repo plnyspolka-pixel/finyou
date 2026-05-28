@@ -75,7 +75,7 @@ function InwestorProfil() {
     setFetching(true);
     const t = toast.loading("Pobieram dane firmy z GUS…");
     try {
-      const res: any = await lookupGus({ data: payload });
+      const res: any = await gusCompanyLookup({ data: payload });
       if (!res?.success) {
         toast.error(res?.message ?? "Nie udało się pobrać danych", { id: t });
         return;
@@ -109,7 +109,7 @@ function InwestorProfil() {
     setFetchingKrs(true);
     const t = toast.loading(forceRefresh ? "Odświeżam dane z KRS…" : "Pobieram dane z KRS…");
     try {
-      const res: any = await lookupKrs({ data: { krs: raw, forceRefresh } });
+      const res: any = await krsCompanyLookup({ data: { krs: raw, forceRefresh } });
       if (!res?.success) {
         toast.error(res?.message ?? "Nie udało się pobrać danych z KRS.", { id: t });
         return;
