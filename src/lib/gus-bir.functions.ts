@@ -85,6 +85,10 @@ function envZaloguj(key: string): string {
   </s:Header>
   <s:Body>
     <Zaloguj xmlns="${BIR_NS}"><pKluczUzytkownika>${key}</pKluczUzytkownika></Zaloguj>
+  </s:Body>
+</s:Envelope>`;
+}
+
 function envSzukaj(sid: string, kind: SearchType, value: string): string {
   const param = kind === "nip" ? "Nip" : kind === "regon" ? (value.length === 14 ? "Regon14zn" : "Regon9zn") : "Krs";
   return `<?xml version="1.0" encoding="utf-8"?>
@@ -104,11 +108,6 @@ function envSzukaj(sid: string, kind: SearchType, value: string): string {
 </s:Envelope>`;
 }
 
-      </pParametryWyszukiwania>
-    </DaneSzukajPodmioty>
-  </s:Body>
-</s:Envelope>`;
-}
 
 function envPelnyRaport(sid: string, regon: string, raport: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
