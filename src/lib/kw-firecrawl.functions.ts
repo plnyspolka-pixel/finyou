@@ -148,7 +148,7 @@ async function callFirecrawl(kw_number: string) {
     onlyMainContent: false,
     waitFor: 5000,
     timeout: 180_000,
-    proxy: "stealth",
+    proxy: "auto",
     blockAds: true,
     actions,
   };
