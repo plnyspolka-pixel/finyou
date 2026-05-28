@@ -952,7 +952,9 @@ export type Database = {
         Row: {
           address: string | null
           bank_account: string | null
+          city: string | null
           company_name: string | null
+          country: string | null
           created_at: string
           email: string | null
           first_name: string | null
@@ -962,6 +964,8 @@ export type Database = {
           last_name: string | null
           nip: string | null
           phone: string | null
+          postal_code: string | null
+          street: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_active_until: string | null
@@ -980,7 +984,9 @@ export type Database = {
         Insert: {
           address?: string | null
           bank_account?: string | null
+          city?: string | null
           company_name?: string | null
+          country?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
@@ -990,6 +996,8 @@ export type Database = {
           last_name?: string | null
           nip?: string | null
           phone?: string | null
+          postal_code?: string | null
+          street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_active_until?: string | null
@@ -1008,7 +1016,9 @@ export type Database = {
         Update: {
           address?: string | null
           bank_account?: string | null
+          city?: string | null
           company_name?: string | null
+          country?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
@@ -1018,6 +1028,8 @@ export type Database = {
           last_name?: string | null
           nip?: string | null
           phone?: string | null
+          postal_code?: string | null
+          street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_active_until?: string | null
@@ -1086,6 +1098,7 @@ export type Database = {
           source: string | null
           status: Database["public"]["Enums"]["loan_status"]
           updated_at: string
+          view_count: number
           visibility_level: Database["public"]["Enums"]["visibility_level"]
           webhook_status: string | null
         }
@@ -1139,6 +1152,7 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string
+          view_count?: number
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
           webhook_status?: string | null
         }
@@ -1192,6 +1206,7 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string
+          view_count?: number
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
           webhook_status?: string | null
         }
@@ -1476,6 +1491,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
       move_to_dlq: {
         Args: {
           dlq_name: string
