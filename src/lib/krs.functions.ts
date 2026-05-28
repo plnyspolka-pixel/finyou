@@ -78,12 +78,18 @@ function pickAddress(adr: any): KrsAddress {
   };
 }
 
+function readLastName(n: any): string {
+  if (!n) return "";
+  if (typeof n === "string") return n;
+  return n.nazwiskoICzlon ?? n.nazwisko ?? n.pierwszyCzlonNazwiska ?? "";
+}
+
 function pickPersonOsoba(o: any): KrsPerson {
   const dane = o?.daneOsoby ?? o ?? {};
   return {
     firstName: [dane.imiona?.imie, dane.imiona?.imieDrugie].filter(Boolean).join(" ").trim() || dane.imiePierwsze || "",
-    lastName: dane.nazwisko ?? dane.nazwiskoIPierwszyCzlonNazwiskaZlozonego ?? "",
-    pesel: dane.pesel ?? undefined,
+    lastName: readLastName(dane.nazwisko) || dane.nazwiskoIPierwszyCzlonNazwiskaZlozonego || "",
+    pesel: dane.pesel ?? dane.identyfikator?.pesel ?? undefined,
   };
 }
 
@@ -92,10 +98,12 @@ function pickPersonInOrgan(c: any): KrsPerson {
   return {
     firstName: [dane.imiona?.imie, dane.imiona?.imieDrugie].filter(Boolean).join(" ").trim()
       || dane.imiePierwsze || dane.imie || "",
-    lastName: dane.nazwisko ?? "",
-    role: c?.funkcjaWOrganie ?? c?.funkcja ?? undefined,
+    lastName: readLastName(dane.nazwisko),
+    role: c?.funkcjaWOrganie ?? c?.funkcja ?? dane?.funkcjaWOrganie ?? undefined,
+    pesel: dane?.identyfikator?.pesel ?? dane?.pesel ?? undefined,
   };
 }
+
 
 function nonEmpty(v: any): boolean {
   if (v == null) return false;
@@ -132,7 +140,6 @@ function mapKrs(raw: any, normalizedKrs: string): KrsCompany {
   const shareCapital = kapitalSrc?.wysokoscKapitaluZakladowego
     ? `${kapitalSrc.wysokoscKapitaluZakladowego.wartosc ?? ""} ${kapitalSrc.wysokoscKapitaluZakladowego.waluta ?? ""}`.trim()
     : "";
-
   const court = naglowek?.nazwaSaduRejestrowego ?? naglowek?.oznaczenieSaduRejestrowego ?? "";
   const registrationDate = naglowek?.dataRejestracjiWKRS ?? podmiot?.dataRejestracji ?? "";
   const deletionDate = naglowek?.dataDokonaniaWpisuWykreslenia ?? "";
@@ -141,14 +148,16 @@ function mapKrs(raw: any, normalizedKrs: string): KrsCompany {
     : (d6?.likwidacja ? "W likwidacji" : (d6?.postepowanieUpadlosciowe ? "W upadłości" : "Aktywny"));
 
   // Dział 2 – reprezentacja / zarząd
-  const organReprezentacji = d2?.organReprezentacji ?? {};
+  // Realne API KRS używa klucza `reprezentacja`; zostawiamy fallback do `organReprezentacji` na wszelki wypadek.
+  const organReprezentacji = d2?.reprezentacja ?? d2?.organReprezentacji ?? {};
   const repMethod = organReprezentacji?.sposobReprezentacji ?? "";
   const repBody = organReprezentacji?.nazwaOrganu ?? "";
   const repMembersRaw = organReprezentacji?.sklad ?? organReprezentacji?.czlonkowieOrganu ?? [];
   const repMembers: KrsPerson[] = (Array.isArray(repMembersRaw) ? repMembersRaw : []).map(pickPersonInOrgan);
 
-  const zarzadSrc = d2?.organReprezentacji?.sklad ?? d2?.zarzad?.sklad ?? d2?.organReprezentacji?.czlonkowieOrganu ?? [];
+  const zarzadSrc = organReprezentacji?.sklad ?? d2?.zarzad?.sklad ?? organReprezentacji?.czlonkowieOrganu ?? [];
   const managementBoard: KrsPerson[] = (Array.isArray(zarzadSrc) ? zarzadSrc : []).map(pickPersonInOrgan);
+
 
   const nadzorSrc = d2?.organNadzoru?.sklad ?? d2?.organNadzoru?.czlonkowieOrganu ?? [];
   const supervisoryBoard: KrsPerson[] = (Array.isArray(nadzorSrc) ? nadzorSrc : []).map(pickPersonInOrgan);
