@@ -44,14 +44,18 @@ export function PropertyLocationAnalysis({
           city: city ?? null,
           postalCode: postalCode ?? null,
           propertyType: propertyType ?? "inne",
+      const res = (await analyze({
+        data: {
+          propertyAddress: propertyAddress ?? null,
+          city: city ?? null,
+          postalCode: postalCode ?? null,
+          propertyType: propertyType ?? "inne",
           forceRefresh,
         },
-      });
+      })) as any;
       setResult(res);
       onAnalyzed?.(res);
       if (res?.success === false) toast.error(res.message ?? "Nie udało się przeanalizować lokalizacji.");
-    } catch (e) {
-      toast.error("Nie udało się przeanalizować lokalizacji.");
     } finally {
       setLoading(false);
     }
