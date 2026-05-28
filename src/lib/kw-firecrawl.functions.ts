@@ -27,46 +27,50 @@ type AnyObj = Record<string, any>;
 /** Build Firecrawl `scrape` action list that walks through EKW search → sections. */
 function buildFirecrawlActions(dept: string, num: string, check: string) {
   return [
-    { type: "wait", milliseconds: 2500 },
+    // Wait for anti-bot interstitial (PerimeterX) to clear
+    { type: "wait", milliseconds: 8000 },
+    { type: "wait", selector: "#kodWydzialuInput", milliseconds: 15000 },
+    { type: "screenshot" },
     { type: "write", selector: "#kodWydzialuInput", text: dept },
     { type: "write", selector: "#numerKsiegiWieczystej", text: num },
     { type: "write", selector: "#cyfraKontrolna", text: check },
     { type: "screenshot" },
     { type: "click", selector: "#wyszukaj" },
-    { type: "wait", milliseconds: 4000 },
+    { type: "wait", milliseconds: 6000 },
     { type: "screenshot" },
     { type: "scrape" }, // result screen
     // try open current content
     { type: "click", selector: "input[value*='PRZEGLĄDANIE AKTUALNEJ']" },
-    { type: "wait", milliseconds: 3500 },
+    { type: "wait", milliseconds: 5000 },
     { type: "scrape" },
     // Dział I-O
-    { type: "click", selector: "input[value*='I-O'], a:has-text('I-O')" },
-    { type: "wait", milliseconds: 2500 },
+    { type: "click", selector: "input[value*='I-O']" },
+    { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
     // Dział I-Sp
-    { type: "click", selector: "input[value*='I-Sp'], a:has-text('I-Sp')" },
-    { type: "wait", milliseconds: 2500 },
+    { type: "click", selector: "input[value*='I-Sp']" },
+    { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
     // Dział II
-    { type: "click", selector: "input[value*='II'], a:has-text('Dział II')" },
-    { type: "wait", milliseconds: 2500 },
+    { type: "click", selector: "input[value='Dział II']" },
+    { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
     // Dział III
-    { type: "click", selector: "input[value*='III'], a:has-text('Dział III')" },
-    { type: "wait", milliseconds: 2500 },
+    { type: "click", selector: "input[value='Dział III']" },
+    { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
     // Dział IV
-    { type: "click", selector: "input[value*='IV'], a:has-text('Dział IV')" },
-    { type: "wait", milliseconds: 2500 },
+    { type: "click", selector: "input[value='Dział IV']" },
+    { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
   ];
 }
+
 
 /** Map the Firecrawl scrape-action results onto our 6 expected snapshots. */
 function extractSnapshots(resp: AnyObj) {
@@ -102,10 +106,13 @@ async function callFirecrawl(kw_number: string) {
     url: EKW_URL,
     formats: ["markdown", "html", "screenshot"],
     onlyMainContent: false,
-    waitFor: 2000,
-    timeout: 120_000,
+    waitFor: 5000,
+    timeout: 180_000,
+    proxy: "stealth",
+    blockAds: true,
     actions,
   };
+
 
   const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
