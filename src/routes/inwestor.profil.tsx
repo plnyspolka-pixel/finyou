@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Loader2, Download } from "lucide-react";
-import { fetchCompanyByNip } from "@/lib/client-profile.functions";
+import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 
 export const Route = createFileRoute("/inwestor/profil")({
   component: InwestorProfil,
