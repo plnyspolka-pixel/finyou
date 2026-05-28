@@ -29,8 +29,7 @@ export interface FloodAnalysisInput {
 
 export interface FloodAnalysisOutput {
   success: boolean;
-  raw: Record<string, any>;
-
+  errorCode?: "MISSING_LOCATION" | "FLOOD_WFS_ERROR" | "NO_FLOOD_DATA";
   message?: string;
   source: "ISOK / Wody Polskie / Hydroportal";
   method: "WFS intersection";
@@ -41,8 +40,9 @@ export interface FloodAnalysisOutput {
   };
   floodRisk: FloodRiskResult;
   alerts: string[];
-  raw: Record<string, unknown>;
+  raw: Record<string, any>;
 }
+
 
 const WFS_BASE =
   "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WFS";
