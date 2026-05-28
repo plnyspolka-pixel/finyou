@@ -32,7 +32,10 @@ function InwestorProfil() {
       company_name: data.company_name ?? "", nip: data.nip ?? "",
       phone: data.phone ?? "", email: data.email ?? user.email ?? "",
       investor_type: data.investor_type ?? "indywidualny",
-      address: data.address ?? "", bank_account: data.bank_account ?? "",
+      address: data.address ?? "",
+      street: data.street ?? "", postal_code: data.postal_code ?? "",
+      city: data.city ?? "", country: data.country ?? "Polska",
+      bank_account: data.bank_account ?? "",
     });
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
