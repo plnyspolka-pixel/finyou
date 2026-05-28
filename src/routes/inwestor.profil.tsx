@@ -248,6 +248,9 @@ function InwestorProfil() {
         </Card>
       )}
 
+      {isFirma && krsData && <KrsRegisterCard data={krsData} />}
+
+
       {isFirma ? (
         <Card>
           <CardHeader><CardTitle>Reprezentacja</CardTitle></CardHeader>
