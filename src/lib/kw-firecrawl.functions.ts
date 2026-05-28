@@ -24,48 +24,87 @@ async function requireStaff(supabase: any, userId: string) {
 
 type AnyObj = Record<string, any>;
 
+function buildClickScript(labels: string[]) {
+  return `(() => {
+    const normalize = (value) => String(value || '')
+      .toLocaleLowerCase('pl-PL')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ł/g, 'l');
+    const labels = ${JSON.stringify(labels)}.map(normalize);
+    const textOf = (el) => normalize([
+      el.value,
+      el.innerText,
+      el.textContent,
+      el.getAttribute('title'),
+      el.getAttribute('aria-label')
+    ].filter(Boolean).join(' '));
+    const candidates = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"], a'));
+    const target = candidates.find((el) => labels.some((label) => textOf(el).includes(label)));
+    document.documentElement.setAttribute('data-kw-last-click', target ? textOf(target) : 'not-found');
+    if (target) target.click();
+  })();`;
+}
+
+function buildFillAndSearchScript(dept: string, num: string, check: string) {
+  return `(() => {
+    const setValue = (selector, value) => {
+      const el = document.querySelector(selector);
+      if (!el) return false;
+      el.focus();
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    };
+    const filled = {
+      dept: setValue('input[id*="kodWydzialu"], input[name*="kodWydzialu"]', ${JSON.stringify(dept)}),
+      number: setValue('input[id*="numerKsiegiWieczystej"], input[name*="numerKsiegiWieczystej"]', ${JSON.stringify(num)}),
+      check: setValue('input[id*="cyfraKontrolna"], input[name*="cyfraKontrolna"]', ${JSON.stringify(check)})
+    };
+    document.documentElement.setAttribute('data-kw-filled', JSON.stringify(filled));
+    const normalize = (value) => String(value || '')
+      .toLocaleLowerCase('pl-PL')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ł/g, 'l');
+    const textOf = (el) => normalize([el.value, el.innerText, el.textContent, el.getAttribute('title'), el.getAttribute('aria-label')].filter(Boolean).join(' '));
+    const candidates = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"], a'));
+    const target = candidates.find((el) => textOf(el).includes('wyszukaj'));
+    document.documentElement.setAttribute('data-kw-search-click', target ? textOf(target) : 'not-found');
+    if (target) target.click();
+  })();`;
+}
+
 /** Build Firecrawl `scrape` action list that walks through EKW search → sections. */
 function buildFirecrawlActions(dept: string, num: string, check: string) {
   return [
-    // Wait for anti-bot interstitial (PerimeterX) to clear
     { type: "wait", milliseconds: 8000 },
-    { type: "wait", selector: "#kodWydzialuInput" },
-
-    { type: "screenshot" },
-    { type: "write", selector: "#kodWydzialuInput", text: dept },
-    { type: "write", selector: "#numerKsiegiWieczystej", text: num },
-    { type: "write", selector: "#cyfraKontrolna", text: check },
-    { type: "screenshot" },
-    { type: "click", selector: "#wyszukaj" },
-    { type: "wait", milliseconds: 6000 },
+    { type: "executeJavascript", script: buildFillAndSearchScript(dept, num, check) },
+    { type: "wait", milliseconds: 8000 },
     { type: "screenshot" },
     { type: "scrape" }, // result screen
-    // try open current content
-    { type: "click", selector: "input[value*='PRZEGLĄDANIE AKTUALNEJ']" },
+    { type: "executeJavascript", script: buildClickScript(["Przeglądanie aktualnej treści KW", "Przegladanie aktualnej tresci KW"]) },
     { type: "wait", milliseconds: 5000 },
+    { type: "screenshot" },
     { type: "scrape" },
-    // Dział I-O
-    { type: "click", selector: "input[value*='I-O']" },
+    { type: "executeJavascript", script: buildClickScript(["Dział I-O", "Dzial I-O", "I-O"]) },
     { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
-    // Dział I-Sp
-    { type: "click", selector: "input[value*='I-Sp']" },
+    { type: "executeJavascript", script: buildClickScript(["Dział I-Sp", "Dzial I-Sp", "I-Sp"]) },
     { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
-    // Dział II
-    { type: "click", selector: "input[value='Dział II']" },
+    { type: "executeJavascript", script: buildClickScript(["Dział II", "Dzial II"]) },
     { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
-    // Dział III
-    { type: "click", selector: "input[value='Dział III']" },
+    { type: "executeJavascript", script: buildClickScript(["Dział III", "Dzial III"]) },
     { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
-    // Dział IV
-    { type: "click", selector: "input[value='Dział IV']" },
+    { type: "executeJavascript", script: buildClickScript(["Dział IV", "Dzial IV"]) },
     { type: "wait", milliseconds: 3500 },
     { type: "screenshot" },
     { type: "scrape" },
