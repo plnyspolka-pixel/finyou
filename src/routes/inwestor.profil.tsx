@@ -49,6 +49,10 @@ function InwestorProfil() {
       phone: f.phone.trim() || null, email: f.email.trim() || null,
       investor_type: f.investor_type as any,
       address: f.address.trim() || null,
+      street: f.street.trim() || null,
+      postal_code: f.postal_code.trim() || null,
+      city: f.city.trim() || null,
+      country: f.country.trim() || null,
       bank_account: f.bank_account.replace(/\s+/g, "") || null,
     };
     const { error } = inv
