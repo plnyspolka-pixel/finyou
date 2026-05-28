@@ -12,7 +12,8 @@ import { Loader2, Download, RefreshCw, AlertTriangle, Eye, EyeOff, CheckCircle2,
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup, type KrsCompany } from "@/lib/krs.functions";
-import { detectPolishBankAccount, formatAccountGroups, maskAccount, logSafeAccount, type BankDetectResult } from "@/lib/polish-bank";
+import { detectPolishBankAccount, maskAccount, logSafeAccount, type BankDetectResult } from "@/lib/polish-bank";
+
 
 
 
