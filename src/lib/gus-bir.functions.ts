@@ -58,7 +58,8 @@ function decodeEntities(s: string): string {
 }
 
 function pickTag(xml: string, tag: string): string {
-  const m = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+  // Case-insensitive — GUS BIR miesza wielkość liter w nazwach pól (np. praw_numerWRejestrzeEwidencji vs praw_numerWrejestrzeEwidencji).
+  const m = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, "i"));
   return m ? m[1].trim() : "";
 }
 
