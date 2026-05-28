@@ -170,8 +170,9 @@ function InwestorProfil() {
               <span>Dane firmy</span>
               <Button size="sm" variant="outline" onClick={autoFill} disabled={fetching}>
                 {fetching ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
-                Pobierz z NIP / KRS
+                Pobierz dane z GUS
               </Button>
+
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
