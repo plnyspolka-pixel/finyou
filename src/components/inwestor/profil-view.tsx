@@ -255,12 +255,12 @@ export function InwestorProfil() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Dane firmy</span>
-              <Button size="sm" variant="outline" onClick={autoFill} disabled={fetching}>
-                {fetching ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
-                Pobierz dane z GUS
+              <Button size="sm" variant="outline" onClick={autoFill} disabled={fetching || fetchingKrs}>
+                {(fetching || fetchingKrs) ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+                Pobierz dane
               </Button>
-
             </CardTitle>
+            <p className="text-xs text-muted-foreground">Wpisz NIP, REGON albo KRS — aplikacja pobierze dane z GUS i (jeśli to spółka) odpis z KRS.</p>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} placeholder="10 cyfr" /></div>
@@ -268,21 +268,17 @@ export function InwestorProfil() {
               <Label>KRS</Label>
               <div className="flex gap-2">
                 <Input maxLength={20} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value })} placeholder="np. 0000123456" />
-                <Button type="button" size="sm" variant="outline" onClick={() => autoFillKrs(false)} disabled={fetchingKrs} className="shrink-0">
-                  {fetchingKrs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                </Button>
                 {krsData && (
                   <Button type="button" size="sm" variant="ghost" onClick={() => autoFillKrs(true)} disabled={fetchingKrs} className="shrink-0" title="Odśwież dane z KRS (pomiń cache)">
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">„Pobierz dane z KRS" pobiera pełny odpis ze źródła Ministerstwa Sprawiedliwości.</p>
             </div>
 
             <div className="md:col-span-2"><Label>Nazwa firmy</Label><Input maxLength={200} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
-            <div><Label>REGON</Label><Input maxLength={20} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value })} /></div>
-            <div><Label>Forma prawna</Label><Input maxLength={100} value={f.legal_form} onChange={(e) => setF({ ...f, legal_form: e.target.value })} placeholder="np. Sp. z o.o." /></div>
+            <div className="md:col-span-2"><Label>REGON</Label><Input maxLength={20} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value })} /></div>
+          </CardContent>
           </CardContent>
         </Card>
       )}
