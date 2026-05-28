@@ -87,7 +87,17 @@ function InwestorProfil() {
         <CardContent className="grid gap-3 md:grid-cols-2">
           <div><Label>E-mail</Label><Input type="email" maxLength={255} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
           <div><Label>Telefon</Label><Input maxLength={32} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-          <div className="md:col-span-2"><Label>Adres</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="ul., nr, kod pocztowy, miasto" /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Adres</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2"><Label>Ulica i numer</Label><Input maxLength={255} value={f.street} onChange={(e) => setF({ ...f, street: e.target.value })} placeholder="np. Marszałkowska 1/2" /></div>
+          <div><Label>Kod pocztowy</Label><Input maxLength={10} value={f.postal_code} onChange={(e) => setF({ ...f, postal_code: e.target.value })} placeholder="00-000" /></div>
+          <div><Label>Miasto</Label><Input maxLength={100} value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>Kraj</Label><Input maxLength={100} value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>Adres (pełny, opcjonalnie)</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="alternatywny pełny zapis adresu" /></div>
         </CardContent>
       </Card>
 
