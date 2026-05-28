@@ -294,16 +294,19 @@ function InwestorProfil() {
       {isFirma && krsData && <KrsRegisterCard data={krsData} />}
 
 
-      {isFirma ? (
+      {isFirma && !isJdg ? (
         <Card>
-          <CardHeader><CardTitle>Reprezentacja</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Reprezentacja</CardTitle>
+            <p className="text-xs text-muted-foreground">Sekcja widoczna tylko dla spółek wpisanych do KRS. Dla JDG się nie wyświetla.</p>
+          </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div><Label>Imię reprezentanta</Label><Input maxLength={100} value={f.representative_first_name} onChange={(e) => setF({ ...f, representative_first_name: e.target.value })} /></div>
             <div><Label>Nazwisko reprezentanta</Label><Input maxLength={100} value={f.representative_last_name} onChange={(e) => setF({ ...f, representative_last_name: e.target.value })} /></div>
             <div className="md:col-span-2"><Label>Funkcja / sposób reprezentacji</Label><Input maxLength={500} value={f.representative_role} onChange={(e) => setF({ ...f, representative_role: e.target.value })} placeholder="np. Prezes Zarządu — reprezentacja jednoosobowa" /></div>
           </CardContent>
         </Card>
-      ) : (
+      ) : !isFirma ? (
         <Card>
           <CardHeader><CardTitle>Dane osobowe</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
@@ -312,7 +315,8 @@ function InwestorProfil() {
             <div className="md:col-span-2"><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value })} placeholder="11 cyfr" /></div>
           </CardContent>
         </Card>
-      )}
+      ) : null}
+
 
       <Card>
         <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
