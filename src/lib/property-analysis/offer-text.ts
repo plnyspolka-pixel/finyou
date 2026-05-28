@@ -2,6 +2,7 @@
 import type {
   CollateralScore,
   DataSourceUsage,
+  FloodRiskResult,
   InvestmentOfferText,
   LegalRiskResult,
   LocationScoreResult,
@@ -9,6 +10,9 @@ import type {
   PropertyAnalysisResult,
   ValuationBenchmark,
 } from "./types";
+import { categoryLabel } from "./scoring";
+import { floodRiskInvestorText } from "./flood-risk.server";
+
 import { categoryLabel } from "./scoring";
 
 const FORBIDDEN_WORDS = [
