@@ -20,7 +20,8 @@ function InwestorProfil() {
   const [f, setF] = useState({
     first_name: "", last_name: "", company_name: "", nip: "",
     phone: "", email: "", investor_type: "indywidualny",
-    address: "", bank_account: "",
+    address: "", street: "", postal_code: "", city: "", country: "Polska",
+    bank_account: "",
   });
 
   useEffect(() => { if (!user) return; void (async () => {
