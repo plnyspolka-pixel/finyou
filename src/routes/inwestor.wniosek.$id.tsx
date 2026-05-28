@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { monthlyPayment, formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 import { useServerFn } from "@tanstack/react-start";
 import { openOrCreateThread } from "@/lib/chat.functions";
@@ -210,6 +211,8 @@ function InwestorWniosek() {
           propertyType={p.property_type}
         />
       )}
+
+      <InvestorSummaryCard applicationId={id} />
 
       {propertyDocs.length > 0 && (
         <Card>
