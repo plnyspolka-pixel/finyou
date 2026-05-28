@@ -64,6 +64,8 @@ function InwestorWniosek() {
       setAnnualRate(Number(data.annual_investor_rate) || 20);
       setMonths(Number(data.preferred_period_months) || 24);
       setMaxPayment(Number(data.max_monthly_payment) || 0);
+      // increment view counter (fire and forget)
+      void supabase.rpc("increment_loan_view" as any, { _loan_id: id });
     }
     if (user) {
       const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
