@@ -158,7 +158,18 @@ function InwestorProfil() {
     } finally { setFetchingKrs(false); }
   };
 
-
+  // Live walidacja rachunku bankowego — lokalnie, z debounce 400 ms.
+  useEffect(() => {
+    const raw = f.bank_account ?? "";
+    setShowFullAccount(false);
+    if (!raw.trim()) { setBankInfo(null); setBankOverride(false); return; }
+    const id = setTimeout(() => {
+      const res = detectPolishBankAccount(raw);
+      setBankInfo(res);
+      setBankOverride(false);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [f.bank_account]);
 
   const save = async () => {
     if (!user) return;
@@ -168,6 +179,20 @@ function InwestorProfil() {
     if (f.entity_type === "osoba_fizyczna" && f.pesel && !/^\d{11}$/.test(f.pesel.replace(/\D/g, ""))) {
       toast.error("PESEL musi mieć 11 cyfr"); return;
     }
+    // Walidacja rachunku przed zapisem — wymagaj potwierdzenia jeśli niepoprawny.
+    if (f.bank_account.trim()) {
+      const check = detectPolishBankAccount(f.bank_account);
+      if (!check.success && !bankOverride) {
+        toast.error("Numer rachunku bankowego jest nieprawidłowy. Popraw albo potwierdź kontynuację mimo błędu.");
+        return;
+      }
+    }
+    const isJdg = f.entity_type === "firma" && (gusEntityType === "F" || gusEntityType === "LF");
+    const showRepresentation = f.entity_type === "firma" && !isJdg;
+    const normalizedAccount = (() => {
+      const c = detectPolishBankAccount(f.bank_account);
+      return c.success ? c.normalized : f.bank_account.replace(/[\s\-]/g, "").toUpperCase() || null;
+    })();
     // Map entity_type → legacy investor_type (NOT NULL column)
     const investorType = f.entity_type === "firma" ? "instytucjonalny" : "indywidualny";
     const payload: any = {
@@ -181,25 +206,29 @@ function InwestorProfil() {
       krs: f.entity_type === "firma" ? (f.krs.trim() || null) : null,
       regon: f.entity_type === "firma" ? (f.regon.trim() || null) : null,
       legal_form: f.entity_type === "firma" ? (f.legal_form.trim() || null) : null,
-      representative_first_name: f.entity_type === "firma" ? (f.representative_first_name.trim() || null) : null,
-      representative_last_name: f.entity_type === "firma" ? (f.representative_last_name.trim() || null) : null,
-      representative_role: f.entity_type === "firma" ? (f.representative_role.trim() || null) : null,
+      representative_first_name: showRepresentation ? (f.representative_first_name.trim() || null) : null,
+      representative_last_name: showRepresentation ? (f.representative_last_name.trim() || null) : null,
+      representative_role: showRepresentation ? (f.representative_role.trim() || null) : null,
       phone: f.phone.trim() || null,
       email: f.email.trim() || null,
       street: f.street.trim() || null,
       postal_code: f.postal_code.trim() || null,
       city: f.city.trim() || null,
       country: f.country.trim() || null,
-      bank_account: f.bank_account.replace(/\s+/g, "") || null,
+      bank_account: normalizedAccount,
     };
     const { error } = inv
       ? await supabase.from("investors").update(payload).eq("id", inv.id)
       : await supabase.from("investors").insert({ ...payload, user_id: user.id });
     if (error) { toast.error(error.message); return; }
+    // Bezpieczne logowanie — bez pełnego numeru rachunku.
+    if (normalizedAccount) console.info("[profil] zapisano rachunek", logSafeAccount(normalizedAccount));
     toast.success("Zapisano");
   };
 
   const isFirma = f.entity_type === "firma";
+  const isJdg = isFirma && (gusEntityType === "F" || gusEntityType === "LF");
+
 
   return (
     <div className="space-y-6 max-w-2xl">
