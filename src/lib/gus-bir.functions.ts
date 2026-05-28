@@ -282,7 +282,16 @@ export const gusCompanyLookup = createServerFn({ method: "POST" })
       ? (pickTag(ogolneBlock, "praw_statusNip") || pickTag(ogolneBlock, "praw_dataSkresleniaPodmiotuZregon") ? "wykreślony" : "aktywny")
       : (pickTag(ogolneBlock, "fiz_dataZakonczeniaDzialalnosci") ? "zakończona" : "aktywna");
 
-    const krs = isPrawna ? pickTag(ogolneBlock, "praw_numerWrejestrzeEwidencji") || "" : "";
+    // GUS BIR1.1 używa różnych wariantów nazwy pola w zależności od raportu — sprawdź wszystkie znane.
+    const krs = isPrawna
+      ? pickTagAny(
+          ogolneBlock,
+          "praw_numerWRejestrzeEwidencji",
+          "praw_numerWrejestrzeEwidencji",
+          "praw_numerwRejestrzeEwidencji",
+          "praw_numerwrejestrzeewidencji",
+        )
+      : "";
 
     const startDate = isPrawna
       ? (pickTag(ogolneBlock, "praw_dataPowstania") || pickTag(ogolneBlock, "praw_dataRozpoczeciaDzialalnosci"))
