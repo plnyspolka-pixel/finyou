@@ -408,8 +408,51 @@ function KrsRegisterCard({ data }: { data: KrsCompany }) {
   if (data.flags.section4HasEntries) alerts.push({ title: "Uwaga: w KRS występują wpisy mogące wskazywać na zaległości lub obciążenia (dział 4)." });
   if (data.flags.representationMissing) alerts.push({ title: "Nie udało się jednoznacznie ustalić sposobu reprezentacji. Zweryfikuj ręcznie odpis KRS." });
 
-  const personLine = (p: { firstName: string; lastName: string; role?: string }) =>
-    [p.firstName, p.lastName].filter(Boolean).join(" ") + (p.role ? ` — ${p.role}` : "");
+  // Zbieramy etykiety osób — formatery są odporne na [object Object].
+  const boardLabels = data.managementBoard.map((p) => formatBoardMember(p));
+  const proxyLabels = data.proxies.map((p) => formatProxy(p));
+  const shareholderLabels = data.partnersOrShareholders.map((w) => formatShareholder(w));
+
+  // Auto-enrichment: dla zamaskowanych etykiet wysyłamy zapytanie do backendu.
+  const [enriched, setEnriched] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const all = [...boardLabels, ...proxyLabels, ...shareholderLabels];
+    const toEnrich = Array.from(new Set(all.filter((l) => labelContainsMask(l))));
+    if (!toEnrich.length) return;
+    let cancelled = false;
+    (async () => {
+      const updates: Record<string, string> = {};
+      for (const label of toEnrich) {
+        try {
+          const masked = extractMaskedNamePart(label);
+          const fn = extractFunctionPart(label);
+          const res: any = await companyRepresentationAutoEnrichment({
+            data: {
+              companyName: data.name || "",
+              nip: data.nip || "",
+              krs: data.krs || "",
+              maskedPerson: masked,
+              function: fn,
+              representationMethodRaw: data.representation.method || "",
+            },
+          });
+          if (res?.enriched && res?.displayValue) {
+            updates[label] = res.displayValue;
+          }
+        } catch {
+          // bezgłośnie — zostawiamy maskę
+        }
+      }
+      if (!cancelled && Object.keys(updates).length) {
+        setEnriched((prev) => ({ ...prev, ...updates }));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.krs]);
+
+  const display = (label: string) => enriched[label] ?? label;
 
   return (
     <Card>
@@ -432,28 +475,24 @@ function KrsRegisterCard({ data }: { data: KrsCompany }) {
           <div className="md:col-span-2"><span className="text-muted-foreground">PKD główne:</span> {data.pkd.main || "—"}</div>
         </div>
 
-        {data.managementBoard.length > 0 && (
+        {boardLabels.length > 0 && (
           <div>
             <div className="text-sm font-semibold mb-1">Zarząd</div>
-            <ul className="text-sm list-disc pl-5">{data.managementBoard.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul>
+            <ul className="text-sm list-disc pl-5">{boardLabels.map((l, i) => <li key={i}>{display(l)}</li>)}</ul>
           </div>
         )}
 
-        {data.proxies.length > 0 && (
+        {proxyLabels.length > 0 && (
           <div>
             <div className="text-sm font-semibold mb-1">Prokurenci</div>
-            <ul className="text-sm list-disc pl-5">{data.proxies.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul>
+            <ul className="text-sm list-disc pl-5">{proxyLabels.map((l, i) => <li key={i}>{display(l)}</li>)}</ul>
           </div>
         )}
 
-        {data.partnersOrShareholders.length > 0 && (
+        {shareholderLabels.length > 0 && (
           <div>
             <div className="text-sm font-semibold mb-1">Wspólnicy / udziałowcy</div>
-            <ul className="text-sm list-disc pl-5">
-              {data.partnersOrShareholders.map((w, i) => (
-                <li key={i}>{w.name}{w.share ? ` — ${w.share}` : ""}{w.sharesCount ? ` (${w.sharesCount} udziałów)` : ""}</li>
-              ))}
-            </ul>
+            <ul className="text-sm list-disc pl-5">{shareholderLabels.map((l, i) => <li key={i}>{display(l)}</li>)}</ul>
           </div>
         )}
 
