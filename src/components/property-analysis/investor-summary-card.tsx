@@ -57,7 +57,24 @@ export function InvestorSummaryCard({ applicationId }: { applicationId: string }
               {result.collateralScore.mainRisks.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
             </ul>
           </div>
+          </div>
         )}
+
+        {result.floodRisk && result.floodRisk.riskLevel !== "none" && result.floodRisk.riskLevel !== "unknown" && (
+          <div>
+            <div className="text-muted-foreground text-xs mb-1">Ryzyko powodziowe</div>
+            <div className="font-medium">
+              {({
+                low: "Niskie (scenariusz 0,2%)",
+                medium: "Średnie (scenariusz 1%)",
+                high: "Wysokie (scenariusz 10%)",
+                very_high: "Bardzo wysokie — obszar szczególnego zagrożenia",
+              } as Record<string, string>)[result.floodRisk.riskLevel]}
+            </div>
+            {result.investmentOfferText.floodRiskSummary && (
+              <div className="text-xs text-muted-foreground mt-1">{result.investmentOfferText.floodRiskSummary}</div>
+            )}
+          </div>
 
         <Separator />
         <div className="text-xs text-muted-foreground">
