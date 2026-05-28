@@ -169,6 +169,7 @@ function InwestorWniosek() {
         {app.annual_investor_rate != null && (
           <Badge className="text-base px-3 py-1"><Wallet className="mr-1 h-4 w-4" />Zysk roczny {Number(app.annual_investor_rate)}%</Badge>
         )}
+        <Badge variant="secondary"><Eye className="mr-1 h-3 w-3" />{app.view_count ?? 0} odsłon</Badge>
       </div>
 
       {app.situation_description && (
