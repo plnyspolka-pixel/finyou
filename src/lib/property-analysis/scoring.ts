@@ -85,8 +85,7 @@ export function calculateCollateralScore(s: ScoringInput): CollateralScore {
   };
 }
 
-  };
-}
+
 
 // A. Stan prawny i kompletność dokumentów — 25 pkt
 function legalAndDocumentsScore(s: ScoringInput): number {
