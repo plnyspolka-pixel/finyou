@@ -253,9 +253,12 @@ export const gusCompanyLookup = createServerFn({ method: "POST" })
       return { success: false, errorCode: "GUS_CONNECTION_ERROR", message: "Nie udało się połączyć z usługą GUS REGON." };
     }
     if (!found) return { success: false, errorCode: "NOT_FOUND", message: "Nie znaleziono firmy w bazie GUS REGON." };
-
     const daneBlock = pickAllBlocks(found.inner, "dane")[0] ?? "";
     const base = mapDane(daneBlock);
+    // Diagnostyka — gdy brak REGON/TYP, logujemy surowy blok do worker logs (bez PII poza NIP/REGON).
+    if (!base.regon || !base.typ) {
+      console.warn("[GUS] base incomplete", { nip: base.nip, regon: base.regon, typ: base.typ, daneSnippet: daneBlock.slice(0, 800) });
+    }
 
     // Pełny raport dla dodatkowych pól (KRS, forma prawna, daty, PKD, kontakt)
     const { ogolne, pkd } = reportNames(base.typ);
