@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -97,6 +98,7 @@ function WniosekDetail() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
+          <TabsTrigger value="zabezpieczenie">Zabezpieczenie</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length})</TabsTrigger>
           <TabsTrigger value="selekcja">Selekcja</TabsTrigger>
@@ -147,6 +149,11 @@ function WniosekDetail() {
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>
+
+        <TabsContent value="zabezpieczenie" className="space-y-4">
+          <CollateralAnalysisSection applicationId={id} />
+        </TabsContent>
+
 
 
         <TabsContent value="dokumenty">
