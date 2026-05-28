@@ -23,10 +23,16 @@ export const Route = createFileRoute("/inwestor/profil")({
 type EntityType = "osoba_fizyczna" | "firma";
 
 function InwestorProfil() {
-  const { user } = useAuth();
-
   const [inv, setInv] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
+  const [fetchingKrs, setFetchingKrs] = useState(false);
+  const [krsData, setKrsData] = useState<KrsCompany | null>(null);
+  // "P" = osoba prawna (spółka), "F" = osoba fizyczna prowadząca działalność (JDG)
+  const [gusEntityType, setGusEntityType] = useState<string>("");
+  const [bankInfo, setBankInfo] = useState<BankDetectResult | null>(null);
+  const [showFullAccount, setShowFullAccount] = useState(false);
+  const [bankOverride, setBankOverride] = useState(false);
+
   const [fetchingKrs, setFetchingKrs] = useState(false);
   const [krsData, setKrsData] = useState<KrsCompany | null>(null);
 
