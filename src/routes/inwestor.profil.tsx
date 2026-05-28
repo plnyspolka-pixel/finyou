@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,8 +22,7 @@ type EntityType = "osoba_fizyczna" | "firma";
 
 function InwestorProfil() {
   const { user } = useAuth();
-  const lookupGus = useServerFn(gusCompanyLookup);
-  const lookupKrs = useServerFn(krsCompanyLookup);
+
   const [inv, setInv] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchingKrs, setFetchingKrs] = useState(false);
@@ -76,7 +74,7 @@ function InwestorProfil() {
     setFetching(true);
     const t = toast.loading("Pobieram dane firmy z GUS…");
     try {
-      const res: any = await lookupGus({ data: payload });
+      const res: any = await gusCompanyLookup({ data: payload });
       if (!res?.success) {
         toast.error(res?.message ?? "Nie udało się pobrać danych", { id: t });
         return;
@@ -110,7 +108,7 @@ function InwestorProfil() {
     setFetchingKrs(true);
     const t = toast.loading(forceRefresh ? "Odświeżam dane z KRS…" : "Pobieram dane z KRS…");
     try {
-      const res: any = await lookupKrs({ data: { krs: raw, forceRefresh } });
+      const res: any = await krsCompanyLookup({ data: { krs: raw, forceRefresh } });
       if (!res?.success) {
         toast.error(res?.message ?? "Nie udało się pobrać danych z KRS.", { id: t });
         return;
