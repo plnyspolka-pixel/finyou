@@ -29,7 +29,8 @@ function buildFirecrawlActions(dept: string, num: string, check: string) {
   return [
     // Wait for anti-bot interstitial (PerimeterX) to clear
     { type: "wait", milliseconds: 8000 },
-    { type: "wait", selector: "#kodWydzialuInput", milliseconds: 15000 },
+    { type: "wait", selector: "#kodWydzialuInput" },
+
     { type: "screenshot" },
     { type: "write", selector: "#kodWydzialuInput", text: dept },
     { type: "write", selector: "#numerKsiegiWieczystej", text: num },
