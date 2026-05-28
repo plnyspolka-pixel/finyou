@@ -130,8 +130,8 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       if (nbp) supporting.push("NBP");
     } else if (gus) {
       mainSource = "GUS BDL";
-      pricePerM2Median = gus.pricePerM2Median;
-      pricePerM2Average = gus.pricePerM2Average;
+      pricePerM2Median = gus.pricePerM2Median ?? null;
+      pricePerM2Average = gus.pricePerM2Average ?? null;
       pricePerHa = gus.pricePerHaByClass?.ogolem ?? null;
       if (nbp) supporting.push("NBP");
     } else if (nbp) {
