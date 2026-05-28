@@ -99,15 +99,32 @@ export interface CollateralScoreComponents {
   marketLiquidity: number;
   technicalAndUseRisks: number;
   dataQuality: number;
+export interface InvestmentOfferText {
+  propertySummary: string;
+  valuationSummary: string;
+  locationSummary: string;
+  legalRiskSummary: string;
+  collateralScoreSummary: string;
+  investorShortSummary: string;
+  floodRiskSummary?: string;
 }
 
-export interface CollateralScore {
-  total: number;
-  category: CollateralCategory;
-  components: CollateralScoreComponents;
-  summary: string;
-  mainRisks: string[];
-  mainStrengths: string[];
+export type FloodRiskLevel = "none" | "low" | "medium" | "high" | "very_high" | "unknown";
+
+export interface FloodRiskResult {
+  riskLevel: FloodRiskLevel;
+  scenario10Percent: boolean;
+  scenario1Percent: boolean;
+  scenario02Percent: boolean;
+  specialFloodHazardArea: boolean;
+  waterDepth: number | null;
+  flowVelocity: number | null;
+  riskMapIntersection: boolean;
+  score: number;
+  geometryUsed?: "point" | "parcel_geometry" | "address_geocoding";
+  available: boolean;
+}
+
 }
 
 export interface InvestmentOfferText {
