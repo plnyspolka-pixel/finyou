@@ -804,6 +804,30 @@ export type Database = {
         }
         Relationships: []
       }
+      gus_bdl_cache: {
+        Row: {
+          cache_key: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       institutional_investor_settings: {
         Row: {
           created_at: string
@@ -1574,6 +1598,30 @@ export type Database = {
           },
         ]
       }
+      nbp_real_estate_cache: {
+        Row: {
+          cache_key: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       offer_distributions: {
         Row: {
           additional_info_request: string | null
@@ -1732,6 +1780,150 @@ export type Database = {
           },
         ]
       }
+      property_analyses: {
+        Row: {
+          application_id: string
+          collateral_category: string | null
+          collateral_score: number | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          estimated_value_pln: number | null
+          id: string
+          ltv_percent: number | null
+          main_source: string | null
+          property_id: string | null
+          result_json: Json | null
+          sources_used: Json | null
+          status: string
+          updated_at: string
+          warnings: Json | null
+        }
+        Insert: {
+          application_id: string
+          collateral_category?: string | null
+          collateral_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          estimated_value_pln?: number | null
+          id?: string
+          ltv_percent?: number | null
+          main_source?: string | null
+          property_id?: string | null
+          result_json?: Json | null
+          sources_used?: Json | null
+          status?: string
+          updated_at?: string
+          warnings?: Json | null
+        }
+        Update: {
+          application_id?: string
+          collateral_category?: string | null
+          collateral_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          estimated_value_pln?: number | null
+          id?: string
+          ltv_percent?: number | null
+          main_source?: string | null
+          property_id?: string | null
+          result_json?: Json | null
+          sources_used?: Json | null
+          status?: string
+          updated_at?: string
+          warnings?: Json | null
+        }
+        Relationships: []
+      }
+      property_analysis_logs: {
+        Row: {
+          analysis_id: string | null
+          application_id: string | null
+          collateral_score: number | null
+          created_at: string
+          document_extraction_status: string | null
+          error_message: string | null
+          google_maps_status: string | null
+          gus_bdl_status: string | null
+          id: string
+          nbp_status: string | null
+          property_id: string | null
+          rcn_status: string | null
+          sources_used: Json | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          application_id?: string | null
+          collateral_score?: number | null
+          created_at?: string
+          document_extraction_status?: string | null
+          error_message?: string | null
+          google_maps_status?: string | null
+          gus_bdl_status?: string | null
+          id?: string
+          nbp_status?: string | null
+          property_id?: string | null
+          rcn_status?: string | null
+          sources_used?: Json | null
+        }
+        Update: {
+          analysis_id?: string | null
+          application_id?: string | null
+          collateral_score?: number | null
+          created_at?: string
+          document_extraction_status?: string | null
+          error_message?: string | null
+          google_maps_status?: string | null
+          gus_bdl_status?: string | null
+          id?: string
+          nbp_status?: string | null
+          property_id?: string | null
+          rcn_status?: string | null
+          sources_used?: Json | null
+        }
+        Relationships: []
+      }
+      property_document_extractions: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          doc_kind: string | null
+          document_id: string
+          extracted_json: Json | null
+          file_hash: string | null
+          id: string
+          model: string | null
+          raw_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          doc_kind?: string | null
+          document_id: string
+          extracted_json?: Json | null
+          file_hash?: string | null
+          id?: string
+          model?: string | null
+          raw_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          doc_kind?: string | null
+          document_id?: string
+          extracted_json?: Json | null
+          file_hash?: string | null
+          id?: string
+          model?: string | null
+          raw_text?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       property_location_analysis_cache: {
         Row: {
           analysis_json: Json
@@ -1771,6 +1963,30 @@ export type Database = {
           postal_code?: string | null
           property_address?: string | null
           property_type?: string | null
+        }
+        Relationships: []
+      }
+      rcn_cache: {
+        Row: {
+          cache_key: string
+          expires_at: string
+          fetched_at: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          payload?: Json
         }
         Relationships: []
       }
