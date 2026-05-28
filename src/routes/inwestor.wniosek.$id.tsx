@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { monthlyPayment, formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 import { useServerFn } from "@tanstack/react-start";
