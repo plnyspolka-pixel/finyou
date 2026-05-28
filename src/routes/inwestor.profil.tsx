@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, RefreshCw, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
+import { krsCompanyLookup, type KrsCompany } from "@/lib/krs.functions";
+
 
 export const Route = createFileRoute("/inwestor/profil")({
   component: InwestorProfil,
@@ -21,8 +24,12 @@ type EntityType = "osoba_fizyczna" | "firma";
 function InwestorProfil() {
   const { user } = useAuth();
   const lookupGus = useServerFn(gusCompanyLookup);
+  const lookupKrs = useServerFn(krsCompanyLookup);
   const [inv, setInv] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
+  const [fetchingKrs, setFetchingKrs] = useState(false);
+  const [krsData, setKrsData] = useState<KrsCompany | null>(null);
+
   const [f, setF] = useState({
     entity_type: "osoba_fizyczna" as EntityType,
     // osoba fizyczna
@@ -96,6 +103,47 @@ function InwestorProfil() {
       toast.error(e?.message ?? "Nie udało się połączyć z usługą GUS REGON.", { id: t });
     } finally { setFetching(false); }
   };
+
+  const autoFillKrs = async (forceRefresh = false) => {
+    const raw = (f.krs ?? "").trim();
+    if (!raw) { toast.error("Wpisz numer KRS"); return; }
+    setFetchingKrs(true);
+    const t = toast.loading(forceRefresh ? "Odświeżam dane z KRS…" : "Pobieram dane z KRS…");
+    try {
+      const res: any = await lookupKrs({ data: { krs: raw, forceRefresh } });
+      if (!res?.success) {
+        toast.error(res?.message ?? "Nie udało się pobrać danych z KRS.", { id: t });
+        return;
+      }
+      const c: KrsCompany = res.company;
+      setKrsData(c);
+      const street = [c.address.street, c.address.buildingNumber].filter(Boolean).join(" ")
+        + (c.address.apartmentNumber ? `/${c.address.apartmentNumber}` : "");
+      // sposób reprezentacji — krótki opis do pola "representative_role"
+      const repSummary = c.representation.method
+        || (c.managementBoard[0] ? `Reprezentacja przez ${c.managementBoard[0].role ?? "członka zarządu"}` : "");
+      const firstBoardMember = c.managementBoard[0];
+      setF((x) => ({
+        ...x,
+        company_name: c.name || x.company_name,
+        krs: c.krs || x.krs,
+        nip: c.nip || x.nip,
+        regon: c.regon || x.regon,
+        legal_form: c.legalForm || x.legal_form,
+        street: street || x.street,
+        postal_code: c.address.postalCode || x.postal_code,
+        city: c.address.city || x.city,
+        country: c.address.country || x.country,
+        representative_first_name: firstBoardMember?.firstName || x.representative_first_name,
+        representative_last_name: firstBoardMember?.lastName || x.representative_last_name,
+        representative_role: repSummary || x.representative_role,
+      }));
+      toast.success(res.cached && !forceRefresh ? "Dane spółki z cache KRS." : "Dane spółki zostały pobrane z KRS.", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się połączyć z API KRS.", { id: t });
+    } finally { setFetchingKrs(false); }
+  };
+
 
 
   const save = async () => {
@@ -177,13 +225,31 @@ function InwestorProfil() {
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} placeholder="10 cyfr" /></div>
-            <div><Label>KRS</Label><Input maxLength={20} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value })} placeholder="np. 0000123456" /></div>
+            <div>
+              <Label>KRS</Label>
+              <div className="flex gap-2">
+                <Input maxLength={20} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value })} placeholder="np. 0000123456" />
+                <Button type="button" size="sm" variant="outline" onClick={() => autoFillKrs(false)} disabled={fetchingKrs} className="shrink-0">
+                  {fetchingKrs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                </Button>
+                {krsData && (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => autoFillKrs(true)} disabled={fetchingKrs} className="shrink-0" title="Odśwież dane z KRS (pomiń cache)">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">„Pobierz dane z KRS" pobiera pełny odpis ze źródła Ministerstwa Sprawiedliwości.</p>
+            </div>
+
             <div className="md:col-span-2"><Label>Nazwa firmy</Label><Input maxLength={200} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
             <div><Label>REGON</Label><Input maxLength={20} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value })} /></div>
             <div><Label>Forma prawna</Label><Input maxLength={100} value={f.legal_form} onChange={(e) => setF({ ...f, legal_form: e.target.value })} placeholder="np. Sp. z o.o." /></div>
           </CardContent>
         </Card>
       )}
+
+      {isFirma && krsData && <KrsRegisterCard data={krsData} />}
+
 
       {isFirma ? (
         <Card>
@@ -234,3 +300,74 @@ function InwestorProfil() {
     </div>
   );
 }
+
+function KrsRegisterCard({ data }: { data: KrsCompany }) {
+  const alerts: Array<{ title: string; body?: string; variant?: "default" | "destructive" }> = [];
+  if (data.flags.liquidation) alerts.push({ title: "Uwaga: podmiot znajduje się w likwidacji.", variant: "destructive" });
+  if (data.flags.bankruptcy) alerts.push({ title: "Uwaga: wobec podmiotu ujawniono informację o upadłości.", variant: "destructive" });
+  if (data.flags.restructuring) alerts.push({ title: "Uwaga: wobec podmiotu ujawniono informację o restrukturyzacji.", variant: "destructive" });
+  if (data.flags.suspended) alerts.push({ title: "Uwaga: działalność podmiotu jest zawieszona." });
+  if (data.flags.deleted) alerts.push({ title: "Uwaga: podmiot został wykreślony z KRS.", variant: "destructive" });
+  if (data.flags.section4HasEntries) alerts.push({ title: "Uwaga: w KRS występują wpisy mogące wskazywać na zaległości lub obciążenia (dział 4)." });
+  if (data.flags.representationMissing) alerts.push({ title: "Nie udało się jednoznacznie ustalić sposobu reprezentacji. Zweryfikuj ręcznie odpis KRS." });
+
+  const personLine = (p: { firstName: string; lastName: string; role?: string }) =>
+    [p.firstName, p.lastName].filter(Boolean).join(" ") + (p.role ? ` — ${p.role}` : "");
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Dane rejestrowe KRS</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        {alerts.map((a, i) => (
+          <Alert key={i} variant={a.variant ?? "default"}>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{a.title}</AlertTitle>
+            {a.body && <AlertDescription>{a.body}</AlertDescription>}
+          </Alert>
+        ))}
+
+        <div className="grid gap-2 md:grid-cols-2 text-sm">
+          <div><span className="text-muted-foreground">Status:</span> <strong>{data.status || "—"}</strong></div>
+          <div><span className="text-muted-foreground">Sąd rejestrowy:</span> {data.court || "—"}</div>
+          <div><span className="text-muted-foreground">Data rejestracji:</span> {data.registrationDate || "—"}</div>
+          <div><span className="text-muted-foreground">Kapitał zakładowy:</span> {data.shareCapital || "—"}</div>
+          <div className="md:col-span-2"><span className="text-muted-foreground">Sposób reprezentacji:</span> {data.representation.method || "—"}</div>
+          <div className="md:col-span-2"><span className="text-muted-foreground">PKD główne:</span> {data.pkd.main || "—"}</div>
+        </div>
+
+        {data.managementBoard.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Zarząd</div>
+            <ul className="text-sm list-disc pl-5">{data.managementBoard.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul>
+          </div>
+        )}
+
+        {data.proxies.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Prokurenci</div>
+            <ul className="text-sm list-disc pl-5">{data.proxies.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul>
+          </div>
+        )}
+
+        {data.partnersOrShareholders.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Wspólnicy / udziałowcy</div>
+            <ul className="text-sm list-disc pl-5">
+              {data.partnersOrShareholders.map((w, i) => (
+                <li key={i}>{w.name}{w.share ? ` — ${w.share}` : ""}{w.sharesCount ? ` (${w.sharesCount} udziałów)` : ""}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {data.pkd.additional.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Pozostałe PKD</div>
+            <ul className="text-sm list-disc pl-5">{data.pkd.additional.map((p, i) => <li key={i}>{p}</li>)}</ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

@@ -651,6 +651,39 @@ export type Database = {
         }
         Relationships: []
       }
+      external_api_logs: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          id: string
+          provider: string
+          query_type: string
+          query_value: string
+          response_time_ms: number | null
+          success: boolean
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          provider: string
+          query_type: string
+          query_value: string
+          response_time_ms?: number | null
+          success: boolean
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          provider?: string
+          query_type?: string
+          query_value?: string
+          response_time_ms?: number | null
+          success?: boolean
+        }
+        Relationships: []
+      }
       fakturowo_documents: {
         Row: {
           buyer_building: string | null
@@ -1095,6 +1128,39 @@ export type Database = {
           user_id?: string | null
           web2learn_status?: string | null
           web2learn_user_id?: string | null
+        }
+        Relationships: []
+      }
+      krs_cache: {
+        Row: {
+          expires_at: string
+          fetched_at: string
+          id: string
+          krs: string
+          mapped_json: Json
+          normalized_krs: string
+          response_json: Json
+          source: string
+        }
+        Insert: {
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          krs: string
+          mapped_json: Json
+          normalized_krs: string
+          response_json: Json
+          source?: string
+        }
+        Update: {
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          krs?: string
+          mapped_json?: Json
+          normalized_krs?: string
+          response_json?: Json
+          source?: string
         }
         Relationships: []
       }
