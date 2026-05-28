@@ -20,6 +20,7 @@ const groups: Group[] = [
       { to: "/admin/wnioski", label: "Wnioski", icon: FileText },
       { to: "/admin/klienci", label: "Klienci", icon: Users },
       { to: "/admin/dokumenty", label: "Dokumenty", icon: FolderOpen },
+      { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
       { to: "/admin/follow-up", label: "Follow-up", icon: PhoneCall },
