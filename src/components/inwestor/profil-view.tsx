@@ -99,12 +99,13 @@ export function InwestorProfil() {
         country: c.address.country || x.country,
       }));
       setGusEntityType(c.entityType || "");
-      toast.success("Dane firmy zostały pobrane z GUS.", { id: t });
-      // Jeśli to spółka i mamy KRS — pobierz pełny odpis z KRS, żeby uzupełnić zarząd/reprezentację.
+      // Jeśli mamy numer KRS — zawsze próbujemy pobrać pełny odpis, żeby zaciągnąć zarząd i sposób reprezentacji.
       const krsNumber = (c.krs || "").replace(/\D/g, "");
-      const isLegalEntity = c.entityType === "P" || c.entityType === "LP";
-      if (isLegalEntity && krsNumber) {
+      if (krsNumber) {
+        toast.success("Dane firmy z GUS. Pobieram odpis KRS…", { id: t });
         void autoFillKrs(false, krsNumber);
+      } else {
+        toast.success("Dane firmy zostały pobrane z GUS.", { id: t });
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się połączyć z usługą GUS REGON.", { id: t });
