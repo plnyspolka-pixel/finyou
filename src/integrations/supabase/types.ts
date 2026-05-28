@@ -984,14 +984,22 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
+          entity_type: string
           first_name: string | null
           id: string
           investor_type: Database["public"]["Enums"]["investor_type"]
           is_active: boolean
+          krs: string | null
           last_name: string | null
+          legal_form: string | null
           nip: string | null
+          pesel: string | null
           phone: string | null
           postal_code: string | null
+          regon: string | null
+          representative_first_name: string | null
+          representative_last_name: string | null
+          representative_role: string | null
           street: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -1016,14 +1024,22 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          entity_type?: string
           first_name?: string | null
           id?: string
           investor_type: Database["public"]["Enums"]["investor_type"]
           is_active?: boolean
+          krs?: string | null
           last_name?: string | null
+          legal_form?: string | null
           nip?: string | null
+          pesel?: string | null
           phone?: string | null
           postal_code?: string | null
+          regon?: string | null
+          representative_first_name?: string | null
+          representative_last_name?: string | null
+          representative_role?: string | null
           street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -1048,14 +1064,22 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          entity_type?: string
           first_name?: string | null
           id?: string
           investor_type?: Database["public"]["Enums"]["investor_type"]
           is_active?: boolean
+          krs?: string | null
           last_name?: string | null
+          legal_form?: string | null
           nip?: string | null
+          pesel?: string | null
           phone?: string | null
           postal_code?: string | null
+          regon?: string | null
+          representative_first_name?: string | null
+          representative_last_name?: string | null
+          representative_role?: string | null
           street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
