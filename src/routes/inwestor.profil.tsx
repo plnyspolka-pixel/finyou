@@ -103,11 +103,19 @@ function InwestorProfil() {
         city: c.address.city || x.city,
         country: c.address.country || x.country,
       }));
+      setGusEntityType(c.entityType || "");
       toast.success("Dane firmy zostały pobrane z GUS.", { id: t });
+      // Jeśli to spółka i mamy KRS — pobierz pełny odpis z KRS, żeby uzupełnić zarząd/reprezentację.
+      const krsNumber = (c.krs || "").replace(/\D/g, "");
+      const isLegalEntity = c.entityType === "P" || c.entityType === "LP";
+      if (isLegalEntity && krsNumber) {
+        void autoFillKrs(false, krsNumber);
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się połączyć z usługą GUS REGON.", { id: t });
     } finally { setFetching(false); }
   };
+
 
   const autoFillKrs = async (forceRefresh = false) => {
     const raw = (f.krs ?? "").trim();
