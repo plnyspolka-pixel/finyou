@@ -1164,6 +1164,219 @@ export type Database = {
         }
         Relationships: []
       }
+      kw_analysis: {
+        Row: {
+          analysis_warning: string | null
+          application_id: string
+          created_at: string
+          id: string
+          investor_summary: string | null
+          kw_number: string
+          legal_risk_score: number | null
+          owners_json: Json | null
+          property_json: Json | null
+          risk_flags: Json | null
+          section_i_o_json: Json | null
+          section_i_sp_json: Json | null
+          section_ii_json: Json | null
+          section_iii_json: Json | null
+          section_iv_json: Json | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_warning?: string | null
+          application_id: string
+          created_at?: string
+          id?: string
+          investor_summary?: string | null
+          kw_number: string
+          legal_risk_score?: number | null
+          owners_json?: Json | null
+          property_json?: Json | null
+          risk_flags?: Json | null
+          section_i_o_json?: Json | null
+          section_i_sp_json?: Json | null
+          section_ii_json?: Json | null
+          section_iii_json?: Json | null
+          section_iv_json?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_warning?: string | null
+          application_id?: string
+          created_at?: string
+          id?: string
+          investor_summary?: string | null
+          kw_number?: string
+          legal_risk_score?: number | null
+          owners_json?: Json | null
+          property_json?: Json | null
+          risk_flags?: Json | null
+          section_i_o_json?: Json | null
+          section_i_sp_json?: Json | null
+          section_ii_json?: Json | null
+          section_iii_json?: Json | null
+          section_iv_json?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kw_fetch_attempts: {
+        Row: {
+          application_id: string
+          attempt_number: number
+          error_message: string | null
+          failure_reason: string | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          kw_number: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          application_id: string
+          attempt_number: number
+          error_message?: string | null
+          failure_reason?: string | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          kw_number: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          application_id?: string
+          attempt_number?: number
+          error_message?: string | null
+          failure_reason?: string | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          kw_number?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      kw_fetch_jobs: {
+        Row: {
+          application_id: string
+          attempts: number
+          created_at: string
+          error_message: string | null
+          failure_reason: string | null
+          fetched_at: string | null
+          id: string
+          kw_number: string
+          last_attempt_at: string | null
+          max_attempts: number
+          missing_sections: Json | null
+          next_attempt_at: string | null
+          parsed_json: Json | null
+          partial_success: boolean
+          raw_html: string | null
+          raw_text: string | null
+          status: string
+          summary_raw_html: string | null
+          summary_raw_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          failure_reason?: string | null
+          fetched_at?: string | null
+          id?: string
+          kw_number: string
+          last_attempt_at?: string | null
+          max_attempts?: number
+          missing_sections?: Json | null
+          next_attempt_at?: string | null
+          parsed_json?: Json | null
+          partial_success?: boolean
+          raw_html?: string | null
+          raw_text?: string | null
+          status?: string
+          summary_raw_html?: string | null
+          summary_raw_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          failure_reason?: string | null
+          fetched_at?: string | null
+          id?: string
+          kw_number?: string
+          last_attempt_at?: string | null
+          max_attempts?: number
+          missing_sections?: Json | null
+          next_attempt_at?: string | null
+          parsed_json?: Json | null
+          partial_success?: boolean
+          raw_html?: string | null
+          raw_text?: string | null
+          status?: string
+          summary_raw_html?: string | null
+          summary_raw_text?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kw_section_sources: {
+        Row: {
+          application_id: string
+          error_message: string | null
+          fetched_at: string
+          id: string
+          job_id: string
+          kw_number: string
+          raw_html: string | null
+          raw_text: string | null
+          screenshot_path: string | null
+          section_key: string
+          section_label: string
+          success: boolean
+          url: string | null
+        }
+        Insert: {
+          application_id: string
+          error_message?: string | null
+          fetched_at?: string
+          id?: string
+          job_id: string
+          kw_number: string
+          raw_html?: string | null
+          raw_text?: string | null
+          screenshot_path?: string | null
+          section_key: string
+          section_label: string
+          success?: boolean
+          url?: string | null
+        }
+        Update: {
+          application_id?: string
+          error_message?: string | null
+          fetched_at?: string
+          id?: string
+          job_id?: string
+          kw_number?: string
+          raw_html?: string | null
+          raw_text?: string | null
+          screenshot_path?: string | null
+          section_key?: string
+          section_label?: string
+          success?: boolean
+          url?: string | null
+        }
+        Relationships: []
+      }
       loan_applications: {
         Row: {
           admin_decision: string | null
