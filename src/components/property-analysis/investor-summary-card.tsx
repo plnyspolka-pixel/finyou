@@ -57,7 +57,6 @@ export function InvestorSummaryCard({ applicationId }: { applicationId: string }
               {result.collateralScore.mainRisks.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
             </ul>
           </div>
-          </div>
         )}
 
         {result.floodRisk && result.floodRisk.riskLevel !== "none" && result.floodRisk.riskLevel !== "unknown" && (
@@ -75,6 +74,7 @@ export function InvestorSummaryCard({ applicationId }: { applicationId: string }
               <div className="text-xs text-muted-foreground mt-1">{result.investmentOfferText.floodRiskSummary}</div>
             )}
           </div>
+        )}
 
         <Separator />
         <div className="text-xs text-muted-foreground">
