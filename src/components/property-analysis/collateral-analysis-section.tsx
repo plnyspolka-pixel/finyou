@@ -149,6 +149,83 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
             </Card>
           </div>
 
+          {result.floodRisk && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Ryzyko powodziowe (ISOK / Wody Polskie)</span>
+                  <Badge variant={
+                    result.floodRisk.riskLevel === "none" ? "default" :
+                    result.floodRisk.riskLevel === "low" ? "secondary" :
+                    result.floodRisk.riskLevel === "medium" ? "secondary" :
+                    "destructive"
+                  }>
+                    {({
+                      none: "brak",
+                      low: "niskie",
+                      medium: "średnie",
+                      high: "wysokie",
+                      very_high: "bardzo wysokie",
+                      unknown: "nieznane",
+                    } as Record<string, string>)[result.floodRisk.riskLevel]}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Źródło: mapy zagrożenia powodziowego (MZP) i ryzyka powodziowego (MRP) — Wody Polskie / ISOK.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm grid gap-2 md:grid-cols-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    {result.floodRisk.scenario10Percent ? <CheckCircle2 className="h-3.5 w-3.5 text-destructive" /> : <XCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                    Scenariusz 10% (woda 100-letnia, częsty)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {result.floodRisk.scenario1Percent ? <CheckCircle2 className="h-3.5 w-3.5 text-amber-600" /> : <XCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                    Scenariusz 1% (raz na 100 lat)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {result.floodRisk.scenario02Percent ? <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" /> : <XCircle className="h-3.5 w-3.5 text-muted-foreground" />}
+                    Scenariusz 0,2% (raz na 500 lat)
+                  </div>
+                  {result.floodRisk.specialFloodHazardArea && (
+                    <div className="flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Obszar szczególnego zagrożenia powodzią
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {result.floodRisk.waterDepth != null && (
+                    <div><span className="text-muted-foreground">Maks. głębokość wody:</span> {result.floodRisk.waterDepth.toFixed(2)} m</div>
+                  )}
+                  {result.floodRisk.flowVelocity != null && (
+                    <div><span className="text-muted-foreground">Prędkość przepływu:</span> {result.floodRisk.flowVelocity.toFixed(2)} m/s</div>
+                  )}
+                  <div><span className="text-muted-foreground">Wpływ na scoring (D):</span> {result.floodRisk.score} pkt</div>
+                  {result.floodRisk.geometryUsed && (
+                    <div className="text-xs text-muted-foreground">Geometria: {result.floodRisk.geometryUsed}</div>
+                  )}
+                  {!result.floodRisk.available && (
+                    <div className="text-xs text-muted-foreground">Usługa chwilowo niedostępna — wynik wstępny.</div>
+                  )}
+                </div>
+                {result.floodAlerts && result.floodAlerts.length > 0 && (
+                  <div className="md:col-span-2">
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {result.floodAlerts.map((a, i) => <li key={i}>{a}</li>)}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+
           {result.legalRisk.warnings.length > 0 && (
             <Card>
               <CardHeader><CardTitle>Ryzyka prawne</CardTitle></CardHeader>
