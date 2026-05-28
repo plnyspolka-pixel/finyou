@@ -20,7 +20,7 @@ type EntityType = "osoba_fizyczna" | "firma";
 
 function InwestorProfil() {
   const { user } = useAuth();
-  const fetchByNip = useServerFn(fetchCompanyByNip);
+  const lookupGus = useServerFn(gusCompanyLookup);
   const [inv, setInv] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
   const [f, setF] = useState({
