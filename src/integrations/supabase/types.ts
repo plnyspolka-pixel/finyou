@@ -1495,6 +1495,48 @@ export type Database = {
           },
         ]
       }
+      property_location_analysis_cache: {
+        Row: {
+          analysis_json: Json
+          city: string | null
+          expires_at: string
+          fetched_at: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          normalized_address: string
+          postal_code: string | null
+          property_address: string | null
+          property_type: string | null
+        }
+        Insert: {
+          analysis_json: Json
+          city?: string | null
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          normalized_address: string
+          postal_code?: string | null
+          property_address?: string | null
+          property_type?: string | null
+        }
+        Update: {
+          analysis_json?: Json
+          city?: string | null
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          normalized_address?: string
+          postal_code?: string | null
+          property_address?: string | null
+          property_type?: string | null
+        }
+        Relationships: []
+      }
       representation_web_enrichment_cache: {
         Row: {
           cache_key: string
