@@ -117,9 +117,10 @@ function InwestorProfil() {
   };
 
 
-  const autoFillKrs = async (forceRefresh = false) => {
-    const raw = (f.krs ?? "").trim();
+  const autoFillKrs = async (forceRefresh = false, krsOverride?: string) => {
+    const raw = (krsOverride ?? f.krs ?? "").trim();
     if (!raw) { toast.error("Wpisz numer KRS"); return; }
+
     setFetchingKrs(true);
     const t = toast.loading(forceRefresh ? "Odświeżam dane z KRS…" : "Pobieram dane z KRS…");
     try {
