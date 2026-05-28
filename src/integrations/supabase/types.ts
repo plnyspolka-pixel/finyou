@@ -804,6 +804,66 @@ export type Database = {
         }
         Relationships: []
       }
+      flood_risk_cache: {
+        Row: {
+          expires_at: string
+          fetched_at: string
+          flow_velocity: number | null
+          geometry_hash: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          property_id: string | null
+          query_bbox: string | null
+          response_json: Json
+          risk_level: string | null
+          scenario_02_percent: boolean | null
+          scenario_1_percent: boolean | null
+          scenario_10_percent: boolean | null
+          score: number | null
+          special_flood_hazard_area: boolean | null
+          water_depth: number | null
+        }
+        Insert: {
+          expires_at?: string
+          fetched_at?: string
+          flow_velocity?: number | null
+          geometry_hash?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          property_id?: string | null
+          query_bbox?: string | null
+          response_json?: Json
+          risk_level?: string | null
+          scenario_02_percent?: boolean | null
+          scenario_1_percent?: boolean | null
+          scenario_10_percent?: boolean | null
+          score?: number | null
+          special_flood_hazard_area?: boolean | null
+          water_depth?: number | null
+        }
+        Update: {
+          expires_at?: string
+          fetched_at?: string
+          flow_velocity?: number | null
+          geometry_hash?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          property_id?: string | null
+          query_bbox?: string | null
+          response_json?: Json
+          risk_level?: string | null
+          scenario_02_percent?: boolean | null
+          scenario_1_percent?: boolean | null
+          scenario_10_percent?: boolean | null
+          score?: number | null
+          special_flood_hazard_area?: boolean | null
+          water_depth?: number | null
+        }
+        Relationships: []
+      }
       gus_bdl_cache: {
         Row: {
           cache_key: string

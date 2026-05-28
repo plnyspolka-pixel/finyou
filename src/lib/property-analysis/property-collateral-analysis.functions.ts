@@ -12,8 +12,10 @@ import { gusBenchmark, classifySoil } from "./gus-bdl.server";
 import { nbpTrend } from "./nbp-real-estate.server";
 import { geocode, locationScore } from "./location-score.server";
 import { extractDocuments } from "./document-extraction.server";
+import { analyzeFloodRisk } from "./flood-risk.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
+
 
 const Input = z.object({ applicationId: z.string().uuid() });
 
@@ -183,7 +185,30 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       transactionsCount: rcn.transactionsCount,
     };
 
-    // 10) Scoring
+    // 10) Ryzyko powodziowe ISOK/Wody Polskie
+    const flood = await analyzeFloodRisk({
+      latitude: input.latitude, longitude: input.longitude,
+      address: input.address, city: input.city, voivodeship: input.voivodeship,
+      propertyId: property?.id ?? null,
+    });
+    sourcesUsed.push({
+      source: "ISOK / Wody Polskie MZP/MRP",
+      used: flood.success,
+      purpose: "weryfikacja zagrożenia powodziowego",
+      dataLevel: flood.property.geometryUsed === "parcel_geometry" ? "geometria działki" : "punkt",
+      period: "",
+      status: flood.success ? "success" : "error",
+    });
+    if (!flood.success) warnings.push(flood.message ?? "Ryzyko powodziowe wymaga ręcznej weryfikacji.");
+    if (flood.success && flood.floodRisk.riskLevel !== "none" && flood.floodRisk.riskLevel !== "unknown") {
+      warnings.push(...flood.alerts);
+    }
+    const floodRiskForScoring = {
+      riskLevel: flood.floodRisk.riskLevel,
+      available: flood.success,
+    };
+
+    // 11) Scoring
     const docsPresent = {
       kw: !!input.kwNumber || docExtraction.extractions.some(e => e.docKind === "kw"),
       mpzpOrWz: docExtraction.extractions.some(e => e.docKind === "mpzp"),
@@ -194,20 +219,25 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     const collateralScore = calculateCollateralScore({
       input, valuation, ltv, location: loc, legal, market,
       rcn: rcn.stats, gus, nbp, documents: docExtraction.extractions, documentsPresent: docsPresent,
+      floodRisk: floodRiskForScoring,
     });
 
-    // 11) Teksty oferty
+    // 12) Teksty oferty
     const weakData = !rcn.stats && !gus;
     if (weakData) warnings.push("Dostępność danych porównawczych jest ograniczona — wymagana ręczna weryfikacja.");
     const offerText = generateOfferText({
       input, valuation, location: loc, legal, collateralScore, sourcesUsed,
       rcnCount: rcn.transactionsCount, rcnRadiusKm: rcn.radiusKm, weakData,
+      floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
+      floodAvailable: flood.success,
     });
 
     const result: PropertyAnalysisResult = buildAnalysisResult({
       input, valuation, ltv, location: loc, legal, market,
       collateralScore, sourcesUsed, warnings, offerText,
-      raw: { rcn: rcn.stats, gus, nbp, loc },
+      raw: { rcn: rcn.stats, gus, nbp, loc, flood: flood.raw },
+      floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
+      floodAlerts: flood.alerts,
     });
 
     // 12) Zapis

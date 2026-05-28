@@ -101,6 +101,22 @@ export interface CollateralScoreComponents {
   dataQuality: number;
 }
 
+export type FloodRiskLevel = "none" | "low" | "medium" | "high" | "very_high" | "unknown";
+
+export interface FloodRiskResult {
+  riskLevel: FloodRiskLevel;
+  scenario10Percent: boolean;
+  scenario1Percent: boolean;
+  scenario02Percent: boolean;
+  specialFloodHazardArea: boolean;
+  waterDepth: number | null;
+  flowVelocity: number | null;
+  riskMapIntersection: boolean;
+  score: number;
+  geometryUsed?: "point" | "parcel_geometry" | "address_geocoding";
+  available: boolean;
+}
+
 export interface CollateralScore {
   total: number;
   category: CollateralCategory;
@@ -117,7 +133,9 @@ export interface InvestmentOfferText {
   legalRiskSummary: string;
   collateralScoreSummary: string;
   investorShortSummary: string;
+  floodRiskSummary?: string;
 }
+
 
 export interface PropertyAnalysisResult {
   success: boolean;
@@ -142,6 +160,8 @@ export interface PropertyAnalysisResult {
   marketLiquidity: MarketLiquidityResult;
   collateralScore: CollateralScore;
   investmentOfferText: InvestmentOfferText;
+  floodRisk?: FloodRiskResult;
+  floodAlerts?: string[];
   warnings: string[];
   raw: Record<string, any>;
 }

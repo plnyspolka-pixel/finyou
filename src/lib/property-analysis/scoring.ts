@@ -54,8 +54,8 @@ export interface ScoringInput {
   nbp: NbpTrend | null;
   documents: DocumentExtraction[];
   documentsPresent: { kw: boolean; mpzpOrWz: boolean; landRegistry: boolean; appraisal: boolean; photos: boolean };
+  floodRisk?: { riskLevel: "none" | "low" | "medium" | "high" | "very_high" | "unknown"; available: boolean };
 }
-
 export function calculateCollateralScore(s: ScoringInput): CollateralScore {
   const components: CollateralScoreComponents = {
     legalAndDocuments: legalAndDocumentsScore(s),
@@ -64,11 +64,16 @@ export function calculateCollateralScore(s: ScoringInput): CollateralScore {
     technicalAndUseRisks: technicalAndUseRisksScore(s),
     dataQuality: dataQualityScore(s),
   };
-  const total = Math.round(
+  let total = Math.round(
     components.legalAndDocuments + components.valueAndLtv +
     components.marketLiquidity + components.technicalAndUseRisks + components.dataQuality,
   );
-  const category = classifyCategory(total);
+  // very_high flood => oznaczenie nieakceptowalne niezależnie od reszty
+  let category = classifyCategory(total);
+  if (s.floodRisk?.available && s.floodRisk.riskLevel === "very_high") {
+    category = "nieakceptowalne";
+    total = Math.min(total, 39);
+  }
   const { strengths, risks } = enumerateStrengthsRisks(s, components);
   return {
     total,
@@ -79,6 +84,8 @@ export function calculateCollateralScore(s: ScoringInput): CollateralScore {
     mainRisks: risks.slice(0, 5),
   };
 }
+
+
 
 // A. Stan prawny i kompletność dokumentów — 25 pkt
 function legalAndDocumentsScore(s: ScoringInput): number {
@@ -133,16 +140,24 @@ function marketLiquidityScore(s: ScoringInput): number {
   return Math.min(20, pts);
 }
 
-// D. Ryzyka techniczne i użytkowe — 15 pkt
+// D. Ryzyka techniczne, użytkowe i środowiskowe — 15 pkt
+// stan techniczny: 3, dostęp do drogi: 2, media: 2, brak istotnych ograniczeń: 3, brak ryzyk powodziowych: 5
 function technicalAndUseRisksScore(s: ScoringInput): number {
   let pts = 0;
-  pts += s.documentsPresent.photos ? 4 : 2;
-  pts += 3; // dostęp do drogi – brak twardych danych
-  pts += 3; // media – j.w.
-  pts += s.documentsPresent.mpzpOrWz ? 3 : 2;
-  pts += 2;
+  pts += s.documentsPresent.photos ? 3 : 2;             // stan techniczny
+  pts += 2;                                             // dostęp do drogi
+  pts += 2;                                             // media
+  pts += s.documentsPresent.mpzpOrWz ? 3 : 2;           // ograniczenia planistyczne
+  // ryzyko powodziowe (max 5)
+  const fr = s.floodRisk;
+  if (!fr || !fr.available || fr.riskLevel === "unknown") pts += 3;
+  else if (fr.riskLevel === "none") pts += 5;
+  else if (fr.riskLevel === "low") pts += 3;
+  else if (fr.riskLevel === "medium") pts += 1;
+  else pts += 0;
   return Math.min(15, pts);
 }
+
 
 // E. Jakość danych — 15 pkt
 function dataQualityScore(s: ScoringInput): number {
@@ -171,9 +186,15 @@ function enumerateStrengthsRisks(s: ScoringInput, c: CollateralScoreComponents):
   if (s.location.score >= 70) strengths.push("Dobra lokalizacja i dostępność infrastruktury.");
   if (s.location.score < 40) risks.push("Słaba lokalizacja — możliwa ograniczona płynność.");
   if (s.legal.warnings.length > 0) risks.push(`Ostrzeżenia prawne: ${s.legal.warnings.slice(0, 3).join("; ")}.`);
-  if (s.documentsPresent.kw) strengths.push("Dostępny odpis księgi wieczystej.");
-  if (!s.documentsPresent.kw) risks.push("Brak odpisu KW.");
   if (c.dataQuality >= 11) strengths.push("Dobra jakość i pokrycie danych.");
   if (c.dataQuality <= 6) risks.push("Słaba jakość/pokrycie danych — wynik wymaga ręcznej weryfikacji.");
+  const fr = s.floodRisk;
+  if (fr?.available) {
+    if (fr.riskLevel === "none") strengths.push("Brak stwierdzonego ryzyka powodziowego (ISOK/Wody Polskie).");
+    else if (fr.riskLevel === "low") risks.push("Lokalizacja w obszarze niskiego ryzyka powodziowego (scenariusz 0,2%).");
+    else if (fr.riskLevel === "medium") risks.push("Lokalizacja w obszarze średniego ryzyka powodziowego (scenariusz 1%).");
+    else if (fr.riskLevel === "high") risks.push("Lokalizacja w obszarze wysokiego ryzyka powodziowego (scenariusz 10%).");
+    else if (fr.riskLevel === "very_high") risks.push("Lokalizacja w obszarze bardzo wysokiego ryzyka powodziowego.");
+  }
   return { strengths, risks };
 }
