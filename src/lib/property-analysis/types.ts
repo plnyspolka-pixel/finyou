@@ -160,6 +160,8 @@ export interface PropertyAnalysisResult {
   marketLiquidity: MarketLiquidityResult;
   collateralScore: CollateralScore;
   investmentOfferText: InvestmentOfferText;
+  floodRisk?: FloodRiskResult;
+  floodAlerts?: string[];
   warnings: string[];
   raw: Record<string, any>;
 }
