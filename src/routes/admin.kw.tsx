@@ -79,7 +79,9 @@ function AdminKwPage() {
     setIsFetching(true);
     try {
       const res = await fetchKw({ data: { kw_number: kwInput.trim().toUpperCase() } });
-      toast.success(`Zakończono: ${STATUS_LABEL[res.status] ?? res.status}`);
+      const label = STATUS_LABEL[res.status] ?? res.status;
+      if (res.ok) toast.success(`Zakończono: ${label}`);
+      else toast.error(res.error ? `${label}: ${res.error}` : label);
       await qc.invalidateQueries({ queryKey: ["kw-jobs"] });
       if (res.jobId) setSelectedJobId(res.jobId);
     } catch (e: any) {
