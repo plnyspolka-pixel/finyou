@@ -140,16 +140,24 @@ function marketLiquidityScore(s: ScoringInput): number {
   return Math.min(20, pts);
 }
 
-// D. Ryzyka techniczne i użytkowe — 15 pkt
+// D. Ryzyka techniczne, użytkowe i środowiskowe — 15 pkt
+// stan techniczny: 3, dostęp do drogi: 2, media: 2, brak istotnych ograniczeń: 3, brak ryzyk powodziowych: 5
 function technicalAndUseRisksScore(s: ScoringInput): number {
   let pts = 0;
-  pts += s.documentsPresent.photos ? 4 : 2;
-  pts += 3; // dostęp do drogi – brak twardych danych
-  pts += 3; // media – j.w.
-  pts += s.documentsPresent.mpzpOrWz ? 3 : 2;
-  pts += 2;
+  pts += s.documentsPresent.photos ? 3 : 2;             // stan techniczny
+  pts += 2;                                             // dostęp do drogi
+  pts += 2;                                             // media
+  pts += s.documentsPresent.mpzpOrWz ? 3 : 2;           // ograniczenia planistyczne
+  // ryzyko powodziowe (max 5)
+  const fr = s.floodRisk;
+  if (!fr || !fr.available || fr.riskLevel === "unknown") pts += 3;
+  else if (fr.riskLevel === "none") pts += 5;
+  else if (fr.riskLevel === "low") pts += 3;
+  else if (fr.riskLevel === "medium") pts += 1;
+  else pts += 0;
   return Math.min(15, pts);
 }
+
 
 // E. Jakość danych — 15 pkt
 function dataQualityScore(s: ScoringInput): number {
