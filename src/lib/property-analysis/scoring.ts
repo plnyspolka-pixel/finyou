@@ -56,8 +56,6 @@ export interface ScoringInput {
   documentsPresent: { kw: boolean; mpzpOrWz: boolean; landRegistry: boolean; appraisal: boolean; photos: boolean };
   floodRisk?: { riskLevel: "none" | "low" | "medium" | "high" | "very_high" | "unknown"; available: boolean };
 }
-
-
 export function calculateCollateralScore(s: ScoringInput): CollateralScore {
   const components: CollateralScoreComponents = {
     legalAndDocuments: legalAndDocumentsScore(s),
@@ -66,11 +64,16 @@ export function calculateCollateralScore(s: ScoringInput): CollateralScore {
     technicalAndUseRisks: technicalAndUseRisksScore(s),
     dataQuality: dataQualityScore(s),
   };
-  const total = Math.round(
+  let total = Math.round(
     components.legalAndDocuments + components.valueAndLtv +
     components.marketLiquidity + components.technicalAndUseRisks + components.dataQuality,
   );
-  const category = classifyCategory(total);
+  // very_high flood => oznaczenie nieakceptowalne niezależnie od reszty
+  let category = classifyCategory(total);
+  if (s.floodRisk?.available && s.floodRisk.riskLevel === "very_high") {
+    category = "nieakceptowalne";
+    total = Math.min(total, 39);
+  }
   const { strengths, risks } = enumerateStrengthsRisks(s, components);
   return {
     total,
@@ -79,6 +82,9 @@ export function calculateCollateralScore(s: ScoringInput): CollateralScore {
     summary: `Łączna ocena zabezpieczenia: ${total}/100 — ${categoryLabel(category)}.`,
     mainStrengths: strengths.slice(0, 5),
     mainRisks: risks.slice(0, 5),
+  };
+}
+
   };
 }
 
