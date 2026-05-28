@@ -20,9 +20,13 @@ export const Route = createFileRoute("/inwestor/profil")({
 });
 
 type EntityType = "osoba_fizyczna" | "firma";
+  const lookupGus = useServerFn(gusCompanyLookup);
+  const lookupKrs = useServerFn(krsCompanyLookup);
+  const [inv, setInv] = useState<any | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const [fetchingKrs, setFetchingKrs] = useState(false);
+  const [krsData, setKrsData] = useState<KrsCompany | null>(null);
 
-function InwestorProfil() {
-  const { user } = useAuth();
   const lookupGus = useServerFn(gusCompanyLookup);
   const [inv, setInv] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
