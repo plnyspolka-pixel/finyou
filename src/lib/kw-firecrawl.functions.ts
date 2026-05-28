@@ -166,6 +166,15 @@ async function callFirecrawl(kw_number: string) {
   return { ok: res.ok, status: res.status, request: body, response: json };
 }
 
+function firecrawlErrorMessage(result: Awaited<ReturnType<typeof callFirecrawl>>) {
+  const response = result.response as AnyObj;
+  const detail = Array.isArray(response?.details)
+    ? response.details.map((d: AnyObj) => d?.message ?? d?.code).filter(Boolean).join("; ")
+    : null;
+  const parts = [response?.code, response?.error, detail].filter(Boolean);
+  return parts.length ? parts.join(": ") : `HTTP ${result.status}`;
+}
+
 /** Start a Firecrawl fetch for the given KW number (admin/kw test mode). */
 export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -311,6 +320,7 @@ export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
     const allOk = parsed.missing_sections.length === 0 && !!summarySnap;
     const anyOk = sectionRows.some((r) => r.success);
     const fcOk = fcResult.ok;
+    const fcError = fcOk ? null : firecrawlErrorMessage(fcResult);
     let status: string;
     if (!fcOk) status = "FIRECRAWL_ERROR";
     else if (allOk) status = "SUCCESS";
@@ -327,7 +337,7 @@ export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
         status,
         firecrawl_request: fcResult.request,
         firecrawl_response: fcResult.response,
-        error_message: fcOk ? null : `HTTP ${fcResult.status}`,
+        error_message: fcError,
         finished_at: new Date().toISOString(),
       })
       .eq("id", attemptId);
@@ -342,7 +352,7 @@ export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
         summary_raw_html: summarySnap?.html ?? null,
         summary_raw_text: summarySnap?.markdown ?? null,
         fetched_at: new Date().toISOString(),
-        error_message: fcOk ? null : `HTTP ${fcResult.status}`,
+        error_message: fcError,
         failure_reason:
           status === "FAILED_NOT_FOUND"
             ? "Brak treści w odpowiedzi"
