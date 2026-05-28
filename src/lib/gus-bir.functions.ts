@@ -90,7 +90,7 @@ function envZaloguj(key: string): string {
 }
 
 function envSzukaj(sid: string, kind: SearchType, value: string): string {
-  const param = kind === "nip" ? "Nips" : kind === "regon" ? (value.length === 14 ? "Regony14zn" : "Regony9zn") : "Krs";
+  const param = kind === "nip" ? "Nip" : kind === "regon" ? (value.length === 14 ? "Regon14zn" : "Regon9zn") : "Krs";
   return `<?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing" xmlns:bir="${BIR_NS}">
   <s:Header>
@@ -100,13 +100,14 @@ function envSzukaj(sid: string, kind: SearchType, value: string): string {
   </s:Header>
   <s:Body>
     <DaneSzukajPodmioty xmlns="${BIR_NS}">
-      <pParametryWyszukiwania xmlns:d="http://CIS/BIR/2014/07">
-        <d:${param}>${value}</d:${param}>
+      <pParametryWyszukiwania xmlns:dat="http://CIS/BIR/PUBL/2014/07/DataContract">
+        <dat:${param}>${value}</dat:${param}>
       </pParametryWyszukiwania>
     </DaneSzukajPodmioty>
   </s:Body>
 </s:Envelope>`;
 }
+
 
 function envPelnyRaport(sid: string, regon: string, raport: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
