@@ -279,7 +279,6 @@ export function InwestorProfil() {
             <div className="md:col-span-2"><Label>Nazwa firmy</Label><Input maxLength={200} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
             <div className="md:col-span-2"><Label>REGON</Label><Input maxLength={20} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value })} /></div>
           </CardContent>
-          </CardContent>
         </Card>
       )}
 
