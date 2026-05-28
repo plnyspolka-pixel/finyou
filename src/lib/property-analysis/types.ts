@@ -143,7 +143,7 @@ export interface PropertyAnalysisResult {
   collateralScore: CollateralScore;
   investmentOfferText: InvestmentOfferText;
   warnings: string[];
-  raw: Record<string, unknown>;
+  raw: Record<string, any>;
 }
 
 export interface RcnStats {

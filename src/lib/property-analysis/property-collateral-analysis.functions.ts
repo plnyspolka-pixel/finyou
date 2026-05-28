@@ -98,8 +98,8 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
 
     // 6) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
-      lat: input.latitude, lng: input.longitude, address: input.address, city: input.city,
-    });
+      pricePerM2Median = gus.pricePerM2Median ?? null;
+      pricePerM2Average = gus.pricePerM2Average ?? null;
     sourcesUsed.push({
       source: "Google Maps Platform", used: input.latitude != null,
       purpose: "lokalizacja i infrastruktura",
