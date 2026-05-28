@@ -175,6 +175,14 @@ function firecrawlErrorMessage(result: Awaited<ReturnType<typeof callFirecrawl>>
   return parts.length ? parts.join(": ") : `HTTP ${result.status}`;
 }
 
+function looksBlockedBySecurity(snaps: Record<string, { html?: string; markdown?: string; url?: string; screenshot?: string | null }>) {
+  const text = Object.values(snaps)
+    .map((snap) => `${snap.markdown ?? ""}\n${snap.html ?? ""}`)
+    .join("\n")
+    .toLowerCase();
+  return /pardon our interruption|please stand by|perimeterx|bot|captcha|zabezpiecze|zablokow/.test(text);
+}
+
 /** Start a Firecrawl fetch for the given KW number (admin/kw test mode). */
 export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -321,8 +329,10 @@ export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
     const anyOk = sectionRows.some((r) => r.success);
     const fcOk = fcResult.ok;
     const fcError = fcOk ? null : firecrawlErrorMessage(fcResult);
+    const blockedBySecurity = fcOk && looksBlockedBySecurity(snaps);
     let status: string;
     if (!fcOk) status = "FIRECRAWL_ERROR";
+    else if (blockedBySecurity) status = "BLOCKED_BY_SECURITY";
     else if (allOk) status = "SUCCESS";
     else if (anyOk) status = "PARTIAL_SUCCESS";
     else status = "FAILED_NOT_FOUND";
@@ -354,7 +364,9 @@ export const startFirecrawlKwFetch = createServerFn({ method: "POST" })
         fetched_at: new Date().toISOString(),
         error_message: fcError,
         failure_reason:
-          status === "FAILED_NOT_FOUND"
+          status === "BLOCKED_BY_SECURITY"
+            ? "Portal EKW wyświetlił zabezpieczenie antybotowe zamiast treści księgi"
+            : status === "FAILED_NOT_FOUND"
             ? "Brak treści w odpowiedzi"
             : status === "PARTIAL_SUCCESS"
               ? "Część działów nie została pobrana"
