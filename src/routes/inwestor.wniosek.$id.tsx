@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { monthlyPayment, formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 import { useServerFn } from "@tanstack/react-start";
@@ -64,6 +64,8 @@ function InwestorWniosek() {
       setAnnualRate(Number(data.annual_investor_rate) || 20);
       setMonths(Number(data.preferred_period_months) || 24);
       setMaxPayment(Number(data.max_monthly_payment) || 0);
+      // increment view counter (fire and forget)
+      void supabase.rpc("increment_loan_view" as any, { _loan_id: id });
     }
     if (user) {
       const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
@@ -167,6 +169,7 @@ function InwestorWniosek() {
         {app.annual_investor_rate != null && (
           <Badge className="text-base px-3 py-1"><Wallet className="mr-1 h-4 w-4" />Zysk roczny {Number(app.annual_investor_rate)}%</Badge>
         )}
+        <Badge variant="secondary"><Eye className="mr-1 h-3 w-3" />{app.view_count ?? 0} odsłon</Badge>
       </div>
 
       {app.situation_description && (

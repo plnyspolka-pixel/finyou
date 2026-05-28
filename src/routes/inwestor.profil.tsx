@@ -20,7 +20,8 @@ function InwestorProfil() {
   const [f, setF] = useState({
     first_name: "", last_name: "", company_name: "", nip: "",
     phone: "", email: "", investor_type: "indywidualny",
-    address: "", bank_account: "",
+    address: "", street: "", postal_code: "", city: "", country: "Polska",
+    bank_account: "",
   });
 
   useEffect(() => { if (!user) return; void (async () => {
@@ -31,7 +32,10 @@ function InwestorProfil() {
       company_name: data.company_name ?? "", nip: data.nip ?? "",
       phone: data.phone ?? "", email: data.email ?? user.email ?? "",
       investor_type: data.investor_type ?? "indywidualny",
-      address: data.address ?? "", bank_account: data.bank_account ?? "",
+      address: data.address ?? "",
+      street: data.street ?? "", postal_code: data.postal_code ?? "",
+      city: data.city ?? "", country: data.country ?? "Polska",
+      bank_account: data.bank_account ?? "",
     });
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
@@ -45,6 +49,10 @@ function InwestorProfil() {
       phone: f.phone.trim() || null, email: f.email.trim() || null,
       investor_type: f.investor_type as any,
       address: f.address.trim() || null,
+      street: f.street.trim() || null,
+      postal_code: f.postal_code.trim() || null,
+      city: f.city.trim() || null,
+      country: f.country.trim() || null,
       bank_account: f.bank_account.replace(/\s+/g, "") || null,
     };
     const { error } = inv
@@ -79,7 +87,17 @@ function InwestorProfil() {
         <CardContent className="grid gap-3 md:grid-cols-2">
           <div><Label>E-mail</Label><Input type="email" maxLength={255} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
           <div><Label>Telefon</Label><Input maxLength={32} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-          <div className="md:col-span-2"><Label>Adres</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="ul., nr, kod pocztowy, miasto" /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Adres</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2"><Label>Ulica i numer</Label><Input maxLength={255} value={f.street} onChange={(e) => setF({ ...f, street: e.target.value })} placeholder="np. Marszałkowska 1/2" /></div>
+          <div><Label>Kod pocztowy</Label><Input maxLength={10} value={f.postal_code} onChange={(e) => setF({ ...f, postal_code: e.target.value })} placeholder="00-000" /></div>
+          <div><Label>Miasto</Label><Input maxLength={100} value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>Kraj</Label><Input maxLength={100} value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} /></div>
+          <div className="md:col-span-2"><Label>Adres (pełny, opcjonalnie)</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="alternatywny pełny zapis adresu" /></div>
         </CardContent>
       </Card>
 
