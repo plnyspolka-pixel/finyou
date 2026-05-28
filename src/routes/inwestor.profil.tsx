@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Loader2, Download } from "lucide-react";
-import { fetchCompanyByNip } from "@/lib/client-profile.functions";
+import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 
 export const Route = createFileRoute("/inwestor/profil")({
   component: InwestorProfil,
@@ -20,7 +20,7 @@ type EntityType = "osoba_fizyczna" | "firma";
 
 function InwestorProfil() {
   const { user } = useAuth();
-  const fetchByNip = useServerFn(fetchCompanyByNip);
+  const lookupGus = useServerFn(gusCompanyLookup);
   const [inv, setInv] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
   const [f, setF] = useState({
@@ -60,42 +60,43 @@ function InwestorProfil() {
   })(); }, [user]);
 
   const autoFill = async () => {
-    const nipDigits = f.nip.replace(/\D/g, "");
-    if (nipDigits.length !== 10) { toast.error("NIP musi mieć 10 cyfr"); return; }
+    const payload: { nip?: string; regon?: string; krs?: string } = {};
+    if (f.nip.replace(/\D/g, "")) payload.nip = f.nip.replace(/\D/g, "");
+    else if (f.regon.replace(/\D/g, "")) payload.regon = f.regon.replace(/\D/g, "");
+    else if (f.krs.replace(/\D/g, "")) payload.krs = f.krs.replace(/\D/g, "");
+    else { toast.error("Wpisz NIP, REGON albo KRS"); return; }
+
     setFetching(true);
+    const t = toast.loading("Pobieram dane firmy z GUS…");
     try {
-      const res: any = await fetchByNip({ data: { nip: nipDigits, knownKrs: f.krs || undefined } });
-      if (!res?.ok) { toast.error(res?.message ?? "Nie znaleziono danych"); return; }
-      const d = res.data ?? {};
-      // Parse address from registeredAddress or businessAddress if present
-      const addr: string = d.registeredAddress ?? d.businessAddress ?? "";
-      let street = "", postal = "", city = "";
-      // Try simple split: "ul. X 1, 00-000 Miasto"
-      const m = addr.match(/^(.*?),\s*(\d{2}-\d{3})\s+(.+)$/);
-      if (m) { street = m[1].trim(); postal = m[2]; city = m[3].trim(); }
+      const res: any = await lookupGus({ data: payload });
+      if (!res?.success) {
+        toast.error(res?.message ?? "Nie udało się pobrać danych", { id: t });
+        return;
+      }
+      const c = res.company;
       setF((x) => ({
         ...x,
-        company_name: d.companyName ?? x.company_name,
-        nip: d.nip ?? nipDigits,
-        krs: d.krs ?? x.krs,
-        regon: d.regon ?? x.regon,
-        legal_form: d.legalForm ?? x.legal_form,
-        first_name: d.firstName ?? x.first_name,
-        last_name: d.lastName ?? x.last_name,
-        pesel: d.pesel ?? x.pesel,
-        phone: d.phone ?? x.phone,
-        email: d.email ?? x.email,
-        street: street || x.street,
-        postal_code: postal || x.postal_code,
-        city: city || x.city,
-        representative_role: d.representationDescription ?? x.representative_role,
+        company_name: c.name || x.company_name,
+        nip: c.nip || x.nip,
+        regon: c.regon || x.regon,
+        krs: c.krs || x.krs,
+        legal_form: c.legalForm || x.legal_form,
+        phone: c.contact.phone || x.phone,
+        email: c.contact.email || x.email,
+        street: [c.address.street, c.address.buildingNumber].filter(Boolean).join(" ")
+          + (c.address.apartmentNumber ? `/${c.address.apartmentNumber}` : "")
+          || x.street,
+        postal_code: c.address.postalCode || x.postal_code,
+        city: c.address.city || x.city,
+        country: c.address.country || x.country,
       }));
-      toast.success(`Pobrano dane z ${res.source}`);
-      if (res.warnings?.length) res.warnings.forEach((w: string) => toast.warning(w));
+      toast.success("Dane firmy zostały pobrane z GUS.", { id: t });
     } catch (e: any) {
-      toast.error(e?.message ?? "Błąd pobierania");
+      toast.error(e?.message ?? "Nie udało się połączyć z usługą GUS REGON.", { id: t });
     } finally { setFetching(false); }
   };
+
 
   const save = async () => {
     if (!user) return;
@@ -169,8 +170,9 @@ function InwestorProfil() {
               <span>Dane firmy</span>
               <Button size="sm" variant="outline" onClick={autoFill} disabled={fetching}>
                 {fetching ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
-                Pobierz z NIP / KRS
+                Pobierz dane z GUS
               </Button>
+
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
