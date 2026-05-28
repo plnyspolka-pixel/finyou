@@ -8,10 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Loader2, Download, RefreshCw, AlertTriangle } from "lucide-react";
+import { Loader2, Download, RefreshCw, AlertTriangle, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup, type KrsCompany } from "@/lib/krs.functions";
+import { detectPolishBankAccount, maskAccount, logSafeAccount, type BankDetectResult } from "@/lib/polish-bank";
+
+
 
 
 export const Route = createFileRoute("/inwestor/profil")({
@@ -27,6 +30,11 @@ function InwestorProfil() {
   const [fetching, setFetching] = useState(false);
   const [fetchingKrs, setFetchingKrs] = useState(false);
   const [krsData, setKrsData] = useState<KrsCompany | null>(null);
+  // "P" = osoba prawna (spółka), "F" = osoba fizyczna prowadząca działalność (JDG)
+  const [gusEntityType, setGusEntityType] = useState<string>("");
+  const [bankInfo, setBankInfo] = useState<BankDetectResult | null>(null);
+  const [showFullAccount, setShowFullAccount] = useState(false);
+  const [bankOverride, setBankOverride] = useState(false);
 
   const [f, setF] = useState({
     entity_type: "osoba_fizyczna" as EntityType,
@@ -96,15 +104,24 @@ function InwestorProfil() {
         city: c.address.city || x.city,
         country: c.address.country || x.country,
       }));
+      setGusEntityType(c.entityType || "");
       toast.success("Dane firmy zostały pobrane z GUS.", { id: t });
+      // Jeśli to spółka i mamy KRS — pobierz pełny odpis z KRS, żeby uzupełnić zarząd/reprezentację.
+      const krsNumber = (c.krs || "").replace(/\D/g, "");
+      const isLegalEntity = c.entityType === "P" || c.entityType === "LP";
+      if (isLegalEntity && krsNumber) {
+        void autoFillKrs(false, krsNumber);
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się połączyć z usługą GUS REGON.", { id: t });
     } finally { setFetching(false); }
   };
 
-  const autoFillKrs = async (forceRefresh = false) => {
-    const raw = (f.krs ?? "").trim();
+
+  const autoFillKrs = async (forceRefresh = false, krsOverride?: string) => {
+    const raw = (krsOverride ?? f.krs ?? "").trim();
     if (!raw) { toast.error("Wpisz numer KRS"); return; }
+
     setFetchingKrs(true);
     const t = toast.loading(forceRefresh ? "Odświeżam dane z KRS…" : "Pobieram dane z KRS…");
     try {
@@ -142,7 +159,18 @@ function InwestorProfil() {
     } finally { setFetchingKrs(false); }
   };
 
-
+  // Live walidacja rachunku bankowego — lokalnie, z debounce 400 ms.
+  useEffect(() => {
+    const raw = f.bank_account ?? "";
+    setShowFullAccount(false);
+    if (!raw.trim()) { setBankInfo(null); setBankOverride(false); return; }
+    const id = setTimeout(() => {
+      const res = detectPolishBankAccount(raw);
+      setBankInfo(res);
+      setBankOverride(false);
+    }, 400);
+    return () => clearTimeout(id);
+  }, [f.bank_account]);
 
   const save = async () => {
     if (!user) return;
@@ -152,6 +180,20 @@ function InwestorProfil() {
     if (f.entity_type === "osoba_fizyczna" && f.pesel && !/^\d{11}$/.test(f.pesel.replace(/\D/g, ""))) {
       toast.error("PESEL musi mieć 11 cyfr"); return;
     }
+    // Walidacja rachunku przed zapisem — wymagaj potwierdzenia jeśli niepoprawny.
+    if (f.bank_account.trim()) {
+      const check = detectPolishBankAccount(f.bank_account);
+      if (!check.success && !bankOverride) {
+        toast.error("Numer rachunku bankowego jest nieprawidłowy. Popraw albo potwierdź kontynuację mimo błędu.");
+        return;
+      }
+    }
+    const isJdg = f.entity_type === "firma" && (gusEntityType === "F" || gusEntityType === "LF");
+    const showRepresentation = f.entity_type === "firma" && !isJdg;
+    const normalizedAccount = (() => {
+      const c = detectPolishBankAccount(f.bank_account);
+      return c.success ? c.normalized : f.bank_account.replace(/[\s\-]/g, "").toUpperCase() || null;
+    })();
     // Map entity_type → legacy investor_type (NOT NULL column)
     const investorType = f.entity_type === "firma" ? "instytucjonalny" : "indywidualny";
     const payload: any = {
@@ -165,25 +207,29 @@ function InwestorProfil() {
       krs: f.entity_type === "firma" ? (f.krs.trim() || null) : null,
       regon: f.entity_type === "firma" ? (f.regon.trim() || null) : null,
       legal_form: f.entity_type === "firma" ? (f.legal_form.trim() || null) : null,
-      representative_first_name: f.entity_type === "firma" ? (f.representative_first_name.trim() || null) : null,
-      representative_last_name: f.entity_type === "firma" ? (f.representative_last_name.trim() || null) : null,
-      representative_role: f.entity_type === "firma" ? (f.representative_role.trim() || null) : null,
+      representative_first_name: showRepresentation ? (f.representative_first_name.trim() || null) : null,
+      representative_last_name: showRepresentation ? (f.representative_last_name.trim() || null) : null,
+      representative_role: showRepresentation ? (f.representative_role.trim() || null) : null,
       phone: f.phone.trim() || null,
       email: f.email.trim() || null,
       street: f.street.trim() || null,
       postal_code: f.postal_code.trim() || null,
       city: f.city.trim() || null,
       country: f.country.trim() || null,
-      bank_account: f.bank_account.replace(/\s+/g, "") || null,
+      bank_account: normalizedAccount,
     };
     const { error } = inv
       ? await supabase.from("investors").update(payload).eq("id", inv.id)
       : await supabase.from("investors").insert({ ...payload, user_id: user.id });
     if (error) { toast.error(error.message); return; }
+    // Bezpieczne logowanie — bez pełnego numeru rachunku.
+    if (normalizedAccount) console.info("[profil] zapisano rachunek", logSafeAccount(normalizedAccount));
     toast.success("Zapisano");
   };
 
   const isFirma = f.entity_type === "firma";
+  const isJdg = isFirma && (gusEntityType === "F" || gusEntityType === "LF");
+
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -249,16 +295,19 @@ function InwestorProfil() {
       {isFirma && krsData && <KrsRegisterCard data={krsData} />}
 
 
-      {isFirma ? (
+      {isFirma && !isJdg ? (
         <Card>
-          <CardHeader><CardTitle>Reprezentacja</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Reprezentacja</CardTitle>
+            <p className="text-xs text-muted-foreground">Sekcja widoczna tylko dla spółek wpisanych do KRS. Dla JDG się nie wyświetla.</p>
+          </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div><Label>Imię reprezentanta</Label><Input maxLength={100} value={f.representative_first_name} onChange={(e) => setF({ ...f, representative_first_name: e.target.value })} /></div>
             <div><Label>Nazwisko reprezentanta</Label><Input maxLength={100} value={f.representative_last_name} onChange={(e) => setF({ ...f, representative_last_name: e.target.value })} /></div>
             <div className="md:col-span-2"><Label>Funkcja / sposób reprezentacji</Label><Input maxLength={500} value={f.representative_role} onChange={(e) => setF({ ...f, representative_role: e.target.value })} placeholder="np. Prezes Zarządu — reprezentacja jednoosobowa" /></div>
           </CardContent>
         </Card>
-      ) : (
+      ) : !isFirma ? (
         <Card>
           <CardHeader><CardTitle>Dane osobowe</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
@@ -267,7 +316,8 @@ function InwestorProfil() {
             <div className="md:col-span-2"><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value })} placeholder="11 cyfr" /></div>
           </CardContent>
         </Card>
-      )}
+      ) : null}
+
 
       <Card>
         <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
@@ -290,9 +340,59 @@ function InwestorProfil() {
       <Card>
         <CardHeader><CardTitle>Rachunek bankowy</CardTitle></CardHeader>
         <CardContent className="grid gap-3">
-          <div><Label>Numer konta (IBAN)</Label><Input maxLength={40} value={f.bank_account} onChange={(e) => setF({ ...f, bank_account: e.target.value })} placeholder="PL00 0000 0000 0000 0000 0000 0000" /></div>
+          <div>
+            <Label>Numer konta (IBAN / NRB)</Label>
+            <div className="flex gap-2 items-center">
+              <Input
+                maxLength={40}
+                value={
+                  inv && !showFullAccount && f.bank_account && bankInfo?.success
+                    ? maskAccount(f.bank_account)
+                    : f.bank_account
+                }
+                onChange={(e) => setF({ ...f, bank_account: e.target.value })}
+                onFocus={() => setShowFullAccount(true)}
+                placeholder="PL00 0000 0000 0000 0000 0000 0000"
+                className={
+                  bankInfo?.success === false ? "border-destructive" :
+                  bankInfo?.success === true ? "border-green-500" : ""
+                }
+              />
+              {inv && f.bank_account && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setShowFullAccount((v) => !v)} title={showFullAccount ? "Ukryj pełny numer" : "Pokaż pełny numer"}>
+                  {showFullAccount ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+            {bankInfo === null && (
+              <p className="text-xs text-muted-foreground mt-1">Wpisz 26-cyfrowy numer rachunku albo IBAN.</p>
+            )}
+            {bankInfo?.success === false && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                <XCircle className="h-3 w-3" /> {bankInfo.message}
+              </div>
+            )}
+            {bankInfo?.success === true && (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-center gap-1 text-xs text-green-600">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {bankInfo.bankName ? `Bank: ${bankInfo.bankName}` : "Numer rachunku jest poprawny, ale bank nie został rozpoznany."}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Format: {bankInfo.format} · Identyfikator banku: {bankInfo.bankIdentifier} · Nr rozliczeniowy: {bankInfo.clearingNumber}
+                </div>
+              </div>
+            )}
+            {bankInfo?.success === false && (
+              <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={bankOverride} onChange={(e) => setBankOverride(e.target.checked)} />
+                Rozumiem, że numer rachunku może być nieprawidłowy.
+              </label>
+            )}
+          </div>
         </CardContent>
       </Card>
+
 
       <Button onClick={save}>Zapisz</Button>
     </div>
