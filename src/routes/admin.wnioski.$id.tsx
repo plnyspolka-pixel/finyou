@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
-import { KwSection } from "@/components/kw-section";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -139,7 +138,6 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
-              <KwSection applicationId={app.id} kwNumber={p.land_register_number} />
               <PropertyLocationAnalysis
                 propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address}
                 city={p.city}
