@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, RefreshCw, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
+import { krsCompanyLookup, type KrsCompany } from "@/lib/krs.functions";
+
 
 export const Route = createFileRoute("/inwestor/profil")({
   component: InwestorProfil,
