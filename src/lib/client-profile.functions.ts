@@ -503,11 +503,42 @@ async function krsLookupByKrs(krs: string): Promise<Partial<BorrowerData> | null
 }
 
 /**
+ * Biała Lista MF — darmowe publiczne API. Po NIP zwraca nazwę, REGON, KRS, adres.
+ * Działa bez klucza API.
+ */
+async function bialaListaLookupByNip(nip: string): Promise<
+  | { kind: "found"; nazwa?: string; regon?: string; krs?: string; adres?: string }
+  | { kind: "none" }
+  | { kind: "error"; message: string }
+> {
+  try {
+    const date = new Date().toISOString().slice(0, 10);
+    const url = `https://wl-api.mf.gov.pl/api/search/nip/${encodeURIComponent(nip)}?date=${date}`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (res.status === 404) return { kind: "none" };
+    if (!res.ok) return { kind: "error", message: `Biała Lista MF: HTTP ${res.status}` };
+    const json: any = await res.json().catch(() => null);
+    const s = json?.result?.subject;
+    if (!s) return { kind: "none" };
+    return {
+      kind: "found",
+      nazwa: s.name,
+      regon: s.regon,
+      krs: s.krs,
+      adres: s.workingAddress || s.residenceAddress,
+    };
+  } catch (e: any) {
+    return { kind: "error", message: `Biała Lista MF: ${String(e?.message ?? e)}` };
+  }
+}
+
+/**
  * GUS BIR (NIP → REGON/KRS) — requires GUS_BIR_API_KEY.
  * Implementacja SOAP jest złożona; bez klucza zwracamy null żeby UI pokazało
  * jasny komunikat. Jeśli klucz jest, używamy najprostszego endpointu DaneSzukajPodmioty.
  */
 async function gusLookupByNip(nip: string): Promise<
+
   | { kind: "found"; regon?: string; krs?: string; nazwa?: string; typ?: string }
   | { kind: "not_configured" }
   | { kind: "none" }
