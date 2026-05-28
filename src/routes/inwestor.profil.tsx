@@ -300,3 +300,74 @@ function InwestorProfil() {
     </div>
   );
 }
+
+function KrsRegisterCard({ data }: { data: KrsCompany }) {
+  const alerts: Array<{ title: string; body?: string; variant?: "default" | "destructive" }> = [];
+  if (data.flags.liquidation) alerts.push({ title: "Uwaga: podmiot znajduje się w likwidacji.", variant: "destructive" });
+  if (data.flags.bankruptcy) alerts.push({ title: "Uwaga: wobec podmiotu ujawniono informację o upadłości.", variant: "destructive" });
+  if (data.flags.restructuring) alerts.push({ title: "Uwaga: wobec podmiotu ujawniono informację o restrukturyzacji.", variant: "destructive" });
+  if (data.flags.suspended) alerts.push({ title: "Uwaga: działalność podmiotu jest zawieszona." });
+  if (data.flags.deleted) alerts.push({ title: "Uwaga: podmiot został wykreślony z KRS.", variant: "destructive" });
+  if (data.flags.section4HasEntries) alerts.push({ title: "Uwaga: w KRS występują wpisy mogące wskazywać na zaległości lub obciążenia (dział 4)." });
+  if (data.flags.representationMissing) alerts.push({ title: "Nie udało się jednoznacznie ustalić sposobu reprezentacji. Zweryfikuj ręcznie odpis KRS." });
+
+  const personLine = (p: { firstName: string; lastName: string; role?: string }) =>
+    [p.firstName, p.lastName].filter(Boolean).join(" ") + (p.role ? ` — ${p.role}` : "");
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Dane rejestrowe KRS</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        {alerts.map((a, i) => (
+          <Alert key={i} variant={a.variant ?? "default"}>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{a.title}</AlertTitle>
+            {a.body && <AlertDescription>{a.body}</AlertDescription>}
+          </Alert>
+        ))}
+
+        <div className="grid gap-2 md:grid-cols-2 text-sm">
+          <div><span className="text-muted-foreground">Status:</span> <strong>{data.status || "—"}</strong></div>
+          <div><span className="text-muted-foreground">Sąd rejestrowy:</span> {data.court || "—"}</div>
+          <div><span className="text-muted-foreground">Data rejestracji:</span> {data.registrationDate || "—"}</div>
+          <div><span className="text-muted-foreground">Kapitał zakładowy:</span> {data.shareCapital || "—"}</div>
+          <div className="md:col-span-2"><span className="text-muted-foreground">Sposób reprezentacji:</span> {data.representation.method || "—"}</div>
+          <div className="md:col-span-2"><span className="text-muted-foreground">PKD główne:</span> {data.pkd.main || "—"}</div>
+        </div>
+
+        {data.managementBoard.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Zarząd</div>
+            <ul className="text-sm list-disc pl-5">{data.managementBoard.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul>
+          </div>
+        )}
+
+        {data.proxies.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Prokurenci</div>
+            <ul className="text-sm list-disc pl-5">{data.proxies.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul>
+          </div>
+        )}
+
+        {data.partnersOrShareholders.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Wspólnicy / udziałowcy</div>
+            <ul className="text-sm list-disc pl-5">
+              {data.partnersOrShareholders.map((w, i) => (
+                <li key={i}>{w.name}{w.share ? ` — ${w.share}` : ""}{w.sharesCount ? ` (${w.sharesCount} udziałów)` : ""}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {data.pkd.additional.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-1">Pozostałe PKD</div>
+            <ul className="text-sm list-disc pl-5">{data.pkd.additional.map((p, i) => <li key={i}>{p}</li>)}</ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
