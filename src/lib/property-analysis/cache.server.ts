@@ -17,10 +17,10 @@ export async function getCached<T>(table: CacheTable, key: string): Promise<T | 
 export async function setCached<T>(table: CacheTable, key: string, payload: T, ttlDays = 30): Promise<void> {
   const expires = new Date(Date.now() + ttlDays * 24 * 3600 * 1000).toISOString();
   await supabaseAdmin.from(table).upsert(
-    { cache_key: key, payload: payload as unknown as object, fetched_at: new Date().toISOString(), expires_at: expires },
+  await supabaseAdmin.from(table).upsert(
+    { cache_key: key, payload: payload as never, fetched_at: new Date().toISOString(), expires_at: expires },
     { onConflict: "cache_key" },
   );
-}
 
 export async function withCache<T>(table: CacheTable, key: string, ttlDays: number, fetcher: () => Promise<T>): Promise<T> {
   const hit = await getCached<T>(table, key);
