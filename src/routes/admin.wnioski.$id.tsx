@@ -138,7 +138,7 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
-              <KwSection applicationId={app.id} kwNumber={p.land_register_number} />
+              <PropertyLocationAnalysis
                 propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address}
                 city={p.city}
                 postalCode={p.postal_code}
