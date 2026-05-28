@@ -186,9 +186,18 @@ function enumerateStrengthsRisks(s: ScoringInput, c: CollateralScoreComponents):
   if (s.location.score >= 70) strengths.push("Dobra lokalizacja i dostępność infrastruktury.");
   if (s.location.score < 40) risks.push("Słaba lokalizacja — możliwa ograniczona płynność.");
   if (s.legal.warnings.length > 0) risks.push(`Ostrzeżenia prawne: ${s.legal.warnings.slice(0, 3).join("; ")}.`);
-  if (s.documentsPresent.kw) strengths.push("Dostępny odpis księgi wieczystej.");
-  if (!s.documentsPresent.kw) risks.push("Brak odpisu KW.");
   if (c.dataQuality >= 11) strengths.push("Dobra jakość i pokrycie danych.");
   if (c.dataQuality <= 6) risks.push("Słaba jakość/pokrycie danych — wynik wymaga ręcznej weryfikacji.");
+  const fr = s.floodRisk;
+  if (fr?.available) {
+    if (fr.riskLevel === "none") strengths.push("Brak stwierdzonego ryzyka powodziowego (ISOK/Wody Polskie).");
+    else if (fr.riskLevel === "low") risks.push("Lokalizacja w obszarze niskiego ryzyka powodziowego (scenariusz 0,2%).");
+    else if (fr.riskLevel === "medium") risks.push("Lokalizacja w obszarze średniego ryzyka powodziowego (scenariusz 1%).");
+    else if (fr.riskLevel === "high") risks.push("Lokalizacja w obszarze wysokiego ryzyka powodziowego (scenariusz 10%).");
+    else if (fr.riskLevel === "very_high") risks.push("Lokalizacja w obszarze bardzo wysokiego ryzyka powodziowego.");
+  }
+  return { strengths, risks };
+}
+
   return { strengths, risks };
 }
