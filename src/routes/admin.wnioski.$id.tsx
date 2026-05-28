@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
+import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -125,17 +126,26 @@ function WniosekDetail() {
           </div>
         </TabsContent>
 
-        <TabsContent value="nieruchomosc">
-          {p ? <Card><CardHeader><CardTitle>{propertyTypeLabels[p.property_type] ?? p.property_type}</CardTitle></CardHeader>
-            <CardContent className="text-sm space-y-1">
-              <div><span className="text-muted-foreground">Adres:</span> {[p.address, p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
-              <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
-              <div><span className="text-muted-foreground">Szacowana wartość:</span> {formatPLN(p.estimated_value)}</div>
-              <div><span className="text-muted-foreground">KW:</span> {p.land_register_number ?? "—"}</div>
-              <div><span className="text-muted-foreground">Hipoteka:</span> {p.has_mortgage ? "Tak" : "Nie"} · Współwłaściciele: {p.has_co_owners ? "Tak" : "Nie"}</div>
-              <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
-            </CardContent></Card> : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
-        </TabsContent>
+          {p ? (
+            <div className="space-y-4">
+              <Card><CardHeader><CardTitle>{propertyTypeLabels[p.property_type] ?? p.property_type}</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <div><span className="text-muted-foreground">Adres:</span> {[p.address, p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
+                  <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
+                  <div><span className="text-muted-foreground">Szacowana wartość:</span> {formatPLN(p.estimated_value)}</div>
+                  <div><span className="text-muted-foreground">KW:</span> {p.land_register_number ?? "—"}</div>
+                  <div><span className="text-muted-foreground">Hipoteka:</span> {p.has_mortgage ? "Tak" : "Nie"} · Współwłaściciele: {p.has_co_owners ? "Tak" : "Nie"}</div>
+                  <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
+                </CardContent>
+              </Card>
+              <PropertyLocationAnalysis
+                propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address}
+                city={p.city}
+                postalCode={p.postal_code}
+                propertyType={p.property_type}
+              />
+            </div>
+          ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
 
         <TabsContent value="dokumenty">
           {docs.length === 0 ? <p className="text-sm text-muted-foreground">Brak dokumentów.</p> :

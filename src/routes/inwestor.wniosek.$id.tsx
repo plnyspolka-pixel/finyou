@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
+import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { monthlyPayment, formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 import { useServerFn } from "@tanstack/react-start";
 import { openOrCreateThread } from "@/lib/chat.functions";
@@ -199,6 +200,15 @@ function InwestorWniosek() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {p && (p.address || p.city) && (
+        <PropertyLocationAnalysis
+          propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address || ""}
+          city={p.city}
+          postalCode={p.postal_code}
+          propertyType={p.property_type}
+        />
       )}
 
       {propertyDocs.length > 0 && (
