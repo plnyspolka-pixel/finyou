@@ -98,7 +98,7 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
 
     // 6) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
-      lat: input.latitude, lng: input.longitude, address: input.address, city: input.city,
+      lat: input.latitude ?? null, lng: input.longitude ?? null, address: input.address, city: input.city,
     });
     sourcesUsed.push({
       source: "Google Maps Platform", used: input.latitude != null,
