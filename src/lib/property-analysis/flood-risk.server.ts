@@ -29,7 +29,8 @@ export interface FloodAnalysisInput {
 
 export interface FloodAnalysisOutput {
   success: boolean;
-  errorCode?: "MISSING_LOCATION" | "FLOOD_WFS_ERROR" | "NO_FLOOD_DATA";
+  raw: Record<string, any>;
+
   message?: string;
   source: "ISOK / Wody Polskie / Hydroportal";
   method: "WFS intersection";
