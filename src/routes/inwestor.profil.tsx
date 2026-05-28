@@ -339,9 +339,59 @@ function InwestorProfil() {
       <Card>
         <CardHeader><CardTitle>Rachunek bankowy</CardTitle></CardHeader>
         <CardContent className="grid gap-3">
-          <div><Label>Numer konta (IBAN)</Label><Input maxLength={40} value={f.bank_account} onChange={(e) => setF({ ...f, bank_account: e.target.value })} placeholder="PL00 0000 0000 0000 0000 0000 0000" /></div>
+          <div>
+            <Label>Numer konta (IBAN / NRB)</Label>
+            <div className="flex gap-2 items-center">
+              <Input
+                maxLength={40}
+                value={
+                  inv && !showFullAccount && f.bank_account && bankInfo?.success
+                    ? maskAccount(f.bank_account)
+                    : f.bank_account
+                }
+                onChange={(e) => setF({ ...f, bank_account: e.target.value })}
+                onFocus={() => setShowFullAccount(true)}
+                placeholder="PL00 0000 0000 0000 0000 0000 0000"
+                className={
+                  bankInfo?.success === false ? "border-destructive" :
+                  bankInfo?.success === true ? "border-green-500" : ""
+                }
+              />
+              {inv && f.bank_account && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setShowFullAccount((v) => !v)} title={showFullAccount ? "Ukryj pełny numer" : "Pokaż pełny numer"}>
+                  {showFullAccount ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+            {bankInfo === null && (
+              <p className="text-xs text-muted-foreground mt-1">Wpisz 26-cyfrowy numer rachunku albo IBAN.</p>
+            )}
+            {bankInfo?.success === false && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                <XCircle className="h-3 w-3" /> {bankInfo.message}
+              </div>
+            )}
+            {bankInfo?.success === true && (
+              <div className="mt-1 space-y-1">
+                <div className="flex items-center gap-1 text-xs text-green-600">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {bankInfo.bankName ? `Bank: ${bankInfo.bankName}` : "Numer rachunku jest poprawny, ale bank nie został rozpoznany."}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Format: {bankInfo.format} · Identyfikator banku: {bankInfo.bankIdentifier} · Nr rozliczeniowy: {bankInfo.clearingNumber}
+                </div>
+              </div>
+            )}
+            {bankInfo?.success === false && (
+              <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={bankOverride} onChange={(e) => setBankOverride(e.target.checked)} />
+                Rozumiem, że numer rachunku może być nieprawidłowy.
+              </label>
+            )}
+          </div>
         </CardContent>
       </Card>
+
 
       <Button onClick={save}>Zapisz</Button>
     </div>
