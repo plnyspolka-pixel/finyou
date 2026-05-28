@@ -18,7 +18,6 @@ import { detectPolishBankAccount, maskAccount, logSafeAccount, type BankDetectRe
 
 
 export const Route = createFileRoute("/inwestor/profil")({
-  codeSplitGroupings: [],
   component: InwestorProfil,
 });
 
