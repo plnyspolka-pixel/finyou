@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+import { KwSection } from "@/components/kw-section";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -125,9 +126,9 @@ function WniosekDetail() {
             </CardContent></Card>
           </div>
         </TabsContent>
-
+        <TabsContent value="nieruchomosc" className="space-y-4">
           {p ? (
-            <div className="space-y-4">
+            <>
               <Card><CardHeader><CardTitle>{propertyTypeLabels[p.property_type] ?? p.property_type}</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
                   <div><span className="text-muted-foreground">Adres:</span> {[p.address, p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
@@ -138,14 +139,17 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
+              <KwSection applicationId={app.id} kwNumber={p.land_register_number} />
               <PropertyLocationAnalysis
                 propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address}
                 city={p.city}
                 postalCode={p.postal_code}
                 propertyType={p.property_type}
               />
-            </div>
+            </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
+        </TabsContent>
+
 
         <TabsContent value="dokumenty">
           {docs.length === 0 ? <p className="text-sm text-muted-foreground">Brak dokumentów.</p> :
