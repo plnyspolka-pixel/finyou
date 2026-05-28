@@ -304,69 +304,96 @@ export type Database = {
         Row: {
           address: string | null
           bank_account: string | null
+          city: string | null
+          company_name: string | null
           consent_email: boolean
           consent_marketing: boolean
           consent_phone: boolean
           consent_rodo: boolean
           consent_sms: boolean
+          country: string | null
           created_at: string
           email: string | null
           external_id: string | null
           first_name: string
           id: string
+          land_register_number: string | null
           last_name: string
+          nip: string | null
+          notes: string | null
           pesel: string | null
           phone: string | null
           phone_normalized: string | null
           phone_raw: string | null
           phone_valid: boolean | null
+          postal_code: string | null
+          regon: string | null
           source: string | null
+          street: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           address?: string | null
           bank_account?: string | null
+          city?: string | null
+          company_name?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
           consent_phone?: boolean
           consent_rodo?: boolean
           consent_sms?: boolean
+          country?: string | null
           created_at?: string
           email?: string | null
           external_id?: string | null
           first_name: string
           id?: string
+          land_register_number?: string | null
           last_name: string
+          nip?: string | null
+          notes?: string | null
           pesel?: string | null
           phone?: string | null
           phone_normalized?: string | null
           phone_raw?: string | null
           phone_valid?: boolean | null
+          postal_code?: string | null
+          regon?: string | null
           source?: string | null
+          street?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           address?: string | null
           bank_account?: string | null
+          city?: string | null
+          company_name?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
           consent_phone?: boolean
           consent_rodo?: boolean
           consent_sms?: boolean
+          country?: string | null
           created_at?: string
           email?: string | null
           external_id?: string | null
           first_name?: string
           id?: string
+          land_register_number?: string | null
           last_name?: string
+          nip?: string | null
+          notes?: string | null
           pesel?: string | null
           phone?: string | null
           phone_normalized?: string | null
           phone_raw?: string | null
           phone_valid?: boolean | null
+          postal_code?: string | null
+          regon?: string | null
           source?: string | null
+          street?: string | null
           updated_at?: string
           user_id?: string | null
         }
