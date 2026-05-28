@@ -198,6 +198,3 @@ function enumerateStrengthsRisks(s: ScoringInput, c: CollateralScoreComponents):
   }
   return { strengths, risks };
 }
-
-  return { strengths, risks };
-}
