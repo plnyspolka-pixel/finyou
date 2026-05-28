@@ -13,8 +13,6 @@ import type {
 import { categoryLabel } from "./scoring";
 import { floodRiskInvestorText } from "./flood-risk.server";
 
-import { categoryLabel } from "./scoring";
-
 const FORBIDDEN_WORDS = [
   "operat",
   "oficjalna wycena",
