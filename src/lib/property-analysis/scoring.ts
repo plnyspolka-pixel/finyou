@@ -54,7 +54,9 @@ export interface ScoringInput {
   nbp: NbpTrend | null;
   documents: DocumentExtraction[];
   documentsPresent: { kw: boolean; mpzpOrWz: boolean; landRegistry: boolean; appraisal: boolean; photos: boolean };
+  floodRisk?: { riskLevel: "none" | "low" | "medium" | "high" | "very_high" | "unknown"; available: boolean };
 }
+
 
 export function calculateCollateralScore(s: ScoringInput): CollateralScore {
   const components: CollateralScoreComponents = {
