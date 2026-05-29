@@ -28,6 +28,15 @@ function maxNonInterestCosts(amount: number, months: number): number {
 }
 
 function Kalkulator() {
+  const fetchRates = useServerFn(getNbpRates);
+  const ratesQ = useQuery({
+    queryKey: ["nbp-rates"],
+    queryFn: () => fetchRates(),
+    staleTime: 12 * 60 * 60 * 1000,
+  });
+  const NBP_REF_RATE = ratesQ.data?.referenceRate ?? 5.75;
+  const MAX_INTEREST_RATE = NBP_REF_RATE * 2 + 8;
+
   const [amount, setAmount] = useState(100_000);
   const [months, setMonths] = useState(12);
   const [annualRate, setAnnualRate] = useState(15);
