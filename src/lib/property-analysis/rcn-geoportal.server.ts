@@ -139,31 +139,19 @@ export async function testRcnCapabilities(): Promise<{
 }
 
 function parseLayerNamesFromWms(xml: string): string[] {
-  try {
-    const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true });
-    const parsed = parser.parse(xml) as any;
-    const layers: string[] = [];
-    const walk = (node: any) => {
-      if (!node || typeof node !== "object") return;
-      if (Array.isArray(node)) {
-        node.forEach(walk);
-        return;
-      }
-      const name = node.Name ?? node.name;
-      if (typeof name === "string" || typeof name === "number") {
-        const s = String(name).trim();
-        if (s && !layers.includes(s)) layers.push(s);
-      }
-      for (const v of Object.values(node)) {
-        if (v && typeof v === "object") walk(v);
-      }
-    };
-    walk(parsed);
-    // Odfiltruj nazwy serwisowe (np. "WMS")
-    return layers.filter((l) => !/^wms$/i.test(l));
-  } catch {
-    return [];
+  const layers: string[] = [];
+  // Każda warstwa WMS GetCapabilities ma <Name>...</Name>. Bierzemy wszystkie i
+  // odfiltrowujemy nazwę serwisową (WMS) i style ("default").
+  const rx = /<(?:[a-zA-Z0-9]+:)?Name>\s*([^<\s][^<]*?)\s*<\/(?:[a-zA-Z0-9]+:)?Name>/g;
+  let m: RegExpExecArray | null;
+  while ((m = rx.exec(xml)) !== null) {
+    const name = m[1].trim();
+    if (!name) continue;
+    if (/^wms$/i.test(name)) continue;
+    if (/^default$/i.test(name)) continue;
+    if (!layers.includes(name)) layers.push(name);
   }
+  return layers;
 }
 
 
