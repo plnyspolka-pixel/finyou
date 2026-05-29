@@ -189,6 +189,21 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       warnings.push("Uwaga: benchmark GUS BDL wygląda nietypowo nisko dla tej lokalizacji. Prawdopodobna przyczyna: błędna jednostka terytorialna, niewłaściwy okres albo fallback. Wynik nie został przyjęty jako główne źródło wartości bez dodatkowej weryfikacji.");
     } else if (nbp) {
       mainSource = "NBP (pomocniczo)";
+    } else if (listings.pricePerM2Median) {
+      mainSource = "Portale ogłoszeniowe (pomocniczo)";
+      pricePerM2Median = listings.pricePerM2Median;
+      pricePerM2Average = listings.pricePerM2Average;
+      warnings.push("Brak danych transakcyjnych — wartość wyliczona z mediany ofert portali ogłoszeniowych (ceny ofertowe są zwykle wyższe od transakcyjnych o 5–15%).");
+    }
+    if (listings.pricePerM2Median) {
+      supporting.push(`Portale ogłoszeniowe (${listings.used} ofert)`);
+      // Cross-check ofert vs benchmark
+      if (pricePerM2Median && mainSource !== "Portale ogłoszeniowe (pomocniczo)") {
+        const diff = (listings.pricePerM2Median - pricePerM2Median) / pricePerM2Median;
+        if (Math.abs(diff) > 0.30) {
+          warnings.push(`Mediana ofert (${listings.pricePerM2Median.toLocaleString("pl-PL")} zł/m²) różni się od głównego benchmarku (${pricePerM2Median.toLocaleString("pl-PL")} zł/m²) o ${(diff * 100).toFixed(0)}% — sprawdź lokalizację i typ nieruchomości.`);
+        }
+      }
     }
 
 
