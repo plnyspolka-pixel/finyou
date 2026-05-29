@@ -10,7 +10,7 @@ import { loanStatusLabels, formatPLN, formatDate, propertyTypeLabels } from "@/l
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
-export const Route = createFileRoute("/admin/wnioski")({
+export const Route = createFileRoute("/admin/wnioski/")({
   component: WnioskiPage,
 });
 
