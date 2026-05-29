@@ -324,7 +324,9 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       floodAlerts: flood.alerts,
     });
     result.gusDiagnostics = gusDiagnostics;
+    result.rcnDiagnostics = rcnDiag;
     result.listingsBenchmark = listings;
+
 
 
     // 12) Zapis
