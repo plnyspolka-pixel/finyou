@@ -399,7 +399,8 @@ export async function rcnBenchmark(args: {
               break;
             }
           } else {
-            const gmlResp = await fetchFeaturesGml(endpoint, layer, bbox, crs);
+            const gmlResp = await fetchFeaturesGml(featureEndpoint, layer, bbox, crs);
+
             if (gmlResp) {
               diag.rawResponseSnippet = gmlResp.snippet;
               if (gmlResp.features.length > 0) {
