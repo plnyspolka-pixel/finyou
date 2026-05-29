@@ -424,15 +424,17 @@ export async function rcnBenchmark(args: {
     }
     if (success) break;
   }
-
   if (allRaw.length === 0) {
-    if (diag.errorTechnical && diag.status === "not_started") {
-      diag.status = "wfs_request_failed";
-      diag.statusMessage = "Nie udało się pobrać danych RCN z usługi WFS.";
-    } else if (diag.status === "not_started") {
-      diag.status = "no_features_in_bbox";
-      diag.statusMessage = "Nie znaleziono transakcji RCN w analizowanym obszarze (do 10 km).";
+    if (diag.errorTechnical) {
+      diag.status = "getfeature_failed";
+      diag.statusMessage = "GetFeature nie zwrócił danych z powodu błędu technicznego.";
+    } else {
+      diag.status = "no_features";
+      diag.statusMessage = "GetCapabilities OK, GetFeature OK — ale w analizowanym obszarze (do 10 km) nie znaleziono transakcji RCN.";
     }
+    return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
+  }
+
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
 
