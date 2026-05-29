@@ -7,7 +7,9 @@ import type {
   DataSourceUsage, LegalRiskResult, LocationScoreResult, MarketLiquidityResult,
   PropertyAnalysisInput, PropertyAnalysisResult, ValuationBenchmark,
 } from "./types";
-import { rcnBenchmark } from "./rcn-geoportal.server";
+import { rcnBenchmarkCached } from "./rcn-geoportal.server";
+
+
 import { gusBenchmark, classifySoil } from "./gus-bdl.server";
 import { nbpTrend } from "./nbp-real-estate.server";
 import { geocode, locationScore } from "./location-score.server";
@@ -70,16 +72,32 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       ? { lat: input.latitude, lng: input.longitude }
       : input.address ? await geocode([input.address, input.city, input.voivodeship].filter(Boolean).join(", ")) : null;
     if (geo) { input.latitude = geo.lat; input.longitude = geo.lng; }
-
-    // 3) RCN
-    const rcn = geo ? await rcnBenchmark({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
-                    : { stats: null, transactionsCount: 0, radiusKm: null };
+    // 3) RCN (z pełną diagnostyką)
+    const rcn = geo
+      ? await rcnBenchmarkCached({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
+      : { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: { status: "missing_coordinates" as const, statusMessage: "Brak współrzędnych — RCN nie odpytany.", endpoint: null, availableLayers: [], layerUsed: null, crsUsed: null, inputCoordinates: { lat: null, lng: null, crs: "EPSG:4326" }, queryBbox: null, radiusM: null, radiiTried: [], featuresRawCount: 0, featuresFilteredCount: 0, filtersApplied: [], periodCounts: { countAllDates: 0, countLast12Months: 0, countLast24Months: 0, countLast36Months: 0 }, sampleFeature: null, rawResponseSnippet: null, errorTechnical: null, capabilitiesChecked: false, propertyTypeMapping: { applicationType: null, keywords: [], matchedLayerKeywords: [] } } };
+    const rcnDiag = rcn.diagnostics;
+    const rcnTechnicalFailure = rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" || rcnDiag.status === "wfs_parse_error" || rcnDiag.status === "wfs_layer_not_found" || rcnDiag.status === "bad_bbox";
     sourcesUsed.push({
-      source: "RCN / Geoportal WFS", used: !!rcn.stats, purpose: "ceny transakcyjne",
-      dataLevel: rcn.radiusKm ? `promień ${rcn.radiusKm} km` : "—",
+      source: "RCN / Geoportal WFS",
+      used: !!rcn.stats,
+      purpose: "ceny transakcyjne",
+      dataLevel: rcn.radiusKm ? `promień ${rcn.radiusKm} km · ${rcnDiag.layerUsed ?? "—"}` : (rcnDiag.endpoint ? "endpoint OK" : "—"),
       period: rcn.stats ? `${rcn.stats.periodMonths} mies.` : "",
-      status: rcn.stats ? "success" : "no_data",
+      status: rcn.stats ? "success" : (rcnTechnicalFailure ? "error" : "no_data"),
+      note: rcnDiag.statusMessage,
     });
+    if (rcnTechnicalFailure) {
+      warnings.push(`RCN niedostępny z powodu błędu technicznego: ${rcnDiag.status}. ${rcnDiag.errorTechnical ? `Szczegóły: ${rcnDiag.errorTechnical}. ` : ""}Benchmark oparto tymczasowo o GUS BDL.`);
+    } else if (rcnDiag.status === "features_found_but_filtered_out") {
+      warnings.push("RCN zwrócił dane, ale wszystkie zostały odfiltrowane. Prawdopodobnie filtr typu nieruchomości albo daty jest zbyt restrykcyjny.");
+    }
+    // Alarm dla dużych miast (Warszawa/Kraków/Wrocław/...) jeżeli brak wyników nawet w 10 km
+    const isMajorCity = /warszaw|krak[óo]w|wroc[lł]aw|pozna[nń]|gda[nń]sk|katowice|[lł]od[zź]|szczecin|lublin|bydgoszcz/i.test(`${input.city ?? ""} ${input.address ?? ""}`);
+    if (isMajorCity && rcnDiag.status === "no_features_in_bbox") {
+      warnings.push(`RCN nie zwrócił wyników dla "${input.city ?? "—"}" nawet w promieniu 10 km. Sprawdź endpoint, warstwę, CRS, bbox i parsowanie odpowiedzi.`);
+    }
+
 
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
     const addrLower = `${input.address ?? ""} ${input.city ?? ""}`.toLowerCase();
@@ -244,13 +262,21 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     if (property?.has_co_owners) legal.warnings.push("Współwłaściciele — wymagana ich zgoda.");
     legal.score = legal.warnings.length === 0 ? 80 : legal.warnings.length === 1 ? 60 : 40;
 
+    const marketSummary = rcn.transactionsCount > 0
+      ? `Odnaleziono ${rcn.transactionsCount} transakcji porównawczych RCN.`
+      : rcnDiag.status === "no_features_in_bbox" ? "Nie znaleziono transakcji RCN w analizowanym obszarze."
+      : rcnDiag.status === "features_found_but_filtered_out" ? "RCN zwrócił dane, ale nie znaleziono wystarczająco podobnych transakcji po zastosowaniu filtrów."
+      : rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" ? "Nie udało się pobrać danych RCN z usługi WFS."
+      : rcnDiag.status === "wfs_parse_error" ? "Dane RCN zostały pobrane, ale aplikacja nie potrafiła ich poprawnie przetworzyć."
+      : rcnDiag.status === "bad_bbox" ? "Błąd zapytania przestrzennego RCN."
+      : rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_layer_not_found" ? "Usługa RCN niedostępna lub nie znaleziono warstwy."
+      : "Brak danych RCN.";
     const market: MarketLiquidityResult = {
       score: rcn.transactionsCount >= 5 ? 80 : rcn.transactionsCount >= 3 ? 60 : rcn.transactionsCount >= 1 ? 40 : 20,
-      summary: rcn.transactionsCount > 0
-        ? `Odnaleziono ${rcn.transactionsCount} transakcji porównawczych.`
-        : "Brak transakcji porównawczych w RCN.",
+      summary: marketSummary,
       transactionsCount: rcn.transactionsCount,
     };
+
 
     // 10) Ryzyko powodziowe ISOK/Wody Polskie
     const flood = await analyzeFloodRisk({
@@ -307,7 +333,9 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       floodAlerts: flood.alerts,
     });
     result.gusDiagnostics = gusDiagnostics;
+    result.rcnDiagnostics = rcnDiag;
     result.listingsBenchmark = listings;
+
 
 
     // 12) Zapis
@@ -330,7 +358,8 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       property_id: property?.id ?? null,
       analysis_id: saved?.id ?? null,
       sources_used: sourcesUsed.map(s => s.source) as never,
-      rcn_status: rcn.stats ? "success" : "no_data",
+      rcn_status: rcnDiag.status,
+
       gus_bdl_status: gus ? "success" : "no_data",
       nbp_status: nbp ? "success" : "no_data",
       google_maps_status: input.latitude != null ? "success" : "no_data",

@@ -184,6 +184,61 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
             </Card>
           </div>
 
+          {result.rcnDiagnostics && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Diagnostyka RCN (administracyjna)</span>
+                  <Badge variant={
+                    result.rcnDiagnostics.status === "success" ? "default" :
+                    result.rcnDiagnostics.status === "no_features_in_bbox" || result.rcnDiagnostics.status === "features_found_but_filtered_out" ? "secondary" :
+                    "destructive"
+                  }>{result.rcnDiagnostics.status}</Badge>
+                </CardTitle>
+                <CardDescription>{result.rcnDiagnostics.statusMessage}</CardDescription>
+              </CardHeader>
+              <CardContent className="text-xs space-y-1">
+                <div><span className="text-muted-foreground">Endpoint:</span> <code className="break-all">{result.rcnDiagnostics.endpoint ?? "—"}</code></div>
+                <div><span className="text-muted-foreground">Warstwa użyta:</span> <code>{result.rcnDiagnostics.layerUsed ?? "—"}</code></div>
+                <div><span className="text-muted-foreground">CRS:</span> {result.rcnDiagnostics.crsUsed ?? "—"}</div>
+                <div><span className="text-muted-foreground">Współrzędne wejściowe:</span> lat={result.rcnDiagnostics.inputCoordinates.lat ?? "—"}, lng={result.rcnDiagnostics.inputCoordinates.lng ?? "—"} ({result.rcnDiagnostics.inputCoordinates.crs})</div>
+                {result.rcnDiagnostics.queryBbox && (
+                  <div><span className="text-muted-foreground">Bbox:</span> [{result.rcnDiagnostics.queryBbox.minX.toFixed(4)}, {result.rcnDiagnostics.queryBbox.minY.toFixed(4)}, {result.rcnDiagnostics.queryBbox.maxX.toFixed(4)}, {result.rcnDiagnostics.queryBbox.maxY.toFixed(4)}] ({result.rcnDiagnostics.queryBbox.crs})</div>
+                )}
+                <div><span className="text-muted-foreground">Promień:</span> {result.rcnDiagnostics.radiusM ?? "—"} m (próbowano: {result.rcnDiagnostics.radiiTried.join(", ") || "—"})</div>
+                <div><span className="text-muted-foreground">Mapowanie typu:</span> {result.rcnDiagnostics.propertyTypeMapping.applicationType ?? "—"} → [{result.rcnDiagnostics.propertyTypeMapping.keywords.join(", ")}]</div>
+                <div><span className="text-muted-foreground">Filtry:</span> {result.rcnDiagnostics.filtersApplied.join(", ") || "(brak)"}</div>
+                <Separator className="my-1" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
+                  <div className="rounded border p-1.5"><div className="text-muted-foreground">Raw count</div><div className="font-medium">{result.rcnDiagnostics.featuresRawCount}</div></div>
+                  <div className="rounded border p-1.5"><div className="text-muted-foreground">Filtered count</div><div className="font-medium">{result.rcnDiagnostics.featuresFilteredCount}</div></div>
+                  <div className="rounded border p-1.5"><div className="text-muted-foreground">≤ 12 mies.</div><div className="font-medium">{result.rcnDiagnostics.periodCounts.countLast12Months}</div></div>
+                  <div className="rounded border p-1.5"><div className="text-muted-foreground">≤ 36 mies.</div><div className="font-medium">{result.rcnDiagnostics.periodCounts.countLast36Months}</div></div>
+                </div>
+                <div><span className="text-muted-foreground">Wykryte warstwy ({result.rcnDiagnostics.availableLayers.length}):</span> <code className="break-all">{result.rcnDiagnostics.availableLayers.slice(0, 12).join(", ") || "—"}{result.rcnDiagnostics.availableLayers.length > 12 ? "…" : ""}</code></div>
+                {result.rcnDiagnostics.errorTechnical && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs break-all">{result.rcnDiagnostics.errorTechnical}</AlertDescription>
+                  </Alert>
+                )}
+                {result.rcnDiagnostics.sampleFeature && (
+                  <details>
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Próbka pierwszego obiektu</summary>
+                    <pre className="mt-1 overflow-auto rounded border bg-muted/30 p-2 text-[10px] max-h-48">{JSON.stringify(result.rcnDiagnostics.sampleFeature, null, 2)}</pre>
+                  </details>
+                )}
+                {result.rcnDiagnostics.rawResponseSnippet && (
+                  <details>
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Fragment odpowiedzi technicznej</summary>
+                    <pre className="mt-1 overflow-auto rounded border bg-muted/30 p-2 text-[10px] max-h-48">{result.rcnDiagnostics.rawResponseSnippet}</pre>
+                  </details>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+
           {result.listingsBenchmark && (
             <Card>
               <CardHeader>

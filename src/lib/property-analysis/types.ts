@@ -163,7 +163,9 @@ export interface PropertyAnalysisResult {
   floodRisk?: FloodRiskResult;
   floodAlerts?: string[];
   gusDiagnostics?: GusBenchmarkDiagnostics | null;
+  rcnDiagnostics?: RcnDiagnostics | null;
   listingsBenchmark?: ListingsBenchmarkSummary | null;
+
   warnings: string[];
   raw: Record<string, any>;
 }
@@ -208,6 +210,45 @@ export interface RcnStats {
   periodMonths: number;
   freshness: "good" | "limited" | "weak";
 }
+
+export type RcnStatus =
+  | "not_started"
+  | "geocoding_failed"
+  | "missing_coordinates"
+  | "wfs_capabilities_failed"
+  | "wfs_layer_not_found"
+  | "bad_bbox"
+  | "wfs_request_failed"
+  | "wfs_timeout"
+  | "wfs_parse_error"
+  | "filter_too_strict"
+  | "no_features_in_bbox"
+  | "features_found_but_filtered_out"
+  | "success";
+
+export interface RcnDiagnostics {
+  status: RcnStatus;
+  statusMessage: string;
+  endpoint: string | null;
+  availableLayers: string[];
+  layerUsed: string | null;
+  crsUsed: "EPSG:4326" | "EPSG:2180" | "EPSG:3857" | null;
+  inputCoordinates: { lat: number | null; lng: number | null; crs: string };
+  queryBbox: { minX: number; minY: number; maxX: number; maxY: number; crs: string } | null;
+  radiusM: number | null;
+  radiiTried: number[];
+  featuresRawCount: number;
+  featuresFilteredCount: number;
+  filtersApplied: string[];
+  periodCounts: { countAllDates: number; countLast12Months: number; countLast24Months: number; countLast36Months: number };
+  sampleFeature: Record<string, any> | null;
+
+  rawResponseSnippet: string | null;
+  errorTechnical: string | null;
+  capabilitiesChecked: boolean;
+  propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
+}
+
 
 
 export interface GusStats {
