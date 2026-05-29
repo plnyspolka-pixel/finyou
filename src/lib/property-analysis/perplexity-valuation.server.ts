@@ -4,15 +4,16 @@ import type { PropertyType, RcnStats } from "./types";
 
 export interface PerplexityValuationInput {
   propertyType: PropertyType | string;
-  address: string | null;
-  city: string | null;
-  voivodeship: string | null;
-  usableAreaM2: number | null;
-  buildingAreaM2: number | null;
-  landAreaM2: number | null;
-  landAreaHa: number | null;
-  declaredPropertyValuePln: number | null;
+  address?: string | null;
+  city?: string | null;
+  voivodeship?: string | null;
+  usableAreaM2?: number | null;
+  buildingAreaM2?: number | null;
+  landAreaM2?: number | null;
+  landAreaHa?: number | null;
+  declaredPropertyValuePln?: number | null;
 }
+
 
 export interface PerplexityValuation {
   status: "success" | "no_data" | "error";
