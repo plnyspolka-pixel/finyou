@@ -241,7 +241,8 @@ export interface RcnDiagnostics {
   featuresFilteredCount: number;
   filtersApplied: string[];
   periodCounts: { countAllDates: number; countLast12Months: number; countLast24Months: number; countLast36Months: number };
-  sampleFeature: Record<string, unknown> | null;
+  sampleFeature: Record<string, any> | null;
+
   rawResponseSnippet: string | null;
   errorTechnical: string | null;
   capabilitiesChecked: boolean;
