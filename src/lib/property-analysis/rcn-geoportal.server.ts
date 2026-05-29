@@ -386,7 +386,8 @@ export async function rcnBenchmark(args: {
         diag.radiusM = r;
 
         try {
-          const jsonResp = await fetchFeaturesJson(endpoint, layer, bbox, crs);
+          const jsonResp = await fetchFeaturesJson(featureEndpoint, layer, bbox, crs);
+
           if (jsonResp) {
             const feats: any[] = jsonResp.raw?.features ?? [];
             diag.rawResponseSnippet = jsonResp.snippet;
