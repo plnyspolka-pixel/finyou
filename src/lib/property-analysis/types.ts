@@ -255,7 +255,18 @@ export interface RcnDiagnostics {
     error: string;
   }>;
   propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
+  queryBbox: { minX: number; minY: number; maxX: number; maxY: number; crs: string } | null;
+  radiusM: number | null;
+  radiiTried: number[];
+  featuresRawCount: number;
+  featuresFilteredCount: number;
+  filtersApplied: string[];
+  periodCounts: { countAllDates: number; countLast12Months: number; countLast24Months: number; countLast36Months: number };
+  sampleFeature: Record<string, any> | null;
+  rawResponseSnippet: string | null;
+  errorTechnical: string | null;
 }
+
 
 
 
