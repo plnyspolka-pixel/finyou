@@ -174,17 +174,19 @@ function point2180(lat: number, lng: number): [number, number] {
 
 function bbox2180(lat: number, lng: number, radiusM: number): [number, number, number, number] {
   const [x, y] = point2180(lat, lng);
-  return [x - radiusM, y - radiusM, x + radiusM, y + radiusM];
-}
-
 // Oblicza minimalną szerokość obrazka żeby utrzymać scaleDenominator ≤ limit.
 // scaleDenominator ≈ pixelSizeM * 1000 / 0.28
+// MapServer twardo odrzuca WIDTH/HEIGHT > 4096 ("Image size out of range").
 function widthForScale(bboxWidthM: number, scaleLimit: number): number {
   const maxPxSize = (scaleLimit * 0.28) / 1000; // m/pixel
-  return Math.max(512, Math.ceil(bboxWidthM / maxPxSize));
+  const desired = Math.ceil(bboxWidthM / maxPxSize);
+  return Math.max(512, Math.min(4096, desired));
 }
 
 // --------- GetFeatureInfo ---------
+// Uwaga: WMS Geoportal RCN nie zwraca atrybutów w INFO_FORMAT=application/vnd.ogc.gml
+// (msGMLOutput jest pusty). Działającym formatem jest text/html — i to z niego parsujemy
+// pola transakcji (każdy obiekt to <div class="accordion"> z listą <span class="list-item-value">).
 
 async function getFeatureInfo(
   layer: string,
@@ -199,12 +201,12 @@ async function getFeatureInfo(
     `&LAYERS=${layer}&QUERY_LAYERS=${layer}&STYLES=` +
     `&CRS=EPSG:2180&BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}` +
     `&WIDTH=${width}&HEIGHT=${height}&I=${i}&J=${j}` +
-    `&INFO_FORMAT=${encodeURIComponent("application/vnd.ogc.gml")}` +
-    `&FEATURE_COUNT=50&FORMAT=image/png`;
+    `&INFO_FORMAT=${encodeURIComponent("text/html")}` +
+    `&FEATURE_COUNT=200&FORMAT=image/png`;
   try {
     const res = await fetchWithTimeout(
       proxify(url),
-      { headers: { Accept: "application/xml,text/xml,*/*" } },
+      { headers: { Accept: "text/html,application/xml,*/*" } },
       RCN_TIMEOUT_MS,
     );
     if (!res.ok) return null;
@@ -214,55 +216,63 @@ async function getFeatureInfo(
   }
 }
 
-// Wyciąga obiekty (features) z msGMLOutput. MapServer zwraca strukturę:
-// <msGMLOutput><{layer}_layer><{layer}_feature>...properties...</_feature></_layer></msGMLOutput>
-function parseMsGmlFeatures(xml: string, layer: string): Array<Record<string, unknown>> {
-  if (!xml || !xml.includes("msGMLOutput") || xml.includes("ServiceException")) return [];
-  try {
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      removeNSPrefix: true,
-      parseAttributeValue: true,
-      parseTagValue: true,
-      trimValues: true,
-    });
-    const parsed = parser.parse(xml) as any;
-    const root = parsed?.msGMLOutput ?? parsed?.msgmloutput ?? parsed;
-    if (!root || typeof root !== "object") return [];
-    const features: Array<Record<string, unknown>> = [];
-    const walk = (node: any) => {
-      if (!node || typeof node !== "object") return;
-      for (const [key, value] of Object.entries(node)) {
-        const lk = key.toLowerCase();
-        if (lk.endsWith("_feature") || lk === `${layer}_feature` || lk === "feature") {
-          const arr = Array.isArray(value) ? value : [value];
-          for (const f of arr) {
-            if (f && typeof f === "object") features.push(flattenProps(f as Record<string, unknown>));
-          }
-        } else if (typeof value === "object") {
-          walk(value);
-        }
+// Parsuje HTML GetFeatureInfo z usługi Geoportal RCN.
+// Każdy obiekt to <div class="accordion"> zawierający sekcje h3 (Dane transakcji / Nieruchomość / Budynek / Dokument)
+// oraz pola <li><span class="list-item-value">Etykieta:</span> wartość</li>.
+function parseHtmlFeatures(html: string, _layer: string): Array<Record<string, unknown>> {
+  if (!html) return [];
+  // Szybkie odsianie pustego HTML
+  if (!/class\s*=\s*"accordion"/i.test(html) && !/list-item-value/i.test(html)) return [];
+
+  // Usuwamy script/style — bezpieczniej dla regexpów.
+  const clean = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "");
+
+  const features: Array<Record<string, unknown>> = [];
+  // Każdy <div class="accordion"> ... aż do następnego <div class="accordion"> lub końca body.
+  const blockRx = /<div\s+class="accordion">([\s\S]*?)(?=<div\s+class="accordion">|<\/body>|$)/gi;
+  let bm: RegExpExecArray | null;
+  while ((bm = blockRx.exec(clean)) !== null) {
+    const block = bm[1];
+    const props: Record<string, unknown> = {};
+    // Tytuł akordeonu np. "Budynek: 106_BUD" / "Lokal: ..." / "Działka: ..."
+    const title = block.match(/<span style="font-weight:bold[^"]*">\s*([^<]+?)\s*<\/span>/i);
+    if (title) {
+      const t = title[1].trim();
+      const idx = t.indexOf(":");
+      if (idx > 0) {
+        props["__obj_type"] = t.slice(0, idx).trim();
+        props["__obj_id"] = t.slice(idx + 1).trim();
+      } else {
+        props["__obj_type"] = t;
       }
-    };
-    walk(root);
-    return features;
-  } catch {
-    return [];
+    }
+    // Sekcje h3 dają kontekst pól (Dane transakcji / Dokument / Nieruchomość / Budynek / Lokal / Działka).
+    const sectionRx = /<h3>\s*([^<]+?)\s*<\/h3>\s*<ul>([\s\S]*?)<\/ul>/gi;
+    let sm: RegExpExecArray | null;
+    while ((sm = sectionRx.exec(block)) !== null) {
+      const section = sm[1].trim().toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "_");
+      const ul = sm[2];
+      const liRx = /<li>\s*<span class="list-item-value">\s*([^<]+?):\s*<\/span>\s*([\s\S]*?)<\/li>/gi;
+      let lm: RegExpExecArray | null;
+      while ((lm = liRx.exec(ul)) !== null) {
+        const label = lm[1].trim();
+        const value = lm[2].replace(/<[^>]+>/g, "").trim();
+        if (!value || value === "-") continue;
+        const key = `${section}__${label.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "_")}`;
+        props[key] = value;
+        // Także alias bez sekcji — pierwsze wystąpienie wygrywa.
+        const alias = label.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "_");
+        if (!(alias in props)) props[alias] = value;
+      }
+    }
+    if (Object.keys(props).length > 0) features.push(props);
   }
+  return features;
 }
 
-function flattenProps(obj: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  const visit = (v: unknown, prefix: string) => {
-    if (v === null || v === undefined) return;
-    if (typeof v !== "object") { out[prefix] = v; return; }
-    if (Array.isArray(v)) { v.forEach((x, i) => visit(x, `${prefix}_${i}`)); return; }
-    for (const [k, vv] of Object.entries(v as Record<string, unknown>)) {
-      if (k.startsWith("@_") || k === "boundedBy" || k === "Box" || k === "geometry") continue;
-      const next = prefix ? `${prefix}.${k}` : k;
-      visit(vv, next);
-    }
-  };
+
   visit(obj, "");
   return out;
 }
