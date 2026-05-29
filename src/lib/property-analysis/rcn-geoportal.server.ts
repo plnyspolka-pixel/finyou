@@ -49,11 +49,15 @@ const TYPE_TO_LAYER: Record<string, string[]> = {
 };
 
 // Promień (m) i krok siatki sond GetFeatureInfo zależnie od typu warstwy.
+// UWAGA: WMS GetFeatureInfo zwraca tylko cechy przecinające piksel sondy.
+// Przy scale ≤ 2000 piksel ≈ 0,56 m, więc gęsta siatka jest konieczna,
+// żeby w gęsto zabudowanym obszarze (np. Warszawa) wyłapać wszystkie obiekty.
 const LAYER_PROBE_CONFIG: Record<string, { radii: number[]; gridSize: number }> = {
-  lokale: { radii: [300, 600, 1200, 2000], gridSize: 12 },
-  budynki: { radii: [300, 600, 1200, 2000], gridSize: 12 },
-  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 10 },
+  lokale: { radii: [300, 600, 1200], gridSize: 20 },
+  budynki: { radii: [300, 600, 1200], gridSize: 20 },
+  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 14 },
 };
+
 
 
 interface RcnFeatureRaw {
@@ -438,10 +442,16 @@ export async function rcnBenchmark(args: {
   let chosenLayer: string | null = null;
   let chosenRadius: number | null = null;
   const radiiUsed: number[] = [];
+  // Minimalna liczba transakcji, którą warto uzbierać zanim przerwiemy eskalację.
+  // Dla obszarów typu Warszawa łatwo wpaść w setki transakcji, więc nie kończymy
+  // pętli po pierwszych 3 — chcemy zebrać statystycznie istotną próbkę.
+  const MIN_DESIRED = 30;
+
 
   outer: for (const layer of candidateLayers) {
     const cfg = LAYER_PROBE_CONFIG[layer] ?? LAYER_PROBE_CONFIG.lokale;
     const scaleLimit = layer === "dzialki" ? 5000 : 2000;
+    const startedAtLayer = allRaw.length;
 
     for (const radius of cfg.radii) {
       radiiUsed.push(radius);
@@ -464,9 +474,8 @@ export async function rcnBenchmark(args: {
         }
       }
 
-      // Wykonujemy w batchach po 6 równolegle, żeby nie zatkać edge function.
-      const batchSize = 6;
-      const newThisRound: RcnFeatureRaw[] = [];
+      // Wykonujemy w batchach równolegle, żeby nie zatkać edge function.
+      const batchSize = 12;
       for (let b = 0; b < probes.length; b += batchSize) {
         const batch = probes.slice(b, b + batchSize);
         const results = await Promise.all(
@@ -476,30 +485,35 @@ export async function rcnBenchmark(args: {
           if (!xml) continue;
           if (!diag.rawResponseSnippet) diag.rawResponseSnippet = xml.slice(0, 800);
           const feats = parseHtmlFeatures(xml, layer);
-
           for (const f of feats) {
             const raw = extractFromProps(f, layer);
             if (seenSig.has(raw.signature)) continue;
             seenSig.add(raw.signature);
             allRaw.push(raw);
-            newThisRound.push(raw);
             if (!diag.sampleFeature) diag.sampleFeature = f;
           }
         }
       }
 
-      if (newThisRound.length >= 3) {
+      // Ustaw wybraną warstwę przy pierwszych trafieniach, ale kontynuuj
+      // eskalację promieni — chcemy zebrać jak najwięcej porównawczych transakcji.
+      if (allRaw.length > startedAtLayer && !chosenLayer) {
         chosenLayer = layer;
         chosenRadius = radius;
-        break outer;
       }
-      if (allRaw.length >= 3) {
-        chosenLayer = layer;
-        chosenRadius = radius;
-        break outer;
+      if (allRaw.length > startedAtLayer) {
+        chosenRadius = radius; // ostatni promień, na którym uzbierano dane
       }
+
+      // Przerywamy dopiero gdy mamy statystycznie sensowną próbkę.
+      if (allRaw.length >= MIN_DESIRED) break outer;
     }
+
+    // Jeśli ta warstwa coś dała — nie przeskakuj do kolejnej (np. budynki przy mieszkaniu).
+    if (allRaw.length > startedAtLayer) break outer;
   }
+
+
   diag.radiiTried = radiiUsed;
   diag.featuresRawCount = allRaw.length;
 
@@ -580,7 +594,8 @@ export async function rcnBenchmarkCached(args: {
   lng: number;
   propertyType: PropertyType | string;
 }): Promise<RcnBenchmarkResult> {
-  const key = `rcn5:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
+  const key = `rcn6:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
+
   return withCache("rcn_cache", key, 7, () => rcnBenchmark(args));
 }
 
