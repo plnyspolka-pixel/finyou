@@ -108,7 +108,8 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       warnings.push(`RCN nie zwrócił wyników dla "${input.city ?? "—"}" nawet w promieniu 10 km. Sprawdź endpoint, warstwę, CRS, bbox i parsowanie odpowiedzi.`);
     }
 
-    }
+
+
 
 
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
