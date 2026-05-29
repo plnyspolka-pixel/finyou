@@ -77,7 +77,17 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       ? await rcnBenchmarkCached({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
       : { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: { status: "missing_coordinates" as const, statusMessage: "Brak współrzędnych — RCN nie odpytany.", endpoint: null, availableLayers: [], layerUsed: null, crsUsed: null, inputCoordinates: { lat: null, lng: null, crs: "EPSG:4326" }, queryBbox: null, radiusM: null, radiiTried: [], featuresRawCount: 0, featuresFilteredCount: 0, filtersApplied: [], periodCounts: { countAllDates: 0, countLast12Months: 0, countLast24Months: 0, countLast36Months: 0 }, sampleFeature: null, rawResponseSnippet: null, errorTechnical: null, capabilitiesChecked: false, propertyTypeMapping: { applicationType: null, keywords: [], matchedLayerKeywords: [] } } };
     const rcnDiag = rcn.diagnostics;
-    const rcnTechnicalFailure = rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" || rcnDiag.status === "wfs_parse_error" || rcnDiag.status === "wfs_layer_not_found" || rcnDiag.status === "bad_bbox";
+    const rcnTechnicalFailure =
+      rcnDiag.status === "wfs_capabilities_failed" ||
+      rcnDiag.status === "wfs_request_failed" ||
+      rcnDiag.status === "wfs_timeout" ||
+      rcnDiag.status === "wfs_parse_error" ||
+      rcnDiag.status === "wfs_layer_not_found" ||
+      rcnDiag.status === "bad_bbox" ||
+      rcnDiag.status === "capabilities_failed" ||
+      rcnDiag.status === "wms_capabilities_success_but_wfs_failed" ||
+      rcnDiag.status === "no_layers_detected" ||
+      rcnDiag.status === "getfeature_failed";
     sourcesUsed.push({
       source: "RCN / Geoportal WFS",
       used: !!rcn.stats,
@@ -94,8 +104,10 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     }
     // Alarm dla dużych miast (Warszawa/Kraków/Wrocław/...) jeżeli brak wyników nawet w 10 km
     const isMajorCity = /warszaw|krak[óo]w|wroc[lł]aw|pozna[nń]|gda[nń]sk|katowice|[lł]od[zź]|szczecin|lublin|bydgoszcz/i.test(`${input.city ?? ""} ${input.address ?? ""}`);
-    if (isMajorCity && rcnDiag.status === "no_features_in_bbox") {
+    if (isMajorCity && (rcnDiag.status === "no_features_in_bbox" || rcnDiag.status === "no_features")) {
       warnings.push(`RCN nie zwrócił wyników dla "${input.city ?? "—"}" nawet w promieniu 10 km. Sprawdź endpoint, warstwę, CRS, bbox i parsowanie odpowiedzi.`);
+    }
+
     }
 
 
