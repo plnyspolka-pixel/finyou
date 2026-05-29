@@ -7,7 +7,8 @@ import type {
   DataSourceUsage, LegalRiskResult, LocationScoreResult, MarketLiquidityResult,
   PropertyAnalysisInput, PropertyAnalysisResult, ValuationBenchmark,
 } from "./types";
-import { rcnBenchmarkCached, rcnStatusMessage } from "./rcn-geoportal.server";
+import { rcnBenchmarkCached } from "./rcn-geoportal.server";
+
 
 import { gusBenchmark, classifySoil } from "./gus-bdl.server";
 import { nbpTrend } from "./nbp-real-estate.server";
