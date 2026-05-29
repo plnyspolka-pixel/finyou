@@ -180,29 +180,24 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       ltvCategory: classifyLtv(ltvPercent),
     };
 
-    // 9) Ryzyka prawne i płynność
+    // 6) Ryzyka prawne i płynność
     const legal: LegalRiskResult = { score: 0, warnings: [] };
     if (property?.has_mortgage) legal.warnings.push("Nieruchomość obciążona hipoteką.");
     if (property?.has_co_owners) legal.warnings.push("Współwłaściciele — wymagana ich zgoda.");
     legal.score = legal.warnings.length === 0 ? 80 : legal.warnings.length === 1 ? 60 : 40;
 
-    const marketSummary = rcn.transactionsCount > 0
-      ? `Odnaleziono ${rcn.transactionsCount} transakcji porównawczych RCN.`
-      : rcnDiag.status === "no_features_in_bbox" ? "Nie znaleziono transakcji RCN w analizowanym obszarze."
-      : rcnDiag.status === "features_found_but_filtered_out" ? "RCN zwrócił dane, ale nie znaleziono wystarczająco podobnych transakcji po zastosowaniu filtrów."
-      : rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" ? "Nie udało się pobrać danych RCN z usługi WFS."
-      : rcnDiag.status === "wfs_parse_error" ? "Dane RCN zostały pobrane, ale aplikacja nie potrafiła ich poprawnie przetworzyć."
-      : rcnDiag.status === "bad_bbox" ? "Błąd zapytania przestrzennego RCN."
-      : rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_layer_not_found" ? "Usługa RCN niedostępna lub nie znaleziono warstwy."
-      : "Brak danych RCN.";
+    const syntheticRcn = perplexityToRcnStats(pplx, isLand);
+    const comparablesCount = pplx.comparablesFound;
+    const marketSummary = pplx.status === "success"
+      ? (pplx.liquidityComment || `Perplexity zidentyfikowała ${comparablesCount} porównań w tej lokalizacji.`)
+      : (pplx.errorMessage ?? "Brak danych porównawczych z Perplexity.");
     const market: MarketLiquidityResult = {
-      score: rcn.transactionsCount >= 5 ? 80 : rcn.transactionsCount >= 3 ? 60 : rcn.transactionsCount >= 1 ? 40 : 20,
+      score: comparablesCount >= 10 ? 80 : comparablesCount >= 5 ? 60 : comparablesCount >= 2 ? 40 : 20,
       summary: marketSummary,
-      transactionsCount: rcn.transactionsCount,
+      transactionsCount: comparablesCount,
     };
 
-
-    // 10) Ryzyko powodziowe ISOK/Wody Polskie
+    // 7) Ryzyko powodziowe ISOK/Wody Polskie
     const flood = await analyzeFloodRisk({
       latitude: input.latitude, longitude: input.longitude,
       address: input.address, city: input.city, voivodeship: input.voivodeship,
@@ -225,7 +220,7 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       available: flood.success,
     };
 
-    // 11) Scoring
+    // 8) Scoring
     const docsPresent = {
       kw: !!input.kwNumber || docExtraction.extractions.some(e => e.docKind === "kw"),
       mpzpOrWz: docExtraction.extractions.some(e => e.docKind === "mpzp"),
@@ -235,16 +230,17 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     };
     const collateralScore = calculateCollateralScore({
       input, valuation, ltv, location: loc, legal, market,
-      rcn: rcn.stats, gus, nbp, documents: docExtraction.extractions, documentsPresent: docsPresent,
+      rcn: syntheticRcn, gus: null, nbp: null,
+      documents: docExtraction.extractions, documentsPresent: docsPresent,
       floodRisk: floodRiskForScoring,
     });
 
-    // 12) Teksty oferty
-    const weakData = !rcn.stats && !gus;
+    // 9) Teksty oferty
+    const weakData = pplx.status !== "success" || comparablesCount < 2;
     if (weakData) warnings.push("Dostępność danych porównawczych jest ograniczona — wymagana ręczna weryfikacja.");
     const offerText = generateOfferText({
       input, valuation, location: loc, legal, collateralScore, sourcesUsed,
-      rcnCount: rcn.transactionsCount, rcnRadiusKm: rcn.radiusKm, weakData,
+      rcnCount: comparablesCount, rcnRadiusKm: null, weakData,
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAvailable: flood.success,
     });
@@ -252,17 +248,12 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     const result: PropertyAnalysisResult = buildAnalysisResult({
       input, valuation, ltv, location: loc, legal, market,
       collateralScore, sourcesUsed, warnings, offerText,
-      raw: { rcn: rcn.stats, gus, gusDiagnostics, nbp, loc, flood: flood.raw, listings },
+      raw: { perplexity: pplx, loc, flood: flood.raw },
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAlerts: flood.alerts,
     });
-    result.gusDiagnostics = gusDiagnostics;
-    result.rcnDiagnostics = rcnDiag;
-    result.listingsBenchmark = listings;
 
-
-
-    // 12) Zapis
+    // 10) Zapis
     const { data: saved } = await supabaseAdmin.from("property_analyses").upsert({
       application_id: applicationId,
       property_id: property?.id ?? null,
@@ -282,14 +273,14 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       property_id: property?.id ?? null,
       analysis_id: saved?.id ?? null,
       sources_used: sourcesUsed.map(s => s.source) as never,
-      rcn_status: rcnDiag.status,
-
-      gus_bdl_status: gus ? "success" : "no_data",
-      nbp_status: nbp ? "success" : "no_data",
+      rcn_status: pplx.status === "success" ? "success" : "no_data",
+      gus_bdl_status: "no_data",
+      nbp_status: "no_data",
       google_maps_status: input.latitude != null ? "success" : "no_data",
       document_extraction_status: docExtraction.status,
       collateral_score: collateralScore.total,
     });
+
 
     return result;
   });
