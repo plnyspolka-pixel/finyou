@@ -1,7 +1,8 @@
 // GUS BDL — benchmark statystyczny (mieszkania zł/m², grunty rolne zł/ha).
 // Z poprawnym mapowaniem jednostki terytorialnej (TERYT/BDL), hierarchią
 // fallbacków, sanity-checkiem dla dużych miast i diagnostyką.
-import type { GusStats } from "./types";
+import type { GusStats, GusBenchmarkDiagnostics, BdlLevelLabel, GusSanityStatus } from "./types";
+
 import { fetchWithTimeout, withCache } from "./cache.server";
 
 const BDL_BASE = "https://bdl.stat.gov.pl/api/v1";
