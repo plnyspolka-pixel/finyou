@@ -142,26 +142,30 @@ function parseLayerNamesFromWms(xml: string): string[] {
   try {
     const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true });
     const parsed = parser.parse(xml) as any;
-    const root = parsed?.WMS_Capabilities ?? parsed?.wms_capabilities ?? parsed;
     const layers: string[] = [];
     const walk = (node: any) => {
       if (!node || typeof node !== "object") return;
-      const ls = node.Layer ?? node.layer;
-      if (ls) {
-        const arr = Array.isArray(ls) ? ls : [ls];
-        for (const l of arr) {
-          const name = l?.Name ?? l?.name;
-          if (name && !layers.includes(String(name))) layers.push(String(name));
-          walk(l);
-        }
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      const name = node.Name ?? node.name;
+      if (typeof name === "string" || typeof name === "number") {
+        const s = String(name).trim();
+        if (s && !layers.includes(s)) layers.push(s);
+      }
+      for (const v of Object.values(node)) {
+        if (v && typeof v === "object") walk(v);
       }
     };
-    walk(root);
-    return layers;
+    walk(parsed);
+    // Odfiltruj nazwy serwisowe (np. "WMS")
+    return layers.filter((l) => !/^wms$/i.test(l));
   } catch {
     return [];
   }
 }
+
 
 // --------- BBOX i grid sond ---------
 
