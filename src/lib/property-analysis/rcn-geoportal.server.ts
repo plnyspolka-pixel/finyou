@@ -23,6 +23,15 @@ const RCN_HEADERS: Record<string, string> = {
   Accept: "application/xml,text/xml,*/*",
 };
 
+// Cloudflare Workers często nie ma dostępu sieciowego do mapy.geoportal.gov.pl
+// (filtry IP / brak DNS). Routujemy więc wszystkie żądania przez Supabase Edge
+// Function `rcn-proxy`, która działa w Deno Deploy i ma normalne wyjście do internetu.
+function proxify(target: string): string {
+  const base = process.env.SUPABASE_URL;
+  if (!base) return target; // fallback: bezpośrednio (np. lokalnie)
+  return `${base}/functions/v1/rcn-proxy?action=proxy&url=${encodeURIComponent(target)}`;
+}
+
 
 // Słownik typów aplikacyjnych → słowa kluczowe charakterystyczne dla nazw warstw / atrybutów RCN.
 const TYPE_KEYWORDS: Record<string, string[]> = {
