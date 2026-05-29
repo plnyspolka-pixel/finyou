@@ -1,4 +1,4 @@
-// Orchestrator analizy zabezpieczenia — łączy wszystkie źródła.
+// Orchestrator analizy zabezpieczenia — wycena oparta wyłącznie o Perplexity (sonar-pro).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -7,15 +7,10 @@ import type {
   DataSourceUsage, LegalRiskResult, LocationScoreResult, MarketLiquidityResult,
   PropertyAnalysisInput, PropertyAnalysisResult, ValuationBenchmark,
 } from "./types";
-import { rcnBenchmarkCached } from "./rcn-geoportal.server";
-
-
-import { gusBenchmark, classifySoil } from "./gus-bdl.server";
-import { nbpTrend } from "./nbp-real-estate.server";
 import { geocode, locationScore } from "./location-score.server";
 import { extractDocuments } from "./document-extraction.server";
 import { analyzeFloodRisk } from "./flood-risk.server";
-import { scrapeSimilarListings } from "./listings-scraping.server";
+import { perplexityValuation, perplexityToRcnStats } from "./perplexity-valuation.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
 
@@ -82,46 +77,6 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       warnings.push(`Geokodowanie odrzuciło wynik niezgodny z miastem "${input.city ?? "—"}". Sprawdź adres nieruchomości.`);
     }
 
-    // 3) RCN (z pełną diagnostyką)
-    const rcn = geo
-      ? await rcnBenchmarkCached({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
-      : { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: { status: "missing_coordinates" as const, statusMessage: "Brak współrzędnych — RCN nie odpytany.", endpoint: null, availableLayers: [], layerUsed: null, crsUsed: null, inputCoordinates: { lat: null, lng: null, crs: "EPSG:4326" }, queryBbox: null, radiusM: null, radiiTried: [], featuresRawCount: 0, featuresFilteredCount: 0, filtersApplied: [], periodCounts: { countAllDates: 0, countLast12Months: 0, countLast24Months: 0, countLast36Months: 0 }, sampleFeature: null, rawResponseSnippet: null, errorTechnical: null, capabilitiesChecked: false, propertyTypeMapping: { applicationType: null, keywords: [], matchedLayerKeywords: [] } } };
-    const rcnDiag = rcn.diagnostics;
-    const rcnTechnicalFailure =
-      rcnDiag.status === "wfs_capabilities_failed" ||
-      rcnDiag.status === "wfs_request_failed" ||
-      rcnDiag.status === "wfs_timeout" ||
-      rcnDiag.status === "wfs_parse_error" ||
-      rcnDiag.status === "wfs_layer_not_found" ||
-      rcnDiag.status === "bad_bbox" ||
-      rcnDiag.status === "capabilities_failed" ||
-      rcnDiag.status === "wms_capabilities_success_but_wfs_failed" ||
-      rcnDiag.status === "no_layers_detected" ||
-      rcnDiag.status === "getfeature_failed";
-    sourcesUsed.push({
-      source: "RCN / Geoportal WFS",
-      used: !!rcn.stats,
-      purpose: "ceny transakcyjne",
-      dataLevel: rcn.radiusKm ? `promień ${rcn.radiusKm} km · ${rcnDiag.layerUsed ?? "—"}` : (rcnDiag.endpoint ? "endpoint OK" : "—"),
-      period: rcn.stats ? `${rcn.stats.periodMonths} mies.` : "",
-      status: rcn.stats ? "success" : (rcnTechnicalFailure ? "error" : "no_data"),
-      note: rcnDiag.statusMessage,
-    });
-    if (rcnTechnicalFailure) {
-      warnings.push(`RCN niedostępny z powodu błędu technicznego: ${rcnDiag.status}. ${rcnDiag.errorTechnical ? `Szczegóły: ${rcnDiag.errorTechnical}. ` : ""}Benchmark oparto tymczasowo o GUS BDL.`);
-    } else if (rcnDiag.status === "features_found_but_filtered_out") {
-      warnings.push("RCN zwrócił dane, ale wszystkie zostały odfiltrowane. Prawdopodobnie filtr typu nieruchomości albo daty jest zbyt restrykcyjny.");
-    }
-    // Alarm dla dużych miast (Warszawa/Kraków/Wrocław/...) jeżeli brak wyników nawet w 10 km
-    const isMajorCity = /warszaw|krak[óo]w|wroc[lł]aw|pozna[nń]|gda[nń]sk|katowice|[lł]od[zź]|szczecin|lublin|bydgoszcz/i.test(`${input.city ?? ""} ${input.address ?? ""}`);
-    if (isMajorCity && (rcnDiag.status === "no_features_in_bbox" || rcnDiag.status === "no_features")) {
-      warnings.push(`RCN nie zwrócił wyników dla "${input.city ?? "—"}" nawet w promieniu 10 km. Sprawdź endpoint, warstwę, CRS, bbox i parsowanie odpowiedzi.`);
-    }
-
-
-
-
-
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
     const addrLower = `${input.address ?? ""} ${input.city ?? ""}`.toLowerCase();
     if (/warszaw/i.test(addrLower)) {
@@ -130,60 +85,36 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       input.voivodeship = input.voivodeship || "mazowieckie";
     }
 
-    // 4) GUS BDL
-    const gusRes = await gusBenchmark({
+    // 3) Wycena Perplexity (sonar-pro) — jedyne źródło cenowe
+    const pplx = await perplexityValuation({
       propertyType: input.propertyType,
+      address: input.address,
       city: input.city,
       voivodeship: input.voivodeship,
-      county: input.county,
-      soilClass: input.soilClass ?? null,
-    });
-    const gus = gusRes.stats;
-    const gusDiagnostics = gusRes.diagnostics;
-    sourcesUsed.push({
-      source: "GUS BDL", used: !!gus, purpose: "benchmark statystyczny",
-      dataLevel: gusDiagnostics.resolvedLocation.bdlUnitName + " · " + gusDiagnostics.resolvedLocation.bdlUnitLevel,
-      period: gusDiagnostics.period.label || "",
-      status: gus ? (gusDiagnostics.sanityCheckStatus === "suspicious" ? "partial" : "success")
-                  : (gusDiagnostics.sanityCheckStatus === "rejected" ? "error" : "no_data"),
-      note: gusDiagnostics.summaryLine,
-    });
-    for (const w of gusDiagnostics.warnings) warnings.push(w);
-
-    // 5) NBP
-    const nbp = await nbpTrend(input.city);
-    sourcesUsed.push({
-      source: "NBP", used: !!nbp, purpose: "trend rynku mieszkaniowego",
-      dataLevel: nbp?.market ?? "—", period: "", status: nbp ? "success" : "no_data",
-    });
-
-    // 5b) Ogłoszenia z portali nieruchomościowych (Otodom/OLX/Domiporta/Gratka/Morizon)
-    const listings = await scrapeSimilarListings({
-      propertyType: input.propertyType,
-      city: input.city,
-      voivodeship: input.voivodeship,
-      areaM2: input.usableAreaM2 ?? input.buildingAreaM2 ?? null,
-    }).catch((e: { message?: string }) => {
-      const fallback: Awaited<ReturnType<typeof scrapeSimilarListings>> = {
-        status: "error", query: "", portals: [], totalFound: 0, used: 0,
-        pricePerM2Median: null, pricePerM2Average: null, pricePerM2Min: null, pricePerM2Max: null,
-        listings: [], errorMessage: e?.message ?? "błąd",
-      };
-      return fallback;
+      usableAreaM2: input.usableAreaM2,
+      buildingAreaM2: input.buildingAreaM2,
+      landAreaM2: input.landAreaM2,
+      landAreaHa: input.landAreaHa,
+      declaredPropertyValuePln: input.declaredPropertyValuePln,
     });
     sourcesUsed.push({
-      source: "Portale nieruchomościowe (Firecrawl)",
-      used: listings.used > 0,
-      purpose: "podobne ogłoszenia sprzedaży",
-      dataLevel: listings.portals.join(", "),
-      period: "aktualne oferty",
-      status: listings.status,
-      note: listings.used > 0
-        ? `${listings.used} ofert z ${listings.totalFound} (mediana ${listings.pricePerM2Median?.toLocaleString("pl-PL") ?? "—"} zł/m²)`
-        : listings.errorMessage,
+      source: "Perplexity (sonar-pro)",
+      used: pplx.status === "success",
+      purpose: "wycena porównawcza z aktualnych ogłoszeń i raportów rynkowych",
+      dataLevel: input.city ? `lokalnie: ${input.city}` : "Polska",
+      period: "ostatnie 12 mies.",
+      status: pplx.status,
+      note: pplx.status === "success"
+        ? `${pplx.comparablesFound} porównań, trend: ${pplx.marketTrend}${pplx.citations.length ? `, źródeł: ${pplx.citations.length}` : ""}`
+        : pplx.errorMessage,
     });
+    if (pplx.status === "error") {
+      warnings.push(`Perplexity nie zwróciła wyceny: ${pplx.errorMessage ?? "błąd"}. Wymagana ręczna wycena.`);
+    } else if (pplx.status === "no_data") {
+      warnings.push("Perplexity nie znalazła wystarczających danych porównawczych — wymagana ręczna weryfikacja.");
+    }
 
-    // 6) Lokalizacja
+    // 4) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
       lat: input.latitude ?? null, lng: input.longitude ?? null, address: input.address, city: input.city,
     });
@@ -194,61 +125,28 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       status: input.latitude != null ? "success" : "no_data",
     });
 
-    // Klasyfikacja gleby (informacyjnie)
-    void classifySoil(input.soilClass);
-
-    // 7) Benchmark wartości
+    // 5) Benchmark wartości — wyłącznie z Perplexity
     const isLand = input.propertyType === "grunt_rolny";
     const areaM2 = input.usableAreaM2 ?? input.buildingAreaM2 ?? input.landAreaM2 ?? null;
     const areaHa = input.landAreaHa ?? (input.landAreaM2 ? input.landAreaM2 / 10_000 : null);
 
-    let pricePerM2Median: number | null = null;
-    let pricePerM2Average: number | null = null;
-    let pricePerHa: number | null = null;
-    let mainSource = "Brak danych";
-    const supporting: string[] = [];
+    const pricePerM2Median = pplx.pricePerM2Median;
+    const pricePerM2Average = pplx.pricePerM2Average;
+    const pricePerHa = pplx.pricePerHa;
+    const mainSource = pplx.status === "success" ? "Perplexity (analiza rynkowa)" : "Brak danych";
+    const supporting: string[] = pplx.status === "success" && pplx.citations.length > 0
+      ? [`${pplx.citations.length} źródeł online`]
+      : [];
 
-    // Cross-check RCN vs GUS — jeżeli GUS jest podejrzany, nie używamy go jako głównego.
-    const gusSuspicious = gusDiagnostics.sanityCheckStatus !== "ok";
-    if (rcn.stats) {
-      mainSource = "RCN / Geoportal";
-      if (rcn.stats.unit === "pln_per_m2") {
-        pricePerM2Median = rcn.stats.median; pricePerM2Average = rcn.stats.average;
-        // Cross-check: GUS vs RCN > 35% różnicy = niespójność
-        if (gus?.pricePerM2Median && rcn.stats.median) {
-          const diff = Math.abs(gus.pricePerM2Median - rcn.stats.median) / rcn.stats.median;
-          if (diff > 0.35) warnings.push(`Benchmark GUS BDL (${Math.round(gus.pricePerM2Median)} zł/m²) różni się od RCN (${Math.round(rcn.stats.median)} zł/m²) o ${(diff * 100).toFixed(0)}% — wynik oznaczony jako niespójny.`);
-        }
-      } else { pricePerHa = rcn.stats.median; }
-      if (gus && !gusSuspicious) supporting.push("GUS BDL");
-      if (nbp) supporting.push("NBP");
-    } else if (gus && !gusSuspicious) {
-      mainSource = "GUS BDL";
-      pricePerM2Median = gus.pricePerM2Median ?? null;
-      pricePerM2Average = gus.pricePerM2Average ?? null;
-      pricePerHa = gus.pricePerHaByClass?.ogolem ?? null;
-      if (nbp) supporting.push("NBP");
-    } else if (gus && gusSuspicious) {
-      mainSource = "GUS BDL (podejrzane — wymaga weryfikacji)";
-      warnings.push("Uwaga: benchmark GUS BDL wygląda nietypowo nisko dla tej lokalizacji. Prawdopodobna przyczyna: błędna jednostka terytorialna, niewłaściwy okres albo fallback. Wynik nie został przyjęty jako główne źródło wartości bez dodatkowej weryfikacji.");
-    } else if (nbp) {
-      mainSource = "NBP (pomocniczo)";
-    } else if (listings.pricePerM2Median) {
-      mainSource = "Portale ogłoszeniowe (pomocniczo)";
-      pricePerM2Median = listings.pricePerM2Median;
-      pricePerM2Average = listings.pricePerM2Average;
-      warnings.push("Brak danych transakcyjnych — wartość wyliczona z mediany ofert portali ogłoszeniowych (ceny ofertowe są zwykle wyższe od transakcyjnych o 5–15%).");
-    }
-    if (listings.pricePerM2Median) {
-      supporting.push(`Portale ogłoszeniowe (${listings.used} ofert)`);
-      // Cross-check ofert vs benchmark
-      if (pricePerM2Median && mainSource !== "Portale ogłoszeniowe (pomocniczo)") {
-        const diff = (listings.pricePerM2Median - pricePerM2Median) / pricePerM2Median;
-        if (Math.abs(diff) > 0.30) {
-          warnings.push(`Mediana ofert (${listings.pricePerM2Median.toLocaleString("pl-PL")} zł/m²) różni się od głównego benchmarku (${pricePerM2Median.toLocaleString("pl-PL")} zł/m²) o ${(diff * 100).toFixed(0)}% — sprawdź lokalizację i typ nieruchomości.`);
-        }
+    if (input.declaredPropertyValuePln && (pplx.estimatedValueLowPln || pplx.estimatedValueHighPln)) {
+      const lo = pplx.estimatedValueLowPln ?? 0;
+      const hi = pplx.estimatedValueHighPln ?? Infinity;
+      if (input.declaredPropertyValuePln < lo * 0.7 || input.declaredPropertyValuePln > hi * 1.3) {
+        warnings.push(`Wartość deklarowana (${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN) istotnie odbiega od oszacowania rynkowego (${lo.toLocaleString("pl-PL")}–${(pplx.estimatedValueHighPln ?? 0).toLocaleString("pl-PL")} PLN).`);
       }
     }
+
+
 
 
     const estMedian = isLand
@@ -282,29 +180,24 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       ltvCategory: classifyLtv(ltvPercent),
     };
 
-    // 9) Ryzyka prawne i płynność
+    // 6) Ryzyka prawne i płynność
     const legal: LegalRiskResult = { score: 0, warnings: [] };
     if (property?.has_mortgage) legal.warnings.push("Nieruchomość obciążona hipoteką.");
     if (property?.has_co_owners) legal.warnings.push("Współwłaściciele — wymagana ich zgoda.");
     legal.score = legal.warnings.length === 0 ? 80 : legal.warnings.length === 1 ? 60 : 40;
 
-    const marketSummary = rcn.transactionsCount > 0
-      ? `Odnaleziono ${rcn.transactionsCount} transakcji porównawczych RCN.`
-      : rcnDiag.status === "no_features_in_bbox" ? "Nie znaleziono transakcji RCN w analizowanym obszarze."
-      : rcnDiag.status === "features_found_but_filtered_out" ? "RCN zwrócił dane, ale nie znaleziono wystarczająco podobnych transakcji po zastosowaniu filtrów."
-      : rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" ? "Nie udało się pobrać danych RCN z usługi WFS."
-      : rcnDiag.status === "wfs_parse_error" ? "Dane RCN zostały pobrane, ale aplikacja nie potrafiła ich poprawnie przetworzyć."
-      : rcnDiag.status === "bad_bbox" ? "Błąd zapytania przestrzennego RCN."
-      : rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_layer_not_found" ? "Usługa RCN niedostępna lub nie znaleziono warstwy."
-      : "Brak danych RCN.";
+    const syntheticRcn = perplexityToRcnStats(pplx, isLand);
+    const comparablesCount = pplx.comparablesFound;
+    const marketSummary = pplx.status === "success"
+      ? (pplx.liquidityComment || `Perplexity zidentyfikowała ${comparablesCount} porównań w tej lokalizacji.`)
+      : (pplx.errorMessage ?? "Brak danych porównawczych z Perplexity.");
     const market: MarketLiquidityResult = {
-      score: rcn.transactionsCount >= 5 ? 80 : rcn.transactionsCount >= 3 ? 60 : rcn.transactionsCount >= 1 ? 40 : 20,
+      score: comparablesCount >= 10 ? 80 : comparablesCount >= 5 ? 60 : comparablesCount >= 2 ? 40 : 20,
       summary: marketSummary,
-      transactionsCount: rcn.transactionsCount,
+      transactionsCount: comparablesCount,
     };
 
-
-    // 10) Ryzyko powodziowe ISOK/Wody Polskie
+    // 7) Ryzyko powodziowe ISOK/Wody Polskie
     const flood = await analyzeFloodRisk({
       latitude: input.latitude, longitude: input.longitude,
       address: input.address, city: input.city, voivodeship: input.voivodeship,
@@ -327,7 +220,7 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       available: flood.success,
     };
 
-    // 11) Scoring
+    // 8) Scoring
     const docsPresent = {
       kw: !!input.kwNumber || docExtraction.extractions.some(e => e.docKind === "kw"),
       mpzpOrWz: docExtraction.extractions.some(e => e.docKind === "mpzp"),
@@ -337,16 +230,17 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     };
     const collateralScore = calculateCollateralScore({
       input, valuation, ltv, location: loc, legal, market,
-      rcn: rcn.stats, gus, nbp, documents: docExtraction.extractions, documentsPresent: docsPresent,
+      rcn: syntheticRcn, gus: null, nbp: null,
+      documents: docExtraction.extractions, documentsPresent: docsPresent,
       floodRisk: floodRiskForScoring,
     });
 
-    // 12) Teksty oferty
-    const weakData = !rcn.stats && !gus;
+    // 9) Teksty oferty
+    const weakData = pplx.status !== "success" || comparablesCount < 2;
     if (weakData) warnings.push("Dostępność danych porównawczych jest ograniczona — wymagana ręczna weryfikacja.");
     const offerText = generateOfferText({
       input, valuation, location: loc, legal, collateralScore, sourcesUsed,
-      rcnCount: rcn.transactionsCount, rcnRadiusKm: rcn.radiusKm, weakData,
+      rcnCount: comparablesCount, rcnRadiusKm: null, weakData,
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAvailable: flood.success,
     });
@@ -354,17 +248,29 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     const result: PropertyAnalysisResult = buildAnalysisResult({
       input, valuation, ltv, location: loc, legal, market,
       collateralScore, sourcesUsed, warnings, offerText,
-      raw: { rcn: rcn.stats, gus, gusDiagnostics, nbp, loc, flood: flood.raw, listings },
+      raw: { perplexity: pplx, loc, flood: flood.raw },
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAlerts: flood.alerts,
     });
-    result.gusDiagnostics = gusDiagnostics;
-    result.rcnDiagnostics = rcnDiag;
-    result.listingsBenchmark = listings;
+    result.perplexityValuation = {
+      status: pplx.status,
+      pricePerM2Median: pplx.pricePerM2Median,
+      pricePerM2Average: pplx.pricePerM2Average,
+      pricePerM2Min: pplx.pricePerM2Min,
+      pricePerM2Max: pplx.pricePerM2Max,
+      pricePerHa: pplx.pricePerHa,
+      estimatedValueLowPln: pplx.estimatedValueLowPln,
+      estimatedValueHighPln: pplx.estimatedValueHighPln,
+      marketTrend: pplx.marketTrend,
+      liquidityComment: pplx.liquidityComment,
+      rationale: pplx.rationale,
+      comparablesFound: pplx.comparablesFound,
+      citations: pplx.citations,
+      errorMessage: pplx.errorMessage,
+    };
 
 
-
-    // 12) Zapis
+    // 10) Zapis
     const { data: saved } = await supabaseAdmin.from("property_analyses").upsert({
       application_id: applicationId,
       property_id: property?.id ?? null,
@@ -384,14 +290,14 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       property_id: property?.id ?? null,
       analysis_id: saved?.id ?? null,
       sources_used: sourcesUsed.map(s => s.source) as never,
-      rcn_status: rcnDiag.status,
-
-      gus_bdl_status: gus ? "success" : "no_data",
-      nbp_status: nbp ? "success" : "no_data",
+      rcn_status: pplx.status === "success" ? "success" : "no_data",
+      gus_bdl_status: "no_data",
+      nbp_status: "no_data",
       google_maps_status: input.latitude != null ? "success" : "no_data",
       document_extraction_status: docExtraction.status,
       collateral_score: collateralScore.total,
     });
+
 
     return result;
   });

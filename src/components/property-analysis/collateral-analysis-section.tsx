@@ -131,6 +131,50 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
                 {result.valuationBenchmark.varianceFromDeclaredValuePercent != null && (
                   <div><span className="text-muted-foreground">Odchylenie od deklaracji:</span> {result.valuationBenchmark.varianceFromDeclaredValuePercent.toFixed(1)}%</div>
                 )}
+                {result.perplexityValuation && (
+
+                  <>
+                    <Separator className="my-2" />
+                    <div className="rounded border bg-muted/30 p-2 text-xs space-y-1">
+                      <div className="flex items-center gap-2">
+                        <b>Wycena Perplexity</b>
+                        <Badge variant={result.perplexityValuation.status === "success" ? "default" : "destructive"}>
+                          {result.perplexityValuation.status}
+                        </Badge>
+                        <span className="text-muted-foreground">trend: {result.perplexityValuation.marketTrend}</span>
+                        <span className="text-muted-foreground">· porównań: {result.perplexityValuation.comparablesFound}</span>
+                      </div>
+                      {result.perplexityValuation.rationale && (
+                        <div className="text-muted-foreground">{result.perplexityValuation.rationale}</div>
+                      )}
+                      {result.perplexityValuation.liquidityComment && (
+                        <div><span className="text-muted-foreground">Płynność:</span> {result.perplexityValuation.liquidityComment}</div>
+                      )}
+                      {(result.perplexityValuation.estimatedValueLowPln || result.perplexityValuation.estimatedValueHighPln) && (
+                        <div>
+                          <span className="text-muted-foreground">Zakres wartości:</span>{" "}
+                          {result.perplexityValuation.estimatedValueLowPln?.toLocaleString("pl-PL") ?? "—"} – {result.perplexityValuation.estimatedValueHighPln?.toLocaleString("pl-PL") ?? "—"} PLN
+                        </div>
+                      )}
+                      {result.perplexityValuation.citations.length > 0 && (
+                        <details>
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                            Źródła ({result.perplexityValuation.citations.length})
+                          </summary>
+                          <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                            {result.perplexityValuation.citations.slice(0, 15).map((c, i) => (
+                              <li key={i}><a href={c} target="_blank" rel="noreferrer" className="underline break-all">{c}</a></li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                      {result.perplexityValuation.errorMessage && (
+                        <div className="text-destructive">{result.perplexityValuation.errorMessage}</div>
+                      )}
+                    </div>
+                  </>
+                )}
+
                 {result.gusDiagnostics && (
                   <>
                     <Separator className="my-2" />
