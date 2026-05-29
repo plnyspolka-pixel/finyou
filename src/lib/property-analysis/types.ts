@@ -165,6 +165,23 @@ export interface PropertyAnalysisResult {
   gusDiagnostics?: GusBenchmarkDiagnostics | null;
   rcnDiagnostics?: RcnDiagnostics | null;
   listingsBenchmark?: ListingsBenchmarkSummary | null;
+  perplexityValuation?: {
+    status: "success" | "no_data" | "error";
+    pricePerM2Median: number | null;
+    pricePerM2Average: number | null;
+    pricePerM2Min: number | null;
+    pricePerM2Max: number | null;
+    pricePerHa: number | null;
+    estimatedValueLowPln: number | null;
+    estimatedValueHighPln: number | null;
+    marketTrend: "rosnacy" | "stabilny" | "spadkowy" | "nieznany";
+    liquidityComment: string;
+    rationale: string;
+    comparablesFound: number;
+    citations: string[];
+    errorMessage?: string;
+  } | null;
+
 
   warnings: string[];
   raw: Record<string, any>;
