@@ -170,7 +170,7 @@ export async function testRcnCapabilities(): Promise<{
       error: "",
     };
     try {
-      const res = await fetchWithTimeout(url, { headers: RCN_HEADERS }, RCN_TIMEOUT_MS);
+      const res = await fetchWithTimeout(proxify(url), { headers: RCN_HEADERS }, RCN_TIMEOUT_MS);
       attempt.httpStatus = res.status;
       attempt.contentType = res.headers.get("content-type") ?? "";
       const text = await res.text();
