@@ -67,11 +67,21 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       status: docExtraction.status,
     });
 
-    // 2) Geokodowanie
+    // 2) Geokodowanie — z walidacją zgodności z deklarowanym miastem/województwem,
+    //    żeby Google nie podstawił nam losowej miejscowości o podobnej nazwie ulicy.
     const geo = input.latitude && input.longitude
       ? { lat: input.latitude, lng: input.longitude }
-      : input.address ? await geocode([input.address, input.city, input.voivodeship].filter(Boolean).join(", ")) : null;
+      : input.address
+        ? await geocode(
+            [input.address, input.city, input.voivodeship, "Polska"].filter(Boolean).join(", "),
+            { expectedCity: input.city, expectedVoivodeship: input.voivodeship }
+          )
+        : null;
     if (geo) { input.latitude = geo.lat; input.longitude = geo.lng; }
+    if (!geo && input.address) {
+      warnings.push(`Geokodowanie odrzuciło wynik niezgodny z miastem "${input.city ?? "—"}". Sprawdź adres nieruchomości.`);
+    }
+
     // 3) RCN (z pełną diagnostyką)
     const rcn = geo
       ? await rcnBenchmarkCached({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
