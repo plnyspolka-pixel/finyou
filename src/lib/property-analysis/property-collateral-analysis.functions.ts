@@ -252,6 +252,23 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAlerts: flood.alerts,
     });
+    result.perplexityValuation = {
+      status: pplx.status,
+      pricePerM2Median: pplx.pricePerM2Median,
+      pricePerM2Average: pplx.pricePerM2Average,
+      pricePerM2Min: pplx.pricePerM2Min,
+      pricePerM2Max: pplx.pricePerM2Max,
+      pricePerHa: pplx.pricePerHa,
+      estimatedValueLowPln: pplx.estimatedValueLowPln,
+      estimatedValueHighPln: pplx.estimatedValueHighPln,
+      marketTrend: pplx.marketTrend,
+      liquidityComment: pplx.liquidityComment,
+      rationale: pplx.rationale,
+      comparablesFound: pplx.comparablesFound,
+      citations: pplx.citations,
+      errorMessage: pplx.errorMessage,
+    };
+
 
     // 10) Zapis
     const { data: saved } = await supabaseAdmin.from("property_analyses").upsert({
