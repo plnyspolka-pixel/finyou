@@ -140,11 +140,14 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       city: input.city,
       voivodeship: input.voivodeship,
       areaM2: input.usableAreaM2 ?? input.buildingAreaM2 ?? null,
-    }).catch((e): Awaited<ReturnType<typeof scrapeSimilarListings>> => ({
-      status: "error", query: "", portals: [], totalFound: 0, used: 0,
-      pricePerM2Median: null, pricePerM2Average: null, pricePerM2Min: null, pricePerM2Max: null,
-      listings: [], errorMessage: e?.message ?? "błąd",
-    }));
+    }).catch((e: { message?: string }) => {
+      const fallback: Awaited<ReturnType<typeof scrapeSimilarListings>> = {
+        status: "error", query: "", portals: [], totalFound: 0, used: 0,
+        pricePerM2Median: null, pricePerM2Average: null, pricePerM2Min: null, pricePerM2Max: null,
+        listings: [], errorMessage: e?.message ?? "błąd",
+      };
+      return fallback;
+    });
     sourcesUsed.push({
       source: "Portale nieruchomościowe (Firecrawl)",
       used: listings.used > 0,
