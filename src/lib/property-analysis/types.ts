@@ -245,9 +245,18 @@ export interface RcnDiagnostics {
   layerUsed: string | null;
   crsUsed: "EPSG:4326" | "EPSG:2180" | "EPSG:3857" | null;
   inputCoordinates: { lat: number | null; lng: number | null; crs: string };
-  queryBbox: { minX: number; minY: number; maxX: number; maxY: number; crs: string } | null;
-  radiusM: number | null;
-  radiiTried: number[];
+  capabilitiesChecked: boolean;
+  capabilitiesAttempts?: Array<{
+    url: string;
+    httpStatus: number | null;
+    contentType: string;
+    responseStartsWith: string;
+    success: boolean;
+    error: string;
+  }>;
+  propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
+}
+
   featuresRawCount: number;
   featuresFilteredCount: number;
   filtersApplied: string[];
