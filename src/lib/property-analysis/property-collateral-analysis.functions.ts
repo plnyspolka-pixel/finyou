@@ -116,6 +116,29 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       dataLevel: nbp?.market ?? "—", period: "", status: nbp ? "success" : "no_data",
     });
 
+    // 5b) Ogłoszenia z portali nieruchomościowych (Otodom/OLX/Domiporta/Gratka/Morizon)
+    const listings = await scrapeSimilarListings({
+      propertyType: input.propertyType,
+      city: input.city,
+      voivodeship: input.voivodeship,
+      areaM2: input.usableAreaM2 ?? input.buildingAreaM2 ?? null,
+    }).catch((e): Awaited<ReturnType<typeof scrapeSimilarListings>> => ({
+      status: "error", query: "", portals: [], totalFound: 0, used: 0,
+      pricePerM2Median: null, pricePerM2Average: null, pricePerM2Min: null, pricePerM2Max: null,
+      listings: [], errorMessage: e?.message ?? "błąd",
+    }));
+    sourcesUsed.push({
+      source: "Portale nieruchomościowe (Firecrawl)",
+      used: listings.used > 0,
+      purpose: "podobne ogłoszenia sprzedaży",
+      dataLevel: listings.portals.join(", "),
+      period: "aktualne oferty",
+      status: listings.status,
+      note: listings.used > 0
+        ? `${listings.used} ofert z ${listings.totalFound} (mediana ${listings.pricePerM2Median?.toLocaleString("pl-PL") ?? "—"} zł/m²)`
+        : listings.errorMessage,
+    });
+
     // 6) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
       lat: input.latitude ?? null, lng: input.longitude ?? null, address: input.address, city: input.city,
