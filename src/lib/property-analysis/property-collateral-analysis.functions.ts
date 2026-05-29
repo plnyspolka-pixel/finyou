@@ -348,9 +348,9 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       application_id: applicationId,
       property_id: property?.id ?? null,
       analysis_id: saved?.id ?? null,
+      sources_used: sourcesUsed.map(s => s.source) as never,
       rcn_status: rcnDiag.status,
 
-      rcn_status: rcn.stats ? "success" : "no_data",
       gus_bdl_status: gus ? "success" : "no_data",
       nbp_status: nbp ? "success" : "no_data",
       google_maps_status: input.latitude != null ? "success" : "no_data",
