@@ -174,7 +174,13 @@ function point2180(lat: number, lng: number): [number, number] {
 
 function bbox2180(lat: number, lng: number, radiusM: number): [number, number, number, number] {
   const [x, y] = point2180(lat, lng);
+  return [x - radiusM, y - radiusM, x + radiusM, y + radiusM];
+}
+
 // Oblicza minimalną szerokość obrazka żeby utrzymać scaleDenominator ≤ limit.
+// scaleDenominator ≈ pixelSizeM * 1000 / 0.28
+// MapServer twardo odrzuca WIDTH/HEIGHT > 4096 ("Image size out of range").
+
 // scaleDenominator ≈ pixelSizeM * 1000 / 0.28
 // MapServer twardo odrzuca WIDTH/HEIGHT > 4096 ("Image size out of range").
 function widthForScale(bboxWidthM: number, scaleLimit: number): number {
