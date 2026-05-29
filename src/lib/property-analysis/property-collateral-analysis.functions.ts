@@ -263,10 +263,12 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     const result: PropertyAnalysisResult = buildAnalysisResult({
       input, valuation, ltv, location: loc, legal, market,
       collateralScore, sourcesUsed, warnings, offerText,
-      raw: { rcn: rcn.stats, gus, nbp, loc, flood: flood.raw },
+      raw: { rcn: rcn.stats, gus, gusDiagnostics, nbp, loc, flood: flood.raw },
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAlerts: flood.alerts,
     });
+    result.gusDiagnostics = gusDiagnostics;
+
 
     // 12) Zapis
     const { data: saved } = await supabaseAdmin.from("property_analyses").upsert({
