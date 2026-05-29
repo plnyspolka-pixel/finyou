@@ -108,6 +108,21 @@ function Kalkulator() {
       </div>
 
       <Card>
+        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <RefreshCw className={`h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} />
+            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-muted-foreground">(dane offline)</span>}
+          </div>
+          <span>Referencyjna: <b className="tabular-nums">{NBP_REF_RATE.toFixed(2)}%</b></span>
+          {ratesQ.data?.lombardRate != null && <span>Lombardowa: <b className="tabular-nums">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
+          {ratesQ.data?.depositRate != null && <span>Depozytowa: <b className="tabular-nums">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
+          <span className="text-muted-foreground">Maks. odsetki ustawowe: <b className="tabular-nums text-foreground">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
+          {ratesQ.data?.effectiveFrom && <span className="text-xs text-muted-foreground ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
+        </CardContent>
+      </Card>
+
+
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
           <CardDescription>Suwaki działają tak samo, jak po stronie klienta.</CardDescription>
