@@ -71,15 +71,32 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       ? { lat: input.latitude, lng: input.longitude }
       : input.address ? await geocode([input.address, input.city, input.voivodeship].filter(Boolean).join(", ")) : null;
     if (geo) { input.latitude = geo.lat; input.longitude = geo.lng; }
-
-    // 3) RCN
-    const rcn = geo ? await rcnBenchmark({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
-                    : { stats: null, transactionsCount: 0, radiusKm: null };
+    // 3) RCN (z pełną diagnostyką)
+    const rcn = geo
+      ? await rcnBenchmarkCached({ lat: geo.lat, lng: geo.lng, propertyType: input.propertyType })
+      : { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: { status: "missing_coordinates" as const, statusMessage: "Brak współrzędnych — RCN nie odpytany.", endpoint: null, availableLayers: [], layerUsed: null, crsUsed: null, inputCoordinates: { lat: null, lng: null, crs: "EPSG:4326" }, queryBbox: null, radiusM: null, radiiTried: [], featuresRawCount: 0, featuresFilteredCount: 0, filtersApplied: [], periodCounts: { countAllDates: 0, countLast12Months: 0, countLast24Months: 0, countLast36Months: 0 }, sampleFeature: null, rawResponseSnippet: null, errorTechnical: null, capabilitiesChecked: false, propertyTypeMapping: { applicationType: null, keywords: [], matchedLayerKeywords: [] } } };
+    const rcnDiag = rcn.diagnostics;
+    const rcnTechnicalFailure = rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" || rcnDiag.status === "wfs_parse_error" || rcnDiag.status === "wfs_layer_not_found" || rcnDiag.status === "bad_bbox";
     sourcesUsed.push({
-      source: "RCN / Geoportal WFS", used: !!rcn.stats, purpose: "ceny transakcyjne",
-      dataLevel: rcn.radiusKm ? `promień ${rcn.radiusKm} km` : "—",
+      source: "RCN / Geoportal WFS",
+      used: !!rcn.stats,
+      purpose: "ceny transakcyjne",
+      dataLevel: rcn.radiusKm ? `promień ${rcn.radiusKm} km · ${rcnDiag.layerUsed ?? "—"}` : (rcnDiag.endpoint ? "endpoint OK" : "—"),
       period: rcn.stats ? `${rcn.stats.periodMonths} mies.` : "",
-      status: rcn.stats ? "success" : "no_data",
+      status: rcn.stats ? "success" : (rcnTechnicalFailure ? "error" : "no_data"),
+      note: rcnDiag.statusMessage,
+    });
+    if (rcnTechnicalFailure) {
+      warnings.push(`RCN niedostępny z powodu błędu technicznego: ${rcnDiag.status}. ${rcnDiag.errorTechnical ? `Szczegóły: ${rcnDiag.errorTechnical}. ` : ""}Benchmark oparto tymczasowo o GUS BDL.`);
+    } else if (rcnDiag.status === "features_found_but_filtered_out") {
+      warnings.push("RCN zwrócił dane, ale wszystkie zostały odfiltrowane. Prawdopodobnie filtr typu nieruchomości albo daty jest zbyt restrykcyjny.");
+    }
+    // Alarm dla dużych miast (Warszawa/Kraków/Wrocław/...) jeżeli brak wyników nawet w 10 km
+    const isMajorCity = /warszaw|krak[óo]w|wroc[lł]aw|pozna[nń]|gda[nń]sk|katowice|[lł]od[zź]|szczecin|lublin|bydgoszcz/i.test(`${input.city ?? ""} ${input.address ?? ""}`);
+    if (isMajorCity && rcnDiag.status === "no_features_in_bbox") {
+      warnings.push(`RCN nie zwrócił wyników dla "${input.city ?? "—"}" nawet w promieniu 10 km. Sprawdź endpoint, warstwę, CRS, bbox i parsowanie odpowiedzi.`);
+    }
+
     });
 
     // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
