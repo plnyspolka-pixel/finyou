@@ -304,35 +304,75 @@ function extractFromProps(p: Record<string, unknown>, layer: string): RcnFeature
   const findFirst = (rgxs: RegExp[]): unknown => {
     for (const r of rgxs) {
       const k = keys.find((kk) => r.test(kk.toLowerCase()));
-      if (k) return p[k];
+      if (k) {
+        const v = p[k];
+        if (v !== null && v !== undefined && String(v).trim() !== "" && String(v).trim() !== "-") return v;
+      }
     }
     return null;
   };
-  const pricePerM2 = toNumber(findFirst([/cena.*m2|m2.*cena|cena_za_m2|cena_m2|price.*m2|jednost.*cen/]));
-  const pricePerHa = toNumber(findFirst([/cena.*ha|ha.*cena|cena_za_ha|cena_ha/]));
-  const totalPrice = toNumber(findFirst([/cena_transakcyjna|cena_calk|cena_lacz|cena_n|^cena$/]));
-  const areaM2 = toNumber(findFirst([/^pow$|powierzchnia$|pow_uzytk|pow_calk|pow_m2|area_m2/]));
-  const areaHa = toNumber(findFirst([/pow_ha|powierzchnia_ha|area_ha/]));
-  const date = tryParseDate(findFirst([/data.*transak|data_trans|transakcja_data|^data$|date/]));
-  const rawType = (findFirst([/rodzaj|typ|kategor|przedmiot/]) as string | null) ?? null;
+
+  // Cena: priorytetowo bierzemy "cena brutto" z sekcji "dane transakcji"
+  // (to cena całej transakcji), a nie z lokalu/budynku, gdzie często bywa pusta.
+  const totalPrice =
+    toNumber(findFirst([/dane_transakcji__cena_brutto/, /^cena_brutto$/, /^cena$/, /cena_transakcyjna/, /cena_calk|cena_lacz|cena_n/]));
+
+  // Powierzchnia użytkowa lokalu / budynku (m²) lub powierzchnia gruntu (m²).
+  const areaUseM2 = toNumber(
+    findFirst([
+      /lokal__pow_użytkowa|lokal__pow_uzytkowa/,
+      /budynek__pow_użytkowa|budynek__pow_uzytkowa/,
+      /pow_uzytkowa|pow_użytkowa/,
+      /pow_uzytk|pow_calk|pow_m2|area_m2/,
+    ]),
+  );
+  const areaLandM2 = toNumber(findFirst([/nieruchomosc__pow_gruntu|nieruchomość__pow_gruntu|pow_gruntu/]));
+
+  // Dla warstwy "lokale" liczy się tylko powierzchnia lokalu.
+  // Dla "budynki" — w pierwszej kolejności pow. użytkowa budynku (mieszkania w domach),
+  // w przeciwnym razie pomijamy (działka by zaniżała cena/m²).
+  // Dla "dzialki" — powierzchnia gruntu.
+  let areaM2: number | null = null;
+  let areaHa: number | null = null;
+  if (layer === "lokale") {
+    areaM2 = areaUseM2;
+  } else if (layer === "budynki") {
+    areaM2 = areaUseM2;
+  } else if (layer === "dzialki") {
+    areaM2 = areaLandM2;
+    if (areaLandM2 && areaLandM2 > 0) areaHa = areaLandM2 / 10000;
+  } else {
+    areaM2 = areaUseM2 ?? areaLandM2;
+  }
+
+  const date = tryParseDate(findFirst([/dokument__data/, /^data$/, /data_trans|transakcja_data|data.*transak/]));
+  const rawType = (findFirst([/nieruchomosc__rodzaj|nieruchomość__rodzaj/, /budynek__rodzaj/, /^rodzaj$/, /typ|kategor|przedmiot/]) as
+    | string
+    | null) ?? null;
+
+  const pricePerM2 = totalPrice && areaM2 && areaM2 > 0 ? totalPrice / areaM2 : null;
+  const pricePerHa = totalPrice && areaHa && areaHa > 0 ? totalPrice / areaHa : null;
 
   return {
-    pricePerM2: pricePerM2 ?? (totalPrice && areaM2 ? totalPrice / areaM2 : null),
-    pricePerHa: pricePerHa ?? (totalPrice && areaHa ? totalPrice / areaHa : null),
+    pricePerM2,
+    pricePerHa,
     totalPrice,
     areaM2,
     areaHa,
     date,
     rawType,
     layer,
-    signature: JSON.stringify(
-      Object.entries(p)
-        .filter(([k]) => !k.toLowerCase().includes("gml") && !k.toLowerCase().includes("geom"))
-        .sort(([a], [b]) => a.localeCompare(b)),
-    ),
+    signature: (p["__obj_type"] && p["__obj_id"]
+      ? `${p["__obj_type"]}:${p["__obj_id"]}`
+      : JSON.stringify(
+          Object.entries(p)
+            .filter(([k]) => !k.startsWith("__"))
+            .sort(([a], [b]) => a.localeCompare(b)),
+        )),
     attrs: p,
   };
 }
+
 
 // --------- Główna funkcja ---------
 
