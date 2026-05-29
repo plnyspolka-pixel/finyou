@@ -439,10 +439,14 @@ export async function rcnBenchmark(args: {
   const isLand = typeStr === "grunt_rolny" || typeStr === "dzialka_budowlana" || typeStr === "dzialka_zabudowana";
   const allRaw: RcnFeatureRaw[] = [];
   const seenSig = new Set<string>();
+  let chosenLayer: string | null = null;
+  let chosenRadius: number | null = null;
+  const radiiUsed: number[] = [];
   // Minimalna liczba transakcji, którą warto uzbierać zanim przerwiemy eskalację.
   // Dla obszarów typu Warszawa łatwo wpaść w setki transakcji, więc nie kończymy
   // pętli po pierwszych 3 — chcemy zebrać statystycznie istotną próbkę.
   const MIN_DESIRED = 30;
+
 
   outer: for (const layer of candidateLayers) {
     const cfg = LAYER_PROBE_CONFIG[layer] ?? LAYER_PROBE_CONFIG.lokale;
