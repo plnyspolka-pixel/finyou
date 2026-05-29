@@ -6,11 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, Calculator, RefreshCw } from "lucide-react";
-import { formatPLN, repaymentTypeLabels } from "@/lib/labels";
+import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info } from "lucide-react";
+import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 
 export const Route = createFileRoute("/inwestor/kalkulator")({
@@ -41,57 +40,42 @@ function Kalkulator() {
   const [months, setMonths] = useState(12);
   const [annualRate, setAnnualRate] = useState(15);
   const [commissionPct, setCommissionPct] = useState(5);
-  const [monthlyFee, setMonthlyFee] = useState(0);
-  const [repayment, setRepayment] = useState("miesieczna");
-  const [balloon, setBalloon] = useState(0);
+  const [maxPayment, setMaxPayment] = useState(5000);
 
   const schedule = useMemo(() => {
-    if (!amount || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0 };
+    if (!amount || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0 };
     const monthlyRate = annualRate / 100 / 12;
     const rows: any[] = [];
-    let saldo = amount;
     const start = new Date();
-    if (repayment === "miesieczna" && monthlyRate > 0) {
-      const rata = (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
-      for (let i = 1; i <= months; i++) {
-        const ods = saldo * monthlyRate;
-        const kap = rata - ods;
-        saldo = Math.max(0, saldo - kap);
-        const d = new Date(start); d.setMonth(d.getMonth() + i);
-        rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata, kap, ods, saldo });
-      }
-    } else if (repayment === "balonowa") {
-      for (let i = 1; i <= months; i++) {
-        const ods = saldo * monthlyRate;
-        const last = i === months;
-        const rata = last ? ods + amount : ods;
-        saldo = last ? 0 : saldo;
-        const d = new Date(start); d.setMonth(d.getMonth() + i);
-        rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata, kap: last ? amount : 0, ods, saldo });
-      }
-    } else {
-      const remaining = Math.max(0, amount - balloon);
-      const baseRate = monthlyRate > 0 ? (remaining * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months)) : remaining / months;
-      for (let i = 1; i <= months; i++) {
-        const ods = saldo * monthlyRate;
-        const last = i === months;
-        const kap = last ? saldo : Math.max(0, baseRate - ods);
-        saldo = Math.max(0, saldo - kap);
-        const d = new Date(start); d.setMonth(d.getMonth() + i);
-        rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata: ods + kap, kap, ods, saldo });
-      }
+
+    const nominalRata = monthlyRate > 0
+      ? (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
+      : amount / months;
+    const cappedRata = maxPayment > 0 ? Math.min(nominalRata, maxPayment) : nominalRata;
+    const balloon = Math.max(0, (nominalRata - cappedRata) * months);
+
+    let saldo = amount;
+    for (let i = 1; i <= months; i++) {
+      const ods = saldo * monthlyRate;
+      const last = i === months;
+      const rata = last ? cappedRata + balloon : cappedRata;
+      const kap = rata - ods;
+      saldo = Math.max(0, saldo - kap);
+      const d = new Date(start); d.setMonth(d.getMonth() + i);
+      rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata, kap, ods, saldo });
     }
     return {
       rows,
       totalRata: rows.reduce((s, r) => s + r.rata, 0),
       totalOds: rows.reduce((s, r) => s + r.ods, 0),
       totalKap: rows.reduce((s, r) => s + r.kap, 0),
+      balloon,
+      nominalRata,
     };
-  }, [amount, months, annualRate, repayment, balloon]);
+  }, [amount, months, annualRate, maxPayment]);
 
   const commissionPln = (amount * commissionPct) / 100;
-  const monthlyFeesTotal = monthlyFee * months;
-  const nonInterestTotal = commissionPln + monthlyFeesTotal;
+  const nonInterestTotal = commissionPln;
   const maxNonInterest = maxNonInterestCosts(amount, months);
   const totalCost = schedule.totalOds + nonInterestTotal;
   const totalToRepay = schedule.totalRata + nonInterestTotal;
@@ -121,7 +105,6 @@ function Kalkulator() {
         </CardContent>
       </Card>
 
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
@@ -137,10 +120,9 @@ function Kalkulator() {
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Od tej kwoty liczone odsetki</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - (amount * commissionPct) / 100))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
             </div>
           </div>
-
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -165,23 +147,26 @@ function Kalkulator() {
               <span className={interestExceeds ? "text-destructive font-medium" : ""}>
                 limit ustawowy: {MAX_INTEREST_RATE.toFixed(2)}%
               </span>
-              <span>{MAX_INTEREST_RATE}%</span>
+              <span>{MAX_INTEREST_RATE.toFixed(2)}%</span>
             </div>
           </div>
 
           <div className="space-y-3">
-            <Label>Typ spłaty</Label>
-            <Select value={repayment} onValueChange={setRepayment}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(repaymentTypeLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {repayment === "mieszana" && (
-              <div className="space-y-2 pt-2">
-                <Label>Balon (PLN)</Label>
-                <Input type="number" value={balloon} onChange={(e) => setBalloon(Number(e.target.value) || 0)} />
-              </div>
+            <div className="flex items-center justify-between">
+              <Label>Maksymalna rata dla klienta</Label>
+              <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
+            </div>
+            <Slider min={500} max={50000} step={250} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>500 zł</span><span>50 000 zł</span></div>
+            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Rata nominalna (annuitet)</span><b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Rata balonowa (ostatnia nadwyżka)</span><b className="tabular-nums">{formatPLN(schedule.balloon)}</b></div>
+            </div>
+            {schedule.balloon > 0 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu.</AlertDescription>
+              </Alert>
             )}
           </div>
         </CardContent>
@@ -190,12 +175,12 @@ function Kalkulator() {
       <Card>
         <CardHeader>
           <CardTitle>Koszty pozaodsetkowe</CardTitle>
-          <CardDescription>Prowizja jednorazowa oraz opłaty miesięczne (np. obsługa, ubezpieczenie).</CardDescription>
+          <CardDescription>Prowizja dla inwestora pobierana jednorazowo z kwoty wypłaty.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Prowizja jednorazowa</Label>
+              <Label>Prowizja dla inwestora (jednorazowa)</Label>
               <div className="flex items-center gap-2">
                 <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
                 <span className="text-sm">% ({formatPLN(commissionPln)})</span>
@@ -205,18 +190,8 @@ function Kalkulator() {
             <div className="flex justify-between text-xs text-muted-foreground"><span>0%</span><span>30%</span></div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Opłata miesięczna</Label>
-              <Input type="number" value={monthlyFee} onChange={(e) => setMonthlyFee(Number(e.target.value) || 0)} className="w-40" />
-            </div>
-            <Slider min={0} max={2000} step={25} value={[Math.min(2000, Math.max(0, monthlyFee))]} onValueChange={(v) => setMonthlyFee(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>0 zł</span><span>2 000 zł</span></div>
-          </div>
-
           <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span>Prowizja</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
-            <div className="flex justify-between"><span>Opłaty miesięczne razem ({months} × {formatPLN(monthlyFee)})</span><b className="tabular-nums">{formatPLN(monthlyFeesTotal)}</b></div>
+            <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
             <div className="flex justify-between border-t pt-2"><span>Suma kosztów pozaodsetkowych</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>Limit ustawowy MPKK (art. 36a UoKK)</span>
@@ -226,23 +201,28 @@ function Kalkulator() {
         </CardContent>
       </Card>
 
-      {anyWarning ? (
+      {nonInterestExceeds && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Przekraczasz ustawowe limity</AlertTitle>
-          <AlertDescription className="space-y-1 pt-1">
-            {interestExceeds && (
-              <div>
-                Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza maksymalne odsetki ustawowe (<b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2× stopa ref. NBP + 8 p.p., art. 359 §2¹ KC). Nadwyżka nie będzie egzekwowalna.
-              </div>
-            )}
-            {nonInterestExceeds && (
-              <div>
-                Koszty pozaodsetkowe <b>{formatPLN(nonInterestTotal)}</b> przekraczają limit MPKK <b>{formatPLN(maxNonInterest)}</b> (art. 36a UoKK — dotyczy kredytu konsumenckiego).
-              </div>
-            )}
+          <AlertTitle>Upewnij się, że pożyczka jest w modelu B2B</AlertTitle>
+          <AlertDescription className="pt-1">
+            Koszty pozaodsetkowe <b>{formatPLN(nonInterestTotal)}</b> przekraczają limit MPKK <b>{formatPLN(maxNonInterest)}</b> (art. 36a UoKK).
+            Limit ten dotyczy <b>kredytu konsumenckiego</b> — przy umowie z konsumentem nadwyżka będzie nienależna.
+            Aby kontynuować z tą prowizją, pożyczkobiorca musi być przedsiębiorcą, a pożyczka udzielona w <b>modelu B2B</b> (na cele związane z prowadzoną działalnością gospodarczą).
           </AlertDescription>
         </Alert>
+      )}
+
+      {anyWarning ? (
+        interestExceeds && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Przekraczasz maksymalne odsetki ustawowe</AlertTitle>
+            <AlertDescription className="pt-1">
+              Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (<b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2× stopa ref. NBP + 8 p.p., art. 359 §2¹ KC). Nadwyżka nie będzie egzekwowalna.
+            </AlertDescription>
+          </Alert>
+        )
       ) : (
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
@@ -259,11 +239,10 @@ function Kalkulator() {
           <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
           <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
           <div className="flex justify-between"><span>Odsetki razem (od kwoty nominalnej)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
-          <div className="flex justify-between"><span>Koszty pozaodsetkowe razem</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
+          <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
-
       </Card>
 
       <Card>
