@@ -155,6 +155,24 @@ export interface PropertyAnalysisResult {
   dataSourcesUsed: DataSourceUsage[];
   valuationBenchmark: ValuationBenchmark;
   ltv: LtvResult;
+export interface PropertyAnalysisResult {
+  success: boolean;
+  property: {
+    type: string;
+    address: string;
+    kwNumber: string | null;
+    parcelNumber: string | null;
+    county: string | null;
+    voivodeship: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    usableAreaM2: number | null;
+    landAreaM2: number | null;
+    landAreaHa: number | null;
+  };
+  dataSourcesUsed: DataSourceUsage[];
+  valuationBenchmark: ValuationBenchmark;
+  ltv: LtvResult;
   locationScore: LocationScoreResult;
   legalRisk: LegalRiskResult;
   marketLiquidity: MarketLiquidityResult;
@@ -162,19 +180,11 @@ export interface PropertyAnalysisResult {
   investmentOfferText: InvestmentOfferText;
   floodRisk?: FloodRiskResult;
   floodAlerts?: string[];
+  gusDiagnostics?: import("./gus-bdl.server").GusBenchmarkDiagnostics | null;
   warnings: string[];
   raw: Record<string, any>;
 }
 
-export interface RcnStats {
-  count: number;
-  median: number | null;
-  average: number | null;
-  q1: number | null;
-  q3: number | null;
-  unit: "pln_per_m2" | "pln_per_ha";
-  radiusM: number;
-  periodMonths: number;
   freshness: "good" | "limited" | "weak";
 }
 
