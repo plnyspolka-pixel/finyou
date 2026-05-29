@@ -34,23 +34,26 @@ function proxify(target: string): string {
   return `${base}/functions/v1/rcn-proxy?action=proxy&url=${encodeURIComponent(target)}`;
 }
 
-// Mapowanie typu nieruchomości → warstwa WMS RCN.
+// Mapowanie typu nieruchomości → warstwy WMS RCN (kolejność = priorytet).
+// UWAGA: warstwa `lokale` w praktyce bywa pusta na wielu obszarach (powiaty publikują
+// mieszkania jako transakcje całych budynków). Dlatego dla mieszkań próbujemy też budynki.
 const TYPE_TO_LAYER: Record<string, string[]> = {
-  mieszkanie: ["lokale"],
+  mieszkanie: ["lokale", "budynki"],
   lokal_uslugowy: ["lokale", "budynki"],
   dom: ["budynki"],
   dzialka_budowlana: ["dzialki"],
-  dzialka_zabudowana: ["dzialki"],
+  dzialka_zabudowana: ["dzialki", "budynki"],
   grunt_rolny: ["dzialki"],
   inna: ["lokale", "budynki", "dzialki"],
 };
 
 // Promień (m) i krok siatki sond GetFeatureInfo zależnie od typu warstwy.
 const LAYER_PROBE_CONFIG: Record<string, { radii: number[]; gridSize: number }> = {
-  lokale: { radii: [200, 400, 800, 1500], gridSize: 6 },
-  budynki: { radii: [200, 400, 800, 1500], gridSize: 6 },
-  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 5 },
+  lokale: { radii: [300, 600, 1200, 2000], gridSize: 12 },
+  budynki: { radii: [300, 600, 1200, 2000], gridSize: 12 },
+  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 10 },
 };
+
 
 interface RcnFeatureRaw {
   pricePerM2?: number | null;
