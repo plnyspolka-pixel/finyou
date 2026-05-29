@@ -347,6 +347,65 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action") ?? "capabilities";
 
+    // --- Akcja: generyczny pass-through do mapy.geoportal.gov.pl/wss/service/rcn ---
+    // Pozwala server functions Cloudflare Workers omijać sieciowe restrykcje, bo
+    // żądanie wychodzi z Supabase Edge (Deno na Deno Deploy).
+    if (action === "proxy") {
+      const target = url.searchParams.get("url");
+      if (!target) {
+        return new Response(JSON.stringify({ error: "Brak parametru url" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+      // Whitelist: tylko mapy.geoportal.gov.pl
+      let targetUrl: URL;
+      try {
+        targetUrl = new URL(target);
+      } catch {
+        return new Response(JSON.stringify({ error: "Nieprawidłowy url" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+      if (targetUrl.hostname !== "mapy.geoportal.gov.pl") {
+        return new Response(JSON.stringify({ error: "Hostname niedozwolony" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 25_000);
+      try {
+        const upstream = await fetch(targetUrl.toString(), {
+          method: "GET",
+          headers: {
+            Accept: "application/json,application/xml,text/xml,*/*",
+            "User-Agent": "FinyouApp/1.0 RCN-Proxy Deno",
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(t);
+        const body = await upstream.arrayBuffer();
+        return new Response(body, {
+          status: upstream.status,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
+            "X-Proxy-Upstream-Status": String(upstream.status),
+          },
+        });
+      } catch (e: unknown) {
+        clearTimeout(t);
+        return new Response(
+          JSON.stringify({
+            error: e instanceof Error ? (e.name === "AbortError" ? "Timeout po 25s" : e.message) : String(e),
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 },
+        );
+      }
+    }
+
     // --- Akcja: testuj capabilities ---
     if (action === "capabilities") {
       const result = await testCapabilities();
@@ -391,7 +450,7 @@ serve(async (req: Request) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Nieznana akcja. Użyj: capabilities | getfeature" }), {
+    return new Response(JSON.stringify({ error: "Nieznana akcja. Użyj: capabilities | getfeature | proxy" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
@@ -402,3 +461,4 @@ serve(async (req: Request) => {
     );
   }
 });
+
