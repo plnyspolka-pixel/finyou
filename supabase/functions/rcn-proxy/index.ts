@@ -381,9 +381,10 @@ serve(async (req: Request) => {
         const upstream = await fetch(targetUrl.toString(), {
           method: "GET",
           headers: {
-            Accept: "application/json,application/xml,text/xml,*/*",
+            Accept: "text/html,application/xml,text/xml,application/json,*/*",
             "User-Agent": "FinyouApp/1.0 RCN-Proxy Deno",
           },
+
           signal: controller.signal,
         });
         clearTimeout(t);

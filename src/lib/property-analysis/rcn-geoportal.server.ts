@@ -13,7 +13,8 @@
 // mapy.geoportal.gov.pl, więc każde żądanie idzie przez Supabase Edge Function `rcn-proxy`
 // (akcja `proxy` — generyczny pass-through, whitelist hosta geoportalu).
 
-import { XMLParser } from "fast-xml-parser";
+// fast-xml-parser nie jest już używany — Geoportal RCN zwraca dane tylko w INFO_FORMAT=text/html.
+
 import proj4 from "proj4";
 import type { PropertyType, RcnStats, RcnDiagnostics, RcnStatus } from "./types";
 import { average, fetchWithTimeout, filterIqrOutliers, median, quartile, withCache } from "./cache.server";
@@ -34,23 +35,26 @@ function proxify(target: string): string {
   return `${base}/functions/v1/rcn-proxy?action=proxy&url=${encodeURIComponent(target)}`;
 }
 
-// Mapowanie typu nieruchomości → warstwa WMS RCN.
+// Mapowanie typu nieruchomości → warstwy WMS RCN (kolejność = priorytet).
+// UWAGA: warstwa `lokale` w praktyce bywa pusta na wielu obszarach (powiaty publikują
+// mieszkania jako transakcje całych budynków). Dlatego dla mieszkań próbujemy też budynki.
 const TYPE_TO_LAYER: Record<string, string[]> = {
-  mieszkanie: ["lokale"],
+  mieszkanie: ["lokale", "budynki"],
   lokal_uslugowy: ["lokale", "budynki"],
   dom: ["budynki"],
   dzialka_budowlana: ["dzialki"],
-  dzialka_zabudowana: ["dzialki"],
+  dzialka_zabudowana: ["dzialki", "budynki"],
   grunt_rolny: ["dzialki"],
   inna: ["lokale", "budynki", "dzialki"],
 };
 
 // Promień (m) i krok siatki sond GetFeatureInfo zależnie od typu warstwy.
 const LAYER_PROBE_CONFIG: Record<string, { radii: number[]; gridSize: number }> = {
-  lokale: { radii: [200, 400, 800, 1500], gridSize: 6 },
-  budynki: { radii: [200, 400, 800, 1500], gridSize: 6 },
-  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 5 },
+  lokale: { radii: [300, 600, 1200, 2000], gridSize: 12 },
+  budynki: { radii: [300, 600, 1200, 2000], gridSize: 12 },
+  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 10 },
 };
+
 
 interface RcnFeatureRaw {
   pricePerM2?: number | null;
@@ -176,12 +180,20 @@ function bbox2180(lat: number, lng: number, radiusM: number): [number, number, n
 
 // Oblicza minimalną szerokość obrazka żeby utrzymać scaleDenominator ≤ limit.
 // scaleDenominator ≈ pixelSizeM * 1000 / 0.28
+// MapServer twardo odrzuca WIDTH/HEIGHT > 4096 ("Image size out of range").
+
+// scaleDenominator ≈ pixelSizeM * 1000 / 0.28
+// MapServer twardo odrzuca WIDTH/HEIGHT > 4096 ("Image size out of range").
 function widthForScale(bboxWidthM: number, scaleLimit: number): number {
   const maxPxSize = (scaleLimit * 0.28) / 1000; // m/pixel
-  return Math.max(512, Math.ceil(bboxWidthM / maxPxSize));
+  const desired = Math.ceil(bboxWidthM / maxPxSize);
+  return Math.max(512, Math.min(4096, desired));
 }
 
 // --------- GetFeatureInfo ---------
+// Uwaga: WMS Geoportal RCN nie zwraca atrybutów w INFO_FORMAT=application/vnd.ogc.gml
+// (msGMLOutput jest pusty). Działającym formatem jest text/html — i to z niego parsujemy
+// pola transakcji (każdy obiekt to <div class="accordion"> z listą <span class="list-item-value">).
 
 async function getFeatureInfo(
   layer: string,
@@ -196,12 +208,12 @@ async function getFeatureInfo(
     `&LAYERS=${layer}&QUERY_LAYERS=${layer}&STYLES=` +
     `&CRS=EPSG:2180&BBOX=${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}` +
     `&WIDTH=${width}&HEIGHT=${height}&I=${i}&J=${j}` +
-    `&INFO_FORMAT=${encodeURIComponent("application/vnd.ogc.gml")}` +
-    `&FEATURE_COUNT=50&FORMAT=image/png`;
+    `&INFO_FORMAT=${encodeURIComponent("text/html")}` +
+    `&FEATURE_COUNT=200&FORMAT=image/png`;
   try {
     const res = await fetchWithTimeout(
       proxify(url),
-      { headers: { Accept: "application/xml,text/xml,*/*" } },
+      { headers: { Accept: "text/html,application/xml,*/*" } },
       RCN_TIMEOUT_MS,
     );
     if (!res.ok) return null;
@@ -211,58 +223,63 @@ async function getFeatureInfo(
   }
 }
 
-// Wyciąga obiekty (features) z msGMLOutput. MapServer zwraca strukturę:
-// <msGMLOutput><{layer}_layer><{layer}_feature>...properties...</_feature></_layer></msGMLOutput>
-function parseMsGmlFeatures(xml: string, layer: string): Array<Record<string, unknown>> {
-  if (!xml || !xml.includes("msGMLOutput") || xml.includes("ServiceException")) return [];
-  try {
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      removeNSPrefix: true,
-      parseAttributeValue: true,
-      parseTagValue: true,
-      trimValues: true,
-    });
-    const parsed = parser.parse(xml) as any;
-    const root = parsed?.msGMLOutput ?? parsed?.msgmloutput ?? parsed;
-    if (!root || typeof root !== "object") return [];
-    const features: Array<Record<string, unknown>> = [];
-    const walk = (node: any) => {
-      if (!node || typeof node !== "object") return;
-      for (const [key, value] of Object.entries(node)) {
-        const lk = key.toLowerCase();
-        if (lk.endsWith("_feature") || lk === `${layer}_feature` || lk === "feature") {
-          const arr = Array.isArray(value) ? value : [value];
-          for (const f of arr) {
-            if (f && typeof f === "object") features.push(flattenProps(f as Record<string, unknown>));
-          }
-        } else if (typeof value === "object") {
-          walk(value);
-        }
+// Parsuje HTML GetFeatureInfo z usługi Geoportal RCN.
+// Każdy obiekt to <div class="accordion"> zawierający sekcje h3 (Dane transakcji / Nieruchomość / Budynek / Dokument)
+// oraz pola <li><span class="list-item-value">Etykieta:</span> wartość</li>.
+function parseHtmlFeatures(html: string, _layer: string): Array<Record<string, unknown>> {
+  if (!html) return [];
+  // Szybkie odsianie pustego HTML
+  if (!/class\s*=\s*"accordion"/i.test(html) && !/list-item-value/i.test(html)) return [];
+
+  // Usuwamy script/style — bezpieczniej dla regexpów.
+  const clean = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "");
+
+  const features: Array<Record<string, unknown>> = [];
+  // Każdy <div class="accordion"> ... aż do następnego <div class="accordion"> lub końca body.
+  const blockRx = /<div\s+class="accordion">([\s\S]*?)(?=<div\s+class="accordion">|<\/body>|$)/gi;
+  let bm: RegExpExecArray | null;
+  while ((bm = blockRx.exec(clean)) !== null) {
+    const block = bm[1];
+    const props: Record<string, unknown> = {};
+    // Tytuł akordeonu np. "Budynek: 106_BUD" / "Lokal: ..." / "Działka: ..."
+    const title = block.match(/<span style="font-weight:bold[^"]*">\s*([^<]+?)\s*<\/span>/i);
+    if (title) {
+      const t = title[1].trim();
+      const idx = t.indexOf(":");
+      if (idx > 0) {
+        props["__obj_type"] = t.slice(0, idx).trim();
+        props["__obj_id"] = t.slice(idx + 1).trim();
+      } else {
+        props["__obj_type"] = t;
       }
-    };
-    walk(root);
-    return features;
-  } catch {
-    return [];
+    }
+    // Sekcje h3 dają kontekst pól (Dane transakcji / Dokument / Nieruchomość / Budynek / Lokal / Działka).
+    const sectionRx = /<h3>\s*([^<]+?)\s*<\/h3>\s*<ul>([\s\S]*?)<\/ul>/gi;
+    let sm: RegExpExecArray | null;
+    while ((sm = sectionRx.exec(block)) !== null) {
+      const section = sm[1].trim().toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "_");
+      const ul = sm[2];
+      const liRx = /<li>\s*<span class="list-item-value">\s*([^<]+?):\s*<\/span>\s*([\s\S]*?)<\/li>/gi;
+      let lm: RegExpExecArray | null;
+      while ((lm = liRx.exec(ul)) !== null) {
+        const label = lm[1].trim();
+        const value = lm[2].replace(/<[^>]+>/g, "").trim();
+        if (!value || value === "-") continue;
+        const key = `${section}__${label.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "_")}`;
+        props[key] = value;
+        // Także alias bez sekcji — pierwsze wystąpienie wygrywa.
+        const alias = label.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "_");
+        if (!(alias in props)) props[alias] = value;
+      }
+    }
+    if (Object.keys(props).length > 0) features.push(props);
   }
+  return features;
 }
 
-function flattenProps(obj: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  const visit = (v: unknown, prefix: string) => {
-    if (v === null || v === undefined) return;
-    if (typeof v !== "object") { out[prefix] = v; return; }
-    if (Array.isArray(v)) { v.forEach((x, i) => visit(x, `${prefix}_${i}`)); return; }
-    for (const [k, vv] of Object.entries(v as Record<string, unknown>)) {
-      if (k.startsWith("@_") || k === "boundedBy" || k === "Box" || k === "geometry") continue;
-      const next = prefix ? `${prefix}.${k}` : k;
-      visit(vv, next);
-    }
-  };
-  visit(obj, "");
-  return out;
-}
+
 
 function toNumber(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -288,35 +305,75 @@ function extractFromProps(p: Record<string, unknown>, layer: string): RcnFeature
   const findFirst = (rgxs: RegExp[]): unknown => {
     for (const r of rgxs) {
       const k = keys.find((kk) => r.test(kk.toLowerCase()));
-      if (k) return p[k];
+      if (k) {
+        const v = p[k];
+        if (v !== null && v !== undefined && String(v).trim() !== "" && String(v).trim() !== "-") return v;
+      }
     }
     return null;
   };
-  const pricePerM2 = toNumber(findFirst([/cena.*m2|m2.*cena|cena_za_m2|cena_m2|price.*m2|jednost.*cen/]));
-  const pricePerHa = toNumber(findFirst([/cena.*ha|ha.*cena|cena_za_ha|cena_ha/]));
-  const totalPrice = toNumber(findFirst([/cena_transakcyjna|cena_calk|cena_lacz|cena_n|^cena$/]));
-  const areaM2 = toNumber(findFirst([/^pow$|powierzchnia$|pow_uzytk|pow_calk|pow_m2|area_m2/]));
-  const areaHa = toNumber(findFirst([/pow_ha|powierzchnia_ha|area_ha/]));
-  const date = tryParseDate(findFirst([/data.*transak|data_trans|transakcja_data|^data$|date/]));
-  const rawType = (findFirst([/rodzaj|typ|kategor|przedmiot/]) as string | null) ?? null;
+
+  // Cena: priorytetowo bierzemy "cena brutto" z sekcji "dane transakcji"
+  // (to cena całej transakcji), a nie z lokalu/budynku, gdzie często bywa pusta.
+  const totalPrice =
+    toNumber(findFirst([/dane_transakcji__cena_brutto/, /^cena_brutto$/, /^cena$/, /cena_transakcyjna/, /cena_calk|cena_lacz|cena_n/]));
+
+  // Powierzchnia użytkowa lokalu / budynku (m²) lub powierzchnia gruntu (m²).
+  const areaUseM2 = toNumber(
+    findFirst([
+      /lokal__pow_użytkowa|lokal__pow_uzytkowa/,
+      /budynek__pow_użytkowa|budynek__pow_uzytkowa/,
+      /pow_uzytkowa|pow_użytkowa/,
+      /pow_uzytk|pow_calk|pow_m2|area_m2/,
+    ]),
+  );
+  const areaLandM2 = toNumber(findFirst([/nieruchomosc__pow_gruntu|nieruchomość__pow_gruntu|pow_gruntu/]));
+
+  // Dla warstwy "lokale" liczy się tylko powierzchnia lokalu.
+  // Dla "budynki" — w pierwszej kolejności pow. użytkowa budynku (mieszkania w domach),
+  // w przeciwnym razie pomijamy (działka by zaniżała cena/m²).
+  // Dla "dzialki" — powierzchnia gruntu.
+  let areaM2: number | null = null;
+  let areaHa: number | null = null;
+  if (layer === "lokale") {
+    areaM2 = areaUseM2;
+  } else if (layer === "budynki") {
+    areaM2 = areaUseM2;
+  } else if (layer === "dzialki") {
+    areaM2 = areaLandM2;
+    if (areaLandM2 && areaLandM2 > 0) areaHa = areaLandM2 / 10000;
+  } else {
+    areaM2 = areaUseM2 ?? areaLandM2;
+  }
+
+  const date = tryParseDate(findFirst([/dokument__data/, /^data$/, /data_trans|transakcja_data|data.*transak/]));
+  const rawType = (findFirst([/nieruchomosc__rodzaj|nieruchomość__rodzaj/, /budynek__rodzaj/, /^rodzaj$/, /typ|kategor|przedmiot/]) as
+    | string
+    | null) ?? null;
+
+  const pricePerM2 = totalPrice && areaM2 && areaM2 > 0 ? totalPrice / areaM2 : null;
+  const pricePerHa = totalPrice && areaHa && areaHa > 0 ? totalPrice / areaHa : null;
 
   return {
-    pricePerM2: pricePerM2 ?? (totalPrice && areaM2 ? totalPrice / areaM2 : null),
-    pricePerHa: pricePerHa ?? (totalPrice && areaHa ? totalPrice / areaHa : null),
+    pricePerM2,
+    pricePerHa,
     totalPrice,
     areaM2,
     areaHa,
     date,
     rawType,
     layer,
-    signature: JSON.stringify(
-      Object.entries(p)
-        .filter(([k]) => !k.toLowerCase().includes("gml") && !k.toLowerCase().includes("geom"))
-        .sort(([a], [b]) => a.localeCompare(b)),
-    ),
+    signature: (p["__obj_type"] && p["__obj_id"]
+      ? `${p["__obj_type"]}:${p["__obj_id"]}`
+      : JSON.stringify(
+          Object.entries(p)
+            .filter(([k]) => !k.startsWith("__"))
+            .sort(([a], [b]) => a.localeCompare(b)),
+        )),
     attrs: p,
   };
 }
+
 
 // --------- Główna funkcja ---------
 
@@ -418,7 +475,8 @@ export async function rcnBenchmark(args: {
         for (const xml of results) {
           if (!xml) continue;
           if (!diag.rawResponseSnippet) diag.rawResponseSnippet = xml.slice(0, 800);
-          const feats = parseMsGmlFeatures(xml, layer);
+          const feats = parseHtmlFeatures(xml, layer);
+
           for (const f of feats) {
             const raw = extractFromProps(f, layer);
             if (seenSig.has(raw.signature)) continue;
@@ -522,9 +580,10 @@ export async function rcnBenchmarkCached(args: {
   lng: number;
   propertyType: PropertyType | string;
 }): Promise<RcnBenchmarkResult> {
-  const key = `rcn4:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
+  const key = `rcn5:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
   return withCache("rcn_cache", key, 7, () => rcnBenchmark(args));
 }
+
 
 // Komunikat dla użytkownika zależny od statusu.
 export function rcnStatusMessage(status: RcnStatus): string {
