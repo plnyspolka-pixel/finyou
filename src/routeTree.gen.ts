@@ -33,7 +33,6 @@ import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
-import { Route as AdminWnioskiRouteImport } from './routes/admin.wnioski'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
@@ -49,6 +48,7 @@ import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as AdminWnioskiIndexRouteImport } from './routes/admin.wnioski.index'
 import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
@@ -179,11 +179,6 @@ const EmbedWniosekRoute = EmbedWniosekRouteImport.update({
   path: '/embed/wniosek',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminWnioskiRoute = AdminWnioskiRouteImport.update({
-  id: '/wnioski',
-  path: '/wnioski',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
   id: '/voicebot',
   path: '/voicebot',
@@ -259,6 +254,11 @@ const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   path: '/dokumenty',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWnioskiIndexRoute = AdminWnioskiIndexRouteImport.update({
+  id: '/wnioski/',
+  path: '/wnioski/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const KlientUmowaOfferIdRoute = KlientUmowaOfferIdRouteImport.update({
   id: '/umowa/$offerId',
   path: '/umowa/$offerId',
@@ -287,9 +287,9 @@ const ApiPublicElevenlabsWebhookRoute =
     getParentRoute: () => rootRouteImport,
   } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AdminWnioskiRoute,
+  id: '/wnioski/$id',
+  path: '/wnioski/$id',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
   id: '/$id',
@@ -332,7 +332,6 @@ export interface FileRoutesByFullPath {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
-  '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -357,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
+  '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -380,7 +380,6 @@ export interface FileRoutesByTo {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
-  '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -405,6 +404,7 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
+  '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -432,7 +432,6 @@ export interface FileRoutesById {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
-  '/admin/wnioski': typeof AdminWnioskiRouteWithChildren
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -457,6 +456,7 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
+  '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -485,7 +485,6 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
-    | '/admin/wnioski'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -510,6 +509,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
+    | '/admin/wnioski/'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -533,7 +533,6 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
-    | '/admin/wnioski'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -558,6 +557,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
+    | '/admin/wnioski'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -584,7 +584,6 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
-    | '/admin/wnioski'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -609,6 +608,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
+    | '/admin/wnioski/'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -799,13 +799,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmbedWniosekRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/wnioski': {
-      id: '/admin/wnioski'
-      path: '/wnioski'
-      fullPath: '/admin/wnioski'
-      preLoaderRoute: typeof AdminWnioskiRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/voicebot': {
       id: '/admin/voicebot'
       path: '/voicebot'
@@ -911,6 +904,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDokumentyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/wnioski/': {
+      id: '/admin/wnioski/'
+      path: '/wnioski'
+      fullPath: '/admin/wnioski/'
+      preLoaderRoute: typeof AdminWnioskiIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/klient/umowa/$offerId': {
       id: '/klient/umowa/$offerId'
       path: '/umowa/$offerId'
@@ -948,10 +948,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
-      path: '/$id'
+      path: '/wnioski/$id'
       fullPath: '/admin/wnioski/$id'
       preLoaderRoute: typeof AdminWnioskiIdRouteImport
-      parentRoute: typeof AdminWnioskiRoute
+      parentRoute: typeof AdminRoute
     }
     '/admin/inwestorzy/$id': {
       id: '/admin/inwestorzy/$id'
@@ -989,18 +989,6 @@ const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
   AdminInwestorzyRouteChildren,
 )
 
-interface AdminWnioskiRouteChildren {
-  AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
-}
-
-const AdminWnioskiRouteChildren: AdminWnioskiRouteChildren = {
-  AdminWnioskiIdRoute: AdminWnioskiIdRoute,
-}
-
-const AdminWnioskiRouteWithChildren = AdminWnioskiRoute._addFileChildren(
-  AdminWnioskiRouteChildren,
-)
-
 interface AdminRouteChildren {
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
@@ -1017,8 +1005,9 @@ interface AdminRouteChildren {
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
-  AdminWnioskiRoute: typeof AdminWnioskiRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
+  AdminWnioskiIndexRoute: typeof AdminWnioskiIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1037,8 +1026,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
-  AdminWnioskiRoute: AdminWnioskiRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
+  AdminWnioskiIdRoute: AdminWnioskiIdRoute,
+  AdminWnioskiIndexRoute: AdminWnioskiIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -1114,3 +1104,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
