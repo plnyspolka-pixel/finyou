@@ -131,6 +131,41 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
                 {result.valuationBenchmark.varianceFromDeclaredValuePercent != null && (
                   <div><span className="text-muted-foreground">Odchylenie od deklaracji:</span> {result.valuationBenchmark.varianceFromDeclaredValuePercent.toFixed(1)}%</div>
                 )}
+                {result.gusDiagnostics && (
+                  <>
+                    <Separator className="my-2" />
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                        Diagnostyka benchmarku GUS BDL
+                      </summary>
+                      <div className="mt-2 space-y-1 rounded border bg-muted/30 p-2">
+                        <div><b>{result.gusDiagnostics.summaryLine}</b></div>
+                        <div><span className="text-muted-foreground">Jednostka BDL:</span> {result.gusDiagnostics.resolvedLocation.bdlUnitName} (id: <code>{result.gusDiagnostics.resolvedLocation.bdlUnitId}</code>, poziom: {result.gusDiagnostics.resolvedLocation.bdlUnitLevel}, źródło: {result.gusDiagnostics.resolvedLocation.source})</div>
+                        {result.gusDiagnostics.bdlVariable && (
+                          <div><span className="text-muted-foreground">Wskaźnik:</span> {result.gusDiagnostics.bdlVariable.variableName} (id: <code>{result.gusDiagnostics.bdlVariable.variableId}</code>, jedn.: {result.gusDiagnostics.bdlVariable.unit ?? "—"})</div>
+                        )}
+                        <div><span className="text-muted-foreground">Okres:</span> {result.gusDiagnostics.period.label || "—"}</div>
+                        <div><span className="text-muted-foreground">Wartość:</span> {result.gusDiagnostics.value != null ? `${result.gusDiagnostics.value.toLocaleString("pl-PL")} zł/m²` : "—"}</div>
+                        <div>
+                          <span className="text-muted-foreground">Fallback:</span>{" "}
+                          {result.gusDiagnostics.fallbackUsed
+                            ? <Badge variant="destructive">tak — {result.gusDiagnostics.fallbackLevel}</Badge>
+                            : <Badge variant="default">nie</Badge>}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Sanity-check:</span>{" "}
+                          <Badge variant={
+                            result.gusDiagnostics.sanityCheckStatus === "ok" ? "default" :
+                            result.gusDiagnostics.sanityCheckStatus === "suspicious" ? "secondary" : "destructive"
+                          }>{result.gusDiagnostics.sanityCheckStatus}</Badge>
+                          {result.gusDiagnostics.sanityCheckReason && (
+                            <div className="text-muted-foreground mt-1">{result.gusDiagnostics.sanityCheckReason}</div>
+                          )}
+                        </div>
+                      </div>
+                    </details>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -148,6 +183,7 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
               </CardContent>
             </Card>
           </div>
+
 
           {result.floodRisk && (
             <Card>

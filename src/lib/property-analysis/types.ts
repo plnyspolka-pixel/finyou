@@ -162,9 +162,39 @@ export interface PropertyAnalysisResult {
   investmentOfferText: InvestmentOfferText;
   floodRisk?: FloodRiskResult;
   floodAlerts?: string[];
+  gusDiagnostics?: GusBenchmarkDiagnostics | null;
   warnings: string[];
   raw: Record<string, any>;
 }
+
+export type BdlLevelLabel =
+  | "powiat / miasto na prawach powiatu"
+  | "województwo"
+  | "region NUTS"
+  | "Polska"
+  | "nieznany";
+
+export type GusSanityStatus = "ok" | "suspicious" | "rejected";
+
+export interface GusBenchmarkDiagnostics {
+  inputLocation: { city: string | null; county: string | null; voivodeship: string | null };
+  resolvedLocation: {
+    bdlUnitId: string;
+    bdlUnitName: string;
+    bdlUnitLevel: BdlLevelLabel;
+    source: "known_city" | "known_voivodeship" | "search" | "country_fallback";
+  };
+  bdlVariable: { variableId: string; variableName: string; unit: string | null } | null;
+  period: { year: string | null; quarter: string | null; label: string };
+  value: number | null;
+  fallbackUsed: boolean;
+  fallbackLevel: BdlLevelLabel | null;
+  sanityCheckStatus: GusSanityStatus;
+  sanityCheckReason: string | null;
+  warnings: string[];
+  summaryLine: string;
+}
+
 
 export interface RcnStats {
   count: number;
@@ -177,6 +207,7 @@ export interface RcnStats {
   periodMonths: number;
   freshness: "good" | "limited" | "weak";
 }
+
 
 export interface GusStats {
   pricePerM2Median: number | null;

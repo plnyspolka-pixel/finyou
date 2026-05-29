@@ -80,16 +80,33 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
       status: rcn.stats ? "success" : "no_data",
     });
 
+    // Normalizacja Warszawy (alias dzielnic/gmin) — wymusza city = Warszawa, county = m.st. Warszawa.
+    const addrLower = `${input.address ?? ""} ${input.city ?? ""}`.toLowerCase();
+    if (/warszaw/i.test(addrLower)) {
+      input.city = "Warszawa";
+      input.county = "m.st. Warszawa";
+      input.voivodeship = input.voivodeship || "mazowieckie";
+    }
+
     // 4) GUS BDL
-    const gus = await gusBenchmark({
-      propertyType: input.propertyType, voivodeship: input.voivodeship, county: input.county,
+    const gusRes = await gusBenchmark({
+      propertyType: input.propertyType,
+      city: input.city,
+      voivodeship: input.voivodeship,
+      county: input.county,
       soilClass: input.soilClass ?? null,
     });
+    const gus = gusRes.stats;
+    const gusDiagnostics = gusRes.diagnostics;
     sourcesUsed.push({
       source: "GUS BDL", used: !!gus, purpose: "benchmark statystyczny",
-      dataLevel: gus?.level ?? "—", period: gus?.period ?? "",
-      status: gus ? "success" : "no_data",
+      dataLevel: gusDiagnostics.resolvedLocation.bdlUnitName + " · " + gusDiagnostics.resolvedLocation.bdlUnitLevel,
+      period: gusDiagnostics.period.label || "",
+      status: gus ? (gusDiagnostics.sanityCheckStatus === "suspicious" ? "partial" : "success")
+                  : (gusDiagnostics.sanityCheckStatus === "rejected" ? "error" : "no_data"),
+      note: gusDiagnostics.summaryLine,
     });
+    for (const w of gusDiagnostics.warnings) warnings.push(w);
 
     // 5) NBP
     const nbp = await nbpTrend(input.city);
@@ -123,22 +140,33 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     let mainSource = "Brak danych";
     const supporting: string[] = [];
 
+    // Cross-check RCN vs GUS — jeżeli GUS jest podejrzany, nie używamy go jako głównego.
+    const gusSuspicious = gusDiagnostics.sanityCheckStatus !== "ok";
     if (rcn.stats) {
       mainSource = "RCN / Geoportal";
       if (rcn.stats.unit === "pln_per_m2") {
         pricePerM2Median = rcn.stats.median; pricePerM2Average = rcn.stats.average;
+        // Cross-check: GUS vs RCN > 35% różnicy = niespójność
+        if (gus?.pricePerM2Median && rcn.stats.median) {
+          const diff = Math.abs(gus.pricePerM2Median - rcn.stats.median) / rcn.stats.median;
+          if (diff > 0.35) warnings.push(`Benchmark GUS BDL (${Math.round(gus.pricePerM2Median)} zł/m²) różni się od RCN (${Math.round(rcn.stats.median)} zł/m²) o ${(diff * 100).toFixed(0)}% — wynik oznaczony jako niespójny.`);
+        }
       } else { pricePerHa = rcn.stats.median; }
-      if (gus) supporting.push("GUS BDL");
+      if (gus && !gusSuspicious) supporting.push("GUS BDL");
       if (nbp) supporting.push("NBP");
-    } else if (gus) {
+    } else if (gus && !gusSuspicious) {
       mainSource = "GUS BDL";
       pricePerM2Median = gus.pricePerM2Median ?? null;
       pricePerM2Average = gus.pricePerM2Average ?? null;
       pricePerHa = gus.pricePerHaByClass?.ogolem ?? null;
       if (nbp) supporting.push("NBP");
+    } else if (gus && gusSuspicious) {
+      mainSource = "GUS BDL (podejrzane — wymaga weryfikacji)";
+      warnings.push("Uwaga: benchmark GUS BDL wygląda nietypowo nisko dla tej lokalizacji. Prawdopodobna przyczyna: błędna jednostka terytorialna, niewłaściwy okres albo fallback. Wynik nie został przyjęty jako główne źródło wartości bez dodatkowej weryfikacji.");
     } else if (nbp) {
       mainSource = "NBP (pomocniczo)";
     }
+
 
     const estMedian = isLand
       ? (pricePerHa && areaHa ? pricePerHa * areaHa : null)
@@ -235,10 +263,12 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     const result: PropertyAnalysisResult = buildAnalysisResult({
       input, valuation, ltv, location: loc, legal, market,
       collateralScore, sourcesUsed, warnings, offerText,
-      raw: { rcn: rcn.stats, gus, nbp, loc, flood: flood.raw },
+      raw: { rcn: rcn.stats, gus, gusDiagnostics, nbp, loc, flood: flood.raw },
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAlerts: flood.alerts,
     });
+    result.gusDiagnostics = gusDiagnostics;
+
 
     // 12) Zapis
     const { data: saved } = await supabaseAdmin.from("property_analyses").upsert({
