@@ -130,12 +130,17 @@ function Kalkulator() {
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Kwota pożyczki</Label>
+              <Label>Kwota nominalna pożyczki</Label>
               <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
             </div>
             <Slider min={20000} max={1_000_000} step={5000} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
+            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Od tej kwoty liczone odsetki</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - (amount * commissionPct) / 100))}</b></div>
+            </div>
           </div>
+
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -251,12 +256,14 @@ function Kalkulator() {
           <CardTitle>Podsumowanie</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
-          <div className="flex justify-between"><span>Kapitał</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+          <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
+          <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+          <div className="flex justify-between"><span>Odsetki razem (od kwoty nominalnej)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
           <div className="flex justify-between"><span>Koszty pozaodsetkowe razem</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
+
       </Card>
 
       <Card>
