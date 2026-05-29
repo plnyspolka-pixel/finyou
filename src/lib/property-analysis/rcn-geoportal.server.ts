@@ -435,8 +435,6 @@ export async function rcnBenchmark(args: {
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
 
-    return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
-  }
 
   diag.featuresRawCount = allRaw.length;
 
