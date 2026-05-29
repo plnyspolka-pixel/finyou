@@ -257,17 +257,6 @@ export interface RcnDiagnostics {
   propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
 }
 
-  featuresRawCount: number;
-  featuresFilteredCount: number;
-  filtersApplied: string[];
-  periodCounts: { countAllDates: number; countLast12Months: number; countLast24Months: number; countLast36Months: number };
-  sampleFeature: Record<string, any> | null;
-
-  rawResponseSnippet: string | null;
-  errorTechnical: string | null;
-  capabilitiesChecked: boolean;
-  propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
-}
 
 
 
