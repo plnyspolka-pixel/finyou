@@ -231,4 +231,29 @@ export interface DocumentExtraction {
   documentId: string;
   docKind: string;
   data: Record<string, unknown>;
+  data: Record<string, unknown>;
+}
+
+export interface ScrapedListingSummary {
+  source: string;
+  url: string;
+  title: string;
+  pricePln: number | null;
+  areaM2: number | null;
+  pricePerM2: number | null;
+  snippet?: string;
+}
+
+export interface ListingsBenchmarkSummary {
+  status: "success" | "no_data" | "error" | "partial";
+  query: string;
+  portals: string[];
+  totalFound: number;
+  used: number;
+  pricePerM2Median: number | null;
+  pricePerM2Average: number | null;
+  pricePerM2Min: number | null;
+  pricePerM2Max: number | null;
+  listings: ScrapedListingSummary[];
+  errorMessage?: string;
 }
