@@ -130,7 +130,9 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
                 <div><span className="text-muted-foreground">Wartość deklarowana:</span> {formatPLN(result.valuationBenchmark.declaredValuePln)}</div>
                 {result.valuationBenchmark.varianceFromDeclaredValuePercent != null && (
                   <div><span className="text-muted-foreground">Odchylenie od deklaracji:</span> {result.valuationBenchmark.varianceFromDeclaredValuePercent.toFixed(1)}%</div>
+                )}
                 {result.perplexityValuation && (
+
                   <>
                     <Separator className="my-2" />
                     <div className="rounded border bg-muted/30 p-2 text-xs space-y-1">
