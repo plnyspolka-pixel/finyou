@@ -262,13 +262,21 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     if (property?.has_co_owners) legal.warnings.push("Współwłaściciele — wymagana ich zgoda.");
     legal.score = legal.warnings.length === 0 ? 80 : legal.warnings.length === 1 ? 60 : 40;
 
+    const marketSummary = rcn.transactionsCount > 0
+      ? `Odnaleziono ${rcn.transactionsCount} transakcji porównawczych RCN.`
+      : rcnDiag.status === "no_features_in_bbox" ? "Nie znaleziono transakcji RCN w analizowanym obszarze."
+      : rcnDiag.status === "features_found_but_filtered_out" ? "RCN zwrócił dane, ale nie znaleziono wystarczająco podobnych transakcji po zastosowaniu filtrów."
+      : rcnDiag.status === "wfs_request_failed" || rcnDiag.status === "wfs_timeout" ? "Nie udało się pobrać danych RCN z usługi WFS."
+      : rcnDiag.status === "wfs_parse_error" ? "Dane RCN zostały pobrane, ale aplikacja nie potrafiła ich poprawnie przetworzyć."
+      : rcnDiag.status === "bad_bbox" ? "Błąd zapytania przestrzennego RCN."
+      : rcnDiag.status === "wfs_capabilities_failed" || rcnDiag.status === "wfs_layer_not_found" ? "Usługa RCN niedostępna lub nie znaleziono warstwy."
+      : "Brak danych RCN.";
     const market: MarketLiquidityResult = {
       score: rcn.transactionsCount >= 5 ? 80 : rcn.transactionsCount >= 3 ? 60 : rcn.transactionsCount >= 1 ? 40 : 20,
-      summary: rcn.transactionsCount > 0
-        ? `Odnaleziono ${rcn.transactionsCount} transakcji porównawczych.`
-        : "Brak transakcji porównawczych w RCN.",
+      summary: marketSummary,
       transactionsCount: rcn.transactionsCount,
     };
+
 
     // 10) Ryzyko powodziowe ISOK/Wody Polskie
     const flood = await analyzeFloodRisk({
