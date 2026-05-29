@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,19 +9,17 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, Calculator } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Calculator, RefreshCw } from "lucide-react";
 import { formatPLN, repaymentTypeLabels } from "@/lib/labels";
+import { getNbpRates } from "@/lib/nbp-rates.functions";
 
 export const Route = createFileRoute("/inwestor/kalkulator")({
   component: Kalkulator,
 });
 
-// Ustawowe limity (stan obecny):
+// Ustawowe limity:
 // Maks. odsetki: art. 359 §2¹ KC = 2 × stopa ref. NBP + 8 p.p.
-// Maks. koszty pozaodsetkowe (kredyt konsumencki, art. 36a UoKK):
-//   MPKK = K·(10% + 10%·n/R), łącznie nie więcej niż 45% K.
-const NBP_REF_RATE = 5.75;
-const MAX_INTEREST_RATE = NBP_REF_RATE * 2 + 8; // 19.5%
+// Maks. koszty pozaodsetkowe (art. 36a UoKK): MPKK = K·(10% + 10%·n/R), maks. 45% K.
 
 function maxNonInterestCosts(amount: number, months: number): number {
   if (!amount || !months) return 0;
@@ -28,6 +28,15 @@ function maxNonInterestCosts(amount: number, months: number): number {
 }
 
 function Kalkulator() {
+  const fetchRates = useServerFn(getNbpRates);
+  const ratesQ = useQuery({
+    queryKey: ["nbp-rates"],
+    queryFn: () => fetchRates(),
+    staleTime: 12 * 60 * 60 * 1000,
+  });
+  const NBP_REF_RATE = ratesQ.data?.referenceRate ?? 5.75;
+  const MAX_INTEREST_RATE = NBP_REF_RATE * 2 + 8;
+
   const [amount, setAmount] = useState(100_000);
   const [months, setMonths] = useState(12);
   const [annualRate, setAnnualRate] = useState(15);
@@ -97,6 +106,21 @@ function Kalkulator() {
         <h1 className="text-2xl font-bold">Kalkulator pożyczki</h1>
         <p className="text-sm text-muted-foreground">Ustaw parametry — od razu zobaczysz harmonogram, koszty i zgodność z limitami ustawowymi.</p>
       </div>
+
+      <Card>
+        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <RefreshCw className={`h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} />
+            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-muted-foreground">(dane offline)</span>}
+          </div>
+          <span>Referencyjna: <b className="tabular-nums">{NBP_REF_RATE.toFixed(2)}%</b></span>
+          {ratesQ.data?.lombardRate != null && <span>Lombardowa: <b className="tabular-nums">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
+          {ratesQ.data?.depositRate != null && <span>Depozytowa: <b className="tabular-nums">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
+          <span className="text-muted-foreground">Maks. odsetki ustawowe: <b className="tabular-nums text-foreground">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
+          {ratesQ.data?.effectiveFrom && <span className="text-xs text-muted-foreground ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
+        </CardContent>
+      </Card>
+
 
       <Card>
         <CardHeader>
