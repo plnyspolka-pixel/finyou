@@ -579,11 +579,11 @@ export async function rcnBenchmarkCached(args: {
   lat: number;
   lng: number;
   propertyType: PropertyType | string;
+}): Promise<RcnBenchmarkResult> {
   const key = `rcn5:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
-
-  const key = `rcn4:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
   return withCache("rcn_cache", key, 7, () => rcnBenchmark(args));
 }
+
 
 // Komunikat dla użytkownika zależny od statusu.
 export function rcnStatusMessage(status: RcnStatus): string {
