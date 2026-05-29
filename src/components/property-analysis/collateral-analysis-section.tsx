@@ -184,6 +184,65 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
             </Card>
           </div>
 
+          {result.listingsBenchmark && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Podobne ogłoszenia z portali nieruchomościowych</span>
+                  <Badge variant={
+                    result.listingsBenchmark.status === "success" ? "default" :
+                    result.listingsBenchmark.status === "partial" ? "secondary" :
+                    result.listingsBenchmark.status === "error" ? "destructive" : "outline"
+                  }>
+                    {result.listingsBenchmark.used}/{result.listingsBenchmark.totalFound} ofert
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Źródło: Otodom, OLX, Domiporta, Gratka, Morizon, nieruchomosci-online (scraping przez Firecrawl).
+                  Ceny ofertowe (zwykle 5–15% wyższe od transakcyjnych).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm space-y-3">
+                {result.listingsBenchmark.errorMessage && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{result.listingsBenchmark.errorMessage}</AlertDescription>
+                  </Alert>
+                )}
+                {result.listingsBenchmark.used > 0 && (
+                  <div className="grid gap-2 md:grid-cols-4">
+                    <div className="rounded border p-2"><div className="text-xs text-muted-foreground">Mediana zł/m²</div><div className="font-medium">{result.listingsBenchmark.pricePerM2Median?.toLocaleString("pl-PL") ?? "—"}</div></div>
+                    <div className="rounded border p-2"><div className="text-xs text-muted-foreground">Średnia zł/m²</div><div className="font-medium">{result.listingsBenchmark.pricePerM2Average?.toLocaleString("pl-PL") ?? "—"}</div></div>
+                    <div className="rounded border p-2"><div className="text-xs text-muted-foreground">Min zł/m²</div><div className="font-medium">{result.listingsBenchmark.pricePerM2Min?.toLocaleString("pl-PL") ?? "—"}</div></div>
+                    <div className="rounded border p-2"><div className="text-xs text-muted-foreground">Max zł/m²</div><div className="font-medium">{result.listingsBenchmark.pricePerM2Max?.toLocaleString("pl-PL") ?? "—"}</div></div>
+                  </div>
+                )}
+                {result.listingsBenchmark.listings.length > 0 && (
+                  <div className="space-y-1.5">
+                    {result.listingsBenchmark.listings.map((l, i) => (
+                      <div key={i} className="flex items-start gap-2 rounded border p-2 text-xs">
+                        <Badge variant="outline" className="shrink-0">{l.source}</Badge>
+                        <div className="flex-1 min-w-0">
+                          <a href={l.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline line-clamp-1">{l.title || l.url}</a>
+                          <div className="text-muted-foreground">
+                            {l.pricePln ? `${l.pricePln.toLocaleString("pl-PL")} zł` : "cena —"}
+                            {" · "}
+                            {l.areaM2 ? `${l.areaM2} m²` : "pow. —"}
+                            {l.pricePerM2 ? ` · ${l.pricePerM2.toLocaleString("pl-PL")} zł/m²` : ""}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer hover:text-foreground">Zapytanie</summary>
+                  <code className="mt-1 block break-all">{result.listingsBenchmark.query}</code>
+                </details>
+              </CardContent>
+            </Card>
+          )}
+
 
           {result.floodRisk && (
             <Card>
