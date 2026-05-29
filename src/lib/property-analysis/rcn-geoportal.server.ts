@@ -13,7 +13,8 @@
 // mapy.geoportal.gov.pl, więc każde żądanie idzie przez Supabase Edge Function `rcn-proxy`
 // (akcja `proxy` — generyczny pass-through, whitelist hosta geoportalu).
 
-import { XMLParser } from "fast-xml-parser";
+// fast-xml-parser nie jest już używany — Geoportal RCN zwraca dane tylko w INFO_FORMAT=text/html.
+
 import proj4 from "proj4";
 import type { PropertyType, RcnStats, RcnDiagnostics, RcnStatus } from "./types";
 import { average, fetchWithTimeout, filterIqrOutliers, median, quartile, withCache } from "./cache.server";
