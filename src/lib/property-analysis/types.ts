@@ -163,6 +163,7 @@ export interface PropertyAnalysisResult {
   floodRisk?: FloodRiskResult;
   floodAlerts?: string[];
   gusDiagnostics?: GusBenchmarkDiagnostics | null;
+  listingsBenchmark?: ListingsBenchmarkSummary | null;
   warnings: string[];
   raw: Record<string, any>;
 }
