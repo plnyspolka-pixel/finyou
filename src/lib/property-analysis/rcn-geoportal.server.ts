@@ -439,13 +439,15 @@ export async function rcnBenchmark(args: {
   const isLand = typeStr === "grunt_rolny" || typeStr === "dzialka_budowlana" || typeStr === "dzialka_zabudowana";
   const allRaw: RcnFeatureRaw[] = [];
   const seenSig = new Set<string>();
-  let chosenLayer: string | null = null;
-  let chosenRadius: number | null = null;
-  const radiiUsed: number[] = [];
+  // Minimalna liczba transakcji, którą warto uzbierać zanim przerwiemy eskalację.
+  // Dla obszarów typu Warszawa łatwo wpaść w setki transakcji, więc nie kończymy
+  // pętli po pierwszych 3 — chcemy zebrać statystycznie istotną próbkę.
+  const MIN_DESIRED = 30;
 
   outer: for (const layer of candidateLayers) {
     const cfg = LAYER_PROBE_CONFIG[layer] ?? LAYER_PROBE_CONFIG.lokale;
     const scaleLimit = layer === "dzialki" ? 5000 : 2000;
+    const startedAtLayer = allRaw.length;
 
     for (const radius of cfg.radii) {
       radiiUsed.push(radius);
@@ -468,9 +470,8 @@ export async function rcnBenchmark(args: {
         }
       }
 
-      // Wykonujemy w batchach po 6 równolegle, żeby nie zatkać edge function.
-      const batchSize = 6;
-      const newThisRound: RcnFeatureRaw[] = [];
+      // Wykonujemy w batchach równolegle, żeby nie zatkać edge function.
+      const batchSize = 12;
       for (let b = 0; b < probes.length; b += batchSize) {
         const batch = probes.slice(b, b + batchSize);
         const results = await Promise.all(
@@ -480,26 +481,34 @@ export async function rcnBenchmark(args: {
           if (!xml) continue;
           if (!diag.rawResponseSnippet) diag.rawResponseSnippet = xml.slice(0, 800);
           const feats = parseHtmlFeatures(xml, layer);
-
           for (const f of feats) {
             const raw = extractFromProps(f, layer);
             if (seenSig.has(raw.signature)) continue;
             seenSig.add(raw.signature);
             allRaw.push(raw);
-            newThisRound.push(raw);
             if (!diag.sampleFeature) diag.sampleFeature = f;
           }
         }
       }
 
-      if (newThisRound.length >= 3) {
+      // Ustaw wybraną warstwę przy pierwszych trafieniach, ale kontynuuj
+      // eskalację promieni — chcemy zebrać jak najwięcej porównawczych transakcji.
+      if (allRaw.length > startedAtLayer && !chosenLayer) {
         chosenLayer = layer;
         chosenRadius = radius;
-        break outer;
       }
-      if (allRaw.length >= 3) {
-        chosenLayer = layer;
-        chosenRadius = radius;
+      if (allRaw.length > startedAtLayer) {
+        chosenRadius = radius; // ostatni promień, na którym uzbierano dane
+      }
+
+      // Przerywamy dopiero gdy mamy statystycznie sensowną próbkę.
+      if (allRaw.length >= MIN_DESIRED) break outer;
+    }
+
+    // Jeśli ta warstwa coś dała — nie przeskakuj do kolejnej (np. budynki przy mieszkaniu).
+    if (allRaw.length > startedAtLayer) break outer;
+  }
+
         break outer;
       }
     }
