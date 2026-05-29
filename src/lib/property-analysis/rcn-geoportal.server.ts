@@ -509,10 +509,7 @@ export async function rcnBenchmark(args: {
     if (allRaw.length > startedAtLayer) break outer;
   }
 
-        break outer;
-      }
-    }
-  }
+
   diag.radiiTried = radiiUsed;
   diag.featuresRawCount = allRaw.length;
 
