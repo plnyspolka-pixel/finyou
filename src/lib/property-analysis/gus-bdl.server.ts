@@ -278,32 +278,8 @@ export function validateResidentialPricePerM2SanityCheck(
   return { status: "ok", threshold, reason: null };
 }
 
-export interface GusBenchmarkDiagnostics {
-  inputLocation: {
-    city: string | null;
-    county: string | null;
-    voivodeship: string | null;
-  };
-  resolvedLocation: {
-    bdlUnitId: string;
-    bdlUnitName: string;
-    bdlUnitLevel: BdlLevelLabel;
-    source: ResolvedBdlUnit["source"];
-  };
-  bdlVariable: {
-    variableId: string;
-    variableName: string;
-    unit: string | null;
-  } | null;
-  period: { year: string | null; quarter: string | null; label: string };
-  value: number | null;
-  fallbackUsed: boolean;
-  fallbackLevel: BdlLevelLabel | null;
-  sanityCheckStatus: SanityStatus;
-  sanityCheckReason: string | null;
-  warnings: string[];
-  summaryLine: string; // gotowy tekst dla UI
-}
+// GusBenchmarkDiagnostics imported from ./types
+
 
 export interface GusBenchmarkArgs {
   propertyType: string;
