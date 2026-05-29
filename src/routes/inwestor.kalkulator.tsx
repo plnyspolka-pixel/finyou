@@ -130,13 +130,13 @@ function Kalkulator() {
                 <span className="text-sm">%</span>
               </div>
             </div>
-            <Slider min={0} max={60} step={0.5} value={[Math.min(60, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
+            <Slider min={0} max={MAX_INTEREST_RATE} step={0.1} value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
               <span className={interestExceeds ? "text-destructive font-medium" : ""}>
                 limit ustawowy: {MAX_INTEREST_RATE.toFixed(2)}%
               </span>
-              <span>60%</span>
+              <span>{MAX_INTEREST_RATE}%</span>
             </div>
           </div>
 
