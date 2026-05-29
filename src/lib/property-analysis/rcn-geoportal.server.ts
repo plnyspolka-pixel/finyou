@@ -49,11 +49,15 @@ const TYPE_TO_LAYER: Record<string, string[]> = {
 };
 
 // Promień (m) i krok siatki sond GetFeatureInfo zależnie od typu warstwy.
+// UWAGA: WMS GetFeatureInfo zwraca tylko cechy przecinające piksel sondy.
+// Przy scale ≤ 2000 piksel ≈ 0,56 m, więc gęsta siatka jest konieczna,
+// żeby w gęsto zabudowanym obszarze (np. Warszawa) wyłapać wszystkie obiekty.
 const LAYER_PROBE_CONFIG: Record<string, { radii: number[]; gridSize: number }> = {
-  lokale: { radii: [300, 600, 1200, 2000], gridSize: 12 },
-  budynki: { radii: [300, 600, 1200, 2000], gridSize: 12 },
-  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 10 },
+  lokale: { radii: [300, 600, 1200], gridSize: 20 },
+  budynki: { radii: [300, 600, 1200], gridSize: 20 },
+  dzialki: { radii: [400, 800, 1500, 3000], gridSize: 14 },
 };
+
 
 
 interface RcnFeatureRaw {
