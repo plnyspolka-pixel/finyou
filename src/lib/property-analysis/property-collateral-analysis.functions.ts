@@ -1,4 +1,4 @@
-// Orchestrator analizy zabezpieczenia — łączy wszystkie źródła.
+// Orchestrator analizy zabezpieczenia — wycena oparta wyłącznie o Perplexity (sonar-pro).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -7,15 +7,10 @@ import type {
   DataSourceUsage, LegalRiskResult, LocationScoreResult, MarketLiquidityResult,
   PropertyAnalysisInput, PropertyAnalysisResult, ValuationBenchmark,
 } from "./types";
-import { rcnBenchmarkCached } from "./rcn-geoportal.server";
-
-
-import { gusBenchmark, classifySoil } from "./gus-bdl.server";
-import { nbpTrend } from "./nbp-real-estate.server";
 import { geocode, locationScore } from "./location-score.server";
 import { extractDocuments } from "./document-extraction.server";
 import { analyzeFloodRisk } from "./flood-risk.server";
-import { scrapeSimilarListings } from "./listings-scraping.server";
+import { perplexityValuation, perplexityToRcnStats } from "./perplexity-valuation.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
 
