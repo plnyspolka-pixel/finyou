@@ -93,6 +93,7 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
                   {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
                 </ul>
               </AlertDescription>
+            </Alert>
           )}
 
           {result.property.latitude != null && result.property.longitude != null && (
@@ -109,7 +110,6 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
                 />
               </CardContent>
             </Card>
-          )}
           )}
 
           <Card>
