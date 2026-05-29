@@ -261,7 +261,7 @@ async function fetchFeaturesJson(endpoint: string, layer: string, bbox: [number,
     `${endpoint}?service=WFS&version=2.0.0&request=GetFeature` +
     `&typeNames=${encodeURIComponent(layer)}&outputFormat=application/json` +
     `&bbox=${encodeURIComponent(bboxStr)}&count=500`;
-  const res = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 25_000);
+  const res = await fetchWithTimeout(proxify(url), { headers: { Accept: "application/json" } }, 25_000);
   if (!res.ok) return null;
   const txt = await res.text();
   try {
