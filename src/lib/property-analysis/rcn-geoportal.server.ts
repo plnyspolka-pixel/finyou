@@ -527,6 +527,16 @@ export function rcnStatusMessage(status: RcnStatus): string {
     case "geocoding_failed": return "Nie udało się zgeokodować adresu — RCN nie został odpytany.";
     case "filter_too_strict": return "Filtry RCN okazały się zbyt restrykcyjne.";
     case "not_started": return "Diagnostyka RCN nie została uruchomiona.";
+    case "capabilities_failed": return "Nie udało się połączyć z usługą RCN GetCapabilities. To błąd techniczny integracji albo dostępności usługi, a nie informacja o braku transakcji RCN.";
+    case "capabilities_success": return "RCN GetCapabilities odpowiedział poprawnie.";
+    case "wms_capabilities_success_but_wfs_failed": return "WMS RCN działa, ale WFS RCN nie zwrócił GetCapabilities — błąd integracji WFS.";
+    case "layers_detected": return "Wykryto warstwy RCN.";
+    case "no_layers_detected": return "RCN GetCapabilities OK, ale nie wykryto żadnych warstw.";
+    case "getfeature_success": return "GetFeature RCN zwrócił dane.";
+    case "getfeature_failed": return "GetFeature RCN nie powiódł się technicznie.";
+    case "features_found": return "Znaleziono obiekty RCN w analizowanym obszarze.";
+    case "no_features": return "GetCapabilities i GetFeature OK, ale w analizowanym obszarze nie znaleziono transakcji RCN.";
+
     default: return "Status RCN nieznany.";
   }
 }
