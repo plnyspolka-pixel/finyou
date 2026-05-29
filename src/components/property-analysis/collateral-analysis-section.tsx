@@ -93,7 +93,23 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
                   {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
                 </ul>
               </AlertDescription>
-            </Alert>
+          )}
+
+          {result.property.latitude != null && result.property.longitude != null && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Lokalizacja nieruchomości</CardTitle>
+                <CardDescription>{result.property.address}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PropertyMap
+                  latitude={result.property.latitude}
+                  longitude={result.property.longitude}
+                  label={result.property.address}
+                />
+              </CardContent>
+            </Card>
+          )}
           )}
 
           <Card>
