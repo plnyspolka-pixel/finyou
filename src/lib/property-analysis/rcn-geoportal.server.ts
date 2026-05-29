@@ -145,11 +145,19 @@ function parseLayerNamesFromWms(xml: string): string[] {
   const rx = /<(?:[a-zA-Z0-9]+:)?Name>\s*([^<\s][^<]*?)\s*<\/(?:[a-zA-Z0-9]+:)?Name>/g;
   let m: RegExpExecArray | null;
   while ((m = rx.exec(xml)) !== null) {
-    const name = m[1].trim();
+    const name = m[1].trim().replace(/^ms:/i, "");
     if (!name) continue;
     if (/^wms$/i.test(name)) continue;
     if (/^default$/i.test(name)) continue;
     if (!layers.includes(name)) layers.push(name);
+  }
+
+  // Geoportal RCN ma stałe warstwy widoczne też w UI WMS. Jeśli XML jest poprawnym
+  // capabilities RCN, ale parser nie wyłapie nazw przez wariant formatowania, nie blokujemy analizy.
+  for (const layer of ["budynki", "lokale", "dzialki", "powiaty"]) {
+    if ((xml.includes(`layer=${layer}`) || xml.includes(`>${layer}<`) || /Rejestr Cen Nieruchomości/i.test(xml)) && !layers.includes(layer)) {
+      layers.push(layer);
+    }
   }
   return layers;
 }
@@ -514,7 +522,7 @@ export async function rcnBenchmarkCached(args: {
   lng: number;
   propertyType: PropertyType | string;
 }): Promise<RcnBenchmarkResult> {
-  const key = `rcn3:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
+  const key = `rcn4:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
   return withCache("rcn_cache", key, 7, () => rcnBenchmark(args));
 }
 

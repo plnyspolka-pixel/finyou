@@ -37,18 +37,19 @@ function extractLayers(xml: string): string[] {
   const layers: string[] = [];
 
   // WFS 2.0 / 1.1 — <Name> wewnątrz <FeatureType>
-  const featureTypeRegex = /<FeatureType[\s\S]*?<Name>([\s\S]*?)<\/Name>/g;
+  const featureTypeRegex = /<(?:[a-zA-Z0-9]+:)?FeatureType[\s\S]*?<(?:[a-zA-Z0-9]+:)?Name>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?Name>/g;
   let match;
   while ((match = featureTypeRegex.exec(xml)) !== null) {
-    const name = match[1].trim();
-    if (name) layers.push(name);
+    const name = match[1].trim().replace(/^ms:/i, "");
+    if (name && !layers.includes(name)) layers.push(name);
   }
 
   // WMS — <Layer><Name>
   if (layers.length === 0) {
-    const layerNameRegex = /<Layer[^>]*>[\s\S]*?<Name>([\s\S]*?)<\/Name>/g;
+    const layerNameRegex = /<(?:[a-zA-Z0-9]+:)?Layer[^>]*>[\s\S]*?<(?:[a-zA-Z0-9]+:)?Name>([\s\S]*?)<\/(?:[a-zA-Z0-9]+:)?Name>/g;
     while ((match = layerNameRegex.exec(xml)) !== null) {
-      const name = match[1].trim();
+      const name = match[1].trim().replace(/^ms:/i, "");
+      if (/^wms$/i.test(name) || /^default$/i.test(name)) continue;
       if (name && !layers.includes(name)) layers.push(name);
     }
   }
