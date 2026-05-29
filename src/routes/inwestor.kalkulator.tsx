@@ -256,12 +256,14 @@ function Kalkulator() {
           <CardTitle>Podsumowanie</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
-          <div className="flex justify-between"><span>Kapitał</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+          <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
+          <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+          <div className="flex justify-between"><span>Odsetki razem (od kwoty nominalnej)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
           <div className="flex justify-between"><span>Koszty pozaodsetkowe razem</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
+
       </Card>
 
       <Card>
