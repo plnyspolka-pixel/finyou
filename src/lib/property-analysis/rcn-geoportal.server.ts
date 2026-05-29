@@ -594,7 +594,8 @@ export async function rcnBenchmarkCached(args: {
   lng: number;
   propertyType: PropertyType | string;
 }): Promise<RcnBenchmarkResult> {
-  const key = `rcn5:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
+  const key = `rcn6:${args.lat.toFixed(3)}:${args.lng.toFixed(3)}:${args.propertyType}`;
+
   return withCache("rcn_cache", key, 7, () => rcnBenchmark(args));
 }
 
