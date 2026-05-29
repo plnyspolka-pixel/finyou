@@ -78,25 +78,126 @@ function emptyDiag(): RcnDiagnostics {
   };
 }
 
-async function fetchCapabilities(endpoint: string): Promise<{ layers: string[]; xml: string } | null> {
-  const url = `${endpoint}?service=WFS&version=2.0.0&request=GetCapabilities`;
+export interface CapabilitiesAttempt {
+  url: string;
+  httpStatus: number | null;
+  contentType: string;
+  responseStartsWith: string;
+  success: boolean;
+  error: string;
+}
+
+function looksLikeCapabilitiesXml(text: string): boolean {
+  return /WFS_Capabilities|WMS_Capabilities|FeatureTypeList|<\s*Layer[\s>]/i.test(text);
+}
+
+function parseLayersFromCapabilitiesXml(xml: string): string[] {
   try {
-    const res = await fetchWithTimeout(url, { headers: { Accept: "application/xml" } }, 15_000);
-    if (!res.ok) return null;
-    const xml = await res.text();
     const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true });
     const parsed = parser.parse(xml) as any;
-    const featureTypes =
-      parsed?.WFS_Capabilities?.FeatureTypeList?.FeatureType ??
-      parsed?.Capabilities?.FeatureTypeList?.FeatureType ??
-      [];
-    const arr = Array.isArray(featureTypes) ? featureTypes : [featureTypes];
-    const layers = arr.map((f: any) => String(f?.Name ?? "")).filter(Boolean);
-    return { layers, xml };
+    const root = parsed?.WFS_Capabilities ?? parsed?.Capabilities ?? parsed?.WMS_Capabilities ?? {};
+    const ft = root?.FeatureTypeList?.FeatureType;
+    if (ft) {
+      const arr = Array.isArray(ft) ? ft : [ft];
+      return arr.map((f: any) => String(f?.Name ?? "")).filter(Boolean);
+    }
+    // WMS fallback — zbierz warstwy z drzewa <Layer>
+    const layers: string[] = [];
+    const walk = (node: any) => {
+      if (!node || typeof node !== "object") return;
+      const ls = node.Layer;
+      if (ls) {
+        const arr = Array.isArray(ls) ? ls : [ls];
+        for (const l of arr) {
+          const name = l?.Name;
+          if (name) layers.push(String(name));
+          walk(l);
+        }
+      }
+    };
+    walk(root);
+    return layers;
   } catch {
-    return null;
+    return [];
   }
 }
+
+/**
+ * Testuje połączenie z usługą RCN GetCapabilities — kolejno WFS 2.0.0, 1.1.0, 1.0.0, WMS.
+ * Zwraca pełną diagnostykę każdej próby.
+ */
+export async function testRcnCapabilities(): Promise<{
+  attempts: CapabilitiesAttempt[];
+  successfulUrl: string | null;
+  successfulService: "WFS" | "WMS" | null;
+  wfsSucceeded: boolean;
+  wmsSucceeded: boolean;
+  layers: string[];
+  xml: string | null;
+}> {
+  const attempts: CapabilitiesAttempt[] = [];
+  let successfulUrl: string | null = null;
+  let successfulService: "WFS" | "WMS" | null = null;
+  let wfsSucceeded = false;
+  let wmsSucceeded = false;
+  let layers: string[] = [];
+  let xml: string | null = null;
+
+  const urls: Array<{ url: string; service: "WFS" | "WMS" }> = [
+    ...WFS_VERSIONS.map((v) => ({
+      url: `${RCN_BASE_ENDPOINT}?SERVICE=WFS&REQUEST=GetCapabilities&VERSION=${v}`,
+      service: "WFS" as const,
+    })),
+    { url: `${RCN_BASE_ENDPOINT}?SERVICE=WMS&REQUEST=GetCapabilities`, service: "WMS" },
+  ];
+
+  for (const { url, service } of urls) {
+    const attempt: CapabilitiesAttempt = {
+      url,
+      httpStatus: null,
+      contentType: "",
+      responseStartsWith: "",
+      success: false,
+      error: "",
+    };
+    try {
+      const res = await fetchWithTimeout(url, { headers: RCN_HEADERS }, RCN_TIMEOUT_MS);
+      attempt.httpStatus = res.status;
+      attempt.contentType = res.headers.get("content-type") ?? "";
+      const text = await res.text();
+      attempt.responseStartsWith = text.slice(0, 300);
+      if (res.ok && looksLikeCapabilitiesXml(text)) {
+        attempt.success = true;
+        if (service === "WFS" && !wfsSucceeded) {
+          wfsSucceeded = true;
+          successfulUrl = url;
+          successfulService = "WFS";
+          layers = parseLayersFromCapabilitiesXml(text);
+          xml = text;
+        } else if (service === "WMS") {
+          wmsSucceeded = true;
+          if (!wfsSucceeded) {
+            successfulUrl = url;
+            successfulService = "WMS";
+          }
+        }
+      } else if (!res.ok) {
+        attempt.error = `HTTP ${res.status}`;
+      } else {
+        attempt.error = "Odpowiedź nie wygląda na XML GetCapabilities";
+      }
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      attempt.error = /abort|timeout/i.test(msg) ? `timeout po ${RCN_TIMEOUT_MS} ms` : msg;
+    }
+    attempts.push(attempt);
+    // Jeśli WFS już zadziałał, możemy przerwać po WFS (sprawdzanie WMS pozostawiamy dla pełności diagnostyki tylko gdy WFS padło).
+    if (wfsSucceeded && service === "WFS") break;
+  }
+
+  return { attempts, successfulUrl, successfulService, wfsSucceeded, wmsSucceeded, layers, xml };
+}
+
 
 function pickLayers(layers: string[], keywords: string[]): string[] {
   if (keywords.length === 0) return layers.slice(0, 3);
