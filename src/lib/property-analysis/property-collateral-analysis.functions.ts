@@ -302,11 +302,12 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
     const result: PropertyAnalysisResult = buildAnalysisResult({
       input, valuation, ltv, location: loc, legal, market,
       collateralScore, sourcesUsed, warnings, offerText,
-      raw: { rcn: rcn.stats, gus, gusDiagnostics, nbp, loc, flood: flood.raw },
+      raw: { rcn: rcn.stats, gus, gusDiagnostics, nbp, loc, flood: flood.raw, listings },
       floodRisk: { ...flood.floodRisk, available: flood.success, geometryUsed: flood.property.geometryUsed },
       floodAlerts: flood.alerts,
     });
     result.gusDiagnostics = gusDiagnostics;
+    result.listingsBenchmark = listings;
 
 
     // 12) Zapis
