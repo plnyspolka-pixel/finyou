@@ -76,12 +76,7 @@ const CITY_SANITY_MIN_PLN_M2: Record<string, number> = {
   "katowice":  6000,
 };
 
-export type BdlLevelLabel =
-  | "powiat / miasto na prawach powiatu"
-  | "województwo"
-  | "region NUTS"
-  | "Polska"
-  | "nieznany";
+// BdlLevelLabel imported from ./types
 
 function levelLabel(level: number): BdlLevelLabel {
   if (level === 6) return "powiat / miasto na prawach powiatu";
