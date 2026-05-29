@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,19 +9,17 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, Calculator } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Calculator, RefreshCw } from "lucide-react";
 import { formatPLN, repaymentTypeLabels } from "@/lib/labels";
+import { getNbpRates } from "@/lib/nbp-rates.functions";
 
 export const Route = createFileRoute("/inwestor/kalkulator")({
   component: Kalkulator,
 });
 
-// Ustawowe limity (stan obecny):
+// Ustawowe limity:
 // Maks. odsetki: art. 359 §2¹ KC = 2 × stopa ref. NBP + 8 p.p.
-// Maks. koszty pozaodsetkowe (kredyt konsumencki, art. 36a UoKK):
-//   MPKK = K·(10% + 10%·n/R), łącznie nie więcej niż 45% K.
-const NBP_REF_RATE = 5.75;
-const MAX_INTEREST_RATE = NBP_REF_RATE * 2 + 8; // 19.5%
+// Maks. koszty pozaodsetkowe (art. 36a UoKK): MPKK = K·(10% + 10%·n/R), maks. 45% K.
 
 function maxNonInterestCosts(amount: number, months: number): number {
   if (!amount || !months) return 0;
