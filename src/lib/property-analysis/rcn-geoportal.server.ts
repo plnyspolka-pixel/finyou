@@ -317,31 +317,52 @@ export async function rcnBenchmark(args: {
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
 
-  // 1) GetCapabilities — wybór endpointu i warstwy
-  let endpoint: string | null = null;
-  let layers: string[] = [];
-  for (const ep of WFS_ENDPOINTS) {
-    const cap = await fetchCapabilities(ep);
-    if (cap && cap.layers.length > 0) { endpoint = ep; layers = cap.layers; break; }
-  }
+  // 1) GetCapabilities — testujemy WFS 2.0.0 → 1.1.0 → 1.0.0 → WMS i zapisujemy pełną diagnostykę.
+  const capTest = await testRcnCapabilities();
   diag.capabilitiesChecked = true;
-  diag.availableLayers = layers;
+  diag.capabilitiesAttempts = capTest.attempts;
+  diag.availableLayers = capTest.layers;
 
-  if (!endpoint) {
-    diag.status = "wfs_capabilities_failed";
-    diag.statusMessage = "Nie udało się pobrać GetCapabilities z żadnego endpointu RCN.";
-    diag.errorTechnical = `Próbowano: ${WFS_ENDPOINTS.join(", ")}`;
+  if (!capTest.wfsSucceeded) {
+    if (capTest.wmsSucceeded) {
+      diag.status = "wms_capabilities_success_but_wfs_failed";
+      diag.statusMessage =
+        "WMS RCN działa, ale WFS RCN GetCapabilities nie zwrócił poprawnej odpowiedzi. To błąd techniczny integracji WFS, nie brak transakcji.";
+    } else {
+      diag.status = "capabilities_failed";
+      diag.statusMessage =
+        "Nie udało się połączyć z usługą RCN GetCapabilities. To błąd techniczny integracji albo dostępności usługi, a nie informacja o braku transakcji RCN.";
+    }
+    diag.errorTechnical = capTest.attempts
+      .map((a) => `${a.url} → ${a.httpStatus ?? "no-status"} ${a.error || "ok"}`)
+      .join(" | ");
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
-  diag.endpoint = endpoint;
+
+  // WFS GetCapabilities OK
+  diag.endpoint = capTest.successfulUrl;
+  const layers = capTest.layers;
+  if (layers.length === 0) {
+    diag.status = "no_layers_detected";
+    diag.statusMessage =
+      "RCN GetCapabilities odpowiedział poprawnie, ale nie wykryto żadnych warstw FeatureType. Sprawdź konfigurację usługi.";
+    return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
+  }
+  // status pośredni: warstwy wykryte — kontynuujemy do GetFeature
+  diag.status = "layers_detected";
+  diag.statusMessage = `Wykryto ${layers.length} warstw RCN. Próbuję pobrać GetFeature.`;
 
   const candidateLayers = pickLayers(layers, keywords);
   diag.propertyTypeMapping.matchedLayerKeywords = candidateLayers;
   if (candidateLayers.length === 0) {
     diag.status = "wfs_layer_not_found";
-    diag.statusMessage = "Nie znaleziono warstwy RCN pasującej do typu nieruchomości.";
+    diag.statusMessage = "Wykryto warstwy RCN, ale żadna nie pasuje do typu nieruchomości.";
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
+
+  // Endpoint bazowy do GetFeature (nie URL GetCapabilities — usuwamy querystring).
+  const featureEndpoint = RCN_BASE_ENDPOINT;
+
 
   // 2) Eskalacja promienia (1km → 10km diagnostycznie)
   const radii = [1000, 2000, 5000, 10000];
