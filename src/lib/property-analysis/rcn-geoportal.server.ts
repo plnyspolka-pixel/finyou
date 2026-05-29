@@ -273,9 +273,6 @@ function parseHtmlFeatures(html: string, _layer: string): Array<Record<string, u
 }
 
 
-  visit(obj, "");
-  return out;
-}
 
 function toNumber(v: unknown): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
