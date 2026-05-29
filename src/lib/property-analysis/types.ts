@@ -161,7 +161,8 @@ export interface PropertyAnalysisResult {
   collateralScore: CollateralScore;
   investmentOfferText: InvestmentOfferText;
   floodRisk?: FloodRiskResult;
-  floodAlerts?: string[];
+  gusDiagnostics?: GusBenchmarkDiagnostics | null;
+
   gusDiagnostics?: import("./gus-bdl.server").GusBenchmarkDiagnostics | null;
   warnings: string[];
   raw: Record<string, any>;
