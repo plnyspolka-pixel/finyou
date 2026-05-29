@@ -11,12 +11,18 @@ proj4.defs(
   "+proj=tmerc +lat_0=0 +lon_0=19 +k=0.9993 +x_0=500000 +y_0=-5300000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 );
 
-// Kandydaci endpointów WFS (kolejność = priorytet). Próbujemy ich po kolei.
-const WFS_ENDPOINTS: ReadonlyArray<string> = [
-  "https://mapy.geoportal.gov.pl/wss/service/PZGiK/RCiWN/WFS",
-  "https://integracja.gugik.gov.pl/cgi-bin/RCiWN",
-  "https://mapy.geoportal.gov.pl/wss/service/rcn/WFS",
-];
+// Bazowy endpoint usługi RCN (Geoportal). Typ usługi określa parametr SERVICE=WFS|WMS.
+// NIE dopisuj /WFS do ścieżki — to powoduje błąd 404.
+const RCN_BASE_ENDPOINT = "https://mapy.geoportal.gov.pl/wss/service/rcn";
+
+// Wersje WFS do wypróbowania w kolejności.
+const WFS_VERSIONS: ReadonlyArray<string> = ["2.0.0", "1.1.0", "1.0.0"];
+
+const RCN_TIMEOUT_MS = 20_000;
+const RCN_HEADERS: Record<string, string> = {
+  Accept: "application/xml,text/xml,*/*",
+};
+
 
 // Słownik typów aplikacyjnych → słowa kluczowe charakterystyczne dla nazw warstw / atrybutów RCN.
 const TYPE_KEYWORDS: Record<string, string[]> = {
