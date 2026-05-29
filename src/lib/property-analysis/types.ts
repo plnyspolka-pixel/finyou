@@ -232,7 +232,6 @@ export interface DocumentExtraction {
   docKind: string;
   data: Record<string, unknown>;
 }
-}
 
 export interface ScrapedListingSummary {
   source: string;
