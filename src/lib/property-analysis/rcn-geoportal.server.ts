@@ -428,7 +428,8 @@ export async function rcnBenchmark(args: {
         for (const xml of results) {
           if (!xml) continue;
           if (!diag.rawResponseSnippet) diag.rawResponseSnippet = xml.slice(0, 800);
-          const feats = parseMsGmlFeatures(xml, layer);
+          const feats = parseHtmlFeatures(xml, layer);
+
           for (const f of feats) {
             const raw = extractFromProps(f, layer);
             if (seenSig.has(raw.signature)) continue;
