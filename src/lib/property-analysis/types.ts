@@ -215,6 +215,16 @@ export type RcnStatus =
   | "not_started"
   | "geocoding_failed"
   | "missing_coordinates"
+  | "capabilities_failed"
+  | "capabilities_success"
+  | "wms_capabilities_success_but_wfs_failed"
+  | "layers_detected"
+  | "no_layers_detected"
+  | "getfeature_success"
+  | "getfeature_failed"
+  | "features_found"
+  | "no_features"
+  // legacy aliases (zachowane dla kompatybilności):
   | "wfs_capabilities_failed"
   | "wfs_layer_not_found"
   | "bad_bbox"
@@ -225,6 +235,7 @@ export type RcnStatus =
   | "no_features_in_bbox"
   | "features_found_but_filtered_out"
   | "success";
+
 
 export interface RcnDiagnostics {
   status: RcnStatus;
