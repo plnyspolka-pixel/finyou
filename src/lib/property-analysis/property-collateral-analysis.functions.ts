@@ -13,6 +13,7 @@ import { nbpTrend } from "./nbp-real-estate.server";
 import { geocode, locationScore } from "./location-score.server";
 import { extractDocuments } from "./document-extraction.server";
 import { analyzeFloodRisk } from "./flood-risk.server";
+import { scrapeSimilarListings } from "./listings-scraping.server";
 import { calculateCollateralScore, classifyLtv } from "./scoring";
 import { buildAnalysisResult, generateOfferText } from "./offer-text";
 
