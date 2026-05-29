@@ -13,6 +13,7 @@ import {
   getPropertyAnalysis,
 } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { PropertyAnalysisResult, SourceStatus } from "@/lib/property-analysis/types";
+import { PropertyMap } from "./property-map";
 
 function statusIcon(s: SourceStatus) {
   if (s === "success") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />;
