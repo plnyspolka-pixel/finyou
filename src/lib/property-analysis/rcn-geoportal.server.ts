@@ -11,12 +11,18 @@ proj4.defs(
   "+proj=tmerc +lat_0=0 +lon_0=19 +k=0.9993 +x_0=500000 +y_0=-5300000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 );
 
-// Kandydaci endpointów WFS (kolejność = priorytet). Próbujemy ich po kolei.
-const WFS_ENDPOINTS: ReadonlyArray<string> = [
-  "https://mapy.geoportal.gov.pl/wss/service/PZGiK/RCiWN/WFS",
-  "https://integracja.gugik.gov.pl/cgi-bin/RCiWN",
-  "https://mapy.geoportal.gov.pl/wss/service/rcn/WFS",
-];
+// Bazowy endpoint usługi RCN (Geoportal). Typ usługi określa parametr SERVICE=WFS|WMS.
+// NIE dopisuj /WFS do ścieżki — to powoduje błąd 404.
+const RCN_BASE_ENDPOINT = "https://mapy.geoportal.gov.pl/wss/service/rcn";
+
+// Wersje WFS do wypróbowania w kolejności.
+const WFS_VERSIONS: ReadonlyArray<string> = ["2.0.0", "1.1.0", "1.0.0"];
+
+const RCN_TIMEOUT_MS = 20_000;
+const RCN_HEADERS: Record<string, string> = {
+  Accept: "application/xml,text/xml,*/*",
+};
+
 
 // Słownik typów aplikacyjnych → słowa kluczowe charakterystyczne dla nazw warstw / atrybutów RCN.
 const TYPE_KEYWORDS: Record<string, string[]> = {
@@ -72,25 +78,126 @@ function emptyDiag(): RcnDiagnostics {
   };
 }
 
-async function fetchCapabilities(endpoint: string): Promise<{ layers: string[]; xml: string } | null> {
-  const url = `${endpoint}?service=WFS&version=2.0.0&request=GetCapabilities`;
+export interface CapabilitiesAttempt {
+  url: string;
+  httpStatus: number | null;
+  contentType: string;
+  responseStartsWith: string;
+  success: boolean;
+  error: string;
+}
+
+function looksLikeCapabilitiesXml(text: string): boolean {
+  return /WFS_Capabilities|WMS_Capabilities|FeatureTypeList|<\s*Layer[\s>]/i.test(text);
+}
+
+function parseLayersFromCapabilitiesXml(xml: string): string[] {
   try {
-    const res = await fetchWithTimeout(url, { headers: { Accept: "application/xml" } }, 15_000);
-    if (!res.ok) return null;
-    const xml = await res.text();
     const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true });
     const parsed = parser.parse(xml) as any;
-    const featureTypes =
-      parsed?.WFS_Capabilities?.FeatureTypeList?.FeatureType ??
-      parsed?.Capabilities?.FeatureTypeList?.FeatureType ??
-      [];
-    const arr = Array.isArray(featureTypes) ? featureTypes : [featureTypes];
-    const layers = arr.map((f: any) => String(f?.Name ?? "")).filter(Boolean);
-    return { layers, xml };
+    const root = parsed?.WFS_Capabilities ?? parsed?.Capabilities ?? parsed?.WMS_Capabilities ?? {};
+    const ft = root?.FeatureTypeList?.FeatureType;
+    if (ft) {
+      const arr = Array.isArray(ft) ? ft : [ft];
+      return arr.map((f: any) => String(f?.Name ?? "")).filter(Boolean);
+    }
+    // WMS fallback — zbierz warstwy z drzewa <Layer>
+    const layers: string[] = [];
+    const walk = (node: any) => {
+      if (!node || typeof node !== "object") return;
+      const ls = node.Layer;
+      if (ls) {
+        const arr = Array.isArray(ls) ? ls : [ls];
+        for (const l of arr) {
+          const name = l?.Name;
+          if (name) layers.push(String(name));
+          walk(l);
+        }
+      }
+    };
+    walk(root);
+    return layers;
   } catch {
-    return null;
+    return [];
   }
 }
+
+/**
+ * Testuje połączenie z usługą RCN GetCapabilities — kolejno WFS 2.0.0, 1.1.0, 1.0.0, WMS.
+ * Zwraca pełną diagnostykę każdej próby.
+ */
+export async function testRcnCapabilities(): Promise<{
+  attempts: CapabilitiesAttempt[];
+  successfulUrl: string | null;
+  successfulService: "WFS" | "WMS" | null;
+  wfsSucceeded: boolean;
+  wmsSucceeded: boolean;
+  layers: string[];
+  xml: string | null;
+}> {
+  const attempts: CapabilitiesAttempt[] = [];
+  let successfulUrl: string | null = null;
+  let successfulService: "WFS" | "WMS" | null = null;
+  let wfsSucceeded = false;
+  let wmsSucceeded = false;
+  let layers: string[] = [];
+  let xml: string | null = null;
+
+  const urls: Array<{ url: string; service: "WFS" | "WMS" }> = [
+    ...WFS_VERSIONS.map((v) => ({
+      url: `${RCN_BASE_ENDPOINT}?SERVICE=WFS&REQUEST=GetCapabilities&VERSION=${v}`,
+      service: "WFS" as const,
+    })),
+    { url: `${RCN_BASE_ENDPOINT}?SERVICE=WMS&REQUEST=GetCapabilities`, service: "WMS" },
+  ];
+
+  for (const { url, service } of urls) {
+    const attempt: CapabilitiesAttempt = {
+      url,
+      httpStatus: null,
+      contentType: "",
+      responseStartsWith: "",
+      success: false,
+      error: "",
+    };
+    try {
+      const res = await fetchWithTimeout(url, { headers: RCN_HEADERS }, RCN_TIMEOUT_MS);
+      attempt.httpStatus = res.status;
+      attempt.contentType = res.headers.get("content-type") ?? "";
+      const text = await res.text();
+      attempt.responseStartsWith = text.slice(0, 300);
+      if (res.ok && looksLikeCapabilitiesXml(text)) {
+        attempt.success = true;
+        if (service === "WFS" && !wfsSucceeded) {
+          wfsSucceeded = true;
+          successfulUrl = url;
+          successfulService = "WFS";
+          layers = parseLayersFromCapabilitiesXml(text);
+          xml = text;
+        } else if (service === "WMS") {
+          wmsSucceeded = true;
+          if (!wfsSucceeded) {
+            successfulUrl = url;
+            successfulService = "WMS";
+          }
+        }
+      } else if (!res.ok) {
+        attempt.error = `HTTP ${res.status}`;
+      } else {
+        attempt.error = "Odpowiedź nie wygląda na XML GetCapabilities";
+      }
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+      attempt.error = /abort|timeout/i.test(msg) ? `timeout po ${RCN_TIMEOUT_MS} ms` : msg;
+    }
+    attempts.push(attempt);
+    // Jeśli WFS już zadziałał, możemy przerwać po WFS (sprawdzanie WMS pozostawiamy dla pełności diagnostyki tylko gdy WFS padło).
+    if (wfsSucceeded && service === "WFS") break;
+  }
+
+  return { attempts, successfulUrl, successfulService, wfsSucceeded, wmsSucceeded, layers, xml };
+}
+
 
 function pickLayers(layers: string[], keywords: string[]): string[] {
   if (keywords.length === 0) return layers.slice(0, 3);
@@ -210,31 +317,52 @@ export async function rcnBenchmark(args: {
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
 
-  // 1) GetCapabilities — wybór endpointu i warstwy
-  let endpoint: string | null = null;
-  let layers: string[] = [];
-  for (const ep of WFS_ENDPOINTS) {
-    const cap = await fetchCapabilities(ep);
-    if (cap && cap.layers.length > 0) { endpoint = ep; layers = cap.layers; break; }
-  }
+  // 1) GetCapabilities — testujemy WFS 2.0.0 → 1.1.0 → 1.0.0 → WMS i zapisujemy pełną diagnostykę.
+  const capTest = await testRcnCapabilities();
   diag.capabilitiesChecked = true;
-  diag.availableLayers = layers;
+  diag.capabilitiesAttempts = capTest.attempts;
+  diag.availableLayers = capTest.layers;
 
-  if (!endpoint) {
-    diag.status = "wfs_capabilities_failed";
-    diag.statusMessage = "Nie udało się pobrać GetCapabilities z żadnego endpointu RCN.";
-    diag.errorTechnical = `Próbowano: ${WFS_ENDPOINTS.join(", ")}`;
+  if (!capTest.wfsSucceeded) {
+    if (capTest.wmsSucceeded) {
+      diag.status = "wms_capabilities_success_but_wfs_failed";
+      diag.statusMessage =
+        "WMS RCN działa, ale WFS RCN GetCapabilities nie zwrócił poprawnej odpowiedzi. To błąd techniczny integracji WFS, nie brak transakcji.";
+    } else {
+      diag.status = "capabilities_failed";
+      diag.statusMessage =
+        "Nie udało się połączyć z usługą RCN GetCapabilities. To błąd techniczny integracji albo dostępności usługi, a nie informacja o braku transakcji RCN.";
+    }
+    diag.errorTechnical = capTest.attempts
+      .map((a) => `${a.url} → ${a.httpStatus ?? "no-status"} ${a.error || "ok"}`)
+      .join(" | ");
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
-  diag.endpoint = endpoint;
+
+  // WFS GetCapabilities OK
+  diag.endpoint = capTest.successfulUrl;
+  const layers = capTest.layers;
+  if (layers.length === 0) {
+    diag.status = "no_layers_detected";
+    diag.statusMessage =
+      "RCN GetCapabilities odpowiedział poprawnie, ale nie wykryto żadnych warstw FeatureType. Sprawdź konfigurację usługi.";
+    return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
+  }
+  // status pośredni: warstwy wykryte — kontynuujemy do GetFeature
+  diag.status = "layers_detected";
+  diag.statusMessage = `Wykryto ${layers.length} warstw RCN. Próbuję pobrać GetFeature.`;
 
   const candidateLayers = pickLayers(layers, keywords);
   diag.propertyTypeMapping.matchedLayerKeywords = candidateLayers;
   if (candidateLayers.length === 0) {
     diag.status = "wfs_layer_not_found";
-    diag.statusMessage = "Nie znaleziono warstwy RCN pasującej do typu nieruchomości.";
+    diag.statusMessage = "Wykryto warstwy RCN, ale żadna nie pasuje do typu nieruchomości.";
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
+
+  // Endpoint bazowy do GetFeature (nie URL GetCapabilities — usuwamy querystring).
+  const featureEndpoint = RCN_BASE_ENDPOINT;
+
 
   // 2) Eskalacja promienia (1km → 10km diagnostycznie)
   const radii = [1000, 2000, 5000, 10000];
@@ -258,7 +386,8 @@ export async function rcnBenchmark(args: {
         diag.radiusM = r;
 
         try {
-          const jsonResp = await fetchFeaturesJson(endpoint, layer, bbox, crs);
+          const jsonResp = await fetchFeaturesJson(featureEndpoint, layer, bbox, crs);
+
           if (jsonResp) {
             const feats: any[] = jsonResp.raw?.features ?? [];
             diag.rawResponseSnippet = jsonResp.snippet;
@@ -270,7 +399,8 @@ export async function rcnBenchmark(args: {
               break;
             }
           } else {
-            const gmlResp = await fetchFeaturesGml(endpoint, layer, bbox, crs);
+            const gmlResp = await fetchFeaturesGml(featureEndpoint, layer, bbox, crs);
+
             if (gmlResp) {
               diag.rawResponseSnippet = gmlResp.snippet;
               if (gmlResp.features.length > 0) {
@@ -294,17 +424,17 @@ export async function rcnBenchmark(args: {
     }
     if (success) break;
   }
-
   if (allRaw.length === 0) {
-    if (diag.errorTechnical && diag.status === "not_started") {
-      diag.status = "wfs_request_failed";
-      diag.statusMessage = "Nie udało się pobrać danych RCN z usługi WFS.";
-    } else if (diag.status === "not_started") {
-      diag.status = "no_features_in_bbox";
-      diag.statusMessage = "Nie znaleziono transakcji RCN w analizowanym obszarze (do 10 km).";
+    if (diag.errorTechnical) {
+      diag.status = "getfeature_failed";
+      diag.statusMessage = "GetFeature nie zwrócił danych z powodu błędu technicznego.";
+    } else {
+      diag.status = "no_features";
+      diag.statusMessage = "GetCapabilities OK, GetFeature OK — ale w analizowanym obszarze (do 10 km) nie znaleziono transakcji RCN.";
     }
     return { stats: null, transactionsCount: 0, radiusKm: null, diagnostics: diag };
   }
+
 
   diag.featuresRawCount = allRaw.length;
 
@@ -397,6 +527,16 @@ export function rcnStatusMessage(status: RcnStatus): string {
     case "geocoding_failed": return "Nie udało się zgeokodować adresu — RCN nie został odpytany.";
     case "filter_too_strict": return "Filtry RCN okazały się zbyt restrykcyjne.";
     case "not_started": return "Diagnostyka RCN nie została uruchomiona.";
+    case "capabilities_failed": return "Nie udało się połączyć z usługą RCN GetCapabilities. To błąd techniczny integracji albo dostępności usługi, a nie informacja o braku transakcji RCN.";
+    case "capabilities_success": return "RCN GetCapabilities odpowiedział poprawnie.";
+    case "wms_capabilities_success_but_wfs_failed": return "WMS RCN działa, ale WFS RCN nie zwrócił GetCapabilities — błąd integracji WFS.";
+    case "layers_detected": return "Wykryto warstwy RCN.";
+    case "no_layers_detected": return "RCN GetCapabilities OK, ale nie wykryto żadnych warstw.";
+    case "getfeature_success": return "GetFeature RCN zwrócił dane.";
+    case "getfeature_failed": return "GetFeature RCN nie powiódł się technicznie.";
+    case "features_found": return "Znaleziono obiekty RCN w analizowanym obszarze.";
+    case "no_features": return "GetCapabilities i GetFeature OK, ale w analizowanym obszarze nie znaleziono transakcji RCN.";
+
     default: return "Status RCN nieznany.";
   }
 }

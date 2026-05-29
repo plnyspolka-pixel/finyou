@@ -215,6 +215,16 @@ export type RcnStatus =
   | "not_started"
   | "geocoding_failed"
   | "missing_coordinates"
+  | "capabilities_failed"
+  | "capabilities_success"
+  | "wms_capabilities_success_but_wfs_failed"
+  | "layers_detected"
+  | "no_layers_detected"
+  | "getfeature_success"
+  | "getfeature_failed"
+  | "features_found"
+  | "no_features"
+  // legacy aliases (zachowane dla kompatybilności):
   | "wfs_capabilities_failed"
   | "wfs_layer_not_found"
   | "bad_bbox"
@@ -226,6 +236,7 @@ export type RcnStatus =
   | "features_found_but_filtered_out"
   | "success";
 
+
 export interface RcnDiagnostics {
   status: RcnStatus;
   statusMessage: string;
@@ -234,6 +245,16 @@ export interface RcnDiagnostics {
   layerUsed: string | null;
   crsUsed: "EPSG:4326" | "EPSG:2180" | "EPSG:3857" | null;
   inputCoordinates: { lat: number | null; lng: number | null; crs: string };
+  capabilitiesChecked: boolean;
+  capabilitiesAttempts?: Array<{
+    url: string;
+    httpStatus: number | null;
+    contentType: string;
+    responseStartsWith: string;
+    success: boolean;
+    error: string;
+  }>;
+  propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
   queryBbox: { minX: number; minY: number; maxX: number; maxY: number; crs: string } | null;
   radiusM: number | null;
   radiiTried: number[];
@@ -242,12 +263,11 @@ export interface RcnDiagnostics {
   filtersApplied: string[];
   periodCounts: { countAllDates: number; countLast12Months: number; countLast24Months: number; countLast36Months: number };
   sampleFeature: Record<string, any> | null;
-
   rawResponseSnippet: string | null;
   errorTechnical: string | null;
-  capabilitiesChecked: boolean;
-  propertyTypeMapping: { applicationType: string | null; keywords: string[]; matchedLayerKeywords: string[] };
 }
+
+
 
 
 
