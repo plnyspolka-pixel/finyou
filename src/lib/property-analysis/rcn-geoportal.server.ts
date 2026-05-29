@@ -23,6 +23,15 @@ const RCN_HEADERS: Record<string, string> = {
   Accept: "application/xml,text/xml,*/*",
 };
 
+// Cloudflare Workers często nie ma dostępu sieciowego do mapy.geoportal.gov.pl
+// (filtry IP / brak DNS). Routujemy więc wszystkie żądania przez Supabase Edge
+// Function `rcn-proxy`, która działa w Deno Deploy i ma normalne wyjście do internetu.
+function proxify(target: string): string {
+  const base = process.env.SUPABASE_URL;
+  if (!base) return target; // fallback: bezpośrednio (np. lokalnie)
+  return `${base}/functions/v1/rcn-proxy?action=proxy&url=${encodeURIComponent(target)}`;
+}
+
 
 // Słownik typów aplikacyjnych → słowa kluczowe charakterystyczne dla nazw warstw / atrybutów RCN.
 const TYPE_KEYWORDS: Record<string, string[]> = {
@@ -161,7 +170,7 @@ export async function testRcnCapabilities(): Promise<{
       error: "",
     };
     try {
-      const res = await fetchWithTimeout(url, { headers: RCN_HEADERS }, RCN_TIMEOUT_MS);
+      const res = await fetchWithTimeout(proxify(url), { headers: RCN_HEADERS }, RCN_TIMEOUT_MS);
       attempt.httpStatus = res.status;
       attempt.contentType = res.headers.get("content-type") ?? "";
       const text = await res.text();
@@ -252,7 +261,7 @@ async function fetchFeaturesJson(endpoint: string, layer: string, bbox: [number,
     `${endpoint}?service=WFS&version=2.0.0&request=GetFeature` +
     `&typeNames=${encodeURIComponent(layer)}&outputFormat=application/json` +
     `&bbox=${encodeURIComponent(bboxStr)}&count=500`;
-  const res = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 25_000);
+  const res = await fetchWithTimeout(proxify(url), { headers: { Accept: "application/json" } }, 25_000);
   if (!res.ok) return null;
   const txt = await res.text();
   try {
@@ -270,7 +279,7 @@ async function fetchFeaturesGml(endpoint: string, layer: string, bbox: [number, 
     `${endpoint}?service=WFS&version=2.0.0&request=GetFeature` +
     `&typeNames=${encodeURIComponent(layer)}` +
     `&bbox=${encodeURIComponent(bboxStr)}&count=500`;
-  const res = await fetchWithTimeout(url, { headers: { Accept: "application/xml" } }, 25_000);
+  const res = await fetchWithTimeout(proxify(url), { headers: { Accept: "application/xml" } }, 25_000);
   if (!res.ok) return null;
   const xml = await res.text();
   try {
