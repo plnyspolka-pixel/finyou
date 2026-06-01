@@ -55,10 +55,67 @@ function initPixel(id: string) {
   window.__fbPixelActive = id;
 }
 
-export function trackFbEvent(event: string, params?: Record<string, unknown>) {
+export function trackFbEvent(
+  event: string,
+  params?: Record<string, unknown>,
+  eventId?: string,
+) {
   if (typeof window === "undefined" || !window.fbq || !window.__fbPixelActive) return;
-  window.fbq("track", event, params || {});
+  if (eventId) {
+    window.fbq("track", event, params || {}, { eventID: eventId });
+  } else {
+    window.fbq("track", event, params || {});
+  }
 }
+
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return;
+  const esc = name.replace(/[.$?*|{}()[\]\\/+^]/g, "\\$&");
+  const m = document.cookie.match(new RegExp("(?:^|; )" + esc + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : undefined;
+}
+
+export async function trackEvent(
+  event: string,
+  params?: Record<string, unknown>,
+  user?: { email?: string; phone?: string; firstName?: string; lastName?: string },
+) {
+  if (typeof window === "undefined") return;
+  const eventId =
+    (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)) +
+    "-" +
+    Date.now().toString(36);
+  trackFbEvent(event, params, eventId);
+  try {
+    const area: "client" | "investor" = window.location.pathname.startsWith("/inwestor")
+      ? "investor"
+      : "client";
+    const { sendFbCapiEvent } = await import("./fb-capi.functions");
+    const value = typeof params?.value === "number" ? (params.value as number) : undefined;
+    const currency =
+      typeof params?.currency === "string" ? (params.currency as string) : undefined;
+    await sendFbCapiEvent({
+      data: {
+        event,
+        area,
+        eventId,
+        sourceUrl: window.location.href,
+        fbp: readCookie("_fbp"),
+        fbc: readCookie("_fbc"),
+        email: user?.email,
+        phone: user?.phone,
+        firstName: user?.firstName,
+        lastName: user?.lastName,
+        value,
+        currency,
+        customData: params,
+      },
+    });
+  } catch (e) {
+    console.warn("[fb-capi]", e);
+  }
+}
+
 
 function pixelForPath(path: string, s: Settings): string | null {
   if (path.startsWith("/inwestor")) return s.investor_pixel_id;
