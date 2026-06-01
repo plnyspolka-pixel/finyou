@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderOpen, Sparkles, Tag, Mail, LogOut, MessageSquare, User } from "lucide-react";
+import { FileText, FolderOpen, Sparkles, Tag, LogOut, MessageSquare, User } from "lucide-react";
 
 export const Route = createFileRoute("/klient")({
   component: KlientLayout,
