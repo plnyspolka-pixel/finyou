@@ -27,7 +27,7 @@ function KlientOpis() {
   const [hint, setHint] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  
   const [aiBusy, setAiBusy] = useState<"draft" | "improve" | "expand" | null>(null);
 
   useEffect(() => {
