@@ -55,9 +55,9 @@ export const assistBusinessDescription = createServerFn({ method: "POST" })
       "jaki efekt biznesowy klient chce osiągnąć, źródła spłaty, harmonogram. " +
       "Maksymalnie 6-10 zdań. Bez listy punktowanej, zwarty akapit. " +
       "ZASADA LICZB: jeżeli używasz jakichkolwiek liczb (kwoty, okresy, raty, oprocentowanie, lokalizacja, typ nieruchomości), " +
-      "bierz je WYŁĄCZNIE z sekcji „Dane z wniosku klienta". " +
+      "bierz je WYŁĄCZNIE z sekcji 'Dane z wniosku klienta'. " +
       "NIGDY nie zostawiaj placeholderów typu X zł, Y%, Z miesięcy, [kwota], ____. " +
-      "Jeśli dana liczba nie została podana — pomiń ją lub opisz słownie (np. „w uzgodnionym terminie"), zamiast wstawiać symbol zastępczy.";
+      "Jeśli dana liczba nie została podana — pomiń ją lub opisz słownie (np. 'w uzgodnionym terminie'), zamiast wstawiać symbol zastępczy.";
 
     const userMsg =
       data.mode === "draft"
