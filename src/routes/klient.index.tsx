@@ -383,8 +383,13 @@ function KlientWniosek() {
       try {
         await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
         toast.success("Dziękujemy! Za chwilę zadzwoni Ania, nasza asystentka.");
-        const { trackFbEvent } = await import("@/lib/fb-pixel");
-        trackFbEvent("Lead", { content_name: "Wniosek pożyczkowy — krok 2", value: amount, currency: "PLN" });
+        const { trackEvent } = await import("@/lib/fb-pixel");
+        await trackEvent(
+          "Lead",
+          { content_name: "Wniosek pożyczkowy — krok 2", value: amount, currency: "PLN" },
+          { phone: phone.trim(), firstName: firstName || undefined },
+        );
+
       } catch (e: any) {
         console.warn("[lead-capture]", e);
       }
