@@ -708,22 +708,6 @@ function KlientWniosek() {
                   )}
                 </div>
 
-                {/* KAFELEK 3 — brak dokumentów */}
-                <div className="rounded-lg border p-4 space-y-3">
-                  <div className="font-semibold">Nie mam teraz dokumentów</div>
-                  <p className="text-sm text-muted-foreground">
-                    Możesz kontynuować wniosek bez numeru księgi wieczystej. Oddzwonimy lub napiszemy do Ciebie i pomożemy ustalić, czego dokładnie potrzebujemy.
-                  </p>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={kwNoDocsContact}
-                      onChange={(e) => setKwNoDocsContact(e.target.checked)}
-                      className="mt-1"
-                    />
-                    <span className="text-sm">Nie mam teraz numeru księgi wieczystej ani dokumentów — proszę o kontakt.</span>
-                  </label>
-                </div>
               </div>
             )}
 
