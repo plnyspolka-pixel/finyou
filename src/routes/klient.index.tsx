@@ -29,7 +29,7 @@ export const Route = createFileRoute("/klient/")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Dane kontaktowe", "Działalność", "Nieruchomość", "Dokumenty", "Podsumowanie"];
+const STEPS = ["Kalkulator", "Dane kontaktowe", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
