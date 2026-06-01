@@ -423,7 +423,7 @@ function KlientWniosek() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Jakie wynagrodzenie roczne oferujesz inwestorowi?</Label>
+                <Label>Jaki max koszt pożyczki akceptujesz</Label>
                 <div className="flex items-center gap-2">
                   <Input type="number" step="0.5" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24" />
                   <span className="text-sm">%</span>
