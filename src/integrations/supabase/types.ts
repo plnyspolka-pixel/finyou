@@ -2725,6 +2725,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_settings: {
+        Row: {
+          client_pixel_id: string | null
+          id: number
+          investor_pixel_id: string | null
+          track_contact: boolean
+          track_lead: boolean
+          track_registration: boolean
+          track_subscribe: boolean
+          updated_at: string
+        }
+        Insert: {
+          client_pixel_id?: string | null
+          id?: number
+          investor_pixel_id?: string | null
+          track_contact?: boolean
+          track_lead?: boolean
+          track_registration?: boolean
+          track_subscribe?: boolean
+          updated_at?: string
+        }
+        Update: {
+          client_pixel_id?: string | null
+          id?: number
+          investor_pixel_id?: string | null
+          track_contact?: boolean
+          track_lead?: boolean
+          track_registration?: boolean
+          track_subscribe?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_videos: {
         Row: {
           category: string | null
