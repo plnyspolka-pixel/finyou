@@ -379,7 +379,7 @@ function KlientWniosek() {
     if (!loanId) { toast.error("Brak wniosku"); return; }
     setSubmitting(true);
     try {
-      await persistAll(6);
+      await persistAll(5);
       await supabase.from("loan_applications").update({
         status: "wniosek_kompletny" as any,
         completeness_percent: 100,
