@@ -438,9 +438,6 @@ export function InwestorProfil() {
                 </div>
               </div>
             )}
-            {bankInfo?.success === false && (
-              <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={bankOverride} onChange={(e) => setBankOverride(e.target.checked)} />
             {bankAutoFill && (
               <Alert className="mt-2">
                 <AlertTriangle className="h-4 w-4" />
