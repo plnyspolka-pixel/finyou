@@ -397,7 +397,7 @@ function KlientWniosek() {
         phone={phone}
         secType={secType}
         kwStatus={kwStatus}
-        kwNumber={kwNumber}
+        kwNumber={kwNumbers.filter((s) => s.trim()).join(", ")}
         docs={docs}
         incomeDocs={incomeDocs}
         uploading={uploading}
