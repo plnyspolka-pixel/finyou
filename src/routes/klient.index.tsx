@@ -29,7 +29,7 @@ export const Route = createFileRoute("/klient/")({
 
 const STEPS = ["Kalkulator", "Dane kontaktowe", "Działalność", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
-type BusinessStatus = "prowadzi" | "zamierza" | "nie_zamierza" | "";
+type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "brak" | "";
 
 function KlientWniosek() {
