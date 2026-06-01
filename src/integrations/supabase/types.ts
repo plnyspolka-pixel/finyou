@@ -317,6 +317,7 @@ export type Database = {
           external_id: string | null
           first_name: string
           id: string
+          krs: string | null
           land_register_number: string | null
           last_name: string
           nip: string | null
@@ -349,6 +350,7 @@ export type Database = {
           external_id?: string | null
           first_name: string
           id?: string
+          krs?: string | null
           land_register_number?: string | null
           last_name: string
           nip?: string | null
@@ -381,6 +383,7 @@ export type Database = {
           external_id?: string | null
           first_name?: string
           id?: string
+          krs?: string | null
           land_register_number?: string | null
           last_name?: string
           nip?: string | null
