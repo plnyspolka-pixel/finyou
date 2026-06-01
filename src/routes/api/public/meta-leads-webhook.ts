@@ -55,7 +55,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               const { data: camp } = await supabaseAdmin.from("meta_campaigns")
                 .select("id").eq("meta_campaign_id", v.campaign_id ?? "").maybeSingle();
 
-              await supabaseAdmin.from("meta_leads").upsert({
+              const { data: inserted } = await supabaseAdmin.from("meta_leads").upsert({
                 meta_lead_id: leadgenId,
                 meta_form_id: v.form_id ?? details.form_id,
                 meta_campaign_id: v.campaign_id ?? details.campaign_id,
@@ -65,7 +65,19 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 phone,
                 field_data: details.field_data,
                 received_at: details.created_time ?? new Date().toISOString(),
-              }, { onConflict: "meta_lead_id" });
+              }, { onConflict: "meta_lead_id" }).select("id").single();
+
+              // Auto-trigger połączenia (jeśli włączone w ustawieniach)
+              const { data: settings } = await supabaseAdmin
+                .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
+              if (phone && settings && settings.call_trigger !== "manual") {
+                await placeOutboundCallInternal({
+                  phone,
+                  source: "meta_lead",
+                  metaLeadId: inserted?.id ?? null,
+                  firstName: name,
+                }).catch((e) => console.error("[meta-leads-webhook] call trigger", e));
+              }
             }
           }
           return new Response("ok", { status: 200 });
