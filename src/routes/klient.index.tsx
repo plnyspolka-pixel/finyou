@@ -20,7 +20,7 @@ import {
   type SecurityType,
 } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
-import { ArrowLeft, ArrowRight, Send, Loader2, Upload, AlertTriangle, Calculator, CheckCircle2, Pencil, Sparkles, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Send, Loader2, Upload, AlertTriangle, Calculator, CheckCircle2, Pencil, Sparkles, FileText, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
@@ -748,19 +748,35 @@ function DocUploader({
   onUpload: (f: File, t: string) => Promise<void>; multiple?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
+  const handleFiles = async (files: FileList | null | undefined) => {
+    if (!files || !files.length) return;
+    for (const f of Array.from(files)) await onUpload(f, docType);
+  };
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="flex items-center gap-2">
-        <Input ref={ref} type="file" multiple={multiple} />
-        <Button type="button" disabled={uploading} onClick={async () => {
-          const files = ref.current?.files;
-          if (!files || !files.length) return;
-          for (const f of Array.from(files)) await onUpload(f, docType);
-          if (ref.current) ref.current.value = "";
-        }}>
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1" /> Wyślij</>}
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <Input ref={ref} type="file" multiple={multiple} accept="image/*,application/pdf" className="flex-1" />
+        <input
+          ref={camRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={async (e) => { await handleFiles(e.target.files); if (camRef.current) camRef.current.value = ""; }}
+        />
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" disabled={uploading} className="sm:hidden flex-1" onClick={() => camRef.current?.click()}>
+            <Camera className="h-4 w-4 mr-1" /> Zrób zdjęcie
+          </Button>
+          <Button type="button" disabled={uploading} className="flex-1 sm:flex-none" onClick={async () => {
+            await handleFiles(ref.current?.files);
+            if (ref.current) ref.current.value = "";
+          }}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1" /> Wyślij</>}
+          </Button>
+        </div>
       </div>
       {docs.length > 0 && (
         <ul className="text-xs text-muted-foreground space-y-1">
@@ -770,6 +786,7 @@ function DocUploader({
     </div>
   );
 }
+
 
 function SubmittedView(props: {
   loanStatus: string;
