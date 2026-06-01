@@ -308,17 +308,21 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 4) {
-      if (!kwStatus) return { ok: false, msg: "Wskaż status księgi wieczystej." };
+      if (!kwStatus) return { ok: false, msg: "Zaznacz jedną z opcji dotyczących numeru księgi wieczystej." };
       if (kwStatus === "znam") {
-        if (!kwNumber.trim()) return { ok: false, msg: "Podaj numer KW." };
-        if (!/^[A-Z]{2}\d[A-Z]\/\d{8}\/\d$/.test(kwNumber.trim()))
-          return { ok: false, msg: "Niepoprawny format KW. Wzór: AAcyfraA/00000000/0 (np. WA1M/00000000/0)." };
+        const valid = kwNumbers.map((s) => s.trim()).filter(Boolean);
+        if (valid.length === 0) return { ok: false, msg: "Wpisz numer księgi wieczystej." };
       }
-      if (kwStatus === "nie_znam" && docsByType("dokument_wlasnosci").length === 0)
-        return { ok: false, msg: "Wgraj zdjęcia dokumentu własności." };
-      if (kwStatus === "brak") {
-        if (!kwDescription.trim()) return { ok: false, msg: "Opisz sytuację nieruchomości." };
-        if (docsByType("dokument_wlasnosci").length === 0) return { ok: false, msg: "Wgraj dokumenty potwierdzające prawa." };
+      if (kwStatus === "nie_znam") {
+        const hasDocs = docsByType("dokument_wlasnosci").length > 0;
+        const hasKw = kwNumbers.some((s) => s.trim());
+        if (!hasDocs && !hasKw && !kwNoDocsContact) {
+          return { ok: false, msg: "Dodaj dokument, wpisz numer KW lub zaznacz prośbę o kontakt." };
+        }
+      }
+      if (kwStatus === "nie_pewien") {
+        const hasDocs = docsByType("dokument_wlasnosci").length > 0;
+        if (!hasDocs) return { ok: false, msg: "Dodaj zdjęcie dokumentu — spróbujemy odczytać numer KW." };
       }
       return { ok: true };
     }
