@@ -195,6 +195,25 @@ export function InwestorProfil() {
           toast.error(e?.message ?? "Nie udało się uzupełnić danych reprezentanta.", { id: tt });
         }
       }
+
+      // Auto-uzupełnienie numeru rachunku bankowego z internetu (Perplexity) — tylko jeżeli jeszcze nie podany.
+      if (!f.bank_account.trim()) {
+        const tb = toast.loading("Szukam numeru rachunku bankowego firmy…");
+        try {
+          const br: any = await companyBankAccountLookup({
+            data: { companyName: c.name || "", nip: c.nip || "", krs: c.krs || "", regon: c.regon || "" },
+          });
+          if (br?.success && br.normalized) {
+            setF((x) => ({ ...x, bank_account: br.normalized }));
+            setBankAutoFill({ sources: Array.isArray(br.sources) ? br.sources : [], rationale: br.rationale || "" });
+            toast.success("Znaleziono numer rachunku — koniecznie zweryfikuj ręcznie.", { id: tb });
+          } else {
+            toast.message("Nie znaleziono numeru rachunku w wiarygodnych źródłach.", { id: tb });
+          }
+        } catch (e: any) {
+          toast.error(e?.message ?? "Nie udało się wyszukać rachunku bankowego.", { id: tb });
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się połączyć z API KRS.", { id: t });
     } finally { setFetchingKrs(false); }
