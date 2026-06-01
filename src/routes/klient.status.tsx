@@ -78,17 +78,6 @@ function KlientOpis() {
     toast.success("Opis zapisany");
   };
 
-  const removeLoan = async () => {
-    if (!loanId) return;
-    setDeleting(true);
-    const { error } = await supabase.from("loan_applications").delete().eq("id", loanId);
-    setDeleting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Wniosek usunięty");
-    setLoanId(null);
-    setText("");
-    void navigate({ to: "/klient" });
-  };
 
   const runAi = async (mode: "draft" | "improve" | "expand") => {
     if (mode !== "draft" && !text.trim()) {
