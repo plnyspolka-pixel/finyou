@@ -63,9 +63,14 @@ function RegisterPage() {
     }
     setLoading(false);
     try {
-      const { trackFbEvent } = await import("@/lib/fb-pixel");
-      trackFbEvent("CompleteRegistration", { status: data.session ? "active" : "pending_email" });
+      const { trackEvent } = await import("@/lib/fb-pixel");
+      await trackEvent(
+        "CompleteRegistration",
+        { status: data.session ? "active" : "pending_email" },
+        { email, phone, firstName, lastName },
+      );
     } catch {}
+
     if (data.session) {
       toast.success("Konto utworzone");
       navigate({ to: "/wybor-roli" });
