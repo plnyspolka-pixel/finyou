@@ -405,7 +405,7 @@ export function InwestorProfil() {
                     ? maskAccount(f.bank_account)
                     : f.bank_account
                 }
-                onChange={(e) => setF({ ...f, bank_account: e.target.value })}
+                onChange={(e) => { setF({ ...f, bank_account: e.target.value }); setBankAutoFill(null); }}
                 onFocus={() => setShowFullAccount(true)}
                 placeholder="PL00 0000 0000 0000 0000 0000 0000"
                 className={
