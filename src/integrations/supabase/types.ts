@@ -567,6 +567,119 @@ export type Database = {
           },
         ]
       }
+      email_campaign_recipients: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          audience_filter: Json
+          audience_type: string
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          failed_count: number
+          finished_at: string | null
+          from_email: string | null
+          from_name: string | null
+          html_body: string
+          id: string
+          name: string
+          recipients_total: number
+          scheduled_at: string | null
+          sent_count: number
+          started_at: string | null
+          status: string
+          subject: string
+          text_body: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience_filter?: Json
+          audience_type?: string
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_body?: string
+          id?: string
+          name: string
+          recipients_total?: number
+          scheduled_at?: string | null
+          sent_count?: number
+          started_at?: string | null
+          status?: string
+          subject: string
+          text_body?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience_filter?: Json
+          audience_type?: string
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          failed_count?: number
+          finished_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          html_body?: string
+          id?: string
+          name?: string
+          recipients_total?: number
+          scheduled_at?: string | null
+          sent_count?: number
+          started_at?: string | null
+          status?: string
+          subject?: string
+          text_body?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -627,6 +740,39 @@ export type Database = {
           send_delay_ms?: number
           transactional_email_ttl_minutes?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          html_body: string
+          id: string
+          name: string
+          subject: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          html_body?: string
+          id?: string
+          name: string
+          subject: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          html_body?: string
+          id?: string
+          name?: string
+          subject?: string
+          updated_at?: string
+          variables?: Json
         }
         Relationships: []
       }
@@ -864,6 +1010,69 @@ export type Database = {
           score?: number | null
           special_flood_hazard_area?: boolean | null
           water_depth?: number | null
+        }
+        Relationships: []
+      }
+      google_ad_drafts: {
+        Row: {
+          campaign_type: string
+          created_at: string
+          created_by: string | null
+          daily_budget_pln: number
+          descriptions: string[]
+          display_path1: string | null
+          display_path2: string | null
+          final_url: string | null
+          headlines: string[]
+          id: string
+          keywords: string[]
+          name: string
+          negative_keywords: string[]
+          notes: string | null
+          status: string
+          target_languages: string[]
+          target_locations: string[]
+          updated_at: string
+        }
+        Insert: {
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          daily_budget_pln?: number
+          descriptions?: string[]
+          display_path1?: string | null
+          display_path2?: string | null
+          final_url?: string | null
+          headlines?: string[]
+          id?: string
+          keywords?: string[]
+          name: string
+          negative_keywords?: string[]
+          notes?: string | null
+          status?: string
+          target_languages?: string[]
+          target_locations?: string[]
+          updated_at?: string
+        }
+        Update: {
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          daily_budget_pln?: number
+          descriptions?: string[]
+          display_path1?: string | null
+          display_path2?: string | null
+          final_url?: string | null
+          headlines?: string[]
+          id?: string
+          keywords?: string[]
+          name?: string
+          negative_keywords?: string[]
+          notes?: string | null
+          status?: string
+          target_languages?: string[]
+          target_locations?: string[]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1765,6 +1974,92 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      meta_ad_drafts: {
+        Row: {
+          ad_account_id: string | null
+          created_at: string
+          created_by: string | null
+          creative: Json
+          daily_budget: number
+          end_time: string | null
+          error_message: string | null
+          id: string
+          lead_form: Json
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          meta_creative_id: string | null
+          meta_form_id: string | null
+          name: string
+          objective: string
+          page_id: string | null
+          page_name: string | null
+          published_at: string | null
+          start_time: string | null
+          status: string
+          targeting: Json
+          updated_at: string
+        }
+        Insert: {
+          ad_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          creative?: Json
+          daily_budget?: number
+          end_time?: string | null
+          error_message?: string | null
+          id?: string
+          lead_form?: Json
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          meta_creative_id?: string | null
+          meta_form_id?: string | null
+          name: string
+          objective?: string
+          page_id?: string | null
+          page_name?: string | null
+          published_at?: string | null
+          start_time?: string | null
+          status?: string
+          targeting?: Json
+          updated_at?: string
+        }
+        Update: {
+          ad_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          creative?: Json
+          daily_budget?: number
+          end_time?: string | null
+          error_message?: string | null
+          id?: string
+          lead_form?: Json
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          meta_creative_id?: string | null
+          meta_form_id?: string | null
+          name?: string
+          objective?: string
+          page_id?: string | null
+          page_name?: string | null
+          published_at?: string | null
+          start_time?: string | null
+          status?: string
+          targeting?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ad_drafts_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meta_campaigns: {
         Row: {
