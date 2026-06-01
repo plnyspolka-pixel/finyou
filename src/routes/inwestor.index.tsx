@@ -13,29 +13,14 @@ export const Route = createFileRoute("/inwestor/")({
 function InwestorList() {
   const { user } = useAuth();
   const [apps, setApps] = useState<any[]>([]);
-  const [paywall, setPaywall] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (!user) return; void (async () => {
-    const { data: inv } = await supabase.from("investors").select("subscription_status").eq("user_id", user.id).maybeSingle();
-    if (!inv || inv.subscription_status !== "aktywny") { setPaywall(true); setLoading(false); return; }
     const { data } = await supabase.from("loan_applications").select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos)").eq("available_to_investors", true).order("created_at", { ascending: false });
     setApps(data ?? []); setLoading(false);
   })(); }, [user]);
 
   if (loading) return <div className="text-muted-foreground">Ładowanie…</div>;
-
-  if (paywall) return (
-    <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Dostępne wnioski</h1>
-      <Card><CardHeader><CardTitle>Aktywuj abonament</CardTitle></CardHeader>
-        <CardContent className="text-sm space-y-3">
-          <p className="text-muted-foreground">Aby zobaczyć dostępne wnioski, aktywuj jeden z planów abonamentowych.</p>
-          <Link to="/inwestor/abonament" className="inline-flex text-primary hover:underline">Przejdź do abonamentu →</Link>
-        </CardContent>
-      </Card>
-    </div>
-  );
 
   return (
     <div className="space-y-6">
