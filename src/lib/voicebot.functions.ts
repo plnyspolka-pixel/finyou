@@ -116,6 +116,9 @@ export async function placeOutboundCallInternal(opts: {
   const s = admin();
   const phone = normalizePhone(opts.phone);
 
+  // SMS before call (jeśli włączone)
+  await maybeSendSms("before_call", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
+
   // Wpis do kolejki — status w_trakcie
   const { data: queueRow } = await s
     .from("call_queue")
