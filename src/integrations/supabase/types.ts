@@ -99,14 +99,18 @@ export type Database = {
           agent_id: string | null
           attempts: number
           client_id: string | null
+          conversation_id: string | null
           created_at: string
           finished_at: string | null
           id: string
           loan_application_id: string | null
+          meta_lead_id: string | null
           phone_normalized: string
           raw_result: Json | null
           result_summary: string | null
           scheduled_at: string
+          sms_sent_at: string | null
+          source: string | null
           started_at: string | null
           status: string
           transcript: string | null
@@ -116,14 +120,18 @@ export type Database = {
           agent_id?: string | null
           attempts?: number
           client_id?: string | null
+          conversation_id?: string | null
           created_at?: string
           finished_at?: string | null
           id?: string
           loan_application_id?: string | null
+          meta_lead_id?: string | null
           phone_normalized: string
           raw_result?: Json | null
           result_summary?: string | null
           scheduled_at?: string
+          sms_sent_at?: string | null
+          source?: string | null
           started_at?: string | null
           status?: string
           transcript?: string | null
@@ -133,14 +141,18 @@ export type Database = {
           agent_id?: string | null
           attempts?: number
           client_id?: string | null
+          conversation_id?: string | null
           created_at?: string
           finished_at?: string | null
           id?: string
           loan_application_id?: string | null
+          meta_lead_id?: string | null
           phone_normalized?: string
           raw_result?: Json | null
           result_summary?: string | null
           scheduled_at?: string
+          sms_sent_at?: string | null
+          source?: string | null
           started_at?: string | null
           status?: string
           transcript?: string | null
@@ -2779,6 +2791,54 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      voicebot_settings: {
+        Row: {
+          agent_id: string | null
+          agent_phone_number_id: string | null
+          call_delay_seconds: number
+          call_trigger: string
+          id: number
+          retry_count: number
+          retry_delay_minutes: number
+          sms_delay_seconds: number
+          sms_enabled: boolean
+          sms_from: string | null
+          sms_template: string | null
+          sms_trigger: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_phone_number_id?: string | null
+          call_delay_seconds?: number
+          call_trigger?: string
+          id?: number
+          retry_count?: number
+          retry_delay_minutes?: number
+          sms_delay_seconds?: number
+          sms_enabled?: boolean
+          sms_from?: string | null
+          sms_template?: string | null
+          sms_trigger?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          agent_phone_number_id?: string | null
+          call_delay_seconds?: number
+          call_trigger?: string
+          id?: number
+          retry_count?: number
+          retry_delay_minutes?: number
+          sms_delay_seconds?: number
+          sms_enabled?: boolean
+          sms_from?: string | null
+          sms_template?: string | null
+          sms_trigger?: string
+          updated_at?: string
         }
         Relationships: []
       }
