@@ -39,6 +39,7 @@ import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
+import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
@@ -58,8 +59,11 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
+import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
+import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
@@ -211,6 +215,11 @@ const AdminMetaRoute = AdminMetaRouteImport.update({
   path: '/meta',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMailingRoute = AdminMailingRouteImport.update({
+  id: '/mailing',
+  path: '/mailing',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLeadyRoute = AdminLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
@@ -309,6 +318,16 @@ const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminInwestorzyRoute,
 } as any)
+const AdminGoogleAdsKreatorRoute = AdminGoogleAdsKreatorRouteImport.update({
+  id: '/google-ads/kreator',
+  path: '/google-ads/kreator',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFbAdsKreatorRoute = AdminFbAdsKreatorRouteImport.update({
+  id: '/fb-ads/kreator',
+  path: '/fb-ads/kreator',
+  getParentRoute: () => AdminRoute,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -319,6 +338,12 @@ const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
     path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksDispatchCampaignsRoute =
+  ApiPublicHooksDispatchCampaignsRouteImport.update({
+    id: '/api/public/hooks/dispatch-campaigns',
+    path: '/api/public/hooks/dispatch-campaigns',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -340,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
+  '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -363,6 +389,8 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
+  '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -372,6 +400,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -390,6 +419,7 @@ export interface FileRoutesByTo {
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
+  '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -413,6 +443,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
+  '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -422,6 +454,7 @@ export interface FileRoutesByTo {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
+  '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -444,6 +477,7 @@ export interface FileRoutesById {
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
+  '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/role': typeof AdminRoleRoute
@@ -467,6 +501,8 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
+  '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -476,6 +512,7 @@ export interface FileRoutesById {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -499,6 +536,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
     | '/admin/leady'
+    | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/role'
@@ -522,6 +560,8 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
+    | '/admin/fb-ads/kreator'
+    | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -531,6 +571,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
+    | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -549,6 +590,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
     | '/admin/leady'
+    | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/role'
@@ -572,6 +614,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/inwestor'
     | '/klient'
+    | '/admin/fb-ads/kreator'
+    | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -581,6 +625,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
     | '/admin/wnioski'
+    | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -602,6 +647,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
     | '/admin/leady'
+    | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/role'
@@ -625,6 +671,8 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/inwestor/'
     | '/klient/'
+    | '/admin/fb-ads/kreator'
+    | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -634,6 +682,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
+    | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -651,6 +700,7 @@ export interface RootRouteChildren {
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
+  ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -867,6 +917,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMetaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/mailing': {
+      id: '/admin/mailing'
+      path: '/mailing'
+      fullPath: '/admin/mailing'
+      preLoaderRoute: typeof AdminMailingRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/leady': {
       id: '/admin/leady'
       path: '/leady'
@@ -1000,6 +1057,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInwestorzyIdRouteImport
       parentRoute: typeof AdminInwestorzyRoute
     }
+    '/admin/google-ads/kreator': {
+      id: '/admin/google-ads/kreator'
+      path: '/google-ads/kreator'
+      fullPath: '/admin/google-ads/kreator'
+      preLoaderRoute: typeof AdminGoogleAdsKreatorRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/fb-ads/kreator': {
+      id: '/admin/fb-ads/kreator'
+      path: '/fb-ads/kreator'
+      fullPath: '/admin/fb-ads/kreator'
+      preLoaderRoute: typeof AdminFbAdsKreatorRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -1012,6 +1083,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/payments/webhook'
       fullPath: '/api/public/payments/webhook'
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/dispatch-campaigns': {
+      id: '/api/public/hooks/dispatch-campaigns'
+      path: '/api/public/hooks/dispatch-campaigns'
+      fullPath: '/api/public/hooks/dispatch-campaigns'
+      preLoaderRoute: typeof ApiPublicHooksDispatchCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1040,6 +1118,7 @@ interface AdminRouteChildren {
   AdminKlienciRoute: typeof AdminKlienciRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
+  AdminMailingRoute: typeof AdminMailingRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -1047,6 +1126,8 @@ interface AdminRouteChildren {
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
+  AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
   AdminWnioskiIndexRoute: typeof AdminWnioskiIndexRoute
 }
@@ -1062,6 +1143,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKlienciRoute: AdminKlienciRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
   AdminLeadyRoute: AdminLeadyRoute,
+  AdminMailingRoute: AdminMailingRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminRoleRoute: AdminRoleRoute,
@@ -1069,6 +1151,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
+  AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
   AdminWnioskiIndexRoute: AdminWnioskiIndexRoute,
 }
@@ -1141,6 +1225,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
+  ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
