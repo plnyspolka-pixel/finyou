@@ -171,7 +171,7 @@ export const sendTestEmail = createServerFn({ method: "POST" })
     await assertStaff(context.userId);
     const { data: c } = await supabaseAdmin.from("email_campaigns").select("*").eq("id", data.id).single();
     if (!c) throw new Error("Kampania nie znaleziona");
-    await sendViaGmail({
+    await sendViaLovable({
       to: data.toEmail,
       from: c.from_email!,
       fromName: c.from_name,
@@ -269,7 +269,7 @@ export async function dispatchScheduledCampaigns(maxPerRun = 200) {
       .limit(maxPerRun);
     for (const r of queue ?? []) {
       try {
-        await sendViaGmail({
+        await sendViaLovable({
           to: r.recipient_email,
           toName: r.recipient_name,
           from: c.from_email!,
