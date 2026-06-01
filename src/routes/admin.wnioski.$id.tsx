@@ -14,6 +14,7 @@ import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
+import { KwContentSection } from "@/components/kw-content-section";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -146,6 +147,7 @@ function WniosekDetail() {
                 postalCode={p.postal_code}
                 propertyType={p.property_type}
               />
+              <KwContentSection applicationId={id} canFetch showKwNumber />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>

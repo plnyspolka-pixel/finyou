@@ -12,6 +12,7 @@ import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalL
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
+import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { formatPLN } from "@/lib/loan-math";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
@@ -186,6 +187,8 @@ function InwestorWniosek() {
       )}
 
       <CollateralAnalysisSection applicationId={id} readOnly />
+
+      <KwContentSection applicationId={id} canFetch={false} />
 
       <InvestorSummaryCard applicationId={id} />
 
