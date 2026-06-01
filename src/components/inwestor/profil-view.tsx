@@ -158,6 +158,41 @@ export function InwestorProfil() {
         representative_role: repSummary || x.representative_role,
       }));
       toast.success(res.cached && !forceRefresh ? "Dane spółki z cache KRS." : "Dane spółki zostały pobrane z KRS.", { id: t });
+
+      // Auto-uzupełnienie zamaskowanych danych reprezentanta z Perplexity (KRS oddaje tylko inicjały).
+      const fn1 = firstBoardMember?.firstName || "";
+      const ln1 = firstBoardMember?.lastName || "";
+      if (firstBoardMember && (/\*/.test(fn1) || /\*/.test(ln1))) {
+        const masked = [fn1, ln1].filter(Boolean).join(" ").trim();
+        const tt = toast.loading("Uzupełniam dane reprezentanta z internetu…");
+        try {
+          const enr: any = await companyRepresentationAutoEnrichment({
+            data: {
+              companyName: c.name || "",
+              nip: c.nip || "",
+              krs: c.krs || "",
+              maskedPerson: masked,
+              function: firstBoardMember.role || "",
+              representationMethodRaw: c.representation.method || "",
+            },
+          });
+          if (enr?.enriched && enr?.fullName) {
+            const parts = String(enr.fullName).trim().split(/\s+/);
+            const last = parts.pop() || "";
+            const first = parts.join(" ");
+            setF((x) => ({
+              ...x,
+              representative_first_name: first || x.representative_first_name,
+              representative_last_name: last || x.representative_last_name,
+            }));
+            toast.success("Uzupełniono dane reprezentanta.", { id: tt });
+          } else {
+            toast.message("Nie znaleziono jednoznacznych danych reprezentanta.", { id: tt });
+          }
+        } catch (e: any) {
+          toast.error(e?.message ?? "Nie udało się uzupełnić danych reprezentanta.", { id: tt });
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się połączyć z API KRS.", { id: t });
     } finally { setFetchingKrs(false); }
