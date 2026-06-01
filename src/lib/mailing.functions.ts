@@ -3,7 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
 
-const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
+const SENDER_DOMAIN = "notify.financeyou.pl";
+const DEFAULT_FROM = "no-reply@financeyou.pl";
+const DEFAULT_FROM_NAME = "FinanceYou";
 
 async function assertStaff(userId: string) {
   const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
@@ -11,56 +13,49 @@ async function assertStaff(userId: string) {
   if (!roles.includes("administrator") && !roles.includes("operator")) throw new Error("Brak uprawnień");
 }
 
-function b64url(s: string) {
-  return Buffer.from(s, "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+function htmlToText(html: string) {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function buildRawEmail(args: { to: string; toName?: string | null; from: string; fromName?: string | null; subject: string; html: string; text?: string | null }) {
-  const toHeader = args.toName ? `${args.toName} <${args.to}>` : args.to;
-  const fromHeader = args.fromName ? `${args.fromName} <${args.from}>` : args.from;
-  const subjectEnc = `=?UTF-8?B?${Buffer.from(args.subject, "utf8").toString("base64")}?=`;
-  const boundary = `b_${Math.random().toString(36).slice(2)}`;
-  const lines = [
-    `To: ${toHeader}`,
-    `From: ${fromHeader}`,
-    `Subject: ${subjectEnc}`,
-    `MIME-Version: 1.0`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    ``,
-    `--${boundary}`,
-    `Content-Type: text/plain; charset="UTF-8"`,
-    `Content-Transfer-Encoding: 7bit`,
-    ``,
-    args.text ?? args.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
-    ``,
-    `--${boundary}`,
-    `Content-Type: text/html; charset="UTF-8"`,
-    `Content-Transfer-Encoding: 7bit`,
-    ``,
-    args.html,
-    ``,
-    `--${boundary}--`,
-  ];
-  return b64url(lines.join("\r\n"));
-}
-
-async function sendViaGmail(args: Parameters<typeof buildRawEmail>[0]) {
-  const lk = process.env.LOVABLE_API_KEY;
-  const gk = process.env.GOOGLE_MAIL_API_KEY;
-  if (!lk) throw new Error("LOVABLE_API_KEY nie jest ustawiony");
-  if (!gk) throw new Error("GOOGLE_MAIL_API_KEY nie jest ustawiony — podłącz konektor Gmail");
-  const raw = buildRawEmail(args);
-  const res = await fetch(`${GMAIL_GATEWAY}/users/me/messages/send`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${lk}`,
-      "X-Connection-Api-Key": gk,
-    },
-    body: JSON.stringify({ raw }),
+/**
+ * Enqueue email to Lovable transactional_emails pgmq queue.
+ * The process-email-queue cron drains it within seconds, sending via notify.financeyou.pl.
+ * From: header uses @financeyou.pl (root), while DNS/DKIM lives on the notify. subdomain.
+ */
+async function sendViaLovable(args: {
+  to: string;
+  toName?: string | null;
+  from?: string | null;
+  fromName?: string | null;
+  subject: string;
+  html: string;
+  text?: string | null;
+  label?: string;
+  idempotencyKey?: string;
+}) {
+  const fromAddr = args.from || DEFAULT_FROM;
+  const fromName = args.fromName || DEFAULT_FROM_NAME;
+  const messageId = crypto.randomUUID();
+  const payload = {
+    run_id: crypto.randomUUID(),
+    to: args.toName ? `${args.toName} <${args.to}>` : args.to,
+    from: `${fromName} <${fromAddr}>`,
+    sender_domain: SENDER_DOMAIN,
+    subject: args.subject,
+    html: args.html,
+    text: args.text || htmlToText(args.html),
+    purpose: "transactional",
+    label: args.label || "mailing_campaign",
+    idempotency_key: args.idempotencyKey || messageId,
+    message_id: messageId,
+    queued_at: new Date().toISOString(),
+  };
+  const { error } = await supabaseAdmin.rpc("enqueue_email", {
+    queue_name: "transactional_emails",
+    payload,
   });
-  if (!res.ok) throw new Error(`Gmail ${res.status}: ${await res.text()}`);
-  return res.json() as Promise<{ id: string; threadId: string }>;
+  if (error) throw new Error(`enqueue_email failed: ${error.message}`);
+  return { messageId };
 }
 
 function renderTemplate(html: string, vars: Record<string, string>) {
@@ -176,7 +171,7 @@ export const sendTestEmail = createServerFn({ method: "POST" })
     await assertStaff(context.userId);
     const { data: c } = await supabaseAdmin.from("email_campaigns").select("*").eq("id", data.id).single();
     if (!c) throw new Error("Kampania nie znaleziona");
-    await sendViaGmail({
+    await sendViaLovable({
       to: data.toEmail,
       from: c.from_email!,
       fromName: c.from_name,
@@ -274,7 +269,7 @@ export async function dispatchScheduledCampaigns(maxPerRun = 200) {
       .limit(maxPerRun);
     for (const r of queue ?? []) {
       try {
-        await sendViaGmail({
+        await sendViaLovable({
           to: r.recipient_email,
           toName: r.recipient_name,
           from: c.from_email!,
