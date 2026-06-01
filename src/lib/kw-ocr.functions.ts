@@ -40,7 +40,7 @@ export const detectKwNumbers = createServerFn({ method: "POST" })
       try {
         const { data: signed, error: se } = await supabase.storage
           .from("documents")
-          .createSignedUrl(d.file_path, 300);
+          .createSignedUrl(d.file_path ?? "", 300);
         if (se || !signed?.signedUrl) continue;
 
         const isPdf = /\.pdf$/i.test(d.file_name ?? "");
