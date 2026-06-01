@@ -185,7 +185,10 @@ function InwestorWniosek() {
         />
       )}
 
+      <CollateralAnalysisSection applicationId={id} readOnly />
+
       <InvestorSummaryCard applicationId={id} />
+
 
       {propertyDocs.length > 0 && (
         <Card>
