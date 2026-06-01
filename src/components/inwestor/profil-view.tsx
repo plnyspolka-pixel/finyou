@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup, type KrsCompany } from "@/lib/krs.functions";
 import { companyRepresentationAutoEnrichment } from "@/lib/krs-enrichment.functions";
+import { companyBankAccountLookup } from "@/lib/company-bank-lookup.functions";
 import {
   formatBoardMember,
   formatProxy,
@@ -38,6 +39,7 @@ export function InwestorProfil() {
   const [bankInfo, setBankInfo] = useState<BankDetectResult | null>(null);
   const [showFullAccount, setShowFullAccount] = useState(false);
   const [bankOverride, setBankOverride] = useState(false);
+  const [bankAutoFill, setBankAutoFill] = useState<{ sources: string[]; rationale: string } | null>(null);
 
   const [f, setF] = useState({
     entity_type: "osoba_fizyczna" as EntityType,
@@ -191,6 +193,25 @@ export function InwestorProfil() {
           }
         } catch (e: any) {
           toast.error(e?.message ?? "Nie udało się uzupełnić danych reprezentanta.", { id: tt });
+        }
+      }
+
+      // Auto-uzupełnienie numeru rachunku bankowego z internetu (Perplexity) — tylko jeżeli jeszcze nie podany.
+      if (!f.bank_account.trim()) {
+        const tb = toast.loading("Szukam numeru rachunku bankowego firmy…");
+        try {
+          const br: any = await companyBankAccountLookup({
+            data: { companyName: c.name || "", nip: c.nip || "", krs: c.krs || "", regon: c.regon || "" },
+          });
+          if (br?.success && br.normalized) {
+            setF((x) => ({ ...x, bank_account: br.normalized }));
+            setBankAutoFill({ sources: Array.isArray(br.sources) ? br.sources : [], rationale: br.rationale || "" });
+            toast.success("Znaleziono numer rachunku — koniecznie zweryfikuj ręcznie.", { id: tb });
+          } else {
+            toast.message("Nie znaleziono numeru rachunku w wiarygodnych źródłach.", { id: tb });
+          }
+        } catch (e: any) {
+          toast.error(e?.message ?? "Nie udało się wyszukać rachunku bankowego.", { id: tb });
         }
       }
     } catch (e: any) {
@@ -384,7 +405,7 @@ export function InwestorProfil() {
                     ? maskAccount(f.bank_account)
                     : f.bank_account
                 }
-                onChange={(e) => setF({ ...f, bank_account: e.target.value })}
+                onChange={(e) => { setF({ ...f, bank_account: e.target.value }); setBankAutoFill(null); }}
                 onFocus={() => setShowFullAccount(true)}
                 placeholder="PL00 0000 0000 0000 0000 0000 0000"
                 className={
@@ -416,6 +437,27 @@ export function InwestorProfil() {
                   Format: {bankInfo.format} · Identyfikator banku: {bankInfo.bankIdentifier} · Nr rozliczeniowy: {bankInfo.clearingNumber}
                 </div>
               </div>
+            )}
+            {bankAutoFill && (
+              <Alert className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Uzupełniono automatycznie — zweryfikuj ręcznie</AlertTitle>
+                <AlertDescription className="space-y-1">
+                  <div>Numer rachunku został znaleziony w internecie i może być nieaktualny lub błędny. Sprawdź go ręcznie u kontrahenta przed pierwszym przelewem.</div>
+                  {bankAutoFill.rationale && <div className="text-xs">Uzasadnienie: {bankAutoFill.rationale}</div>}
+                  {bankAutoFill.sources.length > 0 && (
+                    <div className="text-xs">
+                      Źródła:{" "}
+                      {bankAutoFill.sources.map((s, i) => (
+                        <span key={i}>
+                          {i > 0 ? ", " : ""}
+                          <a href={s} target="_blank" rel="noreferrer" className="underline break-all">{s}</a>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
             )}
             {bankInfo?.success === false && (
               <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
