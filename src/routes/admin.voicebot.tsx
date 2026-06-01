@@ -246,6 +246,9 @@ function VoicebotAdmin() {
           <Button onClick={handleTest} disabled={testing || !settings.agent_id}>
             <Phone className="mr-2 h-4 w-4" />{testing ? "Dzwonię..." : "Zadzwoń teraz"}
           </Button>
+          <Button variant="outline" onClick={handleTestSms} disabled={testing || !settings.sms_from}>
+            <MessageSquare className="mr-2 h-4 w-4" />Wyślij testowy SMS
+          </Button>
         </CardContent>
       </Card>
 
