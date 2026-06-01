@@ -545,13 +545,6 @@ function KlientWniosek() {
               </div>
             )}
 
-            {bizStatus === "nie_zamierza" && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  Na ten moment nie możemy przyjąć wniosku w tym formularzu. Finansowanie w tym modelu jest przeznaczone dla osób prowadzących działalność gospodarczą albo deklarujących gotowość jej założenia.
-                </AlertDescription>
-              </Alert>
-            )}
           </CardContent>
         </Card>
       )}
