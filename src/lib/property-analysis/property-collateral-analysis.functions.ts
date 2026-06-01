@@ -20,8 +20,11 @@ const Input = z.object({ applicationId: z.string().uuid() });
 export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => Input.parse(d))
-  .handler(async ({ data }) => {
-    const { applicationId } = data;
+  .handler(async ({ data }) => runPropertyCollateralAnalysisCore(data.applicationId));
+
+export async function runPropertyCollateralAnalysisCore(applicationId: string) {
+  {
+
     // Załaduj wniosek + property + dokumenty
     const [{ data: app }, { data: props }, { data: docs }] = await Promise.all([
       supabaseAdmin.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
