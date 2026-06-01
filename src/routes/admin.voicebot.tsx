@@ -14,6 +14,7 @@ import {
   getVoicebotSettings,
   updateVoicebotSettings,
   testOutboundCall,
+  testSms,
 } from "@/lib/voicebot.functions";
 import { toast } from "sonner";
 import { Phone, RefreshCw, PhoneCall, Save, MessageSquare } from "lucide-react";
@@ -61,6 +62,7 @@ function VoicebotAdmin() {
   const fetchSettings = useServerFn(getVoicebotSettings);
   const saveSettings = useServerFn(updateVoicebotSettings);
   const doTest = useServerFn(testOutboundCall);
+  const doTestSms = useServerFn(testSms);
 
   const loadQueue = async () => {
     setLoading(true);
@@ -112,6 +114,24 @@ function VoicebotAdmin() {
       setTesting(false);
     }
   };
+
+  const handleTestSms = async () => {
+    if (!testPhone.trim()) return;
+    setTesting(true);
+    try {
+      const r: any = await doTestSms({ data: { phone: testPhone.trim() } });
+      if (r?.ok) {
+        toast.success("SMS wysłany", { description: r.sid ? `sid: ${r.sid}` : undefined });
+      } else {
+        toast.error("Błąd SMS", { description: r?.error ?? "nieznany" });
+      }
+    } catch (e: any) {
+      toast.error("Błąd", { description: e.message });
+    } finally {
+      setTesting(false);
+    }
+  };
+
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -197,7 +217,8 @@ function VoicebotAdmin() {
             </div>
             <div>
               <Label>Nadawca (alfanumeryczny lub +48...)</Label>
-              <Input value={settings.sms_from ?? ""} onChange={(e) => setSettings({ ...settings, sms_from: e.target.value })} placeholder="FinanceYou" />
+              <Input value={settings.sms_from ?? ""} onChange={(e) => setSettings({ ...settings, sms_from: e.target.value })} placeholder="+48... lub FinanceYou" />
+              <p className="text-xs text-muted-foreground mt-1">Numer Twilio w formacie E.164 (np. +48123456789) lub zarejestrowany Alphanumeric Sender ID.</p>
             </div>
             <div>
               <Label>Opóźnienie SMS (s)</Label>
@@ -225,6 +246,9 @@ function VoicebotAdmin() {
           <Input placeholder="+48..." value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
           <Button onClick={handleTest} disabled={testing || !settings.agent_id}>
             <Phone className="mr-2 h-4 w-4" />{testing ? "Dzwonię..." : "Zadzwoń teraz"}
+          </Button>
+          <Button variant="outline" onClick={handleTestSms} disabled={testing || !settings.sms_from}>
+            <MessageSquare className="mr-2 h-4 w-4" />Wyślij testowy SMS
           </Button>
         </CardContent>
       </Card>
