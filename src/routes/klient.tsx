@@ -15,7 +15,6 @@ const items = [
   { to: "/klient/oferta", label: "Oferta", icon: Tag },
   { to: "/klient/wiadomosci", label: "Wiadomości", icon: MessageSquare },
   { to: "/klient/profil", label: "Profil", icon: User },
-  { to: "/klient/kontakt", label: "Kontakt", icon: Mail },
 ];
 
 function KlientLayout() {
