@@ -536,10 +536,6 @@ function KlientWniosek() {
                 <RadioGroupItem value="zamierza" className="mt-0.5" />
                 <span>Nie prowadzę, ale zamierzam ją założyć</span>
               </label>
-              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
-                <RadioGroupItem value="nie_zamierza" className="mt-0.5" />
-                <span>Nie prowadzę i nie zamierzam zakładać działalności</span>
-              </label>
             </RadioGroup>
 
             {bizStatus === "prowadzi" && (
