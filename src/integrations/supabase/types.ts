@@ -1022,13 +1022,19 @@ export type Database = {
           descriptions: string[]
           display_path1: string | null
           display_path2: string | null
+          external_ad_group_id: string | null
+          external_ad_id: string | null
+          external_campaign_id: string | null
           final_url: string | null
           headlines: string[]
           id: string
           keywords: string[]
+          make_run_id: string | null
           name: string
           negative_keywords: string[]
           notes: string | null
+          publish_error: string | null
+          published_at: string | null
           status: string
           target_languages: string[]
           target_locations: string[]
@@ -1042,13 +1048,19 @@ export type Database = {
           descriptions?: string[]
           display_path1?: string | null
           display_path2?: string | null
+          external_ad_group_id?: string | null
+          external_ad_id?: string | null
+          external_campaign_id?: string | null
           final_url?: string | null
           headlines?: string[]
           id?: string
           keywords?: string[]
+          make_run_id?: string | null
           name: string
           negative_keywords?: string[]
           notes?: string | null
+          publish_error?: string | null
+          published_at?: string | null
           status?: string
           target_languages?: string[]
           target_locations?: string[]
@@ -1062,13 +1074,19 @@ export type Database = {
           descriptions?: string[]
           display_path1?: string | null
           display_path2?: string | null
+          external_ad_group_id?: string | null
+          external_ad_id?: string | null
+          external_campaign_id?: string | null
           final_url?: string | null
           headlines?: string[]
           id?: string
           keywords?: string[]
+          make_run_id?: string | null
           name?: string
           negative_keywords?: string[]
           notes?: string | null
+          publish_error?: string | null
+          published_at?: string | null
           status?: string
           target_languages?: string[]
           target_locations?: string[]
