@@ -187,6 +187,24 @@ export function LoanCalculator({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
+              <Label>Prowizja dla inwestora (jednorazowa, pozaodsetkowa)</Label>
+              <div className="flex items-center gap-2">
+                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
+                <span className="text-sm">% ({formatPLN(commissionPln)})</span>
+              </div>
+            </div>
+            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0%</span>
+              <span className={nonInterestExceeds ? "text-destructive font-medium" : ""}>
+                limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
+              </span>
+              <span>30%</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <Label>Maksymalna rata dla klienta</Label>
               <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
             </div>
@@ -206,34 +224,6 @@ export function LoanCalculator({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Koszty pozaodsetkowe</CardTitle>
-          <CardDescription>Prowizja dla inwestora pobierana jednorazowo z kwoty wypłaty.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Prowizja dla inwestora (jednorazowa)</Label>
-              <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
-                <span className="text-sm">% ({formatPLN(commissionPln)})</span>
-              </div>
-            </div>
-            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>0%</span><span>30%</span></div>
-          </div>
-
-          <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm">
-            <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
-            <div className="flex justify-between border-t pt-2"><span>Suma kosztów pozaodsetkowych</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Limit ustawowy MPKK (art. 36a UoKK)</span>
-              <span className={nonInterestExceeds ? "text-destructive font-medium" : ""}>{formatPLN(maxNonInterest)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {nonInterestExceeds && (
         <Alert variant="destructive">
