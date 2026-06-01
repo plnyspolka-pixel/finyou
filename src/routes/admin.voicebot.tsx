@@ -217,7 +217,8 @@ function VoicebotAdmin() {
             </div>
             <div>
               <Label>Nadawca (alfanumeryczny lub +48...)</Label>
-              <Input value={settings.sms_from ?? ""} onChange={(e) => setSettings({ ...settings, sms_from: e.target.value })} placeholder="FinanceYou" />
+              <Input value={settings.sms_from ?? ""} onChange={(e) => setSettings({ ...settings, sms_from: e.target.value })} placeholder="+48... lub FinanceYou" />
+              <p className="text-xs text-muted-foreground mt-1">Numer Twilio w formacie E.164 (np. +48123456789) lub zarejestrowany Alphanumeric Sender ID.</p>
             </div>
             <div>
               <Label>Opóźnienie SMS (s)</Label>
