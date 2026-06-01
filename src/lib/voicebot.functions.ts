@@ -24,6 +24,78 @@ async function loadSettings() {
   return data;
 }
 
+function renderTemplate(tpl: string, vars: Record<string, string | null | undefined>): string {
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? "").toString());
+}
+
+/** Wysyła SMS przez Twilio (connector gateway). */
+export async function sendSmsInternal(opts: {
+  phone: string;
+  body: string;
+  source: string;
+  from?: string | null;
+}): Promise<{ ok: boolean; sid?: string; error?: string }> {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const twilioKey = process.env.TWILIO_API_KEY;
+  if (!lovableKey) return { ok: false, error: "Brak LOVABLE_API_KEY" };
+  if (!twilioKey) return { ok: false, error: "Twilio nie jest podłączony (brak TWILIO_API_KEY)" };
+
+  const settings = await loadSettings();
+  const from = opts.from || settings?.sms_from;
+  if (!from) return { ok: false, error: "Brak nadawcy SMS (sms_from)" };
+
+  const phone = normalizePhone(opts.phone);
+  const s = admin();
+
+  try {
+    const res = await fetch("https://connector-gateway.lovable.dev/twilio/Messages.json", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": twilioKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ To: phone, From: from, Body: opts.body }),
+    });
+    const json: any = await res.json().catch(() => ({}));
+
+    await s.from("automation_events").insert({
+      automation_type: "twilio_sms",
+      status: res.ok ? "sent" : "error",
+      sent_payload: { to: phone, from, body: opts.body, source: opts.source },
+      response_payload: json,
+      error_message: res.ok ? null : (json?.message ?? `HTTP ${res.status}`),
+    });
+
+    if (!res.ok) return { ok: false, error: json?.message ?? `Twilio HTTP ${res.status}` };
+    return { ok: true, sid: json?.sid };
+  } catch (e: any) {
+    await s.from("automation_events").insert({
+      automation_type: "twilio_sms",
+      status: "error",
+      sent_payload: { to: phone, from, body: opts.body, source: opts.source },
+      error_message: e?.message ?? "exception",
+    });
+    return { ok: false, error: e?.message ?? "exception" };
+  }
+}
+
+async function maybeSendSms(
+  trigger: "before_call" | "after_call" | "on_failure",
+  ctx: { phone: string; source: string; firstName?: string | null }
+) {
+  const settings = await loadSettings();
+  if (!settings?.sms_enabled) return;
+  if ((settings.sms_trigger ?? "off") !== trigger) return;
+  const tpl = (settings.sms_template ?? "").trim();
+  if (!tpl) return;
+  const body = renderTemplate(tpl, {
+    first_name: ctx.firstName ?? "",
+    phone: ctx.phone,
+  });
+  await sendSmsInternal({ phone: ctx.phone, body, source: ctx.source, from: settings.sms_from });
+}
+
 /** Wywołuje wychodzące połączenie ElevenLabs (Twilio outbound). */
 export async function placeOutboundCallInternal(opts: {
   phone: string;
