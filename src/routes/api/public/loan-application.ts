@@ -97,6 +97,10 @@ export const Route = createFileRoute("/api/public/loan-application")({
             land_register_number: data.land_register_number ?? null,
           });
 
+          // Jednorazowa analiza zabezpieczenia — fire-and-forget, zapisuje wynik na stałe.
+          void runPropertyCollateralAnalysisCore(loan.id).catch((err) => {
+            console.error("[loan-application] collateral analysis failed", err);
+          });
 
           return new Response(JSON.stringify({ ok: true, id: loan.id }), {
             status: 200,
