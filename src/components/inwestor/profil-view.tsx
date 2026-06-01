@@ -441,6 +441,30 @@ export function InwestorProfil() {
             {bankInfo?.success === false && (
               <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <input type="checkbox" checked={bankOverride} onChange={(e) => setBankOverride(e.target.checked)} />
+            {bankAutoFill && (
+              <Alert className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Uzupełniono automatycznie — zweryfikuj ręcznie</AlertTitle>
+                <AlertDescription className="space-y-1">
+                  <div>Numer rachunku został znaleziony w internecie i może być nieaktualny lub błędny. Sprawdź go ręcznie u kontrahenta przed pierwszym przelewem.</div>
+                  {bankAutoFill.rationale && <div className="text-xs">Uzasadnienie: {bankAutoFill.rationale}</div>}
+                  {bankAutoFill.sources.length > 0 && (
+                    <div className="text-xs">
+                      Źródła:{" "}
+                      {bankAutoFill.sources.map((s, i) => (
+                        <span key={i}>
+                          {i > 0 ? ", " : ""}
+                          <a href={s} target="_blank" rel="noreferrer" className="underline break-all">{s}</a>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+            {bankInfo?.success === false && (
+              <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={bankOverride} onChange={(e) => setBankOverride(e.target.checked)} />
                 Rozumiem, że numer rachunku może być nieprawidłowy.
               </label>
             )}
