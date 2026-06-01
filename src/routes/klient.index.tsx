@@ -40,6 +40,9 @@ function KlientWniosek() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const captureLead = useServerFn(captureLeadFromApplication);
+  const leadFiredRef = useRef(false);
+
 
   const [clientId, setClientId] = useState<string | null>(null);
   const [loanId, setLoanId] = useState<string | null>(null);
