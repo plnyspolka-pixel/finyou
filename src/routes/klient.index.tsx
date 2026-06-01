@@ -325,11 +325,6 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 3) {
-      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
-      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
-      return { ok: true };
-    }
-    if (step === 4) {
       if (!kwStatus) return { ok: false, msg: "Zaznacz jedną z opcji dotyczących numeru księgi wieczystej." };
       if (kwStatus === "znam") {
         const valid = kwNumbers.map((s) => s.trim()).filter(Boolean);
@@ -348,7 +343,7 @@ function KlientWniosek() {
       }
       return { ok: true };
     }
-    if (step === 5) {
+    if (step === 4) {
       if (!secType) return { ok: false, msg: "Brak typu zabezpieczenia." };
       if (secType === "mieszkanie" && docsByType("zdjecia_pomieszczen").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
