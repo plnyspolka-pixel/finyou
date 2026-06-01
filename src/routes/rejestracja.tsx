@@ -62,6 +62,10 @@ function RegisterPage() {
       await supabase.from("profiles").update({ phone }).eq("user_id", data.user.id);
     }
     setLoading(false);
+    try {
+      const { trackFbEvent } = await import("@/lib/fb-pixel");
+      trackFbEvent("CompleteRegistration", { status: data.session ? "active" : "pending_email" });
+    } catch {}
     if (data.session) {
       toast.success("Konto utworzone");
       navigate({ to: "/wybor-roli" });

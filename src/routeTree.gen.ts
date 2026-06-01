@@ -37,6 +37,7 @@ import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
+import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
@@ -205,6 +206,11 @@ const AdminRoleRoute = AdminRoleRouteImport.update({
   path: '/role',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPixeleRoute = AdminPixeleRouteImport.update({
+  id: '/pixele',
+  path: '/pixele',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminOfertyRoute = AdminOfertyRouteImport.update({
   id: '/oferty',
   path: '/oferty',
@@ -368,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
+  '/admin/pixele': typeof AdminPixeleRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -422,6 +429,7 @@ export interface FileRoutesByTo {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
+  '/admin/pixele': typeof AdminPixeleRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -480,6 +488,7 @@ export interface FileRoutesById {
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
+  '/admin/pixele': typeof AdminPixeleRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -539,6 +548,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
+    | '/admin/pixele'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/ustawienia'
@@ -593,6 +603,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
+    | '/admin/pixele'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/ustawienia'
@@ -650,6 +661,7 @@ export interface FileRouteTypes {
     | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
+    | '/admin/pixele'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/ustawienia'
@@ -903,6 +915,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRoleRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pixele': {
+      id: '/admin/pixele'
+      path: '/pixele'
+      fullPath: '/admin/pixele'
+      preLoaderRoute: typeof AdminPixeleRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/oferty': {
       id: '/admin/oferty'
       path: '/oferty'
@@ -1121,6 +1140,7 @@ interface AdminRouteChildren {
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
+  AdminPixeleRoute: typeof AdminPixeleRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
@@ -1146,6 +1166,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMailingRoute: AdminMailingRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
+  AdminPixeleRoute: AdminPixeleRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
@@ -1232,13 +1253,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
