@@ -810,8 +810,6 @@ function KlientWniosek() {
             <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
             <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
             <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
-            <Row k="Status działalności" v={bizStatus === "prowadzi" ? "Prowadzi działalność" : bizStatus === "zamierza" ? "Zamierza założyć" : "—"} />
-            {nip && <Row k="NIP" v={nip} />}
             <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
             <Row k="E-mail" v={email} />
             <Row k="Telefon" v={phone} />
