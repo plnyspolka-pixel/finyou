@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePolishPhone } from "@/lib/phone";
+import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 
 const Schema = z.object({
   first_name: z.string().min(1).max(100),
@@ -96,6 +97,10 @@ export const Route = createFileRoute("/api/public/loan-application")({
             land_register_number: data.land_register_number ?? null,
           });
 
+          // Jednorazowa analiza zabezpieczenia — fire-and-forget, zapisuje wynik na stałe.
+          void runPropertyCollateralAnalysisCore(loan.id).catch((err) => {
+            console.error("[loan-application] collateral analysis failed", err);
+          });
 
           return new Response(JSON.stringify({ ok: true, id: loan.id }), {
             status: 200,
