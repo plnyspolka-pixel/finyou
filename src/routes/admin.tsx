@@ -42,6 +42,7 @@ const groups: Group[] = [
       { to: "/admin/meta", label: "Meta Ads", icon: Facebook },
       { to: "/admin/fb-ads/kreator", label: "Kreator FB Ads", icon: Facebook },
       { to: "/admin/google-ads/kreator", label: "Kreator Google Ads", icon: Search },
+      { to: "/admin/pixele", label: "Pixele FB", icon: Facebook },
     ],
   },
   {
