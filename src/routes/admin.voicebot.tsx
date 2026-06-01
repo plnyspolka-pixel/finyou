@@ -14,6 +14,7 @@ import {
   getVoicebotSettings,
   updateVoicebotSettings,
   testOutboundCall,
+  testSms,
 } from "@/lib/voicebot.functions";
 import { toast } from "sonner";
 import { Phone, RefreshCw, PhoneCall, Save, MessageSquare } from "lucide-react";
