@@ -1,21 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle, Eye } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Wallet, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
-import { monthlyPayment, formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { formatPLN } from "@/lib/loan-math";
+import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { openOrCreateThread } from "@/lib/chat.functions";
 
