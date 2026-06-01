@@ -221,104 +221,24 @@ function InwestorWniosek() {
         </CardContent>
       </Card>
 
+      <LoanCalculator
+        initialAmount={Number(app.loan_amount) || 100_000}
+        initialMonths={Number(app.preferred_period_months) || 12}
+        initialAnnualRate={Number(app.annual_investor_rate) || 15}
+        initialMaxPayment={Number(app.max_monthly_payment) || 5000}
+        onChange={setCalc}
+      />
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" />Kalkulator oferty dla inwestora</CardTitle>
-          <CardDescription>Dostosuj parametry — od razu zobaczysz ratę, zysk i pełny harmonogram.</CardDescription>
+          <CardTitle>Notatka dla administratora</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Kwota oferty</Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
-            </div>
-            <Slider min={20000} max={1_000_000} step={5000} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Twoje roczne wynagrodzenie</Label>
-              <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24" />
-                <span className="text-sm">%</span>
-              </div>
-            </div>
-            <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Okres pożyczki</Label>
-              <span className="text-sm tabular-nums">{months} mies.</span>
-            </div>
-            <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Maks. rata miesięczna klienta</Label>
-              <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
-            </div>
-            <Slider min={500} max={50000} step={250} value={[Math.min(50000, Math.max(500, maxPayment || 500))]} onValueChange={(v) => setMaxPayment(v[0])} />
-          </div>
-
-          {app.kw_status === "znam" && <p className="text-xs text-muted-foreground">Zabezpieczenie: {securityTypeLabels[p?.property_type as SecurityType] ?? "—"}</p>}
-
-          <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
-            {balloon > 0 && (
-              <div className="flex justify-between text-sm"><span>Ostatnia rata (z nadwyżką balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
-            )}
-            <div className="flex justify-between text-sm"><span>Twój zysk łącznie</span><b className="tabular-nums text-primary">{formatPLN(investorComp)}</b></div>
-            <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
-          </div>
-
-          {exceedsMax && (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Część kapitału przekraczająca maksymalną ratę klienta zostanie rozliczona w racie balonowej na koniec okresu.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {schedule.length > 0 && (
-            <div className="rounded-lg border bg-card">
-              <div className="px-4 py-3 border-b">
-                <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
-              </div>
-              <div className="max-h-72 overflow-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 sticky top-0">
-                    <tr className="text-left">
-                      <th className="px-3 py-2 font-medium">#</th>
-                      <th className="px-3 py-2 font-medium">Data</th>
-                      <th className="px-3 py-2 font-medium text-right">Rata</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schedule.map((r) => (
-                      <tr key={r.idx} className="border-t">
-                        <td className="px-3 py-2 tabular-nums">{r.idx}</td>
-                        <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <Label>Notatka dla administratora</Label>
-            <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
+        <CardContent>
+          <Label className="sr-only">Notatka</Label>
+          <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Opcjonalna notatka do oferty…" />
         </CardContent>
       </Card>
+
 
       <div className="flex gap-2 justify-end flex-wrap">
         <Button variant="secondary" onClick={async () => {
