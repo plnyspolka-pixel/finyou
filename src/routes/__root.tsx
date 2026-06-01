@@ -11,6 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
+import { FacebookPixel } from "@/lib/fb-pixel";
 
 function NotFoundComponent() {
   return (
