@@ -1,112 +1,53 @@
-## Zakres
+# /embed/wniosek = /klient (1:1)
 
-Trzy oddzielne moduły w panelu admina (`/admin/mailing`, `/admin/fb-ads/kreator`, `/admin/google-ads/kreator`).
+## Cel
+Embed wklejany na financeyou.pl ma mieć dokładnie ten sam formularz co `/klient` — pełne 5 kroków, uploady dokumentów, walidacje, OCR KW, auto-zapis. Logowanie w kroku 2 (mail+tel albo Google/Apple). Telefon docierany w kroku 3, jeśli brak.
 
----
+## Główna decyzja techniczna
+OAuth (Google/Apple) jest **blokowany w iframe** przez providerów (X-Frame-Options/CSP). Dlatego embed nie może w pełni zhostować flow z uploadami w iframie — uploady wymagają zalogowanej sesji Supabase.
 
-## 1. Moduł Mailingowy — `/admin/mailing`
+**Rozwiązanie:** embed prowadzi krok 1 (kalkulator) w iframie, w kroku 2 wybijamy z iframe do `app.financeyou.pl` (`window.top.location`) z parametrami kalkulatora w URL, gdzie cała reszta (auth + kroki 2–5 + uploady) dzieje się natywnie na `/klient`. Dla użytkownika to nadal jeden ciągły flow, tylko otwierany w nowej karcie/pełnym oknie.
 
-**Baza danych (3 nowe tabele):**
-- `email_campaigns` — `name`, `subject`, `html_body`, `text_body`, `from_email`, `from_name`, `audience_type` (leady/klienci/inwestorzy/wszyscy), `audience_filter` (jsonb — np. status leada), `scheduled_at`, `status` (szkic/zaplanowana/wysylana/wyslana/anulowana/blad), `sent_count`, `failed_count`, `created_by`
-- `email_campaign_recipients` — `campaign_id`, `recipient_email`, `recipient_name`, `user_id?`, `status` (oczekuje/wyslany/blad/odbity), `sent_at`, `error_message`
-- `email_templates` — `name`, `subject`, `html_body`, `variables` (jsonb)
+## Zakres zmian
 
-RLS: SELECT/INSERT/UPDATE/DELETE dla `administrator` + `operator`. GRANT do authenticated + service_role.
+### 1. `/embed/wniosek` → tylko krok 1 (kalkulator + zabezpieczenie)
+- Zostawić obecny ekran kroku 1 (kwota, wynagrodzenie, okres, max rata, typ zabezpieczenia, podgląd raty).
+- Przycisk „Dalej" wybija do `window.top.location.href = "https://app.financeyou.pl/klient/start?<params>"` z zaszyfrowanym/zakodowanym stanem kalkulatora w query stringu (`amount`, `annualRate`, `months`, `maxPayment`, `secType`, `source`).
+- Jeśli brak `window.top` (otwarte bezpośrednio), nawiguje wewnątrz.
 
-**UI:**
-- Lista kampanii z filtrami statusu
-- Kreator: wybór szablonu lub edytor HTML (textarea + podgląd live w iframe), wybór segmentu, podgląd liczby odbiorców, datepicker harmonogramu
-- Dialog "Wyślij testowo" → pojedynczy adres
-- Karta szczegółów kampanii: statystyki + tabela odbiorców
-- Zakładka "Szablony" — CRUD
+### 2. Nowa trasa `/klient/start` (publiczna)
+- Czyta paramy z URL, zapisuje do `sessionStorage` (klucz `embed_calc_v1`).
+- Jeśli użytkownik zalogowany → redirect do `/klient` (krok 2).
+- Jeśli niezalogowany → pokazuje ekran auth zgodnie z wymogiem:
+  - **email + telefon + hasło** (sign up) lub **email + hasło** (sign in)
+  - **„Kontynuuj z Google"** (`lovable.auth.signInWithOAuth("google", { redirect_uri: origin + "/klient/start" })`)
+  - **„Kontynuuj z Apple"** (analogicznie)
+- Po pomyślnym auth → redirect do `/klient`.
 
-**Serwer (`src/lib/mailing.functions.ts`):**
-- `listCampaigns`, `getCampaign`, `saveCampaign`, `deleteCampaign`
-- `previewAudience({audience_type, filter})` → liczba + sample
-- `sendTestEmail({campaignId, toEmail})`
-- `scheduleCampaign({campaignId, when})` — materializuje odbiorców do `email_campaign_recipients`
-- `dispatchScheduledCampaigns()` — wywoływana przez pg_cron co minutę; bierze kampanie ze `scheduled_at <= now()` i status `zaplanowana`, wysyła w batchach
+### 3. `/klient` pre-fill z `sessionStorage`
+- Na starcie, jeśli `clientId === null` i jest `embed_calc_v1` w sessionStorage → wczytuje paramy do kalkulatora, zapisuje telefon (jeśli był), ustawia krok na 2 lub 3 (zależnie czy telefon dotarł), i czyści klucz.
+- Jeśli telefon nie został podany w trakcie auth → na kroku 3 (Dane kontaktowe) telefon jest wymagany jak dziś.
 
-**Wysyłka:** używamy istniejącego connectora **Gmail** (już skonfigurowany w projekcie — `GOOGLE_MAIL_API_KEY` jest w secretach) przez gateway. To pozwala wysyłać od razu, bez konfigurowania domeny.
+### 4. Konfiguracja auth
+- `supabase--configure_social_auth` z `providers: ["google", "apple"]` (jeśli Apple jeszcze nie włączone).
+- Apple wymaga konfiguracji Services ID/JWT — informacja dla użytkownika jeśli nie skonfigurowane.
 
-**Cron:** route `/api/public/hooks/dispatch-campaigns` + `pg_cron` co 1 minutę z `apikey`.
+### 5. Panel `/admin/embed`
+- Bez zmian funkcjonalnych. URL pozostaje `/embed/wniosek?source=...`.
 
----
+## Co się NIE zmienia
+- `/klient` (już ma pełne 5 kroków, uploady, OCR KW) — tylko mała wstawka pre-fill na starcie.
+- `/api/public/loan-application` — pozostaje dla wstecznej kompatybilności, ale embed już go nie używa.
+- Schemat DB — bez migracji.
 
-## 2. Kreator Facebook Lead Ads — `/admin/fb-ads/kreator`
+## UX
+- Użytkownik na `financeyou.pl` widzi w iframe „mini-kalkulator". Klika „Dalej" → otwiera się `app.financeyou.pl` w tej samej karcie (`_top`) z auth + pełnym wnioskiem.
+- Cały lead (dane + dokumenty + zdjęcia) trafia 1:1 jak z `/klient`, z `source=embed_<źródło>`.
 
-Wykorzystuje istniejący `META_ACCESS_TOKEN` (token musi mieć scope `ads_management` + `leads_retrieval` + `pages_manage_ads`).
+## Pliki
+- `src/routes/embed.wniosek.tsx` — uprościć do kroku 1 + przekierowanie top-frame
+- `src/routes/klient.start.tsx` — NOWA, auth gateway z pre-fillem
+- `src/routes/klient.index.tsx` — dodać efekt pre-fillu z sessionStorage
+- konfiguracja: `configure_social_auth(["google","apple"])`
 
-**Baza:**
-- `meta_ad_drafts` — `name`, `ad_account_id`, `page_id`, `objective` (LEAD_GENERATION), `daily_budget`, `targeting` (jsonb: kraje, wiek od/do, płeć, zainteresowania, lokalizacje), `creative` (jsonb: headline, primary_text, description, image_url, cta_type), `lead_form` (jsonb: nazwa, pytania), `status` (szkic/opublikowana/blad), `meta_campaign_id?`, `meta_adset_id?`, `meta_ad_id?`, `error_message?`
-
-**UI — wieloetapowy kreator (Stepper):**
-1. **Konto + strona FB** — wybór z `meta_ad_accounts` + dropdown stron (fetch `/me/accounts`)
-2. **Cel + budżet** — daily budget (PLN), data startu/końca
-3. **Grupa docelowa** — kraj (default Polska), wiek 18-65, płeć, miasta (autocomplete przez `/search?type=adgeolocation`), zainteresowania (autocomplete `/search?type=adinterest`)
-4. **Kreacja** — upload zdjęcia (Supabase Storage `property-photos` lub nowy bucket `ad-creatives`), headline, primary text, opis, CTA (`SIGN_UP` / `LEARN_MORE` / `APPLY_NOW`)
-5. **Formularz leadowy** — nazwa, intro headline + opis, pola (email, telefon, imię — preset; możliwość dodania pytań niestandardowych), privacy policy URL, thank-you message
-6. **Podgląd + publikacja** — JSON preview, "Zapisz jako szkic" / "Publikuj na Facebooku"
-
-**Serwer (`src/lib/meta-ads-creator.functions.ts`):**
-- `listFbPages()` → `GET /me/accounts`
-- `searchTargeting({type, q})` → `GET /search?type=adgeolocation|adinterest`
-- `saveAdDraft`, `listAdDrafts`, `getAdDraft`, `deleteAdDraft`
-- `publishAdDraft({draftId})` — sekwencja:
-  1. `POST /act_{id}/campaigns` (objective=LEAD_GENERATION, status=PAUSED)
-  2. `POST /act_{id}/adsets` (targeting, daily_budget, optimization_goal=LEAD_GENERATION)
-  3. `POST /{page_id}/leadgen_forms` (formularz)
-  4. `POST /act_{id}/adcreatives` (link do strony + form_id)
-  5. `POST /act_{id}/ads` (adset_id + creative_id)
-  6. Zapis zwróconych ID do `meta_ad_drafts`, status=`opublikowana` (PAUSED — wymaga ręcznej aktywacji)
-
-**Storage:** bucket `ad-creatives` (publiczny) na zdjęcia kreacji.
-
----
-
-## 3. Kreator Google Ads — `/admin/google-ads/kreator`
-
-**Krytyczna informacja dla użytkownika:** Google Ads API wymaga **developer token** zatwierdzanego przez Google (proces 2-4 tygodnie + wymóg konta MCC + Terms of Service). Bez tego API nie działa.
-
-**Podejście dwuetapowe:**
-
-**Etap A (od razu — działa bez API):**
-- Tabela `google_ad_drafts` — `name`, `campaign_type` (SEARCH/DISPLAY), `daily_budget_pln`, `keywords` (text[]), `negative_keywords` (text[]), `headlines` (text[] — Responsive Search Ads: 3-15 nagłówków po 30 zn.), `descriptions` (text[] — 2-4 opisy po 90 zn.), `final_url`, `target_locations` (text[]), `target_languages` (text[]), `status` (szkic/eksportowana), `notes`
-- UI kreatora z walidacją limitów znaków, podgląd reklamy SERP-like
-- Eksport do **Google Ads Editor CSV** (format do zaimportowania ręcznie w Google Ads Editor — to standardowy workflow agencji)
-- Przycisk "Otwórz w Google Ads" → deep link do https://ads.google.com/aw/campaigns/new z prefilled query params (część pól)
-
-**Etap B (opcjonalnie później):**
-- Connector Google Ads + developer token → automatyczna publikacja
-- Pole w UI integracji: "Status developer tokena: oczekuje/zatwierdzony"
-
-**Serwer (`src/lib/google-ads.functions.ts`):**
-- `saveGoogleAdDraft`, `listGoogleAdDrafts`, `getGoogleAdDraft`, `deleteGoogleAdDraft`
-- `exportToCsv({draftId})` — zwraca CSV w formacie Google Ads Editor
-
----
-
-## Nawigacja
-
-W `src/routes/admin.tsx` dodać do grupy "Konfiguracja":
-- Mailing (ikona Mail)
-- Kreator FB Ads (pod Meta Ads)
-- Kreator Google Ads (ikona Search/Globe)
-
----
-
-## Czego NIE robię w tej iteracji (osobne zapytania)
-
-- Tracking otwarć/kliknięć maili (wymaga własnego pixela + bramki) — pokażemy tylko `sent`/`failed`/`bounced` jeśli Gmail zwróci
-- Statystyki kampanii FB po publikacji — już istnieje synchronizacja w `/admin/meta`
-- A/B testing kreacji
-- Pełna integracja Google Ads API (czeka na developer token)
-- Edycja opublikowanych kampanii FB (pierwsze podejście: publikuj jako PAUSED, edycja w Ads Manager)
-
----
-
-## Pytania kontrolne przed startem
-
-1. **Wysyłka maili**: OK na Gmail connector (limit ~500/dzień na konto), czy wolisz Lovable Emails z własną domeną `notify.financeyou.pl`? Lovable Emails = lepsza dostarczalność i wyższe limity, ale wymaga konfiguracji DNS (~10 min).
-2. **FB Lead Ads — uprawnienia tokena**: czy obecny `META_ACCESS_TOKEN` to System User Token z `ads_management` + `pages_manage_ads`? Jeśli nie, trzeba wygenerować nowy w Business Manager przed publikacją.
-3. **Google Ads — developer token**: czy macie już zatwierdzony developer token, czy zaczynamy od eksportu CSV i deep linków?
+OK z planem? Wtedy implementuję.

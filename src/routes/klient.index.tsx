@@ -114,6 +114,29 @@ function KlientWniosek() {
     return rows;
   }, [months, rata, balloon]);
 
+  // Pre-fill z embed (wniosek-start zapisuje paramy kalkulatora do sessionStorage)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem("embed_calc_v1");
+      if (!raw) return;
+      const p = JSON.parse(raw) as {
+        amount?: number; annualRate?: number; months?: number; maxPayment?: number;
+        secType?: SecurityType | null; source?: string;
+      };
+      if (p.amount) setAmount(p.amount);
+      if (p.annualRate) setAnnualRate(p.annualRate);
+      if (p.months) setMonths(p.months);
+      if (p.maxPayment) setMaxPayment(p.maxPayment);
+      if (p.secType) setSecType(p.secType);
+      // przeskocz krok 1 — kalkulator już wypełniony w embedzie
+      setStep(2);
+      sessionStorage.removeItem("embed_calc_v1");
+    } catch {
+      /* noop */
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) return;
     setEmail((e) => e || user.email || "");
