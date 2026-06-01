@@ -303,9 +303,11 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string) {
 
 
     return result;
-  });
+  }
+}
 
 export const getPropertyAnalysis = createServerFn({ method: "GET" })
+
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
