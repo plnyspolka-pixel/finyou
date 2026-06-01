@@ -82,6 +82,16 @@ function KlientProfil() {
       </Card>
 
       <Card>
+        <CardHeader><CardTitle>Dane firmy (opcjonalnie)</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2"><Label>Nazwa firmy</Label><Input maxLength={255} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
+          <div><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} placeholder="np. 1234567890" /></div>
+          <div><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
+          <div className="md:col-span-2"><Label>KRS</Label><Input maxLength={10} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value.replace(/\D/g, "") })} placeholder="10 cyfr (jeśli spółka)" /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle>Rachunek bankowy</CardTitle></CardHeader>
         <CardContent className="grid gap-3">
           <div><Label>Numer konta (IBAN)</Label><Input maxLength={40} value={f.bank_account} onChange={(e) => setF({ ...f, bank_account: e.target.value })} placeholder="PL00 0000 0000 0000 0000 0000 0000" /></div>
