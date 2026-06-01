@@ -799,7 +799,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 6 && (
+      {step === 5 && (
         <Card>
           <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
