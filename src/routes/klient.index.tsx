@@ -29,7 +29,7 @@ export const Route = createFileRoute("/klient/")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Dane kontaktowe", "Działalność", "Nieruchomość", "Dokumenty", "Podsumowanie"];
+const STEPS = ["Kalkulator", "Dane kontaktowe", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
@@ -325,11 +325,6 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 3) {
-      if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
-      if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
-      return { ok: true };
-    }
-    if (step === 4) {
       if (!kwStatus) return { ok: false, msg: "Zaznacz jedną z opcji dotyczących numeru księgi wieczystej." };
       if (kwStatus === "znam") {
         const valid = kwNumbers.map((s) => s.trim()).filter(Boolean);
@@ -348,7 +343,7 @@ function KlientWniosek() {
       }
       return { ok: true };
     }
-    if (step === 5) {
+    if (step === 4) {
       if (!secType) return { ok: false, msg: "Brak typu zabezpieczenia." };
       if (secType === "mieszkanie" && docsByType("zdjecia_pomieszczen").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
@@ -384,7 +379,7 @@ function KlientWniosek() {
     if (!loanId) { toast.error("Brak wniosku"); return; }
     setSubmitting(true);
     try {
-      await persistAll(6);
+      await persistAll(5);
       await supabase.from("loan_applications").update({
         status: "wniosek_kompletny" as any,
         completeness_percent: 100,
@@ -560,37 +555,6 @@ function KlientWniosek() {
       )}
 
       {step === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Czy prowadzisz działalność gospodarczą albo zamierzasz ją założyć?</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RadioGroup value={bizStatus} onValueChange={(v) => setBizStatus(v as BusinessStatus)}>
-              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
-                <RadioGroupItem value="prowadzi" className="mt-0.5" />
-                <span>Tak, prowadzę działalność gospodarczą</span>
-              </label>
-              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
-                <RadioGroupItem value="zamierza" className="mt-0.5" />
-                <span>Nie prowadzę, ale zamierzam ją założyć</span>
-              </label>
-            </RadioGroup>
-
-            {bizStatus === "prowadzi" && (
-              <div>
-                <Label>Podaj NIP *</Label>
-                <Input value={nip} onChange={(e) => setNip(e.target.value)} placeholder="np. 1234567890" />
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
-      )}
-
-
-
-
-      {step === 4 && (
         <Card>
           <CardHeader>
             <CardTitle>Gdzie leży ta nieruchomość?</CardTitle>
@@ -774,7 +738,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 5 && secType && (
+      {step === 4 && secType && (
         <Card>
           <CardHeader>
             <CardTitle>Dokumenty — {securityTypeLabels[secType]}</CardTitle>
@@ -835,7 +799,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 6 && (
+      {step === 5 && (
         <Card>
           <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -846,8 +810,6 @@ function KlientWniosek() {
             <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
             <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
             <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
-            <Row k="Status działalności" v={bizStatus === "prowadzi" ? "Prowadzi działalność" : bizStatus === "zamierza" ? "Zamierza założyć" : "—"} />
-            {nip && <Row k="NIP" v={nip} />}
             <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
             <Row k="E-mail" v={email} />
             <Row k="Telefon" v={phone} />
