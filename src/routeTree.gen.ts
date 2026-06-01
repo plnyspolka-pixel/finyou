@@ -60,6 +60,7 @@ import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
@@ -321,6 +322,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDispatchCampaignsRoute =
+  ApiPublicHooksDispatchCampaignsRouteImport.update({
+    id: '/api/public/hooks/dispatch-campaigns',
+    path: '/api/public/hooks/dispatch-campaigns',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -372,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -422,6 +430,7 @@ export interface FileRoutesByTo {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
+  '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -476,6 +485,7 @@ export interface FileRoutesById {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -531,6 +541,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
+    | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -581,6 +592,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
     | '/admin/wnioski'
+    | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -634,6 +646,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
+    | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -651,6 +664,7 @@ export interface RootRouteChildren {
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
+  ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -1014,6 +1028,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/dispatch-campaigns': {
+      id: '/api/public/hooks/dispatch-campaigns'
+      path: '/api/public/hooks/dispatch-campaigns'
+      fullPath: '/api/public/hooks/dispatch-campaigns'
+      preLoaderRoute: typeof ApiPublicHooksDispatchCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1141,6 +1162,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
+  ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }

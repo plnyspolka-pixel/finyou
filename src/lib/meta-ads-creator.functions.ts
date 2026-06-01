@@ -76,10 +76,10 @@ export const saveAdDraft = createServerFn({ method: "POST" })
     await assertStaff(context.userId);
     if (data.id) {
       const { id, ...rest } = data;
-      await supabaseAdmin.from("meta_ad_drafts").update(rest).eq("id", id!);
+      await supabaseAdmin.from("meta_ad_drafts").update(rest as any).eq("id", id!);
       return { id: id! };
     }
-    const { data: row, error } = await supabaseAdmin.from("meta_ad_drafts").insert({ ...data, created_by: context.userId }).select("id").single();
+    const { data: row, error } = await supabaseAdmin.from("meta_ad_drafts").insert({ ...data, created_by: context.userId } as any).select("id").single();
     if (error) throw new Error(error.message);
     return { id: row!.id };
   });
