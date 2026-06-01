@@ -18,6 +18,7 @@ function KlientProfil() {
   const [f, setF] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     pesel: "", address: "", bank_account: "",
+    company_name: "", nip: "", regon: "", krs: "",
   });
 
   useEffect(() => { if (!user) return; void (async () => {
@@ -27,6 +28,7 @@ function KlientProfil() {
       first_name: data.first_name ?? "", last_name: data.last_name ?? "",
       email: data.email ?? user.email ?? "", phone: data.phone ?? "",
       pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
+      company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
     });
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
@@ -34,6 +36,9 @@ function KlientProfil() {
   const save = async () => {
     if (!user) return;
     if (f.pesel && !/^\d{11}$/.test(f.pesel)) { toast.error("PESEL musi mieć 11 cyfr"); return; }
+    if (f.nip && !/^\d{10}$/.test(f.nip.replace(/[\s-]/g, ""))) { toast.error("NIP musi mieć 10 cyfr"); return; }
+    if (f.regon && !/^\d{9}$|^\d{14}$/.test(f.regon)) { toast.error("REGON musi mieć 9 lub 14 cyfr"); return; }
+    if (f.krs && !/^\d{10}$/.test(f.krs)) { toast.error("KRS musi mieć 10 cyfr"); return; }
     const payload = {
       first_name: f.first_name.trim() || "",
       last_name: f.last_name.trim() || "",
@@ -42,6 +47,10 @@ function KlientProfil() {
       pesel: f.pesel.trim() || null,
       address: f.address.trim() || null,
       bank_account: f.bank_account.replace(/\s+/g, "") || null,
+      company_name: f.company_name.trim() || null,
+      nip: f.nip.replace(/[\s-]/g, "") || null,
+      regon: f.regon.trim() || null,
+      krs: f.krs.trim() || null,
     };
     const { error } = row
       ? await supabase.from("clients").update(payload).eq("id", row.id)
@@ -69,6 +78,16 @@ function KlientProfil() {
           <div><Label>E-mail</Label><Input type="email" maxLength={255} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
           <div><Label>Telefon</Label><Input maxLength={32} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
           <div className="md:col-span-2"><Label>Adres</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="ul., nr, kod pocztowy, miasto" /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Dane firmy (opcjonalnie)</CardTitle></CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2"><Label>Nazwa firmy</Label><Input maxLength={255} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
+          <div><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} placeholder="np. 1234567890" /></div>
+          <div><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
+          <div className="md:col-span-2"><Label>KRS</Label><Input maxLength={10} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value.replace(/\D/g, "") })} placeholder="10 cyfr (jeśli spółka)" /></div>
         </CardContent>
       </Card>
 
