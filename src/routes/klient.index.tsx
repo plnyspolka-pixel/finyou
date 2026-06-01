@@ -67,7 +67,11 @@ function KlientWniosek() {
   const [city, setCity] = useState("");
   const [street, setStreet] = useState("");
   const [kwStatus, setKwStatus] = useState<KwStatus>("");
-  const [kwNumber, setKwNumber] = useState("");
+  const [kwNumbers, setKwNumbers] = useState<string[]>([""]);
+  const [kwNoDocsContact, setKwNoDocsContact] = useState<boolean>(false);
+  const [kwDetected, setKwDetected] = useState<string[]>([]);
+  const [kwScanning, setKwScanning] = useState<boolean>(false);
+  const [mobywatelOpen, setMobywatelOpen] = useState<boolean>(false);
   const [kwDescription, setKwDescription] = useState("");
 
   // Dokumenty
