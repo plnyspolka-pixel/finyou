@@ -115,6 +115,24 @@ function VoicebotAdmin() {
     }
   };
 
+  const handleTestSms = async () => {
+    if (!testPhone.trim()) return;
+    setTesting(true);
+    try {
+      const r: any = await doTestSms({ data: { phone: testPhone.trim() } });
+      if (r?.ok) {
+        toast.success("SMS wysłany", { description: r.sid ? `sid: ${r.sid}` : undefined });
+      } else {
+        toast.error("Błąd SMS", { description: r?.error ?? "nieznany" });
+      }
+    } catch (e: any) {
+      toast.error("Błąd", { description: e.message });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
