@@ -557,37 +557,6 @@ function KlientWniosek() {
       {step === 3 && (
         <Card>
           <CardHeader>
-            <CardTitle>Czy prowadzisz działalność gospodarczą albo zamierzasz ją założyć?</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RadioGroup value={bizStatus} onValueChange={(v) => setBizStatus(v as BusinessStatus)}>
-              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
-                <RadioGroupItem value="prowadzi" className="mt-0.5" />
-                <span>Tak, prowadzę działalność gospodarczą</span>
-              </label>
-              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
-                <RadioGroupItem value="zamierza" className="mt-0.5" />
-                <span>Nie prowadzę, ale zamierzam ją założyć</span>
-              </label>
-            </RadioGroup>
-
-            {bizStatus === "prowadzi" && (
-              <div>
-                <Label>Podaj NIP *</Label>
-                <Input value={nip} onChange={(e) => setNip(e.target.value)} placeholder="np. 1234567890" />
-              </div>
-            )}
-
-          </CardContent>
-        </Card>
-      )}
-
-
-
-
-      {step === 4 && (
-        <Card>
-          <CardHeader>
             <CardTitle>Gdzie leży ta nieruchomość?</CardTitle>
             <CardDescription>Wybrany typ: <b>{secType ? securityTypeLabels[secType] : "—"}</b>{" "}
               <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setStep(1)}>Zmień rodzaj zabezpieczenia</Button>
