@@ -29,7 +29,7 @@ export const Route = createFileRoute("/klient/")({
 
 const STEPS = ["Kalkulator", "Dane kontaktowe", "Działalność", "Nieruchomość", "Dokumenty", "Podsumowanie"];
 
-type BusinessStatus = "prowadzi" | "zamierza" | "nie_zamierza" | "";
+type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "brak" | "";
 
 function KlientWniosek() {
@@ -292,7 +292,6 @@ function KlientWniosek() {
     }
     if (step === 3) {
       if (!bizStatus) return { ok: false, msg: "Wybierz status działalności." };
-      if (bizStatus === "nie_zamierza") return { ok: false, msg: "Nie możemy przyjąć wniosku w tej ścieżce." };
       if (bizStatus === "prowadzi" && !nip.trim()) return { ok: false, msg: "Podaj NIP." };
       return { ok: true };
     }
@@ -537,10 +536,6 @@ function KlientWniosek() {
                 <RadioGroupItem value="zamierza" className="mt-0.5" />
                 <span>Nie prowadzę, ale zamierzam ją założyć</span>
               </label>
-              <label className="flex items-start gap-2 cursor-pointer rounded border p-3 hover:bg-accent">
-                <RadioGroupItem value="nie_zamierza" className="mt-0.5" />
-                <span>Nie prowadzę i nie zamierzam zakładać działalności</span>
-              </label>
             </RadioGroup>
 
             {bizStatus === "prowadzi" && (
@@ -550,13 +545,6 @@ function KlientWniosek() {
               </div>
             )}
 
-            {bizStatus === "nie_zamierza" && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  Na ten moment nie możemy przyjąć wniosku w tym formularzu. Finansowanie w tym modelu jest przeznaczone dla osób prowadzących działalność gospodarczą albo deklarujących gotowość jej założenia.
-                </AlertDescription>
-              </Alert>
-            )}
           </CardContent>
         </Card>
       )}
@@ -719,9 +707,7 @@ function KlientWniosek() {
         <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
         </Button>
-        {step === 3 && bizStatus === "nie_zamierza" ? (
-          <Button variant="outline" onClick={() => setStep(1)}>Wróć do kalkulatora</Button>
-        ) : step < STEPS.length ? (
+        {step < STEPS.length ? (
           <Button disabled={saving} onClick={() => void goNext()}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2 h-4 w-4" /></>}
           </Button>
