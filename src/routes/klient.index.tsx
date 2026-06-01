@@ -738,7 +738,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 5 && secType && (
+      {step === 4 && secType && (
         <Card>
           <CardHeader>
             <CardTitle>Dokumenty — {securityTypeLabels[secType]}</CardTitle>
