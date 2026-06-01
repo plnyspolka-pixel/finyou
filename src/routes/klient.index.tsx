@@ -621,7 +621,7 @@ function KlientWniosek() {
                         <Input
                           value={kw}
                           onChange={(e) => {
-                            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9/]/g, "").slice(0, 16);
+                            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9\/]/g, "").slice(0, 16);
                             setKwNumbers((arr) => arr.map((x, i) => (i === idx ? v : x)));
                           }}
                           placeholder="Np. LU1I/00012345/6"
