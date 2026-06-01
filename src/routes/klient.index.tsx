@@ -578,58 +578,197 @@ function KlientWniosek() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Czy znasz numer księgi wieczystej?</Label>
+              <Label>Czy znasz numer księgi wieczystej nieruchomości?</Label>
               <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)}>
-                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="znam" /><span>Tak, znam</span></label>
-                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_znam" /><span>Nie znam / nie mam teraz przy sobie</span></label>
-                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="brak" /><span>Nieruchomość nie ma księgi wieczystej</span></label>
+                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="znam" /><span>Tak, znam numer księgi wieczystej</span></label>
+                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_znam" /><span>Nie znam numeru księgi wieczystej</span></label>
+                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_pewien" /><span>Nie jestem pewien / mam dokumenty, ale nie wiem, gdzie jest numer</span></label>
               </RadioGroup>
+              <p className="text-xs text-muted-foreground">Nie musisz samodzielnie analizować księgi wieczystej. Wystarczy numer albo zdjęcie dokumentu.</p>
             </div>
 
-            {kwStatus === "znam" && (() => {
-              const kwValid = /^[A-Z]{2}\d[A-Z]\/\d{8}\/\d$/.test(kwNumber.trim());
-              return (
-                <div className="space-y-1">
-                  <Label>Numer księgi wieczystej *</Label>
-                  <Input
-                    value={kwNumber}
-                    onChange={(e) => {
-                      // Format: AAcyfraA/00000000/0 — auto-uppercase, tylko dozwolone znaki, auto slashe
-                      const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 13);
-                      let out = raw;
-                      if (raw.length > 4) out = raw.slice(0, 4) + "/" + raw.slice(4);
-                      if (raw.length > 12) out = raw.slice(0, 4) + "/" + raw.slice(4, 12) + "/" + raw.slice(12);
-                      setKwNumber(out);
-                    }}
-                    placeholder="np. WA1M/00000000/0"
-                    inputMode="text"
-                    maxLength={15}
-                    aria-invalid={kwNumber.length > 0 && !kwValid}
-                  />
-                  <p className={`text-xs ${kwNumber.length > 0 && !kwValid ? "text-destructive" : "text-muted-foreground"}`}>
-                    Format: 2 litery + cyfra + litera / 8 cyfr / 1 cyfra — np. WA1M/00000000/0
-                  </p>
-                </div>
-              );
-            })()}
+            {kwStatus === "znam" && (
+              <div className="space-y-3">
+                {kwNumbers.map((kw, idx) => {
+                  const trimmed = kw.trim();
+                  const looksOdd = trimmed.length > 0 && !/^[A-Z]{2}\d[A-Z]\/\d{8}\/\d$/.test(trimmed);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <Label>{kwNumbers.length > 1 ? `Numer księgi wieczystej #${idx + 1}` : "Wpisz numer księgi wieczystej"}</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={kw}
+                          onChange={(e) => {
+                            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9/]/g, "").slice(0, 16);
+                            setKwNumbers((arr) => arr.map((x, i) => (i === idx ? v : x)));
+                          }}
+                          placeholder="Np. LU1I/00012345/6"
+                          inputMode="text"
+                        />
+                        {kwNumbers.length > 1 && (
+                          <Button type="button" variant="ghost" onClick={() => setKwNumbers((arr) => arr.filter((_, i) => i !== idx))}>Usuń</Button>
+                        )}
+                      </div>
+                      {looksOdd && (
+                        <p className="text-xs text-amber-600">Sprawdź proszę, czy numer KW jest wpisany w całości, np. LU1I/00012345/6</p>
+                      )}
+                    </div>
+                  );
+                })}
+                <Button type="button" variant="outline" size="sm" onClick={() => setKwNumbers((arr) => [...arr, ""])}>
+                  + Dodaj kolejną księgę wieczystą
+                </Button>
+              </div>
+            )}
 
             {kwStatus === "nie_znam" && (
-              <DocUploader
-                label="Wgraj zdjęcia dokumentu, na podstawie którego stałeś/aś się właścicielem nieruchomości *"
-                docType="dokument_wlasnosci"
-                docs={docsByType("dokument_wlasnosci")}
-                uploading={uploading}
-                onUpload={uploadDoc}
-              />
+              <div className="space-y-4">
+                <Alert>
+                  <AlertTitle>Nie znasz numeru księgi wieczystej? Spokojnie — pomożemy Ci go ustalić.</AlertTitle>
+                  <AlertDescription>
+                    Numer księgi wieczystej często znajdziesz w dokumentach dotyczących nieruchomości albo w aplikacji mObywatel. Nie musisz samodzielnie sprawdzać księgi. Wystarczy, że wpiszesz numer, jeśli go znajdziesz, albo prześlesz nam zdjęcie dokumentu — sprawdzimy to po naszej stronie.
+                  </AlertDescription>
+                </Alert>
+
+                {/* KAFELEK 1 — mObywatel */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="font-semibold">Sprawdź w aplikacji mObywatel</div>
+                  <p className="text-sm text-muted-foreground">
+                    Jeżeli masz aplikację mObywatel, możesz spróbować znaleźć dane nieruchomości lub dokumenty, w których widoczny jest numer księgi wieczystej.
+                  </p>
+                  <details open={mobywatelOpen} onToggle={(e) => setMobywatelOpen((e.target as HTMLDetailsElement).open)}>
+                    <summary className="cursor-pointer text-sm font-medium">Pokaż instrukcję krok po kroku</summary>
+                    <ol className="list-decimal pl-5 text-sm text-muted-foreground space-y-1 mt-2">
+                      <li>Otwórz aplikację mObywatel na swoim telefonie.</li>
+                      <li>Zaloguj się do aplikacji.</li>
+                      <li>Wejdź w sekcję usług lub dokumentów.</li>
+                      <li>Poszukaj informacji dotyczących nieruchomości, mieszkania, domu, działki albo dokumentów powiązanych z nieruchomością.</li>
+                      <li>Jeżeli zobaczysz numer księgi wieczystej, przepisz go do formularza.</li>
+                      <li>Jeżeli nie wiesz, który to numer, zrób zdjęcie ekranu albo zdjęcie dokumentu i dodaj je poniżej.</li>
+                    </ol>
+                  </details>
+                  <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                    <Button asChild type="button" className="sm:w-auto w-full">
+                      <a href="https://www.gov.pl/web/mobywatel" target="_blank" rel="noopener noreferrer">Otwórz mObywatel / e-Obywatel</a>
+                    </Button>
+                    <div className="hidden sm:flex flex-col items-center">
+                      <img
+                        src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https%3A%2F%2Fwww.gov.pl%2Fweb%2Fmobywatel"
+                        alt="QR kod do strony mObywatel"
+                        width={140}
+                        height={140}
+                        className="rounded border bg-white p-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1 text-center max-w-[160px]">Zeskanuj kod telefonem, żeby przejść do informacji o aplikacji mObywatel.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KAFELEK 2 — Upload dokumentu */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="font-semibold">Dodaj zdjęcie dokumentu</div>
+                  <p className="text-sm text-muted-foreground">
+                    Jeżeli masz akt notarialny, umowę, wypis z rejestru gruntów, zawiadomienie z sądu, decyzję, dokument ze spółdzielni albo inny dokument dotyczący nieruchomości — dodaj jego zdjęcie. Spróbujemy odczytać numer księgi wieczystej.
+                  </p>
+                  <DocUploader
+                    label="Dodaj dokument albo zdjęcie dokumentu"
+                    docType="dokument_wlasnosci"
+                    docs={docsByType("dokument_wlasnosci")}
+                    uploading={uploading}
+                    onUpload={uploadDoc}
+                    multiple
+                  />
+                  <p className="text-xs text-muted-foreground">Zrób zdjęcie tak, żeby dokument był czytelny, dobrze oświetlony i obejmował całą stronę.</p>
+                  {docsByType("dokument_wlasnosci").length > 0 && (
+                    <Button type="button" variant="outline" size="sm" disabled={kwScanning || !loanId} onClick={() => void scanKwFromDocs()}>
+                      {kwScanning ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Skanuję dokumenty…</> : <><Sparkles className="h-3 w-3 mr-1" /> Spróbuj odczytać numer KW z dokumentów</>}
+                    </Button>
+                  )}
+                </div>
+
+                {/* KAFELEK 3 — brak dokumentów */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="font-semibold">Nie mam teraz dokumentów</div>
+                  <p className="text-sm text-muted-foreground">
+                    Możesz kontynuować wniosek bez numeru księgi wieczystej. Oddzwonimy lub napiszemy do Ciebie i pomożemy ustalić, czego dokładnie potrzebujemy.
+                  </p>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={kwNoDocsContact}
+                      onChange={(e) => setKwNoDocsContact(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <span className="text-sm">Nie mam teraz numeru księgi wieczystej ani dokumentów — proszę o kontakt.</span>
+                  </label>
+                </div>
+              </div>
             )}
 
-            {kwStatus === "brak" && (
-              <>
-                <div><Label>Opisz sytuację nieruchomości *</Label><Textarea rows={3} value={kwDescription} onChange={(e) => setKwDescription(e.target.value)} /></div>
-                <DocUploader label="Wgraj dokumenty potwierdzające Twoje prawa do nieruchomości *"
-                  docType="dokument_wlasnosci" docs={docsByType("dokument_wlasnosci")} uploading={uploading} onUpload={uploadDoc} />
-              </>
+            {kwStatus === "nie_pewien" && (
+              <div className="space-y-4">
+                <Alert>
+                  <AlertDescription>
+                    Dodaj zdjęcie dokumentu lub plik PDF. Nie musisz wiedzieć, gdzie dokładnie znajduje się numer księgi wieczystej — spróbujemy go odczytać po naszej stronie.
+                  </AlertDescription>
+                </Alert>
+                <DocUploader
+                  label="Dodaj dokument albo zdjęcie dokumentu"
+                  docType="dokument_wlasnosci"
+                  docs={docsByType("dokument_wlasnosci")}
+                  uploading={uploading}
+                  onUpload={uploadDoc}
+                  multiple
+                />
+                <p className="text-xs text-muted-foreground">Dokumenty zostaną zapisane przy Twoim wniosku. Spróbujemy odczytać z nich numer KW.</p>
+                {docsByType("dokument_wlasnosci").length > 0 && (
+                  <Button type="button" variant="outline" size="sm" disabled={kwScanning || !loanId} onClick={() => void scanKwFromDocs()}>
+                    {kwScanning ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Skanuję dokumenty…</> : <><Sparkles className="h-3 w-3 mr-1" /> Spróbuj odczytać numer KW z dokumentów</>}
+                  </Button>
+                )}
+              </div>
             )}
+
+            {/* Wyniki OCR — wspólne dla nie_znam / nie_pewien */}
+            {kwDetected.length > 0 && (kwStatus === "nie_znam" || kwStatus === "nie_pewien") && (
+              <Alert>
+                <AlertTitle>
+                  {kwDetected.length === 1
+                    ? `Znaleźliśmy prawdopodobny numer księgi wieczystej: ${kwDetected[0]}. Sprawdź proszę, czy wygląda poprawnie.`
+                    : "Znaleźliśmy kilka możliwych numerów ksiąg wieczystych. Zaznacz te, które dotyczą nieruchomości stanowiącej zabezpieczenie pożyczki."}
+                </AlertTitle>
+                <AlertDescription>
+                  <div className="space-y-2 mt-2">
+                    {kwDetected.map((d) => {
+                      const checked = kwNumbers.map((s) => s.trim()).includes(d);
+                      return (
+                        <label key={d} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setKwNumbers((arr) => {
+                                  const cleaned = arr.filter((s) => s.trim());
+                                  return [...cleaned, d];
+                                });
+                                setKwStatus("znam");
+                              } else {
+                                setKwNumbers((arr) => arr.filter((s) => s.trim() !== d));
+                              }
+                            }}
+                          />
+                          <span className="font-mono text-sm">{d}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
           </CardContent>
         </Card>
       )}
