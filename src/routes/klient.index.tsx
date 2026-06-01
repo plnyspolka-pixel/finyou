@@ -141,8 +141,12 @@ function KlientWniosek() {
         setVoivodeship(prop.voivodeship ?? "");
         setCity(prop.city ?? "");
         setStreet(prop.street ?? "");
-        setKwNumber(prop.land_register_number ?? "");
-        setKwDescription(prop.description ?? "");
+        const lr = prop.land_register_number ?? "";
+        const parsedKw = lr.split(",").map((s: string) => s.trim()).filter(Boolean);
+        setKwNumbers(parsedKw.length ? parsedKw : [""]);
+        const desc = prop.description ?? "";
+        setKwNoDocsContact(/\[KONTAKT_BEZ_KW\]/.test(desc));
+        setKwDescription(desc.replace(/\s*\[KONTAKT_BEZ_KW\]\s*/g, "").trim());
         setAreaSqm(prop.area_sqm ? String(prop.area_sqm) : "");
         setMpzpInfo(prop.mpzp_info ?? "");
         setLandRegistryExtract(prop.land_registry_extract ?? "");
