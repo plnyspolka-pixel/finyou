@@ -86,7 +86,7 @@ function KlientOpis() {
     }
     setAiBusy(mode);
     try {
-      const res = await assist({ data: { currentText: text, hint, mode } });
+      const res = await assist({ data: { currentText: text, hint, mode, loanId: loanId ?? undefined } });
       if (res?.text) {
         setText(res.text);
         toast.success("Gotowe — sprawdź i zapisz");
