@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup, type KrsCompany } from "@/lib/krs.functions";
 import { companyRepresentationAutoEnrichment } from "@/lib/krs-enrichment.functions";
+import { companyBankAccountLookup } from "@/lib/company-bank-lookup.functions";
 import {
   formatBoardMember,
   formatProxy,
@@ -38,6 +39,7 @@ export function InwestorProfil() {
   const [bankInfo, setBankInfo] = useState<BankDetectResult | null>(null);
   const [showFullAccount, setShowFullAccount] = useState(false);
   const [bankOverride, setBankOverride] = useState(false);
+  const [bankAutoFill, setBankAutoFill] = useState<{ sources: string[]; rationale: string } | null>(null);
 
   const [f, setF] = useState({
     entity_type: "osoba_fizyczna" as EntityType,
