@@ -259,6 +259,7 @@ export const testOutboundCall = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ phone: z.string().min(5) }).parse(input))
   .handler(async ({ data }) => {
     return await placeOutboundCallInternal({ phone: data.phone, source: "test" });
+  });
 
 /** Test ręczny SMS z panelu admina. */
 export const testSms = createServerFn({ method: "POST" })
