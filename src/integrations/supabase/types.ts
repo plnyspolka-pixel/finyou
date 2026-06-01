@@ -1311,6 +1311,66 @@ export type Database = {
         }
         Relationships: []
       }
+      kw_documents: {
+        Row: {
+          bill_in: number | null
+          bill_out: number | null
+          created_at: string
+          dzial_1o: string | null
+          dzial_1s: string | null
+          dzial_2: string | null
+          dzial_3: string | null
+          dzial_4: string | null
+          fetched_at: string | null
+          id: string
+          kw_number: string
+          last_error: string | null
+          okladka: string | null
+          ordered_at: string | null
+          ordered_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bill_in?: number | null
+          bill_out?: number | null
+          created_at?: string
+          dzial_1o?: string | null
+          dzial_1s?: string | null
+          dzial_2?: string | null
+          dzial_3?: string | null
+          dzial_4?: string | null
+          fetched_at?: string | null
+          id?: string
+          kw_number: string
+          last_error?: string | null
+          okladka?: string | null
+          ordered_at?: string | null
+          ordered_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bill_in?: number | null
+          bill_out?: number | null
+          created_at?: string
+          dzial_1o?: string | null
+          dzial_1s?: string | null
+          dzial_2?: string | null
+          dzial_3?: string | null
+          dzial_4?: string | null
+          fetched_at?: string | null
+          id?: string
+          kw_number?: string
+          last_error?: string | null
+          okladka?: string | null
+          ordered_at?: string | null
+          ordered_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kw_fetch_attempts: {
         Row: {
           application_id: string | null
