@@ -259,6 +259,27 @@ export const testOutboundCall = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ phone: z.string().min(5) }).parse(input))
   .handler(async ({ data }) => {
     return await placeOutboundCallInternal({ phone: data.phone, source: "test" });
+
+/** Test ręczny SMS z panelu admina. */
+export const testSms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      phone: z.string().min(5),
+      body: z.string().min(1).max(1000).optional(),
+      firstName: z.string().optional().nullable(),
+    }).parse(input)
+  )
+  .handler(async ({ data }) => {
+    const settings = await loadSettings();
+    const tpl = data.body || settings?.sms_template || "Test SMS z FinanceYou.";
+    const body = renderTemplate(tpl, { first_name: data.firstName ?? "", phone: data.phone });
+    return await sendSmsInternal({
+      phone: data.phone,
+      body,
+      source: "test",
+      from: settings?.sms_from ?? null,
+    });
   });
 
 /** Pobranie ustawień. */
