@@ -1721,6 +1721,218 @@ export type Database = {
           },
         ]
       }
+      meta_ad_accounts: {
+        Row: {
+          account_status: number | null
+          amount_spent: number | null
+          balance: number | null
+          business_name: string | null
+          created_at: string
+          currency: string | null
+          id: string
+          is_active: boolean | null
+          last_synced_at: string | null
+          meta_account_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_status?: number | null
+          amount_spent?: number | null
+          balance?: number | null
+          business_name?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          meta_account_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_status?: number | null
+          amount_spent?: number | null
+          balance?: number | null
+          business_name?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          meta_account_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meta_campaigns: {
+        Row: {
+          ad_account_id: string
+          clicks: number | null
+          cost_per_lead: number | null
+          cpc: number | null
+          created_at: string
+          ctr: number | null
+          daily_budget: number | null
+          id: string
+          impressions: number | null
+          last_synced_at: string | null
+          leads_count: number | null
+          lifetime_budget: number | null
+          meta_campaign_id: string
+          name: string
+          objective: string | null
+          spend: number | null
+          start_time: string | null
+          status: string | null
+          stop_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          ad_account_id: string
+          clicks?: number | null
+          cost_per_lead?: number | null
+          cpc?: number | null
+          created_at?: string
+          ctr?: number | null
+          daily_budget?: number | null
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string | null
+          leads_count?: number | null
+          lifetime_budget?: number | null
+          meta_campaign_id: string
+          name: string
+          objective?: string | null
+          spend?: number | null
+          start_time?: string | null
+          status?: string | null
+          stop_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ad_account_id?: string
+          clicks?: number | null
+          cost_per_lead?: number | null
+          cpc?: number | null
+          created_at?: string
+          ctr?: number | null
+          daily_budget?: number | null
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string | null
+          leads_count?: number | null
+          lifetime_budget?: number | null
+          meta_campaign_id?: string
+          name?: string
+          objective?: string | null
+          spend?: number | null
+          start_time?: string | null
+          status?: string | null
+          stop_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_campaigns_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_leads: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          email: string | null
+          field_data: Json | null
+          full_name: string | null
+          id: string
+          lead_application_id: string | null
+          meta_campaign_id: string | null
+          meta_form_id: string | null
+          meta_lead_id: string
+          phone: string | null
+          received_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          email?: string | null
+          field_data?: Json | null
+          full_name?: string | null
+          id?: string
+          lead_application_id?: string | null
+          meta_campaign_id?: string | null
+          meta_form_id?: string | null
+          meta_lead_id: string
+          phone?: string | null
+          received_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          email?: string | null
+          field_data?: Json | null
+          full_name?: string | null
+          id?: string
+          lead_application_id?: string | null
+          meta_campaign_id?: string | null
+          meta_form_id?: string | null
+          meta_lead_id?: string
+          phone?: string | null
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "meta_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leads_lead_application_id_fkey"
+            columns: ["lead_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_sync_log: {
+        Row: {
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          items_synced: number | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          items_synced?: number | null
+          started_at?: string
+          status: string
+          sync_type: string
+        }
+        Update: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          items_synced?: number | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: []
+      }
       nbp_real_estate_cache: {
         Row: {
           cache_key: string
