@@ -97,6 +97,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <FacebookPixel />
         <Outlet />
         <Toaster />
       </AuthProvider>
