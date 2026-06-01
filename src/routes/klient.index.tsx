@@ -849,7 +849,13 @@ function KlientWniosek() {
             <Row k="Telefon" v={phone} />
             <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
             
-            <Row k="Księga wieczysta" v={kwStatus === "znam" ? kwNumber : kwStatus === "nie_znam" ? "Dokument własności (załączony)" : kwStatus === "brak" ? "Brak KW — opis i dokumenty" : "—"} />
+            <Row k="Księga wieczysta" v={(() => {
+              const nums = kwNumbers.map((s) => s.trim()).filter(Boolean);
+              if (nums.length) return nums.join(", ");
+              if (kwNoDocsContact) return "Brak — klient prosi o kontakt";
+              if (kwStatus === "nie_znam" || kwStatus === "nie_pewien") return "Dokumenty załączone";
+              return "—";
+            })()} />
             <Row k="Załączone dokumenty" v={`${docs.length}`} />
           </CardContent>
         </Card>
