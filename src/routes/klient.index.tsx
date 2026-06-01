@@ -289,6 +289,26 @@ function KlientWniosek() {
     toast.success("Dodano dokument");
   };
 
+  const runKwOcr = useServerFn(detectKwNumbers);
+  const scanKwFromDocs = async () => {
+    if (!loanId) return;
+    setKwScanning(true);
+    try {
+      const res = await runKwOcr({ data: { loanApplicationId: loanId } });
+      const found = res?.detected ?? [];
+      setKwDetected(found);
+      if (found.length === 0) {
+        toast.info("Nie udało się automatycznie odczytać numeru KW. Możesz wpisać go ręcznie lub kontynuować bez numeru.");
+      } else {
+        toast.success(found.length === 1 ? "Znaleziono numer KW — sprawdź propozycję." : "Znaleziono kilka numerów KW — wybierz właściwe.");
+      }
+    } catch (e: any) {
+      toast.error("Nie udało się przeskanować dokumentów", { description: e?.message });
+    } finally {
+      setKwScanning(false);
+    }
+  };
+
   const docsByType = (t: string) => docs.filter((d) => d.document_type === t);
 
   // Walidacja kroków
