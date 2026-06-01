@@ -18,6 +18,7 @@ function KlientProfil() {
   const [f, setF] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     pesel: "", address: "", bank_account: "",
+    company_name: "", nip: "", regon: "", krs: "",
   });
 
   useEffect(() => { if (!user) return; void (async () => {
@@ -27,6 +28,7 @@ function KlientProfil() {
       first_name: data.first_name ?? "", last_name: data.last_name ?? "",
       email: data.email ?? user.email ?? "", phone: data.phone ?? "",
       pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
+      company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
     });
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
@@ -34,6 +36,9 @@ function KlientProfil() {
   const save = async () => {
     if (!user) return;
     if (f.pesel && !/^\d{11}$/.test(f.pesel)) { toast.error("PESEL musi mieć 11 cyfr"); return; }
+    if (f.nip && !/^\d{10}$/.test(f.nip.replace(/[\s-]/g, ""))) { toast.error("NIP musi mieć 10 cyfr"); return; }
+    if (f.regon && !/^\d{9}$|^\d{14}$/.test(f.regon)) { toast.error("REGON musi mieć 9 lub 14 cyfr"); return; }
+    if (f.krs && !/^\d{10}$/.test(f.krs)) { toast.error("KRS musi mieć 10 cyfr"); return; }
     const payload = {
       first_name: f.first_name.trim() || "",
       last_name: f.last_name.trim() || "",
@@ -42,6 +47,10 @@ function KlientProfil() {
       pesel: f.pesel.trim() || null,
       address: f.address.trim() || null,
       bank_account: f.bank_account.replace(/\s+/g, "") || null,
+      company_name: f.company_name.trim() || null,
+      nip: f.nip.replace(/[\s-]/g, "") || null,
+      regon: f.regon.trim() || null,
+      krs: f.krs.trim() || null,
     };
     const { error } = row
       ? await supabase.from("clients").update(payload).eq("id", row.id)
