@@ -604,9 +604,7 @@ function KlientWniosek() {
               <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)}>
                 <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="znam" /><span>Tak, znam numer księgi wieczystej</span></label>
                 <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_znam" /><span>Nie znam numeru księgi wieczystej</span></label>
-                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_pewien" /><span>Nie jestem pewien / mam dokumenty, ale nie wiem, gdzie jest numer</span></label>
               </RadioGroup>
-              <p className="text-xs text-muted-foreground">Nie musisz samodzielnie analizować księgi wieczystej. Wystarczy numer albo zdjęcie dokumentu.</p>
             </div>
 
             {kwStatus === "znam" && (
