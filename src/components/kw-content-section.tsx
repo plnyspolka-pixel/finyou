@@ -1,0 +1,171 @@
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { BookOpenCheck, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
+
+type KwDoc = {
+  status: string;
+  okladka: string | null;
+  dzial_1o: string | null;
+  dzial_1s: string | null;
+  dzial_2: string | null;
+  dzial_3: string | null;
+  dzial_4: string | null;
+  fetched_at: string | null;
+  last_error: string | null;
+  ordered_at: string | null;
+} | null;
+
+const SECTIONS: Array<{ key: keyof NonNullable<KwDoc>; label: string }> = [
+  { key: "okladka", label: "Okładka" },
+  { key: "dzial_1o", label: "Dział I-O — Oznaczenie nieruchomości" },
+  { key: "dzial_1s", label: "Dział I-Sp — Spis praw związanych" },
+  { key: "dzial_2", label: "Dział II — Własność" },
+  { key: "dzial_3", label: "Dział III — Prawa, roszczenia i ograniczenia" },
+  { key: "dzial_4", label: "Dział IV — Hipoteki" },
+];
+
+export function KwContentSection({
+  applicationId,
+  canFetch,
+  showKwNumber = false,
+}: {
+  applicationId: string;
+  /** Whether the user can trigger a fetch / refresh (admin only). */
+  canFetch: boolean;
+  /** Whether to display the KW number itself (admin only). */
+  showKwNumber?: boolean;
+}) {
+  const getKw = useServerFn(getKwForApplication);
+  const doFetch = useServerFn(fetchKwForApplication);
+  const [doc, setDoc] = useState<KwDoc>(null);
+  const [hasKw, setHasKw] = useState<boolean | null>(null);
+  const [kwNumber, setKwNumber] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const reload = async () => {
+    try {
+      const r = await getKw({ data: { loanApplicationId: applicationId } });
+      setHasKw(r.hasKw);
+      if (r.hasKw) setDoc(r.document as KwDoc);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void reload(); }, [applicationId]);
+
+  const onFetch = async (force = false) => {
+    setBusy(true);
+    try {
+      const r = await doFetch({ data: { loanApplicationId: applicationId, force } });
+      setKwNumber(r.kwNumber ?? null);
+      if (r.status === "ready") toast.success("Treść KW pobrana");
+      else if (r.status === "processing") toast.info("KW jest w trakcie pobierania — odśwież za chwilę");
+      await reload();
+    } catch (e: any) {
+      toast.error(e?.message || "Nie udało się pobrać KW");
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) return null;
+
+  if (hasKw === false) {
+    if (!canFetch) return null;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść KW</CardTitle>
+          <CardDescription>Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const ready = doc?.status === "ready";
+  const processing = doc?.status === "processing";
+  const error = doc?.status === "error" || doc?.status === "not_found";
+
+  // Investor view + nothing fetched yet → render nothing (avoid empty cards)
+  if (!doc && !canFetch) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść księgi wieczystej</CardTitle>
+            <CardDescription>
+              Dane z Centralnej Bazy Ksiąg Wieczystych (CMD KW Engine).
+              {showKwNumber && kwNumber && <> · KW: <code className="text-foreground">{kwNumber}</code></>}
+              {doc?.fetched_at && <> · Pobrano: {new Date(doc.fetched_at).toLocaleString("pl-PL")}</>}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            {ready && <Badge variant="secondary">Gotowe</Badge>}
+            {processing && <Badge variant="outline" className="gap-1"><Loader2 className="h-3 w-3 animate-spin" />Pobieranie</Badge>}
+            {error && <Badge variant="destructive">{doc?.status === "not_found" ? "Nie znaleziono" : "Błąd"}</Badge>}
+            {canFetch && (
+              <Button size="sm" variant={ready ? "outline" : "default"} disabled={busy} onClick={() => void onFetch(ready)}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                {ready ? "Odśwież" : processing ? "Sprawdź status" : "Pobierz treść KW"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {processing && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertTitle>Pobieranie KW w toku</AlertTitle>
+            <AlertDescription>
+              CMD pobiera dokument z EKW — to może potrwać do kilkudziesięciu sekund. Odśwież po chwili.
+            </AlertDescription>
+          </Alert>
+        )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{doc?.status === "not_found" ? "Nie znaleziono księgi" : "Błąd pobierania"}</AlertTitle>
+            {doc?.last_error && <AlertDescription>{doc.last_error}</AlertDescription>}
+          </Alert>
+        )}
+        {ready && (
+          <Accordion type="multiple" defaultValue={["dzial_1o", "dzial_2"]}>
+            {SECTIONS.map(({ key, label }) => {
+              const html = (doc as any)?.[key] as string | null;
+              if (!html) return null;
+              return (
+                <AccordionItem key={key as string} value={key as string}>
+                  <AccordionTrigger className="text-left">{label}</AccordionTrigger>
+                  <AccordionContent>
+                    <div
+                      className="kw-html prose prose-sm max-w-none dark:prose-invert overflow-x-auto"
+                      dangerouslySetInnerHTML={{ __html: html }}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        )}
+        {!doc && canFetch && (
+          <p className="text-sm text-muted-foreground">
+            Treść KW jeszcze nie została pobrana. Kliknij „Pobierz treść KW”, aby uzupełnić ją z EKW.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
