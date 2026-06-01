@@ -171,6 +171,7 @@ export async function placeOutboundCallInternal(opts: {
           })
           .eq("id", queueRow.id);
       }
+      await maybeSendSms("on_failure", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
       return {
         ok: false,
         error: json?.message ?? json?.detail?.message ?? `ElevenLabs HTTP ${res.status}`,
