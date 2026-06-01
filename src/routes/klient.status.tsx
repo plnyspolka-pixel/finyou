@@ -201,38 +201,6 @@ function KlientOpis() {
         </CardContent>
       </Card>
 
-      {loanId && (
-        <Card className="border-destructive/40">
-          <CardHeader>
-            <CardTitle className="text-base text-destructive">Strefa niebezpieczna</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              Usunięcie wniosku jest nieodwracalne. Załączone dokumenty pozostaną w sekcji „Dokumenty”.
-            </p>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" disabled={deleting}>
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                  Usuń wniosek
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Usunąć wniosek?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tej operacji nie da się cofnąć. Wniosek wraz z opisem zostanie trwale usunięty.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Anuluj</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void removeLoan()}>Usuń</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
