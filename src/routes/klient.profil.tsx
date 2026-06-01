@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Download, Loader2 } from "lucide-react";
+import { gusCompanyLookup } from "@/lib/gus-bir.functions";
+import { krsCompanyLookup } from "@/lib/krs.functions";
 
 export const Route = createFileRoute("/klient/profil")({
   component: KlientProfil,
@@ -15,6 +18,7 @@ export const Route = createFileRoute("/klient/profil")({
 function KlientProfil() {
   const { user } = useAuth();
   const [row, setRow] = useState<any | null>(null);
+  const [fetching, setFetching] = useState(false);
   const [f, setF] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     pesel: "", address: "", bank_account: "",
@@ -32,6 +36,53 @@ function KlientProfil() {
     });
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
+
+  const autoFill = async () => {
+    const payload: { nip?: string; regon?: string; krs?: string } = {};
+    if (f.nip.replace(/\D/g, "")) payload.nip = f.nip.replace(/\D/g, "");
+    else if (f.regon.replace(/\D/g, "")) payload.regon = f.regon.replace(/\D/g, "");
+    else if (f.krs.replace(/\D/g, "")) payload.krs = f.krs.replace(/\D/g, "");
+    else { toast.error("Wpisz NIP, REGON albo KRS"); return; }
+
+    setFetching(true);
+    const t = toast.loading("Pobieram dane firmy z GUS…");
+    try {
+      const res: any = await gusCompanyLookup({ data: payload });
+      if (!res?.success) {
+        toast.error(res?.message ?? "Nie udało się pobrać danych", { id: t });
+        return;
+      }
+      const c = res.company;
+      const street = [c.address?.street, c.address?.buildingNumber].filter(Boolean).join(" ")
+        + (c.address?.apartmentNumber ? `/${c.address.apartmentNumber}` : "");
+      const addr = [street, c.address?.postalCode, c.address?.city].filter(Boolean).join(", ");
+      setF((x) => ({
+        ...x,
+        company_name: c.name || x.company_name,
+        nip: c.nip || x.nip,
+        regon: c.regon || x.regon,
+        krs: c.krs || x.krs,
+        address: addr || x.address,
+        phone: c.contact?.phone || x.phone,
+        email: c.contact?.email || x.email,
+      }));
+      const krsNumber = (c.krs || "").replace(/\D/g, "");
+      if (krsNumber) {
+        toast.success("Dane z GUS. Pobieram odpis KRS…", { id: t });
+        try {
+          const kres: any = await krsCompanyLookup({ data: { krs: krsNumber, forceRefresh: false } });
+          if (kres?.success) {
+            const k = kres.company;
+            setF((x) => ({ ...x, company_name: k.name || x.company_name, krs: k.krs || x.krs }));
+          }
+        } catch { /* ignore */ }
+      } else {
+        toast.success("Dane firmy zostały pobrane.", { id: t });
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się pobrać danych firmy.", { id: t });
+    } finally { setFetching(false); }
+  };
 
   const save = async () => {
     if (!user) return;
@@ -82,12 +133,21 @@ function KlientProfil() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Dane firmy (opcjonalnie)</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Dane firmy (opcjonalnie)</span>
+            <Button size="sm" variant="outline" onClick={autoFill} disabled={fetching}>
+              {fetching ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+              Pobierz dane
+            </Button>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Wpisz NIP, REGON albo KRS — aplikacja pobierze dane z GUS i (jeśli to spółka) odpis z KRS.</p>
+        </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
+          <div><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} placeholder="10 cyfr" /></div>
+          <div><Label>KRS</Label><Input maxLength={10} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value.replace(/\D/g, "") })} placeholder="np. 0000123456" /></div>
           <div className="md:col-span-2"><Label>Nazwa firmy</Label><Input maxLength={255} value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
-          <div><Label>NIP</Label><Input maxLength={13} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value })} placeholder="np. 1234567890" /></div>
-          <div><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
-          <div className="md:col-span-2"><Label>KRS</Label><Input maxLength={10} value={f.krs} onChange={(e) => setF({ ...f, krs: e.target.value.replace(/\D/g, "") })} placeholder="10 cyfr (jeśli spółka)" /></div>
+          <div className="md:col-span-2"><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
         </CardContent>
       </Card>
 
