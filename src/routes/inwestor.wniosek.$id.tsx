@@ -1,21 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, Calculator, FileText, Image as ImageIcon, ExternalLink, Wallet, AlertTriangle, Eye } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Wallet, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
-import { monthlyPayment, formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { formatPLN } from "@/lib/loan-math";
+import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { openOrCreateThread } from "@/lib/chat.functions";
 
@@ -51,29 +50,20 @@ function InwestorWniosek() {
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
 
-  // Calc — mirror client form
-  const [amount, setAmount] = useState<number>(0);
-  const [annualRate, setAnnualRate] = useState<number>(20);
-  const [months, setMonths] = useState<number>(24);
-  const [maxPayment, setMaxPayment] = useState<number>(0);
+  // Calc state — wypełniana przez LoanCalculator (onChange)
+  const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
   const [note, setNote] = useState("");
 
   useEffect(() => { void (async () => {
     const { data } = await supabase.from("loan_applications").select("*, properties(*)").eq("id", id).maybeSingle();
     setApp(data);
     if (data) {
-      setAmount(Number(data.loan_amount) || 0);
-      setAnnualRate(Number(data.annual_investor_rate) || 20);
-      setMonths(Number(data.preferred_period_months) || 24);
-      setMaxPayment(Number(data.max_monthly_payment) || 0);
-      // increment view counter (fire and forget)
       void supabase.rpc("increment_loan_view" as any, { _loan_id: id });
     }
     if (user) {
       const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
       if (inv) setInvestorId(inv.id);
     }
-    // documents
     const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", id).order("created_at", { ascending: false });
     const list = ds ?? [];
     setDocs(list);
@@ -86,24 +76,6 @@ function InwestorWniosek() {
     setDocUrls(next);
   })(); }, [id, user]);
 
-  const rataNominal = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
-  const rata = useMemo(() => (maxPayment > 0 ? Math.min(rataNominal, maxPayment) : rataNominal), [rataNominal, maxPayment]);
-  const balloon = useMemo(() => Math.max(0, (rataNominal - rata) * months), [rataNominal, rata, months]);
-  const totalPay = useMemo(() => rata * months + balloon, [rata, months, balloon]);
-  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
-  const exceedsMax = balloon > 0;
-
-  const schedule = useMemo(() => {
-    if (!months || !rata) return [];
-    const today = new Date();
-    const rows: { idx: number; date: string; payment: number }[] = [];
-    for (let i = 1; i <= months; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth() + i, today.getDate());
-      rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), payment: i === months ? rata + balloon : rata });
-    }
-    return rows;
-  }, [months, rata, balloon]);
-
   const openFile = async (d: any) => {
     if (!d.file_path) return;
     const { data } = await supabase.storage.from("documents").createSignedUrl(d.file_path, 3600);
@@ -112,17 +84,17 @@ function InwestorWniosek() {
 
   const submit = async (status: "szkic" | "zlozona") => {
     if (!investorId) { toast.error("Brak profilu inwestora"); return; }
-    if (!amount || !months) { toast.error("Uzupełnij kwotę i okres"); return; }
+    if (!calc || !calc.amount || !calc.months) { toast.error("Uzupełnij parametry oferty w kalkulatorze"); return; }
     setSubmitting(true);
     const payload = {
       loan_application_id: id, investor_id: investorId, offer_status: status as any,
-      proposed_amount: amount, period_months: months,
-      expected_yearly_yield: annualRate, commission: 0,
-      collection_protection: false, has_balloon: balloon > 0,
-      balloon_amount: balloon > 0 ? balloon : null,
-      repayment_type: (balloon > 0 ? "mieszana" : "miesieczna") as any,
-      estimated_monthly_payment: rata, estimated_total_cost: totalPay,
-      schedule: schedule.map(r => ({ idx: r.idx, date: r.date, rata: r.payment })) as any,
+      proposed_amount: calc.amount, period_months: calc.months,
+      expected_yearly_yield: calc.annualRate, commission: calc.commissionPln,
+      collection_protection: false, has_balloon: calc.balloon > 0,
+      balloon_amount: calc.balloon > 0 ? calc.balloon : null,
+      repayment_type: (calc.balloon > 0 ? "mieszana" : "miesieczna") as any,
+      estimated_monthly_payment: calc.cappedRata, estimated_total_cost: calc.totalToRepay,
+      schedule: calc.schedule.map(r => ({ idx: r.idx, date: r.date, rata: r.rata, kapital: r.kap, odsetki: r.ods, saldo: r.saldo })) as any,
       investor_note: note || null,
       submitted_at: status === "zlozona" ? new Date().toISOString() : null,
     };
@@ -132,6 +104,7 @@ function InwestorWniosek() {
     toast.success(status === "zlozona" ? "Oferta złożona" : "Zapisano szkic");
     void navigate({ to: "/inwestor/oferty" });
   };
+
 
   if (!app) return <div className="text-muted-foreground">Ładowanie…</div>;
   const p = app.properties?.[0];

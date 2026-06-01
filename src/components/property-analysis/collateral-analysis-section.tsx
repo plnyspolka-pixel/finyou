@@ -28,7 +28,7 @@ function categoryVariant(c: string): "default" | "secondary" | "destructive" | "
   return "destructive";
 }
 
-export function CollateralAnalysisSection({ applicationId }: { applicationId: string }) {
+export function CollateralAnalysisSection({ applicationId, readOnly = false }: { applicationId: string; readOnly?: boolean }) {
   const fetchAnalysis = useServerFn(getPropertyAnalysis);
   const runAnalysis = useServerFn(runPropertyCollateralAnalysis);
   const [row, setRow] = useState<any | null>(null);
@@ -71,15 +71,19 @@ export function CollateralAnalysisSection({ applicationId }: { applicationId: st
           <h3 className="text-lg font-semibold">Analiza zabezpieczenia</h3>
           <p className="text-xs text-muted-foreground">Automatyczna analiza nieruchomości jako zabezpieczenia pożyczki.</p>
         </div>
-        <Button onClick={run} disabled={running} size="sm">
-          {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {row ? "Uruchom ponownie" : "Uruchom analizę"}
-        </Button>
+        {!readOnly && (
+          <Button onClick={run} disabled={running} size="sm">
+            {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {row ? "Uruchom ponownie" : "Uruchom analizę"}
+          </Button>
+        )}
       </div>
 
       {!result && (
         <Card><CardContent className="py-6 text-sm text-muted-foreground">
-          Brak wyników. Uruchom analizę, aby zebrać dane ze źródeł zewnętrznych.
+          {readOnly
+            ? "Analiza zabezpieczenia jest w przygotowaniu — pojawi się tu, gdy zostanie zakończona."
+            : "Brak wyników. Uruchom analizę, aby zebrać dane ze źródeł zewnętrznych."}
         </CardContent></Card>
       )}
 
