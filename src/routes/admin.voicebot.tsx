@@ -62,6 +62,7 @@ function VoicebotAdmin() {
   const fetchSettings = useServerFn(getVoicebotSettings);
   const saveSettings = useServerFn(updateVoicebotSettings);
   const doTest = useServerFn(testOutboundCall);
+  const doTestSms = useServerFn(testSms);
 
   const loadQueue = async () => {
     setLoading(true);
