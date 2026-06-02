@@ -21,6 +21,7 @@ import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
 import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -52,10 +53,12 @@ import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growth-engine'
 import { Route as AdminWnioskiIndexRouteImport } from './routes/admin.wnioski.index'
 import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
+import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/public/meta-leads-webhook'
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
@@ -125,6 +128,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const WniosekTokenRoute = WniosekTokenRouteImport.update({
   id: '/wniosek/$token',
   path: '/wniosek/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LSlugRoute = LSlugRouteImport.update({
+  id: '/l/$slug',
+  path: '/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KlientWiadomosciRoute = KlientWiadomosciRouteImport.update({
@@ -282,6 +290,11 @@ const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   path: '/dokumenty',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAiGrowthEngineRoute = AdminAiGrowthEngineRouteImport.update({
+  id: '/ai-growth-engine',
+  path: '/ai-growth-engine',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminWnioskiIndexRoute = AdminWnioskiIndexRouteImport.update({
   id: '/wnioski/',
   path: '/wnioski/',
@@ -301,6 +314,11 @@ const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
   id: '/umowa/$offerId',
   path: '/umowa/$offerId',
   getParentRoute: () => InwestorRoute,
+} as any)
+const EmbedLSlugRoute = EmbedLSlugRouteImport.update({
+  id: '/embed/l/$slug',
+  path: '/embed/l/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMetaLeadsWebhookRoute =
   ApiPublicMetaLeadsWebhookRouteImport.update({
@@ -368,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -399,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
+  '/l/$slug': typeof LSlugRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
@@ -410,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
+  '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
@@ -424,6 +445,7 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -455,6 +477,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
+  '/l/$slug': typeof LSlugRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/inwestor': typeof InwestorIndexRoute
@@ -466,6 +489,7 @@ export interface FileRoutesByTo {
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
+  '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
@@ -484,6 +508,7 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -515,6 +540,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
+  '/l/$slug': typeof LSlugRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
@@ -526,6 +552,7 @@ export interface FileRoutesById {
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
+  '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
@@ -545,6 +572,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/wniosek-start'
     | '/wybor-roli'
+    | '/admin/ai-growth-engine'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -576,6 +604,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/status'
     | '/klient/wiadomosci'
+    | '/l/$slug'
     | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
@@ -587,6 +616,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
     | '/api/public/meta-leads-webhook'
+    | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
@@ -601,6 +631,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/wniosek-start'
     | '/wybor-roli'
+    | '/admin/ai-growth-engine'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -632,6 +663,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/status'
     | '/klient/wiadomosci'
+    | '/l/$slug'
     | '/wniosek/$token'
     | '/admin'
     | '/inwestor'
@@ -643,6 +675,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
     | '/api/public/meta-leads-webhook'
+    | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
@@ -660,6 +693,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/wniosek-start'
     | '/wybor-roli'
+    | '/admin/ai-growth-engine'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -691,6 +725,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/status'
     | '/klient/wiadomosci'
+    | '/l/$slug'
     | '/wniosek/$token'
     | '/admin/'
     | '/inwestor/'
@@ -702,6 +737,7 @@ export interface FileRouteTypes {
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
     | '/api/public/meta-leads-webhook'
+    | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/klient/umowa/$offerId'
@@ -721,10 +757,12 @@ export interface RootRouteChildren {
   WniosekStartRoute: typeof WniosekStartRoute
   WyborRoliRoute: typeof WyborRoliRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
+  LSlugRoute: typeof LSlugRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
+  EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -814,6 +852,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek/$token'
       fullPath: '/wniosek/$token'
       preLoaderRoute: typeof WniosekTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/l/$slug': {
+      id: '/l/$slug'
+      path: '/l/$slug'
+      fullPath: '/l/$slug'
+      preLoaderRoute: typeof LSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/klient/wiadomosci': {
@@ -1033,6 +1078,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDokumentyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ai-growth-engine': {
+      id: '/admin/ai-growth-engine'
+      path: '/ai-growth-engine'
+      fullPath: '/admin/ai-growth-engine'
+      preLoaderRoute: typeof AdminAiGrowthEngineRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/wnioski/': {
       id: '/admin/wnioski/'
       path: '/wnioski'
@@ -1060,6 +1112,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/umowa/$offerId'
       preLoaderRoute: typeof InwestorUmowaOfferIdRouteImport
       parentRoute: typeof InwestorRoute
+    }
+    '/embed/l/$slug': {
+      id: '/embed/l/$slug'
+      path: '/embed/l/$slug'
+      fullPath: '/embed/l/$slug'
+      preLoaderRoute: typeof EmbedLSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/meta-leads-webhook': {
       id: '/api/public/meta-leads-webhook'
@@ -1147,6 +1206,7 @@ const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAiGrowthEngineRoute: typeof AdminAiGrowthEngineRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
@@ -1173,6 +1233,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAiGrowthEngineRoute: AdminAiGrowthEngineRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
@@ -1263,10 +1324,12 @@ const rootRouteChildren: RootRouteChildren = {
   WniosekStartRoute: WniosekStartRoute,
   WyborRoliRoute: WyborRoliRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
+  LSlugRoute: LSlugRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
+  EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
@@ -1274,13 +1337,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

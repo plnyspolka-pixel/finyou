@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -38,6 +38,7 @@ const groups: Group[] = [
   {
     label: "Marketing",
     items: [
+      { to: "/admin/ai-growth-engine", label: "AI Growth Engine", icon: Sparkles },
       { to: "/admin/mailing", label: "Mailing", icon: Mail },
       { to: "/admin/meta", label: "Meta Ads", icon: Facebook },
       { to: "/admin/fb-ads/kreator", label: "Kreator FB Ads", icon: Facebook },
