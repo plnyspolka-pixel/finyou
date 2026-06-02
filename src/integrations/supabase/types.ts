@@ -79,6 +79,102 @@ export type Database = {
           },
         ]
       }
+      ai_funnel_events: {
+        Row: {
+          campaign: string | null
+          country: string | null
+          created_at: string
+          device: string | null
+          event_type: string
+          id: string
+          landing_id: string | null
+          medium: string | null
+          metadata: Json | null
+          referrer: string | null
+          session_id: string
+          source: string | null
+          step: string
+          step_order: number
+          user_agent: string | null
+          value: number | null
+        }
+        Insert: {
+          campaign?: string | null
+          country?: string | null
+          created_at?: string
+          device?: string | null
+          event_type?: string
+          id?: string
+          landing_id?: string | null
+          medium?: string | null
+          metadata?: Json | null
+          referrer?: string | null
+          session_id: string
+          source?: string | null
+          step: string
+          step_order?: number
+          user_agent?: string | null
+          value?: number | null
+        }
+        Update: {
+          campaign?: string | null
+          country?: string | null
+          created_at?: string
+          device?: string | null
+          event_type?: string
+          id?: string
+          landing_id?: string | null
+          medium?: string | null
+          metadata?: Json | null
+          referrer?: string | null
+          session_id?: string
+          source?: string | null
+          step?: string
+          step_order?: number
+          user_agent?: string | null
+          value?: number | null
+        }
+        Relationships: []
+      }
+      ai_funnel_insights: {
+        Row: {
+          bottlenecks: Json | null
+          created_at: string
+          id: string
+          landing_id: string | null
+          metrics: Json | null
+          period_from: string
+          period_to: string
+          recommendations: Json | null
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          bottlenecks?: Json | null
+          created_at?: string
+          id?: string
+          landing_id?: string | null
+          metrics?: Json | null
+          period_from: string
+          period_to: string
+          recommendations?: Json | null
+          summary: string
+          user_id: string
+        }
+        Update: {
+          bottlenecks?: Json | null
+          created_at?: string
+          id?: string
+          landing_id?: string | null
+          metrics?: Json | null
+          period_from?: string
+          period_to?: string
+          recommendations?: Json | null
+          summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_growth_action_log: {
         Row: {
           action: string
