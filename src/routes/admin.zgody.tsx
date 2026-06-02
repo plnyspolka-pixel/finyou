@@ -14,7 +14,7 @@ export const Route = createFileRoute("/admin/zgody")({
   component: ZgodyPage,
 });
 
-type Kind = "privacy" | "marketing" | "terms";
+type Kind = "privacy" | "marketing" | "terms" | "terms_investor";
 type Doc = {
   id: string;
   kind: Kind;
@@ -25,20 +25,24 @@ type Doc = {
   updated_at: string;
 };
 
+const KINDS: Kind[] = ["privacy", "marketing", "terms", "terms_investor"];
+
 const KIND_LABELS: Record<Kind, string> = {
   privacy: "Polityka prywatności",
   marketing: "Zgody marketingowe",
-  terms: "Regulamin",
+  terms: "Regulamin klienta (pożyczkobiorcy)",
+  terms_investor: "Regulamin inwestora",
 };
 
 const KIND_DEFAULT_TITLE: Record<Kind, string> = {
   privacy: "Akceptuję politykę prywatności",
   marketing: "Wyrażam zgodę na otrzymywanie informacji handlowych",
-  terms: "Akceptuję regulamin",
+  terms: "Akceptuję regulamin klienta",
+  terms_investor: "Akceptuję regulamin inwestora",
 };
 
 function ZgodyPage() {
-  const [docs, setDocs] = useState<Record<Kind, Doc | null>>({ privacy: null, marketing: null, terms: null });
+  const [docs, setDocs] = useState<Record<Kind, Doc | null>>({ privacy: null, marketing: null, terms: null, terms_investor: null });
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -48,7 +52,7 @@ function ZgodyPage() {
       .select("*")
       .eq("is_active", true)
       .order("version", { ascending: false });
-    const next: Record<Kind, Doc | null> = { privacy: null, marketing: null, terms: null };
+    const next: Record<Kind, Doc | null> = { privacy: null, marketing: null, terms: null, terms_investor: null };
     (data as Doc[] | null)?.forEach((d) => {
       if (!next[d.kind]) next[d.kind] = d;
     });
@@ -63,18 +67,18 @@ function ZgodyPage() {
       <div>
         <h1 className="text-2xl font-bold">Treści zgód</h1>
         <p className="text-sm text-muted-foreground">
-          Polityka prywatności, zgody marketingowe i regulamin. Zaakceptowana wersja jest zapisywana przy kliencie.
+          Polityka prywatności, zgody marketingowe oraz dwa regulaminy: dla klientów (pożyczkobiorców) i dla inwestorów. Zaakceptowana wersja jest zapisywana przy użytkowniku.
         </p>
       </div>
 
       <Tabs defaultValue="privacy">
         <TabsList>
-          <TabsTrigger value="privacy">{KIND_LABELS.privacy}</TabsTrigger>
-          <TabsTrigger value="marketing">{KIND_LABELS.marketing}</TabsTrigger>
-          <TabsTrigger value="terms">{KIND_LABELS.terms}</TabsTrigger>
+          {KINDS.map((k) => (
+            <TabsTrigger key={k} value={k}>{KIND_LABELS[k]}</TabsTrigger>
+          ))}
         </TabsList>
 
-        {(["privacy", "marketing", "terms"] as Kind[]).map((kind) => (
+        {KINDS.map((kind) => (
           <TabsContent key={kind} value={kind}>
             <ConsentEditor kind={kind} doc={docs[kind]} loading={loading} onSaved={load} />
           </TabsContent>

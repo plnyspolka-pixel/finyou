@@ -4755,7 +4755,7 @@ export type Database = {
     Enums: {
       app_role: "administrator" | "operator" | "klient" | "inwestor"
       automation_status: "aktywna" | "wstrzymana" | "zakonczona" | "blad"
-      consent_kind: "privacy" | "marketing" | "terms"
+      consent_kind: "privacy" | "marketing" | "terms" | "terms_investor"
       contact_channel:
         | "telefon"
         | "sms"
@@ -4950,7 +4950,7 @@ export const Constants = {
     Enums: {
       app_role: ["administrator", "operator", "klient", "inwestor"],
       automation_status: ["aktywna", "wstrzymana", "zakonczona", "blad"],
-      consent_kind: ["privacy", "marketing", "terms"],
+      consent_kind: ["privacy", "marketing", "terms", "terms_investor"],
       contact_channel: [
         "telefon",
         "sms",
