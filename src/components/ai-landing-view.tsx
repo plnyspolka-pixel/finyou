@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useLandingEngagement } from "@/hooks/use-landing-engagement";
 
 type Section = { kind: string; heading: string; body?: string; items?: { title: string; text?: string }[] };
 type Variant = { id: string; label: string; weight: number; is_active: boolean; overrides: any };
@@ -38,6 +39,9 @@ export function AiLandingView({
 }) {
   const recorded = useRef(false);
   const variant = useMemo(() => pickVariant(landing.id, variants), [landing.id, variants]);
+  const source = embedded ? "embed" : "direct";
+
+  useLandingEngagement({ landingId: landing.id, variantId: variant?.id ?? null, source });
 
   const ov = variant?.overrides ?? {};
   const heroHeadline = ov.hero_headline ?? landing.hero_headline;
@@ -54,16 +58,16 @@ export function AiLandingView({
       landing_id: landing.id,
       variant_id: variant?.id ?? null,
       event_type: "view",
-      source: embedded ? "embed" : "direct",
+      source,
     });
-  }, [landing.id, embedded, variant?.id]);
+  }, [landing.id, source, variant?.id]);
 
   const onCtaClick = () => {
     void supabase.from("ai_landing_events").insert({
       landing_id: landing.id,
       variant_id: variant?.id ?? null,
       event_type: "cta_click",
-      source: embedded ? "embed" : "direct",
+      source,
     });
   };
 
@@ -73,7 +77,7 @@ export function AiLandingView({
         <header className="space-y-4 text-center">
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{heroHeadline}</h1>
           <p className="text-lg text-muted-foreground">{heroSub}</p>
-          <Button size="lg" asChild onClick={onCtaClick}>
+          <Button size="lg" asChild onClick={onCtaClick} data-track="hero_cta">
             <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{ctaLabel}</a>
           </Button>
         </header>
@@ -95,7 +99,7 @@ export function AiLandingView({
               )}
               {s.kind === "cta" && (
                 <div className="pt-2">
-                  <Button asChild onClick={onCtaClick}>
+                  <Button asChild onClick={onCtaClick} data-track={`section_cta_${i}`}>
                     <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{ctaLabel}</a>
                   </Button>
                 </div>
