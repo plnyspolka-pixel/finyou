@@ -14,7 +14,7 @@ export const Route = createFileRoute("/admin/zgody")({
   component: ZgodyPage,
 });
 
-type Kind = "privacy" | "marketing" | "terms";
+type Kind = "privacy" | "marketing" | "terms" | "terms_investor";
 type Doc = {
   id: string;
   kind: Kind;
@@ -25,16 +25,20 @@ type Doc = {
   updated_at: string;
 };
 
+const KINDS: Kind[] = ["privacy", "marketing", "terms", "terms_investor"];
+
 const KIND_LABELS: Record<Kind, string> = {
   privacy: "Polityka prywatności",
   marketing: "Zgody marketingowe",
-  terms: "Regulamin",
+  terms: "Regulamin klienta (pożyczkobiorcy)",
+  terms_investor: "Regulamin inwestora",
 };
 
 const KIND_DEFAULT_TITLE: Record<Kind, string> = {
   privacy: "Akceptuję politykę prywatności",
   marketing: "Wyrażam zgodę na otrzymywanie informacji handlowych",
-  terms: "Akceptuję regulamin",
+  terms: "Akceptuję regulamin klienta",
+  terms_investor: "Akceptuję regulamin inwestora",
 };
 
 function ZgodyPage() {
