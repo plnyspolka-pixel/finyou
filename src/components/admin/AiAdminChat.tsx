@@ -7,11 +7,12 @@ import {
   listConversations,
   getConversation,
   deleteConversation,
+  transcribeAdminAudio,
 } from "@/lib/ai-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench } from "lucide-react";
+import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench, Mic, Square } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
