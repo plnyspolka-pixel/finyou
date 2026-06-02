@@ -22,6 +22,7 @@ import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
 import { Route as KlientStatusRouteImport } from './routes/klient.status'
@@ -141,6 +142,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const WniosekTokenRoute = WniosekTokenRouteImport.update({
   id: '/wniosek/$token',
   path: '/wniosek/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
@@ -474,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
+  '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -541,6 +548,7 @@ export interface FileRoutesByTo {
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
+  '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
@@ -612,6 +620,7 @@ export interface FileRoutesById {
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
+  '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -684,6 +693,7 @@ export interface FileRouteTypes {
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/l/$slug'
+    | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -751,6 +761,7 @@ export interface FileRouteTypes {
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/l/$slug'
+    | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
     | '/blog'
@@ -821,6 +832,7 @@ export interface FileRouteTypes {
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/l/$slug'
+    | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -855,6 +867,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
+  RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
@@ -957,6 +970,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek/$token'
       fullPath: '/wniosek/$token'
       preLoaderRoute: typeof WniosekTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/l/$slug': {
@@ -1492,6 +1512,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
+  RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
