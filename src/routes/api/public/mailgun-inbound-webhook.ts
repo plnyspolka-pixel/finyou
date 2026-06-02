@@ -134,7 +134,7 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
         }
 
         const replySubject = subject.toLowerCase().startsWith("re:") ? subject : `Re: ${subject}`;
-        const send = await sendMailgunEmail({
+        const send = await sendResendEmail({
           to: fromEmail,
           subject: replySubject,
           text: replyText,
