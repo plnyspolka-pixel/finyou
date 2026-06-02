@@ -141,7 +141,14 @@ export const getPublicLandingPage = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!page) return { page: null };
     // increment view count (fire-and-forget)
-    await supabaseAdmin.rpc("increment_loan_view", { _loan_id: page.id }).catch(() => {});
+    try {
+      await supabaseAdmin
+        .from("landing_pages")
+        .update({ view_count: ((page as { view_count?: number }).view_count ?? 0) + 1 } as never)
+        .eq("id", page.id);
+    } catch {
+      /* ignore */
+    }
     return { page };
   });
 
