@@ -67,6 +67,22 @@ export async function sendSmsInternal(opts: {
       error_message: res.ok ? null : (json?.message ?? `HTTP ${res.status}`),
     });
 
+    try {
+      const { logLeadCommunication } = await import("@/lib/lead-comms.server");
+      await logLeadCommunication({
+        phoneNormalized: phone,
+        channel: "sms",
+        direction: "outbound",
+        status: res.ok ? "sent" : "failed",
+        content: opts.body,
+        externalId: json?.sid ?? null,
+        metadata: { from, source: opts.source },
+        errorMessage: res.ok ? null : (json?.message ?? `HTTP ${res.status}`),
+      });
+    } catch (e) {
+      console.error("[sms] log lead comm failed", e);
+    }
+
     if (!res.ok) return { ok: false, error: json?.message ?? `Twilio HTTP ${res.status}` };
     return { ok: true, sid: json?.sid };
   } catch (e: any) {
@@ -79,6 +95,7 @@ export async function sendSmsInternal(opts: {
     return { ok: false, error: e?.message ?? "exception" };
   }
 }
+
 
 async function maybeSendSms(
   trigger: "before_call" | "after_call" | "on_failure",
