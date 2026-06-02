@@ -73,7 +73,7 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
             const current = ((camp as any)?.[counterField] as number) ?? 0;
             await supabaseAdmin
               .from("email_campaigns")
-              .update({ [counterField]: current + 1 })
+              .update({ [counterField]: current + 1 } as never)
               .eq("id", rec.campaign_id);
           }
         }
