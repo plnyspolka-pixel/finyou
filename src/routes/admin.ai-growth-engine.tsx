@@ -236,6 +236,7 @@ function LandingsList() {
           </TableBody>
         </Table>
       </CardContent>
+      {abLanding && <AbTestingDialog landing={abLanding} open={!!abLanding} onClose={() => setAbLanding(null)} />}
     </Card>
   );
 }
