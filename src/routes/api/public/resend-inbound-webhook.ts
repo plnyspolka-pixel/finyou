@@ -63,7 +63,7 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         }
         let evt: any;
         try { evt = JSON.parse(raw); } catch { return new Response("bad json", { status: 400 }); }
-        if (evt?.type && evt.type !== "email.inbound" && evt.type !== "inbound.email.received") {
+        if (evt?.type && !["email.received", "email.inbound", "inbound.email.received"].includes(evt.type)) {
           return new Response("ignored", { status: 200 });
         }
         const data = evt?.data ?? evt;
