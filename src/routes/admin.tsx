@@ -62,6 +62,7 @@ const groups: Group[] = [
       { to: "/admin/fakturowo", label: "Fakturowo", icon: Receipt },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
+      { to: "/admin/zgody", label: "Treści zgód", icon: FileCheck },
       { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
     ],
   },
