@@ -42,6 +42,7 @@ const groups: Group[] = [
       { to: "/admin/ai-seo", label: "AI SEO Content", icon: FileText },
       { to: "/admin/ai-outreach", label: "AI Outreach", icon: Send },
       { to: "/admin/ai-linkbuilding", label: "AI Link Building", icon: Link2 },
+      { to: "/admin/ai-serp", label: "SERP Tracker", icon: Search },
       { to: "/admin/mailing", label: "Mailing", icon: Mail },
       { to: "/admin/meta", label: "Meta Ads", icon: Facebook },
       { to: "/admin/fb-ads/kreator", label: "Kreator FB Ads", icon: Facebook },

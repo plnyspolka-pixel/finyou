@@ -682,6 +682,98 @@ export type Database = {
           },
         ]
       }
+      ai_serp_keywords: {
+        Row: {
+          created_at: string
+          difficulty: number | null
+          id: string
+          intent: string | null
+          is_active: boolean
+          keyword: string
+          language: string
+          location: string
+          search_volume: number | null
+          tags: string[] | null
+          target_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: number | null
+          id?: string
+          intent?: string | null
+          is_active?: boolean
+          keyword: string
+          language?: string
+          location?: string
+          search_volume?: number | null
+          tags?: string[] | null
+          target_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: number | null
+          id?: string
+          intent?: string | null
+          is_active?: boolean
+          keyword?: string
+          language?: string
+          location?: string
+          search_volume?: number | null
+          tags?: string[] | null
+          target_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_serp_rankings: {
+        Row: {
+          checked_at: string
+          created_at: string
+          id: string
+          keyword_id: string
+          position: number | null
+          previous_position: number | null
+          serp_features: string[] | null
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          checked_at?: string
+          created_at?: string
+          id?: string
+          keyword_id: string
+          position?: number | null
+          previous_position?: number | null
+          serp_features?: string[] | null
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          checked_at?: string
+          created_at?: string
+          id?: string
+          keyword_id?: string
+          position?: number | null
+          previous_position?: number | null
+          serp_features?: string[] | null
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_serp_rankings_keyword_id_fkey"
+            columns: ["keyword_id"]
+            isOneToOne: false
+            referencedRelation: "ai_serp_keywords"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
