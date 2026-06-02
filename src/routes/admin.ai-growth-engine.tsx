@@ -12,12 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Sparkles, ExternalLink, Trash2, Copy, Loader2, Eye, EyeOff, FlaskConical, Activity } from "lucide-react";
+import { Sparkles, ExternalLink, Trash2, Copy, Loader2, Eye, EyeOff, FlaskConical, Activity, Wand2 } from "lucide-react";
 import {
   generateAiLanding, setLandingStatus, deleteLanding, updateGrowthSettings,
 } from "@/lib/ai-growth.functions";
 import { AbTestingDialog } from "@/components/ab-testing-dialog";
 import { HeatmapDialog } from "@/components/heatmap-dialog";
+import { MicroOptimizerDialog } from "@/components/micro-optimizer-dialog";
 
 export const Route = createFileRoute("/admin/ai-growth-engine")({
   component: GrowthEnginePage,
@@ -176,6 +177,7 @@ function LandingsList() {
   const [reloadTick, setReloadTick] = useState(0);
   const [abLanding, setAbLanding] = useState<any | null>(null);
   const [heatmapLanding, setHeatmapLanding] = useState<any | null>(null);
+  const [optLanding, setOptLanding] = useState<any | null>(null);
 
   useEffect(() => {
     supabase.from("ai_landings").select("*").order("created_at", { ascending: false }).then(({ data }) => setItems(data ?? []));
@@ -218,6 +220,9 @@ function LandingsList() {
                     <Button size="sm" variant="outline" onClick={() => setHeatmapLanding(l)} title="Heatmapy & engagement">
                       <Activity className="h-3.5 w-3.5" />
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => setOptLanding(l)} title="AI Micro-Optimizer">
+                      <Wand2 className="h-3.5 w-3.5" />
+                    </Button>
                     {l.status !== "published" ? (
                       <Button size="sm" variant="default" onClick={async () => { await setStatus({ data: { id: l.id, status: "published" } }); toast.success("Opublikowano"); reload(); }}>
                         <Eye className="h-3.5 w-3.5 mr-1" />Publikuj
@@ -242,6 +247,7 @@ function LandingsList() {
       </CardContent>
       {abLanding && <AbTestingDialog landing={abLanding} open={!!abLanding} onClose={() => setAbLanding(null)} />}
       {heatmapLanding && <HeatmapDialog landing={heatmapLanding} open={!!heatmapLanding} onClose={() => setHeatmapLanding(null)} />}
+      {optLanding && <MicroOptimizerDialog landing={optLanding} open={!!optLanding} onClose={() => { setOptLanding(null); reload(); }} />}
     </Card>
   );
 }

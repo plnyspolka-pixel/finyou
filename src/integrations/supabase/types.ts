@@ -137,6 +137,69 @@ export type Database = {
           },
         ]
       }
+      ai_landing_optimizations: {
+        Row: {
+          applied_variant_id: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          expected_lift_pct: number | null
+          id: string
+          kind: string
+          landing_id: string
+          payload: Json
+          rationale: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applied_variant_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          expected_lift_pct?: number | null
+          id?: string
+          kind: string
+          landing_id: string
+          payload?: Json
+          rationale?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applied_variant_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          expected_lift_pct?: number | null
+          id?: string
+          kind?: string
+          landing_id?: string
+          payload?: Json
+          rationale?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_landing_optimizations_applied_variant_id_fkey"
+            columns: ["applied_variant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_landing_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_landing_optimizations_landing_id_fkey"
+            columns: ["landing_id"]
+            isOneToOne: false
+            referencedRelation: "ai_landings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_landing_variants: {
         Row: {
           created_at: string
