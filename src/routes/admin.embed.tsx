@@ -13,7 +13,11 @@ export const Route = createFileRoute("/admin/embed")({
 });
 
 function EmbedPage() {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://twoja-domena.pl";
+  const PROD_ORIGIN = "https://app.financeyou.pl";
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : PROD_ORIGIN;
+  // Zawsze używamy produkcyjnej domeny w generowanym kodzie embed,
+  // żeby iframe nie wymagał logowania do Lovable (preview jest chronione).
+  const origin = PROD_ORIGIN;
   const [source, setSource] = useState("strona-www");
   const [height, setHeight] = useState("900");
 
