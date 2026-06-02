@@ -23,8 +23,8 @@ export const Route = createFileRoute("/admin/ai-growth-engine")({
 });
 
 const MODULES_COMING_SOON = [
-  "A/B/n Testing", "AI Micro-Optimizer", "Heatmaps & Engagement",
-  "AI SEO Builder", "SEO Content Engine", "Link Building Assistant",
+  "AI Micro-Optimizer", "Heatmaps & Engagement",
+  "AI SEO Builder", "Link Building Assistant",
   "Link Exchange Autopilot", "Email Outreach Autopilot",
 ];
 
