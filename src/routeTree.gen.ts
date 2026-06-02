@@ -74,6 +74,7 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
+import { Route as AdminMarketingEmailRouteImport } from './routes/admin.marketing.email'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
@@ -409,6 +410,11 @@ const AdminMarketingTrackingRoute = AdminMarketingTrackingRouteImport.update({
   path: '/marketing/tracking',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMarketingEmailRoute = AdminMarketingEmailRouteImport.update({
+  id: '/marketing/email',
+  path: '/marketing/email',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -501,6 +507,7 @@ export interface FileRoutesByFullPath {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -571,6 +578,7 @@ export interface FileRoutesByTo {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -645,6 +653,7 @@ export interface FileRoutesById {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -720,6 +729,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/marketing/email'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -790,6 +800,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/marketing/email'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -863,6 +874,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/marketing/email'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -1361,6 +1373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMarketingTrackingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/marketing/email': {
+      id: '/admin/marketing/email'
+      path: '/marketing/email'
+      fullPath: '/admin/marketing/email'
+      preLoaderRoute: typeof AdminMarketingEmailRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/inwestorzy/$id': {
       id: '/admin/inwestorzy/$id'
       path: '/$id'
@@ -1447,6 +1466,7 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
+  AdminMarketingEmailRoute: typeof AdminMarketingEmailRoute
   AdminMarketingTrackingRoute: typeof AdminMarketingTrackingRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
   AdminWnioskiIndexRoute: typeof AdminWnioskiIndexRoute
@@ -1481,6 +1501,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
+  AdminMarketingEmailRoute: AdminMarketingEmailRoute,
   AdminMarketingTrackingRoute: AdminMarketingTrackingRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
   AdminWnioskiIndexRoute: AdminWnioskiIndexRoute,
