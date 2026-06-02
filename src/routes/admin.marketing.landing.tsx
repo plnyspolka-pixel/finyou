@@ -23,7 +23,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Sparkles, Plus, Trash2, ExternalLink, Eye, Users } from "lucide-react";
