@@ -14,6 +14,239 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_growth_action_log: {
+        Row: {
+          action: string
+          actor: string | null
+          cost_pln: number | null
+          created_at: string
+          id: string
+          module: string
+          payload: Json | null
+          status: string
+          summary: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          cost_pln?: number | null
+          created_at?: string
+          id?: string
+          module: string
+          payload?: Json | null
+          status?: string
+          summary?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          cost_pln?: number | null
+          created_at?: string
+          id?: string
+          module?: string
+          payload?: Json | null
+          status?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
+      ai_growth_settings: {
+        Row: {
+          automation_mode: string
+          brand_description: string | null
+          brand_name: string
+          daily_ai_budget_pln: number
+          default_model: string
+          id: string
+          notes: string | null
+          primary_cta_url: string | null
+          target_audience: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          automation_mode?: string
+          brand_description?: string | null
+          brand_name?: string
+          daily_ai_budget_pln?: number
+          default_model?: string
+          id?: string
+          notes?: string | null
+          primary_cta_url?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          automation_mode?: string
+          brand_description?: string | null
+          brand_name?: string
+          daily_ai_budget_pln?: number
+          default_model?: string
+          id?: string
+          notes?: string | null
+          primary_cta_url?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      ai_landing_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          landing_id: string
+          meta: Json | null
+          source: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          landing_id: string
+          meta?: Json | null
+          source?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          landing_id?: string
+          meta?: Json | null
+          source?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_landing_events_landing_id_fkey"
+            columns: ["landing_id"]
+            isOneToOne: false
+            referencedRelation: "ai_landings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_landing_events_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "ai_landing_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_landing_variants: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          landing_id: string
+          overrides: Json
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          landing_id: string
+          overrides?: Json
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          landing_id?: string
+          overrides?: Json
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_landing_variants_landing_id_fkey"
+            columns: ["landing_id"]
+            isOneToOne: false
+            referencedRelation: "ai_landings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_landings: {
+        Row: {
+          audience: string | null
+          brief: string | null
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_url: string | null
+          goal: string | null
+          hero_headline: string | null
+          hero_subheadline: string | null
+          id: string
+          keywords: string[] | null
+          meta_description: string | null
+          meta_title: string | null
+          published_at: string | null
+          raw_ai_output: Json | null
+          sections: Json
+          slug: string
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string | null
+          brief?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          goal?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          raw_ai_output?: Json | null
+          sections?: Json
+          slug: string
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string | null
+          brief?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          goal?: string | null
+          hero_headline?: string | null
+          hero_subheadline?: string | null
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          meta_title?: string | null
+          published_at?: string | null
+          raw_ai_output?: Json | null
+          sections?: Json
+          slug?: string
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
