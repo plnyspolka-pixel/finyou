@@ -3247,12 +3247,14 @@ export type Database = {
       lead_communications: {
         Row: {
           agent_id: string | null
+          attachments: Json
           channel: string
           content: string | null
           created_at: string
           created_by: string | null
           direction: string
           duration_seconds: number | null
+          elevenlabs_conversation_id: string | null
           email: string | null
           error_message: string | null
           external_id: string | null
@@ -3263,17 +3265,20 @@ export type Database = {
           recording_url: string | null
           status: string | null
           subject: string | null
+          thread_external_id: string | null
           transcript: Json | null
           updated_at: string
         }
         Insert: {
           agent_id?: string | null
+          attachments?: Json
           channel: string
           content?: string | null
           created_at?: string
           created_by?: string | null
           direction?: string
           duration_seconds?: number | null
+          elevenlabs_conversation_id?: string | null
           email?: string | null
           error_message?: string | null
           external_id?: string | null
@@ -3284,17 +3289,20 @@ export type Database = {
           recording_url?: string | null
           status?: string | null
           subject?: string | null
+          thread_external_id?: string | null
           transcript?: Json | null
           updated_at?: string
         }
         Update: {
           agent_id?: string | null
+          attachments?: Json
           channel?: string
           content?: string | null
           created_at?: string
           created_by?: string | null
           direction?: string
           duration_seconds?: number | null
+          elevenlabs_conversation_id?: string | null
           email?: string | null
           error_message?: string | null
           external_id?: string | null
@@ -3305,6 +3313,7 @@ export type Database = {
           recording_url?: string | null
           status?: string | null
           subject?: string | null
+          thread_external_id?: string | null
           transcript?: Json | null
           updated_at?: string
         }
@@ -3334,9 +3343,11 @@ export type Database = {
           first_name: string | null
           google_ads_id: string | null
           id: string
+          instagram_igsid: string | null
           investor_id: string | null
           last_name: string | null
           loan_application_id: string | null
+          messenger_psid: string | null
           meta_campaign_id: string | null
           meta_form_id: string | null
           meta_lead_id: string | null
@@ -3369,9 +3380,11 @@ export type Database = {
           first_name?: string | null
           google_ads_id?: string | null
           id?: string
+          instagram_igsid?: string | null
           investor_id?: string | null
           last_name?: string | null
           loan_application_id?: string | null
+          messenger_psid?: string | null
           meta_campaign_id?: string | null
           meta_form_id?: string | null
           meta_lead_id?: string | null
@@ -3404,9 +3417,11 @@ export type Database = {
           first_name?: string | null
           google_ads_id?: string | null
           id?: string
+          instagram_igsid?: string | null
           investor_id?: string | null
           last_name?: string | null
           loan_application_id?: string | null
+          messenger_psid?: string | null
           meta_campaign_id?: string | null
           meta_form_id?: string | null
           meta_lead_id?: string | null
