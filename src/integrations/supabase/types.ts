@@ -14,6 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_admin_audit_log: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          success: boolean
+          tool_input: Json | null
+          tool_name: string
+          tool_output: Json | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          success?: boolean
+          tool_input?: Json | null
+          tool_name: string
+          tool_output?: Json | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          success?: boolean
+          tool_input?: Json | null
+          tool_name?: string
+          tool_output?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_admin_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_admin_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          tokens_in: number | null
+          tokens_out: number | null
+          tool_calls: Json | null
+          tool_results: Json | null
+        }
+        Insert: {
+          content?: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_calls?: Json | null
+          tool_results?: Json | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_calls?: Json | null
+          tool_results?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_admin_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_admin_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_admin_settings: {
+        Row: {
+          enable_db_read: boolean
+          enable_db_write: boolean
+          enable_file_read: boolean
+          id: string
+          max_tokens: number
+          model: string
+          singleton: boolean
+          system_prompt: string
+          temperature: number
+          updated_at: string
+        }
+        Insert: {
+          enable_db_read?: boolean
+          enable_db_write?: boolean
+          enable_file_read?: boolean
+          id?: string
+          max_tokens?: number
+          model?: string
+          singleton?: boolean
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Update: {
+          enable_db_read?: boolean
+          enable_db_write?: boolean
+          enable_file_read?: boolean
+          id?: string
+          max_tokens?: number
+          model?: string
+          singleton?: boolean
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_backlinks: {
         Row: {
           anchor_text: string | null
@@ -4313,6 +4456,8 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      exec_admin_select: { Args: { _sql: string }; Returns: Json }
+      exec_admin_write: { Args: { _sql: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

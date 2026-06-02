@@ -2,7 +2,8 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot } from "lucide-react";
+import { AiAdminChat } from "@/components/admin/AiAdminChat";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -59,6 +60,7 @@ const groups: Group[] = [
   {
     label: "Konfiguracja",
     items: [
+      { to: "/admin/ai-administrator", label: "AI Administrator", icon: Bot },
       { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
       { to: "/admin/fakturowo", label: "Fakturowo", icon: Receipt },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
@@ -121,6 +123,7 @@ function AdminLayout() {
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto p-6"><Outlet /></main>
+      {roles.includes("administrator") && <AiAdminChat />}
     </div>
   );
 }
