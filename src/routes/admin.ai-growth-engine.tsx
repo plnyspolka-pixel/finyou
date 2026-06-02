@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Sparkles, ExternalLink, Trash2, Copy, Loader2, Eye, EyeOff } from "lucide-react";
+import { Sparkles, ExternalLink, Trash2, Copy, Loader2, Eye, EyeOff, FlaskConical } from "lucide-react";
 import {
   generateAiLanding, setLandingStatus, deleteLanding, updateGrowthSettings,
 } from "@/lib/ai-growth.functions";
+import { AbTestingDialog } from "@/components/ab-testing-dialog";
 
 export const Route = createFileRoute("/admin/ai-growth-engine")({
   component: GrowthEnginePage,
