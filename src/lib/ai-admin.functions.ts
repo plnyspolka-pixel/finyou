@@ -98,7 +98,8 @@ export const sendAdminChat = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { callAnthropic, runTool, type AnthropicMessage } = await import("./ai-admin.server");
+    const { callAnthropic, runTool } = await import("./ai-admin.server");
+    type AnthropicMessage = import("./ai-admin.server").AnthropicMessage;
 
     // Load settings
     const { data: settings, error: sErr } = await supabaseAdmin
