@@ -288,3 +288,49 @@ function WniosekStartPage() {
     </div>
   );
 }
+
+function ConsentCheckboxes({
+  docs, accepted, onChange,
+}: {
+  docs: Record<ConsentKind, ConsentDoc | null>;
+  accepted: Record<ConsentKind, boolean>;
+  onChange: (next: Record<ConsentKind, boolean>) => void;
+}) {
+  const items: { key: ConsentKind; required: boolean }[] = [
+    { key: "privacy", required: true },
+    { key: "terms", required: true },
+    { key: "marketing", required: false },
+  ];
+  const visible = items.filter((it) => docs[it.key]);
+  if (visible.length === 0) return null;
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      {visible.map(({ key, required }) => {
+        const doc = docs[key]!;
+        return (
+          <label key={key} className="flex items-start gap-2 text-sm">
+            <Checkbox
+              checked={accepted[key]}
+              onCheckedChange={(v) => onChange({ ...accepted, [key]: v === true })}
+              className="mt-0.5"
+            />
+            <span className="leading-snug">
+              {doc.title}{required && <span className="text-destructive"> *</span>}{" "}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button type="button" className="text-accent hover:underline">(czytaj)</button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader><DialogTitle>{doc.title}</DialogTitle></DialogHeader>
+                  <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm text-muted-foreground">
+                    {doc.content}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
