@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_backlinks: {
+        Row: {
+          anchor_text: string | null
+          created_at: string
+          created_by: string | null
+          dofollow: boolean
+          domain_authority: number | null
+          first_seen_at: string
+          id: string
+          last_checked_at: string | null
+          link_type: string
+          notes: string | null
+          outreach_target_id: string | null
+          source_domain: string
+          source_url: string
+          status: string
+          target_url: string
+          updated_at: string
+        }
+        Insert: {
+          anchor_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          dofollow?: boolean
+          domain_authority?: number | null
+          first_seen_at?: string
+          id?: string
+          last_checked_at?: string | null
+          link_type?: string
+          notes?: string | null
+          outreach_target_id?: string | null
+          source_domain: string
+          source_url: string
+          status?: string
+          target_url: string
+          updated_at?: string
+        }
+        Update: {
+          anchor_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          dofollow?: boolean
+          domain_authority?: number | null
+          first_seen_at?: string
+          id?: string
+          last_checked_at?: string | null
+          link_type?: string
+          notes?: string | null
+          outreach_target_id?: string | null
+          source_domain?: string
+          source_url?: string
+          status?: string
+          target_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_backlinks_outreach_target_id_fkey"
+            columns: ["outreach_target_id"]
+            isOneToOne: false
+            referencedRelation: "ai_outreach_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_growth_action_log: {
         Row: {
           action: string
@@ -306,6 +371,48 @@ export type Database = {
           source?: string
           status?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_linkbuilding_suggestions: {
+        Row: {
+          contact_hint: string | null
+          created_at: string
+          created_by: string | null
+          expected_da: number | null
+          id: string
+          priority: number
+          rationale: string
+          status: string
+          strategy: string
+          target_domain: string
+          updated_at: string
+        }
+        Insert: {
+          contact_hint?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_da?: number | null
+          id?: string
+          priority?: number
+          rationale?: string
+          status?: string
+          strategy: string
+          target_domain: string
+          updated_at?: string
+        }
+        Update: {
+          contact_hint?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_da?: number | null
+          id?: string
+          priority?: number
+          rationale?: string
+          status?: string
+          strategy?: string
+          target_domain?: string
           updated_at?: string
         }
         Relationships: []
