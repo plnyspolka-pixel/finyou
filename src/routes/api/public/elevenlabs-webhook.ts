@@ -92,12 +92,40 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             })
             .eq("id", queueRow.id);
         }
+
+        // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
+        try {
+          const { logLeadCommunication } = await import("@/lib/lead-comms.server");
+          const durationSec = Number(body?.metadata?.call_duration_secs ?? body?.duration_seconds ?? body?.call_duration_secs) || null;
+          const recordingUrl = body?.recording_url || body?.audio_url || body?.metadata?.recording_url || null;
+          await logLeadCommunication({
+            loanApplicationId: queueRow?.loan_application_id ?? null,
+            clientId: queueRow?.client_id ?? null,
+            metaLeadId: queueRow?.meta_lead_id ?? null,
+            phoneNormalized: queueRow?.phone_normalized ?? phone ?? null,
+            channel: "voicebot_call",
+            direction: "outbound",
+            status: "completed",
+            subject: summary ? "Rozmowa voicebota" : null,
+            content: summary || transcript || null,
+            transcript: body?.transcript_segments || body?.turns || body?.messages || (transcript ? { text: transcript } : null),
+            recordingUrl,
+            durationSeconds: durationSec,
+            externalId: callId ?? null,
+            agentId: body?.agent_id ?? queueRow?.agent_id ?? null,
+            metadata: { source: "elevenlabs_webhook", raw: body },
+          });
+        } catch (e) {
+          console.error("[elevenlabs-webhook] log lead comm failed", e);
+        }
+
         await supabase.from("automation_events").insert({
           automation_type: "elevenlabs_webhook",
           status: "received",
           sent_payload: {},
           response_payload: body,
         });
+
         return new Response(JSON.stringify({ ok: true }), {
           headers: { "content-type": "application/json" },
         });

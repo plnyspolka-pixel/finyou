@@ -3244,6 +3244,217 @@ export type Database = {
           },
         ]
       }
+      lead_communications: {
+        Row: {
+          agent_id: string | null
+          channel: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          duration_seconds: number | null
+          email: string | null
+          error_message: string | null
+          external_id: string | null
+          id: string
+          lead_id: string | null
+          metadata: Json
+          phone_normalized: string | null
+          recording_url: string | null
+          status: string | null
+          subject: string | null
+          transcript: Json | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          channel: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          email?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          phone_normalized?: string | null
+          recording_url?: string | null
+          status?: string | null
+          subject?: string | null
+          transcript?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          channel?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          email?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json
+          phone_normalized?: string | null
+          recording_url?: string | null
+          status?: string | null
+          subject?: string | null
+          transcript?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_communications_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          application_data: Json
+          assigned_to: string | null
+          client_id: string | null
+          consent_email: boolean
+          consent_marketing: boolean
+          consent_phone: boolean
+          consent_rodo: boolean
+          consent_sms: boolean
+          created_at: string
+          current_form_step: number | null
+          email: string | null
+          first_name: string | null
+          google_ads_id: string | null
+          id: string
+          investor_id: string | null
+          last_name: string | null
+          loan_application_id: string | null
+          meta_campaign_id: string | null
+          meta_form_id: string | null
+          meta_lead_id: string | null
+          notes: string | null
+          phone_normalized: string | null
+          phone_raw: string | null
+          return_link: string | null
+          return_link_token: string | null
+          source: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          application_data?: Json
+          assigned_to?: string | null
+          client_id?: string | null
+          consent_email?: boolean
+          consent_marketing?: boolean
+          consent_phone?: boolean
+          consent_rodo?: boolean
+          consent_sms?: boolean
+          created_at?: string
+          current_form_step?: number | null
+          email?: string | null
+          first_name?: string | null
+          google_ads_id?: string | null
+          id?: string
+          investor_id?: string | null
+          last_name?: string | null
+          loan_application_id?: string | null
+          meta_campaign_id?: string | null
+          meta_form_id?: string | null
+          meta_lead_id?: string | null
+          notes?: string | null
+          phone_normalized?: string | null
+          phone_raw?: string | null
+          return_link?: string | null
+          return_link_token?: string | null
+          source?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          application_data?: Json
+          assigned_to?: string | null
+          client_id?: string | null
+          consent_email?: boolean
+          consent_marketing?: boolean
+          consent_phone?: boolean
+          consent_rodo?: boolean
+          consent_sms?: boolean
+          created_at?: string
+          current_form_step?: number | null
+          email?: string | null
+          first_name?: string | null
+          google_ads_id?: string | null
+          id?: string
+          investor_id?: string | null
+          last_name?: string | null
+          loan_application_id?: string | null
+          meta_campaign_id?: string | null
+          meta_form_id?: string | null
+          meta_lead_id?: string | null
+          notes?: string | null
+          phone_normalized?: string | null
+          phone_raw?: string | null
+          return_link?: string | null
+          return_link_token?: string | null
+          source?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_meta_lead_id_fkey"
+            columns: ["meta_lead_id"]
+            isOneToOne: false
+            referencedRelation: "meta_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loan_applications: {
         Row: {
           admin_decision: string | null

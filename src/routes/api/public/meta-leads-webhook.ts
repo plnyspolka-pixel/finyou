@@ -215,6 +215,28 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 lead_application_id: capture.loanApplicationId,
               }, { onConflict: "meta_lead_id" }).select("id").single();
 
+              // Upsert zunifikowanego leada (panel admina widzi wszystko z jednego miejsca)
+              try {
+                const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
+                await upsertLeadFromSource({
+                  type: "pozyczkowy",
+                  source: "meta_ads",
+                  firstName: capture.firstName,
+                  lastName: splitName(name).last,
+                  email,
+                  phoneRaw: phone,
+                  phoneNormalized: phone ? normPhone(phone) : null,
+                  metaLeadId: inserted?.id ?? null,
+                  metaFormId: v.form_id ?? details.form_id,
+                  metaCampaignId: v.campaign_id ?? details.campaign_id,
+                  loanApplicationId: capture.loanApplicationId,
+                  clientId: capture.clientId,
+                  applicationData: { meta_field_data: details.field_data, return_link: capture.returnLink },
+                });
+              } catch (e) {
+                console.error("[meta-leads-webhook] unified lead upsert", e);
+              }
+
               // 3) SMS z linkiem do dokończenia wniosku
               if (phone && capture.returnLink) {
                 const smsBody = `Cześć ${capture.firstName ?? ""}! Dziękujemy za zainteresowanie pożyczką. Dokończ wniosek tutaj: ${capture.returnLink} — Finance You`.replace(/\s+/g, " ").trim();
