@@ -37,6 +37,12 @@ export function AiAdminChat() {
   const listFn = useServerFn(listConversations);
   const getFn = useServerFn(getConversation);
   const delFn = useServerFn(deleteConversation);
+  const transcribeFn = useServerFn(transcribeAdminAudio);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   const convs = useQuery({
     queryKey: ["ai-admin-convs"],
