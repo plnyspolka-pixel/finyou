@@ -79,6 +79,104 @@ export type Database = {
           },
         ]
       }
+      ai_competitor_snapshots: {
+        Row: {
+          ai_analysis: Json | null
+          change_summary: string | null
+          changed: boolean
+          checked_at: string
+          competitor_id: string
+          content: string | null
+          content_hash: string
+          created_at: string
+          description: string | null
+          id: string
+          title: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          change_summary?: string | null
+          changed?: boolean
+          checked_at?: string
+          competitor_id: string
+          content?: string | null
+          content_hash: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          change_summary?: string | null
+          changed?: boolean
+          checked_at?: string
+          competitor_id?: string
+          content?: string | null
+          content_hash?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_competitor_snapshots_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "ai_competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_competitors: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          is_active: boolean
+          last_checked_at: string | null
+          name: string
+          notes: string | null
+          tags: string[] | null
+          updated_at: string
+          urls: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          name: string
+          notes?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          urls?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          name?: string
+          notes?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          urls?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_funnel_events: {
         Row: {
           campaign: string | null

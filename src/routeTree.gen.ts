@@ -61,6 +61,7 @@ import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
 import { Route as AdminAiLinkbuildingRouteImport } from './routes/admin.ai-linkbuilding'
 import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growth-engine'
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
+import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminWnioskiIndexRouteImport } from './routes/admin.wnioski.index'
 import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
@@ -337,6 +338,11 @@ const AdminAiFunnelRoute = AdminAiFunnelRouteImport.update({
   path: '/ai-funnel',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAiCompetitorsRoute = AdminAiCompetitorsRouteImport.update({
+  id: '/ai-competitors',
+  path: '/ai-competitors',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminWnioskiIndexRoute = AdminWnioskiIndexRouteImport.update({
   id: '/wnioski/',
   path: '/wnioski/',
@@ -428,6 +434,7 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
   '/admin/ai-linkbuilding': typeof AdminAiLinkbuildingRoute
@@ -494,6 +501,7 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
   '/admin/ai-linkbuilding': typeof AdminAiLinkbuildingRoute
@@ -564,6 +572,7 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
   '/admin/ai-linkbuilding': typeof AdminAiLinkbuildingRoute
@@ -635,6 +644,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/wniosek-start'
     | '/wybor-roli'
+    | '/admin/ai-competitors'
     | '/admin/ai-funnel'
     | '/admin/ai-growth-engine'
     | '/admin/ai-linkbuilding'
@@ -701,6 +711,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/wniosek-start'
     | '/wybor-roli'
+    | '/admin/ai-competitors'
     | '/admin/ai-funnel'
     | '/admin/ai-growth-engine'
     | '/admin/ai-linkbuilding'
@@ -770,6 +781,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/wniosek-start'
     | '/wybor-roli'
+    | '/admin/ai-competitors'
     | '/admin/ai-funnel'
     | '/admin/ai-growth-engine'
     | '/admin/ai-linkbuilding'
@@ -1220,6 +1232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiFunnelRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ai-competitors': {
+      id: '/admin/ai-competitors'
+      path: '/ai-competitors'
+      fullPath: '/admin/ai-competitors'
+      preLoaderRoute: typeof AdminAiCompetitorsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/wnioski/': {
       id: '/admin/wnioski/'
       path: '/wnioski'
@@ -1341,6 +1360,7 @@ const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAiCompetitorsRoute: typeof AdminAiCompetitorsRoute
   AdminAiFunnelRoute: typeof AdminAiFunnelRoute
   AdminAiGrowthEngineRoute: typeof AdminAiGrowthEngineRoute
   AdminAiLinkbuildingRoute: typeof AdminAiLinkbuildingRoute
@@ -1373,6 +1393,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAiCompetitorsRoute: AdminAiCompetitorsRoute,
   AdminAiFunnelRoute: AdminAiFunnelRoute,
   AdminAiGrowthEngineRoute: AdminAiGrowthEngineRoute,
   AdminAiLinkbuildingRoute: AdminAiLinkbuildingRoute,
