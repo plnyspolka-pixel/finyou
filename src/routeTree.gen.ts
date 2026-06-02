@@ -71,6 +71,7 @@ import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
+import { Route as ApiPublicResendInboundWebhookRouteImport } from './routes/api/public/resend-inbound-webhook'
 import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/public/meta-messenger-webhook'
 import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/public/meta-leads-webhook'
 import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api/public/mailgun-inbound-webhook'
@@ -399,6 +400,12 @@ const ApiPublicResendWebhookRoute = ApiPublicResendWebhookRouteImport.update({
   path: '/api/public/resend-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicResendInboundWebhookRoute =
+  ApiPublicResendInboundWebhookRouteImport.update({
+    id: '/api/public/resend-inbound-webhook',
+    path: '/api/public/resend-inbound-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMetaMessengerWebhookRoute =
   ApiPublicMetaMessengerWebhookRouteImport.update({
     id: '/api/public/meta-messenger-webhook',
@@ -564,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
+  '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
@@ -642,6 +650,7 @@ export interface FileRoutesByTo {
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
+  '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
@@ -724,6 +733,7 @@ export interface FileRoutesById {
   '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
+  '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
@@ -807,6 +817,7 @@ export interface FileRouteTypes {
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
+    | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
@@ -885,6 +896,7 @@ export interface FileRouteTypes {
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
+    | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
@@ -966,6 +978,7 @@ export interface FileRouteTypes {
     | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
     | '/api/public/meta-messenger-webhook'
+    | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
@@ -997,6 +1010,7 @@ export interface RootRouteChildren {
   ApiPublicMailgunInboundWebhookRoute: typeof ApiPublicMailgunInboundWebhookRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
   ApiPublicMetaMessengerWebhookRoute: typeof ApiPublicMetaMessengerWebhookRoute
+  ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
@@ -1440,6 +1454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicResendWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/resend-inbound-webhook': {
+      id: '/api/public/resend-inbound-webhook'
+      path: '/api/public/resend-inbound-webhook'
+      fullPath: '/api/public/resend-inbound-webhook'
+      preLoaderRoute: typeof ApiPublicResendInboundWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/meta-messenger-webhook': {
       id: '/api/public/meta-messenger-webhook'
       path: '/api/public/meta-messenger-webhook'
@@ -1739,6 +1760,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMailgunInboundWebhookRoute: ApiPublicMailgunInboundWebhookRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
   ApiPublicMetaMessengerWebhookRoute: ApiPublicMetaMessengerWebhookRoute,
+  ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
@@ -1748,13 +1770,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
