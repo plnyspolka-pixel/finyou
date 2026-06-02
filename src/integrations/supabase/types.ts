@@ -247,6 +247,145 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_seo_articles: {
+        Row: {
+          content_md: string
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_url: string | null
+          excerpt: string | null
+          id: string
+          keywords: string[] | null
+          meta_description: string | null
+          meta_title: string | null
+          primary_keyword: string | null
+          published_at: string | null
+          raw_ai_output: Json | null
+          reading_minutes: number | null
+          scheduled_for: string | null
+          slug: string
+          source: string
+          status: string
+          title: string
+          topic_id: string | null
+          updated_at: string
+          word_count: number | null
+        }
+        Insert: {
+          content_md: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          excerpt?: string | null
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          meta_title?: string | null
+          primary_keyword?: string | null
+          published_at?: string | null
+          raw_ai_output?: Json | null
+          reading_minutes?: number | null
+          scheduled_for?: string | null
+          slug: string
+          source?: string
+          status?: string
+          title: string
+          topic_id?: string | null
+          updated_at?: string
+          word_count?: number | null
+        }
+        Update: {
+          content_md?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          excerpt?: string | null
+          id?: string
+          keywords?: string[] | null
+          meta_description?: string | null
+          meta_title?: string | null
+          primary_keyword?: string | null
+          published_at?: string | null
+          raw_ai_output?: Json | null
+          reading_minutes?: number | null
+          scheduled_for?: string | null
+          slug?: string
+          source?: string
+          status?: string
+          title?: string
+          topic_id?: string | null
+          updated_at?: string
+          word_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_seo_articles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "ai_seo_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_seo_topics: {
+        Row: {
+          article_id: string | null
+          created_at: string
+          created_by: string | null
+          difficulty: number | null
+          id: string
+          notes: string | null
+          primary_keyword: string | null
+          priority: number
+          search_intent: string | null
+          secondary_keywords: string[] | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          difficulty?: number | null
+          id?: string
+          notes?: string | null
+          primary_keyword?: string | null
+          priority?: number
+          search_intent?: string | null
+          secondary_keywords?: string[] | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          difficulty?: number | null
+          id?: string
+          notes?: string | null
+          primary_keyword?: string | null
+          priority?: number
+          search_intent?: string | null
+          secondary_keywords?: string[] | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_seo_topics_article_fk"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "ai_seo_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
