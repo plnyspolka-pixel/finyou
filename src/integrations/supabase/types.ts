@@ -2932,6 +2932,125 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_leads: {
+        Row: {
+          created_at: string
+          custom_fields: Json
+          email: string
+          id: string
+          ip_address: string | null
+          landing_page_id: string
+          name: string | null
+          phone: string | null
+          source: string | null
+          user_agent: string | null
+          utm: Json | null
+        }
+        Insert: {
+          created_at?: string
+          custom_fields?: Json
+          email: string
+          id?: string
+          ip_address?: string | null
+          landing_page_id: string
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          user_agent?: string | null
+          utm?: Json | null
+        }
+        Update: {
+          created_at?: string
+          custom_fields?: Json
+          email?: string
+          id?: string
+          ip_address?: string | null
+          landing_page_id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          user_agent?: string | null
+          utm?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_leads_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_pages: {
+        Row: {
+          conversion_count: number
+          created_at: string
+          created_by: string
+          cta_text: string
+          form_fields: Json
+          headline: string
+          hero_image_url: string | null
+          id: string
+          meta_description: string | null
+          og_image_url: string | null
+          published: boolean
+          redirect_url: string | null
+          sections: Json
+          slug: string
+          subheadline: string | null
+          thank_you_message: string
+          theme: Json
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          conversion_count?: number
+          created_at?: string
+          created_by: string
+          cta_text?: string
+          form_fields?: Json
+          headline: string
+          hero_image_url?: string | null
+          id?: string
+          meta_description?: string | null
+          og_image_url?: string | null
+          published?: boolean
+          redirect_url?: string | null
+          sections?: Json
+          slug: string
+          subheadline?: string | null
+          thank_you_message?: string
+          theme?: Json
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          conversion_count?: number
+          created_at?: string
+          created_by?: string
+          cta_text?: string
+          form_fields?: Json
+          headline?: string
+          hero_image_url?: string | null
+          id?: string
+          meta_description?: string | null
+          og_image_url?: string | null
+          published?: boolean
+          redirect_url?: string | null
+          sections?: Json
+          slug?: string
+          subheadline?: string | null
+          thank_you_message?: string
+          theme?: Json
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       lead_attributions: {
         Row: {
           campaign_id: string | null
