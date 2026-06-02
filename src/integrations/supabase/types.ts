@@ -4456,6 +4456,8 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      exec_admin_select: { Args: { _sql: string }; Returns: Json }
+      exec_admin_write: { Args: { _sql: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
