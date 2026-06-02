@@ -66,13 +66,44 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         if (evt?.type && !["email.received", "email.inbound", "inbound.email.received"].includes(evt.type)) {
           return new Response("ignored", { status: 200 });
         }
-        const data = evt?.data ?? evt;
+        const meta = evt?.data ?? evt;
+        const emailId = String(meta?.email_id ?? meta?.id ?? "");
+
+        // Webhook zawiera TYLKO metadane — body i załączniki trzeba dociągnąć przez Resend API.
+        const GATEWAY = "https://connector-gateway.lovable.dev/resend";
+        const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+        const RESEND_API_KEY = process.env.RESEND_API_KEY;
+        const resendHeaders: Record<string, string> = {
+          Authorization: `Bearer ${LOVABLE_API_KEY ?? ""}`,
+          "X-Connection-Api-Key": RESEND_API_KEY ?? "",
+        };
+
+        let data: any = meta;
+        if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+          try {
+            const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}`, { headers: resendHeaders });
+            if (r.ok) data = { ...meta, ...(await r.json()) };
+            else console.error("[resend-inbound] fetch email failed", r.status, await r.text().catch(() => ""));
+          } catch (e) { console.error("[resend-inbound] fetch email error", e); }
+        }
 
         const fromHdr = pickFirstAddr(data.from ?? data.From);
         const { email: fromEmail, name } = parseAddr(fromHdr);
         const subject = String(data.subject ?? data.Subject ?? "(bez tematu)");
-        const text = String(data.text ?? data.stripped_text ?? data.plain ?? "");
-        const html = typeof data.html === "string" ? data.html : null;
+        let text = String(data.text ?? "");
+        let html: string | null = typeof data.html === "string" ? data.html : null;
+        // html_format=data_uri → dekoduj
+        if (html && (data.html_format === "data_uri" || html.startsWith("data:"))) {
+          try {
+            const m = html.match(/^data:([^;,]+)(;base64)?,(.*)$/);
+            if (m) {
+              const isB64 = !!m[2];
+              const body = isB64 ? Buffer.from(m[3], "base64").toString("utf8") : decodeURIComponent(m[3]);
+              html = body;
+            }
+          } catch { /* noop */ }
+        }
+        if (!text && html) text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 8000);
         const messageId = String(data.message_id ?? data.messageId ?? data["Message-Id"] ?? "");
         const inReplyTo = String(data.in_reply_to ?? data["In-Reply-To"] ?? "") || null;
         const references = String(data.references ?? data.References ?? "") || null;
@@ -92,26 +123,29 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         }
         if (!leadId) return new Response("no lead", { status: 200 });
 
-        // Załączniki — Resend Inbound przekazuje listę z URL-ami (i czasem `content` base64).
+        // Załączniki: pobierz listę z signed download_url przez Resend API
         const stored: any[] = [];
-        const atts: any[] = Array.isArray(data.attachments) ? data.attachments : [];
-        for (const a of atts) {
-          const filename = a?.filename ?? a?.name ?? `file-${Date.now()}`;
-          const mime = a?.content_type ?? a?.contentType ?? a?.mime ?? "application/octet-stream";
-          if (a?.url) {
-            const s = await downloadAndStore({ leadId, url: a.url, filename, mime });
-            if (s) stored.push(s);
-          } else if (typeof a?.content === "string") {
-            try {
-              const buf = Buffer.from(a.content, "base64");
-              const safeName = String(filename).replace(/[^\w.\-]+/g, "_");
-              const path = `leads/${leadId}/${Date.now()}-${safeName}`;
-              const { error } = await supabaseAdmin.storage.from("documents")
-                .upload(path, buf, { contentType: mime, upsert: false });
-              if (!error) stored.push({ name: safeName, mime, size: buf.byteLength, path });
-            } catch { /* noop */ }
-          }
+        if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+          try {
+            const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, { headers: resendHeaders });
+            if (r.ok) {
+              const list = await r.json();
+              const items: any[] = Array.isArray(list?.data) ? list.data : [];
+              for (const a of items) {
+                const filename = a?.filename ?? `file-${a?.id ?? Date.now()}`;
+                const mime = a?.content_type ?? "application/octet-stream";
+                if (a?.download_url) {
+                  const s = await downloadAndStore({ leadId, url: a.download_url, filename, mime });
+                  if (s) stored.push(s);
+                }
+              }
+            } else {
+              console.error("[resend-inbound] fetch attachments failed", r.status, await r.text().catch(() => ""));
+            }
+          } catch (e) { console.error("[resend-inbound] fetch attachments error", e); }
         }
+
+
 
         const inboundLogId = await logLeadCommunication({
           leadId,
