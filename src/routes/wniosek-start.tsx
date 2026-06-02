@@ -110,6 +110,15 @@ function WniosekStartPage() {
       toast.error("Uzupełnij wszystkie pola");
       return;
     }
+    // Wymagane: polityka prywatności + regulamin (jeśli skonfigurowane). Marketing — dobrowolny.
+    if (consentDocs.privacy && !accepted.privacy) {
+      toast.error("Musisz zaakceptować politykę prywatności");
+      return;
+    }
+    if (consentDocs.terms && !accepted.terms) {
+      toast.error("Musisz zaakceptować regulamin");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -126,6 +135,35 @@ function WniosekStartPage() {
     }
     if (data.user) {
       await supabase.from("profiles").update({ phone }).eq("user_id", data.user.id);
+    }
+    // Zapisz zgody (snapshot wersji) jako klienta — jeśli klient z tym user_id istnieje, zaktualizuj; inaczej wstaw.
+    if (data.user) {
+      const versions: Record<string, { id: string; version: number; accepted: boolean }> = {};
+      (Object.keys(accepted) as ConsentKind[]).forEach((k) => {
+        const doc = consentDocs[k];
+        if (doc) versions[k] = { id: doc.id, version: doc.version, accepted: accepted[k] };
+      });
+      const consentPayload = {
+        consent_rodo: !!accepted.privacy,
+        consent_marketing: !!accepted.marketing,
+        consent_terms: !!accepted.terms,
+        consent_versions: versions,
+        consents_accepted_at: new Date().toISOString(),
+      };
+      const { data: existing } = await supabase.from("clients").select("id").eq("user_id", data.user.id).maybeSingle();
+      if (existing?.id) {
+        await supabase.from("clients").update(consentPayload).eq("id", existing.id);
+      } else {
+        await supabase.from("clients").insert({
+          user_id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          source: "wniosek-start",
+          ...consentPayload,
+        });
+      }
     }
     if (data.session) {
       toast.success("Konto utworzone");
