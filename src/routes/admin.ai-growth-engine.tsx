@@ -174,6 +174,7 @@ function LandingsList() {
   const del = useServerFn(deleteLanding);
   const [items, setItems] = useState<any[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
+  const [abLanding, setAbLanding] = useState<any | null>(null);
 
   useEffect(() => {
     supabase.from("ai_landings").select("*").order("created_at", { ascending: false }).then(({ data }) => setItems(data ?? []));
