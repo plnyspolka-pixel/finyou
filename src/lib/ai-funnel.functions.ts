@@ -111,7 +111,6 @@ export const getFunnelStats = createServerFn({ method: "POST" })
 
     // Device split
     const deviceMap = new Map<string, number>();
-    for (const [, ] of sessionFirstTouch) { /* count by session below */ }
     const sessionDevice = new Map<string, string>();
     for (const e of sortedEvs) {
       if (!sessionDevice.has(e.session_id) && e.device) sessionDevice.set(e.session_id, e.device);
