@@ -74,6 +74,7 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
+import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
 import { Route as AdminMarketingLandingRouteImport } from './routes/admin.marketing.landing'
 import { Route as AdminMarketingEmailRouteImport } from './routes/admin.marketing.email'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
@@ -411,6 +412,11 @@ const AdminMarketingTrackingRoute = AdminMarketingTrackingRouteImport.update({
   path: '/marketing/tracking',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMarketingSocialRoute = AdminMarketingSocialRouteImport.update({
+  id: '/marketing/social',
+  path: '/marketing/social',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMarketingLandingRoute = AdminMarketingLandingRouteImport.update({
   id: '/marketing/landing',
   path: '/marketing/landing',
@@ -515,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
+  '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -587,6 +594,7 @@ export interface FileRoutesByTo {
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
+  '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -663,6 +671,7 @@ export interface FileRoutesById {
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
+  '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -740,6 +749,7 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy/$id'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
+    | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -812,6 +822,7 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy/$id'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
+    | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -887,6 +898,7 @@ export interface FileRouteTypes {
     | '/admin/inwestorzy/$id'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
+    | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
@@ -1385,6 +1397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMarketingTrackingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/marketing/social': {
+      id: '/admin/marketing/social'
+      path: '/marketing/social'
+      fullPath: '/admin/marketing/social'
+      preLoaderRoute: typeof AdminMarketingSocialRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/marketing/landing': {
       id: '/admin/marketing/landing'
       path: '/marketing/landing'
@@ -1487,6 +1506,7 @@ interface AdminRouteChildren {
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
   AdminMarketingEmailRoute: typeof AdminMarketingEmailRoute
   AdminMarketingLandingRoute: typeof AdminMarketingLandingRoute
+  AdminMarketingSocialRoute: typeof AdminMarketingSocialRoute
   AdminMarketingTrackingRoute: typeof AdminMarketingTrackingRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
   AdminWnioskiIndexRoute: typeof AdminWnioskiIndexRoute
@@ -1523,6 +1543,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
   AdminMarketingEmailRoute: AdminMarketingEmailRoute,
   AdminMarketingLandingRoute: AdminMarketingLandingRoute,
+  AdminMarketingSocialRoute: AdminMarketingSocialRoute,
   AdminMarketingTrackingRoute: AdminMarketingTrackingRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
   AdminWnioskiIndexRoute: AdminWnioskiIndexRoute,
