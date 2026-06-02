@@ -33,7 +33,12 @@ async function findOrCreateLeadByPsid(opts: {
     source: opts.platform === "messenger" ? "messenger" : "instagram",
     applicationData: { [col]: opts.senderId },
   }).then(async (id) => {
-    if (id) await supabaseAdmin.from("leads").update({ [col]: opts.senderId }).eq("id", id);
+    if (id) {
+      const patch = (col === "messenger_psid"
+        ? { messenger_psid: opts.senderId }
+        : { instagram_igsid: opts.senderId });
+      await supabaseAdmin.from("leads").update(patch).eq("id", id);
+    }
     return id;
   });
 }

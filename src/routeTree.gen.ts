@@ -71,7 +71,9 @@ import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
+import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/public/meta-messenger-webhook'
 import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/public/meta-leads-webhook'
+import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api/public/mailgun-inbound-webhook'
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
@@ -397,10 +399,22 @@ const ApiPublicResendWebhookRoute = ApiPublicResendWebhookRouteImport.update({
   path: '/api/public/resend-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMetaMessengerWebhookRoute =
+  ApiPublicMetaMessengerWebhookRouteImport.update({
+    id: '/api/public/meta-messenger-webhook',
+    path: '/api/public/meta-messenger-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMetaLeadsWebhookRoute =
   ApiPublicMetaLeadsWebhookRouteImport.update({
     id: '/api/public/meta-leads-webhook',
     path: '/api/public/meta-leads-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicMailgunInboundWebhookRoute =
+  ApiPublicMailgunInboundWebhookRouteImport.update({
+    id: '/api/public/mailgun-inbound-webhook',
+    path: '/api/public/mailgun-inbound-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicLoanApplicationRoute =
@@ -547,7 +561,9 @@ export interface FileRoutesByFullPath {
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
+  '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
@@ -623,7 +639,9 @@ export interface FileRoutesByTo {
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
+  '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
@@ -703,7 +721,9 @@ export interface FileRoutesById {
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
+  '/api/public/mailgun-inbound-webhook': typeof ApiPublicMailgunInboundWebhookRoute
   '/api/public/meta-leads-webhook': typeof ApiPublicMetaLeadsWebhookRoute
+  '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
@@ -784,7 +804,9 @@ export interface FileRouteTypes {
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
+    | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
@@ -860,7 +882,9 @@ export interface FileRouteTypes {
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
+    | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
@@ -939,7 +963,9 @@ export interface FileRouteTypes {
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
+    | '/api/public/mailgun-inbound-webhook'
     | '/api/public/meta-leads-webhook'
+    | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
@@ -968,7 +994,9 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
+  ApiPublicMailgunInboundWebhookRoute: typeof ApiPublicMailgunInboundWebhookRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
+  ApiPublicMetaMessengerWebhookRoute: typeof ApiPublicMetaMessengerWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
@@ -1412,11 +1440,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicResendWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/meta-messenger-webhook': {
+      id: '/api/public/meta-messenger-webhook'
+      path: '/api/public/meta-messenger-webhook'
+      fullPath: '/api/public/meta-messenger-webhook'
+      preLoaderRoute: typeof ApiPublicMetaMessengerWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/meta-leads-webhook': {
       id: '/api/public/meta-leads-webhook'
       path: '/api/public/meta-leads-webhook'
       fullPath: '/api/public/meta-leads-webhook'
       preLoaderRoute: typeof ApiPublicMetaLeadsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mailgun-inbound-webhook': {
+      id: '/api/public/mailgun-inbound-webhook'
+      path: '/api/public/mailgun-inbound-webhook'
+      fullPath: '/api/public/mailgun-inbound-webhook'
+      preLoaderRoute: typeof ApiPublicMailgunInboundWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/loan-application': {
@@ -1694,7 +1736,9 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
+  ApiPublicMailgunInboundWebhookRoute: ApiPublicMailgunInboundWebhookRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
+  ApiPublicMetaMessengerWebhookRoute: ApiPublicMetaMessengerWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
