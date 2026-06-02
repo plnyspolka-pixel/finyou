@@ -1,39 +1,80 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
 type Section = { kind: string; heading: string; body?: string; items?: { title: string; text?: string }[] };
+type Variant = { id: string; label: string; weight: number; is_active: boolean; overrides: any };
 
-export function AiLandingView({ landing, embedded = false }: { landing: any; embedded?: boolean }) {
+function pickVariant(landingId: string, variants: Variant[]): Variant | null {
+  const active = variants.filter((v) => v.is_active && v.weight > 0);
+  if (active.length === 0) return null;
+  const key = `ai_ab_${landingId}`;
+  if (typeof window !== "undefined") {
+    const cached = sessionStorage.getItem(key);
+    if (cached) {
+      const hit = active.find((v) => v.id === cached);
+      if (hit) return hit;
+    }
+  }
+  const total = active.reduce((s, v) => s + v.weight, 0);
+  let r = Math.random() * total;
+  let chosen = active[0];
+  for (const v of active) {
+    if (r < v.weight) { chosen = v; break; }
+    r -= v.weight;
+  }
+  if (typeof window !== "undefined") sessionStorage.setItem(key, chosen.id);
+  return chosen;
+}
+
+export function AiLandingView({
+  landing,
+  variants = [],
+  embedded = false,
+}: {
+  landing: any;
+  variants?: Variant[];
+  embedded?: boolean;
+}) {
   const recorded = useRef(false);
+  const variant = useMemo(() => pickVariant(landing.id, variants), [landing.id, variants]);
+
+  const ov = variant?.overrides ?? {};
+  const heroHeadline = ov.hero_headline ?? landing.hero_headline;
+  const heroSub = ov.hero_subheadline ?? landing.hero_subheadline;
+  const ctaLabel = ov.cta_label ?? landing.cta_label ?? "Złóż wniosek";
+  const cta = ov.cta_url ?? landing.cta_url ?? "https://app.financeyou.pl/embed/wniosek";
+  const sections: Section[] = Array.isArray(ov.sections) ? ov.sections
+    : Array.isArray(landing.sections) ? landing.sections : [];
 
   useEffect(() => {
     if (recorded.current) return;
     recorded.current = true;
     void supabase.from("ai_landing_events").insert({
       landing_id: landing.id,
+      variant_id: variant?.id ?? null,
       event_type: "view",
       source: embedded ? "embed" : "direct",
     });
-  }, [landing.id, embedded]);
+  }, [landing.id, embedded, variant?.id]);
 
   const onCtaClick = () => {
     void supabase.from("ai_landing_events").insert({
-      landing_id: landing.id, event_type: "cta_click", source: embedded ? "embed" : "direct",
+      landing_id: landing.id,
+      variant_id: variant?.id ?? null,
+      event_type: "cta_click",
+      source: embedded ? "embed" : "direct",
     });
   };
-
-  const cta = landing.cta_url || "https://app.financeyou.pl/embed/wniosek";
-  const sections: Section[] = Array.isArray(landing.sections) ? landing.sections : [];
 
   return (
     <article className={embedded ? "p-4" : "min-h-screen bg-background"}>
       <div className={`mx-auto max-w-3xl ${embedded ? "" : "px-4 py-12"}`}>
         <header className="space-y-4 text-center">
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{landing.hero_headline}</h1>
-          <p className="text-lg text-muted-foreground">{landing.hero_subheadline}</p>
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{heroHeadline}</h1>
+          <p className="text-lg text-muted-foreground">{heroSub}</p>
           <Button size="lg" asChild onClick={onCtaClick}>
-            <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{landing.cta_label || "Złóż wniosek"}</a>
+            <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{ctaLabel}</a>
           </Button>
         </header>
 
@@ -55,7 +96,7 @@ export function AiLandingView({ landing, embedded = false }: { landing: any; emb
               {s.kind === "cta" && (
                 <div className="pt-2">
                   <Button asChild onClick={onCtaClick}>
-                    <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{landing.cta_label || "Złóż wniosek"}</a>
+                    <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{ctaLabel}</a>
                   </Button>
                 </div>
               )}
@@ -66,6 +107,7 @@ export function AiLandingView({ landing, embedded = false }: { landing: any; emb
         {!embedded && (
           <footer className="mt-16 text-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} Finance You. Treść wygenerowana przez AI.
+            {variant && <span className="ml-2 opacity-60">· wariant: {variant.label}</span>}
           </footer>
         )}
       </div>
