@@ -291,7 +291,7 @@ function CampaignEditor({ open, onClose, initial }: { open: boolean; onClose: ()
   const [subject, setSubject] = useState(initial?.subject ?? "");
   const [preview, setPreview] = useState(initial?.preview_text ?? "");
   const [fromName, setFromName] = useState(initial?.from_name ?? "FinanceYou");
-  const [fromEmail, setFromEmail] = useState(initial?.from_email ?? "newsletter@financeyou.pl");
+  const [fromEmail, setFromEmail] = useState(initial?.from_email ?? "newsletter@app.financeyou.pl");
   const [replyTo, setReplyTo] = useState(initial?.reply_to ?? "");
   const [html, setHtml] = useState(initial?.html_body ?? "");
   const [segmentId, setSegmentId] = useState<string>(initial?.segment_id ?? "all");
