@@ -54,6 +54,17 @@ function WniosekStartPage() {
   // Zapamiętaj parametry kalkulatora przed jakimkolwiek redirectem (OAuth wraca tu z powrotem).
   useEffect(() => {
     captureParamsToStorage();
+    // Prefill z linku /wniosek/$token (lead z Meta itp.)
+    try {
+      const raw = sessionStorage.getItem("wniosek_prefill_v1");
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p.firstName) setFirstName(p.firstName);
+        if (p.lastName && p.lastName !== "—") setLastName(p.lastName);
+        if (p.email) setEmail(p.email);
+        if (p.phone) setPhone(p.phone);
+      }
+    } catch { /* noop */ }
   }, []);
 
   // Już zalogowany → prosto do wniosku
