@@ -4072,6 +4072,60 @@ export type Database = {
         }
         Relationships: []
       }
+      social_posts: {
+        Row: {
+          ai_model: string | null
+          ai_prompt: string | null
+          campaign: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          hashtags: string[] | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          platform: string
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_prompt?: string | null
+          campaign?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          hashtags?: string[] | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          platform: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_model?: string | null
+          ai_prompt?: string | null
+          campaign?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          hashtags?: string[] | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          platform?: string
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
