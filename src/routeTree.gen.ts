@@ -22,6 +22,7 @@ import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
 import { Route as KlientStatusRouteImport } from './routes/klient.status'
@@ -71,6 +72,7 @@ import { Route as ApiPublicMetaLeadsWebhookRouteImport } from './routes/api/publ
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
+import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
@@ -141,6 +143,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const WniosekTokenRoute = WniosekTokenRouteImport.update({
   id: '/wniosek/$token',
   path: '/wniosek/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
@@ -391,6 +398,11 @@ const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   path: '/wnioski/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMarketingTrackingRoute = AdminMarketingTrackingRouteImport.update({
+  id: '/marketing/tracking',
+  path: '/marketing/tracking',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -474,6 +486,7 @@ export interface FileRoutesByFullPath {
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
+  '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -482,6 +495,7 @@ export interface FileRoutesByFullPath {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -541,6 +555,7 @@ export interface FileRoutesByTo {
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
+  '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
@@ -549,6 +564,7 @@ export interface FileRoutesByTo {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -612,6 +628,7 @@ export interface FileRoutesById {
   '/klient/status': typeof KlientStatusRoute
   '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
+  '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -620,6 +637,7 @@ export interface FileRoutesById {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -684,6 +702,7 @@ export interface FileRouteTypes {
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/l/$slug'
+    | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -692,6 +711,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -751,6 +771,7 @@ export interface FileRouteTypes {
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/l/$slug'
+    | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
     | '/blog'
@@ -759,6 +780,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -821,6 +843,7 @@ export interface FileRouteTypes {
     | '/klient/status'
     | '/klient/wiadomosci'
     | '/l/$slug'
+    | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
@@ -829,6 +852,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -855,6 +879,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
+  RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
@@ -957,6 +982,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek/$token'
       fullPath: '/wniosek/$token'
       preLoaderRoute: typeof WniosekTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/l/$slug': {
@@ -1302,6 +1334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWnioskiIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/marketing/tracking': {
+      id: '/admin/marketing/tracking'
+      path: '/marketing/tracking'
+      fullPath: '/admin/marketing/tracking'
+      preLoaderRoute: typeof AdminMarketingTrackingRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/inwestorzy/$id': {
       id: '/admin/inwestorzy/$id'
       path: '/$id'
@@ -1388,6 +1427,7 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
+  AdminMarketingTrackingRoute: typeof AdminMarketingTrackingRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
   AdminWnioskiIndexRoute: typeof AdminWnioskiIndexRoute
 }
@@ -1421,6 +1461,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
+  AdminMarketingTrackingRoute: AdminMarketingTrackingRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
   AdminWnioskiIndexRoute: AdminWnioskiIndexRoute,
 }
@@ -1492,6 +1533,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
+  RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
