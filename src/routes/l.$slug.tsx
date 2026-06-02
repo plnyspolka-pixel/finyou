@@ -58,7 +58,7 @@ export const Route = createFileRoute("/l/$slug")({
     return res;
   },
   head: ({ loaderData }) => {
-    const page = (loaderData?.page as PublicPage | null) ?? null;
+    const page = (loaderData?.page as unknown as PublicPage | null) ?? null;
     if (!page) return { meta: [{ title: "Nie znaleziono" }] };
     const desc = page.meta_description ?? page.subheadline ?? page.headline;
     const meta: Array<Record<string, string>> = [
