@@ -7,11 +7,12 @@ import {
   listConversations,
   getConversation,
   deleteConversation,
+  transcribeAdminAudio,
 } from "@/lib/ai-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench } from "lucide-react";
+import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench, Mic, Square } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -36,6 +37,12 @@ export function AiAdminChat() {
   const listFn = useServerFn(listConversations);
   const getFn = useServerFn(getConversation);
   const delFn = useServerFn(deleteConversation);
+  const transcribeFn = useServerFn(transcribeAdminAudio);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   const convs = useQuery({
     queryKey: ["ai-admin-convs"],
@@ -74,6 +81,59 @@ export function AiAdminChat() {
       await qc.invalidateQueries({ queryKey: ["ai-admin-convs"] });
     },
   });
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recChunksRef.current.push(e.data);
+      };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(recChunksRef.current, { type: mr.mimeType || "audio/webm" });
+        if (blob.size < 500) {
+          toast.error("Nagranie zbyt krótkie");
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const ext = (mr.mimeType || "audio/webm").includes("mp4") ? "mp4" : "webm";
+          const file = new File([blob], `voice.${ext}`, { type: mr.mimeType || "audio/webm" });
+          const fd = new FormData();
+          fd.append("audio", file);
+          const res = await transcribeFn({ data: fd });
+          if (res.text) {
+            setInput((prev) => (prev ? `${prev} ${res.text}` : res.text));
+          } else {
+            toast.error("Nie udało się rozpoznać mowy");
+          }
+        } catch (e) {
+          toast.error((e as Error).message);
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch (e) {
+      toast.error("Brak dostępu do mikrofonu", { description: (e as Error).message });
+    }
+  };
+
+  const stopRecording = () => {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") mr.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
 
   const submit = () => {
     const text = input.trim();
@@ -207,6 +267,22 @@ export function AiAdminChat() {
                 rows={2}
                 className="resize-none text-sm"
               />
+              <Button
+                size="icon"
+                variant={recording ? "destructive" : "outline"}
+                onClick={recording ? stopRecording : startRecording}
+                disabled={transcribing || send.isPending}
+                aria-label={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                title={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+              >
+                {transcribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : recording ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
               <Button size="icon" onClick={submit} disabled={send.isPending || !input.trim()}>
                 {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>

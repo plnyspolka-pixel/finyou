@@ -256,3 +256,37 @@ export const sendAdminChat = createServerFn({ method: "POST" })
 
     return { conversation_id: convId, ok: true, tokens: { input: totalIn, output: totalOut }, note: "Limit rund narzędzi osiągnięty" };
   });
+
+/** Transkrypcja głosówki dla AI Administratora (ElevenLabs scribe_v2). */
+export const transcribeAdminAudio = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => {
+    if (!(input instanceof FormData)) throw new Error("Oczekiwano FormData");
+    const file = input.get("audio");
+    if (!(file instanceof File)) throw new Error("Brak pliku audio");
+    return { file };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) throw new Error("Brak ELEVENLABS_API_KEY");
+
+    const fd = new FormData();
+    fd.append("file", data.file);
+    fd.append("model_id", "scribe_v2");
+    fd.append("language_code", "pol");
+    fd.append("diarize", "false");
+    fd.append("tag_audio_events", "false");
+
+    const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+      method: "POST",
+      headers: { "xi-api-key": apiKey },
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      throw new Error(`Transkrypcja nieudana (${res.status}): ${err.slice(0, 300)}`);
+    }
+    const json: { text?: string } = await res.json();
+    return { text: String(json.text ?? "").trim() };
+  });
