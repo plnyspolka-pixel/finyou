@@ -243,11 +243,13 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
           return new Response("ok", { status: 200 });
         } catch (e: any) {
           console.error("[meta-leads-webhook]", e);
-          await supabaseAdmin.from("automation_events").insert({
-            automation_type: "meta_lead_capture",
-            status: "error",
-            error_message: e?.message ?? "exception",
-          }).catch(() => {});
+          try {
+            await supabaseAdmin.from("automation_events").insert({
+              automation_type: "meta_lead_capture",
+              status: "error",
+              error_message: e?.message ?? "exception",
+            });
+          } catch { /* noop */ }
           return new Response("error", { status: 500 });
         }
       },
