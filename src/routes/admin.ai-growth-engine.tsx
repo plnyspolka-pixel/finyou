@@ -175,6 +175,7 @@ function LandingsList() {
   const [items, setItems] = useState<any[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
   const [abLanding, setAbLanding] = useState<any | null>(null);
+  const [heatmapLanding, setHeatmapLanding] = useState<any | null>(null);
 
   useEffect(() => {
     supabase.from("ai_landings").select("*").order("created_at", { ascending: false }).then(({ data }) => setItems(data ?? []));
@@ -214,6 +215,9 @@ function LandingsList() {
                     <Button size="sm" variant="outline" onClick={() => setAbLanding(l)} title="Testy A/B">
                       <FlaskConical className="h-3.5 w-3.5" />
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => setHeatmapLanding(l)} title="Heatmapy & engagement">
+                      <Activity className="h-3.5 w-3.5" />
+                    </Button>
                     {l.status !== "published" ? (
                       <Button size="sm" variant="default" onClick={async () => { await setStatus({ data: { id: l.id, status: "published" } }); toast.success("Opublikowano"); reload(); }}>
                         <Eye className="h-3.5 w-3.5 mr-1" />Publikuj
@@ -237,6 +241,7 @@ function LandingsList() {
         </Table>
       </CardContent>
       {abLanding && <AbTestingDialog landing={abLanding} open={!!abLanding} onClose={() => setAbLanding(null)} />}
+      {heatmapLanding && <HeatmapDialog landing={heatmapLanding} open={!!heatmapLanding} onClose={() => setHeatmapLanding(null)} />}
     </Card>
   );
 }
