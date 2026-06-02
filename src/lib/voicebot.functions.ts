@@ -207,7 +207,26 @@ export async function placeOutboundCallInternal(opts: {
         })
         .eq("id", queueRow.id);
     }
+    try {
+      const { logLeadCommunication } = await import("@/lib/lead-comms.server");
+      await logLeadCommunication({
+        loanApplicationId: opts.loanApplicationId ?? null,
+        clientId: opts.clientId ?? null,
+        metaLeadId: opts.metaLeadId ?? null,
+        phoneNormalized: phone,
+        channel: "voicebot_call",
+        direction: "outbound",
+        status: "initiated",
+        content: "Inicjacja rozmowy voicebota",
+        externalId: conversationId ?? callSid ?? null,
+        agentId: settings.agent_id,
+        metadata: { source: opts.source, callSid },
+      });
+    } catch (e) {
+      console.error("[voicebot] log init failed", e);
+    }
     return { ok: true, conversationId, callSid };
+
   } catch (e: any) {
     if (queueRow) {
       await s
