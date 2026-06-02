@@ -12,18 +12,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Sparkles, ExternalLink, Trash2, Copy, Loader2, Eye, EyeOff } from "lucide-react";
+import { Sparkles, ExternalLink, Trash2, Copy, Loader2, Eye, EyeOff, FlaskConical } from "lucide-react";
 import {
   generateAiLanding, setLandingStatus, deleteLanding, updateGrowthSettings,
 } from "@/lib/ai-growth.functions";
+import { AbTestingDialog } from "@/components/ab-testing-dialog";
 
 export const Route = createFileRoute("/admin/ai-growth-engine")({
   component: GrowthEnginePage,
 });
 
 const MODULES_COMING_SOON = [
-  "A/B/n Testing", "AI Micro-Optimizer", "Heatmaps & Engagement",
-  "AI SEO Builder", "SEO Content Engine", "Link Building Assistant",
+  "AI Micro-Optimizer", "Heatmaps & Engagement",
+  "AI SEO Builder", "Link Building Assistant",
   "Link Exchange Autopilot", "Email Outreach Autopilot",
 ];
 
@@ -173,6 +174,7 @@ function LandingsList() {
   const del = useServerFn(deleteLanding);
   const [items, setItems] = useState<any[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
+  const [abLanding, setAbLanding] = useState<any | null>(null);
 
   useEffect(() => {
     supabase.from("ai_landings").select("*").order("created_at", { ascending: false }).then(({ data }) => setItems(data ?? []));
@@ -209,6 +211,9 @@ function LandingsList() {
                     <Button size="sm" variant="outline" onClick={() => copyEmbed(l.slug)} title="Kopiuj embed">
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => setAbLanding(l)} title="Testy A/B">
+                      <FlaskConical className="h-3.5 w-3.5" />
+                    </Button>
                     {l.status !== "published" ? (
                       <Button size="sm" variant="default" onClick={async () => { await setStatus({ data: { id: l.id, status: "published" } }); toast.success("Opublikowano"); reload(); }}>
                         <Eye className="h-3.5 w-3.5 mr-1" />Publikuj
@@ -231,6 +236,7 @@ function LandingsList() {
           </TableBody>
         </Table>
       </CardContent>
+      {abLanding && <AbTestingDialog landing={abLanding} open={!!abLanding} onClose={() => setAbLanding(null)} />}
     </Card>
   );
 }

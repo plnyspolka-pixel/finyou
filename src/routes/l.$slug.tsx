@@ -6,7 +6,8 @@ export const Route = createFileRoute("/l/$slug")({
   loader: async ({ params }) => {
     const { data } = await supabase.from("ai_landings").select("*").eq("slug", params.slug).eq("status", "published").maybeSingle();
     if (!data) throw notFound();
-    return { landing: data };
+    const { data: variants } = await supabase.from("ai_landing_variants").select("*").eq("landing_id", data.id).eq("is_active", true);
+    return { landing: data, variants: variants ?? [] };
   },
   head: ({ loaderData }) => ({
     meta: loaderData?.landing ? [
@@ -22,6 +23,6 @@ export const Route = createFileRoute("/l/$slug")({
 });
 
 function LandingPage() {
-  const { landing } = Route.useLoaderData();
-  return <AiLandingView landing={landing} />;
+  const { landing, variants } = Route.useLoaderData();
+  return <AiLandingView landing={landing} variants={variants} />;
 }
