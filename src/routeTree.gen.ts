@@ -56,6 +56,7 @@ import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
+import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
 import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growth-engine'
 import { Route as AdminWnioskiIndexRouteImport } from './routes/admin.wnioski.index'
 import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
@@ -308,6 +309,11 @@ const AdminAiSeoRoute = AdminAiSeoRouteImport.update({
   path: '/ai-seo',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAiOutreachRoute = AdminAiOutreachRouteImport.update({
+  id: '/ai-outreach',
+  path: '/ai-outreach',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAiGrowthEngineRoute = AdminAiGrowthEngineRouteImport.update({
   id: '/ai-growth-engine',
   path: '/ai-growth-engine',
@@ -405,6 +411,7 @@ export interface FileRoutesByFullPath {
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
+  '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
@@ -467,6 +474,7 @@ export interface FileRoutesByTo {
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
+  '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
@@ -533,6 +541,7 @@ export interface FileRoutesById {
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
+  '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
@@ -600,6 +609,7 @@ export interface FileRouteTypes {
     | '/wniosek-start'
     | '/wybor-roli'
     | '/admin/ai-growth-engine'
+    | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
@@ -662,6 +672,7 @@ export interface FileRouteTypes {
     | '/wniosek-start'
     | '/wybor-roli'
     | '/admin/ai-growth-engine'
+    | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
@@ -727,6 +738,7 @@ export interface FileRouteTypes {
     | '/wniosek-start'
     | '/wybor-roli'
     | '/admin/ai-growth-engine'
+    | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
@@ -1137,6 +1149,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiSeoRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ai-outreach': {
+      id: '/admin/ai-outreach'
+      path: '/ai-outreach'
+      fullPath: '/admin/ai-outreach'
+      preLoaderRoute: typeof AdminAiOutreachRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ai-growth-engine': {
       id: '/admin/ai-growth-engine'
       path: '/ai-growth-engine'
@@ -1266,6 +1285,7 @@ const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAiGrowthEngineRoute: typeof AdminAiGrowthEngineRoute
+  AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
@@ -1294,6 +1314,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAiGrowthEngineRoute: AdminAiGrowthEngineRoute,
+  AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
