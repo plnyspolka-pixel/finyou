@@ -207,25 +207,39 @@ export const submitLandingLead = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Also push into email_subscribers if table exists
-    const parts = (data.name ?? "").trim().split(/\s+/);
-    await supabaseAdmin
-      .from("email_subscribers")
-      .upsert(
-        {
-          email: data.email.toLowerCase().trim(),
-          first_name: parts[0] || null,
-          last_name: parts.slice(1).join(" ") || null,
-          source: "landing",
-          source_id: data.landing_page_id,
-          tags: ["landing"],
-        },
-        { onConflict: "email", ignoreDuplicates: true }
-      )
-      .then(() => {})
-      .catch(() => {});
+    try {
+      const parts = (data.name ?? "").trim().split(/\s+/);
+      await supabaseAdmin
+        .from("email_subscribers")
+        .upsert(
+          {
+            email: data.email.toLowerCase().trim(),
+            first_name: parts[0] || null,
+            last_name: parts.slice(1).join(" ") || null,
+            source: "landing",
+            source_id: data.landing_page_id,
+            tags: ["landing"],
+          },
+          { onConflict: "email", ignoreDuplicates: true }
+        );
+    } catch {
+      /* ignore — email_subscribers may not exist */
+    }
 
     // Increment conversion_count
-    await supabaseAdmin.rpc("increment_loan_view", { _loan_id: data.landing_page_id }).catch(() => {});
+    try {
+      const { data: cur } = await supabaseAdmin
+        .from("landing_pages")
+        .select("conversion_count")
+        .eq("id", data.landing_page_id)
+        .maybeSingle();
+      await supabaseAdmin
+        .from("landing_pages")
+        .update({ conversion_count: ((cur as { conversion_count?: number } | null)?.conversion_count ?? 0) + 1 } as never)
+        .eq("id", data.landing_page_id);
+    } catch {
+      /* ignore */
+    }
 
     return {
       ok: true,
