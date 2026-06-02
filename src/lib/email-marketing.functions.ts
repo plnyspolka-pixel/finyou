@@ -85,22 +85,25 @@ export const importSubscribersFromLeads = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: leads, error } = await context.supabase
-      .from("leady")
-      .select("id, email, imie, nazwisko, created_at")
+      .from("meta_leads")
+      .select("id, email, full_name, received_at")
       .not("email", "is", null)
       .limit(5000);
     if (error) throw new Error(error.message);
 
     const rows = (leads ?? [])
-      .filter((l: any) => l.email)
-      .map((l: any) => ({
-        email: String(l.email).toLowerCase().trim(),
-        first_name: l.imie ?? null,
-        last_name: l.nazwisko ?? null,
-        source: "lead",
-        source_id: l.id,
-        tags: ["lead"],
-      }));
+      .filter((l) => l.email)
+      .map((l) => {
+        const parts = (l.full_name ?? "").trim().split(/\s+/);
+        return {
+          email: String(l.email).toLowerCase().trim(),
+          first_name: parts[0] ?? null,
+          last_name: parts.slice(1).join(" ") || null,
+          source: "lead",
+          source_id: l.id,
+          tags: ["lead"],
+        };
+      });
 
     if (!rows.length) return { imported: 0 };
 
