@@ -98,7 +98,7 @@ export const Route = createFileRoute("/l/$slug")({
 function LandingPage() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(pageQuery(slug));
-  const page = data.page as PublicPage;
+  const page = data.page as unknown as PublicPage;
   const primary = page.theme?.primary ?? "#0ea5e9";
   const background = page.theme?.background ?? "#ffffff";
 
