@@ -38,6 +38,7 @@ import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkul
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
@@ -234,6 +235,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminZgodyRoute = AdminZgodyRouteImport.update({
+  id: '/zgody',
+  path: '/zgody',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
   id: '/voicebot',
@@ -536,6 +542,7 @@ export interface FileRoutesByFullPath {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -615,6 +622,7 @@ export interface FileRoutesByTo {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -698,6 +706,7 @@ export interface FileRoutesById {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -782,6 +791,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/admin/zgody'
     | '/blog/$slug'
     | '/embed/wniosek'
     | '/inwestor/abonament'
@@ -861,6 +871,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/admin/zgody'
     | '/blog/$slug'
     | '/embed/wniosek'
     | '/inwestor/abonament'
@@ -943,6 +954,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/admin/zgody'
     | '/blog/$slug'
     | '/embed/wniosek'
     | '/inwestor/abonament'
@@ -1222,6 +1234,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/zgody': {
+      id: '/admin/zgody'
+      path: '/zgody'
+      fullPath: '/admin/zgody'
+      preLoaderRoute: typeof AdminZgodyRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/voicebot': {
       id: '/admin/voicebot'
@@ -1635,6 +1654,7 @@ interface AdminRouteChildren {
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
+  AdminZgodyRoute: typeof AdminZgodyRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
@@ -1674,6 +1694,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
+  AdminZgodyRoute: AdminZgodyRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
