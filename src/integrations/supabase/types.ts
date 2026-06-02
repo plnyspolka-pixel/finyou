@@ -247,6 +247,132 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_outreach_messages: {
+        Row: {
+          angle: string | null
+          body: string
+          created_at: string
+          created_by: string | null
+          goal: string | null
+          id: string
+          language: string | null
+          model: string | null
+          parent_id: string | null
+          reply_excerpt: string | null
+          sent_at: string | null
+          status: string
+          step: number
+          subject: string
+          target_id: string
+          updated_at: string
+        }
+        Insert: {
+          angle?: string | null
+          body: string
+          created_at?: string
+          created_by?: string | null
+          goal?: string | null
+          id?: string
+          language?: string | null
+          model?: string | null
+          parent_id?: string | null
+          reply_excerpt?: string | null
+          sent_at?: string | null
+          status?: string
+          step?: number
+          subject: string
+          target_id: string
+          updated_at?: string
+        }
+        Update: {
+          angle?: string | null
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          goal?: string | null
+          id?: string
+          language?: string | null
+          model?: string | null
+          parent_id?: string | null
+          reply_excerpt?: string | null
+          sent_at?: string | null
+          status?: string
+          step?: number
+          subject?: string
+          target_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_outreach_messages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_outreach_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_outreach_messages_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "ai_outreach_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_outreach_targets: {
+        Row: {
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          domain: string
+          id: string
+          language: string | null
+          meta: Json
+          niche: string | null
+          notes: string | null
+          priority: number
+          source: string
+          status: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          id?: string
+          language?: string | null
+          meta?: Json
+          niche?: string | null
+          notes?: string | null
+          priority?: number
+          source?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          id?: string
+          language?: string | null
+          meta?: Json
+          niche?: string | null
+          notes?: string | null
+          priority?: number
+          source?: string
+          status?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       ai_seo_articles: {
         Row: {
           content_md: string
