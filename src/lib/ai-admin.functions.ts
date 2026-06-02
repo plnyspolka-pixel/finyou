@@ -201,7 +201,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
         conversation_id: convId,
         role: "assistant",
         content: assistantText,
-        tool_calls: toolCalls.length ? toolCalls : null,
+        tool_calls: (toolCalls.length ? toolCalls : null) as never,
         tokens_in: resp.usage.input_tokens,
         tokens_out: resp.usage.output_tokens,
       });
@@ -235,8 +235,8 @@ export const sendAdminChat = createServerFn({ method: "POST" })
           user_id: context.userId,
           conversation_id: convId,
           tool_name: tc.name,
-          tool_input: tc.input,
-          tool_output: r.ok ? r.output : null,
+          tool_input: tc.input as never,
+          tool_output: (r.ok ? r.output : null) as never,
           success: r.ok,
           error: r.ok ? null : r.error,
         });
