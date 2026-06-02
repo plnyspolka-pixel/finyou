@@ -209,11 +209,11 @@ export const promoteSuggestionToOutreach = createServerFn({ method: "POST" })
     const { data: t, error: tErr } = await supabase.from("ai_outreach_targets").insert({
       domain: s.target_domain,
       niche: "link-building",
-      contact_email: null,
-      contact_url: s.contact_hint,
+      url: s.contact_hint ?? null,
       priority: s.priority,
       status: "new",
       notes: `${s.strategy}\n\n${s.rationale}`,
+      source: "ai_linkbuilding",
       created_by: userId,
     }).select().single();
     if (tErr) throw new Error(tErr.message);
