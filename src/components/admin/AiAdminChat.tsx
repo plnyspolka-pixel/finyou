@@ -82,6 +82,59 @@ export function AiAdminChat() {
     },
   });
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "";
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recChunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recChunksRef.current.push(e.data);
+      };
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(recChunksRef.current, { type: mr.mimeType || "audio/webm" });
+        if (blob.size < 500) {
+          toast.error("Nagranie zbyt krótkie");
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const ext = (mr.mimeType || "audio/webm").includes("mp4") ? "mp4" : "webm";
+          const file = new File([blob], `voice.${ext}`, { type: mr.mimeType || "audio/webm" });
+          const fd = new FormData();
+          fd.append("audio", file);
+          const res = await transcribeFn({ data: fd });
+          if (res.text) {
+            setInput((prev) => (prev ? `${prev} ${res.text}` : res.text));
+          } else {
+            toast.error("Nie udało się rozpoznać mowy");
+          }
+        } catch (e) {
+          toast.error((e as Error).message);
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch (e) {
+      toast.error("Brak dostępu do mikrofonu", { description: (e as Error).message });
+    }
+  };
+
+  const stopRecording = () => {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") mr.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
+
   const submit = () => {
     const text = input.trim();
     if (!text || send.isPending) return;
