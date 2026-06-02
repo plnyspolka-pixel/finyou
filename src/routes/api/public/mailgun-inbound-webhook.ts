@@ -7,7 +7,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
-import { sendMailgunEmail } from "@/lib/mailgun-send.server";
+import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore } from "@/lib/inbound-attachments.server";
 
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
