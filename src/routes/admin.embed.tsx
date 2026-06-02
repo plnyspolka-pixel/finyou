@@ -42,6 +42,11 @@ function EmbedPage() {
         <p className="text-sm text-muted-foreground">
           Wklej poniższy kod HTML na swoją stronę — formularz wniosku o pożyczkę pojawi się jako iframe.
         </p>
+        {currentOrigin !== PROD_ORIGIN && (
+          <p className="mt-2 text-xs text-amber-600">
+            Generowany kod używa produkcyjnego adresu <code>{PROD_ORIGIN}</code>, niezależnie od tego gdzie otwierasz panel (preview wymaga logowania do Lovable).
+          </p>
+        )}
       </div>
 
       <Card>
