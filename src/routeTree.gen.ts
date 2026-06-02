@@ -55,6 +55,7 @@ import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as AdminAiSerpRouteImport } from './routes/admin.ai-serp'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
 import { Route as AdminAiLinkbuildingRouteImport } from './routes/admin.ai-linkbuilding'
@@ -305,6 +306,11 @@ const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   path: '/dokumenty',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAiSerpRoute = AdminAiSerpRouteImport.update({
+  id: '/ai-serp',
+  path: '/ai-serp',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAiSeoRoute = AdminAiSeoRouteImport.update({
   id: '/ai-seo',
   path: '/ai-seo',
@@ -420,6 +426,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai-linkbuilding': typeof AdminAiLinkbuildingRoute
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
+  '/admin/ai-serp': typeof AdminAiSerpRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -484,6 +491,7 @@ export interface FileRoutesByTo {
   '/admin/ai-linkbuilding': typeof AdminAiLinkbuildingRoute
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
+  '/admin/ai-serp': typeof AdminAiSerpRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -552,6 +560,7 @@ export interface FileRoutesById {
   '/admin/ai-linkbuilding': typeof AdminAiLinkbuildingRoute
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
+  '/admin/ai-serp': typeof AdminAiSerpRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/admin/ai-linkbuilding'
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
+    | '/admin/ai-serp'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -685,6 +695,7 @@ export interface FileRouteTypes {
     | '/admin/ai-linkbuilding'
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
+    | '/admin/ai-serp'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -752,6 +763,7 @@ export interface FileRouteTypes {
     | '/admin/ai-linkbuilding'
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
+    | '/admin/ai-serp'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -1154,6 +1166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDokumentyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ai-serp': {
+      id: '/admin/ai-serp'
+      path: '/ai-serp'
+      fullPath: '/admin/ai-serp'
+      preLoaderRoute: typeof AdminAiSerpRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ai-seo': {
       id: '/admin/ai-seo'
       path: '/ai-seo'
@@ -1307,6 +1326,7 @@ interface AdminRouteChildren {
   AdminAiLinkbuildingRoute: typeof AdminAiLinkbuildingRoute
   AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
+  AdminAiSerpRoute: typeof AdminAiSerpRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
@@ -1337,6 +1357,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAiLinkbuildingRoute: AdminAiLinkbuildingRoute,
   AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
+  AdminAiSerpRoute: AdminAiSerpRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
