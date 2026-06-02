@@ -151,10 +151,11 @@ export const applyOptimization = createServerFn({ method: "POST" })
     let appliedVariantId: string | null = null;
 
     try {
+      const payload = (opt.payload ?? {}) as Record<string, any>;
       if (opt.kind === "variant" || opt.kind === "copy") {
         const overrides: Record<string, any> = {};
         for (const k of ["hero_headline", "hero_subheadline", "cta_label"]) {
-          if (opt.payload?.[k]) overrides[k] = opt.payload[k];
+          if (payload[k]) overrides[k] = payload[k];
         }
         if (Object.keys(overrides).length === 0) throw new Error("Brak nadpisań do zastosowania");
 
@@ -165,9 +166,9 @@ export const applyOptimization = createServerFn({ method: "POST" })
         if (vErr) throw new Error(vErr.message);
         appliedVariantId = v.id;
       } else if (opt.kind === "seo") {
-        const patch: Record<string, any> = {};
-        if (opt.payload?.meta_title) patch.meta_title = opt.payload.meta_title;
-        if (opt.payload?.meta_description) patch.meta_description = opt.payload.meta_description;
+        const patch: { meta_title?: string; meta_description?: string } = {};
+        if (payload.meta_title) patch.meta_title = String(payload.meta_title);
+        if (payload.meta_description) patch.meta_description = String(payload.meta_description);
         if (Object.keys(patch).length === 0) throw new Error("Brak zmian SEO");
         const { error: uErr } = await supabase.from("ai_landings").update(patch).eq("id", opt.landing_id);
         if (uErr) throw new Error(uErr.message);
