@@ -13,7 +13,11 @@ export const Route = createFileRoute("/admin/embed")({
 });
 
 function EmbedPage() {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://twoja-domena.pl";
+  const PROD_ORIGIN = "https://app.financeyou.pl";
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : PROD_ORIGIN;
+  // Zawsze używamy produkcyjnej domeny w generowanym kodzie embed,
+  // żeby iframe nie wymagał logowania do Lovable (preview jest chronione).
+  const origin = PROD_ORIGIN;
   const [source, setSource] = useState("strona-www");
   const [height, setHeight] = useState("900");
 
@@ -38,6 +42,11 @@ function EmbedPage() {
         <p className="text-sm text-muted-foreground">
           Wklej poniższy kod HTML na swoją stronę — formularz wniosku o pożyczkę pojawi się jako iframe.
         </p>
+        {currentOrigin !== PROD_ORIGIN && (
+          <p className="mt-2 text-xs text-amber-600">
+            Generowany kod używa produkcyjnego adresu <code>{PROD_ORIGIN}</code>, niezależnie od tego gdzie otwierasz panel (preview wymaga logowania do Lovable).
+          </p>
+        )}
       </div>
 
       <Card>
