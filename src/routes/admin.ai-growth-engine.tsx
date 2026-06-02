@@ -211,6 +211,9 @@ function LandingsList() {
                     <Button size="sm" variant="outline" onClick={() => copyEmbed(l.slug)} title="Kopiuj embed">
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => setAbLanding(l)} title="Testy A/B">
+                      <FlaskConical className="h-3.5 w-3.5" />
+                    </Button>
                     {l.status !== "published" ? (
                       <Button size="sm" variant="default" onClick={async () => { await setStatus({ data: { id: l.id, status: "published" } }); toast.success("Opublikowano"); reload(); }}>
                         <Eye className="h-3.5 w-3.5 mr-1" />Publikuj
