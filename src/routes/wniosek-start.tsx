@@ -74,6 +74,19 @@ function WniosekStartPage() {
     } catch { /* noop */ }
   }, []);
 
+  // Pobierz aktywne treści zgód
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("consent_documents")
+        .select("id, kind, title, content, version")
+        .eq("is_active", true);
+      const next: Record<ConsentKind, ConsentDoc | null> = { privacy: null, marketing: null, terms: null };
+      (data as ConsentDoc[] | null)?.forEach((d) => { next[d.kind] = d; });
+      setConsentDocs(next);
+    })();
+  }, []);
+
   // Już zalogowany → prosto do wniosku
   useEffect(() => {
     if (authLoading) return;
