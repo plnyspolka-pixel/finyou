@@ -45,7 +45,7 @@ export const Route = createFileRoute("/api/public/resend-webhook")({
         // Zaktualizuj odbiorcę
         const { data: rec } = await supabaseAdmin
           .from("email_campaign_recipients")
-          .update(patch)
+          .update(patch as never)
           .eq("resend_id", resendId)
           .select("campaign_id, recipient_email")
           .maybeSingle();
