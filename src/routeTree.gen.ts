@@ -19,6 +19,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
@@ -35,6 +36,7 @@ import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
@@ -53,6 +55,7 @@ import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growth-engine'
 import { Route as AdminWnioskiIndexRouteImport } from './routes/admin.wnioski.index'
 import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
@@ -119,6 +122,11 @@ const InwestorIndexRoute = InwestorIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => InwestorRoute,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -198,6 +206,11 @@ const InwestorAbonamentRoute = InwestorAbonamentRouteImport.update({
 const EmbedWniosekRoute = EmbedWniosekRouteImport.update({
   id: '/embed/wniosek',
   path: '/embed/wniosek',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
@@ -288,6 +301,11 @@ const AdminDystrybucjaRoute = AdminDystrybucjaRouteImport.update({
 const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   id: '/dokumenty',
   path: '/dokumenty',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAiSeoRoute = AdminAiSeoRouteImport.update({
+  id: '/ai-seo',
+  path: '/ai-seo',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAiGrowthEngineRoute = AdminAiGrowthEngineRouteImport.update({
@@ -387,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
+  '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -405,6 +424,7 @@ export interface FileRoutesByFullPath {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -421,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/l/$slug': typeof LSlugRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
@@ -446,6 +467,7 @@ export interface FileRoutesByTo {
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
+  '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -464,6 +486,7 @@ export interface FileRoutesByTo {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -480,6 +503,7 @@ export interface FileRoutesByTo {
   '/l/$slug': typeof LSlugRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
+  '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
@@ -509,6 +533,7 @@ export interface FileRoutesById {
   '/wniosek-start': typeof WniosekStartRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
+  '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -527,6 +552,7 @@ export interface FileRoutesById {
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -543,6 +569,7 @@ export interface FileRoutesById {
   '/l/$slug': typeof LSlugRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
@@ -573,6 +600,7 @@ export interface FileRouteTypes {
     | '/wniosek-start'
     | '/wybor-roli'
     | '/admin/ai-growth-engine'
+    | '/admin/ai-seo'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -591,6 +619,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/blog/$slug'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -607,6 +636,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/wniosek/$token'
     | '/admin/'
+    | '/blog/'
     | '/inwestor/'
     | '/klient/'
     | '/admin/fb-ads/kreator'
@@ -632,6 +662,7 @@ export interface FileRouteTypes {
     | '/wniosek-start'
     | '/wybor-roli'
     | '/admin/ai-growth-engine'
+    | '/admin/ai-seo'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -650,6 +681,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/blog/$slug'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -666,6 +698,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/wniosek/$token'
     | '/admin'
+    | '/blog'
     | '/inwestor'
     | '/klient'
     | '/admin/fb-ads/kreator'
@@ -694,6 +727,7 @@ export interface FileRouteTypes {
     | '/wniosek-start'
     | '/wybor-roli'
     | '/admin/ai-growth-engine'
+    | '/admin/ai-seo'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -712,6 +746,7 @@ export interface FileRouteTypes {
     | '/admin/szkolenia'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/blog/$slug'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -728,6 +763,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/wniosek/$token'
     | '/admin/'
+    | '/blog/'
     | '/inwestor/'
     | '/klient/'
     | '/admin/fb-ads/kreator'
@@ -756,9 +792,11 @@ export interface RootRouteChildren {
   RejestracjaRoute: typeof RejestracjaRoute
   WniosekStartRoute: typeof WniosekStartRoute
   WyborRoliRoute: typeof WyborRoliRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
   ApiPublicMetaLeadsWebhookRoute: typeof ApiPublicMetaLeadsWebhookRoute
@@ -839,6 +877,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/'
       preLoaderRoute: typeof InwestorIndexRouteImport
       parentRoute: typeof InwestorRoute
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
@@ -950,6 +995,13 @@ declare module '@tanstack/react-router' {
       path: '/embed/wniosek'
       fullPath: '/embed/wniosek'
       preLoaderRoute: typeof EmbedWniosekRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/voicebot': {
@@ -1076,6 +1128,13 @@ declare module '@tanstack/react-router' {
       path: '/dokumenty'
       fullPath: '/admin/dokumenty'
       preLoaderRoute: typeof AdminDokumentyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ai-seo': {
+      id: '/admin/ai-seo'
+      path: '/ai-seo'
+      fullPath: '/admin/ai-seo'
+      preLoaderRoute: typeof AdminAiSeoRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ai-growth-engine': {
@@ -1207,6 +1266,7 @@ const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAiGrowthEngineRoute: typeof AdminAiGrowthEngineRoute
+  AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
@@ -1234,6 +1294,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAiGrowthEngineRoute: AdminAiGrowthEngineRoute,
+  AdminAiSeoRoute: AdminAiSeoRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
@@ -1323,9 +1384,11 @@ const rootRouteChildren: RootRouteChildren = {
   RejestracjaRoute: RejestracjaRoute,
   WniosekStartRoute: WniosekStartRoute,
   WyborRoliRoute: WyborRoliRoute,
+  BlogSlugRoute: BlogSlugRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
   WniosekTokenRoute: WniosekTokenRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
   ApiPublicMetaLeadsWebhookRoute: ApiPublicMetaLeadsWebhookRoute,
@@ -1337,13 +1400,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

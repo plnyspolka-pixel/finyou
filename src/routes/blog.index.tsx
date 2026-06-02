@@ -36,7 +36,7 @@ function BlogIndex() {
           <p className="text-muted-foreground">Pożyczki pod zastaw nieruchomości — wiedza, porady, analizy.</p>
         </header>
         <div className="grid gap-4 md:grid-cols-2">
-          {articles.map((a) => (
+          {articles.map((a: any) => (
             <Link key={a.id} to="/blog/$slug" params={{ slug: a.slug }} className="block">
               <Card className="h-full hover:border-primary transition-colors">
                 <CardHeader>
