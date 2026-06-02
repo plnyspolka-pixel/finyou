@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+
+type ConsentKind = "privacy" | "marketing" | "terms";
+type ConsentDoc = { id: string; kind: ConsentKind; title: string; content: string; version: number };
 
 export const Route = createFileRoute("/wniosek-start")({
   component: WniosekStartPage,
@@ -50,6 +55,8 @@ function WniosekStartPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [consentDocs, setConsentDocs] = useState<Record<ConsentKind, ConsentDoc | null>>({ privacy: null, marketing: null, terms: null });
+  const [accepted, setAccepted] = useState<Record<ConsentKind, boolean>>({ privacy: false, marketing: false, terms: false });
 
   // Zapamiętaj parametry kalkulatora przed jakimkolwiek redirectem (OAuth wraca tu z powrotem).
   useEffect(() => {
@@ -65,6 +72,19 @@ function WniosekStartPage() {
         if (p.phone) setPhone(p.phone);
       }
     } catch { /* noop */ }
+  }, []);
+
+  // Pobierz aktywne treści zgód
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("consent_documents")
+        .select("id, kind, title, content, version")
+        .eq("is_active", true);
+      const next: Record<ConsentKind, ConsentDoc | null> = { privacy: null, marketing: null, terms: null };
+      (data as ConsentDoc[] | null)?.forEach((d) => { next[d.kind] = d; });
+      setConsentDocs(next);
+    })();
   }, []);
 
   // Już zalogowany → prosto do wniosku
@@ -90,6 +110,15 @@ function WniosekStartPage() {
       toast.error("Uzupełnij wszystkie pola");
       return;
     }
+    // Wymagane: polityka prywatności + regulamin (jeśli skonfigurowane). Marketing — dobrowolny.
+    if (consentDocs.privacy && !accepted.privacy) {
+      toast.error("Musisz zaakceptować politykę prywatności");
+      return;
+    }
+    if (consentDocs.terms && !accepted.terms) {
+      toast.error("Musisz zaakceptować regulamin");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -106,6 +135,35 @@ function WniosekStartPage() {
     }
     if (data.user) {
       await supabase.from("profiles").update({ phone }).eq("user_id", data.user.id);
+    }
+    // Zapisz zgody (snapshot wersji) jako klienta — jeśli klient z tym user_id istnieje, zaktualizuj; inaczej wstaw.
+    if (data.user) {
+      const versions: Record<string, { id: string; version: number; accepted: boolean }> = {};
+      (Object.keys(accepted) as ConsentKind[]).forEach((k) => {
+        const doc = consentDocs[k];
+        if (doc) versions[k] = { id: doc.id, version: doc.version, accepted: accepted[k] };
+      });
+      const consentPayload = {
+        consent_rodo: !!accepted.privacy,
+        consent_marketing: !!accepted.marketing,
+        consent_terms: !!accepted.terms,
+        consent_versions: versions,
+        consents_accepted_at: new Date().toISOString(),
+      };
+      const { data: existing } = await supabase.from("clients").select("id").eq("user_id", data.user.id).maybeSingle();
+      if (existing?.id) {
+        await supabase.from("clients").update(consentPayload).eq("id", existing.id);
+      } else {
+        await supabase.from("clients").insert({
+          user_id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          source: "wniosek-start",
+          ...consentPayload,
+        });
+      }
     }
     if (data.session) {
       toast.success("Konto utworzone");
@@ -189,6 +247,7 @@ function WniosekStartPage() {
                 <Label htmlFor="password">Hasło</Label>
                 <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
+              <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
               <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? "Tworzenie konta…" : "Załóż konto i kontynuuj"}
               </Button>
@@ -226,6 +285,52 @@ function WniosekStartPage() {
           </p>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function ConsentCheckboxes({
+  docs, accepted, onChange,
+}: {
+  docs: Record<ConsentKind, ConsentDoc | null>;
+  accepted: Record<ConsentKind, boolean>;
+  onChange: (next: Record<ConsentKind, boolean>) => void;
+}) {
+  const items: { key: ConsentKind; required: boolean }[] = [
+    { key: "privacy", required: true },
+    { key: "terms", required: true },
+    { key: "marketing", required: false },
+  ];
+  const visible = items.filter((it) => docs[it.key]);
+  if (visible.length === 0) return null;
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      {visible.map(({ key, required }) => {
+        const doc = docs[key]!;
+        return (
+          <label key={key} className="flex items-start gap-2 text-sm">
+            <Checkbox
+              checked={accepted[key]}
+              onCheckedChange={(v) => onChange({ ...accepted, [key]: v === true })}
+              className="mt-0.5"
+            />
+            <span className="leading-snug">
+              {doc.title}{required && <span className="text-destructive"> *</span>}{" "}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button type="button" className="text-accent hover:underline">(czytaj)</button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader><DialogTitle>{doc.title}</DialogTitle></DialogHeader>
+                  <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm text-muted-foreground">
+                    {doc.content}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }
