@@ -267,6 +267,22 @@ export function AiAdminChat() {
                 rows={2}
                 className="resize-none text-sm"
               />
+              <Button
+                size="icon"
+                variant={recording ? "destructive" : "outline"}
+                onClick={recording ? stopRecording : startRecording}
+                disabled={transcribing || send.isPending}
+                aria-label={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                title={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+              >
+                {transcribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : recording ? (
+                  <Square className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
               <Button size="icon" onClick={submit} disabled={send.isPending || !input.trim()}>
                 {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
