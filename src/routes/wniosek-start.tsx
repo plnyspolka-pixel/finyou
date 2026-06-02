@@ -55,6 +55,8 @@ function WniosekStartPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [consentDocs, setConsentDocs] = useState<Record<ConsentKind, ConsentDoc | null>>({ privacy: null, marketing: null, terms: null });
+  const [accepted, setAccepted] = useState<Record<ConsentKind, boolean>>({ privacy: false, marketing: false, terms: false });
 
   // Zapamiętaj parametry kalkulatora przed jakimkolwiek redirectem (OAuth wraca tu z powrotem).
   useEffect(() => {
