@@ -1461,6 +1461,9 @@ export type Database = {
           consent_phone: boolean
           consent_rodo: boolean
           consent_sms: boolean
+          consent_terms: boolean
+          consent_versions: Json
+          consents_accepted_at: string | null
           country: string | null
           created_at: string
           email: string | null
@@ -1494,6 +1497,9 @@ export type Database = {
           consent_phone?: boolean
           consent_rodo?: boolean
           consent_sms?: boolean
+          consent_terms?: boolean
+          consent_versions?: Json
+          consents_accepted_at?: string | null
           country?: string | null
           created_at?: string
           email?: string | null
@@ -1527,6 +1533,9 @@ export type Database = {
           consent_phone?: boolean
           consent_rodo?: boolean
           consent_sms?: boolean
+          consent_terms?: boolean
+          consent_versions?: Json
+          consents_accepted_at?: string | null
           country?: string | null
           created_at?: string
           email?: string | null
@@ -1549,6 +1558,39 @@ export type Database = {
           street?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      consent_documents: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["consent_kind"]
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["consent_kind"]
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["consent_kind"]
+          title?: string
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -4713,6 +4755,7 @@ export type Database = {
     Enums: {
       app_role: "administrator" | "operator" | "klient" | "inwestor"
       automation_status: "aktywna" | "wstrzymana" | "zakonczona" | "blad"
+      consent_kind: "privacy" | "marketing" | "terms"
       contact_channel:
         | "telefon"
         | "sms"
@@ -4907,6 +4950,7 @@ export const Constants = {
     Enums: {
       app_role: ["administrator", "operator", "klient", "inwestor"],
       automation_status: ["aktywna", "wstrzymana", "zakonczona", "blad"],
+      consent_kind: ["privacy", "marketing", "terms"],
       contact_channel: [
         "telefon",
         "sms",
