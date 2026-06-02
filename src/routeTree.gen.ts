@@ -46,6 +46,7 @@ import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
+import { Route as AdminLeadyAllRouteImport } from './routes/admin.leady-all'
 import { Route as AdminLeadyRouteImport } from './routes/admin.leady'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
@@ -78,6 +79,7 @@ import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marke
 import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
 import { Route as AdminMarketingLandingRouteImport } from './routes/admin.marketing.landing'
 import { Route as AdminMarketingEmailRouteImport } from './routes/admin.marketing.email'
+import { Route as AdminLeadyAllIdRouteImport } from './routes/admin.leady-all.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
@@ -270,6 +272,11 @@ const AdminMailingRoute = AdminMailingRouteImport.update({
   path: '/mailing',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLeadyAllRoute = AdminLeadyAllRouteImport.update({
+  id: '/leady-all',
+  path: '/leady-all',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLeadyRoute = AdminLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
@@ -433,6 +440,11 @@ const AdminMarketingEmailRoute = AdminMarketingEmailRouteImport.update({
   path: '/marketing/email',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLeadyAllIdRoute = AdminLeadyAllIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminLeadyAllRoute,
+} as any)
 const AdminInwestorzyIdRoute = AdminInwestorzyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -494,6 +506,7 @@ export interface FileRoutesByFullPath {
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
+  '/admin/leady-all': typeof AdminLeadyAllRouteWithChildren
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
@@ -526,6 +539,7 @@ export interface FileRoutesByFullPath {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/leady-all/$id': typeof AdminLeadyAllIdRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
@@ -568,6 +582,7 @@ export interface FileRoutesByTo {
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
+  '/admin/leady-all': typeof AdminLeadyAllRouteWithChildren
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
@@ -600,6 +615,7 @@ export interface FileRoutesByTo {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/leady-all/$id': typeof AdminLeadyAllIdRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
@@ -646,6 +662,7 @@ export interface FileRoutesById {
   '/admin/klienci': typeof AdminKlienciRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/leady': typeof AdminLeadyRoute
+  '/admin/leady-all': typeof AdminLeadyAllRouteWithChildren
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
@@ -678,6 +695,7 @@ export interface FileRoutesById {
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
+  '/admin/leady-all/$id': typeof AdminLeadyAllIdRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
@@ -725,6 +743,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
     | '/admin/leady'
+    | '/admin/leady-all'
     | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
@@ -757,6 +776,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/leady-all/$id'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
@@ -799,6 +819,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
     | '/admin/leady'
+    | '/admin/leady-all'
     | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
@@ -831,6 +852,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/leady-all/$id'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
@@ -876,6 +898,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-pozyczki'
     | '/admin/leady'
+    | '/admin/leady-all'
     | '/admin/mailing'
     | '/admin/meta'
     | '/admin/oferty'
@@ -908,6 +931,7 @@ export interface FileRouteTypes {
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
+    | '/admin/leady-all/$id'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
@@ -1213,6 +1237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMailingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/leady-all': {
+      id: '/admin/leady-all'
+      path: '/leady-all'
+      fullPath: '/admin/leady-all'
+      preLoaderRoute: typeof AdminLeadyAllRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/leady': {
       id: '/admin/leady'
       path: '/leady'
@@ -1437,6 +1468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMarketingEmailRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/leady-all/$id': {
+      id: '/admin/leady-all/$id'
+      path: '/$id'
+      fullPath: '/admin/leady-all/$id'
+      preLoaderRoute: typeof AdminLeadyAllIdRouteImport
+      parentRoute: typeof AdminLeadyAllRoute
+    }
     '/admin/inwestorzy/$id': {
       id: '/admin/inwestorzy/$id'
       path: '/$id'
@@ -1494,6 +1532,18 @@ const AdminInwestorzyRouteWithChildren = AdminInwestorzyRoute._addFileChildren(
   AdminInwestorzyRouteChildren,
 )
 
+interface AdminLeadyAllRouteChildren {
+  AdminLeadyAllIdRoute: typeof AdminLeadyAllIdRoute
+}
+
+const AdminLeadyAllRouteChildren: AdminLeadyAllRouteChildren = {
+  AdminLeadyAllIdRoute: AdminLeadyAllIdRoute,
+}
+
+const AdminLeadyAllRouteWithChildren = AdminLeadyAllRoute._addFileChildren(
+  AdminLeadyAllRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminAiAdministratorRoute: typeof AdminAiAdministratorRoute
   AdminAiCompetitorsRoute: typeof AdminAiCompetitorsRoute
@@ -1513,6 +1563,7 @@ interface AdminRouteChildren {
   AdminKlienciRoute: typeof AdminKlienciRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
   AdminLeadyRoute: typeof AdminLeadyRoute
+  AdminLeadyAllRoute: typeof AdminLeadyAllRouteWithChildren
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
@@ -1551,6 +1602,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKlienciRoute: AdminKlienciRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
   AdminLeadyRoute: AdminLeadyRoute,
+  AdminLeadyAllRoute: AdminLeadyAllRouteWithChildren,
   AdminMailingRoute: AdminMailingRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
