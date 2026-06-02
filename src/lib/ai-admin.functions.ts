@@ -246,7 +246,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
         conversation_id: convId,
         role: "tool",
         content: "",
-        tool_results: results,
+        tool_results: results as never,
       });
       messages.push({
         role: "user",
