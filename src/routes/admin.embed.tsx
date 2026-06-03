@@ -19,7 +19,7 @@ function EmbedPage() {
   // żeby iframe nie wymagał logowania do Lovable (preview jest chronione).
   const origin = PROD_ORIGIN;
   const [source, setSource] = useState("strona-www");
-  const [height, setHeight] = useState("900");
+  const [height, setHeight] = useState("100%");
 
   const url = useMemo(() => {
     const u = new URL("/embed/wniosek", origin);
@@ -27,7 +27,7 @@ function EmbedPage() {
     return u.toString();
   }, [origin, source]);
 
-  const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;max-width:720px;width:100%;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
+  const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
   const linkSnippet = `<a href="${url}" target="_blank" rel="noopener">Złóż wniosek o pożyczkę</a>`;
 
   const copy = async (text: string, label: string) => {
@@ -60,8 +60,8 @@ function EmbedPage() {
             <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="np. strona-www" />
           </div>
           <div className="space-y-2">
-            <Label>Wysokość iframe (px)</Label>
-            <Input type="number" min={400} value={height} onChange={(e) => setHeight(e.target.value)} />
+            <Label>Wysokość iframe</Label>
+            <Input value={height} onChange={(e) => setHeight(e.target.value)} placeholder="np. 100% lub 900" />
           </div>
         </CardContent>
       </Card>
@@ -105,8 +105,8 @@ function EmbedPage() {
           <iframe
             src={url}
             width="100%"
-            height={Number(height) || 900}
-            style={{ border: 0, maxWidth: 720 }}
+            height={/^\d+$/.test(height) ? Number(height) : 900}
+            style={{ border: 0 }}
             title="Podgląd wniosku"
           />
         </CardContent>
