@@ -60,8 +60,8 @@ function EmbedPage() {
             <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="np. strona-www" />
           </div>
           <div className="space-y-2">
-            <Label>Wysokość iframe (px)</Label>
-            <Input type="number" min={400} value={height} onChange={(e) => setHeight(e.target.value)} />
+            <Label>Wysokość iframe</Label>
+            <Input value={height} onChange={(e) => setHeight(e.target.value)} placeholder="np. 100% lub 900" />
           </div>
         </CardContent>
       </Card>
