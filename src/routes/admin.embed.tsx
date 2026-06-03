@@ -19,7 +19,7 @@ function EmbedPage() {
   // żeby iframe nie wymagał logowania do Lovable (preview jest chronione).
   const origin = PROD_ORIGIN;
   const [source, setSource] = useState("strona-www");
-  const [height, setHeight] = useState("900");
+  const [height, setHeight] = useState("100%");
 
   const url = useMemo(() => {
     const u = new URL("/embed/wniosek", origin);
