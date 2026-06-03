@@ -105,8 +105,8 @@ function EmbedPage() {
           <iframe
             src={url}
             width="100%"
-            height={Number(height) || 900}
-            style={{ border: 0, maxWidth: 720 }}
+            height={/^\d+$/.test(height) ? Number(height) : 900}
+            style={{ border: 0 }}
             title="Podgląd wniosku"
           />
         </CardContent>
