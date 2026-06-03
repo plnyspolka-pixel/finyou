@@ -27,7 +27,7 @@ function EmbedPage() {
     return u.toString();
   }, [origin, source]);
 
-  const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;max-width:720px;width:100%;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
+  const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
   const linkSnippet = `<a href="${url}" target="_blank" rel="noopener">Złóż wniosek o pożyczkę</a>`;
 
   const copy = async (text: string, label: string) => {
