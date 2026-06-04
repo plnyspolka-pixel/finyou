@@ -8,29 +8,30 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Phone, ArrowRight } from "lucide-react";
 import {
-  ShieldCheck,
-  Clock,
-  Wallet,
-  FileCheck,
-  Home,
-  Building2,
-  TreePine,
-  Phone,
-  Mail,
-  CheckCircle2,
-  Zap,
-  Lock,
-  HandCoins,
-  Calculator,
-  ArrowRight,
-  Star,
-  TrendingUp,
-} from "lucide-react";
+  IconVault,
+  IconClock,
+  IconLtv,
+  IconBolt,
+  IconShield,
+  IconDoc,
+  IconHandCoins,
+  IconLock,
+  IconCalc,
+  IconApartment,
+  IconHouse,
+  IconShop,
+  IconLand,
+  IconPhone,
+  IconMail,
+  IconCheck,
+} from "@/components/brand-icons";
 import { QuickCalculator } from "@/components/landing/quick-calculator";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
-import { cn } from "@/lib/utils";
+import { Particles } from "@/components/ui/particles";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
