@@ -4561,6 +4561,36 @@ export type Database = {
         }
         Relationships: []
       }
+      text_agent_knowledge: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          embedding: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          embedding?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          embedding?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       text_agent_settings: {
         Row: {
           first_message: string | null
@@ -4758,6 +4788,15 @@ export type Database = {
         Returns: boolean
       }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
+      match_text_agent_knowledge: {
+        Args: { match_count?: number; query_embedding: string }
+        Returns: {
+          content: string
+          id: string
+          similarity: number
+          title: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string

@@ -172,8 +172,22 @@ export async function runAgentTurn(opts: {
 
   const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
 
+  // RAG: pobierz fragmenty bazy wiedzy najbardziej pasujące do wiadomości klienta.
+  let knowledgeBlock = "";
+  try {
+    const { retrieveKnowledge } = await import("./text-agent-knowledge.server");
+    const chunks = await retrieveKnowledge(opts.userMessage, 4);
+    if (chunks.length > 0) {
+      knowledgeBlock =
+        "\n\n[BAZA WIEDZY — wykorzystaj te informacje gdy są trafne]\n" +
+        chunks.map((c, i) => `### ${i + 1}. ${c.title}\n${c.content}`).join("\n\n");
+    }
+  } catch (e) {
+    console.error("[el-text-agent] RAG retrieval failed", e);
+  }
+
   const messages: EmittedMessage[] = [
-    { role: "system", content: systemPrompt + leadContext },
+    { role: "system", content: systemPrompt + leadContext + knowledgeBlock },
   ];
   for (const m of history ?? []) {
     if (!m.content) continue;
