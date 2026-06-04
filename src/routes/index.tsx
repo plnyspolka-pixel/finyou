@@ -103,7 +103,7 @@ function Landing() {
               {PHONE_DISPLAY}
             </a>
           </div>
-          <Button asChild size="sm" className="md:size-default bg-accent text-accent-foreground hover:bg-accent/90">
+          <Button asChild size="sm" className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:brightness-110 transition">
             {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#kalkulator">Sprawdź ratę</a>}
           </Button>
         </div>
@@ -164,7 +164,7 @@ function Landing() {
                     const el = document.getElementById("kalkulator");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
+                  className="group bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-xl shadow-accent/40 hover:shadow-2xl hover:brightness-110 transition"
                 >
                   <IconCalc className="mr-2 h-4 w-4" />
                   Sprawdź warunki pożyczki
