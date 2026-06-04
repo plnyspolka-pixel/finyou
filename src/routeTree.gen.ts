@@ -42,6 +42,7 @@ import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
+import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
@@ -255,6 +256,11 @@ const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
 const AdminUstawieniaRoute = AdminUstawieniaRouteImport.update({
   id: '/ustawienia',
   path: '/ustawienia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTextAgentRoute = AdminTextAgentRouteImport.update({
+  id: '/text-agent',
+  path: '/text-agent',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
@@ -547,6 +553,7 @@ export interface FileRoutesByFullPath {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
+  '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/zgody': typeof AdminZgodyRoute
@@ -628,6 +635,7 @@ export interface FileRoutesByTo {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
+  '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/zgody': typeof AdminZgodyRoute
@@ -713,6 +721,7 @@ export interface FileRoutesById {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
+  '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/zgody': typeof AdminZgodyRoute
@@ -799,6 +808,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/role'
     | '/admin/szkolenia'
+    | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/zgody'
@@ -880,6 +890,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/role'
     | '/admin/szkolenia'
+    | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/zgody'
@@ -964,6 +975,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/role'
     | '/admin/szkolenia'
+    | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/voicebot'
     | '/admin/zgody'
@@ -1274,6 +1286,13 @@ declare module '@tanstack/react-router' {
       path: '/ustawienia'
       fullPath: '/admin/ustawienia'
       preLoaderRoute: typeof AdminUstawieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/text-agent': {
+      id: '/admin/text-agent'
+      path: '/text-agent'
+      fullPath: '/admin/text-agent'
+      preLoaderRoute: typeof AdminTextAgentRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/szkolenia': {
@@ -1672,6 +1691,7 @@ interface AdminRouteChildren {
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
+  AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
@@ -1712,6 +1732,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPixeleRoute: AdminPixeleRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
+  AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminZgodyRoute: AdminZgodyRoute,
