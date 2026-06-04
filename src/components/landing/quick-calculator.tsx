@@ -172,7 +172,7 @@ export function QuickCalculator() {
               <div className="flex items-center justify-between">
                 <dt className="text-sm text-white/75">Zabezpieczenie</dt>
                 <dd className="text-right text-base font-bold text-white">
-                  {secType ? labelFor(secType) : <span className="text-white/40">— wybierz —</span>}
+                  {secType ? securityTypeLabels[secType] : <span className="text-white/40">— wybierz —</span>}
                 </dd>
               </div>
             </dl>
