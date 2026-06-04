@@ -110,11 +110,18 @@ function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] text-primary-foreground">
-        {/* Animated grid */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
+        {/* Animated grid (MagicUI) */}
+        <AnimatedGridPattern
+          numSquares={40}
+          maxOpacity={0.15}
+          duration={3}
+          className={cn(
+            "[mask-image:radial-gradient(ellipse_at_center,white_30%,transparent_75%)]",
+            "inset-0 h-full w-full skew-y-12 text-white/40"
+          )}
         />
+        {/* Meteors */}
+        <Meteors number={20} />
         {/* Glow */}
         <div
           aria-hidden
