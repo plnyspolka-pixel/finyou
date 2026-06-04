@@ -317,7 +317,7 @@ function Landing() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { icon: IconApartment, t: "Mieszkanie" },
-              { icon: IconShop, t: "Dom / dom w budowie" },
+              { icon: IconHouse, t: "Dom / dom w budowie" },
               { icon: IconShop, t: "Lokal użytkowy / usługowy" },
               { icon: IconLand, t: "Działka / grunt rolny" },
             ].map((p) => (
