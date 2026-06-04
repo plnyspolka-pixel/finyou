@@ -147,17 +147,19 @@ function Landing() {
               Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
+              <ShimmerButton
+                shimmerColor="#ffffff"
+                background="oklch(0.78 0.18 85)"
+                className="group shadow-xl shadow-accent/30"
+                onClick={() => {
+                  const el = document.getElementById("kalkulator");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}
               >
-                <a href="#kalkulator">
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Wylicz ratę w 5 sekund
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </a>
-              </Button>
+                <Calculator className="mr-2 h-4 w-4 text-accent-foreground" />
+                <span className="text-sm font-semibold text-accent-foreground md:text-base">Wylicz ratę w 5 sekund</span>
+                <ArrowRight className="ml-2 h-4 w-4 text-accent-foreground transition-transform group-hover:translate-x-1" />
+              </ShimmerButton>
               <Button
                 asChild
                 size="lg"
