@@ -182,10 +182,10 @@ function Landing() {
             </ul>
           </div>
 
-          {/* Stats glass card */}
           <div className="relative">
             <div className="absolute inset-0 -rotate-3 rounded-3xl bg-gradient-to-br from-accent/30 to-[oklch(0.65_0.13_235)]/30 blur-2xl" />
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
+              <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
               {[
                 { v: "20 tys.–1 mln", l: "zł kwota", icon: IconVault },
                 { v: "6 – 72", l: "mies. okres", icon: IconClock },
@@ -196,18 +196,24 @@ function Landing() {
                   key={s.l}
                   className="group rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40"
                 >
-                  <s.icon className="h-5 w-5 text-accent" />
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/95 shadow-md ring-1 ring-white/40">
+                    <s.icon size={22} />
+                  </div>
                   <div className="mt-3 text-2xl font-extrabold text-white md:text-3xl">{s.v}</div>
                   <div className="mt-1 text-[11px] uppercase tracking-wider text-white/60">{s.l}</div>
                 </div>
               ))}
-              <div className="col-span-2 rounded-2xl bg-gradient-to-br from-accent/20 to-[oklch(0.65_0.13_235)]/20 p-4 ring-1 ring-white/15">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
-                  <IconShield className="h-4 w-4 text-accent" />
-                  Bezpieczna hipoteka u notariusza
+              <div className="col-span-2 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-accent/20 to-[oklch(0.65_0.13_235)]/20 p-4 ring-1 ring-white/15">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/95 shadow-md">
+                  <IconShield size={24} />
                 </div>
-                <div className="mt-2 text-sm text-white/85">
-                  Każda umowa zabezpieczona aktem notarialnym i wpisem do księgi wieczystej.
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-white/85">
+                    Bezpieczna hipoteka u notariusza
+                  </div>
+                  <div className="mt-1 text-sm text-white/85">
+                    Każda umowa zabezpieczona aktem notarialnym i wpisem do księgi wieczystej.
+                  </div>
                 </div>
               </div>
             </div>
