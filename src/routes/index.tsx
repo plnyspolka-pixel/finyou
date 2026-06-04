@@ -146,7 +146,7 @@ function Landing() {
             </h1>
             <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
               Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
-              Zły BIK, komornik, istniejąca hipoteka — analizujemy indywidualnie.
+              Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
               Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -294,7 +294,7 @@ function Landing() {
           <div className="mt-12 grid gap-4 md:grid-cols-3">
             {[
               { t: "Zły BIK / brak zdolności", d: "Decyduje wartość nieruchomości, nie scoring bankowy." },
-              { t: "Komornik lub hipoteka", d: "Komornik i istniejąca hipoteka nie przekreślają sprawy." },
+              { t: "Istniejąca hipoteka", d: "Druga hipoteka nie przekreśla sprawy — analizujemy indywidualnie." },
               { t: "Nowa działalność", d: "Finansujemy DG nawet od 1. dnia po założeniu." },
               { t: "Pilna gotówka na firmę", d: "Wypłata po formalnościach u notariusza." },
               { t: "Konsolidacja zobowiązań", d: "Spłata kilku zobowiązań jedną pożyczką." },
@@ -478,8 +478,8 @@ function Landing() {
                 a: "Do złożenia wniosku nie musisz mieć działalności gospodarczej. Natomiast sama pożyczka jest udzielana osobom prowadzącym DG. Możemy finansować nawet nowe działalności, już od pierwszego dnia po założeniu.",
               },
               {
-                q: "Czy zły BIK lub komornik mnie dyskwalifikują?",
-                a: "Nie. W pożyczce zabezpieczonej na nieruchomości kluczowa jest sama nieruchomość. Komornik czy zły BIK nie przekreślają sprawy — analizujemy indywidualnie.",
+                q: "Czy zły BIK mnie dyskwalifikuje?",
+                a: "Nie. W pożyczce zabezpieczonej na nieruchomości kluczowa jest sama nieruchomość — analizujemy każdą sprawę indywidualnie.",
               },
               {
                 q: "Czy potrzebny jest operat szacunkowy?",
