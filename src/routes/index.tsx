@@ -411,19 +411,18 @@ function Landing() {
               { n: "3", t: "Decyzja do 48 h", d: "Wniosek trafia od razu do inwestorów." },
               { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
             ].map((s, i, arr) => (
-              <li
-                key={s.n}
-                className="relative rounded-2xl border border-border bg-card p-6 shadow-sm"
-              >
-                <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-[oklch(0.15_0.09_265)] text-primary-foreground text-base font-extrabold shadow-md">
-                  {s.n}
-                </div>
-                <h3 className="mt-4 font-bold text-foreground">{s.t}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
-                {i < arr.length - 1 && (
-                  <ArrowRight className="absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-muted-foreground/50 md:block" />
-                )}
-              </li>
+              <BlurFade key={s.n} delay={0.1 + i * 0.1} inView direction="up">
+                <li className="relative rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-[oklch(0.15_0.09_265)] text-primary-foreground text-base font-extrabold shadow-md">
+                    {s.n}
+                  </div>
+                  <h3 className="mt-4 font-bold text-foreground">{s.t}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
+                  {i < arr.length - 1 && (
+                    <ArrowRight className="absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-muted-foreground/50 md:block" />
+                  )}
+                </li>
+              </BlurFade>
             ))}
           </ol>
         </div>
