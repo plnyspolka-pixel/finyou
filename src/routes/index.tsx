@@ -136,7 +136,10 @@ function Landing() {
             </div>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
               Pożyczka pod zastaw{" "}
-              <AuroraText className="block">nieruchomości</AuroraText>
+              <AuroraText
+                className="block"
+                colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
+              >nieruchomości</AuroraText>
               <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
                 od 20 000 do 1 000 000 zł
               </span>
