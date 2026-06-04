@@ -28,6 +28,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { QuickCalculator } from "@/components/landing/quick-calculator";
+import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
+import { AuroraText } from "@/components/ui/aurora-text";
+import { Meteors } from "@/components/ui/meteors";
+import { cn } from "@/lib/utils";
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
@@ -104,11 +110,18 @@ function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] text-primary-foreground">
-        {/* Animated grid */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
+        {/* Animated grid (MagicUI) */}
+        <AnimatedGridPattern
+          numSquares={40}
+          maxOpacity={0.15}
+          duration={3}
+          className={cn(
+            "[mask-image:radial-gradient(ellipse_at_center,white_30%,transparent_75%)]",
+            "inset-0 h-full w-full skew-y-12 text-white/40"
+          )}
         />
+        {/* Meteors */}
+        <Meteors number={20} />
         {/* Glow */}
         <div
           aria-hidden
@@ -122,10 +135,11 @@ function Landing() {
               Decyzja w 48 godzin
             </div>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-              Pożyczka pod zastaw
-              <span className="block bg-gradient-to-r from-accent via-[oklch(0.65_0.20_260)] to-[oklch(0.65_0.13_235)] bg-clip-text text-transparent">
-                nieruchomości
-              </span>
+              Pożyczka pod zastaw{" "}
+              <AuroraText
+                className="block"
+                colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
+              >nieruchomości</AuroraText>
               <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
                 od 20 000 do 1 000 000 zł
               </span>
@@ -136,17 +150,19 @@ function Landing() {
               Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
+              <ShimmerButton
+                shimmerColor="#ffffff"
+                background="oklch(0.78 0.18 85)"
+                className="group shadow-xl shadow-accent/30"
+                onClick={() => {
+                  const el = document.getElementById("kalkulator");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}
               >
-                <a href="#kalkulator">
-                  <Calculator className="mr-2 h-4 w-4" />
-                  Wylicz ratę w 5 sekund
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </a>
-              </Button>
+                <Calculator className="mr-2 h-4 w-4 text-accent-foreground" />
+                <span className="text-sm font-semibold text-accent-foreground md:text-base">Wylicz ratę w 5 sekund</span>
+                <ArrowRight className="ml-2 h-4 w-4 text-accent-foreground transition-transform group-hover:translate-x-1" />
+              </ShimmerButton>
               <Button
                 asChild
                 size="lg"
@@ -177,7 +193,8 @@ function Landing() {
           {/* Stats glass card */}
           <div className="relative">
             <div className="absolute inset-0 -rotate-3 rounded-3xl bg-gradient-to-br from-accent/30 to-[oklch(0.65_0.13_235)]/30 blur-2xl" />
-            <div className="relative grid grid-cols-2 gap-3 rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
+            <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
+              <BorderBeam size={250} duration={12} colorFrom="oklch(0.78_0.18_85)" colorTo="oklch(0.65_0.13_235)" />
               {[
                 { v: "20 tys.–1 mln", l: "zł kwota", icon: Wallet },
                 { v: "6 – 72", l: "mies. okres", icon: Clock },
