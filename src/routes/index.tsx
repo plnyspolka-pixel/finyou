@@ -255,7 +255,8 @@ function Landing() {
             Wybierz kwotę, okres i typ zabezpieczenia. W kolejnych krokach ustalimy z Tobą indywidualne warunki — ratę dopasowaną do Twojego budżetu.
           </p>
         </div>
-        <div className="mt-10">
+        <div className="relative mt-10 overflow-hidden rounded-3xl">
+          <BorderBeam size={220} duration={11} colorFrom="#fbbf24" colorTo="#38bdf8" borderWidth={1.5} />
           <QuickCalculator />
         </div>
       </section>
