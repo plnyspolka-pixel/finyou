@@ -205,14 +205,3 @@ export function QuickCalculator() {
   );
 }
 
-function labelFor(t: SecurityType): string {
-  const m: Record<SecurityType, string> = {
-    mieszkanie: "Mieszkanie",
-    dom: "Dom",
-    grunt_rolny: "Grunt rolny",
-    dzialka_budowlana: "Działka budowlana",
-    lokal_uslugowy: "Lokal usługowy",
-    inna: "Inna",
-  };
-  return m[t];
-}
