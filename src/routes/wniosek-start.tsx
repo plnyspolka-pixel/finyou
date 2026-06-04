@@ -45,6 +45,17 @@ function captureParamsToStorage() {
   }
 }
 
+function getNextPath(): string {
+  if (typeof window === "undefined") return "/klient";
+  const sp = new URLSearchParams(window.location.search);
+  const next = sp.get("next");
+  if (next && /^\/[a-z0-9/_-]+$/i.test(next)) return next;
+  try {
+    if (sessionStorage.getItem("calc_step1_v1")) return "/wniosek-warunki";
+  } catch { /* noop */ }
+  return "/klient";
+}
+
 function WniosekStartPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -57,6 +68,11 @@ function WniosekStartPage() {
   const [busy, setBusy] = useState(false);
   const [consentDocs, setConsentDocs] = useState<Record<ConsentKind, ConsentDoc | null>>({ privacy: null, marketing: null, terms: null });
   const [accepted, setAccepted] = useState<Record<ConsentKind, boolean>>({ privacy: false, marketing: false, terms: false });
+
+  // Stan "user jest zalogowany przez OAuth, ale brak numeru telefonu"
+  const [needsPhone, setNeedsPhone] = useState<null | { userId: string }>(null);
+  const [phonePost, setPhonePost] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
 
   // Zapamiętaj parametry kalkulatora przed jakimkolwiek redirectem (OAuth wraca tu z powrotem).
   useEffect(() => {
@@ -87,21 +103,62 @@ function WniosekStartPage() {
     })();
   }, []);
 
-  // Już zalogowany → prosto do wniosku
+  // Już zalogowany → sprawdź czy ma numer telefonu. Jeśli nie — pokaż formularz "podaj telefon".
   useEffect(() => {
     if (authLoading) return;
-    if (user) void navigate({ to: "/klient" });
+    if (!user) return;
+    void (async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const existingPhone = (profile as { phone?: string | null } | null)?.phone;
+      if (!existingPhone || existingPhone.trim().length < 6) {
+        setNeedsPhone({ userId: user.id });
+      } else {
+        void navigate({ to: getNextPath() });
+      }
+    })();
   }, [authLoading, user, navigate]);
 
   const oauth = async (provider: "google" | "apple") => {
+    const sp = new URLSearchParams(window.location.search);
+    const ret = new URL("/wniosek-start", window.location.origin);
+    const nx = sp.get("next");
+    if (nx) ret.searchParams.set("next", nx);
     const res = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: `${window.location.origin}/wniosek-start`,
+      redirect_uri: ret.toString(),
     });
     if (res.error) {
       const msg = res.error.message || "";
       if (/cancel/i.test(msg)) return;
       toast.error("Logowanie nie powiodło się", { description: msg });
     }
+  };
+
+  const submitPhonePost = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!needsPhone) return;
+    if (!phonePost.trim() || phonePost.trim().length < 9) {
+      toast.error("Podaj poprawny numer telefonu");
+      return;
+    }
+    setPhoneBusy(true);
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ user_id: needsPhone.userId, phone: phonePost.trim() }, { onConflict: "user_id" });
+    if (!error) {
+      // synchronizuj też w clients jeśli istnieje
+      await supabase.from("clients").update({ phone: phonePost.trim() }).eq("user_id", needsPhone.userId);
+    }
+    setPhoneBusy(false);
+    if (error) {
+      toast.error("Nie udało się zapisać numeru", { description: error.message });
+      return;
+    }
+    toast.success("Numer zapisany");
+    void navigate({ to: getNextPath() });
   };
 
   const submitSignup = async (e: FormEvent) => {
@@ -167,7 +224,7 @@ function WniosekStartPage() {
     }
     if (data.session) {
       toast.success("Konto utworzone");
-      navigate({ to: "/klient" });
+      navigate({ to: getNextPath() });
     } else {
       toast.success("Konto utworzone", {
         description: "Sprawdź skrzynkę e-mail, by potwierdzić adres, a następnie zaloguj się.",
@@ -185,8 +242,43 @@ function WniosekStartPage() {
       toast.error("Nie udało się zalogować", { description: error.message });
       return;
     }
-    navigate({ to: "/klient" });
+    navigate({ to: getNextPath() });
   };
+
+  // Render: brakuje telefonu po OAuth
+  if (needsPhone) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Jeszcze jedna rzecz — Twój telefon</CardTitle>
+            <CardDescription>
+              Skontaktujemy się z Tobą w sprawie wniosku. Numer jest wymagany, żeby przejść do kolejnego kroku.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={submitPhonePost}>
+              <div className="space-y-2">
+                <Label htmlFor="phone-post">Numer telefonu</Label>
+                <Input
+                  id="phone-post"
+                  type="tel"
+                  required
+                  autoFocus
+                  value={phonePost}
+                  onChange={(e) => setPhonePost(e.target.value)}
+                  placeholder="+48 600 000 000"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={phoneBusy}>
+                {phoneBusy ? "Zapisuję…" : "Zapisz numer i kontynuuj"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
