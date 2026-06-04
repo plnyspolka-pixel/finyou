@@ -33,7 +33,9 @@ import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { Particles } from "@/components/ui/particles";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { BlurFade } from "@/components/ui/blur-fade";
-import { Marquee } from "@/components/ui/marquee";
+import iconHouseHand from "@/assets/icon-house-hand.png.asset.json";
+import iconShield from "@/assets/icon-shield-check.png.asset.json";
+import iconExcavator from "@/assets/icon-excavator.png.asset.json";
 
 import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
 
@@ -85,7 +87,7 @@ function Landing() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
           <Link to="/" className="shrink-0">
-            <FinanceYouLogo variant="light" />
+            <FinanceYouLogo variant="light" size="lg" />
           </Link>
           <nav className="hidden items-center gap-6 lg:flex">
             <a href="#kalkulator" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
@@ -101,7 +103,7 @@ function Landing() {
               {PHONE_DISPLAY}
             </a>
           </div>
-          <Button asChild size="sm" className="md:size-default bg-accent text-accent-foreground hover:bg-accent/90">
+          <Button asChild size="sm" className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:brightness-110 transition">
             {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#kalkulator">Sprawdź ratę</a>}
           </Button>
         </div>
@@ -140,7 +142,7 @@ function Landing() {
                 Pożyczka pod zastaw{" "}
                 <AuroraText
                   className="block"
-                  colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
+                  colors={["#a78bfa", "#6366f1", "#38bdf8", "#22d3ee", "#a78bfa"]}
                 >nieruchomości</AuroraText>
                 <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
                   od 20 000 do 1 000 000 zł
@@ -162,7 +164,7 @@ function Landing() {
                     const el = document.getElementById("kalkulator");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
+                  className="group bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-xl shadow-accent/40 hover:shadow-2xl hover:brightness-110 transition"
                 >
                   <IconCalc className="mr-2 h-4 w-4" />
                   Sprawdź warunki pożyczki
@@ -203,20 +205,26 @@ function Landing() {
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
               <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
               {[
-                { v: "20 tys.–1 mln", l: "zł kwota", icon: IconVault },
-                { v: "6 – 72", l: "mies. okres", icon: IconClock },
-                { v: "do 50%", l: "wartości LTV", icon: IconLtv },
-                { v: "48 h", l: "decyzja", icon: IconBolt },
+                { v: "20 tys.–1 mln", l: "zł kwota", bg: iconHouseHand.url },
+                { v: "6 – 72", l: "mies. okres", bg: iconShield.url },
+                { v: "do 50%", l: "wartości LTV", bg: iconExcavator.url },
+                { v: "48 h", l: "decyzja", bg: iconShield.url },
               ].map((s) => (
                 <div
                   key={s.l}
-                  className="group rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40"
+                  className="group relative overflow-hidden rounded-2xl bg-white/5 p-5 ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40"
                 >
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/95 shadow-md ring-1 ring-white/40">
-                    <s.icon size={22} />
+                  {/* Ikona w tle — centralnie, subtelnie */}
+                  <img
+                    src={s.bg}
+                    alt=""
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 m-auto h-24 w-24 object-contain opacity-[0.13] mix-blend-screen transition group-hover:opacity-20 group-hover:scale-110"
+                  />
+                  <div className="relative z-10">
+                    <div className="text-3xl font-extrabold text-white md:text-4xl drop-shadow-md">{s.v}</div>
+                    <div className="mt-2 text-[11px] uppercase tracking-wider text-white/70">{s.l}</div>
                   </div>
-                  <div className="mt-3 text-2xl font-extrabold text-white md:text-3xl">{s.v}</div>
-                  <div className="mt-1 text-[11px] uppercase tracking-wider text-white/60">{s.l}</div>
                 </div>
               ))}
               <div className="col-span-2 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-accent/20 to-[oklch(0.65_0.13_235)]/20 p-4 ring-1 ring-white/15">
@@ -237,23 +245,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Icon marquee — wizualny pasek ikon inspirowanych PDF */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-r from-primary/[0.04] via-accent/[0.06] to-primary/[0.04] py-6">
-        <Marquee pauseOnHover className="[--duration:38s] [--gap:2.5rem]">
-          {[
-            IconShield, IconVault, IconHandCoins, IconBolt, IconLtv,
-            IconLock, IconDoc, IconClock, IconApartment, IconHouse,
-            IconShop, IconLand, IconCalc, IconPhone, IconCheck,
-          ].map((Icon, i) => (
-            <div
-              key={i}
-              className="group grid h-14 w-14 place-items-center rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md"
-            >
-              <Icon size={28} />
-            </div>
-          ))}
-        </Marquee>
-      </section>
+      {/* (usunięto pasek przewijany z ikonami — na prośbę klienta) */}
 
       {/* Trust strip */}
       <section className="border-b border-border bg-card">
@@ -497,7 +489,7 @@ function Landing() {
           </Accordion>
 
           <div className="mt-10 text-center">
-            <Button asChild size="lg" className="bg-accent text-accent-foreground shadow-lg shadow-accent/20 hover:bg-accent/90">
+            <Button asChild size="lg" className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:brightness-110 transition">
               <a href="#kalkulator">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Wróć do kalkulatora
@@ -520,7 +512,7 @@ function Landing() {
               Zadzwoń lub napisz — odpowiemy na pytania, doradzimy, czy złożenie wniosku w twojej
               sytuacji ma sens.
             </p>
-            <Button asChild size="lg" className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button asChild size="lg" className="mt-6 bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-xl shadow-accent/40 hover:shadow-2xl hover:brightness-110 transition">
               <a href="#kalkulator">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Najpierw sprawdź ratę
@@ -560,13 +552,51 @@ function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:px-6">
-          <FinanceYouLogo variant="light" size="sm" />
+        <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+          <div className="grid gap-10 md:grid-cols-[1.2fr_1fr_1fr]">
+            {/* Dane firmy */}
+            <div>
+              <FinanceYouLogo variant="light" size="md" />
+              <p className="mt-4 text-sm font-semibold text-foreground">Finance You sp. z o.o.</p>
+              <address className="mt-1 not-italic text-sm leading-relaxed text-muted-foreground">
+                ul. Nowogrodzka 31<br />
+                00-511 Warszawa
+              </address>
+              <dl className="mt-4 space-y-1 text-xs text-muted-foreground">
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">KRS:</dt><dd>0000635207</dd></div>
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">NIP:</dt><dd>7010611803</dd></div>
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">REGON:</dt><dd>365350668</dd></div>
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">Kapitał zakładowy:</dt><dd>389 600,00 zł</dd></div>
+              </dl>
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/80">
+                Sąd Rejonowy dla m.st. Warszawy w Warszawie, XII Wydział Gospodarczy Krajowego Rejestru Sądowego.
+              </p>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a>
-            <a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a>
-            <span>© {new Date().getFullYear()} Finance You</span>
+            {/* Kontakt */}
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Kontakt</h3>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a></li>
+                <li><a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a></li>
+                <li>pn–pt 9:00–17:00</li>
+              </ul>
+            </div>
+
+            {/* Nawigacja */}
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Informacje</h3>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><a href="#kalkulator" className="hover:text-foreground">Kalkulator</a></li>
+                <li><a href="#jak-to-dziala" className="hover:text-foreground">Jak to działa</a></li>
+                <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
+            <span>© {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
+            <span>Pożyczki zabezpieczone hipoteką dla osób prowadzących działalność gospodarczą.</span>
           </div>
         </div>
       </footer>
@@ -576,7 +606,7 @@ function Landing() {
         <Button
           asChild
           size="lg"
-          className="w-full bg-accent text-accent-foreground shadow-lg shadow-accent/30 hover:bg-accent/90"
+          className="w-full bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/40 hover:brightness-110 transition"
         >
           <a href="#kalkulator">
             <IconCalc className="mr-2 h-4 w-4" />

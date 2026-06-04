@@ -18,7 +18,7 @@ export function FinanceYouLogo({
   variant = "dark",
   size = "md",
 }: Props) {
-  const h = size === "sm" ? "h-7" : size === "lg" ? "h-14" : "h-10";
+  const h = size === "sm" ? "h-9" : size === "lg" ? "h-20" : "h-14";
   // logo zostało wygenerowane na jasnym beżowym tle — na dark hero odwracamy
   // jasność, na light tle (header, footer) pokazujemy oryginał.
   const filter =
