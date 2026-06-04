@@ -561,12 +561,8 @@ function Landing() {
       {/* Footer */}
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:px-6">
-          <div className="flex items-center gap-2 font-bold text-foreground">
-            <div className="grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-primary to-[oklch(0.15_0.09_265)] text-primary-foreground text-xs">
-              FY
-            </div>
-            Finance You
-          </div>
+          <FinanceYouLogo variant="light" size="sm" />
+
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a>
             <a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a>
