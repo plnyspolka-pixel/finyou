@@ -128,63 +128,75 @@ function Landing() {
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-[1.15fr_1fr] md:px-6 md:py-24">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-              <IconBolt size={16} />
-              Decyzja w 48 godzin
-            </div>
-            <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-              Pożyczka pod zastaw{" "}
-              <AuroraText
-                className="block"
-                colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
-              >nieruchomości</AuroraText>
-              <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
-                od 20 000 do 1 000 000 zł
-              </span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
-              Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
-              Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
-              Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                onClick={() => {
-                  const el = document.getElementById("kalkulator");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
-              >
-                <IconCalc className="mr-2 h-4 w-4" />
-                Sprawdź warunki pożyczki
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-              >
-                <a href={`tel:${PHONE_HREF}`}>
-                  <Phone className="mr-2 h-4 w-4" />
-                  {PHONE_DISPLAY}
-                </a>
-              </Button>
-            </div>
-            <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
-              {[
-                "Złożenie wniosku darmowe",
-                "Decyzja do 48 godzin",
-                "Bez opłat za rozpatrzenie",
-                "Nowa działalność — od 1. dnia",
-              ].map((t) => (
-                <li key={t} className="flex items-center gap-2">
-                  <IconCheck className="h-4 w-4 text-accent" />
-                  {t}
-                </li>
-              ))}
-            </ul>
+            <BlurFade delay={0.05} inView>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+                <IconBolt size={16} />
+                <AnimatedShinyText className="inline-flex items-center justify-center !text-white/90 !mx-0">
+                  Decyzja w 48 godzin
+                </AnimatedShinyText>
+              </div>
+            </BlurFade>
+            <BlurFade delay={0.15} inView>
+              <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
+                Pożyczka pod zastaw{" "}
+                <AuroraText
+                  className="block"
+                  colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
+                >nieruchomości</AuroraText>
+                <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
+                  od 20 000 do 1 000 000 zł
+                </span>
+              </h1>
+            </BlurFade>
+            <BlurFade delay={0.3} inView>
+              <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
+                Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
+                Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
+                Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
+              </p>
+            </BlurFade>
+            <BlurFade delay={0.4} inView>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    const el = document.getElementById("kalkulator");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
+                >
+                  <IconCalc className="mr-2 h-4 w-4" />
+                  Sprawdź warunki pożyczki
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <a href={`tel:${PHONE_HREF}`}>
+                    <Phone className="mr-2 h-4 w-4" />
+                    {PHONE_DISPLAY}
+                  </a>
+                </Button>
+              </div>
+            </BlurFade>
+            <BlurFade delay={0.5} inView>
+              <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
+                {[
+                  "Złożenie wniosku darmowe",
+                  "Decyzja do 48 godzin",
+                  "Bez opłat za rozpatrzenie",
+                  "Nowa działalność — od 1. dnia",
+                ].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <IconCheck className="h-4 w-4 text-accent" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </BlurFade>
           </div>
 
           <div className="relative">
