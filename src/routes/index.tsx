@@ -489,7 +489,7 @@ function Landing() {
           </Accordion>
 
           <div className="mt-10 text-center">
-            <Button asChild size="lg" className="bg-accent text-accent-foreground shadow-lg shadow-accent/20 hover:bg-accent/90">
+            <Button asChild size="lg" className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:brightness-110 transition">
               <a href="#kalkulator">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Wróć do kalkulatora
@@ -512,7 +512,7 @@ function Landing() {
               Zadzwoń lub napisz — odpowiemy na pytania, doradzimy, czy złożenie wniosku w twojej
               sytuacji ma sens.
             </p>
-            <Button asChild size="lg" className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button asChild size="lg" className="mt-6 bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-xl shadow-accent/40 hover:shadow-2xl hover:brightness-110 transition">
               <a href="#kalkulator">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Najpierw sprawdź ratę
@@ -552,13 +552,51 @@ function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:px-6">
-          <FinanceYouLogo variant="light" size="sm" />
+        <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+          <div className="grid gap-10 md:grid-cols-[1.2fr_1fr_1fr]">
+            {/* Dane firmy */}
+            <div>
+              <FinanceYouLogo variant="light" size="md" />
+              <p className="mt-4 text-sm font-semibold text-foreground">Finance You sp. z o.o.</p>
+              <address className="mt-1 not-italic text-sm leading-relaxed text-muted-foreground">
+                ul. Nowogrodzka 31<br />
+                00-511 Warszawa
+              </address>
+              <dl className="mt-4 space-y-1 text-xs text-muted-foreground">
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">KRS:</dt><dd>0000635207</dd></div>
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">NIP:</dt><dd>7010611803</dd></div>
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">REGON:</dt><dd>365350668</dd></div>
+                <div className="flex gap-2"><dt className="font-semibold text-foreground/80">Kapitał zakładowy:</dt><dd>389 600,00 zł</dd></div>
+              </dl>
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/80">
+                Sąd Rejonowy dla m.st. Warszawy w Warszawie, XII Wydział Gospodarczy Krajowego Rejestru Sądowego.
+              </p>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a>
-            <a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a>
-            <span>© {new Date().getFullYear()} Finance You</span>
+            {/* Kontakt */}
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Kontakt</h3>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a></li>
+                <li><a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a></li>
+                <li>pn–pt 9:00–17:00</li>
+              </ul>
+            </div>
+
+            {/* Nawigacja */}
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Informacje</h3>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><a href="#kalkulator" className="hover:text-foreground">Kalkulator</a></li>
+                <li><a href="#jak-to-dziala" className="hover:text-foreground">Jak to działa</a></li>
+                <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
+            <span>© {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
+            <span>Pożyczki zabezpieczone hipoteką dla osób prowadzących działalność gospodarczą.</span>
           </div>
         </div>
       </footer>
@@ -568,7 +606,7 @@ function Landing() {
         <Button
           asChild
           size="lg"
-          className="w-full bg-accent text-accent-foreground shadow-lg shadow-accent/30 hover:bg-accent/90"
+          className="w-full bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/40 hover:brightness-110 transition"
         >
           <a href="#kalkulator">
             <IconCalc className="mr-2 h-4 w-4" />
