@@ -96,6 +96,7 @@ function Landing() {
           <Button asChild size="sm" className="md:size-default">
             {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#wniosek">Złóż wniosek</a>}
           </Button>
+        </div>
       </header>
 
       {/* Hero */}
