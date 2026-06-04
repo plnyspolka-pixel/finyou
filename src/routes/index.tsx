@@ -188,7 +188,8 @@ function Landing() {
           {/* Stats glass card */}
           <div className="relative">
             <div className="absolute inset-0 -rotate-3 rounded-3xl bg-gradient-to-br from-accent/30 to-[oklch(0.65_0.13_235)]/30 blur-2xl" />
-            <div className="relative grid grid-cols-2 gap-3 rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
+            <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
+              <BorderBeam size={250} duration={12} colorFrom="oklch(0.78_0.18_85)" colorTo="oklch(0.65_0.13_235)" />
               {[
                 { v: "20 tys.–1 mln", l: "zł kwota", icon: Wallet },
                 { v: "6 – 72", l: "mies. okres", icon: Clock },
