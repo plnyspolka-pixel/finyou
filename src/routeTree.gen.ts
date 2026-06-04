@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
+import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
 import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
@@ -94,6 +95,11 @@ import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/ap
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WniosekWarunkiRoute = WniosekWarunkiRouteImport.update({
+  id: '/wniosek-warunki',
+  path: '/wniosek-warunki',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WniosekStartRoute = WniosekStartRouteImport.update({
@@ -514,6 +520,7 @@ export interface FileRoutesByFullPath {
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
+  '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
@@ -594,6 +601,7 @@ export interface FileRoutesByTo {
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
+  '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
@@ -678,6 +686,7 @@ export interface FileRoutesById {
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
+  '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
@@ -763,6 +772,7 @@ export interface FileRouteTypes {
     | '/logowanie'
     | '/rejestracja'
     | '/wniosek-start'
+    | '/wniosek-warunki'
     | '/wybor-roli'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
@@ -843,6 +853,7 @@ export interface FileRouteTypes {
     | '/logowanie'
     | '/rejestracja'
     | '/wniosek-start'
+    | '/wniosek-warunki'
     | '/wybor-roli'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
@@ -926,6 +937,7 @@ export interface FileRouteTypes {
     | '/logowanie'
     | '/rejestracja'
     | '/wniosek-start'
+    | '/wniosek-warunki'
     | '/wybor-roli'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
@@ -1010,6 +1022,7 @@ export interface RootRouteChildren {
   LogowanieRoute: typeof LogowanieRoute
   RejestracjaRoute: typeof RejestracjaRoute
   WniosekStartRoute: typeof WniosekStartRoute
+  WniosekWarunkiRoute: typeof WniosekWarunkiRoute
   WyborRoliRoute: typeof WyborRoliRoute
   BlogSlugRoute: typeof BlogSlugRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
@@ -1037,6 +1050,13 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wniosek-warunki': {
+      id: '/wniosek-warunki'
+      path: '/wniosek-warunki'
+      fullPath: '/wniosek-warunki'
+      preLoaderRoute: typeof WniosekWarunkiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wniosek-start': {
@@ -1769,6 +1789,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogowanieRoute: LogowanieRoute,
   RejestracjaRoute: RejestracjaRoute,
   WniosekStartRoute: WniosekStartRoute,
+  WniosekWarunkiRoute: WniosekWarunkiRoute,
   WyborRoliRoute: WyborRoliRoute,
   BlogSlugRoute: BlogSlugRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
