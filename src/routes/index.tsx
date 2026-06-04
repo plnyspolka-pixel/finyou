@@ -79,12 +79,9 @@ function Landing() {
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-          <div className="flex items-center gap-2 font-bold text-foreground">
-            <div className="grid h-9 w-9 place-items-center rounded-md bg-gradient-to-br from-primary to-[oklch(0.15_0.09_265)] text-primary-foreground text-sm shadow-md">
-              FY
-            </div>
-            <span className="text-base md:text-lg">Finance You</span>
-          </div>
+          <Link to="/" className="shrink-0">
+            <FinanceYouLogo variant="light" />
+          </Link>
           <nav className="hidden items-center gap-6 lg:flex">
             <a href="#kalkulator" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
             <a href="#jak-to-dziala" className="text-sm font-medium text-muted-foreground hover:text-foreground">Jak to działa</a>
@@ -105,25 +102,21 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] text-primary-foreground">
-        {/* Animated grid (MagicUI) */}
-        <AnimatedGridPattern
-          numSquares={40}
-          maxOpacity={0.15}
-          duration={3}
-          className={cn(
-            "[mask-image:radial-gradient(ellipse_at_center,white_30%,transparent_75%)]",
-            "inset-0 h-full w-full skew-y-12 text-white/40"
-          )}
-        />
-        {/* Meteors */}
-        <Meteors number={20} />
-        {/* Glow */}
+      {/* Hero — nowoczesne tło: gradient mesh + soft orbs */}
+      <section className="relative overflow-hidden border-b border-border bg-[oklch(0.16_0.09_265)] text-primary-foreground">
+        {/* Aurora mesh */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_20%_10%,oklch(0.40_0.25_268_/0.6),transparent_55%),radial-gradient(circle_at_85%_85%,oklch(0.65_0.13_235_/0.45),transparent_55%)]"
+          className="pointer-events-none absolute inset-0 opacity-90 [background-image:radial-gradient(ellipse_70%_55%_at_15%_5%,oklch(0.45_0.22_265_/_0.55),transparent_60%),radial-gradient(ellipse_60%_45%_at_85%_15%,oklch(0.65_0.13_235_/_0.45),transparent_65%),radial-gradient(ellipse_70%_50%_at_50%_100%,oklch(0.78_0.18_85_/_0.18),transparent_65%)]"
         />
+        {/* Subtelne dot pattern - bardzo cichy */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:32px_32px]"
+        />
+        {/* Animated soft orbs */}
+        <div aria-hidden className="pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-[oklch(0.55_0.22_278)]/30 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[oklch(0.78_0.18_85)]/15 blur-3xl" />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-[1.15fr_1fr] md:px-6 md:py-24">
           <div>
@@ -147,19 +140,18 @@ function Landing() {
               Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <ShimmerButton
-                shimmerColor="#ffffff"
-                background="oklch(0.78 0.18 85)"
-                className="group shadow-xl shadow-accent/30"
+              <Button
+                size="lg"
                 onClick={() => {
                   const el = document.getElementById("kalkulator");
                   el?.scrollIntoView({ behavior: "smooth" });
                 }}
+                className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
               >
-                <Calculator className="mr-2 h-4 w-4 text-accent-foreground" />
-                <span className="text-sm font-semibold text-accent-foreground md:text-base">Wylicz ratę w 5 sekund</span>
-                <ArrowRight className="ml-2 h-4 w-4 text-accent-foreground transition-transform group-hover:translate-x-1" />
-              </ShimmerButton>
+                <Calculator className="mr-2 h-4 w-4" />
+                Sprawdź warunki pożyczki
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
               <Button
                 asChild
                 size="lg"
@@ -191,7 +183,6 @@ function Landing() {
           <div className="relative">
             <div className="absolute inset-0 -rotate-3 rounded-3xl bg-gradient-to-br from-accent/30 to-[oklch(0.65_0.13_235)]/30 blur-2xl" />
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
-              <BorderBeam size={250} duration={12} colorFrom="oklch(0.78_0.18_85)" colorTo="oklch(0.65_0.13_235)" />
               {[
                 { v: "20 tys.–1 mln", l: "zł kwota", icon: Wallet },
                 { v: "6 – 72", l: "mies. okres", icon: Clock },
@@ -208,17 +199,12 @@ function Landing() {
                 </div>
               ))}
               <div className="col-span-2 rounded-2xl bg-gradient-to-br from-accent/20 to-[oklch(0.65_0.13_235)]/20 p-4 ring-1 ring-white/15">
-                <div className="flex items-center gap-2 text-xs text-white/80">
-                  <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                  <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                  <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                  <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                  <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                  <span className="font-semibold text-white">5.0</span>
-                  <span className="text-white/60">— opinie klientów</span>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
+                  <ShieldCheck className="h-4 w-4 text-accent" />
+                  Bezpieczna hipoteka u notariusza
                 </div>
                 <div className="mt-2 text-sm text-white/85">
-                  „Wszystko trafia w jedno miejsce. Decyzja przyszła w dobę."
+                  Każda umowa zabezpieczona aktem notarialnym i wpisem do księgi wieczystej.
                 </div>
               </div>
             </div>
@@ -230,10 +216,10 @@ function Landing() {
       <section className="border-b border-border bg-card">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-4 md:px-6">
           {[
-            { icon: HandCoins, t: "Darmowy wniosek", d: "Bez opłat za rozpatrzenie." },
-            { icon: Clock, t: "Decyzja 48 h", d: "Bez kolejek i pośredników." },
-            { icon: ShieldCheck, t: "Bezpiecznie", d: "Formalności u notariusza." },
-            { icon: Lock, t: "Wszystko w jednym miejscu", d: "Bez SMS-ów i WhatsAppa." },
+            { icon: HandCoins, t: "Złożenie wniosku darmowe", d: "Bez opłat za rozpatrzenie." },
+            { icon: TrendingUp, t: "Do 50% wartości", d: "LTV liczone od wartości rynkowej." },
+            { icon: Lock, t: "Wszystko w jednym miejscu", d: "Bez SMS-ów i WhatsAppa — jeden formularz." },
+            { icon: FileCheck, t: "Hipoteka u notariusza", d: "Akt notarialny i wpis do KW." },
           ].map((f) => (
             <div key={f.t} className="flex items-start gap-3">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 text-primary ring-1 ring-border">
@@ -251,20 +237,20 @@ function Landing() {
       {/* KALKULATOR — main conversion tool */}
       <section className="relative mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1 z 4</p>
           <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground md:text-5xl">
-            Sprawdź ratę
-            <span className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] bg-clip-text text-transparent"> bez logowania</span>
+            Sprawdź warunki
+            <span className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] bg-clip-text text-transparent"> pożyczki pod zastaw</span>
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Przesuń suwaki — od razu zobaczysz orientacyjną ratę, całkowity koszt i sumę spłat.
-            Bez podawania danych osobowych.
+            Wybierz kwotę, okres i typ zabezpieczenia. W kolejnych krokach ustalimy z Tobą indywidualne warunki — ratę dopasowaną do Twojego budżetu.
           </p>
         </div>
         <div className="mt-10">
-          <QuickCalculator ctaHref="#wniosek" />
+          <QuickCalculator />
         </div>
       </section>
+
 
       {/* For whom */}
       <section className="border-t border-border bg-secondary/40">
