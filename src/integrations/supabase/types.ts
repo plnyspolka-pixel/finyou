@@ -4561,6 +4561,30 @@ export type Database = {
         }
         Relationships: []
       }
+      text_agent_settings: {
+        Row: {
+          first_message: string | null
+          id: number
+          system_prompt: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          first_message?: string | null
+          id?: number
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          first_message?: string | null
+          id?: number
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       tracking_settings: {
         Row: {
           client_pixel_id: string | null
