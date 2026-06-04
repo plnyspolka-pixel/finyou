@@ -135,10 +135,8 @@ function Landing() {
               Decyzja w 48 godzin
             </div>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-              Pożyczka pod zastaw
-              <span className="block bg-gradient-to-r from-accent via-[oklch(0.65_0.20_260)] to-[oklch(0.65_0.13_235)] bg-clip-text text-transparent">
-                nieruchomości
-              </span>
+              Pożyczka pod zastaw{" "}
+              <AuroraText className="block">nieruchomości</AuroraText>
               <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
                 od 20 000 do 1 000 000 zł
               </span>
