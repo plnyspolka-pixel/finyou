@@ -21,6 +21,7 @@ const groups: Group[] = [
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
+      { to: "/admin/text-agent", label: "Agent DM (Messenger/IG/email)", icon: Bot },
     ],
   },
 
