@@ -47,17 +47,9 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace JSX {
-    interface IntrinsicElements {
-      "elevenlabs-convai": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & { "agent-id"?: string },
-        HTMLElement
-      >;
-    }
-  }
-}
+const ConvaiWidget = "elevenlabs-convai" as unknown as React.FC<
+  { "agent-id": string } & React.HTMLAttributes<HTMLElement>
+>;
 
 function Landing() {
   const { user, roles, loading } = useAuth();
@@ -502,7 +494,7 @@ function Landing() {
       </footer>
 
       {/* ElevenLabs Convai widget */}
-      <elevenlabs-convai agent-id="agent_1701kt4q868ben4vpcbgzga0vmy5"></elevenlabs-convai>
+      <ConvaiWidget agent-id="agent_1701kt4q868ben4vpcbgzga0vmy5" />
     </div>
   );
 }
