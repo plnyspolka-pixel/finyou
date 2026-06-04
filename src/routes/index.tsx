@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -94,9 +94,8 @@ function Landing() {
             </a>
           </div>
           <Button asChild size="sm" className="md:size-default">
-            <a href="#wniosek">Złóż wniosek</a>
+            {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#wniosek">Złóż wniosek</a>}
           </Button>
-        </div>
       </header>
 
       {/* Hero */}
