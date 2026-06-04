@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { ArrowRight, Calculator, ShieldCheck, Wallet, Clock } from "lucide-react";
-import { formatPLN, type SecurityType } from "@/lib/loan-math";
+import { formatPLN, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 
 export function QuickCalculator() {
   const [amount, setAmount] = useState(200_000);
