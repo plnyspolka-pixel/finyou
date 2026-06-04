@@ -24,37 +24,64 @@ let cachedAgentPrompt: { prompt: string; firstMessage: string | null; fetchedAt:
 const PROMPT_TTL_MS = 5 * 60 * 1000;
 
 async function fetchAgentPrompt(): Promise<{ prompt: string; firstMessage: string | null }> {
-  const agentId = process.env.ELEVENLABS_TEXT_AGENT_ID;
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!agentId || !apiKey) {
-    return {
-      prompt: defaultSystemPrompt(),
-      firstMessage: null,
-    };
-  }
   const now = Date.now();
   if (cachedAgentPrompt && now - cachedAgentPrompt.fetchedAt < PROMPT_TTL_MS) {
     return { prompt: cachedAgentPrompt.prompt, firstMessage: cachedAgentPrompt.firstMessage };
   }
+
+  // 1) Preferuj prompt z DB (edytowalny w /admin/text-agent).
   try {
-    const res = await fetch(`${EL_BASE}/convai/agents/${encodeURIComponent(agentId)}`, {
-      headers: { "xi-api-key": apiKey },
-    });
-    if (!res.ok) throw new Error(`EL agent fetch ${res.status}`);
-    const json: any = await res.json();
-    const promptFromEL: string | undefined =
-      json?.conversation_config?.agent?.prompt?.prompt ??
-      json?.conversation_config?.prompt?.prompt ??
-      json?.prompt?.prompt;
-    const firstMessage: string | null =
-      json?.conversation_config?.agent?.first_message ?? null;
-    const prompt = (promptFromEL && promptFromEL.length > 20) ? promptFromEL : defaultSystemPrompt();
-    cachedAgentPrompt = { prompt, firstMessage, fetchedAt: now };
-    return { prompt, firstMessage };
+    const s = admin();
+    const { data } = await s
+      .from("text_agent_settings")
+      .select("system_prompt, first_message")
+      .eq("id", 1)
+      .maybeSingle();
+    const dbPrompt = (data?.system_prompt ?? "").trim();
+    if (dbPrompt.length > 20) {
+      const out = { prompt: dbPrompt, firstMessage: data?.first_message ?? null };
+      cachedAgentPrompt = { ...out, fetchedAt: now };
+      return out;
+    }
   } catch (e) {
-    console.error("[el-text-agent] fetch prompt failed", e);
-    return { prompt: defaultSystemPrompt(), firstMessage: null };
+    console.error("[el-text-agent] db prompt fetch failed", e);
   }
+
+  // 2) Fallback: pobierz z ElevenLabs (jeśli skonfigurowany).
+  const agentId = process.env.ELEVENLABS_TEXT_AGENT_ID;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (agentId && apiKey) {
+    try {
+      const res = await fetch(`${EL_BASE}/convai/agents/${encodeURIComponent(agentId)}`, {
+        headers: { "xi-api-key": apiKey },
+      });
+      if (res.ok) {
+        const json: any = await res.json();
+        const promptFromEL: string | undefined =
+          json?.conversation_config?.agent?.prompt?.prompt ??
+          json?.conversation_config?.prompt?.prompt ??
+          json?.prompt?.prompt;
+        const firstMessage: string | null =
+          json?.conversation_config?.agent?.first_message ?? null;
+        if (promptFromEL && promptFromEL.length > 20) {
+          cachedAgentPrompt = { prompt: promptFromEL, firstMessage, fetchedAt: now };
+          return { prompt: promptFromEL, firstMessage };
+        }
+      }
+    } catch (e) {
+      console.error("[el-text-agent] EL fetch failed", e);
+    }
+  }
+
+  // 3) Fallback ostateczny: zaszyty default.
+  const fallback = { prompt: defaultSystemPrompt(), firstMessage: null };
+  cachedAgentPrompt = { ...fallback, fetchedAt: now };
+  return fallback;
+}
+
+/** Wyczyść cache promptu — wywołane po zapisaniu z UI. */
+export function clearAgentPromptCache() {
+  cachedAgentPrompt = null;
 }
 
 function defaultSystemPrompt(): string {
