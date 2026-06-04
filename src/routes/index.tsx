@@ -122,7 +122,7 @@ function Landing() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-[1.15fr_1fr] md:px-6 md:py-24">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-              <Zap className="h-3.5 w-3.5 text-accent" />
+              <IconBolt className="h-3.5 w-3.5 text-accent" />
               Decyzja w 48 godzin
             </div>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
@@ -149,7 +149,7 @@ function Landing() {
                 }}
                 className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
               >
-                <Calculator className="mr-2 h-4 w-4" />
+                <IconCalc className="mr-2 h-4 w-4" />
                 Sprawdź warunki pożyczki
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
@@ -173,7 +173,7 @@ function Landing() {
                 "Nowa działalność — od 1. dnia",
               ].map((t) => (
                 <li key={t} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-accent" />
+                  <IconCheck className="h-4 w-4 text-accent" />
                   {t}
                 </li>
               ))}
@@ -185,10 +185,10 @@ function Landing() {
             <div className="absolute inset-0 -rotate-3 rounded-3xl bg-gradient-to-br from-accent/30 to-[oklch(0.65_0.13_235)]/30 blur-2xl" />
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
               {[
-                { v: "20 tys.–1 mln", l: "zł kwota", icon: Wallet },
-                { v: "6 – 72", l: "mies. okres", icon: Clock },
-                { v: "do 50%", l: "wartości LTV", icon: TrendingUp },
-                { v: "48 h", l: "decyzja", icon: Zap },
+                { v: "20 tys.–1 mln", l: "zł kwota", icon: IconVault },
+                { v: "6 – 72", l: "mies. okres", icon: IconClock },
+                { v: "do 50%", l: "wartości LTV", icon: IconLtv },
+                { v: "48 h", l: "decyzja", icon: IconBolt },
               ].map((s) => (
                 <div
                   key={s.l}
@@ -201,7 +201,7 @@ function Landing() {
               ))}
               <div className="col-span-2 rounded-2xl bg-gradient-to-br from-accent/20 to-[oklch(0.65_0.13_235)]/20 p-4 ring-1 ring-white/15">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
-                  <ShieldCheck className="h-4 w-4 text-accent" />
+                  <IconShield className="h-4 w-4 text-accent" />
                   Bezpieczna hipoteka u notariusza
                 </div>
                 <div className="mt-2 text-sm text-white/85">
@@ -217,10 +217,10 @@ function Landing() {
       <section className="border-b border-border bg-card">
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-4 md:px-6">
           {[
-            { icon: HandCoins, t: "Złożenie wniosku darmowe", d: "Bez opłat za rozpatrzenie." },
-            { icon: TrendingUp, t: "Do 50% wartości", d: "LTV liczone od wartości rynkowej." },
-            { icon: Lock, t: "Wszystko w jednym miejscu", d: "Bez SMS-ów i WhatsAppa — jeden formularz." },
-            { icon: FileCheck, t: "Hipoteka u notariusza", d: "Akt notarialny i wpis do KW." },
+            { icon: IconHandCoins, t: "Złożenie wniosku darmowe", d: "Bez opłat za rozpatrzenie." },
+            { icon: IconLtv, t: "Do 50% wartości", d: "LTV liczone od wartości rynkowej." },
+            { icon: IconLock, t: "Wszystko w jednym miejscu", d: "Bez SMS-ów i WhatsAppa — jeden formularz." },
+            { icon: IconDoc, t: "Hipoteka u notariusza", d: "Akt notarialny i wpis do KW." },
           ].map((f) => (
             <div key={f.t} className="flex items-start gap-3">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 text-primary ring-1 ring-border">
@@ -269,7 +269,7 @@ function Landing() {
             </div>
             <Button asChild variant="outline" className="border-primary/30 bg-card">
               <a href="#kalkulator">
-                <Calculator className="mr-2 h-4 w-4" />
+                <IconCalc className="mr-2 h-4 w-4" />
                 Sprawdź swoją ratę
               </a>
             </Button>
@@ -290,7 +290,7 @@ function Landing() {
               >
                 <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent opacity-0 transition group-hover:opacity-100" />
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-accent" />
+                  <IconCheck className="h-5 w-5 text-accent" />
                   <h3 className="font-bold text-foreground">{c.t}</h3>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{c.d}</p>
@@ -316,10 +316,10 @@ function Landing() {
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: Home, t: "Mieszkanie" },
-              { icon: Building2, t: "Dom / dom w budowie" },
-              { icon: Building2, t: "Lokal użytkowy / usługowy" },
-              { icon: TreePine, t: "Działka / grunt rolny" },
+              { icon: IconApartment, t: "Mieszkanie" },
+              { icon: IconShop, t: "Dom / dom w budowie" },
+              { icon: IconShop, t: "Lokal użytkowy / usługowy" },
+              { icon: IconLand, t: "Działka / grunt rolny" },
             ].map((p) => (
               <div
                 key={p.t}
@@ -347,7 +347,7 @@ function Landing() {
             </div>
             <Button asChild variant="outline" className="border-primary/30 bg-card">
               <a href="#kalkulator">
-                <Calculator className="mr-2 h-4 w-4" />
+                <IconCalc className="mr-2 h-4 w-4" />
                 Zacznij od kalkulatora
               </a>
             </Button>
@@ -458,7 +458,7 @@ function Landing() {
           <div className="mt-10 text-center">
             <Button asChild size="lg" className="bg-accent text-accent-foreground shadow-lg shadow-accent/20 hover:bg-accent/90">
               <a href="#kalkulator">
-                <Calculator className="mr-2 h-4 w-4" />
+                <IconCalc className="mr-2 h-4 w-4" />
                 Wróć do kalkulatora
               </a>
             </Button>
@@ -481,7 +481,7 @@ function Landing() {
             </p>
             <Button asChild size="lg" className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90">
               <a href="#kalkulator">
-                <Calculator className="mr-2 h-4 w-4" />
+                <IconCalc className="mr-2 h-4 w-4" />
                 Najpierw sprawdź ratę
               </a>
             </Button>
@@ -505,7 +505,7 @@ function Landing() {
               className="group flex items-center gap-3 rounded-2xl border border-white/15 bg-white/5 p-5 backdrop-blur transition hover:bg-white/10"
             >
               <div className="grid h-12 w-12 place-items-center rounded-xl bg-accent text-accent-foreground shadow-lg shadow-accent/30">
-                <Mail className="h-5 w-5" />
+                <IconMail className="h-5 w-5" />
               </div>
               <div className="flex-1">
                 <div className="text-xs uppercase tracking-wider text-white/60">E-mail</div>
@@ -538,7 +538,7 @@ function Landing() {
           className="w-full bg-accent text-accent-foreground shadow-lg shadow-accent/30 hover:bg-accent/90"
         >
           <a href="#kalkulator">
-            <Calculator className="mr-2 h-4 w-4" />
+            <IconCalc className="mr-2 h-4 w-4" />
             Wylicz ratę
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>
