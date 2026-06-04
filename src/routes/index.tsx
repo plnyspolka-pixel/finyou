@@ -377,48 +377,6 @@ function Landing() {
         </div>
       </section>
 
-      {/* Form (CTA) */}
-      <section
-        id="wniosek"
-        className="relative scroll-mt-20 border-t border-border bg-gradient-to-b from-background to-secondary/40"
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent"
-        />
-        <div className="mx-auto max-w-5xl px-4 py-16 md:px-6 md:py-24">
-          <div className="text-center">
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground md:text-5xl">
-              Złóż wniosek — to zajmie minutę
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-              Złożenie jest darmowe. Nie pobieramy opłaty za rozpatrzenie. Decyzja do 48 h mailem.
-            </p>
-          </div>
-
-          <div className="mt-10 overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
-            <iframe
-              src="/embed/wniosek"
-              title="Wniosek o pożyczkę"
-              className="h-[1200px] w-full md:h-[1100px]"
-              loading="lazy"
-            />
-          </div>
-
-          <div className="mt-6 flex flex-col items-center justify-center gap-4 text-sm text-muted-foreground md:flex-row">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-accent" /> Dane przesyłane bezpiecznie
-            </div>
-            <div className="flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-accent" /> Bez zobowiązań
-            </div>
-            <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-accent" /> Darmowa analiza
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* FAQ */}
       <section id="faq" className="scroll-mt-20 border-t border-border">
