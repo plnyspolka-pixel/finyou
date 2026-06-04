@@ -85,7 +85,7 @@ function Landing() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
           <Link to="/" className="shrink-0">
-            <FinanceYouLogo variant="light" />
+            <FinanceYouLogo variant="light" size="lg" />
           </Link>
           <nav className="hidden items-center gap-6 lg:flex">
             <a href="#kalkulator" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
@@ -140,7 +140,7 @@ function Landing() {
                 Pożyczka pod zastaw{" "}
                 <AuroraText
                   className="block"
-                  colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
+                  colors={["#a78bfa", "#6366f1", "#38bdf8", "#22d3ee", "#a78bfa"]}
                 >nieruchomości</AuroraText>
                 <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
                   od 20 000 do 1 000 000 zł
