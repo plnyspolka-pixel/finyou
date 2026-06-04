@@ -8,8 +8,9 @@ type Props = {
 };
 
 /**
- * Premium FY monogram — geometryczny, gold + navy.
- * F i Y zachodzące, w heksagonalnym kartuszu z złotym akcentem.
+ * FinanceYou — minimalistyczny monogram FY.
+ * Cienkie linie, geometryczna precyzja, jeden gold akcent.
+ * Inspirowane premium brandami (Maison Margiela / Aesop / private banking).
  */
 export function FinanceYouLogo({
   className,
@@ -20,108 +21,89 @@ export function FinanceYouLogo({
   const dim = size === "sm" ? "h-8 w-8" : size === "lg" ? "h-12 w-12" : "h-10 w-10";
   const wordSize = size === "sm" ? "text-sm" : size === "lg" ? "text-xl" : "text-base";
 
-  // Kolory wg wariantu
-  const bgFrom =
-    variant === "dark"
-      ? "oklch(0.18 0.09 265)"
-      : variant === "light"
-      ? "oklch(1 0 0)"
-      : "transparent";
-  const bgTo =
-    variant === "dark"
-      ? "oklch(0.10 0.07 265)"
-      : variant === "light"
-      ? "oklch(0.96 0.01 265)"
-      : "transparent";
+  const stroke =
+    variant === "light" ? "oklch(0.18 0.09 265)" : "oklch(0.98 0 0)";
   const gold = "oklch(0.78 0.18 85)";
-  const goldDeep = "oklch(0.68 0.15 78)";
-  const mono = variant === "light" ? "oklch(0.18 0.09 265)" : "oklch(1 0 0)";
-
-  const id = "fyLogo";
+  const textColor =
+    variant === "light" ? "text-[oklch(0.18_0.09_265)]" : "text-white";
+  const subColor =
+    variant === "light" ? "text-muted-foreground" : "text-white/55";
 
   return (
     <div className={cn("inline-flex items-center gap-2.5", className)}>
       <svg
-        viewBox="0 0 48 48"
-        className={cn(dim, "drop-shadow-sm")}
+        viewBox="0 0 40 40"
+        className={cn(dim)}
         role="img"
         aria-label="Finance You"
+        fill="none"
       >
-        <defs>
-          <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={bgFrom} />
-            <stop offset="100%" stopColor={bgTo} />
-          </linearGradient>
-          <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={gold} />
-            <stop offset="100%" stopColor={goldDeep} />
-          </linearGradient>
-          <linearGradient id={`${id}-mono`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={mono} stopOpacity="1" />
-            <stop offset="100%" stopColor={mono} stopOpacity="0.85" />
-          </linearGradient>
-        </defs>
-
-        {/* Karusz */}
-        <rect
-          x="2"
-          y="2"
-          width="44"
-          height="44"
-          rx="11"
-          fill={`url(#${id}-bg)`}
-          stroke={`url(#${id}-gold)`}
-          strokeWidth="1.2"
-          strokeOpacity={variant === "mono" ? 0.6 : 1}
+        {/* Krąg bazowy — cienka linia */}
+        <circle
+          cx="20"
+          cy="20"
+          r="18.5"
+          stroke={stroke}
+          strokeOpacity="0.18"
+          strokeWidth="1"
         />
 
-        {/* F — pionowa kolumna + dwie poprzeczki */}
-        <g>
-          {/* pion */}
-          <rect x="12" y="11" width="4.2" height="26" rx="1.2" fill={`url(#${id}-mono)`} />
-          {/* górna poprzeczka */}
-          <rect x="12" y="11" width="14" height="4.2" rx="1.2" fill={`url(#${id}-mono)`} />
-          {/* środkowa poprzeczka — krótsza, gold akcent */}
-          <rect x="12" y="22" width="9.5" height="3.6" rx="1" fill={`url(#${id}-gold)`} />
-        </g>
+        {/* Monogram FY — linie, nie bloki */}
+        {/* F: pion + górna poprzeczka + krótka środkowa */}
+        <path
+          d="M11 9 L11 31"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="square"
+        />
+        <path
+          d="M11 9 L21 9"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="square"
+        />
+        <path
+          d="M11 19 L18 19"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="square"
+        />
 
-        {/* Y — dwa ramiona zbiegają się w pion */}
-        <g>
-          {/* lewe ramię */}
-          <path
-            d="M22 11 L29.5 24 L29.5 28 L25.5 28 L19 16 Z"
-            fill={`url(#${id}-mono)`}
-            opacity="0.92"
-          />
-          {/* prawe ramię */}
-          <path
-            d="M37 11 L29.5 24 L29.5 28 L33.5 28 L40 16 Z"
-            fill={`url(#${id}-mono)`}
-            opacity="0.92"
-          />
-          {/* pion Y */}
-          <rect x="27.4" y="24" width="4.2" height="13" rx="1.2" fill={`url(#${id}-mono)`} />
-          {/* złoty akcent u góry prawego ramienia */}
-          <circle cx="38" cy="12.5" r="1.8" fill={`url(#${id}-gold)`} />
-        </g>
+        {/* Y: dwie skośne zbiegające się + pion w dół */}
+        <path
+          d="M22 9 L28 19 L28 31"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="square"
+          strokeLinejoin="miter"
+        />
+        <path
+          d="M34 9 L28 19"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="square"
+        />
+
+        {/* Złoty akcent — kropka jako sygnatura */}
+        <circle cx="28" cy="31" r="1.6" fill={gold} />
       </svg>
 
       {showWordmark && (
         <div className="flex flex-col leading-none">
           <span
             className={cn(
-              "font-extrabold tracking-tight",
+              "font-semibold tracking-tight",
               wordSize,
-              variant === "light" ? "text-foreground" : "text-white",
+              textColor,
             )}
-            style={{ fontFamily: "Montserrat, sans-serif", letterSpacing: "-0.02em" }}
+            style={{ fontFamily: "Inter, system-ui, sans-serif", letterSpacing: "-0.02em" }}
           >
-            Finance<span style={{ color: gold }}>You</span>
+            Finance<span style={{ color: gold, fontWeight: 600 }}>You</span>
           </span>
           <span
             className={cn(
-              "mt-0.5 text-[9px] font-semibold uppercase tracking-[0.22em]",
-              variant === "light" ? "text-muted-foreground" : "text-white/55",
+              "mt-1 text-[9px] font-medium uppercase tracking-[0.28em]",
+              subColor,
             )}
           >
             Private lending
