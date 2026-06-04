@@ -118,6 +118,8 @@ function Landing() {
         {/* Animated soft orbs */}
         <div aria-hidden className="pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-[oklch(0.55_0.22_278)]/30 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[oklch(0.78_0.18_85)]/15 blur-3xl" />
+        {/* Premium particles — subtle, nowoczesny "stardust" */}
+        <Particles className="absolute inset-0" quantity={90} staticity={40} ease={60} color="#fde68a" />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-[1.15fr_1fr] md:px-6 md:py-24">
           <div>
