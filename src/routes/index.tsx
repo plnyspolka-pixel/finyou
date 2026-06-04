@@ -237,27 +237,19 @@ function Landing() {
         </div>
       </section>
 
-      {/* Marquee — PDF-inspired benefits */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 py-4">
-        <Marquee pauseOnHover className="[--duration:40s]">
+      {/* Icon marquee — wizualny pasek ikon inspirowanych PDF */}
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-r from-primary/[0.04] via-accent/[0.06] to-primary/[0.04] py-6">
+        <Marquee pauseOnHover className="[--duration:38s] [--gap:2.5rem]">
           {[
-            { icon: IconShield, t: "Hipoteka u notariusza" },
-            { icon: IconBolt, t: "Decyzja w 48 godzin" },
-            { icon: IconHandCoins, t: "Złożenie wniosku darmowe" },
-            { icon: IconVault, t: "Bez opłat za rozpatrzenie" },
-            { icon: IconLtv, t: "Do 50% wartości nieruchomości" },
-            { icon: IconLock, t: "Wszystko w jednym miejscu" },
-            { icon: IconDoc, t: "Sprawdzone konstrukcje prawne" },
-            { icon: IconClock, t: "Od 6 do 72 miesięcy" },
-            { icon: IconCheck, t: "Zły BIK — analizujemy" },
-            { icon: IconHouse, t: "Mieszkania, domy, lokale, działki" },
-          ].map((it) => (
-            <div key={it.t} className="mx-6 flex items-center gap-3 text-sm font-semibold text-foreground/80">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-card ring-1 ring-border">
-                <it.icon size={16} />
-              </span>
-              {it.t}
-              <span className="text-accent">•</span>
+            IconShield, IconVault, IconHandCoins, IconBolt, IconLtv,
+            IconLock, IconDoc, IconClock, IconApartment, IconHouse,
+            IconShop, IconLand, IconCalc, IconPhone, IconCheck,
+          ].map((Icon, i) => (
+            <div
+              key={i}
+              className="group grid h-14 w-14 place-items-center rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md"
+            >
+              <Icon size={28} />
             </div>
           ))}
         </Marquee>
