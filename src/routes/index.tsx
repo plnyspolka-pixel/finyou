@@ -32,6 +32,10 @@ import { AuroraText } from "@/components/ui/aurora-text";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { Particles } from "@/components/ui/particles";
 import { BorderBeam } from "@/components/ui/border-beam";
+import { BlurFade } from "@/components/ui/blur-fade";
+import { Marquee } from "@/components/ui/marquee";
+
+import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
@@ -123,63 +127,75 @@ function Landing() {
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-[1.15fr_1fr] md:px-6 md:py-24">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-              <IconBolt size={16} />
-              Decyzja w 48 godzin
-            </div>
-            <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-              Pożyczka pod zastaw{" "}
-              <AuroraText
-                className="block"
-                colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
-              >nieruchomości</AuroraText>
-              <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
-                od 20 000 do 1 000 000 zł
-              </span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
-              Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
-              Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
-              Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                onClick={() => {
-                  const el = document.getElementById("kalkulator");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
-              >
-                <IconCalc className="mr-2 h-4 w-4" />
-                Sprawdź warunki pożyczki
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-              >
-                <a href={`tel:${PHONE_HREF}`}>
-                  <Phone className="mr-2 h-4 w-4" />
-                  {PHONE_DISPLAY}
-                </a>
-              </Button>
-            </div>
-            <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
-              {[
-                "Złożenie wniosku darmowe",
-                "Decyzja do 48 godzin",
-                "Bez opłat za rozpatrzenie",
-                "Nowa działalność — od 1. dnia",
-              ].map((t) => (
-                <li key={t} className="flex items-center gap-2">
-                  <IconCheck className="h-4 w-4 text-accent" />
-                  {t}
-                </li>
-              ))}
-            </ul>
+            <BlurFade delay={0.05} inView>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
+                <IconBolt size={16} />
+                <AnimatedShinyText className="inline-flex items-center justify-center !text-white/90 !mx-0">
+                  Decyzja w 48 godzin
+                </AnimatedShinyText>
+              </div>
+            </BlurFade>
+            <BlurFade delay={0.15} inView>
+              <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
+                Pożyczka pod zastaw{" "}
+                <AuroraText
+                  className="block"
+                  colors={["#fbbf24", "#f59e0b", "#a78bfa", "#38bdf8", "#fbbf24"]}
+                >nieruchomości</AuroraText>
+                <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
+                  od 20 000 do 1 000 000 zł
+                </span>
+              </h1>
+            </BlurFade>
+            <BlurFade delay={0.3} inView>
+              <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
+                Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
+                Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
+                Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
+              </p>
+            </BlurFade>
+            <BlurFade delay={0.4} inView>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    const el = document.getElementById("kalkulator");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="group bg-accent text-accent-foreground shadow-xl shadow-accent/30 hover:bg-accent/90"
+                >
+                  <IconCalc className="mr-2 h-4 w-4" />
+                  Sprawdź warunki pożyczki
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <a href={`tel:${PHONE_HREF}`}>
+                    <Phone className="mr-2 h-4 w-4" />
+                    {PHONE_DISPLAY}
+                  </a>
+                </Button>
+              </div>
+            </BlurFade>
+            <BlurFade delay={0.5} inView>
+              <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
+                {[
+                  "Złożenie wniosku darmowe",
+                  "Decyzja do 48 godzin",
+                  "Bez opłat za rozpatrzenie",
+                  "Nowa działalność — od 1. dnia",
+                ].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <IconCheck className="h-4 w-4 text-accent" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </BlurFade>
           </div>
 
           <div className="relative">
@@ -219,6 +235,32 @@ function Landing() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Marquee — PDF-inspired benefits */}
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 py-4">
+        <Marquee pauseOnHover className="[--duration:40s]">
+          {[
+            { icon: IconShield, t: "Hipoteka u notariusza" },
+            { icon: IconBolt, t: "Decyzja w 48 godzin" },
+            { icon: IconHandCoins, t: "Złożenie wniosku darmowe" },
+            { icon: IconVault, t: "Bez opłat za rozpatrzenie" },
+            { icon: IconLtv, t: "Do 50% wartości nieruchomości" },
+            { icon: IconLock, t: "Wszystko w jednym miejscu" },
+            { icon: IconDoc, t: "Sprawdzone konstrukcje prawne" },
+            { icon: IconClock, t: "Od 6 do 72 miesięcy" },
+            { icon: IconCheck, t: "Zły BIK — analizujemy" },
+            { icon: IconHouse, t: "Mieszkania, domy, lokale, działki" },
+          ].map((it) => (
+            <div key={it.t} className="mx-6 flex items-center gap-3 text-sm font-semibold text-foreground/80">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-card ring-1 ring-border">
+                <it.icon size={16} />
+              </span>
+              {it.t}
+              <span className="text-accent">•</span>
+            </div>
+          ))}
+        </Marquee>
       </section>
 
       {/* Trust strip */}
@@ -329,16 +371,15 @@ function Landing() {
               { icon: IconHouse, t: "Dom / dom w budowie" },
               { icon: IconShop, t: "Lokal użytkowy / usługowy" },
               { icon: IconLand, t: "Działka / grunt rolny" },
-            ].map((p) => (
-              <div
-                key={p.t}
-                className="flex flex-col items-start gap-3 rounded-2xl border border-border bg-card p-6 transition hover:border-accent/60"
-              >
-                <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent/15 to-[oklch(0.65_0.13_235)]/15 text-accent ring-1 ring-accent/20">
-                  <p.icon className="h-5 w-5" />
+            ].map((p, i) => (
+              <BlurFade key={p.t} delay={0.1 + i * 0.08} inView>
+                <div className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-xl">
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent/15 to-[oklch(0.65_0.13_235)]/15 text-accent ring-1 ring-accent/20 transition group-hover:scale-110 group-hover:rotate-3">
+                    <p.icon className="h-5 w-5" />
+                  </div>
+                  <div className="text-sm font-bold text-foreground">{p.t}</div>
                 </div>
-                <div className="text-sm font-bold text-foreground">{p.t}</div>
-              </div>
+              </BlurFade>
             ))}
           </div>
         </div>
@@ -369,19 +410,18 @@ function Landing() {
               { n: "3", t: "Decyzja do 48 h", d: "Wniosek trafia od razu do inwestorów." },
               { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
             ].map((s, i, arr) => (
-              <li
-                key={s.n}
-                className="relative rounded-2xl border border-border bg-card p-6 shadow-sm"
-              >
-                <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-[oklch(0.15_0.09_265)] text-primary-foreground text-base font-extrabold shadow-md">
-                  {s.n}
-                </div>
-                <h3 className="mt-4 font-bold text-foreground">{s.t}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
-                {i < arr.length - 1 && (
-                  <ArrowRight className="absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-muted-foreground/50 md:block" />
-                )}
-              </li>
+              <BlurFade key={s.n} delay={0.1 + i * 0.1} inView direction="up">
+                <li className="relative rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-primary to-[oklch(0.15_0.09_265)] text-primary-foreground text-base font-extrabold shadow-md">
+                    {s.n}
+                  </div>
+                  <h3 className="mt-4 font-bold text-foreground">{s.t}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
+                  {i < arr.length - 1 && (
+                    <ArrowRight className="absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-muted-foreground/50 md:block" />
+                  )}
+                </li>
+              </BlurFade>
             ))}
           </ol>
         </div>
