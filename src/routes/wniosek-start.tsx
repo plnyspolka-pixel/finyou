@@ -224,7 +224,7 @@ function WniosekStartPage() {
     }
     if (data.session) {
       toast.success("Konto utworzone");
-      navigate({ to: "/klient" });
+      navigate({ to: getNextPath() });
     } else {
       toast.success("Konto utworzone", {
         description: "Sprawdź skrzynkę e-mail, by potwierdzić adres, a następnie zaloguj się.",
@@ -242,8 +242,43 @@ function WniosekStartPage() {
       toast.error("Nie udało się zalogować", { description: error.message });
       return;
     }
-    navigate({ to: "/klient" });
+    navigate({ to: getNextPath() });
   };
+
+  // Render: brakuje telefonu po OAuth
+  if (needsPhone) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Jeszcze jedna rzecz — Twój telefon</CardTitle>
+            <CardDescription>
+              Skontaktujemy się z Tobą w sprawie wniosku. Numer jest wymagany, żeby przejść do kolejnego kroku.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={submitPhonePost}>
+              <div className="space-y-2">
+                <Label htmlFor="phone-post">Numer telefonu</Label>
+                <Input
+                  id="phone-post"
+                  type="tel"
+                  required
+                  autoFocus
+                  value={phonePost}
+                  onChange={(e) => setPhonePost(e.target.value)}
+                  placeholder="+48 600 000 000"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={phoneBusy}>
+                {phoneBusy ? "Zapisuję…" : "Zapisz numer i kontynuuj"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
