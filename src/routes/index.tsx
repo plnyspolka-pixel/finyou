@@ -28,6 +28,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { QuickCalculator } from "@/components/landing/quick-calculator";
+import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
+import { AuroraText } from "@/components/ui/aurora-text";
+import { Meteors } from "@/components/ui/meteors";
+import { cn } from "@/lib/utils";
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
