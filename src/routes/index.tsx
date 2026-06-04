@@ -53,6 +53,7 @@ const ConvaiWidget = "elevenlabs-convai" as unknown as React.FC<
 
 function Landing() {
   const { user, roles, loading } = useAuth();
+  const panelHref = user ? defaultPathForRoles(roles) : null;
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -64,28 +65,6 @@ function Landing() {
     s.type = "text/javascript";
     document.body.appendChild(s);
   }, []);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Ładowanie…
-      </div>
-    );
-  }
-
-  if (user) {
-    const pending =
-      typeof window !== "undefined" ? localStorage.getItem("pending_role_selection") : null;
-    if (pending === "1") {
-      try {
-        localStorage.removeItem("pending_role_selection");
-      } catch {
-        /* noop */
-      }
-      return <Navigate to="/wybor-roli" />;
-    }
-    return <Navigate to={defaultPathForRoles(roles)} />;
-  }
 
   return (
     <div className="min-h-screen bg-background font-[Montserrat]">
