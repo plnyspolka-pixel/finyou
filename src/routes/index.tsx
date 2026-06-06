@@ -430,6 +430,10 @@ function Landing() {
                 a: "Prosimy, żeby nie wysyłać dokumentów poza formularzem. Najlepiej dodać je do wniosku na financeyou.pl — wszystko trafia w jedno miejsce, a sprawa od razu idzie do inwestorów.",
               },
               {
+                q: "Co jest zabezpieczeniem pożyczki?",
+                a: "Zabezpieczeniem pożyczki jest hipoteka ustanawiana na nieruchomości oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 Kodeksu postępowania cywilnego, składane w formie aktu notarialnego.",
+              },
+              {
                 q: "Czy wypełnienie wniosku oznacza utratę nieruchomości?",
                 a: "Nie. Samo złożenie wniosku i analiza nie powodują utraty nieruchomości. Zabezpieczeniem jest hipoteka ustanawiana u notariusza po pozytywnej decyzji.",
               },
