@@ -32,6 +32,7 @@ import {
   BgRocket,
 } from "@/components/brand-icons";
 import { QuickCalculator } from "@/components/landing/quick-calculator";
+import { PropertyTypesShowcase } from "@/components/landing/property-types-showcase";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { Particles } from "@/components/ui/particles";
