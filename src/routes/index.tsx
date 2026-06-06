@@ -572,9 +572,6 @@ function Landing() {
           </a>
         </Button>
       </div>
-
-      {/* ElevenLabs widget */}
-      <ConvaiWidget agent-id="agent_1701kt4q868ben4vpcbgzga0vmy5" />
     </div>
   );
 }
