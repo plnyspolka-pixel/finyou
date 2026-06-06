@@ -580,7 +580,7 @@ function Landing() {
 
           <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
             <span>© {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
-            <span>Pożyczki zabezpieczone hipoteką dla osób prowadzących działalność gospodarczą.</span>
+            <span>Prywatne pożyczki zabezpieczone hipoteką na nieruchomości.</span>
           </div>
         </div>
       </footer>
