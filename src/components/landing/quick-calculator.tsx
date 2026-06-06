@@ -21,11 +21,10 @@ export function QuickCalculator() {
     } catch {
       /* noop */
     }
-    const url = new URL("/wniosek-start", window.location.origin);
+    const url = new URL("/wniosek-zabezpieczenie", window.location.origin);
     url.searchParams.set("amount", String(amount));
     url.searchParams.set("months", String(months));
     url.searchParams.set("source", "landing_calculator");
-    url.searchParams.set("next", "/wniosek-warunki");
     window.location.href = url.toString();
   };
 
