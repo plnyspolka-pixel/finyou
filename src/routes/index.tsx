@@ -64,24 +64,11 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const ConvaiWidget = "elevenlabs-convai" as unknown as React.FC<
-  { "agent-id": string } & React.HTMLAttributes<HTMLElement>
->;
 
 function Landing() {
   const { user, roles } = useAuth();
   const panelHref = user ? defaultPathForRoles(roles) : null;
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (document.getElementById("elevenlabs-convai-script")) return;
-    const s = document.createElement("script");
-    s.id = "elevenlabs-convai-script";
-    s.src = "https://unpkg.com/@elevenlabs/convai-widget-embed";
-    s.async = true;
-    s.type = "text/javascript";
-    document.body.appendChild(s);
-  }, []);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background font-[Montserrat] pb-16 md:pb-0">
