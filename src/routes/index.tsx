@@ -350,7 +350,7 @@ function Landing() {
 
           <ol className="mt-12 grid gap-5 md:grid-cols-4">
             {[
-              { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund, bez logowania." },
+              { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund." },
               { n: "2", t: "Złóż wniosek", d: "Numer KW i zdjęcia nieruchomości w formularzu." },
               { n: "3", t: "Decyzja do 24 h", d: "Wniosek trafia od razu do inwestorów." },
               { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
@@ -428,6 +428,10 @@ function Landing() {
               {
                 q: "Czy mogę wysłać dokumenty SMS-em lub mailem?",
                 a: "Prosimy, żeby nie wysyłać dokumentów poza formularzem. Najlepiej dodać je do wniosku na financeyou.pl — wszystko trafia w jedno miejsce, a sprawa od razu idzie do inwestorów.",
+              },
+              {
+                q: "Co jest zabezpieczeniem pożyczki?",
+                a: "Zabezpieczeniem pożyczki jest hipoteka ustanawiana na nieruchomości oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 Kodeksu postępowania cywilnego, składane w formie aktu notarialnego.",
               },
               {
                 q: "Czy wypełnienie wniosku oznacza utratę nieruchomości?",
