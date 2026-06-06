@@ -350,7 +350,7 @@ function Landing() {
 
           <ol className="mt-12 grid gap-5 md:grid-cols-4">
             {[
-              { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund, bez logowania." },
+              { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund." },
               { n: "2", t: "Złóż wniosek", d: "Numer KW i zdjęcia nieruchomości w formularzu." },
               { n: "3", t: "Decyzja do 24 h", d: "Wniosek trafia od razu do inwestorów." },
               { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
