@@ -148,7 +148,8 @@ export function QuickCalculator() {
         </div>
 
         {/* Summary panel */}
-        <div className="relative rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] p-6 text-primary-foreground md:p-8">
+        <div className="relative min-w-0 rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] p-6 text-primary-foreground md:p-8">
+
           <div className="absolute inset-0 rounded-2xl opacity-30 [background-image:radial-gradient(circle_at_30%_20%,oklch(0.65_0.13_235_/0.45),transparent_55%)]" />
           <div className="relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
