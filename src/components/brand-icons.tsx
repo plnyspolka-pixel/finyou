@@ -271,3 +271,82 @@ export function IconMail(props: IconProps) {
     </svg>
   );
 }
+
+/* —————————— BACKGROUND WATERMARK ICONS (line-art, oversized for tile bg) —————————— */
+
+type BgProps = React.SVGProps<SVGSVGElement> & { className?: string };
+
+const bgBase = (props: BgProps) => ({
+  viewBox: "0 0 100 100",
+  fill: "none",
+  className: cn("h-full w-full", props.className),
+  ...props,
+});
+
+/* Banknot z monetami — kwota */
+export function BgMoney(props: BgProps) {
+  return (
+    <svg {...bgBase(props)}>
+      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+        <rect x="14" y="32" width="58" height="34" rx="4" />
+        <circle cx="43" cy="49" r="8" />
+        <path d="M43 44v10M40 47h6M40 51h6" />
+        <circle cx="22" cy="40" r="1.5" fill={GOLD} />
+        <circle cx="64" cy="58" r="1.5" fill={GOLD} />
+        <circle cx="74" cy="72" r="10" />
+        <path d="M74 67v10M71 70h6M71 74h6" />
+        <circle cx="58" cy="78" r="7" />
+      </g>
+    </svg>
+  );
+}
+
+/* Kalendarz z zegarem — okres */
+export function BgPeriod(props: BgProps) {
+  return (
+    <svg {...bgBase(props)}>
+      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+        <rect x="16" y="22" width="50" height="46" rx="4" />
+        <path d="M16 34h50M28 16v12M54 16v12" />
+        <circle cx="32" cy="48" r="2" fill={GOLD} />
+        <circle cx="44" cy="48" r="2" fill={GOLD} />
+        <circle cx="56" cy="48" r="2" fill={GOLD} />
+        <circle cx="32" cy="60" r="2" fill={GOLD} />
+        <circle cx="70" cy="70" r="16" />
+        <path d="M70 60v10l7 4" />
+      </g>
+    </svg>
+  );
+}
+
+/* Waga / proporcje — LTV */
+export function BgScale(props: BgProps) {
+  return (
+    <svg {...bgBase(props)}>
+      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+        <path d="M50 14v66M30 80h40" />
+        <path d="M50 22l-22 22M50 22l22 22" />
+        <path d="M16 44h24l-12 18a12 12 0 0024 0L40 44" />
+        <path d="M60 44h24l-12 14a12 12 0 0024 0L72 44" transform="translate(-12,0)" />
+        <circle cx="50" cy="14" r="3" fill={GOLD} />
+      </g>
+    </svg>
+  );
+}
+
+/* Rakieta — 48h decyzja */
+export function BgRocket(props: BgProps) {
+  return (
+    <svg {...bgBase(props)}>
+      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+        <path d="M50 10c12 10 18 22 18 36 0 8-3 14-6 18H38c-3-4-6-10-6-18 0-14 6-26 18-36z" />
+        <circle cx="50" cy="40" r="6" />
+        <path d="M38 56l-10 6 4 10 8-6M62 56l10 6-4 10-8-6" />
+        <path d="M44 74c2 6 4 10 6 14 2-4 4-8 6-14" />
+        <circle cx="46" cy="86" r="1.5" fill={GOLD} />
+        <circle cx="54" cy="90" r="1.5" fill={GOLD} />
+      </g>
+    </svg>
+  );
+}
+

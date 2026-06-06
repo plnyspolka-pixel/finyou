@@ -26,6 +26,10 @@ import {
   IconPhone,
   IconMail,
   IconCheck,
+  BgMoney,
+  BgPeriod,
+  BgScale,
+  BgRocket,
 } from "@/components/brand-icons";
 import { QuickCalculator } from "@/components/landing/quick-calculator";
 import { AuroraText } from "@/components/ui/aurora-text";
@@ -202,22 +206,25 @@ function Landing() {
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
               <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
               {[
-                { v: "20 tys.–1 mln", l: "zł kwota", Icon: IconVault },
-                { v: "6 – 72", l: "mies. okres", Icon: IconClock },
-                { v: "do 50%", l: "wartości LTV", Icon: IconLtv },
-                { v: "48 h", l: "decyzja", Icon: IconBolt },
+                { v: "20 tys.", v2: "– 1 mln zł", l: "kwota pożyczki", Bg: BgMoney },
+                { v: "6 – 72", v2: "miesięcy", l: "okres spłaty", Bg: BgPeriod },
+                { v: "do 50%", v2: "wartości", l: "maksymalne LTV", Bg: BgScale },
+                { v: "48 h", v2: "decyzja", l: "szybka analiza", Bg: BgRocket },
               ].map((s) => (
                 <div
                   key={s.l}
-                  className="group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl bg-white/5 p-5 text-center ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40"
+                  className="group relative flex h-32 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/5 px-3 text-center ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40 md:h-36"
                 >
-                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 shadow-md ring-1 ring-white/20 transition group-hover:scale-110">
-                    <s.Icon size={26} />
+                  <div className="pointer-events-none absolute inset-0 opacity-[0.13] transition group-hover:opacity-25 group-hover:scale-110">
+                    <s.Bg />
                   </div>
-                  <div className="text-2xl font-extrabold leading-tight text-white md:text-3xl drop-shadow-md">
+                  <div className="relative text-xl font-extrabold leading-tight text-white drop-shadow-md md:text-2xl">
                     {s.v}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-white/70 md:text-[11px]">
+                  <div className="relative mt-0.5 text-[11px] font-semibold text-white/85 md:text-xs">
+                    {s.v2}
+                  </div>
+                  <div className="relative mt-2 text-[9px] uppercase tracking-[0.15em] text-white/60 md:text-[10px]">
                     {s.l}
                   </div>
                 </div>
