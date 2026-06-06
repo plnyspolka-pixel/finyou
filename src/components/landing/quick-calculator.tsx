@@ -58,19 +58,20 @@ export function QuickCalculator() {
         className="pointer-events-none absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-[oklch(0.55_0.18_265)]/15 blur-3xl"
       />
 
-      {/* Wskaźnik kroków */}
-      <div className="relative mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {/* Wskaźnik kroków — kompakt na mobile, pełny na md+ */}
+      <div className="relative mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <span className="grid h-6 w-6 place-items-center rounded-full bg-accent text-[11px] font-extrabold text-accent-foreground">1</span>
         <span className="text-foreground">Parametry</span>
-        <span className="mx-1 h-px w-6 bg-border" />
-        <span className="grid h-6 w-6 place-items-center rounded-full bg-secondary text-[11px] font-bold">2</span>
-        <span>Twoje dane</span>
-        <span className="mx-1 h-px w-6 bg-border" />
-        <span className="grid h-6 w-6 place-items-center rounded-full bg-secondary text-[11px] font-bold">3</span>
-        <span>Indywidualne warunki</span>
         <span className="mx-1 hidden h-px w-6 bg-border sm:block" />
-        <span className="hidden h-6 w-6 place-items-center rounded-full bg-secondary text-[11px] font-bold sm:grid">4</span>
-        <span className="hidden sm:inline">Nieruchomość</span>
+        <span className="hidden h-6 w-6 place-items-center rounded-full bg-secondary text-[11px] font-bold sm:grid">2</span>
+        <span className="hidden sm:inline">Twoje dane</span>
+        <span className="mx-1 hidden h-px w-6 bg-border md:block" />
+        <span className="hidden h-6 w-6 place-items-center rounded-full bg-secondary text-[11px] font-bold md:grid">3</span>
+        <span className="hidden md:inline">Warunki</span>
+        <span className="mx-1 hidden h-px w-6 bg-border lg:block" />
+        <span className="hidden h-6 w-6 place-items-center rounded-full bg-secondary text-[11px] font-bold lg:grid">4</span>
+        <span className="hidden lg:inline">Nieruchomość</span>
+        <span className="ml-auto text-[10px] font-bold text-muted-foreground sm:hidden">krok 1 z 4</span>
       </div>
 
       <div className="relative grid gap-10 md:grid-cols-[1.1fr_0.9fr]">
