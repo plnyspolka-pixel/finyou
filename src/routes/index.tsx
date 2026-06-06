@@ -146,13 +146,13 @@ function Landing() {
                   colors={["#a78bfa", "#6366f1", "#38bdf8", "#22d3ee", "#a78bfa"]}
                 >nieruchomości</AuroraText>
                 <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
-                  od 20 000 do 1 000 000 zł
+                  do 1 000 000 zł
                 </span>
               </h1>
             </BlurFade>
             <BlurFade delay={0.3} inView>
               <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
-                Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
+                Łatwa i szybka pożyczka pod zastaw nieruchomości — bez zbędnych procedur bankowych i dokumentów.
                 Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
                 Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
               </p>
