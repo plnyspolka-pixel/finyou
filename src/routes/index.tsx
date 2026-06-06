@@ -26,6 +26,10 @@ import {
   IconPhone,
   IconMail,
   IconCheck,
+  BgMoney,
+  BgPeriod,
+  BgScale,
+  BgRocket,
 } from "@/components/brand-icons";
 import { QuickCalculator } from "@/components/landing/quick-calculator";
 import { AuroraText } from "@/components/ui/aurora-text";
