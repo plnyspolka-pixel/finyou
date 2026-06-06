@@ -114,7 +114,7 @@ export function QuickCalculator() {
             onClick={goNext}
             className="relative h-16 w-full rounded-xl bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-base font-extrabold uppercase tracking-wide text-accent-foreground shadow-2xl shadow-accent/50 ring-2 ring-accent/40 ring-offset-2 ring-offset-card hover:brightness-110 hover:scale-[1.02] transition-all disabled:opacity-50 md:text-lg"
           >
-            Dalej — wybierz zabezpieczenie
+            Dalej
             <ArrowRight className="ml-2 h-6 w-6 animate-[bounce_1.2s_infinite]" />
           </Button>
         </div>
