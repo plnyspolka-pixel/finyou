@@ -51,12 +51,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Prywatna pożyczka hipoteczna od 20 000 zł do 1 000 000 zł. Decyzja do 48 h, złożenie wniosku darmowe. Zabezpieczenie na nieruchomości w Polsce.",
+          "Prywatna pożyczka pod zastaw nieruchomości do 1 000 000 zł. Decyzja do 24 h, bez zbędnych procedur bankowych. Zabezpieczenie na nieruchomości w Polsce.",
       },
       { property: "og:title", content: "Pożyczka pod zastaw nieruchomości — Finance You" },
       {
         property: "og:description",
-        content: "Decyzja do 48 h. Kwoty 20 000 – 1 000 000 zł. Złożenie wniosku darmowe.",
+        content: "Decyzja do 24 h. Do 1 000 000 zł. Bez zbędnych procedur bankowych.",
       },
     ],
   }),
