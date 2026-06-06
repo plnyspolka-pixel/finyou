@@ -51,12 +51,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Prywatna pożyczka hipoteczna od 20 000 zł do 1 000 000 zł. Decyzja do 48 h, złożenie wniosku darmowe. Zabezpieczenie na nieruchomości w Polsce.",
+          "Prywatna pożyczka pod zastaw nieruchomości do 1 000 000 zł. Decyzja do 24 h, bez zbędnych procedur bankowych. Zabezpieczenie na nieruchomości w Polsce.",
       },
       { property: "og:title", content: "Pożyczka pod zastaw nieruchomości — Finance You" },
       {
         property: "og:description",
-        content: "Decyzja do 48 h. Kwoty 20 000 – 1 000 000 zł. Złożenie wniosku darmowe.",
+        content: "Decyzja do 24 h. Do 1 000 000 zł. Bez zbędnych procedur bankowych.",
       },
     ],
   }),
@@ -134,7 +134,7 @@ function Landing() {
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
                 <IconBolt size={16} />
                 <AnimatedShinyText className="inline-flex items-center justify-center !text-white/90 !mx-0">
-                  Decyzja w 48 godzin
+                  Decyzja w 24 godziny
                 </AnimatedShinyText>
               </div>
             </BlurFade>
@@ -146,13 +146,13 @@ function Landing() {
                   colors={["#a78bfa", "#6366f1", "#38bdf8", "#22d3ee", "#a78bfa"]}
                 >nieruchomości</AuroraText>
                 <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
-                  od 20 000 do 1 000 000 zł
+                  do 1 000 000 zł
                 </span>
               </h1>
             </BlurFade>
             <BlurFade delay={0.3} inView>
               <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
-                Prywatne finansowanie dla osób prowadzących działalność gospodarczą.
+                Łatwa i szybka pożyczka pod zastaw nieruchomości — bez zbędnych procedur bankowych i dokumentów.
                 Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
                 Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
               </p>
@@ -188,9 +188,9 @@ function Landing() {
               <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
                 {[
                   "Złożenie wniosku darmowe",
-                  "Decyzja do 48 godzin",
+                  "Decyzja do 24 godzin",
                   "Bez opłat za rozpatrzenie",
-                  "Nowa działalność — od 1. dnia",
+                  "Bez zbędnych procedur bankowych",
                 ].map((t) => (
                   <li key={t} className="flex items-center gap-2">
                     <IconCheck className="h-4 w-4 text-accent" />
@@ -206,10 +206,10 @@ function Landing() {
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
               <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
               {[
-                { v: "20 tys.", v2: "– 1 mln zł", l: "kwota pożyczki", Bg: BgMoney },
+                { v: "do 1 mln", v2: "złotych", l: "kwota pożyczki", Bg: BgMoney },
                 { v: "6 – 72", v2: "miesięcy", l: "okres spłaty", Bg: BgPeriod },
                 { v: "do 50%", v2: "wartości", l: "maksymalne LTV", Bg: BgScale },
-                { v: "48 h", v2: "decyzja", l: "szybka analiza", Bg: BgRocket },
+                { v: "24 h", v2: "decyzja", l: "szybka analiza", Bg: BgRocket },
               ].map((s) => (
                 <div
                   key={s.l}
@@ -303,10 +303,10 @@ function Landing() {
             {[
               { t: "Zły BIK / brak zdolności", d: "Decyduje wartość nieruchomości, nie scoring bankowy." },
               { t: "Istniejąca hipoteka", d: "Druga hipoteka nie przekreśla sprawy — analizujemy indywidualnie." },
-              { t: "Nowa działalność", d: "Finansujemy DG nawet od 1. dnia po założeniu." },
-              { t: "Pilna gotówka na firmę", d: "Wypłata po formalnościach u notariusza." },
+              { t: "Pilna gotówka", d: "Wypłata po formalnościach u notariusza." },
               { t: "Konsolidacja zobowiązań", d: "Spłata kilku zobowiązań jedną pożyczką." },
-              { t: "Inwestycja / projekt", d: "Zakup nieruchomości, remont, rozwój firmy." },
+              { t: "Inwestycja / projekt", d: "Zakup nieruchomości, remont, własny cel." },
+              { t: "Bez procedur bankowych", d: "Mniej dokumentów, decyzja do 24 godzin." },
             ].map((c) => (
               <div
                 key={c.t}
@@ -379,7 +379,7 @@ function Landing() {
             {[
               { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund, bez logowania." },
               { n: "2", t: "Złóż wniosek", d: "Numer KW i zdjęcia nieruchomości w formularzu." },
-              { n: "3", t: "Decyzja do 48 h", d: "Wniosek trafia od razu do inwestorów." },
+              { n: "3", t: "Decyzja do 24 h", d: "Wniosek trafia od razu do inwestorów." },
               { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
             ].map((s, i, arr) => (
               <BlurFade key={s.n} delay={0.1 + i * 0.1} inView direction="up">
@@ -414,7 +414,7 @@ function Landing() {
             {[
               {
                 q: "Ile mogę pożyczyć?",
-                a: "Od 20 000 zł do 1 000 000 zł, ale nie przekraczamy połowy wartości nieruchomości. Ostateczna kwota zależy od analizy nieruchomości i decyzji inwestorów.",
+                a: "Do 1 000 000 zł, ale nie przekraczamy połowy wartości nieruchomości. Ostateczna kwota zależy od analizy nieruchomości i decyzji inwestorów.",
               },
               {
                 q: "Na jaki okres mogę wziąć pożyczkę?",
@@ -430,15 +430,11 @@ function Landing() {
               },
               {
                 q: "Kiedy będzie decyzja?",
-                a: "Wniosek zostanie rozpatrzony do 48 godzin. Jeśli decyzja będzie pozytywna, informacja przyjdzie mailowo.",
+                a: "Wniosek zostanie rozpatrzony do 24 godzin. Jeśli decyzja będzie pozytywna, informacja przyjdzie mailowo.",
               },
               {
                 q: "Czy mogę spłacić pożyczkę wcześniej?",
                 a: "Tak, zawsze jest możliwość wcześniejszej spłaty. Szczegóły określane są w dokumentach umowy.",
-              },
-              {
-                q: "Czy muszę mieć działalność gospodarczą?",
-                a: "Do złożenia wniosku nie musisz mieć działalności gospodarczej. Natomiast sama pożyczka jest udzielana osobom prowadzącym DG. Możemy finansować nawet nowe działalności, już od pierwszego dnia po założeniu.",
               },
               {
                 q: "Czy zły BIK mnie dyskwalifikuje?",
@@ -584,7 +580,7 @@ function Landing() {
 
           <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
             <span>© {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
-            <span>Pożyczki zabezpieczone hipoteką dla osób prowadzących działalność gospodarczą.</span>
+            <span>Prywatne pożyczki zabezpieczone hipoteką na nieruchomości.</span>
           </div>
         </div>
       </footer>
