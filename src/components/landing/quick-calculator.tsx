@@ -170,24 +170,8 @@ export function QuickCalculator() {
                 </dt>
                 <dd className="text-xl font-extrabold text-white">{months} mies.</dd>
               </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-white/75">Zabezpieczenie</dt>
-                <dd className="text-right text-base font-bold text-white">
-                  {secType ? securityTypeLabels[secType] : <span className="text-white/40">— wybierz —</span>}
-                </dd>
-              </div>
             </dl>
 
-            <div className="mt-6 space-y-3 rounded-xl border border-white/15 bg-white/5 p-4 text-xs leading-relaxed text-white/80">
-              <div className="flex items-start gap-2">
-                <FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span><strong className="text-white">Wszystko w jednym miejscu</strong> — bez SMS-ów i WhatsAppa, jeden formularz.</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span><strong className="text-white">Hipoteka u notariusza</strong> — akt notarialny i wpis do KW.</span>
-              </div>
-            </div>
 
             {step === 1 ? (
               <Button
