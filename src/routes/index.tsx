@@ -337,23 +337,8 @@ function Landing() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: IconApartment, t: "Mieszkanie" },
-              { icon: IconHouse, t: "Dom / dom w budowie" },
-              { icon: IconShop, t: "Lokal użytkowy / usługowy" },
-              { icon: IconLand, t: "Działka / grunt rolny" },
-            ].map((p, i) => (
-              <BlurFade key={p.t} delay={0.1 + i * 0.08} inView>
-                <div className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-xl">
-                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent/15 to-[oklch(0.65_0.13_235)]/15 text-accent ring-1 ring-accent/20 transition group-hover:scale-110 group-hover:rotate-3">
-                    <p.icon className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm font-bold text-foreground">{p.t}</div>
-                </div>
-              </BlurFade>
-            ))}
-          </div>
+          <PropertyTypesShowcase />
+
         </div>
       </section>
 
