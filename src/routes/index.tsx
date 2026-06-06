@@ -205,41 +205,26 @@ function Landing() {
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
               <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
               {[
-                { v: "20 tys.–1 mln", l: "zł kwota", bg: iconHouseHand.url },
-                { v: "6 – 72", l: "mies. okres", bg: iconShield.url },
-                { v: "do 50%", l: "wartości LTV", bg: iconExcavator.url },
-                { v: "48 h", l: "decyzja", bg: iconShield.url },
+                { v: "20 tys.–1 mln", l: "zł kwota", Icon: IconVault },
+                { v: "6 – 72", l: "mies. okres", Icon: IconClock },
+                { v: "do 50%", l: "wartości LTV", Icon: IconLtv },
+                { v: "48 h", l: "decyzja", Icon: IconBolt },
               ].map((s) => (
                 <div
                   key={s.l}
-                  className="group relative overflow-hidden rounded-2xl bg-white/5 p-5 ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40"
+                  className="group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl bg-white/5 p-5 text-center ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40"
                 >
-                  {/* Ikona w tle — centralnie, subtelnie */}
-                  <img
-                    src={s.bg}
-                    alt=""
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 m-auto h-24 w-24 object-contain opacity-[0.13] mix-blend-screen transition group-hover:opacity-20 group-hover:scale-110"
-                  />
-                  <div className="relative z-10">
-                    <div className="text-3xl font-extrabold text-white md:text-4xl drop-shadow-md">{s.v}</div>
-                    <div className="mt-2 text-[11px] uppercase tracking-wider text-white/70">{s.l}</div>
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/95 shadow-md ring-1 ring-white/20 transition group-hover:scale-110">
+                    <s.Icon size={26} />
+                  </div>
+                  <div className="text-2xl font-extrabold leading-tight text-white md:text-3xl drop-shadow-md">
+                    {s.v}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-white/70 md:text-[11px]">
+                    {s.l}
                   </div>
                 </div>
               ))}
-              <div className="col-span-2 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-accent/20 to-[oklch(0.65_0.13_235)]/20 p-4 ring-1 ring-white/15">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/95 shadow-md">
-                  <IconShield size={24} />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-white/85">
-                    Bezpieczna hipoteka u notariusza
-                  </div>
-                  <div className="mt-1 text-sm text-white/85">
-                    Każda umowa zabezpieczona aktem notarialnym i wpisem do księgi wieczystej.
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
