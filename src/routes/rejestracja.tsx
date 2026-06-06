@@ -136,7 +136,7 @@ function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Hasło</Label>
-              <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Tworzenie konta…" : "Załóż konto"}
