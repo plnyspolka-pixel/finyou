@@ -293,7 +293,7 @@ function Landing() {
               { t: "Istniejąca hipoteka", d: "Druga hipoteka nie przekreśla sprawy — analizujemy indywidualnie." },
               { t: "Pilna gotówka", d: "Wypłata po formalnościach u notariusza." },
               { t: "Konsolidacja zobowiązań", d: "Spłata kilku zobowiązań jedną pożyczką." },
-              { t: "Inwestycja / projekt", d: "Zakup nieruchomości, remont, własny cel." },
+              
               { t: "Bez procedur bankowych", d: "Mniej dokumentów, decyzja do 24 godzin." },
             ].map((c) => (
               <div
