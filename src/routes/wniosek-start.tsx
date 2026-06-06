@@ -284,11 +284,7 @@ function WniosekStartPage() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{mode === "signup" ? "Załóż konto i kontynuuj" : "Zaloguj się"}</CardTitle>
-          <CardDescription>
-            Aby dokończyć wniosek (dane, dokumenty, KW) potrzebujemy konta — dzięki temu
-            zapiszemy postęp i będziesz mógł wrócić w każdej chwili.
-          </CardDescription>
+          <CardTitle>{mode === "signup" ? "Podaj dane i oblicz swoją ratę" : "Zaloguj się"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
@@ -341,7 +337,7 @@ function WniosekStartPage() {
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
               <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? "Tworzenie konta…" : "Załóż konto i kontynuuj"}
+                {busy ? "Tworzenie konta…" : "Podaj dane i oblicz swoją ratę"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Masz już konto?{" "}

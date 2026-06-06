@@ -102,16 +102,22 @@ export function QuickCalculator() {
           </div>
         </div>
 
-        <Button
-          type="button"
-          size="lg"
-          disabled={!canSubmit}
-          onClick={goNext}
-          className="mt-8 h-14 w-full bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-base font-extrabold text-accent-foreground shadow-xl shadow-accent/40 hover:brightness-110 transition disabled:opacity-50 md:text-lg"
-        >
-          Dalej — wybierz zabezpieczenie
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
+        <div className="relative mt-8">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] opacity-70 blur-lg animate-pulse"
+          />
+          <Button
+            type="button"
+            size="lg"
+            disabled={!canSubmit}
+            onClick={goNext}
+            className="relative h-16 w-full rounded-xl bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-base font-extrabold uppercase tracking-wide text-accent-foreground shadow-2xl shadow-accent/50 ring-2 ring-accent/40 ring-offset-2 ring-offset-card hover:brightness-110 hover:scale-[1.02] transition-all disabled:opacity-50 md:text-lg"
+          >
+            Dalej — wybierz zabezpieczenie
+            <ArrowRight className="ml-2 h-6 w-6 animate-[bounce_1.2s_infinite]" />
+          </Button>
+        </div>
 
         <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-accent" />
