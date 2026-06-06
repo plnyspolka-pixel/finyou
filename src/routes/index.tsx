@@ -33,9 +33,6 @@ import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { Particles } from "@/components/ui/particles";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { BlurFade } from "@/components/ui/blur-fade";
-import iconHouseHand from "@/assets/icon-house-hand.png.asset.json";
-import iconShield from "@/assets/icon-shield-check.png.asset.json";
-import iconExcavator from "@/assets/icon-excavator.png.asset.json";
 
 import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
 
