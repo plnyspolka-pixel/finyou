@@ -303,10 +303,10 @@ function Landing() {
             {[
               { t: "Zły BIK / brak zdolności", d: "Decyduje wartość nieruchomości, nie scoring bankowy." },
               { t: "Istniejąca hipoteka", d: "Druga hipoteka nie przekreśla sprawy — analizujemy indywidualnie." },
-              { t: "Nowa działalność", d: "Finansujemy DG nawet od 1. dnia po założeniu." },
-              { t: "Pilna gotówka na firmę", d: "Wypłata po formalnościach u notariusza." },
+              { t: "Pilna gotówka", d: "Wypłata po formalnościach u notariusza." },
               { t: "Konsolidacja zobowiązań", d: "Spłata kilku zobowiązań jedną pożyczką." },
-              { t: "Inwestycja / projekt", d: "Zakup nieruchomości, remont, rozwój firmy." },
+              { t: "Inwestycja / projekt", d: "Zakup nieruchomości, remont, własny cel." },
+              { t: "Bez procedur bankowych", d: "Mniej dokumentów, decyzja do 24 godzin." },
             ].map((c) => (
               <div
                 key={c.t}
