@@ -206,10 +206,10 @@ function Landing() {
             <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
               <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
               {[
-                { v: "20 tys.", v2: "– 1 mln zł", l: "kwota pożyczki", Bg: BgMoney },
+                { v: "do 1 mln", v2: "złotych", l: "kwota pożyczki", Bg: BgMoney },
                 { v: "6 – 72", v2: "miesięcy", l: "okres spłaty", Bg: BgPeriod },
                 { v: "do 50%", v2: "wartości", l: "maksymalne LTV", Bg: BgScale },
-                { v: "48 h", v2: "decyzja", l: "szybka analiza", Bg: BgRocket },
+                { v: "24 h", v2: "decyzja", l: "szybka analiza", Bg: BgRocket },
               ].map((s) => (
                 <div
                   key={s.l}
