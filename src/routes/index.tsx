@@ -134,7 +134,7 @@ function Landing() {
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
                 <IconBolt size={16} />
                 <AnimatedShinyText className="inline-flex items-center justify-center !text-white/90 !mx-0">
-                  Decyzja w 48 godzin
+                  Decyzja w 24 godziny
                 </AnimatedShinyText>
               </div>
             </BlurFade>
