@@ -46,7 +46,7 @@ export function QuickCalculator() {
   return (
     <div
       id="kalkulator"
-      className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-2xl md:p-10 scroll-mt-24"
+      className="relative w-full max-w-full overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-2xl sm:p-6 md:p-10 scroll-mt-24"
     >
       {/* Subtelne glow akcentowe */}
       <div
@@ -76,10 +76,10 @@ export function QuickCalculator() {
 
       <div className="relative grid gap-10 md:grid-cols-[1.1fr_0.9fr]">
         {/* Inputs */}
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground">
-            <Calculator className="h-3.5 w-3.5 text-accent" />
-            Sprawdź warunki pożyczki pod zastaw
+        <div className="min-w-0">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-foreground sm:text-xs">
+            <Calculator className="h-3.5 w-3.5 shrink-0 text-accent" />
+            <span className="truncate">Sprawdź warunki pożyczki</span>
           </div>
           <h3 className="mt-4 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
             Powiedz nam, ile i na jak długo
@@ -90,14 +90,14 @@ export function QuickCalculator() {
 
           <div className="mt-7 space-y-7">
             {/* Kwota */}
-            <div>
-              <div className="flex items-baseline justify-between">
+            <div className="min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
                 <Label className="text-sm font-semibold text-foreground">Kwota pożyczki</Label>
                 <Input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value) || 0)}
-                  className="w-36 text-right text-base font-extrabold"
+                  className="w-28 shrink-0 text-right text-sm font-extrabold sm:w-36 sm:text-base"
                 />
               </div>
               <Slider
@@ -113,6 +113,7 @@ export function QuickCalculator() {
                 <span>1 000 000 zł</span>
               </div>
             </div>
+
 
             {/* Okres */}
             <div>
@@ -147,7 +148,8 @@ export function QuickCalculator() {
         </div>
 
         {/* Summary panel */}
-        <div className="relative rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] p-6 text-primary-foreground md:p-8">
+        <div className="relative min-w-0 rounded-2xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.13_0.09_265)] p-6 text-primary-foreground md:p-8">
+
           <div className="absolute inset-0 rounded-2xl opacity-30 [background-image:radial-gradient(circle_at_30%_20%,oklch(0.65_0.13_235_/0.45),transparent_55%)]" />
           <div className="relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
