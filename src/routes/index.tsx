@@ -188,9 +188,9 @@ function Landing() {
               <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
                 {[
                   "Złożenie wniosku darmowe",
-                  "Decyzja do 48 godzin",
+                  "Decyzja do 24 godzin",
                   "Bez opłat za rozpatrzenie",
-                  "Nowa działalność — od 1. dnia",
+                  "Bez zbędnych procedur bankowych",
                 ].map((t) => (
                   <li key={t} className="flex items-center gap-2">
                     <IconCheck className="h-4 w-4 text-accent" />
