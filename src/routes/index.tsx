@@ -79,7 +79,7 @@ function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background font-[Montserrat] pb-16 md:pb-0">
+    <div className="min-h-screen overflow-x-hidden bg-background font-[Montserrat] pb-16 md:pb-0">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
