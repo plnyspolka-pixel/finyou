@@ -326,8 +326,7 @@ function Landing() {
               Akceptujemy różne typy nieruchomości
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Nieruchomości na terenie Polski. Preferujemy mieszkaniówkę w miastach powyżej 20 000
-              mieszkańców. Działki i grunty rolne — analiza indywidualna.
+              Nieruchomości na terenie Polski. Każdą sprawę analizujemy indywidualnie.
             </p>
           </div>
 
