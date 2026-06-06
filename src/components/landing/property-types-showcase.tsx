@@ -20,10 +20,9 @@ const TYPES: PropType[] = [
     title: "Mieszkanie",
     img: imgApartment,
     docs: [
-      "Akt notarialny (nabycie nieruchomości)",
       "Numer księgi wieczystej",
-      "Zaświadczenie ze spółdzielni lub wspólnoty (brak zaległości)",
-      "Dokument tożsamości właściciela",
+      "Zdjęcia każdego pomieszczenia",
+      "Zdjęcia z zewnątrz",
     ],
   },
   {
@@ -31,10 +30,10 @@ const TYPES: PropType[] = [
     title: "Dom / dom w budowie",
     img: imgHouse,
     docs: [
-      "Akt notarialny",
       "Numer księgi wieczystej",
-      "Wypis i wyrys z rejestru gruntów",
-      "Pozwolenie na budowę / dziennik budowy (jeśli w budowie)",
+      "Zdjęcia z zewnątrz całego budynku",
+      "Zdjęcia każdego pomieszczenia (z wyjątkiem piwnicy i strychu)",
+      "Powierzchnia użytkowa",
     ],
   },
   {
@@ -42,21 +41,19 @@ const TYPES: PropType[] = [
     title: "Lokal użytkowy / usługowy",
     img: imgCommercial,
     docs: [
-      "Akt notarialny",
       "Numer księgi wieczystej",
-      "Wypis z rejestru gruntów / kartoteka lokalu",
-      "Pozwolenie na użytkowanie (jeśli dotyczy)",
+      "Zdjęcia każdego pomieszczenia",
+      "Zdjęcia z zewnątrz",
+      "Powierzchnia użytkowa (jeżeli lokal nie jest w bloku)",
     ],
   },
   {
     key: "rolna",
-    title: "Działka rolna",
+    title: "Grunt rolny",
     img: imgLandAgri,
     docs: [
-      "Akt notarialny",
-      "Numer księgi wieczystej",
-      "Wypis i wyrys z rejestru gruntów",
-      "Zaświadczenie o przeznaczeniu w MPZP lub o jego braku",
+      "Wypis z rejestru gruntów",
+      "Numer księgi wieczystej (jeżeli nie ma go na wypisie)",
     ],
   },
   {
@@ -64,10 +61,8 @@ const TYPES: PropType[] = [
     title: "Działka budowlana",
     img: imgLandBuild,
     docs: [
-      "Akt notarialny",
       "Numer księgi wieczystej",
-      "Wypis i wyrys z rejestru gruntów",
-      "Wypis z MPZP lub decyzja o warunkach zabudowy (WZ)",
+      "MPZP albo warunki zabudowy",
     ],
   },
 ];
