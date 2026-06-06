@@ -242,8 +242,8 @@ function Landing() {
           {[
             { icon: IconHandCoins, t: "Złożenie wniosku darmowe", d: "Bez opłat za rozpatrzenie." },
             { icon: IconLtv, t: "Do 50% wartości", d: "LTV liczone od wartości rynkowej." },
-            { icon: IconLock, t: "Wszystko w jednym miejscu", d: "Bez SMS-ów i WhatsAppa — jeden formularz." },
-            { icon: IconDoc, t: "Hipoteka u notariusza", d: "Akt notarialny i wpis do KW." },
+            { icon: IconLock, t: "Bezpośrednio do inwestora", d: "Twój wniosek trafia do inwestora — bez pośredników." },
+            { icon: IconDoc, t: "Notariusz w całym kraju", d: "Umowa u wybranego przez Ciebie notariusza — bez zbędnych dojazdów." },
           ].map((f) => (
             <div key={f.t} className="flex items-start gap-3">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 text-primary ring-1 ring-border">

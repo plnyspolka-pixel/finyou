@@ -181,11 +181,11 @@ export function QuickCalculator() {
             <div className="mt-6 space-y-3 rounded-xl border border-white/15 bg-white/5 p-4 text-xs leading-relaxed text-white/80">
               <div className="flex items-start gap-2">
                 <FileSignature className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span>Twój wniosek trafia <strong className="text-white">bezpośrednio do inwestora</strong> — bez pośredników.</span>
+                <span><strong className="text-white">Wszystko w jednym miejscu</strong> — bez SMS-ów i WhatsAppa, jeden formularz.</span>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                <span>Umowa u <strong className="text-white">wybranego przez Ciebie notariusza</strong> w całym kraju — bez zbędnych dojazdów.</span>
+                <span><strong className="text-white">Hipoteka u notariusza</strong> — akt notarialny i wpis do KW.</span>
               </div>
             </div>
 
