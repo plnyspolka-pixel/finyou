@@ -379,7 +379,7 @@ function Landing() {
             {[
               { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund, bez logowania." },
               { n: "2", t: "Złóż wniosek", d: "Numer KW i zdjęcia nieruchomości w formularzu." },
-              { n: "3", t: "Decyzja do 48 h", d: "Wniosek trafia od razu do inwestorów." },
+              { n: "3", t: "Decyzja do 24 h", d: "Wniosek trafia od razu do inwestorów." },
               { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
             ].map((s, i, arr) => (
               <BlurFade key={s.n} delay={0.1 + i * 0.1} inView direction="up">
