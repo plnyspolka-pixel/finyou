@@ -46,7 +46,7 @@ export function QuickCalculator() {
   return (
     <div
       id="kalkulator"
-      className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-2xl md:p-10 scroll-mt-24"
+      className="relative w-full max-w-full overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-2xl sm:p-6 md:p-10 scroll-mt-24"
     >
       {/* Subtelne glow akcentowe */}
       <div
