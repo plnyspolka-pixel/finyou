@@ -414,7 +414,7 @@ function Landing() {
             {[
               {
                 q: "Ile mogę pożyczyć?",
-                a: "Od 20 000 zł do 1 000 000 zł, ale nie przekraczamy połowy wartości nieruchomości. Ostateczna kwota zależy od analizy nieruchomości i decyzji inwestorów.",
+                a: "Do 1 000 000 zł, ale nie przekraczamy połowy wartości nieruchomości. Ostateczna kwota zależy od analizy nieruchomości i decyzji inwestorów.",
               },
               {
                 q: "Na jaki okres mogę wziąć pożyczkę?",
@@ -430,15 +430,11 @@ function Landing() {
               },
               {
                 q: "Kiedy będzie decyzja?",
-                a: "Wniosek zostanie rozpatrzony do 48 godzin. Jeśli decyzja będzie pozytywna, informacja przyjdzie mailowo.",
+                a: "Wniosek zostanie rozpatrzony do 24 godzin. Jeśli decyzja będzie pozytywna, informacja przyjdzie mailowo.",
               },
               {
                 q: "Czy mogę spłacić pożyczkę wcześniej?",
                 a: "Tak, zawsze jest możliwość wcześniejszej spłaty. Szczegóły określane są w dokumentach umowy.",
-              },
-              {
-                q: "Czy muszę mieć działalność gospodarczą?",
-                a: "Do złożenia wniosku nie musisz mieć działalności gospodarczej. Natomiast sama pożyczka jest udzielana osobom prowadzącym DG. Możemy finansować nawet nowe działalności, już od pierwszego dnia po założeniu.",
               },
               {
                 q: "Czy zły BIK mnie dyskwalifikuje?",
