@@ -860,31 +860,18 @@ function KlientWniosek() {
             )}
 
             {secType === "dzialka_budowlana" && (
-              <>
-                <div><Label>Zaświadczenie z MPZP albo warunki zabudowy — informacja *</Label>
-                  <Textarea rows={3} value={mpzpInfo} onChange={(e) => setMpzpInfo(e.target.value)} placeholder="Opisz lub załącz dokument" />
-                </div>
-                <DocUploader label="Załącz dokument (MPZP / warunki zabudowy)" docType="mpzp"
-                  docs={docsByType("mpzp")} uploading={uploading} onUpload={uploadDoc} multiple />
-              </>
+              <DocUploader label="MPZP lub warunki zabudowy *" docType="mpzp"
+                docs={docsByType("mpzp")} uploading={uploading} onUpload={uploadDoc} multiple />
             )}
 
             {secType === "grunt_rolny" && (
-              <>
-                <div><Label>Wypis z rejestru gruntów — informacja *</Label>
-                  <Textarea rows={3} value={landRegistryExtract} onChange={(e) => setLandRegistryExtract(e.target.value)} />
-                </div>
-                <DocUploader label="Załącz wypis z rejestru gruntów" docType="wypis_rejestru"
-                  docs={docsByType("wypis_rejestru")} uploading={uploading} onUpload={uploadDoc} multiple />
-              </>
+              <DocUploader label="Wypis z rejestru gruntów *" docType="wypis_rejestru"
+                docs={docsByType("wypis_rejestru")} uploading={uploading} onUpload={uploadDoc} multiple />
             )}
 
             {secType === "inna" && (
-              <>
-                <div><Label>Opis nieruchomości *</Label><Textarea rows={4} value={otherDescription} onChange={(e) => setOtherDescription(e.target.value)} /></div>
-                <DocUploader label="Dokumenty lub zdjęcia nieruchomości *" docType="inne"
-                  docs={docsByType("inne")} uploading={uploading} onUpload={uploadDoc} multiple />
-              </>
+              <DocUploader label="Dokumenty lub zdjęcia nieruchomości *" docType="inne"
+                docs={docsByType("inne")} uploading={uploading} onUpload={uploadDoc} multiple />
             )}
           </CardContent>
         </Card>
