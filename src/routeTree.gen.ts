@@ -14,6 +14,7 @@ import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as WniosekZabezpieczenieRouteImport } from './routes/wniosek-zabezpieczenie'
 import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
 import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
+import { Route as WniosekOpisRouteImport } from './routes/wniosek-opis'
 import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
@@ -31,6 +32,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
+import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
@@ -128,6 +130,11 @@ const WniosekStartRoute = WniosekStartRouteImport.update({
   path: '/wniosek-start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WniosekOpisRoute = WniosekOpisRouteImport.update({
+  id: '/wniosek-opis',
+  path: '/wniosek-opis',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WniosekFormularzRoute = WniosekFormularzRouteImport.update({
   id: '/wniosek-formularz',
   path: '/wniosek-formularz',
@@ -212,6 +219,11 @@ const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const KlientWniosekRoute = KlientWniosekRouteImport.update({
+  id: '/wniosek',
+  path: '/wniosek',
+  getParentRoute: () => KlientRoute,
 } as any)
 const KlientProfilRoute = KlientProfilRouteImport.update({
   id: '/profil',
@@ -596,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
+  '/wniosek-opis': typeof WniosekOpisRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -640,6 +653,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/profil': typeof KlientProfilRoute
+  '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -688,6 +702,7 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
+  '/wniosek-opis': typeof WniosekOpisRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -732,6 +747,7 @@ export interface FileRoutesByTo {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/profil': typeof KlientProfilRoute
+  '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -784,6 +800,7 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
+  '/wniosek-opis': typeof WniosekOpisRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -828,6 +845,7 @@ export interface FileRoutesById {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/profil': typeof KlientProfilRoute
+  '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -881,6 +899,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
+    | '/wniosek-opis'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -925,6 +944,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/klient/profil'
+    | '/klient/wniosek'
     | '/l/$slug'
     | '/r/$code'
     | '/wniosek/$token'
@@ -973,6 +993,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
+    | '/wniosek-opis'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -1017,6 +1038,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/klient/profil'
+    | '/klient/wniosek'
     | '/l/$slug'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1068,6 +1090,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
+    | '/wniosek-opis'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -1112,6 +1135,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/klient/profil'
+    | '/klient/wniosek'
     | '/l/$slug'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1164,6 +1188,7 @@ export interface RootRouteChildren {
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WniosekFormularzRoute: typeof WniosekFormularzRoute
+  WniosekOpisRoute: typeof WniosekOpisRoute
   WniosekStartRoute: typeof WniosekStartRoute
   WniosekWarunkiRoute: typeof WniosekWarunkiRoute
   WniosekZabezpieczenieRoute: typeof WniosekZabezpieczenieRoute
@@ -1232,6 +1257,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek-start'
       fullPath: '/wniosek-start'
       preLoaderRoute: typeof WniosekStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wniosek-opis': {
+      id: '/wniosek-opis'
+      path: '/wniosek-opis'
+      fullPath: '/wniosek-opis'
+      preLoaderRoute: typeof WniosekOpisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wniosek-formularz': {
@@ -1352,6 +1384,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/l/$slug'
       preLoaderRoute: typeof LSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/klient/wniosek': {
+      id: '/klient/wniosek'
+      path: '/wniosek'
+      fullPath: '/klient/wniosek'
+      preLoaderRoute: typeof KlientWniosekRouteImport
+      parentRoute: typeof KlientRoute
     }
     '/klient/profil': {
       id: '/klient/profil'
@@ -1993,11 +2032,13 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 
 interface KlientRouteChildren {
   KlientProfilRoute: typeof KlientProfilRoute
+  KlientWniosekRoute: typeof KlientWniosekRoute
   KlientIndexRoute: typeof KlientIndexRoute
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
   KlientProfilRoute: KlientProfilRoute,
+  KlientWniosekRoute: KlientWniosekRoute,
   KlientIndexRoute: KlientIndexRoute,
 }
 
@@ -2015,6 +2056,7 @@ const rootRouteChildren: RootRouteChildren = {
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WniosekFormularzRoute: WniosekFormularzRoute,
+  WniosekOpisRoute: WniosekOpisRoute,
   WniosekStartRoute: WniosekStartRoute,
   WniosekWarunkiRoute: WniosekWarunkiRoute,
   WniosekZabezpieczenieRoute: WniosekZabezpieczenieRoute,

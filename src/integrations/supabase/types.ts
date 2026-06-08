@@ -3552,7 +3552,9 @@ export type Database = {
           id: string
           initial_score: number | null
           interest_score: number | null
+          investor_description: string | null
           investor_interest_count: number
+          investor_purpose: string | null
           kw_status: string | null
           last_automation_error: string | null
           last_contact_at: string | null
@@ -3612,7 +3614,9 @@ export type Database = {
           id?: string
           initial_score?: number | null
           interest_score?: number | null
+          investor_description?: string | null
           investor_interest_count?: number
+          investor_purpose?: string | null
           kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
@@ -3672,7 +3676,9 @@ export type Database = {
           id?: string
           initial_score?: number | null
           interest_score?: number | null
+          investor_description?: string | null
           investor_interest_count?: number
+          investor_purpose?: string | null
           kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
