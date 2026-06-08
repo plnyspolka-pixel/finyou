@@ -1,0 +1,371 @@
+// Codzienny mailing przypominający z A/B-testem wariantów + uczeniem najlepszej godziny.
+// Wywoływane wyłącznie z public hook (pg_cron, godzinowo).
+import { createClient } from "@supabase/supabase-js";
+import { computeLoanProgress } from "./loan-progress";
+import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "./loan-progress.server";
+import { sendMailgunEmail } from "./mailgun-send.server";
+
+function admin() {
+  const url = process.env.SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key);
+}
+
+function warsawHour(now: Date = new Date()): number {
+  const p = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false,
+  }).formatToParts(now);
+  return parseInt(p.find((x) => x.type === "hour")?.value ?? "0", 10);
+}
+function warsawWeekday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", weekday: "short" })
+    .formatToParts(now).find((x) => x.type === "weekday")?.value ?? "";
+}
+function warsawDateKey(now: Date = new Date()): string {
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(now);
+  return `${p.find(x=>x.type==="year")?.value}-${p.find(x=>x.type==="month")?.value}-${p.find(x=>x.type==="day")?.value}`;
+}
+
+function publicBaseUrl(): string {
+  // Pierwszeństwo dla pełnej domeny produkcyjnej
+  return process.env.PUBLIC_BASE_URL
+    || process.env.SITE_URL
+    || "https://financeyou.pl";
+}
+
+function renderTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "");
+}
+
+function fmtPLN(n: number | null | undefined): string {
+  if (!n || n <= 0) return "Twojej kwoty";
+  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(n);
+}
+
+function pickVariantEpsilonGreedy(variants: Array<{
+  id: string; subject: string; preview_text: string | null; body_html: string; weight: number;
+  sent_count: number; opened_count: number;
+}>): typeof variants[number] | null {
+  if (variants.length === 0) return null;
+  // 15% exploration: czysto losowy wariant ważony `weight`
+  if (Math.random() < 0.15) {
+    const totalW = variants.reduce((s, v) => s + Math.max(0.0001, Number(v.weight) || 1), 0);
+    let r = Math.random() * totalW;
+    for (const v of variants) {
+      r -= Math.max(0.0001, Number(v.weight) || 1);
+      if (r <= 0) return v;
+    }
+    return variants[variants.length - 1];
+  }
+  // 85% exploitation: smoothed open-rate (Laplace prior)
+  const scored = variants.map((v) => ({
+    v,
+    score: (v.opened_count + 1) / (v.sent_count + 5),
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  // softmax wśród top-5, żeby nie utknąć na jednym
+  const top = scored.slice(0, Math.min(5, scored.length));
+  const max = top[0].score;
+  const exps = top.map((t) => Math.exp((t.score - max) * 12));
+  const sumE = exps.reduce((s, x) => s + x, 0);
+  let r = Math.random() * sumE;
+  for (let i = 0; i < top.length; i++) {
+    r -= exps[i];
+    if (r <= 0) return top[i].v;
+  }
+  return top[0].v;
+}
+
+export interface SendReminderResult {
+  ok: boolean;
+  sendId?: string;
+  variantId?: string;
+  error?: string;
+  skipped?: string;
+}
+
+async function ensureReturnToken(loanId: string): Promise<string> {
+  const s = admin();
+  const { data } = await s.from("loan_applications").select("return_link_token").eq("id", loanId).maybeSingle();
+  if (data?.return_link_token) return data.return_link_token as string;
+  const token = (globalThis.crypto as any)?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
+  await s.from("loan_applications").update({ return_link_token: token }).eq("id", loanId);
+  return token;
+}
+
+async function bumpPreferredHourFromOpens(loanId: string) {
+  const s = admin();
+  const { data: opens } = await s
+    .from("loan_reminder_email_sends")
+    .select("sent_hour_warsaw")
+    .eq("loan_application_id", loanId)
+    .not("opened_at", "is", null);
+  if (!opens || opens.length < 3) return;
+  const counts = new Map<number, number>();
+  for (const o of opens) {
+    const h = Number(o.sent_hour_warsaw);
+    counts.set(h, (counts.get(h) ?? 0) + 1);
+  }
+  let bestH = 10, bestC = -1;
+  for (const [h, c] of counts.entries()) {
+    if (c > bestC) { bestC = c; bestH = h; }
+  }
+  if (bestH < 9) bestH = 9;
+  if (bestH > 20) bestH = 20;
+  await s.from("loan_applications").update({ preferred_email_hour: bestH }).eq("id", loanId);
+}
+
+/** Główna procedura cron: znajduje odbiorców na bieżącą godzinę i wysyła. */
+export async function runDailyReminderEmailsBatch(): Promise<{
+  ok: true;
+  hour: number;
+  weekday: string;
+  candidates: number;
+  sent: number;
+  errors: number;
+  results: SendReminderResult[];
+} | { ok: false; skipped: string; hour: number; weekday: string }> {
+  const now = new Date();
+  const hour = warsawHour(now);
+  const weekday = warsawWeekday(now);
+
+  // Sztywne okno mailingu: 9:00–20:00 Warszawa, bez niedziel.
+  if (weekday === "Sun" || hour < 9 || hour > 20) {
+    return { ok: false, skipped: weekday === "Sun" ? "sunday" : "outside_hours", hour, weekday };
+  }
+
+  const s = admin();
+  const dayKey = warsawDateKey(now);
+  const dayStartIso = new Date(`${dayKey}T00:00:00+02:00`).toISOString(); // przybliżenie strefy, wystarcza do dedup dziennego
+
+  // Aktywne warianty
+  const { data: variants } = await s
+    .from("loan_reminder_email_variants")
+    .select("id,subject,preview_text,body_html,weight,sent_count,opened_count")
+    .eq("active", true);
+  if (!variants || variants.length === 0) {
+    return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
+  }
+
+  // Kandydaci: wnioski w odpowiednich statusach, z mailem, nie wypisali się, nie wysłano dziś,
+  // i preferowana godzina = aktualna (albo NULL — wtedy losujemy i wysyłamy teraz dla nowych).
+  const { data: loans } = await s
+    .from("loan_applications")
+    .select(`
+      id, status, current_form_step, loan_amount, preferred_period_months,
+      preferred_email_hour, reminder_email_count, reminder_email_unsubscribed,
+      return_link_token, created_at,
+      client:clients!inner(id, first_name, last_name, email, phone_normalized, phone)
+    `)
+    .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
+    .eq("reminder_email_unsubscribed", false)
+    .lt("reminder_email_count", 365)
+    .limit(500);
+
+  const candidates = (loans ?? []).filter((l: any) => {
+    const email = l.client?.email;
+    if (!email) return false;
+    const ph = l.preferred_email_hour;
+    if (ph == null) return true; // pierwszy raz — wyślemy teraz i zapiszemy godzinę
+    return Number(ph) === hour;
+  });
+
+  if (candidates.length === 0) {
+    return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
+  }
+
+  // Sprawdzenie czy nie wysłano już dziś
+  const loanIds = candidates.map((l: any) => l.id);
+  const { data: sentToday } = await s
+    .from("loan_reminder_email_sends")
+    .select("loan_application_id")
+    .in("loan_application_id", loanIds)
+    .gte("sent_at", dayStartIso);
+  const alreadyToday = new Set((sentToday ?? []).map((r: any) => r.loan_application_id));
+
+  const baseUrl = publicBaseUrl();
+  const results: SendReminderResult[] = [];
+  let sent = 0, errors = 0;
+
+  for (const loan of candidates) {
+    if (alreadyToday.has(loan.id)) {
+      results.push({ ok: false, skipped: "already_sent_today" });
+      continue;
+    }
+
+    // Pobierz dane uzupełniające (property, documents) — postęp wniosku
+    const [{ data: prop }, { data: docs }] = await Promise.all([
+      s.from("properties").select("*").eq("loan_application_id", loan.id).maybeSingle(),
+      s.from("documents").select("id,document_type,file_name").eq("loan_application_id", loan.id),
+    ]);
+    const progress = computeLoanProgress({
+      loan: {
+        id: loan.id,
+        current_form_step: loan.current_form_step,
+        status: loan.status,
+        loan_amount: loan.loan_amount,
+        preferred_period_months: loan.preferred_period_months,
+      },
+      client: {
+        first_name: loan.client?.first_name ?? null,
+        last_name: loan.client?.last_name ?? null,
+        phone_normalized: loan.client?.phone_normalized ?? loan.client?.phone ?? null,
+        email: loan.client?.email ?? null,
+      },
+      property: prop,
+      documents: docs ?? [],
+    });
+    if (progress.is_complete) {
+      results.push({ ok: false, skipped: "complete" });
+      continue;
+    }
+
+    const variant = pickVariantEpsilonGreedy(variants as any);
+    if (!variant) {
+      results.push({ ok: false, skipped: "no_variant" });
+      continue;
+    }
+
+    const token = await ensureReturnToken(loan.id);
+
+    // Wstępny wpis żeby mieć ID do linków
+    const { data: pending, error: insErr } = await s
+      .from("loan_reminder_email_sends")
+      .insert({
+        loan_application_id: loan.id,
+        variant_id: variant.id,
+        recipient_email: loan.client.email,
+        subject: "",
+        sent_hour_warsaw: hour,
+      })
+      .select("id")
+      .single();
+    if (insErr || !pending) {
+      errors++;
+      results.push({ ok: false, error: insErr?.message ?? "insert failed" });
+      continue;
+    }
+
+    const sendId = pending.id;
+    const wniosekLink = `${baseUrl}/api/public/email/click?s=${sendId}`;
+    const pixelUrl = `${baseUrl}/api/public/email/open?s=${sendId}`;
+    const missing = progress.missing_documents.length > 0
+      ? progress.missing_documents.join(", ")
+      : (progress.current_step <= 2 ? "uzupełnienie danych kontaktowych" : "kilka informacji");
+
+    const vars = {
+      first_name: (loan.client.first_name ?? "").trim() || "Witaj",
+      missing,
+      link: wniosekLink,
+      loan_amount: fmtPLN(loan.loan_amount),
+    };
+    const subject = renderTemplate(variant.subject, vars);
+    const bodyInner = renderTemplate(variant.body_html, vars);
+    const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#111">
+${bodyInner}
+<hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
+<p style="font-size:11px;color:#888">Finance You — pożyczki pod zastaw nieruchomości. Otrzymujesz tę wiadomość bo złożyłeś wniosek na financeyou.pl. <a href="${baseUrl}/email/unsubscribe?s=${sendId}" style="color:#888">Wypisz mnie z przypomnień</a>.</p>
+<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;border:0" />
+</body></html>`;
+    const text = bodyInner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() + `\n\nLink: ${wniosekLink}`;
+
+    const res = await sendMailgunEmail({ to: loan.client.email, subject, text, html });
+
+    if (!res.ok) {
+      errors++;
+      await s.from("loan_reminder_email_sends").update({
+        subject, error_message: res.error?.slice(0, 500) ?? "unknown",
+      }).eq("id", sendId);
+      results.push({ ok: false, sendId, variantId: variant.id, error: res.error });
+      continue;
+    }
+
+    sent++;
+    await s.from("loan_reminder_email_sends").update({
+      subject, mg_message_id: res.id ?? null,
+    }).eq("id", sendId);
+
+    // Inkrementuj statystyki wariantu (atomowo przez SQL — tu prosty UPDATE)
+    await s.rpc("increment_email_variant_sent", { p_variant_id: variant.id }).then(
+      () => {},
+      async () => {
+        await s.from("loan_reminder_email_variants").update({
+          sent_count: (variant.sent_count ?? 0) + 1,
+        }).eq("id", variant.id);
+      },
+    );
+
+    // Aktualizuj wniosek
+    const newPrefHour = loan.preferred_email_hour ?? hour;
+    await s.from("loan_applications").update({
+      reminder_email_count: (loan.reminder_email_count ?? 0) + 1,
+      reminder_email_first_sent_at: loan.reminder_email_count ? undefined : new Date().toISOString(),
+      preferred_email_hour: newPrefHour,
+    }).eq("id", loan.id);
+
+    results.push({ ok: true, sendId, variantId: variant.id });
+  }
+
+  return { ok: true, hour, weekday, candidates: candidates.length, sent, errors, results };
+}
+
+/** Wywoływane z route'a /api/public/email/open?s=ID */
+export async function recordEmailOpen(sendId: string): Promise<void> {
+  const s = admin();
+  const { data: row } = await s
+    .from("loan_reminder_email_sends")
+    .select("id,opened_at,open_count,variant_id,loan_application_id")
+    .eq("id", sendId)
+    .maybeSingle();
+  if (!row) return;
+  await s.from("loan_reminder_email_sends").update({
+    opened_at: row.opened_at ?? new Date().toISOString(),
+    open_count: (row.open_count ?? 0) + 1,
+  }).eq("id", sendId);
+  if (!row.opened_at && row.variant_id) {
+    await s.rpc("increment_email_variant_opened", { p_variant_id: row.variant_id }).then(
+      () => {},
+      async () => {
+        const { data: v } = await s.from("loan_reminder_email_variants").select("opened_count").eq("id", row.variant_id).maybeSingle();
+        if (v) await s.from("loan_reminder_email_variants").update({ opened_count: (v.opened_count ?? 0) + 1 }).eq("id", row.variant_id);
+      },
+    );
+  }
+  if (row.loan_application_id) await bumpPreferredHourFromOpens(row.loan_application_id);
+}
+
+/** Wywoływane z route'a /api/public/email/click?s=ID — zwraca docelowy URL. */
+export async function recordEmailClick(sendId: string): Promise<string | null> {
+  const s = admin();
+  const { data: row } = await s
+    .from("loan_reminder_email_sends")
+    .select("id,clicked_at,click_count,variant_id,loan_application_id,opened_at")
+    .eq("id", sendId)
+    .maybeSingle();
+  if (!row) return null;
+  const nowIso = new Date().toISOString();
+  await s.from("loan_reminder_email_sends").update({
+    clicked_at: row.clicked_at ?? nowIso,
+    click_count: (row.click_count ?? 0) + 1,
+    opened_at: row.opened_at ?? nowIso,
+  }).eq("id", sendId);
+  if (!row.clicked_at && row.variant_id) {
+    await s.rpc("increment_email_variant_clicked", { p_variant_id: row.variant_id }).then(
+      () => {},
+      async () => {
+        const { data: v } = await s.from("loan_reminder_email_variants").select("clicked_count").eq("id", row.variant_id).maybeSingle();
+        if (v) await s.from("loan_reminder_email_variants").update({ clicked_count: (v.clicked_count ?? 0) + 1 }).eq("id", row.variant_id);
+      },
+    );
+  }
+  const { data: loan } = await s
+    .from("loan_applications")
+    .select("return_link_token")
+    .eq("id", row.loan_application_id!)
+    .maybeSingle();
+  const token = loan?.return_link_token;
+  if (!token) return null;
+  return `${publicBaseUrl()}/wniosek/${token}`;
+}
