@@ -3572,9 +3572,13 @@ export type Database = {
           preferred_contact_channel:
             | Database["public"]["Enums"]["contact_channel"]
             | null
+          preferred_email_hour: number | null
           preferred_period_months: number | null
           property_quality: string | null
           reminder_attempts: number
+          reminder_email_count: number
+          reminder_email_first_sent_at: string | null
+          reminder_email_unsubscribed: boolean
           reminder_paused: boolean
           return_link: string | null
           return_link_token: string | null
@@ -3634,9 +3638,13 @@ export type Database = {
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
+          preferred_email_hour?: number | null
           preferred_period_months?: number | null
           property_quality?: string | null
           reminder_attempts?: number
+          reminder_email_count?: number
+          reminder_email_first_sent_at?: string | null
+          reminder_email_unsubscribed?: boolean
           reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
@@ -3696,9 +3704,13 @@ export type Database = {
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
+          preferred_email_hour?: number | null
           preferred_period_months?: number | null
           property_quality?: string | null
           reminder_attempts?: number
+          reminder_email_count?: number
+          reminder_email_first_sent_at?: string | null
+          reminder_email_unsubscribed?: boolean
           reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
@@ -3720,6 +3732,117 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      loan_reminder_email_sends: {
+        Row: {
+          click_count: number
+          clicked_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          loan_application_id: string
+          mg_message_id: string | null
+          open_count: number
+          opened_at: string | null
+          recipient_email: string
+          sent_at: string
+          sent_hour_warsaw: number
+          subject: string
+          variant_id: string | null
+        }
+        Insert: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          loan_application_id: string
+          mg_message_id?: string | null
+          open_count?: number
+          opened_at?: string | null
+          recipient_email: string
+          sent_at?: string
+          sent_hour_warsaw: number
+          subject: string
+          variant_id?: string | null
+        }
+        Update: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          loan_application_id?: string
+          mg_message_id?: string | null
+          open_count?: number
+          opened_at?: string | null
+          recipient_email?: string
+          sent_at?: string
+          sent_hour_warsaw?: number
+          subject?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_reminder_email_sends_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_reminder_email_sends_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "loan_reminder_email_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_reminder_email_variants: {
+        Row: {
+          active: boolean
+          body_html: string
+          category: string
+          clicked_count: number
+          created_at: string
+          id: string
+          opened_count: number
+          preview_text: string | null
+          sent_count: number
+          subject: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          body_html: string
+          category?: string
+          clicked_count?: number
+          created_at?: string
+          id?: string
+          opened_count?: number
+          preview_text?: string | null
+          sent_count?: number
+          subject: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          body_html?: string
+          category?: string
+          clicked_count?: number
+          created_at?: string
+          id?: string
+          opened_count?: number
+          preview_text?: string | null
+          sent_count?: number
+          subject?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
       }
       marketing_campaigns: {
         Row: {
