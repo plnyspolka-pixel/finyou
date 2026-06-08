@@ -46,15 +46,14 @@ function captureParamsToStorage() {
 }
 
 function getNextPath(): string {
-  if (typeof window === "undefined") return "/wniosek-formularz";
+  if (typeof window === "undefined") return "/wniosek-warunki";
   const sp = new URLSearchParams(window.location.search);
   const next = sp.get("next");
   if (next && /^\/[a-z0-9/_-]+$/i.test(next)) return next;
-  try {
-    if (sessionStorage.getItem("calc_step1_v1")) return "/wniosek-warunki";
-  } catch { /* noop */ }
-  return "/wniosek-formularz";
+  // Po podaniu danych → zawsze do kalkulatora (warunki: oprocentowanie + max rata)
+  return "/wniosek-warunki";
 }
+
 
 function WniosekStartPage() {
   const navigate = useNavigate();
