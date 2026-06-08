@@ -1466,6 +1466,10 @@ export type Database = {
           consents_accepted_at: string | null
           country: string | null
           created_at: string
+          do_not_call: boolean
+          do_not_call_at: string | null
+          do_not_call_reason: string | null
+          do_not_call_source: string | null
           email: string | null
           external_id: string | null
           first_name: string
@@ -1502,6 +1506,10 @@ export type Database = {
           consents_accepted_at?: string | null
           country?: string | null
           created_at?: string
+          do_not_call?: boolean
+          do_not_call_at?: string | null
+          do_not_call_reason?: string | null
+          do_not_call_source?: string | null
           email?: string | null
           external_id?: string | null
           first_name: string
@@ -1538,6 +1546,10 @@ export type Database = {
           consents_accepted_at?: string | null
           country?: string | null
           created_at?: string
+          do_not_call?: boolean
+          do_not_call_at?: string | null
+          do_not_call_reason?: string | null
+          do_not_call_source?: string | null
           email?: string | null
           external_id?: string | null
           first_name?: string
