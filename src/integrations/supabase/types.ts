@@ -4976,6 +4976,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_email_variant_clicked: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
+      increment_email_variant_opened: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
+      increment_email_variant_sent: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
       match_text_agent_knowledge: {
         Args: { match_count?: number; query_embedding: string }
