@@ -43,6 +43,7 @@ import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
@@ -108,6 +109,7 @@ import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
+import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 
 const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
   id: '/zapomniane-haslo',
@@ -277,6 +279,11 @@ const InwestorAbonamentRoute = InwestorAbonamentRouteImport.update({
 const EmbedWniosekRoute = EmbedWniosekRouteImport.update({
   id: '/embed/wniosek',
   path: '/embed/wniosek',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -621,6 +628,11 @@ const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
   path: '/api/public/email/open',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEmailClickRoute = ApiPublicEmailClickRouteImport.update({
+  id: '/api/public/email/click',
+  path: '/api/public/email/click',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -672,6 +684,7 @@ export interface FileRoutesByFullPath {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -709,6 +722,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -770,6 +784,7 @@ export interface FileRoutesByTo {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -807,6 +822,7 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
+  '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -872,6 +888,7 @@ export interface FileRoutesById {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
@@ -909,6 +926,7 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -975,6 +993,7 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/zgody'
     | '/blog/$slug'
+    | '/email/unsubscribe'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -1012,6 +1031,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
+    | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -1073,6 +1093,7 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/zgody'
     | '/blog/$slug'
+    | '/email/unsubscribe'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -1110,6 +1131,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski'
+    | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -1174,6 +1196,7 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/zgody'
     | '/blog/$slug'
+    | '/email/unsubscribe'
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
@@ -1211,6 +1234,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
+    | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -1246,6 +1270,7 @@ export interface RootRouteChildren {
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
   RCodeRoute: typeof RCodeRoute
@@ -1260,6 +1285,7 @@ export interface RootRouteChildren {
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
+  ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -1513,6 +1539,13 @@ declare module '@tanstack/react-router' {
       path: '/embed/wniosek'
       fullPath: '/embed/wniosek'
       preLoaderRoute: typeof EmbedWniosekRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/$slug': {
@@ -1970,6 +2003,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicEmailOpenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/click': {
+      id: '/api/public/email/click'
+      path: '/api/public/email/click'
+      fullPath: '/api/public/email/click'
+      preLoaderRoute: typeof ApiPublicEmailClickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -2146,6 +2186,7 @@ const rootRouteChildren: RootRouteChildren = {
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   BlogSlugRoute: BlogSlugRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
   RCodeRoute: RCodeRoute,
@@ -2160,6 +2201,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
+  ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:

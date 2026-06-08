@@ -3579,6 +3579,7 @@ export type Database = {
           reminder_email_count: number
           reminder_email_first_sent_at: string | null
           reminder_email_unsubscribed: boolean
+          reminder_email_unsubscribed_at: string | null
           reminder_paused: boolean
           return_link: string | null
           return_link_token: string | null
@@ -3645,6 +3646,7 @@ export type Database = {
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
           reminder_email_unsubscribed?: boolean
+          reminder_email_unsubscribed_at?: string | null
           reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
@@ -3711,6 +3713,7 @@ export type Database = {
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
           reminder_email_unsubscribed?: boolean
+          reminder_email_unsubscribed_at?: string | null
           reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
