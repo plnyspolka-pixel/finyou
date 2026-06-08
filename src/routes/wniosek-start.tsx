@@ -176,6 +176,10 @@ function WniosekStartPage() {
       toast.error("Musisz zaakceptować regulamin");
       return;
     }
+    if (!contactConsent) {
+      toast.error("Musisz wyrazić zgodę na kontakt — bez niej nie obsłużymy wniosku");
+      return;
+    }
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -204,6 +208,9 @@ function WniosekStartPage() {
         consent_rodo: !!accepted.privacy,
         consent_marketing: !!accepted.marketing,
         consent_terms: !!accepted.terms,
+        consent_phone: contactConsent,
+        consent_email: contactConsent,
+        consent_sms: contactConsent,
         consent_versions: versions,
         consents_accepted_at: new Date().toISOString(),
       };
