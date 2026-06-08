@@ -167,9 +167,9 @@ function WniosekStartPage() {
       toast.error("Uzupełnij wszystkie pola");
       return;
     }
-    // Wymagane: polityka prywatności + regulamin (jeśli skonfigurowane). Marketing — dobrowolny.
-    if (consentDocs.privacy && !accepted.privacy) {
-      toast.error("Musisz zaakceptować politykę prywatności");
+    // Wymagane: polityka prywatności + regulamin + zgoda na kontakt. Marketing — dobrowolny.
+    if (!accepted.privacy) {
+      toast.error("Musisz zaakceptować politykę prywatności i regulamin");
       return;
     }
     if (consentDocs.terms && !accepted.terms) {
