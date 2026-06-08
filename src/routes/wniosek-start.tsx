@@ -67,6 +67,7 @@ function WniosekStartPage() {
   const [busy, setBusy] = useState(false);
   const [consentDocs, setConsentDocs] = useState<Record<ConsentKind, ConsentDoc | null>>({ privacy: null, marketing: null, terms: null });
   const [accepted, setAccepted] = useState<Record<ConsentKind, boolean>>({ privacy: false, marketing: false, terms: false });
+  const [contactConsent, setContactConsent] = useState(false);
 
   // Stan "user jest zalogowany przez OAuth, ale brak numeru telefonu"
   const [needsPhone, setNeedsPhone] = useState<null | { userId: string }>(null);
@@ -166,13 +167,17 @@ function WniosekStartPage() {
       toast.error("Uzupełnij wszystkie pola");
       return;
     }
-    // Wymagane: polityka prywatności + regulamin (jeśli skonfigurowane). Marketing — dobrowolny.
-    if (consentDocs.privacy && !accepted.privacy) {
-      toast.error("Musisz zaakceptować politykę prywatności");
+    // Wymagane: polityka prywatności + regulamin + zgoda na kontakt. Marketing — dobrowolny.
+    if (!accepted.privacy) {
+      toast.error("Musisz zaakceptować politykę prywatności i regulamin");
       return;
     }
     if (consentDocs.terms && !accepted.terms) {
       toast.error("Musisz zaakceptować regulamin");
+      return;
+    }
+    if (!contactConsent) {
+      toast.error("Musisz wyrazić zgodę na kontakt — bez niej nie obsłużymy wniosku");
       return;
     }
     setBusy(true);
@@ -203,6 +208,9 @@ function WniosekStartPage() {
         consent_rodo: !!accepted.privacy,
         consent_marketing: !!accepted.marketing,
         consent_terms: !!accepted.terms,
+        consent_phone: contactConsent,
+        consent_email: contactConsent,
+        consent_sms: contactConsent,
         consent_versions: versions,
         consents_accepted_at: new Date().toISOString(),
       };
@@ -310,6 +318,33 @@ function WniosekStartPage() {
                 <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
+              <div className="space-y-2 rounded-md border p-3 text-sm">
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={accepted.privacy}
+                    onCheckedChange={(v) => setAccepted({ ...accepted, privacy: v === true })}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Akceptuję{" "}
+                    <a href="/polityka-prywatnosci" target="_blank" rel="noreferrer" className="text-accent hover:underline">politykę prywatności</a>
+                    {" "}oraz{" "}
+                    <a href="/regulamin" target="_blank" rel="noreferrer" className="text-accent hover:underline">regulamin serwisu</a>
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={contactConsent}
+                    onCheckedChange={(v) => setContactConsent(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Wyrażam zgodę na kontakt telefoniczny, e-mailowy oraz SMS-owy, w tym z wykorzystaniem agentów konwersacyjnych AI, w celu obsługi mojego wniosku.
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+              </div>
               <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
                 {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
               </Button>
