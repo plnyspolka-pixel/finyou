@@ -157,7 +157,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           await logLeadCommunication({
             leadId: g.leadId,
-            channel: g.channel,
+            channel: g.channel as "email" | "messenger",
             direction: "outbound",
             content: replyText,
             externalId: sendId,
