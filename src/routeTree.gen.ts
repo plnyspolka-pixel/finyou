@@ -28,12 +28,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
-import { Route as KlientWiadomosciRouteImport } from './routes/klient.wiadomosci'
-import { Route as KlientStatusRouteImport } from './routes/klient.status'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
-import { Route as KlientOfertaRouteImport } from './routes/klient.oferta'
-import { Route as KlientKontaktRouteImport } from './routes/klient.kontakt'
-import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -73,7 +68,6 @@ import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
 import { Route as AdminWnioskiIndexRouteImport } from './routes/admin.wnioski.index'
-import { Route as KlientUmowaOfferIdRouteImport } from './routes/klient.umowa.$offerId'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
@@ -197,34 +191,9 @@ const LSlugRoute = LSlugRouteImport.update({
   path: '/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const KlientWiadomosciRoute = KlientWiadomosciRouteImport.update({
-  id: '/wiadomosci',
-  path: '/wiadomosci',
-  getParentRoute: () => KlientRoute,
-} as any)
-const KlientStatusRoute = KlientStatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => KlientRoute,
-} as any)
 const KlientProfilRoute = KlientProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
-  getParentRoute: () => KlientRoute,
-} as any)
-const KlientOfertaRoute = KlientOfertaRouteImport.update({
-  id: '/oferta',
-  path: '/oferta',
-  getParentRoute: () => KlientRoute,
-} as any)
-const KlientKontaktRoute = KlientKontaktRouteImport.update({
-  id: '/kontakt',
-  path: '/kontakt',
-  getParentRoute: () => KlientRoute,
-} as any)
-const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
-  id: '/dokumenty',
-  path: '/dokumenty',
   getParentRoute: () => KlientRoute,
 } as any)
 const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
@@ -421,11 +390,6 @@ const AdminWnioskiIndexRoute = AdminWnioskiIndexRouteImport.update({
   id: '/wnioski/',
   path: '/wnioski/',
   getParentRoute: () => AdminRoute,
-} as any)
-const KlientUmowaOfferIdRoute = KlientUmowaOfferIdRouteImport.update({
-  id: '/umowa/$offerId',
-  path: '/umowa/$offerId',
-  getParentRoute: () => KlientRoute,
 } as any)
 const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   id: '/wniosek/$id',
@@ -626,12 +590,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/klient/dokumenty': typeof KlientDokumentyRoute
-  '/klient/kontakt': typeof KlientKontaktRoute
-  '/klient/oferta': typeof KlientOfertaRoute
   '/klient/profil': typeof KlientProfilRoute
-  '/klient/status': typeof KlientStatusRoute
-  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -658,7 +617,6 @@ export interface FileRoutesByFullPath {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
-  '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -717,12 +675,7 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/klient/dokumenty': typeof KlientDokumentyRoute
-  '/klient/kontakt': typeof KlientKontaktRoute
-  '/klient/oferta': typeof KlientOfertaRoute
   '/klient/profil': typeof KlientProfilRoute
-  '/klient/status': typeof KlientStatusRoute
-  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -749,7 +702,6 @@ export interface FileRoutesByTo {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
-  '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -812,12 +764,7 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/klient/dokumenty': typeof KlientDokumentyRoute
-  '/klient/kontakt': typeof KlientKontaktRoute
-  '/klient/oferta': typeof KlientOfertaRoute
   '/klient/profil': typeof KlientProfilRoute
-  '/klient/status': typeof KlientStatusRoute
-  '/klient/wiadomosci': typeof KlientWiadomosciRoute
   '/l/$slug': typeof LSlugRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -844,7 +791,6 @@ export interface FileRoutesById {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
-  '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -908,12 +854,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/klient/dokumenty'
-    | '/klient/kontakt'
-    | '/klient/oferta'
     | '/klient/profil'
-    | '/klient/status'
-    | '/klient/wiadomosci'
     | '/l/$slug'
     | '/r/$code'
     | '/wniosek/$token'
@@ -940,7 +881,6 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
-    | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/loan-reminders'
@@ -999,12 +939,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/klient/dokumenty'
-    | '/klient/kontakt'
-    | '/klient/oferta'
     | '/klient/profil'
-    | '/klient/status'
-    | '/klient/wiadomosci'
     | '/l/$slug'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1031,7 +966,6 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
-    | '/klient/umowa/$offerId'
     | '/admin/wnioski'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/loan-reminders'
@@ -1093,12 +1027,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/klient/dokumenty'
-    | '/klient/kontakt'
-    | '/klient/oferta'
     | '/klient/profil'
-    | '/klient/status'
-    | '/klient/wiadomosci'
     | '/l/$slug'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1125,7 +1054,6 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
-    | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/loan-reminders'
@@ -1309,46 +1237,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/klient/wiadomosci': {
-      id: '/klient/wiadomosci'
-      path: '/wiadomosci'
-      fullPath: '/klient/wiadomosci'
-      preLoaderRoute: typeof KlientWiadomosciRouteImport
-      parentRoute: typeof KlientRoute
-    }
-    '/klient/status': {
-      id: '/klient/status'
-      path: '/status'
-      fullPath: '/klient/status'
-      preLoaderRoute: typeof KlientStatusRouteImport
-      parentRoute: typeof KlientRoute
-    }
     '/klient/profil': {
       id: '/klient/profil'
       path: '/profil'
       fullPath: '/klient/profil'
       preLoaderRoute: typeof KlientProfilRouteImport
-      parentRoute: typeof KlientRoute
-    }
-    '/klient/oferta': {
-      id: '/klient/oferta'
-      path: '/oferta'
-      fullPath: '/klient/oferta'
-      preLoaderRoute: typeof KlientOfertaRouteImport
-      parentRoute: typeof KlientRoute
-    }
-    '/klient/kontakt': {
-      id: '/klient/kontakt'
-      path: '/kontakt'
-      fullPath: '/klient/kontakt'
-      preLoaderRoute: typeof KlientKontaktRouteImport
-      parentRoute: typeof KlientRoute
-    }
-    '/klient/dokumenty': {
-      id: '/klient/dokumenty'
-      path: '/dokumenty'
-      fullPath: '/klient/dokumenty'
-      preLoaderRoute: typeof KlientDokumentyRouteImport
       parentRoute: typeof KlientRoute
     }
     '/inwestor/wiadomosci': {
@@ -1623,13 +1516,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/wnioski/'
       preLoaderRoute: typeof AdminWnioskiIndexRouteImport
       parentRoute: typeof AdminRoute
-    }
-    '/klient/umowa/$offerId': {
-      id: '/klient/umowa/$offerId'
-      path: '/umowa/$offerId'
-      fullPath: '/klient/umowa/$offerId'
-      preLoaderRoute: typeof KlientUmowaOfferIdRouteImport
-      parentRoute: typeof KlientRoute
     }
     '/inwestor/wniosek/$id': {
       id: '/inwestor/wniosek/$id'
@@ -1962,25 +1848,13 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 )
 
 interface KlientRouteChildren {
-  KlientDokumentyRoute: typeof KlientDokumentyRoute
-  KlientKontaktRoute: typeof KlientKontaktRoute
-  KlientOfertaRoute: typeof KlientOfertaRoute
   KlientProfilRoute: typeof KlientProfilRoute
-  KlientStatusRoute: typeof KlientStatusRoute
-  KlientWiadomosciRoute: typeof KlientWiadomosciRoute
   KlientIndexRoute: typeof KlientIndexRoute
-  KlientUmowaOfferIdRoute: typeof KlientUmowaOfferIdRoute
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
-  KlientDokumentyRoute: KlientDokumentyRoute,
-  KlientKontaktRoute: KlientKontaktRoute,
-  KlientOfertaRoute: KlientOfertaRoute,
   KlientProfilRoute: KlientProfilRoute,
-  KlientStatusRoute: KlientStatusRoute,
-  KlientWiadomosciRoute: KlientWiadomosciRoute,
   KlientIndexRoute: KlientIndexRoute,
-  KlientUmowaOfferIdRoute: KlientUmowaOfferIdRoute,
 }
 
 const KlientRouteWithChildren =
@@ -2025,3 +1899,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
