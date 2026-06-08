@@ -937,6 +937,7 @@ function KlientWniosek() {
           </Button>
         )}
       </div>
+      </div>
     </div>
   );
 }
