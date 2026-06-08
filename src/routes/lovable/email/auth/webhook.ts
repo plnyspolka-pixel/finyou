@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { render } from '@react-email/render'
+import { render } from 'react-email'
 import { parseEmailWebhookPayload } from '@lovable.dev/email-js'
 import { WebhookError, verifyWebhookRequest } from '@lovable.dev/webhooks-js'
 import { createClient } from '@supabase/supabase-js'
@@ -31,10 +31,10 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "finyou"
+const SITE_NAME = "Finance You"
 const SENDER_DOMAIN = "notify.filipbielak.pl"
-const ROOT_DOMAIN = "filipbielak.pl"
-const FROM_DOMAIN = "filipbielak.pl"
+const ROOT_DOMAIN = "financeyou.pl"
+const FROM_DOMAIN = "financeyou.pl"
 
 function redactEmail(email: string | null | undefined): string {
   if (!email) return '***'
