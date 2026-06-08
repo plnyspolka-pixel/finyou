@@ -49,7 +49,13 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
       return { ok: true, deduped: true as const };
     }
 
-    const scheduledAt = new Date(Date.now() + 60 * 1000).toISOString();
+    // Druga zapora: jeśli „za 60 s" wypada poza 8:00–22:00 Warszawa lub w niedzielę,
+    // przesuń na najbliższe 8:00 (pn–sob). placeOutboundCallInternal i tak ma guard,
+    // ale nie chcemy mieć w kolejce wpisów z nocną godziną.
+    const { getCallingWindow } = await import("@/lib/voicebot.functions");
+    const target = new Date(Date.now() + 60 * 1000);
+    const win = getCallingWindow(target);
+    const scheduledAt = (win.allowed ? target : win.nextAllowedAt).toISOString();
     const { error } = await supabaseAdmin.from("call_queue").insert({
       phone_normalized: phone,
       client_id: client?.id ?? null,
