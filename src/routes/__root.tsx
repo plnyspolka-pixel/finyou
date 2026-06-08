@@ -13,6 +13,7 @@ import faviconAsset from "@/assets/favicon.png.asset.json";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
+import { GoogleAnalytics } from "@/lib/google-analytics";
 
 function NotFoundComponent() {
   return (
@@ -106,6 +107,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <FacebookPixel />
+        <GoogleAnalytics />
         <Outlet />
         <Toaster />
       </AuthProvider>
