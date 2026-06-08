@@ -131,8 +131,8 @@ export async function runDailyReminderEmailsBatch(): Promise<{
   const hour = warsawHour(now);
   const weekday = warsawWeekday(now);
 
-  // Sztywne okno mailingu: 7:00–23:59 Warszawa, bez niedziel.
-  if (weekday === "Sun" || hour < 7) {
+  // Sztywne okno mailingu: 6:00–23:59 Warszawa, bez niedziel.
+  if (weekday === "Sun" || hour < 6) {
     return { ok: false, skipped: weekday === "Sun" ? "sunday" : "outside_hours", hour, weekday };
   }
 
