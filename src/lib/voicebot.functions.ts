@@ -28,6 +28,65 @@ function renderTemplate(tpl: string, vars: Record<string, string | null | undefi
   return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? "").toString());
 }
 
+/** Sztywne godziny dzwonienia: 8:00–22:00 czasu Warszawy, oprócz niedziel. */
+export function getCallingWindow(now: Date = new Date()): {
+  allowed: boolean;
+  reason?: "sunday" | "outside_hours";
+  hour: number;
+  weekday: string;
+  nextAllowedAt: Date;
+} {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Warsaw",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+    hour12: false,
+  }).formatToParts(now);
+  const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const isSunday = weekday === "Sun";
+  const inWindow = hour >= 8 && hour < 22;
+  const allowed = !isSunday && inWindow;
+
+  function warsawOffsetMinutes(at: Date): number {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Warsaw",
+      hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+    const p = Object.fromEntries(dtf.formatToParts(at).map((x) => [x.type, x.value]));
+    const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+    return (asUtc - at.getTime()) / 60000;
+  }
+  function nextEightAm(from: Date): Date {
+    let cursor = new Date(from.getTime());
+    for (let i = 0; i < 8; i++) {
+      const off = warsawOffsetMinutes(cursor);
+      const local = new Date(cursor.getTime() + off * 60000);
+      const ly = local.getUTCFullYear(), lm = local.getUTCMonth(), ld = local.getUTCDate();
+      const lh = local.getUTCHours(), ldow = local.getUTCDay();
+      let candidate = new Date(Date.UTC(ly, lm, ld, 8, 0, 0) - off * 60000);
+      if (ldow !== 0 && lh < 8 && candidate.getTime() > from.getTime()) return candidate;
+      const tomorrowDow = (ldow + 1) % 7;
+      const addDays = tomorrowDow === 0 ? 2 : 1;
+      candidate = new Date(Date.UTC(ly, lm, ld + addDays, 8, 0, 0) - off * 60000);
+      if (candidate.getTime() > from.getTime()) return candidate;
+      cursor = new Date(candidate.getTime() + 3600_000);
+    }
+    return new Date(from.getTime() + 12 * 3600_000);
+  }
+
+  return {
+    allowed,
+    reason: allowed ? undefined : isSunday ? "sunday" : "outside_hours",
+    hour,
+    weekday,
+    nextAllowedAt: allowed ? now : nextEightAm(now),
+  };
+}
+
 /** Wysyła SMS przez Twilio (connector gateway). */
 export async function sendSmsInternal(opts: {
   phone: string;
