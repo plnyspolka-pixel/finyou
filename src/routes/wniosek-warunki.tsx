@@ -75,7 +75,7 @@ function WniosekWarunkiPage() {
 
   const [step1, setStep1] = useState<Step1 | null>(null);
   const [monthlyRate, setMonthlyRate] = useState(2.0);
-  const [maxPayment, setMaxPayment] = useState(8000);
+  const [maxPayment, setMaxPayment] = useState(1500);
 
   // Restore step 1 z sessionStorage
   useEffect(() => {
