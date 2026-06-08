@@ -91,6 +91,12 @@ function WniosekOpisPage() {
       const { error } = await supabase.from("loan_applications").update(payload).eq("id", loanId);
       if (error) throw error;
       toast.success(markComplete ? "Wniosek wysłany do analizy" : "Zapisano");
+      if (markComplete) {
+        try {
+          const { trackEvent } = await import("@/lib/fb-pixel");
+          await trackEvent("SubmitApplication", { content_name: "Wniosek wysłany do analizy", loan_id: loanId });
+        } catch {}
+      }
       void navigate({ to: "/klient/wniosek" });
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd zapisu");
