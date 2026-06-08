@@ -9,9 +9,11 @@ import { createFileRoute } from "@tanstack/react-router";
  *
  * ElevenLabs woła POST z body zawierającym m.in. caller_id / called_number / agent_id
  * (zarówno dla połączeń inbound jak i outbound przed startem rozmowy).
- * Odpowiadamy ciałem `conversation_initiation_client_data` z dynamicznymi zmiennymi
- * (imię, kwota wniosku, status, brakujące dokumenty, % wypełnienia, link itp.),
- * dzięki czemu Ania mówi po imieniu i operuje realnymi danymi klienta.
+ * Odpowiadamy ciałem `conversation_initiation_client_data` z dynamicznymi zmiennymi.
+ *
+ * UWAGA: ElevenLabs akceptuje w `dynamic_variables` wyłącznie wartości
+ * prymitywne (string / number / boolean). Tablice/obiekty muszą być
+ * sklejone do stringa, inaczej agent ich nie podstawi.
  */
 export const Route = createFileRoute("/api/public/hooks/elevenlabs-conversation-init")({
   server: {
@@ -34,6 +36,51 @@ function normalizePhone(raw: string | null | undefined): string | null {
   return `+${d}`;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  nowy_lead: "Nowy lead",
+  w_trakcie_uzupelniania: "W trakcie uzupełniania wniosku",
+  braki_w_dokumentach: "Braki w dokumentach",
+  do_kontaktu: "Do kontaktu",
+  w_follow_upie: "W follow-upie",
+  wniosek_kompletny: "Wniosek kompletny",
+  do_analizy: "W trakcie analizy",
+  rokuje: "Wniosek rokuje",
+  nie_rokuje: "Wniosek nie rokuje",
+  wyslany_do_inwestorow: "Wysłany do inwestorów",
+  oferta_od_inwestora: "Oferta od inwestora",
+  oferta_przekazana_klientowi: "Oferta przekazana klientowi",
+  zaakceptowany_przez_klienta: "Zaakceptowany przez klienta",
+  do_umowy: "Do umowy",
+  zamkniety: "Sprawa zamknięta",
+  archiwalny: "Archiwalny",
+  oczekuje_podpisania_umowy: "Oczekuje podpisania umowy",
+  umowa_podpisana: "Umowa podpisana",
+  oczekuje_ustanowienia_zabezpieczen: "Oczekuje ustanowienia zabezpieczeń",
+  zabezpieczenia_ustanowione: "Zabezpieczenia ustanowione",
+  dokumenty_dostarczone_do_inwestora: "Dokumenty dostarczone do inwestora",
+  oczekuje_wyplaty: "Oczekuje wypłaty",
+  wyplacony: "Wypłacony",
+  wniosek_odrzucony: "Wniosek odrzucony",
+};
+
+const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  mieszkanie: "Mieszkanie",
+  dom: "Dom",
+  dzialka: "Działka",
+  lokal_uzytkowy: "Lokal użytkowy",
+  inne: "Inne",
+};
+
+const STEP_LABELS: Record<number, string> = {
+  1: "Start wniosku",
+  2: "Warunki spłaty",
+  3: "Formularz danych",
+  4: "Zabezpieczenie",
+  5: "Weryfikacja dokumentów",
+  6: "Analiza wniosku",
+  7: "Oferta i umowa",
+};
+
 async function handler({ request }: { request: Request }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -49,7 +96,6 @@ async function handler({ request }: { request: Request }) {
     payload = {};
   }
 
-  // ElevenLabs przesyła różne pola w zależności od konfiguracji. Próbujemy wszystkich.
   const callerRaw =
     payload?.caller_id ??
     payload?.from_number ??
@@ -61,65 +107,162 @@ async function handler({ request }: { request: Request }) {
     null;
   const phone = normalizePhone(callerRaw);
 
-  console.log("[el-conv-init] incoming", { method: request.method, phone, keys: Object.keys(payload ?? {}) });
+  console.log("[el-conv-init] incoming", {
+    method: request.method,
+    phone,
+    keys: Object.keys(payload ?? {}),
+  });
 
-  // Domyślne wartości — żeby agent miał czym wypełnić zmienne nawet bez dopasowania.
-  const dyn: Record<string, string> = {
+  // Domyślne wartości — wszystkie jako prymitywne typy (string/number/boolean).
+  const dyn: Record<string, string | number | boolean> = {
     first_name: "",
     last_name: "",
     full_name: "",
-    loan_amount: "",
-    loan_purpose: "",
-    completion_percent: "0",
+    phone: phone ?? "",
+    email: "",
+    loan_amount: 0,
+    current_step: 0,
+    step_label: "",
+    missing_step: "",
+    property_type: "",
+    property_type_label: "",
+    property_city: "",
+    uploaded_documents: "",
+    uploaded_documents_count: 0,
     missing_documents: "",
+    missing_documents_count: 0,
+    completion_percent: 0,
+    is_complete: false,
+    client_id: "",
     loan_application_id: "",
-    return_link: "",
+    application_link: "",
+    do_not_call: false,
+    max_monthly_payment: 0,
+    max_monthly_loan_cost: 0,
+    preferred_repayment_period: 0,
+    client_repayment_comment: "",
+    has_application: false,
     status: "",
+    status_label: "Brak danych",
+    status_message: "",
+    client_action: "",
+    is_decision_available: false,
+    is_completed: false,
+    is_rejected: false,
     city: "",
   };
 
   if (phone) {
-    // Klient po telefonie (clients.phone_normalized).
     const { data: client } = await supabaseAdmin
       .from("clients")
-      .select("id, first_name, last_name, city")
+      .select("id, first_name, last_name, email, city, consent_phone")
       .eq("phone_normalized", phone)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (client) {
+      dyn.client_id = client.id;
       dyn.first_name = client.first_name ?? "";
       dyn.last_name = client.last_name ?? "";
       dyn.full_name = `${client.first_name ?? ""} ${client.last_name ?? ""}`.trim();
+      dyn.email = client.email ?? "";
       dyn.city = client.city ?? "";
+      dyn.do_not_call = client.consent_phone === false;
 
-      // Najnowszy wniosek tego klienta
       const { data: app } = await supabaseAdmin
         .from("loan_applications")
-        .select("id, status, loan_amount, completeness_percent, missing_fields, return_link, return_link_token, situation_description")
+        .select(
+          "id, status, loan_amount, completeness_percent, missing_fields, missing_documents_snapshot, return_link, return_link_token, situation_description, current_form_step, max_monthly_payment, preferred_period_months, admin_decision, decision_reason"
+        )
         .eq("client_id", client.id)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (app) {
+        dyn.has_application = true;
         dyn.loan_application_id = app.id;
         dyn.status = String(app.status ?? "");
-        dyn.loan_amount = app.loan_amount ? String(Math.round(Number(app.loan_amount))) : "";
-        dyn.loan_purpose = app.situation_description ?? "";
-        dyn.completion_percent = String(app.completeness_percent ?? 0);
-        const missing = Array.isArray(app.missing_fields) ? app.missing_fields : [];
-        dyn.missing_documents = missing.length > 0 ? missing.join(", ") : "wszystko skompletowane";
-        dyn.return_link =
+        dyn.status_label = STATUS_LABELS[String(app.status ?? "")] ?? String(app.status ?? "");
+        dyn.loan_amount = app.loan_amount ? Math.round(Number(app.loan_amount)) : 0;
+        dyn.completion_percent = Number(app.completeness_percent ?? 0);
+        dyn.is_complete = Number(app.completeness_percent ?? 0) >= 100;
+        dyn.current_step = Number(app.current_form_step ?? 0);
+        dyn.step_label = STEP_LABELS[Number(app.current_form_step ?? 0)] ?? "";
+        dyn.client_repayment_comment = app.situation_description ?? "";
+        dyn.max_monthly_payment = app.max_monthly_payment ? Math.round(Number(app.max_monthly_payment)) : 0;
+        dyn.max_monthly_loan_cost = dyn.max_monthly_payment; // alias — koszt = rata
+        dyn.preferred_repayment_period = Number(app.preferred_period_months ?? 0);
+
+        const missing = Array.isArray(app.missing_fields) ? (app.missing_fields as string[]) : [];
+        const missingDocs = Array.isArray(app.missing_documents_snapshot)
+          ? (app.missing_documents_snapshot as string[])
+          : [];
+        const allMissing = [...new Set([...missing, ...missingDocs])];
+        dyn.missing_documents = allMissing.length > 0 ? allMissing.join(", ") : "wszystko skompletowane";
+        dyn.missing_documents_count = allMissing.length;
+        dyn.missing_step = allMissing[0] ?? "";
+
+        dyn.application_link =
           app.return_link ??
           (app.return_link_token ? `https://app.financeyou.pl/wniosek/${app.return_link_token}` : "");
+
+        // Status decyzji
+        const decision = (app.admin_decision ?? "").toLowerCase();
+        dyn.is_decision_available = decision === "approved" || decision === "rejected";
+        dyn.is_rejected = decision === "rejected" || app.status === "wniosek_odrzucony";
+        dyn.is_completed = app.status === "wyplacony" || app.status === "zamkniety";
+
+        // Wiadomość statusowa + akcja klienta
+        if (dyn.is_rejected) {
+          dyn.status_message = app.decision_reason ?? "Wniosek odrzucony.";
+          dyn.client_action = "Brak dalszych akcji";
+        } else if (dyn.is_completed) {
+          dyn.status_message = "Środki zostały wypłacone.";
+          dyn.client_action = "Brak dalszych akcji";
+        } else if (allMissing.length > 0) {
+          dyn.status_message = `Czekamy na: ${allMissing.join(", ")}.`;
+          dyn.client_action = "Uzupełnij brakujące dokumenty";
+        } else if (Number(app.completeness_percent ?? 0) < 100) {
+          dyn.status_message = "Wniosek wymaga dokończenia.";
+          dyn.client_action = "Dokończ wniosek online";
+        } else {
+          dyn.status_message = "Wniosek jest analizowany.";
+          dyn.client_action = "Czekaj na kontakt opiekuna";
+        }
+
+        // Nieruchomość
+        const { data: prop } = await supabaseAdmin
+          .from("properties")
+          .select("property_type, city")
+          .eq("loan_application_id", app.id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (prop) {
+          dyn.property_type = String(prop.property_type ?? "");
+          dyn.property_type_label =
+            PROPERTY_TYPE_LABELS[String(prop.property_type ?? "")] ?? String(prop.property_type ?? "");
+          dyn.property_city = prop.city ?? "";
+        }
+
+        // Wgrane dokumenty
+        const { data: docs } = await supabaseAdmin
+          .from("documents")
+          .select("doc_type, file_name")
+          .eq("loan_application_id", app.id);
+        if (docs && docs.length > 0) {
+          const names = docs.map((d: any) => d.doc_type ?? d.file_name).filter(Boolean);
+          dyn.uploaded_documents = names.join(", ");
+          dyn.uploaded_documents_count = names.length;
+        }
       }
     } else {
       // Fallback: lead z Meta po telefonie
       const { data: lead } = await supabaseAdmin
         .from("leads")
-        .select("first_name, last_name, application_data, return_link")
+        .select("first_name, last_name, email, application_data, return_link")
         .eq("phone_normalized", phone)
         .order("updated_at", { ascending: false })
         .limit(1)
@@ -128,10 +271,11 @@ async function handler({ request }: { request: Request }) {
         dyn.first_name = lead.first_name ?? "";
         dyn.last_name = lead.last_name ?? "";
         dyn.full_name = `${lead.first_name ?? ""} ${lead.last_name ?? ""}`.trim();
+        dyn.email = lead.email ?? "";
         const ad: any = lead.application_data ?? {};
-        if (ad.loan_amount) dyn.loan_amount = String(ad.loan_amount);
-        if (ad.purpose) dyn.loan_purpose = String(ad.purpose);
-        if (lead.return_link) dyn.return_link = lead.return_link;
+        if (ad.loan_amount) dyn.loan_amount = Number(ad.loan_amount) || 0;
+        if (ad.purpose) dyn.client_repayment_comment = String(ad.purpose);
+        if (lead.return_link) dyn.application_link = lead.return_link;
       }
     }
   }
