@@ -13,6 +13,7 @@ import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as WniosekZabezpieczenieRouteImport } from './routes/wniosek-zabezpieczenie'
 import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
 import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
+import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
@@ -117,6 +118,11 @@ const WniosekWarunkiRoute = WniosekWarunkiRouteImport.update({
 const WniosekStartRoute = WniosekStartRouteImport.update({
   id: '/wniosek-start',
   path: '/wniosek-start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WniosekFormularzRoute = WniosekFormularzRouteImport.update({
+  id: '/wniosek-formularz',
+  path: '/wniosek-formularz',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RejestracjaRoute = RejestracjaRouteImport.update({
@@ -565,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -653,6 +660,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -745,6 +753,7 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -838,6 +847,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/wniosek-formularz'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -926,6 +936,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/logowanie'
     | '/rejestracja'
+    | '/wniosek-formularz'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -1017,6 +1028,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/wniosek-formularz'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -1109,6 +1121,7 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   RejestracjaRoute: typeof RejestracjaRoute
+  WniosekFormularzRoute: typeof WniosekFormularzRoute
   WniosekStartRoute: typeof WniosekStartRoute
   WniosekWarunkiRoute: typeof WniosekWarunkiRoute
   WniosekZabezpieczenieRoute: typeof WniosekZabezpieczenieRoute
@@ -1163,6 +1176,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek-start'
       fullPath: '/wniosek-start'
       preLoaderRoute: typeof WniosekStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wniosek-formularz': {
+      id: '/wniosek-formularz'
+      path: '/wniosek-formularz'
+      fullPath: '/wniosek-formularz'
+      preLoaderRoute: typeof WniosekFormularzRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rejestracja': {
@@ -1934,6 +1954,7 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   RejestracjaRoute: RejestracjaRoute,
+  WniosekFormularzRoute: WniosekFormularzRoute,
   WniosekStartRoute: WniosekStartRoute,
   WniosekWarunkiRoute: WniosekWarunkiRoute,
   WniosekZabezpieczenieRoute: WniosekZabezpieczenieRoute,

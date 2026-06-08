@@ -46,14 +46,14 @@ function captureParamsToStorage() {
 }
 
 function getNextPath(): string {
-  if (typeof window === "undefined") return "/klient";
+  if (typeof window === "undefined") return "/wniosek-formularz";
   const sp = new URLSearchParams(window.location.search);
   const next = sp.get("next");
   if (next && /^\/[a-z0-9/_-]+$/i.test(next)) return next;
   try {
     if (sessionStorage.getItem("calc_step1_v1")) return "/wniosek-warunki";
   } catch { /* noop */ }
-  return "/klient";
+  return "/wniosek-formularz";
 }
 
 function WniosekStartPage() {
