@@ -331,7 +331,7 @@ function WniosekStartPage() {
                 <Label htmlFor="password2">Hasło</Label>
                 <Input id="password2" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              <Button type="submit" className="w-full" disabled={busy}>
+              <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
                 {busy ? "Logowanie…" : "Zaloguj się i kontynuuj"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
