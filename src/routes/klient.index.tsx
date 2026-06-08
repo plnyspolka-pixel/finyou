@@ -55,7 +55,7 @@ function KlientWniosek() {
   const [annualRate, setAnnualRate] = useState<number>(20);
   // slider wynagrodzenia: 15-60%
   const [months, setMonths] = useState<number>(24);
-  const [maxPayment, setMaxPayment] = useState<number>(5000);
+  const [maxPayment, setMaxPayment] = useState<number>(1500);
   const [secType, setSecType] = useState<SecurityType | null>(null);
 
   // Działalność
