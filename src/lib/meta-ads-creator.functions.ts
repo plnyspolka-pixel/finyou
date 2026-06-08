@@ -127,6 +127,53 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       const leadForm = (draft.lead_form ?? {}) as any;
       const targeting = (draft.targeting ?? {}) as any;
 
+      // Auto-remarketing: utwórz / pobierz audiencje dla tego konta i podepnij include/exclude
+      const { data: ts } = await supabaseAdmin
+        .from("tracking_settings")
+        .select("meta_audience_visitors_id, meta_audience_converters_id, meta_audiences_account_id")
+        .eq("id", 1)
+        .maybeSingle();
+
+      let visitorsId = (ts as any)?.meta_audience_visitors_id as string | null;
+      let convertersId = (ts as any)?.meta_audience_converters_id as string | null;
+      const sameAccount = (ts as any)?.meta_audiences_account_id === acc.meta_account_id;
+
+      if (!sameAccount || !visitorsId || !convertersId) {
+        const visitors = await metaPost(`/${actId}/customaudiences`, {
+          name: "FY — Odwiedzający /wniosek (30 dni)",
+          subtype: "WEBSITE",
+          description: "Auto: wszyscy odwiedzający strony wniosku w ostatnich 30 dniach",
+          rule: JSON.stringify({
+            inclusions: {
+              operator: "or",
+              rules: [
+                { event_sources: [{ id: (await supabaseAdmin.from("tracking_settings").select("client_pixel_id").eq("id", 1).maybeSingle()).data?.client_pixel_id, type: "pixel" }], retention_seconds: 30 * 86400, filter: { operator: "and", filters: [{ field: "url", operator: "i_contains", value: "/wniosek" }] } },
+              ],
+            },
+          }),
+        });
+        const converters = await metaPost(`/${actId}/customaudiences`, {
+          name: "FY — Wysłali wniosek (30 dni)",
+          subtype: "WEBSITE",
+          description: "Auto: ci, którzy ukończyli wniosek (SubmitApplication)",
+          rule: JSON.stringify({
+            inclusions: {
+              operator: "or",
+              rules: [
+                { event_sources: [{ id: (await supabaseAdmin.from("tracking_settings").select("client_pixel_id").eq("id", 1).maybeSingle()).data?.client_pixel_id, type: "pixel" }], retention_seconds: 30 * 86400, filter: { operator: "and", filters: [{ field: "event", operator: "eq", value: "SubmitApplication" }] } },
+              ],
+            },
+          }),
+        });
+        visitorsId = visitors.id;
+        convertersId = converters.id;
+        await supabaseAdmin.from("tracking_settings").update({
+          meta_audience_visitors_id: visitorsId,
+          meta_audience_converters_id: convertersId,
+          meta_audiences_account_id: acc.meta_account_id,
+        }).eq("id", 1);
+      }
+
       // 1) Campaign
       const camp = await metaPost(`/${actId}/campaigns`, {
         name: draft.name,
@@ -134,6 +181,12 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         status: "PAUSED",
         special_ad_categories: "[]",
       });
+
+      const useRemarketing = (targeting as any).remarketing !== false; // domyślnie włączone
+      const customAudiences = useRemarketing && (targeting as any).remarketing_mode !== "exclude_only"
+        ? [{ id: visitorsId }]
+        : undefined;
+      const excludedAudiences = useRemarketing ? [{ id: convertersId }] : undefined;
 
       // 2) AdSet
       const adset = await metaPost(`/${actId}/adsets`, {
@@ -149,6 +202,8 @@ export const publishAdDraft = createServerFn({ method: "POST" })
           age_max: targeting.age_max ?? 65,
           genders: targeting.genders,
           interests: targeting.interests,
+          custom_audiences: customAudiences,
+          excluded_custom_audiences: excludedAudiences,
           publisher_platforms: ["facebook", "instagram"],
         },
         status: "PAUSED",
