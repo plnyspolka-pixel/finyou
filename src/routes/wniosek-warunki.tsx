@@ -376,7 +376,7 @@ function WniosekWarunkiPage() {
                 onClick={goNext}
                 className="mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                Dalej — nieruchomość i KW
+                Dalej — zabezpieczenie
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
