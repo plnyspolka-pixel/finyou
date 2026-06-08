@@ -20,13 +20,48 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+
+  const resendConfirmation = async () => {
+    const targetEmail = (confirmationEmail || email).trim();
+    if (!targetEmail) {
+      toast.error("Wpisz e-mail, żeby wysłać potwierdzenie ponownie");
+      return;
+    }
+
+    setResendingConfirmation(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: targetEmail,
+      options: { emailRedirectTo: `${window.location.origin}/logowanie` },
+    });
+    setResendingConfirmation(false);
+
+    if (error) {
+      toast.error("Nie udało się wysłać potwierdzenia", { description: error.message });
+      return;
+    }
+
+    toast.success("Wysłaliśmy link potwierdzający", {
+      description: `Sprawdź skrzynkę ${targetEmail} oraz folder spam/oferty.`,
+    });
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setConfirmationEmail("");
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      if (/email not confirmed/i.test(error.message)) {
+        setConfirmationEmail(email.trim());
+        toast.error("Ten e-mail nie jest jeszcze potwierdzony", {
+          description: "Możesz wysłać link potwierdzający ponownie poniżej.",
+        });
+        return;
+      }
       toast.error("Nie udało się zalogować", { description: error.message });
       return;
     }
