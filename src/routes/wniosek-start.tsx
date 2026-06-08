@@ -310,7 +310,7 @@ function WniosekStartPage() {
                 <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
-              <Button type="submit" className="w-full" disabled={busy}>
+              <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
                 {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
               </Button>
 
