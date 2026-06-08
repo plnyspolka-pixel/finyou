@@ -95,7 +95,15 @@ function WniosekWarunkiPage() {
   const [monthlyRate, setMonthlyRate] = useState(2.0);
   const [maxPayment, setMaxPayment] = useState(1500);
 
+  // Po wejściu zalogowanego klienta zaplanuj pierwszy follow-up (telefon Ani ~1 min później)
+  const scheduleFollowup = useServerFn(scheduleCalculatorEntryFollowup);
+  useEffect(() => {
+    if (authLoading || !user) return;
+    void scheduleFollowup({ data: undefined as never }).catch(() => { /* noop */ });
+  }, [authLoading, user, scheduleFollowup]);
+
   // Restore step 1 z sessionStorage
+
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("calc_step1_v1");
