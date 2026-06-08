@@ -392,13 +392,12 @@ function KlientWniosek() {
         if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową lokalu." };
         if (docsByType("zdjecia_lokalu").length === 0) return { ok: false, msg: "Wgraj zdjęcia lokalu." };
       }
-      if (secType === "dzialka_budowlana" && !mpzpInfo.trim() && docsByType("mpzp").length === 0)
-        return { ok: false, msg: "Dodaj informację o MPZP / warunkach zabudowy." };
-      if (secType === "grunt_rolny" && !landRegistryExtract.trim() && docsByType("wypis_rejestru").length === 0)
-        return { ok: false, msg: "Dodaj wypis z rejestru gruntów." };
-      if (secType === "inna") {
-        if (!otherDescription.trim()) return { ok: false, msg: "Opisz nieruchomość." };
-        if (docsByType("inne").length === 0) return { ok: false, msg: "Wgraj dokumenty lub zdjęcia." };
+      if (secType === "dzialka_budowlana" && docsByType("mpzp").length === 0)
+        return { ok: false, msg: "Wgraj dokument MPZP lub warunki zabudowy." };
+      if (secType === "grunt_rolny" && docsByType("wypis_rejestru").length === 0)
+        return { ok: false, msg: "Wgraj wypis z rejestru gruntów." };
+      if (secType === "inna" && docsByType("inne").length === 0) {
+        return { ok: false, msg: "Wgraj dokumenty lub zdjęcia nieruchomości." };
       }
       return { ok: true };
     }
