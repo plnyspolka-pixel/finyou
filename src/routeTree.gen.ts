@@ -103,9 +103,11 @@ import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
+import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
+import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 
 const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
   id: '/zapomniane-haslo',
@@ -590,6 +592,12 @@ const ApiPublicHooksLoanRemindersRoute =
     path: '/api/public/hooks/loan-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksLoanReminderEmailsRoute =
+  ApiPublicHooksLoanReminderEmailsRouteImport.update({
+    id: '/api/public/hooks/loan-reminder-emails',
+    path: '/api/public/hooks/loan-reminder-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksFollowUpTickRoute =
   ApiPublicHooksFollowUpTickRouteImport.update({
     id: '/api/public/hooks/follow-up-tick',
@@ -608,6 +616,11 @@ const ApiPublicHooksDispatchCampaignsRoute =
     path: '/api/public/hooks/dispatch-campaigns',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
+  id: '/api/public/email/open',
+  path: '/api/public/email/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -696,9 +709,11 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
@@ -792,9 +807,11 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
+  '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
@@ -892,9 +909,11 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
@@ -993,9 +1012,11 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
+    | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/voicebot-inbound'
@@ -1089,9 +1110,11 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski'
+    | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/voicebot-inbound'
@@ -1188,9 +1211,11 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
+    | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/voicebot-inbound'
@@ -1235,9 +1260,11 @@ export interface RootRouteChildren {
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
+  ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
+  ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
@@ -1908,6 +1935,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLoanRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/loan-reminder-emails': {
+      id: '/api/public/hooks/loan-reminder-emails'
+      path: '/api/public/hooks/loan-reminder-emails'
+      fullPath: '/api/public/hooks/loan-reminder-emails'
+      preLoaderRoute: typeof ApiPublicHooksLoanReminderEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/follow-up-tick': {
       id: '/api/public/hooks/follow-up-tick'
       path: '/api/public/hooks/follow-up-tick'
@@ -1927,6 +1961,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/dispatch-campaigns'
       fullPath: '/api/public/hooks/dispatch-campaigns'
       preLoaderRoute: typeof ApiPublicHooksDispatchCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/email/open': {
+      id: '/api/public/email/open'
+      path: '/api/public/email/open'
+      fullPath: '/api/public/email/open'
+      preLoaderRoute: typeof ApiPublicEmailOpenRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -2119,10 +2160,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
+  ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
+  ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
