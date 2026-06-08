@@ -3536,6 +3536,7 @@ export type Database = {
           estimated_ltv: number | null
           external_id: string | null
           fast_decision: boolean | null
+          first_reminder_at: string | null
           id: string
           initial_score: number | null
           interest_score: number | null
@@ -3543,19 +3544,24 @@ export type Database = {
           kw_status: string | null
           last_automation_error: string | null
           last_contact_at: string | null
+          last_reminder_at: string | null
           last_webhook_at: string | null
           loan_amount: number | null
           location_quality: string | null
           make_scenario_id: string | null
           max_monthly_payment: number | null
+          missing_documents_snapshot: Json
           missing_fields: Json | null
           next_contact_at: string | null
+          next_reminder_at: string | null
           nip: string | null
           preferred_contact_channel:
             | Database["public"]["Enums"]["contact_channel"]
             | null
           preferred_period_months: number | null
           property_quality: string | null
+          reminder_attempts: number
+          reminder_paused: boolean
           return_link: string | null
           return_link_token: string | null
           risk_level: string | null
@@ -3590,6 +3596,7 @@ export type Database = {
           estimated_ltv?: number | null
           external_id?: string | null
           fast_decision?: boolean | null
+          first_reminder_at?: string | null
           id?: string
           initial_score?: number | null
           interest_score?: number | null
@@ -3597,19 +3604,24 @@ export type Database = {
           kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
+          last_reminder_at?: string | null
           last_webhook_at?: string | null
           loan_amount?: number | null
           location_quality?: string | null
           make_scenario_id?: string | null
           max_monthly_payment?: number | null
+          missing_documents_snapshot?: Json
           missing_fields?: Json | null
           next_contact_at?: string | null
+          next_reminder_at?: string | null
           nip?: string | null
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
           preferred_period_months?: number | null
           property_quality?: string | null
+          reminder_attempts?: number
+          reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
           risk_level?: string | null
@@ -3644,6 +3656,7 @@ export type Database = {
           estimated_ltv?: number | null
           external_id?: string | null
           fast_decision?: boolean | null
+          first_reminder_at?: string | null
           id?: string
           initial_score?: number | null
           interest_score?: number | null
@@ -3651,19 +3664,24 @@ export type Database = {
           kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
+          last_reminder_at?: string | null
           last_webhook_at?: string | null
           loan_amount?: number | null
           location_quality?: string | null
           make_scenario_id?: string | null
           max_monthly_payment?: number | null
+          missing_documents_snapshot?: Json
           missing_fields?: Json | null
           next_contact_at?: string | null
+          next_reminder_at?: string | null
           nip?: string | null
           preferred_contact_channel?:
             | Database["public"]["Enums"]["contact_channel"]
             | null
           preferred_period_months?: number | null
           property_quality?: string | null
+          reminder_attempts?: number
+          reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
           risk_level?: string | null

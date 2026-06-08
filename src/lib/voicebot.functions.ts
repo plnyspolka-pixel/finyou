@@ -121,6 +121,8 @@ export async function placeOutboundCallInternal(opts: {
   loanApplicationId?: string | null;
   metaLeadId?: string | null;
   firstName?: string | null;
+  /** Zmienne przekazywane do agenta jako conversation_initiation_client_data.dynamic_variables. */
+  dynamicVariables?: Record<string, string> | null;
 }): Promise<{ ok: boolean; conversationId?: string; callSid?: string; error?: string }> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { ok: false, error: "Brak ELEVENLABS_API_KEY" };
@@ -154,17 +156,23 @@ export async function placeOutboundCallInternal(opts: {
     .single();
 
   try {
+    const body: Record<string, unknown> = {
+      agent_id: settings.agent_id,
+      agent_phone_number_id: settings.agent_phone_number_id,
+      to_number: phone,
+    };
+    if (opts.dynamicVariables && Object.keys(opts.dynamicVariables).length > 0) {
+      body.conversation_initiation_client_data = {
+        dynamic_variables: opts.dynamicVariables,
+      };
+    }
     const res = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
       method: "POST",
       headers: {
         "xi-api-key": apiKey,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        agent_id: settings.agent_id,
-        agent_phone_number_id: settings.agent_phone_number_id,
-        to_number: phone,
-      }),
+      body: JSON.stringify(body),
     });
     const json: any = await res.json().catch(() => ({}));
 

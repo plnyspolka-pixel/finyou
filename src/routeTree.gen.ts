@@ -46,6 +46,7 @@ import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
+import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
@@ -92,6 +93,7 @@ import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
 const WyborRoliRoute = WyborRoliRouteImport.update({
@@ -277,6 +279,11 @@ const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
 const AdminRoleRoute = AdminRoleRouteImport.update({
   id: '/role',
   path: '/role',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
+  id: '/przypomnienia',
+  path: '/przypomnienia',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPixeleRoute = AdminPixeleRouteImport.update({
@@ -517,6 +524,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksLoanRemindersRoute =
+  ApiPublicHooksLoanRemindersRouteImport.update({
+    id: '/api/public/hooks/loan-reminders',
+    path: '/api/public/hooks/loan-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDispatchCampaignsRoute =
   ApiPublicHooksDispatchCampaignsRouteImport.update({
     id: '/api/public/hooks/dispatch-campaigns',
@@ -558,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -607,6 +621,7 @@ export interface FileRoutesByFullPath {
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -641,6 +656,7 @@ export interface FileRoutesByTo {
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -690,6 +706,7 @@ export interface FileRoutesByTo {
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -728,6 +745,7 @@ export interface FileRoutesById {
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -777,6 +795,7 @@ export interface FileRoutesById {
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -816,6 +835,7 @@ export interface FileRouteTypes {
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
+    | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -865,6 +885,7 @@ export interface FileRouteTypes {
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/loan-reminders'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -899,6 +920,7 @@ export interface FileRouteTypes {
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
+    | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -948,6 +970,7 @@ export interface FileRouteTypes {
     | '/klient/umowa/$offerId'
     | '/admin/wnioski'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/loan-reminders'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -985,6 +1008,7 @@ export interface FileRouteTypes {
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
+    | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -1034,6 +1058,7 @@ export interface FileRouteTypes {
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/loan-reminders'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -1064,6 +1089,7 @@ export interface RootRouteChildren {
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
+  ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -1327,6 +1353,13 @@ declare module '@tanstack/react-router' {
       path: '/role'
       fullPath: '/admin/role'
       preLoaderRoute: typeof AdminRoleRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/przypomnienia': {
+      id: '/admin/przypomnienia'
+      path: '/przypomnienia'
+      fullPath: '/admin/przypomnienia'
+      preLoaderRoute: typeof AdminPrzypomnieniaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/pixele': {
@@ -1651,6 +1684,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/loan-reminders': {
+      id: '/api/public/hooks/loan-reminders'
+      path: '/api/public/hooks/loan-reminders'
+      fullPath: '/api/public/hooks/loan-reminders'
+      preLoaderRoute: typeof ApiPublicHooksLoanRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/dispatch-campaigns': {
       id: '/api/public/hooks/dispatch-campaigns'
       path: '/api/public/hooks/dispatch-campaigns'
@@ -1709,6 +1749,7 @@ interface AdminRouteChildren {
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
+  AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
@@ -1750,6 +1791,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
+  AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
@@ -1848,6 +1890,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
+  ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
