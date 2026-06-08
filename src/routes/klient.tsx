@@ -29,7 +29,7 @@ function KlientLayout() {
         <div className="px-5 py-5 border-b border-sidebar-border font-semibold">Panel klienta</div>
         <nav className="flex-1 px-2 py-3 space-y-1">
           {items.map((it) => {
-            const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
+            const active = pathname.startsWith(it.to);
             return (
               <Link key={it.to} to={it.to}
                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/60"}`}>
