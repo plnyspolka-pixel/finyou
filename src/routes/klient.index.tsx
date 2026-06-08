@@ -824,6 +824,7 @@ function KlientWniosek() {
             )}
           </CardContent>
         </Card>
+        </div>
       )}
 
       {step === 4 && secType && (
