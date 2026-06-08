@@ -17,6 +17,7 @@ import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
 import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
+import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
@@ -137,6 +138,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
   path: '/rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoweHasloRoute = NoweHasloRouteImport.update({
+  id: '/nowe-haslo',
+  path: '/nowe-haslo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogowanieRoute = LogowanieRouteImport.update({
@@ -565,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/nowe-haslo': typeof NoweHasloRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -653,6 +660,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
+  '/nowe-haslo': typeof NoweHasloRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -745,6 +753,7 @@ export interface FileRoutesById {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/nowe-haslo': typeof NoweHasloRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -838,6 +847,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/nowe-haslo'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -926,6 +936,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/logowanie'
+    | '/nowe-haslo'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -1017,6 +1028,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/nowe-haslo'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -1109,6 +1121,7 @@ export interface RootRouteChildren {
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
+  NoweHasloRoute: typeof NoweHasloRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WniosekFormularzRoute: typeof WniosekFormularzRoute
@@ -1198,6 +1211,13 @@ declare module '@tanstack/react-router' {
       path: '/rejestracja'
       fullPath: '/rejestracja'
       preLoaderRoute: typeof RejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nowe-haslo': {
+      id: '/nowe-haslo'
+      path: '/nowe-haslo'
+      fullPath: '/nowe-haslo'
+      preLoaderRoute: typeof NoweHasloRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logowanie': {
@@ -1928,6 +1948,7 @@ const rootRouteChildren: RootRouteChildren = {
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
+  NoweHasloRoute: NoweHasloRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WniosekFormularzRoute: WniosekFormularzRoute,
