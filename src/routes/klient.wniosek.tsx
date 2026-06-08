@@ -152,8 +152,8 @@ function KlientWniosekSummary() {
 
       {loan.status === "w_trakcie_uzupelniania" && (
         <div className="flex justify-end">
-          <Button onClick={() => navigate({ to: "/wniosek-opis" })}>
-            <Send className="mr-2 h-4 w-4" /> Przejdź do wysłania wniosku
+          <Button variant="cta" size="cta" onClick={() => navigate({ to: "/wniosek-opis" })}>
+            <Send className="mr-2" /> Przejdź do wysłania wniosku
           </Button>
         </div>
       )}
