@@ -14,10 +14,6 @@ import {
 
 interface EmailChangeEmailProps {
   siteName: string
-  // oldEmail is the user's current address (HookData.OldEmail). For the
-  // NEW-recipient half of a secure email_change fanout, `email` equals the
-  // recipient (NEW), so the "from" line must render oldEmail to read
-  // "from OLD to NEW" instead of "from NEW to NEW".
   oldEmail: string
   email: string
   newEmail: string
@@ -30,32 +26,32 @@ export const EmailChangeEmail = ({
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="pl" dir="ltr">
     <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
+    <Preview>Potwierdź zmianę adresu e-mail w {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
+        <Heading style={h1}>Potwierdź zmianę adresu e-mail</Heading>
         <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
+          Otrzymaliśmy prośbę o zmianę adresu e-mail w {siteName} z{' '}
           <Link href={`mailto:${oldEmail}`} style={link}>
             {oldEmail}
           </Link>{' '}
-          to{' '}
+          na{' '}
           <Link href={`mailto:${newEmail}`} style={link}>
             {newEmail}
           </Link>
           .
         </Text>
         <Text style={text}>
-          Click the button below to confirm this change:
+          Kliknij przycisk poniżej, aby potwierdzić zmianę:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
+          Potwierdź zmianę
         </Button>
         <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
+          Jeśli to nie Ty prosiłeś o tę zmianę, natychmiast zabezpiecz swoje
+          konto.
         </Text>
       </Container>
     </Body>
