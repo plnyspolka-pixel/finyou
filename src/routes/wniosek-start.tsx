@@ -284,7 +284,7 @@ function WniosekStartPage() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{mode === "signup" ? "Podaj dane i oblicz swoją ratę" : "Zaloguj się"}</CardTitle>
+          <CardTitle>{mode === "signup" ? "Podaj dane i odbierz SMS z harmonogramem spłat" : "Zaloguj się"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
 
