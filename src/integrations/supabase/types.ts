@@ -4656,6 +4656,10 @@ export type Database = {
           client_pixel_id: string | null
           ga4_measurement_id: string | null
           google_ads_conversion_id: string | null
+          google_ads_label_lead: string | null
+          google_ads_label_registration: string | null
+          google_ads_label_submit: string | null
+          google_ads_label_subscribe: string | null
           gtm_container_id: string | null
           id: number
           investor_pixel_id: string | null
@@ -4672,6 +4676,10 @@ export type Database = {
           client_pixel_id?: string | null
           ga4_measurement_id?: string | null
           google_ads_conversion_id?: string | null
+          google_ads_label_lead?: string | null
+          google_ads_label_registration?: string | null
+          google_ads_label_submit?: string | null
+          google_ads_label_subscribe?: string | null
           gtm_container_id?: string | null
           id?: number
           investor_pixel_id?: string | null
@@ -4688,6 +4696,10 @@ export type Database = {
           client_pixel_id?: string | null
           ga4_measurement_id?: string | null
           google_ads_conversion_id?: string | null
+          google_ads_label_lead?: string | null
+          google_ads_label_registration?: string | null
+          google_ads_label_submit?: string | null
+          google_ads_label_subscribe?: string | null
           gtm_container_id?: string | null
           id?: number
           investor_pixel_id?: string | null
