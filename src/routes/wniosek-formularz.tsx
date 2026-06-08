@@ -960,35 +960,83 @@ function DocUploader({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
   const handleFiles = async (files: FileList | null | undefined) => {
     if (!files || !files.length) return;
     for (const f of Array.from(files)) await onUpload(f, docType);
   };
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-        <Input ref={ref} type="file" multiple={multiple} accept="image/*,application/pdf" className="flex-1" />
+
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => ref.current?.click()}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ref.current?.click(); } }}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={async (e) => {
+          e.preventDefault();
+          setDragOver(false);
+          await handleFiles(e.dataTransfer?.files);
+        }}
+        className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition cursor-pointer ${
+          dragOver ? "border-accent bg-accent/10" : "border-border bg-muted/30 hover:bg-muted/50"
+        } ${uploading ? "opacity-60 pointer-events-none" : ""}`}
+      >
+        {uploading ? (
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        ) : (
+          <Upload className="h-6 w-6 text-muted-foreground" />
+        )}
+        <div className="text-sm font-medium">
+          {uploading ? "Przesyłanie…" : "Dodaj albo przeciągnij plik"}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Zdjęcie lub PDF{multiple ? " — możesz dodać kilka" : ""}. Wysyłka startuje od razu po wyborze.
+        </div>
+
+        <input
+          ref={ref}
+          type="file"
+          multiple={multiple}
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={async (e) => {
+            const files = e.target.files;
+            if (ref.current) ref.current.value = "";
+            await handleFiles(files);
+          }}
+        />
         <input
           ref={camRef}
           type="file"
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={async (e) => { await handleFiles(e.target.files); if (camRef.current) camRef.current.value = ""; }}
+          onChange={async (e) => {
+            const files = e.target.files;
+            if (camRef.current) camRef.current.value = "";
+            await handleFiles(files);
+          }}
         />
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" disabled={uploading} className="sm:hidden flex-1" onClick={() => camRef.current?.click()}>
-            <Camera className="h-4 w-4 mr-1" /> Zrób zdjęcie
-          </Button>
-          <Button type="button" disabled={uploading} className="flex-1 sm:flex-none" onClick={async () => {
-            await handleFiles(ref.current?.files);
-            if (ref.current) ref.current.value = "";
-          }}>
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1" /> Wyślij</>}
-          </Button>
-        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploading}
+          className="sm:hidden mt-1"
+          onClick={(e) => { e.stopPropagation(); camRef.current?.click(); }}
+        >
+          <Camera className="h-4 w-4 mr-1" /> Zrób zdjęcie
+        </Button>
       </div>
+
       {docs.length > 0 && (
         <ul className="text-xs text-muted-foreground space-y-1">
           {docs.map((d) => <li key={d.id}>• {d.file_name}</li>)}
