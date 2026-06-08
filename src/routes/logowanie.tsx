@@ -20,13 +20,48 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [resendingConfirmation, setResendingConfirmation] = useState(false);
+
+  const resendConfirmation = async () => {
+    const targetEmail = (confirmationEmail || email).trim();
+    if (!targetEmail) {
+      toast.error("Wpisz e-mail, żeby wysłać potwierdzenie ponownie");
+      return;
+    }
+
+    setResendingConfirmation(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: targetEmail,
+      options: { emailRedirectTo: `${window.location.origin}/logowanie` },
+    });
+    setResendingConfirmation(false);
+
+    if (error) {
+      toast.error("Nie udało się wysłać potwierdzenia", { description: error.message });
+      return;
+    }
+
+    toast.success("Wysłaliśmy link potwierdzający", {
+      description: `Sprawdź skrzynkę ${targetEmail} oraz folder spam/oferty.`,
+    });
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setConfirmationEmail("");
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      if (/email not confirmed/i.test(error.message)) {
+        setConfirmationEmail(email.trim());
+        toast.error("Ten e-mail nie jest jeszcze potwierdzony", {
+          description: "Możesz wysłać link potwierdzający ponownie poniżej.",
+        });
+        return;
+      }
       toast.error("Nie udało się zalogować", { description: error.message });
       return;
     }
@@ -131,6 +166,23 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logowanie…" : "Zaloguj się"}
             </Button>
+            {confirmationEmail ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="font-medium">Adres e-mail nie jest jeszcze potwierdzony.</p>
+                <p className="mt-1 text-amber-800">
+                  Wyślij ponownie link na {confirmationEmail} i po kliknięciu wróć do logowania.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 w-full border-amber-300 bg-white text-amber-950 hover:bg-amber-100"
+                  disabled={resendingConfirmation}
+                  onClick={resendConfirmation}
+                >
+                  {resendingConfirmation ? "Wysyłanie…" : "Wyślij ponownie potwierdzenie"}
+                </Button>
+              </div>
+            ) : null}
             <p className="text-center text-sm text-muted-foreground">
               Nie masz konta?{" "}
               <Link to="/rejestracja" className="font-medium text-accent hover:underline">
