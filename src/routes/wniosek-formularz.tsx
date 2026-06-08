@@ -135,12 +135,16 @@ function KlientWniosek() {
       if (p.maxPayment) setMaxPayment(p.maxPayment);
       if (p.secType) setSecType(p.secType);
       // przeskocz krok 1 — kalkulator już wypełniony w embedzie / na wniosek-warunki
-      setStep(p.startStep && p.startStep >= 1 && p.startStep <= 5 ? p.startStep : 2);
+      const targetStep = p.startStep && p.startStep >= 1 && p.startStep <= 5 ? p.startStep : 2;
+      setStep(targetStep);
+      // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu do kroku KW
+      setEditing(true);
       sessionStorage.removeItem("embed_calc_v1");
     } catch {
       /* noop */
     }
   }, []);
+
 
   useEffect(() => {
     if (!user) return;
