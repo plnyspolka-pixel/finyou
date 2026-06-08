@@ -126,15 +126,20 @@ function WniosekWarunkiPage() {
 
   const annuity = useMemo(() => monthlyAnnuity(amount, monthlyRate, months), [amount, monthlyRate, months]);
   const rata = useMemo(() => (maxPayment > 0 ? Math.min(annuity, maxPayment) : annuity), [annuity, maxPayment]);
-  const balloon = useMemo(() => Math.max(0, (annuity - rata) * months), [annuity, rata, months]);
-  const totalPay = useMemo(() => rata * months + balloon, [rata, months, balloon]);
-  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
-  const exceedsMax = balloon > 0;
 
   const schedule = useMemo(
     () => buildSchedule(amount, monthlyRate, months, maxPayment),
     [amount, monthlyRate, months, maxPayment],
   );
+
+  // Liczymy podsumowanie wprost z harmonogramu, żeby symulacja
+  // zawsze zgadzała się 1:1 z tabelą poniżej.
+  const lastRow = schedule.length > 0 ? schedule[schedule.length - 1] : null;
+  const lastPayment = lastRow?.payment ?? 0;
+  const balloonExtra = Math.max(0, lastPayment - rata);
+  const totalPay = useMemo(() => schedule.reduce((s, r) => s + r.payment, 0), [schedule]);
+  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
+  const exceedsMax = balloonExtra > 0.5;
 
 
   const goNext = () => {
