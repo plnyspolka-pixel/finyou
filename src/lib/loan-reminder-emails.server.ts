@@ -112,7 +112,7 @@ async function bumpPreferredHourFromOpens(loanId: string) {
   for (const [h, c] of counts.entries()) {
     if (c > bestC) { bestC = c; bestH = h; }
   }
-  if (bestH < 7) bestH = 7;
+  if (bestH < 6) bestH = 6;
   if (bestH > 23) bestH = 23;
   await s.from("loan_applications").update({ preferred_email_hour: bestH }).eq("id", loanId);
 }
