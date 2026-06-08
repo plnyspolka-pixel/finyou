@@ -46,15 +46,14 @@ function captureParamsToStorage() {
 }
 
 function getNextPath(): string {
-  if (typeof window === "undefined") return "/wniosek-formularz";
+  if (typeof window === "undefined") return "/wniosek-warunki";
   const sp = new URLSearchParams(window.location.search);
   const next = sp.get("next");
   if (next && /^\/[a-z0-9/_-]+$/i.test(next)) return next;
-  try {
-    if (sessionStorage.getItem("calc_step1_v1")) return "/wniosek-warunki";
-  } catch { /* noop */ }
-  return "/wniosek-formularz";
+  // Po podaniu danych → zawsze do kalkulatora (warunki: oprocentowanie + max rata)
+  return "/wniosek-warunki";
 }
+
 
 function WniosekStartPage() {
   const navigate = useNavigate();
@@ -284,7 +283,7 @@ function WniosekStartPage() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{mode === "signup" ? "Podaj dane i odbierz SMS z harmonogramem spłat" : "Zaloguj się"}</CardTitle>
+          <CardTitle>{mode === "signup" ? "Zobacz harmonogram spłat" : "Zaloguj się"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
 
@@ -315,7 +314,7 @@ function WniosekStartPage() {
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
               <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? "Tworzenie konta…" : "Podaj dane i odbierz SMS z harmonogramem spłat"}
+                {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">

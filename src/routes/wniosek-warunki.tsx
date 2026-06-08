@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { scheduleCalculatorEntryFollowup } from "@/lib/calculator-followup.functions";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,7 +95,15 @@ function WniosekWarunkiPage() {
   const [monthlyRate, setMonthlyRate] = useState(2.0);
   const [maxPayment, setMaxPayment] = useState(1500);
 
+  // Po wejściu zalogowanego klienta zaplanuj pierwszy follow-up (telefon Ani ~1 min później)
+  const scheduleFollowup = useServerFn(scheduleCalculatorEntryFollowup);
+  useEffect(() => {
+    if (authLoading || !user) return;
+    void scheduleFollowup().catch(() => { /* noop */ });
+  }, [authLoading, user, scheduleFollowup]);
+
   // Restore step 1 z sessionStorage
+
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("calc_step1_v1");
