@@ -98,6 +98,7 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
+import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
 const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
@@ -557,6 +558,12 @@ const ApiPublicHooksLoanRemindersRoute =
     path: '/api/public/hooks/loan-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksFollowUpTickRoute =
+  ApiPublicHooksFollowUpTickRouteImport.update({
+    id: '/api/public/hooks/follow-up-tick',
+    path: '/api/public/hooks/follow-up-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDispatchCampaignsRoute =
   ApiPublicHooksDispatchCampaignsRouteImport.update({
     id: '/api/public/hooks/dispatch-campaigns',
@@ -648,6 +655,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -737,6 +745,7 @@ export interface FileRoutesByTo {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -830,6 +839,7 @@ export interface FileRoutesById {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -924,6 +934,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -1013,6 +1024,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -1105,6 +1117,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -1146,6 +1159,7 @@ export interface RootRouteChildren {
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
+  ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1780,6 +1794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLoanRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/follow-up-tick': {
+      id: '/api/public/hooks/follow-up-tick'
+      path: '/api/public/hooks/follow-up-tick'
+      fullPath: '/api/public/hooks/follow-up-tick'
+      preLoaderRoute: typeof ApiPublicHooksFollowUpTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/dispatch-campaigns': {
       id: '/api/public/hooks/dispatch-campaigns'
       path: '/api/public/hooks/dispatch-campaigns'
@@ -1973,6 +1994,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
+  ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
@@ -1984,13 +2006,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
