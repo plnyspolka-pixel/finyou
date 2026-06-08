@@ -221,15 +221,12 @@ function WniosekStartPage() {
         });
       }
     }
-    if (data.session) {
-      toast.success("Konto utworzone");
-      navigate({ to: getNextPath() });
-    } else {
-      toast.success("Konto utworzone", {
-        description: "Sprawdź skrzynkę e-mail, by potwierdzić adres, a następnie zaloguj się.",
-      });
-      setMode("signin");
+    if (!data.session) {
+      // Auto-confirm jest włączone — od razu logujemy bez potwierdzania maila
+      await supabase.auth.signInWithPassword({ email, password });
     }
+    toast.success("Konto utworzone");
+    navigate({ to: getNextPath() });
   };
 
   const submitSignin = async (e: FormEvent) => {
