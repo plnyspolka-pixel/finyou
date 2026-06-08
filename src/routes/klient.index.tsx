@@ -122,15 +122,15 @@ function KlientWniosek() {
       if (!raw) return;
       const p = JSON.parse(raw) as {
         amount?: number; annualRate?: number; months?: number; maxPayment?: number;
-        secType?: SecurityType | null; source?: string;
+        secType?: SecurityType | null; source?: string; startStep?: number;
       };
       if (p.amount) setAmount(p.amount);
       if (p.annualRate) setAnnualRate(p.annualRate);
       if (p.months) setMonths(p.months);
       if (p.maxPayment) setMaxPayment(p.maxPayment);
       if (p.secType) setSecType(p.secType);
-      // przeskocz krok 1 — kalkulator już wypełniony w embedzie
-      setStep(2);
+      // przeskocz krok 1 — kalkulator już wypełniony w embedzie / na wniosek-warunki
+      setStep(p.startStep && p.startStep >= 1 && p.startStep <= 5 ? p.startStep : 2);
       sessionStorage.removeItem("embed_calc_v1");
     } catch {
       /* noop */
