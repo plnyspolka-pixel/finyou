@@ -100,6 +100,7 @@ import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
+import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
 const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
@@ -571,6 +572,12 @@ const ApiPublicHooksFollowUpTickRoute =
     path: '/api/public/hooks/follow-up-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksElevenlabsConversationInitRoute =
+  ApiPublicHooksElevenlabsConversationInitRouteImport.update({
+    id: '/api/public/hooks/elevenlabs-conversation-init',
+    path: '/api/public/hooks/elevenlabs-conversation-init',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDispatchCampaignsRoute =
   ApiPublicHooksDispatchCampaignsRouteImport.update({
     id: '/api/public/hooks/dispatch-campaigns',
@@ -662,6 +669,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -753,6 +761,7 @@ export interface FileRoutesByTo {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -848,6 +857,7 @@ export interface FileRoutesById {
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -944,6 +954,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/process-scheduled-calls'
@@ -1035,6 +1046,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/process-scheduled-calls'
@@ -1129,6 +1141,7 @@ export interface FileRouteTypes {
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/process-scheduled-calls'
@@ -1172,6 +1185,7 @@ export interface RootRouteChildren {
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
+  ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -1822,6 +1836,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksFollowUpTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/elevenlabs-conversation-init': {
+      id: '/api/public/hooks/elevenlabs-conversation-init'
+      path: '/api/public/hooks/elevenlabs-conversation-init'
+      fullPath: '/api/public/hooks/elevenlabs-conversation-init'
+      preLoaderRoute: typeof ApiPublicHooksElevenlabsConversationInitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/dispatch-campaigns': {
       id: '/api/public/hooks/dispatch-campaigns'
       path: '/api/public/hooks/dispatch-campaigns'
@@ -2015,6 +2036,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
+  ApiPublicHooksElevenlabsConversationInitRoute:
+    ApiPublicHooksElevenlabsConversationInitRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
