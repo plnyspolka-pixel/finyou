@@ -75,6 +75,31 @@ function AdminLayout() {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <>
+      {groups.map((g, gi) => (
+        <div key={gi} className="space-y-1">
+          {g.label && (
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              {g.label}
+            </div>
+          )}
+          {g.items.map((it) => {
+            const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
+            return (
+              <Link key={it.to} to={it.to} onClick={onNavigate}
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/60"}`}>
+                <it.icon className="h-4 w-4" /> {it.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+
 
   useEffect(() => {
     if (loading) return;
