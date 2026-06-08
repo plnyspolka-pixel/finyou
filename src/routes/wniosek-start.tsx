@@ -321,12 +321,12 @@ function WniosekStartPage() {
                 <Label htmlFor="password">Hasło</Label>
                 <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
+              
               <div className="space-y-2 rounded-md border p-3 text-sm">
                 <label className="flex items-start gap-2">
                   <Checkbox
-                    checked={accepted.privacy}
-                    onCheckedChange={(v) => setAccepted({ ...accepted, privacy: v === true })}
+                    checked={accepted.privacy && accepted.terms}
+                    onCheckedChange={(v) => setAccepted({ ...accepted, privacy: v === true, terms: v === true })}
                     className="mt-0.5"
                   />
                   <span className="leading-snug">
