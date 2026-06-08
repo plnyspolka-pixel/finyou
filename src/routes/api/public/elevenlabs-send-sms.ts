@@ -33,24 +33,37 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           },
         }),
       POST: async ({ request }) => {
-        const expected = process.env.ELEVENLABS_WEBHOOK_SECRET;
-        if (!expected) return json({ error: "Webhook secret not configured" }, 500);
-
+        const expected =
+          process.env.ELEVENLABS_WEBHOOK_SECRET ||
+          process.env.FINANCEYOU_WEBHOOK_SECRET;
         const provided = request.headers.get("x-webhook-secret");
+
+        console.log("[elevenlabs-send-sms] hit", {
+          hasExpected: Boolean(expected),
+          hasProvided: Boolean(provided),
+          providedLen: provided?.length ?? 0,
+        });
+
+        if (!expected) {
+          return json({ ok: false, error: "Webhook secret not configured on server" }, 500);
+        }
         if (!provided || provided !== expected) {
-          return json({ error: "Unauthorized" }, 401);
+          return json({ ok: false, error: "Unauthorized: invalid x-webhook-secret" }, 401);
         }
 
         let raw: unknown;
         try {
           raw = await request.json();
         } catch {
-          return json({ error: "Invalid JSON" }, 400);
+          return json({ ok: false, error: "Invalid JSON body" }, 400);
         }
 
         const parsed = BodySchema.safeParse(raw);
         if (!parsed.success) {
-          return json({ error: "Invalid input", details: parsed.error.flatten() }, 400);
+          return json(
+            { ok: false, error: "Invalid input: " + JSON.stringify(parsed.error.flatten().fieldErrors) },
+            400,
+          );
         }
 
         const { phone, message, application_url } = parsed.data;
@@ -65,10 +78,16 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           source: "elevenlabs_agent",
         });
 
+        console.log("[elevenlabs-send-sms] sms result", {
+          ok: result.ok,
+          sid: result.sid,
+          error: result.error,
+        });
+
         if (!result.ok) {
-          return json({ ok: false, error: result.error }, 502);
+          return json({ ok: false, error: result.error ?? "SMS send failed" }, 502);
         }
-        return json({ ok: true, sid: result.sid });
+        return json({ ok: true, sid: result.sid ?? null });
       },
     },
   },
