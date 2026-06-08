@@ -4656,6 +4656,9 @@ export type Database = {
           client_pixel_id: string | null
           id: number
           investor_pixel_id: string | null
+          meta_audience_converters_id: string | null
+          meta_audience_visitors_id: string | null
+          meta_audiences_account_id: string | null
           track_contact: boolean
           track_lead: boolean
           track_registration: boolean
@@ -4666,6 +4669,9 @@ export type Database = {
           client_pixel_id?: string | null
           id?: number
           investor_pixel_id?: string | null
+          meta_audience_converters_id?: string | null
+          meta_audience_visitors_id?: string | null
+          meta_audiences_account_id?: string | null
           track_contact?: boolean
           track_lead?: boolean
           track_registration?: boolean
@@ -4676,6 +4682,9 @@ export type Database = {
           client_pixel_id?: string | null
           id?: number
           investor_pixel_id?: string | null
+          meta_audience_converters_id?: string | null
+          meta_audience_visitors_id?: string | null
+          meta_audiences_account_id?: string | null
           track_contact?: boolean
           track_lead?: boolean
           track_registration?: boolean
