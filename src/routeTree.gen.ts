@@ -92,6 +92,7 @@ import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
 const WyborRoliRoute = WyborRoliRouteImport.update({
@@ -517,6 +518,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksLoanRemindersRoute =
+  ApiPublicHooksLoanRemindersRouteImport.update({
+    id: '/api/public/hooks/loan-reminders',
+    path: '/api/public/hooks/loan-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDispatchCampaignsRoute =
   ApiPublicHooksDispatchCampaignsRouteImport.update({
     id: '/api/public/hooks/dispatch-campaigns',
@@ -607,6 +614,7 @@ export interface FileRoutesByFullPath {
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -690,6 +698,7 @@ export interface FileRoutesByTo {
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -777,6 +786,7 @@ export interface FileRoutesById {
   '/klient/umowa/$offerId': typeof KlientUmowaOfferIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
+  '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -865,6 +875,7 @@ export interface FileRouteTypes {
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/loan-reminders'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -948,6 +959,7 @@ export interface FileRouteTypes {
     | '/klient/umowa/$offerId'
     | '/admin/wnioski'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/loan-reminders'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -1034,6 +1046,7 @@ export interface FileRouteTypes {
     | '/klient/umowa/$offerId'
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
+    | '/api/public/hooks/loan-reminders'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -1064,6 +1077,7 @@ export interface RootRouteChildren {
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
+  ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -1651,6 +1665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/loan-reminders': {
+      id: '/api/public/hooks/loan-reminders'
+      path: '/api/public/hooks/loan-reminders'
+      fullPath: '/api/public/hooks/loan-reminders'
+      preLoaderRoute: typeof ApiPublicHooksLoanRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/dispatch-campaigns': {
       id: '/api/public/hooks/dispatch-campaigns'
       path: '/api/public/hooks/dispatch-campaigns'
@@ -1848,6 +1869,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
+  ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
