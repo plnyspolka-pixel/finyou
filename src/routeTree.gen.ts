@@ -97,6 +97,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
+import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
@@ -552,6 +553,12 @@ const ApiPublicHooksVoicebotInboundRoute =
     path: '/api/public/hooks/voicebot-inbound',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessScheduledCallsRoute =
+  ApiPublicHooksProcessScheduledCallsRouteImport.update({
+    id: '/api/public/hooks/process-scheduled-calls',
+    path: '/api/public/hooks/process-scheduled-calls',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanRemindersRoute =
   ApiPublicHooksLoanRemindersRouteImport.update({
     id: '/api/public/hooks/loan-reminders',
@@ -657,6 +664,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -747,6 +755,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -841,6 +850,7 @@ export interface FileRoutesById {
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -936,6 +946,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
@@ -1026,6 +1037,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
@@ -1119,6 +1131,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
@@ -1161,6 +1174,7 @@ export interface RootRouteChildren {
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
+  ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -1787,6 +1801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVoicebotInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-scheduled-calls': {
+      id: '/api/public/hooks/process-scheduled-calls'
+      path: '/api/public/hooks/process-scheduled-calls'
+      fullPath: '/api/public/hooks/process-scheduled-calls'
+      preLoaderRoute: typeof ApiPublicHooksProcessScheduledCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminders': {
       id: '/api/public/hooks/loan-reminders'
       path: '/api/public/hooks/loan-reminders'
@@ -1996,6 +2017,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
+  ApiPublicHooksProcessScheduledCallsRoute:
+    ApiPublicHooksProcessScheduledCallsRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
