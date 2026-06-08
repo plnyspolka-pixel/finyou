@@ -432,12 +432,13 @@ function WniosekWarunkiPage() {
 
               <Button
                 type="button"
-                size="lg"
+                variant="cta"
+                size="cta"
                 onClick={goNext}
-                className="mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                className="mt-6 w-full animate-pulse-soft"
               >
                 Dalej — zabezpieczenie
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2" />
               </Button>
 
               <div className="mt-4 flex items-center gap-2 text-xs text-white/80">
