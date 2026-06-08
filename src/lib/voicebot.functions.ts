@@ -194,6 +194,37 @@ export async function placeOutboundCallInternal(opts: {
   const s = admin();
   const phone = normalizePhone(opts.phone);
 
+  // SZTYWNE OGRANICZENIE: dzwonimy tylko 8:00–22:00 Europe/Warsaw, oprócz niedziel.
+  // Test (`source === "test"`) z panelu admina wykonujemy zawsze.
+  const window = getCallingWindow();
+  if (!window.allowed && opts.source !== "test") {
+    const nextIso = window.nextAllowedAt.toISOString();
+    await s.from("call_queue").insert({
+      phone_normalized: phone,
+      client_id: opts.clientId ?? null,
+      loan_application_id: opts.loanApplicationId ?? null,
+      meta_lead_id: opts.metaLeadId ?? null,
+      source: opts.source,
+      agent_id: settings.agent_id,
+      status: "oczekuje",
+      scheduled_at: nextIso,
+      result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${nextIso}`,
+    });
+    if (opts.loanApplicationId) {
+      await s
+        .from("loan_applications")
+        .update({ next_reminder_at: nextIso, reminder_paused: false })
+        .eq("id", opts.loanApplicationId);
+    }
+    await s.from("automation_events").insert({
+      automation_type: "elevenlabs_outbound_call",
+      status: "skipped",
+      sent_payload: { phone, source: opts.source },
+      response_payload: { quiet_hours: true, reason: window.reason, hour: window.hour, weekday: window.weekday, next_allowed_at: nextIso },
+    });
+    return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${nextIso}` };
+  }
+
   // SMS before call (jeśli włączone)
   await maybeSendSms("before_call", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
 
