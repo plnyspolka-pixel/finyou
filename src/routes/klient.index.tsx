@@ -1009,9 +1009,9 @@ function SubmittedView(props: {
             <CheckCircle2 className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Twój wniosek został złożony</h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Status: <Badge variant="secondary">{loanStatusLabels[loanStatus] ?? loanStatus}</Badge>
-          </p>
+          <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+            <span>Status:</span> <Badge variant="secondary">{loanStatusLabels[loanStatus] ?? loanStatus}</Badge>
+          </div>
         </div>
         <Button variant="outline" onClick={onEdit}>
           <Pencil className="h-4 w-4 mr-2" /> Edytuj wniosek
