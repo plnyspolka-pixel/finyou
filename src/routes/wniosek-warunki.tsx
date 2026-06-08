@@ -253,15 +253,15 @@ function WniosekWarunkiPage() {
                 </div>
               </div>
 
-              {/* Wynagrodzenie miesięczne inwestora */}
+              {/* Twoja propozycja oprocentowania */}
               <div>
                 <div className="flex items-baseline justify-between">
                   <div>
                     <Label className="text-sm font-semibold text-foreground">
-                      Miesięczne wynagrodzenie inwestora
+                      Twoja propozycja: oprocentowanie miesięczne
                     </Label>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Zaproponuj, ile możesz miesięcznie pokryć — ustalimy z Tobą indywidualne warunki.
+                      Im wyższe oprocentowanie zaproponujesz, tym większa szansa, że inwestor szybciej przyjmie wniosek.
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
