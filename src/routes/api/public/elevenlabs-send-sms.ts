@@ -1,14 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { sendSmsInternal } from "@/lib/voicebot.functions";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const BodySchema = z.object({
   phone: z.string().min(6).max(20),
   message: z.string().min(1).max(500).optional(),
   application_url: z.string().url().max(500).optional(),
+  // Opcjonalne — gdy podane, wygenerujemy magic link i wyślemy go SMS-em.
+  email: z.string().email().max(200).optional(),
+  first_name: z.string().min(1).max(100).optional(),
+  last_name: z.string().min(1).max(100).optional(),
+  amount: z.number().positive().max(100_000_000).optional(),
+  months: z.number().int().positive().max(600).optional(),
+  sec_type: z.string().max(40).optional(),
+  next: z.string().max(200).optional(),
 });
 
 const DEFAULT_URL = "https://financeyou.pl/wniosek-warunki";
+const SITE_URL = "https://financeyou.pl";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -18,6 +28,74 @@ function json(data: unknown, status = 200) {
       "Access-Control-Allow-Origin": "*",
     },
   });
+}
+
+async function generateAutoLoginLink(input: {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone: string;
+  amount?: number;
+  months?: number;
+  sec_type?: string;
+  next?: string;
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const emailNorm = input.email.toLowerCase().trim();
+
+  // Znajdź lub utwórz użytkownika
+  let userId: string | null = null;
+  const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+  const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === emailNorm);
+  if (existing) {
+    userId = existing.id;
+  } else {
+    const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
+      email: emailNorm,
+      email_confirm: true,
+      user_metadata: {
+        first_name: input.first_name,
+        last_name: input.last_name,
+        phone: input.phone,
+      },
+    });
+    if (cErr || !created.user) {
+      return { ok: false, error: "Nie udało się utworzyć użytkownika: " + (cErr?.message ?? "") };
+    }
+    userId = created.user.id;
+  }
+
+  // Wypełnij profil
+  await supabaseAdmin
+    .from("profiles")
+    .upsert(
+      {
+        user_id: userId,
+        email: emailNorm,
+        first_name: input.first_name ?? null,
+        last_name: input.last_name ?? null,
+        phone: input.phone,
+      },
+      { onConflict: "user_id" },
+    );
+
+  // Zbuduj URL docelowy
+  const nextPath = input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/wniosek-start";
+  const ret = new URL(nextPath, SITE_URL);
+  if (input.amount) ret.searchParams.set("amount", String(input.amount));
+  if (input.months) ret.searchParams.set("months", String(input.months));
+  if (input.sec_type) ret.searchParams.set("secType", input.sec_type);
+  ret.searchParams.set("source", "ania_voicebot");
+
+  // Wygeneruj magic link
+  const { data: link, error: lErr } = await supabaseAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email: emailNorm,
+    options: { redirectTo: ret.toString() },
+  });
+  if (lErr || !link?.properties?.action_link) {
+    return { ok: false, error: "Nie udało się wygenerować linku: " + (lErr?.message ?? "") };
+  }
+  return { ok: true, url: link.properties.action_link };
 }
 
 export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
@@ -66,28 +144,44 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           );
         }
 
-        const { phone, message, application_url } = parsed.data;
-        const url = application_url || DEFAULT_URL;
+        const { phone, message, application_url, email, first_name, last_name, amount, months, sec_type, next } = parsed.data;
+
+        // Tryb magic link — gdy podano email
+        let url = application_url || DEFAULT_URL;
+        let magicLinkUsed = false;
+        if (email) {
+          const r = await generateAutoLoginLink({ email, first_name, last_name, phone, amount, months, sec_type, next });
+          if (!r.ok) {
+            return json({ ok: false, error: r.error }, 500);
+          }
+          url = r.url;
+          magicLinkUsed = true;
+        }
+
+        const name = first_name ? ` ${first_name}` : "";
         const body =
           message ||
-          `FinanceYou: Aby kontynuować wniosek o kredyt hipoteczny, wypełnij formularz: ${url}`;
+          (magicLinkUsed
+            ? `Finance You: Cześć${name}! Tu Ania. Kliknij, aby kontynuować wniosek (zalogujemy Cię automatycznie): ${url}`
+            : `FinanceYou: Aby kontynuować wniosek o kredyt hipoteczny, wypełnij formularz: ${url}`);
 
         const result = await sendSmsInternal({
           phone,
           body,
-          source: "elevenlabs_agent",
+          source: magicLinkUsed ? "elevenlabs_agent_magic" : "elevenlabs_agent",
         });
 
         console.log("[elevenlabs-send-sms] sms result", {
           ok: result.ok,
           sid: result.sid,
+          magic: magicLinkUsed,
           error: result.error,
         });
 
         if (!result.ok) {
           return json({ ok: false, error: result.error ?? "SMS send failed" }, 502);
         }
-        return json({ ok: true, sid: result.sid ?? null });
+        return json({ ok: true, sid: result.sid ?? null, magic_link: magicLinkUsed });
       },
     },
   },
