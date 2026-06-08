@@ -318,6 +318,33 @@ function WniosekStartPage() {
                 <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
+              <div className="space-y-2 rounded-md border p-3 text-sm">
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={accepted.privacy}
+                    onCheckedChange={(v) => setAccepted({ ...accepted, privacy: v === true })}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Akceptuję{" "}
+                    <a href="/polityka-prywatnosci" target="_blank" rel="noreferrer" className="text-accent hover:underline">politykę prywatności</a>
+                    {" "}oraz{" "}
+                    <a href="/regulamin" target="_blank" rel="noreferrer" className="text-accent hover:underline">regulamin serwisu</a>
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={contactConsent}
+                    onCheckedChange={(v) => setContactConsent(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Wyrażam zgodę na kontakt telefoniczny, e-mailowy oraz SMS-owy, w tym z wykorzystaniem agentów konwersacyjnych AI, w celu obsługi mojego wniosku.
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+              </div>
               <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
                 {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
               </Button>
