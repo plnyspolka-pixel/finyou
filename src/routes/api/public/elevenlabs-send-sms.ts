@@ -30,6 +30,31 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function normalizePhone(p: string): string {
+  return p.replace(/[^\d+]/g, "");
+}
+
+async function lookupProfileByPhone(
+  phone: string,
+): Promise<{ email: string; first_name?: string; last_name?: string } | null> {
+  const norm = normalizePhone(phone);
+  const variants = Array.from(
+    new Set([phone, norm, norm.replace(/^\+/, ""), "+" + norm.replace(/^\+/, "")]),
+  );
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("email, first_name, last_name, phone")
+    .in("phone", variants)
+    .limit(1);
+  const row = data?.[0];
+  if (!row?.email) return null;
+  return {
+    email: row.email,
+    first_name: row.first_name ?? undefined,
+    last_name: row.last_name ?? undefined,
+  };
+}
+
 async function generateAutoLoginLink(input: {
   email: string;
   first_name?: string;
@@ -65,21 +90,20 @@ async function generateAutoLoginLink(input: {
   }
 
   // Wypełnij profil
-  await supabaseAdmin
-    .from("profiles")
-    .upsert(
-      {
-        user_id: userId,
-        email: emailNorm,
-        first_name: input.first_name ?? null,
-        last_name: input.last_name ?? null,
-        phone: input.phone,
-      },
-      { onConflict: "user_id" },
-    );
+  await supabaseAdmin.from("profiles").upsert(
+    {
+      user_id: userId,
+      email: emailNorm,
+      first_name: input.first_name ?? null,
+      last_name: input.last_name ?? null,
+      phone: input.phone,
+    },
+    { onConflict: "user_id" },
+  );
 
   // Zbuduj URL docelowy
-  const nextPath = input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/wniosek-start";
+  const nextPath =
+    input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/wniosek-start";
   const ret = new URL(nextPath, SITE_URL);
   if (input.amount) ret.searchParams.set("amount", String(input.amount));
   if (input.months) ret.searchParams.set("months", String(input.months));
@@ -97,6 +121,7 @@ async function generateAutoLoginLink(input: {
   }
   return { ok: true, url: link.properties.action_link };
 }
+
 
 export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
   server: {
@@ -144,9 +169,20 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           );
         }
 
-        const { phone, message, application_url, email, first_name, last_name, amount, months, sec_type, next } = parsed.data;
+        const { phone, message, application_url, amount, months, sec_type, next } = parsed.data;
+        let { email, first_name, last_name } = parsed.data;
 
-        // Tryb magic link — gdy podano email
+        // Jeśli brak emaila — spróbuj znaleźć po numerze telefonu
+        if (!email) {
+          const found = await lookupProfileByPhone(phone);
+          if (found) {
+            email = found.email;
+            first_name = first_name ?? found.first_name;
+            last_name = last_name ?? found.last_name;
+          }
+        }
+
+        // Tryb magic link — gdy mamy email
         let url = application_url || DEFAULT_URL;
         let magicLinkUsed = false;
         if (email) {
@@ -157,6 +193,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           url = r.url;
           magicLinkUsed = true;
         }
+
 
         const name = first_name ? ` ${first_name}` : "";
         const body =
