@@ -264,6 +264,34 @@ async function handler({ request }: { request: Request }) {
         dyn.missing_documents = allMissing.length > 0 ? allMissing.join(", ") : "wszystko skompletowane";
         dyn.missing_documents_count = allMissing.length;
         dyn.missing_step = allMissing[0] ?? "";
+
+        dyn.application_link =
+          app.return_link ??
+          (app.return_link_token ? `https://app.financeyou.pl/wniosek/${app.return_link_token}` : "");
+
+        // Status decyzji
+        const decision = (app.admin_decision ?? "").toLowerCase();
+        dyn.is_decision_available = decision === "approved" || decision === "rejected";
+        dyn.is_rejected = decision === "rejected" || app.status === "wniosek_odrzucony";
+        dyn.is_completed = app.status === "wyplacony" || app.status === "zamkniety";
+
+        // Wiadomość statusowa + akcja klienta
+        if (dyn.is_rejected) {
+          dyn.status_message = app.decision_reason ?? "Wniosek odrzucony.";
+          dyn.client_action = "Brak dalszych akcji";
+        } else if (dyn.is_completed) {
+          dyn.status_message = "Środki zostały wypłacone.";
+          dyn.client_action = "Brak dalszych akcji";
+        } else if (allMissing.length > 0) {
+          dyn.status_message = `Czekamy na: ${allMissing.join(", ")}.`;
+          dyn.client_action = `Uzupełnij: ${allMissing[0]}`;
+        } else if (Number(app.completeness_percent ?? 0) < 100) {
+          dyn.status_message = "Wniosek wymaga dokończenia.";
+          dyn.client_action = "Dokończ wniosek online";
+        } else {
+          dyn.status_message = "Wniosek jest analizowany.";
+          dyn.client_action = "Czekaj na kontakt opiekuna";
+        }
       }
     } else {
       // Fallback: lead z Meta po telefonie
