@@ -145,7 +145,31 @@ function PixelePage() {
             <Label>Google Ads — Conversion ID (opcjonalne)</Label>
             <Input value={s.google_ads_conversion_id ?? ""} onChange={(e) => setS({ ...s, google_ads_conversion_id: e.target.value })} placeholder="np. AW-123456789" />
           </div>
+          <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Etykiety konwersji (tylko sam ciąg po ukośniku z tagu, np. <code>foxcCOqrrLscEOidscUB</code> z <code>AW-413945576/foxcCOqrrLscEOidscUB</code>). Wystrzelają się automatycznie razem ze zdarzeniami Meta Pixel.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Rejestracja klienta</Label>
+                <Input value={s.google_ads_label_registration ?? ""} onChange={(e) => setS({ ...s, google_ads_label_registration: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lead pożyczkowy</Label>
+                <Input value={s.google_ads_label_lead ?? ""} onChange={(e) => setS({ ...s, google_ads_label_lead: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Wniosek wysłany</Label>
+                <Input value={s.google_ads_label_submit ?? ""} onChange={(e) => setS({ ...s, google_ads_label_submit: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Subskrypcja inwestora</Label>
+                <Input value={s.google_ads_label_subscribe ?? ""} onChange={(e) => setS({ ...s, google_ads_label_subscribe: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+            </div>
+          </div>
         </CardContent>
+
       </Card>
 
       <div className="flex gap-2">
