@@ -10,13 +10,37 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!data) throw notFound();
     return { article: data };
   },
-  head: ({ loaderData }) => ({
+  head: ({ params, loaderData }) => ({
     meta: loaderData?.article ? [
       { title: loaderData.article.meta_title || loaderData.article.title },
       { name: "description", content: loaderData.article.meta_description || loaderData.article.excerpt || "" },
       { property: "og:title", content: loaderData.article.meta_title || loaderData.article.title },
       { property: "og:description", content: loaderData.article.meta_description || loaderData.article.excerpt || "" },
       { property: "og:type", content: "article" },
+      { property: "og:url", content: `https://financeyou.pl/blog/${params.slug}` },
+    ] : [],
+    links: loaderData?.article ? [
+      { rel: "canonical", href: `https://financeyou.pl/blog/${params.slug}` },
+    ] : [],
+    scripts: loaderData?.article ? [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: loaderData.article.title,
+          description: loaderData.article.excerpt || loaderData.article.meta_description || "",
+          datePublished: loaderData.article.published_at ?? undefined,
+          dateModified: loaderData.article.updated_at ?? loaderData.article.published_at ?? undefined,
+          author: { "@type": "Organization", name: "Finance You" },
+          publisher: {
+            "@type": "Organization",
+            name: "Finance You",
+            logo: { "@type": "ImageObject", url: "https://financeyou.pl/favicon.png" },
+          },
+          mainEntityOfPage: `https://financeyou.pl/blog/${params.slug}`,
+        }),
+      },
     ] : [],
   }),
   component: ArticlePage,
