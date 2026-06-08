@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /inwestor
+Disallow: /inwestor/
+Disallow: /klient
+Disallow: /klient/
+Disallow: /api/
+Disallow: /lovable/
+Disallow: /embed/
+
+Sitemap: https://financeyou.pl/sitemap.xml

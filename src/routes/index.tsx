@@ -45,10 +45,26 @@ const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
 const EMAIL = "kontakt@financeyou.pl";
 
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  { q: "Ile mogę pożyczyć?", a: "Do 1 000 000 zł, ale nie przekraczamy połowy wartości nieruchomości. Ostateczna kwota zależy od analizy nieruchomości i decyzji inwestorów." },
+  { q: "Na jaki okres mogę wziąć pożyczkę?", a: "Od 6 miesięcy do 72 miesięcy. Okres zależy od konkretnej sprawy, kwoty, zabezpieczenia i decyzji inwestorów." },
+  { q: "Ile kosztuje pożyczka?", a: "Orientacyjnie koszty najczęściej mieszczą się między około 1,79% a 3% miesięcznie. To nie jest jeszcze oferta — wszystko zależy od nieruchomości, kwoty, lokalizacji, obciążeń i decyzji inwestorów. Złożenie wniosku jest darmowe." },
+  { q: "Czy wniosek kosztuje?", a: "Nie. Złożenie wniosku jest całkowicie darmowe. Nie pobieramy opłat za rozpatrzenie wniosku." },
+  { q: "Kiedy będzie decyzja?", a: "Wniosek zostanie rozpatrzony do 24 godzin. Jeśli decyzja będzie pozytywna, informacja przyjdzie mailowo." },
+  { q: "Czy mogę spłacić pożyczkę wcześniej?", a: "Tak, zawsze jest możliwość wcześniejszej spłaty. Szczegóły określane są w dokumentach umowy." },
+  { q: "Czy zły BIK mnie dyskwalifikuje?", a: "Nie. W pożyczce zabezpieczonej na nieruchomości kluczowa jest sama nieruchomość — analizujemy każdą sprawę indywidualnie." },
+  { q: "Czy potrzebny jest operat szacunkowy?", a: "Nie. Operat szacunkowy nie jest wymagany na etapie wniosku. Jeśli masz operat, możesz go dodać jako dokument dodatkowy." },
+  { q: "Czy nieruchomość może być za granicą?", a: "Nie. Akceptujemy wyłącznie nieruchomości położone na terenie Polski." },
+  { q: "Czy muszę być właścicielem nieruchomości?", a: "Nie musisz być właścicielem, ale właściciel nieruchomości musi przystąpić do umowy." },
+  { q: "Czy mogę wysłać dokumenty SMS-em lub mailem?", a: "Prosimy, żeby nie wysyłać dokumentów poza formularzem. Najlepiej dodać je do wniosku na financeyou.pl — wszystko trafia w jedno miejsce, a sprawa od razu idzie do inwestorów." },
+  { q: "Co jest zabezpieczeniem pożyczki?", a: "Zabezpieczeniem pożyczki jest hipoteka ustanawiana na nieruchomości oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 Kodeksu postępowania cywilnego, składane w formie aktu notarialnego." },
+  { q: "Czy wypełnienie wniosku oznacza utratę nieruchomości?", a: "Nie. Samo złożenie wniosku i analiza nie powodują utraty nieruchomości. Zabezpieczeniem jest hipoteka ustanawiana u notariusza po pozytywnej decyzji." },
+];
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Pożyczka pod zastaw nieruchomości — Finance You" },
+      { title: "Pożyczka pod zastaw nieruchomości — szybka decyzja, do 1 mln zł | Finance You" },
       {
         name: "description",
         content:
@@ -58,6 +74,48 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content: "Decyzja do 24 h. Do 1 000 000 zł. Bez zbędnych procedur bankowych.",
+      },
+      { property: "og:url", content: "https://financeyou.pl/" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [{ rel: "canonical", href: "https://financeyou.pl/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Finance You",
+          url: "https://financeyou.pl",
+          logo: "https://financeyou.pl/favicon.png",
+          email: EMAIL,
+          telephone: PHONE_HREF,
+          areaServed: "PL",
+          description:
+            "Prywatne pożyczki pod zastaw nieruchomości w Polsce — decyzja w 24 godziny, do 1 000 000 zł.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Finance You",
+          url: "https://financeyou.pl",
+          inLanguage: "pl-PL",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: FAQ_ITEMS.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }),
       },
     ],
   }),
@@ -134,7 +192,7 @@ function Landing() {
                   colors={["#a78bfa", "#6366f1", "#38bdf8", "#22d3ee", "#a78bfa"]}
                 >nieruchomości</AuroraText>
                 <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
-                  do 1 000 000 zł
+                  — szybka decyzja i do 1 mln zł
                 </span>
               </h1>
             </BlurFade>
@@ -384,60 +442,7 @@ function Landing() {
           </div>
 
           <Accordion type="single" collapsible className="mt-10 rounded-2xl border border-border bg-card px-4 shadow-sm md:px-6">
-            {[
-              {
-                q: "Ile mogę pożyczyć?",
-                a: "Do 1 000 000 zł, ale nie przekraczamy połowy wartości nieruchomości. Ostateczna kwota zależy od analizy nieruchomości i decyzji inwestorów.",
-              },
-              {
-                q: "Na jaki okres mogę wziąć pożyczkę?",
-                a: "Od 6 miesięcy do 72 miesięcy. Okres zależy od konkretnej sprawy, kwoty, zabezpieczenia i decyzji inwestorów.",
-              },
-              {
-                q: "Ile kosztuje pożyczka?",
-                a: "Orientacyjnie koszty najczęściej mieszczą się między około 1,79% a 3% miesięcznie. To nie jest jeszcze oferta — wszystko zależy od nieruchomości, kwoty, lokalizacji, obciążeń i decyzji inwestorów. Złożenie wniosku jest darmowe.",
-              },
-              {
-                q: "Czy wniosek kosztuje?",
-                a: "Nie. Złożenie wniosku jest całkowicie darmowe. Nie pobieramy opłat za rozpatrzenie wniosku.",
-              },
-              {
-                q: "Kiedy będzie decyzja?",
-                a: "Wniosek zostanie rozpatrzony do 24 godzin. Jeśli decyzja będzie pozytywna, informacja przyjdzie mailowo.",
-              },
-              {
-                q: "Czy mogę spłacić pożyczkę wcześniej?",
-                a: "Tak, zawsze jest możliwość wcześniejszej spłaty. Szczegóły określane są w dokumentach umowy.",
-              },
-              {
-                q: "Czy zły BIK mnie dyskwalifikuje?",
-                a: "Nie. W pożyczce zabezpieczonej na nieruchomości kluczowa jest sama nieruchomość — analizujemy każdą sprawę indywidualnie.",
-              },
-              {
-                q: "Czy potrzebny jest operat szacunkowy?",
-                a: "Nie. Operat szacunkowy nie jest wymagany na etapie wniosku. Jeśli masz operat, możesz go dodać jako dokument dodatkowy.",
-              },
-              {
-                q: "Czy nieruchomość może być za granicą?",
-                a: "Nie. Akceptujemy wyłącznie nieruchomości położone na terenie Polski.",
-              },
-              {
-                q: "Czy muszę być właścicielem nieruchomości?",
-                a: "Nie musisz być właścicielem, ale właściciel nieruchomości musi przystąpić do umowy.",
-              },
-              {
-                q: "Czy mogę wysłać dokumenty SMS-em lub mailem?",
-                a: "Prosimy, żeby nie wysyłać dokumentów poza formularzem. Najlepiej dodać je do wniosku na financeyou.pl — wszystko trafia w jedno miejsce, a sprawa od razu idzie do inwestorów.",
-              },
-              {
-                q: "Co jest zabezpieczeniem pożyczki?",
-                a: "Zabezpieczeniem pożyczki jest hipoteka ustanawiana na nieruchomości oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 Kodeksu postępowania cywilnego, składane w formie aktu notarialnego.",
-              },
-              {
-                q: "Czy wypełnienie wniosku oznacza utratę nieruchomości?",
-                a: "Nie. Samo złożenie wniosku i analiza nie powodują utraty nieruchomości. Zabezpieczeniem jest hipoteka ustanawiana u notariusza po pozytywnej decyzji.",
-              },
-            ].map((f, i) => (
+            {FAQ_ITEMS.map((f, i) => (
               <AccordionItem key={i} value={`q-${i}`} className="border-border">
                 <AccordionTrigger className="text-left text-base font-semibold text-foreground">
                   {f.q}

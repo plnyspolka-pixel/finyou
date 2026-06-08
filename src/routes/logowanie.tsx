@@ -11,6 +11,25 @@ import { toast } from "sonner";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/logowanie")({
+  head: () => ({
+    meta: [
+      { title: "Finance You — Zaloguj się do panelu klienta" },
+      {
+        name: "description",
+        content:
+          "Zaloguj się do Finance You, aby śledzić status wniosku o pożyczkę pod zastaw nieruchomości, dodawać dokumenty i kontaktować się z inwestorem.",
+      },
+      { property: "og:title", content: "Finance You — Logowanie" },
+      {
+        property: "og:description",
+        content: "Panel klienta Finance You — status wniosku, dokumenty, kontakt z inwestorem.",
+      },
+      { property: "og:url", content: "https://financeyou.pl/logowanie" },
+      { property: "og:type", content: "website" },
+      { name: "robots", content: "noindex,follow" },
+    ],
+    links: [{ rel: "canonical", href: "https://financeyou.pl/logowanie" }],
+  }),
   component: LoginPage,
 });
 

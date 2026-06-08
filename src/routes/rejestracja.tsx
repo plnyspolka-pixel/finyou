@@ -9,6 +9,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/rejestracja")({
+  head: () => ({
+    meta: [
+      { title: "Finance You — Załóż konto klienta" },
+      {
+        name: "description",
+        content:
+          "Załóż darmowe konto w Finance You i złóż wniosek o prywatną pożyczkę pod zastaw nieruchomości do 1 000 000 zł. Decyzja w 24 godziny.",
+      },
+      { property: "og:title", content: "Finance You — Rejestracja" },
+      {
+        property: "og:description",
+        content: "Darmowe konto klienta Finance You. Złóż wniosek o pożyczkę pod zastaw nieruchomości.",
+      },
+      { property: "og:url", content: "https://financeyou.pl/rejestracja" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [{ rel: "canonical", href: "https://financeyou.pl/rejestracja" }],
+  }),
   component: RegisterPage,
 });
 
