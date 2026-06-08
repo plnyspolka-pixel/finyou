@@ -924,12 +924,12 @@ function KlientWniosek() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
         </Button>
         {step < STEPS.length ? (
-          <Button disabled={saving} onClick={() => void goNext()}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2 h-4 w-4" /></>}
+          <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
+            {saving ? <Loader2 className="animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2" /></>}
           </Button>
         ) : (
-          <Button disabled={submitting} onClick={() => void submit()}>
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Wyślij kompletny wniosek do analizy</>}
+          <Button variant="cta" size="cta" disabled={submitting} onClick={() => void submit()}>
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij kompletny wniosek do analizy</>}
           </Button>
         )}
       </div>

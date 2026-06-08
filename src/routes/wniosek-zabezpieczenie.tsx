@@ -76,13 +76,14 @@ function WniosekZabezpieczeniePage() {
           <SecurityTypePicker value={secType} onChange={setSecType} />
           <Button
             type="button"
-            size="lg"
+            variant="cta"
+            size="cta"
             disabled={!secType}
             onClick={goNext}
-            className="h-14 w-full text-base font-extrabold disabled:opacity-50"
+            className="w-full disabled:opacity-50"
           >
             Dalej
-            <ArrowRight className="ml-2 h-5 w-5" />
+            <ArrowRight className="ml-2" />
           </Button>
         </CardContent>
       </Card>

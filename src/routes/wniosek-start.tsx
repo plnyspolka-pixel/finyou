@@ -266,7 +266,7 @@ function WniosekStartPage() {
                   placeholder="+48 600 000 000"
                 />
               </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={phoneBusy}>
+              <Button type="submit" variant="cta" size="cta" className="w-full" disabled={phoneBusy}>
                 {phoneBusy ? "Zapisuję…" : "Zapisz numer i kontynuuj"}
               </Button>
             </form>
@@ -310,7 +310,7 @@ function WniosekStartPage() {
                 <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
-              <Button type="submit" className="w-full" disabled={busy}>
+              <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
                 {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
               </Button>
 
@@ -331,7 +331,7 @@ function WniosekStartPage() {
                 <Label htmlFor="password2">Hasło</Label>
                 <Input id="password2" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              <Button type="submit" className="w-full" disabled={busy}>
+              <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
                 {busy ? "Logowanie…" : "Zaloguj się i kontynuuj"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">

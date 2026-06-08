@@ -51,7 +51,7 @@ function KlientWniosekSummary() {
         <CardHeader><CardTitle>Nie masz jeszcze wniosku</CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">Złóż wniosek, żeby zobaczyć tu jego podsumowanie.</p>
-          <Button onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>Złóż wniosek</Button>
+          <Button variant="cta" size="cta" onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>Złóż wniosek</Button>
         </CardContent>
       </Card>
     );
@@ -152,8 +152,8 @@ function KlientWniosekSummary() {
 
       {loan.status === "w_trakcie_uzupelniania" && (
         <div className="flex justify-end">
-          <Button onClick={() => navigate({ to: "/wniosek-opis" })}>
-            <Send className="mr-2 h-4 w-4" /> Przejdź do wysłania wniosku
+          <Button variant="cta" size="cta" onClick={() => navigate({ to: "/wniosek-opis" })}>
+            <Send className="mr-2" /> Przejdź do wysłania wniosku
           </Button>
         </div>
       )}

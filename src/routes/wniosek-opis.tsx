@@ -174,8 +174,8 @@ function WniosekOpisPage() {
               <Button variant="outline" disabled={submitting} onClick={() => void save(false)}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Zapisz roboczo"}
               </Button>
-              <Button disabled={submitting || !description.trim()} onClick={() => void save(true)}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> Wyślij do analizy</>}
+              <Button variant="cta" size="cta" disabled={submitting || !description.trim()} onClick={() => void save(true)}>
+                {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij do analizy</>}
               </Button>
             </div>
           </div>
