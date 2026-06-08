@@ -46,6 +46,7 @@ import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
+import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
@@ -278,6 +279,11 @@ const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
 const AdminRoleRoute = AdminRoleRouteImport.update({
   id: '/role',
   path: '/role',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
+  id: '/przypomnienia',
+  path: '/przypomnienia',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPixeleRoute = AdminPixeleRouteImport.update({
@@ -565,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -649,6 +656,7 @@ export interface FileRoutesByTo {
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -737,6 +745,7 @@ export interface FileRoutesById {
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
@@ -826,6 +835,7 @@ export interface FileRouteTypes {
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
+    | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -910,6 +920,7 @@ export interface FileRouteTypes {
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
+    | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -997,6 +1008,7 @@ export interface FileRouteTypes {
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
+    | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/szkolenia'
     | '/admin/text-agent'
@@ -1341,6 +1353,13 @@ declare module '@tanstack/react-router' {
       path: '/role'
       fullPath: '/admin/role'
       preLoaderRoute: typeof AdminRoleRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/przypomnienia': {
+      id: '/admin/przypomnienia'
+      path: '/przypomnienia'
+      fullPath: '/admin/przypomnienia'
+      preLoaderRoute: typeof AdminPrzypomnieniaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/pixele': {
@@ -1730,6 +1749,7 @@ interface AdminRouteChildren {
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
+  AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
@@ -1771,6 +1791,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
+  AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
