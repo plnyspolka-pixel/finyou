@@ -1,0 +1,20 @@
+# Finance You
+
+> Prywatne pożyczki pod zastaw nieruchomości w Polsce — do 1 000 000 zł, decyzja w 24 godziny, bez procedur bankowych.
+
+Finance You łączy klientów potrzebujących finansowania pod zastaw nieruchomości (mieszkanie, dom, lokal, działka) z prywatnymi inwestorami. Kluczem do decyzji jest wartość zabezpieczenia, a nie scoring bankowy — pomagamy także osobom ze złym BIK lub istniejącą hipoteką.
+
+## Pages
+
+- [Strona główna](/): Pożyczka pod zastaw nieruchomości — kalkulator, FAQ, jak to działa.
+- [Wniosek — start](/wniosek-start): Rozpoczęcie wniosku o pożyczkę pod zastaw nieruchomości.
+- [Warunki pożyczki](/wniosek-warunki): Wybór kwoty, okresu i typu zabezpieczenia.
+- [Zabezpieczenie](/wniosek-zabezpieczenie): Dane o nieruchomości stanowiącej zabezpieczenie.
+- [Formularz wniosku](/wniosek-formularz): Pełny formularz wniosku o pożyczkę.
+- [Blog](/blog): Artykuły o pożyczkach pod zastaw nieruchomości.
+- [Logowanie](/logowanie): Logowanie do panelu klienta.
+- [Rejestracja](/rejestracja): Założenie konta klienta.
+
+## Optional
+
+- [Wybór roli](/wybor-roli): Wybór typu konta po rejestracji.
