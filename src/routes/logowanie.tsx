@@ -185,6 +185,14 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logowanie…" : "Zaloguj się"}
             </Button>
+            <p className="text-right text-sm">
+              <Link
+                to="/zapomniane-haslo"
+                className="font-medium text-accent hover:underline"
+              >
+                Nie pamiętam hasła
+              </Link>
+            </p>
             {confirmationEmail ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <p className="font-medium">Adres e-mail nie jest jeszcze potwierdzony.</p>

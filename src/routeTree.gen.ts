@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as WniosekZabezpieczenieRouteImport } from './routes/wniosek-zabezpieczenie'
 import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
@@ -16,6 +17,7 @@ import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
 import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
+import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
@@ -98,6 +100,11 @@ import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
+const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
+  id: '/zapomniane-haslo',
+  path: '/zapomniane-haslo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
@@ -131,6 +138,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
   path: '/rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoweHasloRoute = NoweHasloRouteImport.update({
+  id: '/nowe-haslo',
+  path: '/nowe-haslo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogowanieRoute = LogowanieRouteImport.update({
@@ -559,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/nowe-haslo': typeof NoweHasloRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -566,6 +579,7 @@ export interface FileRoutesByFullPath {
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
@@ -646,6 +660,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
+  '/nowe-haslo': typeof NoweHasloRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -653,6 +668,7 @@ export interface FileRoutesByTo {
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
@@ -737,6 +753,7 @@ export interface FileRoutesById {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/nowe-haslo': typeof NoweHasloRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -744,6 +761,7 @@ export interface FileRoutesById {
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
@@ -829,6 +847,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/nowe-haslo'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -836,6 +855,7 @@ export interface FileRouteTypes {
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
+    | '/zapomniane-haslo'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
@@ -916,6 +936,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/logowanie'
+    | '/nowe-haslo'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -923,6 +944,7 @@ export interface FileRouteTypes {
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
+    | '/zapomniane-haslo'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
@@ -1006,6 +1028,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/nowe-haslo'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -1013,6 +1036,7 @@ export interface FileRouteTypes {
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
+    | '/zapomniane-haslo'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
@@ -1097,6 +1121,7 @@ export interface RootRouteChildren {
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
+  NoweHasloRoute: typeof NoweHasloRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WniosekFormularzRoute: typeof WniosekFormularzRoute
@@ -1104,6 +1129,7 @@ export interface RootRouteChildren {
   WniosekWarunkiRoute: typeof WniosekWarunkiRoute
   WniosekZabezpieczenieRoute: typeof WniosekZabezpieczenieRoute
   WyborRoliRoute: typeof WyborRoliRoute
+  ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   BlogSlugRoute: typeof BlogSlugRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
@@ -1131,6 +1157,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/zapomniane-haslo': {
+      id: '/zapomniane-haslo'
+      path: '/zapomniane-haslo'
+      fullPath: '/zapomniane-haslo'
+      preLoaderRoute: typeof ZapomnianeHasloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/wybor-roli': {
       id: '/wybor-roli'
       path: '/wybor-roli'
@@ -1178,6 +1211,13 @@ declare module '@tanstack/react-router' {
       path: '/rejestracja'
       fullPath: '/rejestracja'
       preLoaderRoute: typeof RejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nowe-haslo': {
+      id: '/nowe-haslo'
+      path: '/nowe-haslo'
+      fullPath: '/nowe-haslo'
+      preLoaderRoute: typeof NoweHasloRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logowanie': {
@@ -1908,6 +1948,7 @@ const rootRouteChildren: RootRouteChildren = {
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
+  NoweHasloRoute: NoweHasloRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WniosekFormularzRoute: WniosekFormularzRoute,
@@ -1915,6 +1956,7 @@ const rootRouteChildren: RootRouteChildren = {
   WniosekWarunkiRoute: WniosekWarunkiRoute,
   WniosekZabezpieczenieRoute: WniosekZabezpieczenieRoute,
   WyborRoliRoute: WyborRoliRoute,
+  ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   BlogSlugRoute: BlogSlugRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
@@ -1942,13 +1984,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
