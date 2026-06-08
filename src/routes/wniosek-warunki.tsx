@@ -120,11 +120,26 @@ function WniosekWarunkiPage() {
           ts: Date.now(),
         }),
       );
+      // Prefill panelu klienta i przeskocz od razu do kroku "Zabezpieczenie"
+      const annualRate = Math.round(monthlyRate * 12 * 10) / 10;
+      sessionStorage.setItem(
+        "embed_calc_v1",
+        JSON.stringify({
+          amount: step1?.amount,
+          months: step1?.months,
+          maxPayment,
+          annualRate,
+          secType: step1?.secType ?? null,
+          source: step1?.source ?? "wniosek_warunki",
+          startStep: 3,
+        }),
+      );
     } catch {
       /* noop */
     }
     void navigate({ to: "/klient" });
   };
+
 
   if (!step1) {
     return (
