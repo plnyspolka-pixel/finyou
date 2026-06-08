@@ -2,18 +2,13 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderOpen, Sparkles, Tag, LogOut, MessageSquare, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 export const Route = createFileRoute("/klient")({
   component: KlientLayout,
 });
 
 const items = [
-  { to: "/klient", label: "Mój wniosek", icon: FileText, exact: true },
-  { to: "/klient/dokumenty", label: "Dokumenty", icon: FolderOpen },
-  { to: "/klient/status", label: "Opis", icon: Sparkles },
-  { to: "/klient/oferta", label: "Oferta", icon: Tag },
-  { to: "/klient/wiadomosci", label: "Wiadomości", icon: MessageSquare },
   { to: "/klient/profil", label: "Profil", icon: User },
 ];
 
@@ -34,7 +29,7 @@ function KlientLayout() {
         <div className="px-5 py-5 border-b border-sidebar-border font-semibold">Panel klienta</div>
         <nav className="flex-1 px-2 py-3 space-y-1">
           {items.map((it) => {
-            const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
+            const active = pathname.startsWith(it.to);
             return (
               <Link key={it.to} to={it.to}
                 className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/60"}`}>
