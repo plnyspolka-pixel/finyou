@@ -13,6 +13,7 @@ import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as WniosekZabezpieczenieRouteImport } from './routes/wniosek-zabezpieczenie'
 import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
 import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
+import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
@@ -20,7 +21,6 @@ import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -119,6 +119,11 @@ const WniosekStartRoute = WniosekStartRouteImport.update({
   path: '/wniosek-start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WniosekFormularzRoute = WniosekFormularzRouteImport.update({
+  id: '/wniosek-formularz',
+  path: '/wniosek-formularz',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
   path: '/rejestracja',
@@ -153,11 +158,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const KlientIndexRoute = KlientIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => KlientRoute,
 } as any)
 const InwestorIndexRoute = InwestorIndexRouteImport.update({
   id: '/',
@@ -565,6 +565,7 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -619,7 +620,6 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
-  '/klient/': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -651,8 +651,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -707,7 +709,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
-  '/klient': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -745,6 +746,7 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
+  '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-start': typeof WniosekStartRoute
   '/wniosek-warunki': typeof WniosekWarunkiRoute
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
@@ -799,7 +801,6 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
-  '/klient/': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -838,6 +839,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/wniosek-formularz'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -892,7 +894,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
-    | '/klient/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -924,8 +925,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/wniosek-formularz'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -980,7 +983,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/blog'
     | '/inwestor'
-    | '/klient'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1017,6 +1019,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/rejestracja'
+    | '/wniosek-formularz'
     | '/wniosek-start'
     | '/wniosek-warunki'
     | '/wniosek-zabezpieczenie'
@@ -1071,7 +1074,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
-    | '/klient/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1109,6 +1111,7 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   RejestracjaRoute: typeof RejestracjaRoute
+  WniosekFormularzRoute: typeof WniosekFormularzRoute
   WniosekStartRoute: typeof WniosekStartRoute
   WniosekWarunkiRoute: typeof WniosekWarunkiRoute
   WniosekZabezpieczenieRoute: typeof WniosekZabezpieczenieRoute
@@ -1165,6 +1168,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WniosekStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wniosek-formularz': {
+      id: '/wniosek-formularz'
+      path: '/wniosek-formularz'
+      fullPath: '/wniosek-formularz'
+      preLoaderRoute: typeof WniosekFormularzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rejestracja': {
       id: '/rejestracja'
       path: '/rejestracja'
@@ -1213,13 +1223,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/klient/': {
-      id: '/klient/'
-      path: '/'
-      fullPath: '/klient/'
-      preLoaderRoute: typeof KlientIndexRouteImport
-      parentRoute: typeof KlientRoute
     }
     '/inwestor/': {
       id: '/inwestor/'
@@ -1908,7 +1911,6 @@ interface KlientRouteChildren {
   KlientProfilRoute: typeof KlientProfilRoute
   KlientStatusRoute: typeof KlientStatusRoute
   KlientWiadomosciRoute: typeof KlientWiadomosciRoute
-  KlientIndexRoute: typeof KlientIndexRoute
   KlientUmowaOfferIdRoute: typeof KlientUmowaOfferIdRoute
 }
 
@@ -1919,7 +1921,6 @@ const KlientRouteChildren: KlientRouteChildren = {
   KlientProfilRoute: KlientProfilRoute,
   KlientStatusRoute: KlientStatusRoute,
   KlientWiadomosciRoute: KlientWiadomosciRoute,
-  KlientIndexRoute: KlientIndexRoute,
   KlientUmowaOfferIdRoute: KlientUmowaOfferIdRoute,
 }
 
@@ -1934,6 +1935,7 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   RejestracjaRoute: RejestracjaRoute,
+  WniosekFormularzRoute: WniosekFormularzRoute,
   WniosekStartRoute: WniosekStartRoute,
   WniosekWarunkiRoute: WniosekWarunkiRoute,
   WniosekZabezpieczenieRoute: WniosekZabezpieczenieRoute,
@@ -1962,3 +1964,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
