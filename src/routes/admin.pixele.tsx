@@ -20,6 +20,9 @@ type Settings = {
   track_registration: boolean;
   track_subscribe: boolean;
   track_contact: boolean;
+  ga4_measurement_id: string | null;
+  gtm_container_id: string | null;
+  google_ads_conversion_id: string | null;
 };
 
 function PixelePage() {
