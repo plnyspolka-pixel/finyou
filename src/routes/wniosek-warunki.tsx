@@ -99,7 +99,7 @@ function WniosekWarunkiPage() {
   const scheduleFollowup = useServerFn(scheduleCalculatorEntryFollowup);
   useEffect(() => {
     if (authLoading || !user) return;
-    void scheduleFollowup({ data: undefined as never }).catch(() => { /* noop */ });
+    void scheduleFollowup().catch(() => { /* noop */ });
   }, [authLoading, user, scheduleFollowup]);
 
   // Restore step 1 z sessionStorage
