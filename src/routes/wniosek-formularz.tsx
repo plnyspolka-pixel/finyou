@@ -479,7 +479,8 @@ function KlientWniosek() {
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-8">
+      <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Wniosek o pożyczkę pod zastaw nieruchomości</h1>
         <p className="text-sm text-muted-foreground">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></p>
