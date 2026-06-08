@@ -169,9 +169,20 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           );
         }
 
-        const { phone, message, application_url, email, first_name, last_name, amount, months, sec_type, next } = parsed.data;
+        const { phone, message, application_url, amount, months, sec_type, next } = parsed.data;
+        let { email, first_name, last_name } = parsed.data;
 
-        // Tryb magic link — gdy podano email
+        // Jeśli brak emaila — spróbuj znaleźć po numerze telefonu
+        if (!email) {
+          const found = await lookupProfileByPhone(phone);
+          if (found) {
+            email = found.email;
+            first_name = first_name ?? found.first_name;
+            last_name = last_name ?? found.last_name;
+          }
+        }
+
+        // Tryb magic link — gdy mamy email
         let url = application_url || DEFAULT_URL;
         let magicLinkUsed = false;
         if (email) {
@@ -182,6 +193,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           url = r.url;
           magicLinkUsed = true;
         }
+
 
         const name = first_name ? ` ${first_name}` : "";
         const body =
