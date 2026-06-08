@@ -266,7 +266,7 @@ function WniosekStartPage() {
                   placeholder="+48 600 000 000"
                 />
               </div>
-              <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={phoneBusy}>
+              <Button type="submit" variant="cta" size="cta" className="w-full" disabled={phoneBusy}>
                 {phoneBusy ? "Zapisuję…" : "Zapisz numer i kontynuuj"}
               </Button>
             </form>
