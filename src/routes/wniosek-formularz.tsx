@@ -435,6 +435,7 @@ function KlientWniosek() {
       setEditing(false);
       setStep(1);
       toast.success("Wniosek wysłany do analizy");
+      void navigate({ to: "/klient" });
     } finally {
       setSubmitting(false);
     }
