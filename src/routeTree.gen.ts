@@ -94,6 +94,7 @@ import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kre
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
+import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 
@@ -531,6 +532,12 @@ const ApiPublicHooksVoicebotOptOutRoute =
     path: '/api/public/hooks/voicebot-opt-out',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksVoicebotInboundRoute =
+  ApiPublicHooksVoicebotInboundRouteImport.update({
+    id: '/api/public/hooks/voicebot-inbound',
+    path: '/api/public/hooks/voicebot-inbound',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanRemindersRoute =
   ApiPublicHooksLoanRemindersRouteImport.update({
     id: '/api/public/hooks/loan-reminders',
@@ -629,6 +636,7 @@ export interface FileRoutesByFullPath {
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -715,6 +723,7 @@ export interface FileRoutesByTo {
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -805,6 +814,7 @@ export interface FileRoutesById {
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -896,6 +906,7 @@ export interface FileRouteTypes {
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
@@ -982,6 +993,7 @@ export interface FileRouteTypes {
     | '/admin/wnioski'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
@@ -1071,6 +1083,7 @@ export interface FileRouteTypes {
     | '/admin/wnioski/'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
@@ -1103,6 +1116,7 @@ export interface RootRouteChildren {
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
+  ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1705,6 +1719,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVoicebotOptOutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/voicebot-inbound': {
+      id: '/api/public/hooks/voicebot-inbound'
+      path: '/api/public/hooks/voicebot-inbound'
+      fullPath: '/api/public/hooks/voicebot-inbound'
+      preLoaderRoute: typeof ApiPublicHooksVoicebotInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminders': {
       id: '/api/public/hooks/loan-reminders'
       path: '/api/public/hooks/loan-reminders'
@@ -1912,6 +1933,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
+  ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
