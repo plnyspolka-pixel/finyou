@@ -36,13 +36,17 @@ type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
 
 function KlientWniosek() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const captureLead = useServerFn(captureLeadFromApplication);
   const leadFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) void navigate({ to: "/logowanie" });
+  }, [authLoading, user, navigate]);
 
 
   const [clientId, setClientId] = useState<string | null>(null);
