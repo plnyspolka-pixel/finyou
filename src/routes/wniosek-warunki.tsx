@@ -213,14 +213,24 @@ function WniosekWarunkiPage() {
       <div className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
         {/* Stepper */}
         <ol className="mb-8 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-          <li className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-muted-foreground">
-            <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/30 text-[10px] text-foreground">✓</span>
-            Parametry
+          <li>
+            <Link
+              to="/"
+              className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-muted-foreground transition hover:bg-accent/20 hover:text-foreground"
+            >
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/30 text-[10px] text-foreground">✓</span>
+              Parametry
+            </Link>
           </li>
           <li className="text-muted-foreground">→</li>
-          <li className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-muted-foreground">
-            <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/30 text-[10px] text-foreground">✓</span>
-            Twoje dane
+          <li>
+            <Link
+              to="/wniosek-start"
+              className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-muted-foreground transition hover:bg-accent/20 hover:text-foreground"
+            >
+              <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/30 text-[10px] text-foreground">✓</span>
+              Twoje dane
+            </Link>
           </li>
           <li className="text-muted-foreground">→</li>
           <li className="flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-accent-foreground">
@@ -422,12 +432,13 @@ function WniosekWarunkiPage() {
 
               <Button
                 type="button"
-                size="lg"
+                variant="cta"
+                size="cta"
                 onClick={goNext}
-                className="mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                className="mt-6 w-full animate-pulse-soft"
               >
                 Dalej — zabezpieczenie
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2" />
               </Button>
 
               <div className="mt-4 flex items-center gap-2 text-xs text-white/80">
