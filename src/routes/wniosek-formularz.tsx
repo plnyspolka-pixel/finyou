@@ -311,8 +311,18 @@ function KlientWniosek() {
   const uploadDoc = async (file: File, docType: string) => {
     if (!loanId || !user) { toast.error("Najpierw przejdź dalej, aby utworzyć wniosek"); return; }
     setUploading(true);
-    const path = `${user.id}/${loanId}/${Date.now()}-${file.name}`;
-    const { error: ue } = await supabase.storage.from("documents").upload(path, file);
+    // Sanityzacja nazwy pliku — Supabase Storage odrzuca polskie znaki, spacje i znaki specjalne.
+    const safeName = file.name
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip diacritics
+      .replace(/ł/g, "l").replace(/Ł/g, "L")
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .replace(/_+/g, "_")
+      .slice(0, 120) || "plik";
+    const path = `${user.id}/${loanId}/${Date.now()}-${safeName}`;
+    const { error: ue } = await supabase.storage.from("documents").upload(path, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
     if (ue) { toast.error("Błąd uploadu", { description: ue.message }); setUploading(false); return; }
     const { error: ie } = await supabase.from("documents").insert({
       loan_application_id: loanId, file_name: file.name, file_path: path,
@@ -324,6 +334,7 @@ function KlientWniosek() {
     setUploading(false);
     toast.success("Dodano dokument");
   };
+
 
   const runKwOcr = useServerFn(detectKwNumbers);
   const scanKwFromDocs = async () => {
