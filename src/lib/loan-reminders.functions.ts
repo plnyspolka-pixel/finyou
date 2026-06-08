@@ -113,8 +113,18 @@ export async function placeReminderCall(
     // nic do przypominania
     return { ok: true, skipped: "complete" };
   }
+  // Klient poprosił o usunięcie / nie dzwonić — zatrzymaj.
+  if ((full.client as any)?.do_not_call === true) {
+    const s = admin();
+    await s
+      .from("loan_applications")
+      .update({ reminder_paused: true, next_reminder_at: null })
+      .eq("id", loanApplicationId);
+    return { ok: true, skipped: "do_not_call" };
+  }
   const phone = full.client?.phone_normalized ?? full.client?.phone;
   if (!phone) return { ok: false, error: "Brak numeru telefonu klienta" };
+
 
   const result = await placeOutboundCallInternal({
     phone,

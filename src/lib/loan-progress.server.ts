@@ -23,7 +23,7 @@ export async function loadLoanLeadData(loanApplicationId: string): Promise<LoanL
   if (!loan) return null;
 
   const [{ data: client }, { data: prop }, { data: docs }] = await Promise.all([
-    s.from("clients").select("first_name,last_name,phone_normalized,email,phone").eq("id", loan.client_id).maybeSingle(),
+    s.from("clients").select("id,first_name,last_name,phone_normalized,email,phone,do_not_call").eq("id", loan.client_id).maybeSingle(),
     s.from("properties").select("*").eq("loan_application_id", loan.id).maybeSingle(),
     s.from("documents").select("id,document_type,file_name").eq("loan_application_id", loan.id),
   ]);
@@ -48,12 +48,17 @@ export async function loadLoanLeadData(loanApplicationId: string): Promise<LoanL
     documents: docs ?? [],
   });
 
-  const variables = buildElevenLabsVariables(progress, {
-    first_name: client?.first_name ?? null,
-    last_name: client?.last_name ?? null,
-    phone_normalized: client?.phone_normalized ?? client?.phone ?? null,
-    email: client?.email ?? null,
-  });
+  const variables = {
+    ...buildElevenLabsVariables(progress, {
+      first_name: client?.first_name ?? null,
+      last_name: client?.last_name ?? null,
+      phone_normalized: client?.phone_normalized ?? client?.phone ?? null,
+      email: client?.email ?? null,
+    }),
+    client_id: client?.id ?? "",
+    loan_application_id: loan.id,
+    do_not_call: client?.do_not_call ? "true" : "false",
+  };
 
   return { loan, client, property: prop, documents: docs ?? [], progress, variables };
 }
