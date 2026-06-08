@@ -82,7 +82,6 @@ import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
-import { Route as ApiPublicElevenlabsMagicLinkRouteImport } from './routes/api/public/elevenlabs-magic-link'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
 import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
@@ -473,12 +472,6 @@ const ApiPublicElevenlabsSendSmsRoute =
     path: '/api/public/elevenlabs-send-sms',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicElevenlabsMagicLinkRoute =
-  ApiPublicElevenlabsMagicLinkRouteImport.update({
-    id: '/api/public/elevenlabs-magic-link',
-    path: '/api/public/elevenlabs-magic-link',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/wnioski/$id',
   path: '/wnioski/$id',
@@ -642,7 +635,6 @@ export interface FileRoutesByFullPath {
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/elevenlabs-magic-link': typeof ApiPublicElevenlabsMagicLinkRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -732,7 +724,6 @@ export interface FileRoutesByTo {
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/elevenlabs-magic-link': typeof ApiPublicElevenlabsMagicLinkRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -826,7 +817,6 @@ export interface FileRoutesById {
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/elevenlabs-magic-link': typeof ApiPublicElevenlabsMagicLinkRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -921,7 +911,6 @@ export interface FileRouteTypes {
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
-    | '/api/public/elevenlabs-magic-link'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -1011,7 +1000,6 @@ export interface FileRouteTypes {
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
-    | '/api/public/elevenlabs-magic-link'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -1104,7 +1092,6 @@ export interface FileRouteTypes {
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
-    | '/api/public/elevenlabs-magic-link'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -1149,7 +1136,6 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
-  ApiPublicElevenlabsMagicLinkRoute: typeof ApiPublicElevenlabsMagicLinkRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
@@ -1682,13 +1668,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicElevenlabsSendSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/elevenlabs-magic-link': {
-      id: '/api/public/elevenlabs-magic-link'
-      path: '/api/public/elevenlabs-magic-link'
-      fullPath: '/api/public/elevenlabs-magic-link'
-      preLoaderRoute: typeof ApiPublicElevenlabsMagicLinkRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
       path: '/wnioski/$id'
@@ -1984,7 +1963,6 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
-  ApiPublicElevenlabsMagicLinkRoute: ApiPublicElevenlabsMagicLinkRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
