@@ -20,6 +20,9 @@ type Settings = {
   track_registration: boolean;
   track_subscribe: boolean;
   track_contact: boolean;
+  ga4_measurement_id: string | null;
+  gtm_container_id: string | null;
+  google_ads_conversion_id: string | null;
 };
 
 function PixelePage() {
@@ -31,6 +34,7 @@ function PixelePage() {
       setS((data as Settings) ?? {
         client_pixel_id: "", investor_pixel_id: "",
         track_lead: true, track_registration: true, track_subscribe: true, track_contact: true,
+        ga4_measurement_id: "", gtm_container_id: "", google_ads_conversion_id: "",
       });
     });
   }, []);
@@ -45,10 +49,13 @@ function PixelePage() {
       track_registration: s.track_registration,
       track_subscribe: s.track_subscribe,
       track_contact: s.track_contact,
+      ga4_measurement_id: s.ga4_measurement_id?.trim() || null,
+      gtm_container_id: s.gtm_container_id?.trim() || null,
+      google_ads_conversion_id: s.google_ads_conversion_id?.trim() || null,
     }).eq("id", 1);
     setSaving(false);
     if (error) toast.error(error.message);
-    else toast.success("Zapisano. Pixele załadują się przy następnym przeładowaniu strony.");
+    else toast.success("Zapisano. Skrypty załadują się przy następnym przeładowaniu strony.");
   };
 
   const testFire = (event: string) => {
@@ -106,6 +113,27 @@ function PixelePage() {
               <Switch checked={(s as any)[k]} onCheckedChange={(v) => setS({ ...s, [k]: v } as Settings)} />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Google — GA4, Tag Manager, Ads</CardTitle>
+          <CardDescription>Skrypty Google ładują się na całej stronie. <code>page_view</code> leci automatycznie przy zmianie ścieżki, a kluczowe zdarzenia (Lead, rejestracja, wniosek) są mirrorowane z Pixela.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <Label>GA4 — Measurement ID</Label>
+            <Input value={s.ga4_measurement_id ?? ""} onChange={(e) => setS({ ...s, ga4_measurement_id: e.target.value })} placeholder="np. G-XXXXXXXXXX" />
+          </div>
+          <div className="space-y-1">
+            <Label>Google Tag Manager — Container ID (opcjonalne)</Label>
+            <Input value={s.gtm_container_id ?? ""} onChange={(e) => setS({ ...s, gtm_container_id: e.target.value })} placeholder="np. GTM-XXXXXXX" />
+          </div>
+          <div className="space-y-1">
+            <Label>Google Ads — Conversion ID (opcjonalne)</Label>
+            <Input value={s.google_ads_conversion_id ?? ""} onChange={(e) => setS({ ...s, google_ads_conversion_id: e.target.value })} placeholder="np. AW-123456789" />
+          </div>
         </CardContent>
       </Card>
 

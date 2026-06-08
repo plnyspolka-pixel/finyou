@@ -86,6 +86,22 @@ export async function trackEvent(
     "-" +
     Date.now().toString(36);
   trackFbEvent(event, params, eventId);
+  // Mirror to Google Analytics 4 (gtag) with mapped event name
+  try {
+    const gaMap: Record<string, string> = {
+      Lead: "generate_lead",
+      CompleteRegistration: "sign_up",
+      StartApplication: "sign_up",
+      SubmitApplication: "submit_application",
+      Subscribe: "purchase",
+      Contact: "contact",
+      Purchase: "purchase",
+    };
+    const gaEvent = gaMap[event] ?? event;
+    (window as any).gtag?.("event", gaEvent, { ...(params || {}), event_id: eventId });
+  } catch {
+    /* ignore */
+  }
   try {
     const area: "client" | "investor" = window.location.pathname.startsWith("/inwestor")
       ? "investor"
