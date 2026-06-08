@@ -14,6 +14,25 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminders")({
         if (expected && apiKey && apiKey !== expected) {
           return new Response(JSON.stringify({ error: "invalid apikey" }), { status: 401 });
         }
+        // Quiet hours: dzwonimy tylko 8:00–22:00 czasu Warszawa, poza niedzielami.
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Warsaw",
+          hour: "2-digit",
+          minute: "2-digit",
+          weekday: "short",
+          hour12: false,
+        }).formatToParts(new Date());
+        const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+        const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+        const isSunday = weekday === "Sun";
+        const inWindow = hour >= 8 && hour < 22;
+        if (isSunday || !inWindow) {
+          return new Response(
+            JSON.stringify({ ok: true, skipped: true, reason: isSunday ? "sunday" : "outside_hours", hour, weekday }),
+            { headers: { "content-type": "application/json" } },
+          );
+        }
+
         const url = process.env.SUPABASE_URL!;
         const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
         const supabase = createClient(url, key);
