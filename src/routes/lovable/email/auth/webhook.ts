@@ -12,12 +12,12 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Potwierdź swój adres e-mail',
+  invite: 'Zaproszenie do Finance You',
+  magiclink: 'Twój link do logowania',
+  recovery: 'Resetowanie hasła',
+  email_change: 'Potwierdź zmianę adresu e-mail',
+  reauthentication: 'Twój kod weryfikacyjny',
 }
 
 // Template mapping
@@ -34,7 +34,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 const SITE_NAME = "Finance You"
 const SENDER_DOMAIN = "notify.filipbielak.pl"
 const ROOT_DOMAIN = "financeyou.pl"
-const FROM_DOMAIN = "filipbielak.pl"
+const FROM_DOMAIN = "financeyou.pl"
 
 function redactEmail(email: string | null | undefined): string {
   if (!email) return '***'
