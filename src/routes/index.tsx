@@ -556,6 +556,8 @@ function Landing() {
                 <li><a href="#kalkulator" className="hover:text-foreground">Kalkulator</a></li>
                 <li><a href="#jak-to-dziala" className="hover:text-foreground">Jak to działa</a></li>
                 <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
+                <li><a href="/polityka-prywatnosci" className="hover:text-foreground">Polityka prywatności</a></li>
+                <li><a href="/regulamin" className="hover:text-foreground">Regulamin serwisu</a></li>
               </ul>
             </div>
           </div>
