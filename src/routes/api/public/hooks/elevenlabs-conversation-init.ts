@@ -199,43 +199,11 @@ async function handler({ request }: { request: Request }) {
         const missingDocs = Array.isArray(app.missing_documents_snapshot)
           ? (app.missing_documents_snapshot as string[])
           : [];
-        const allMissing = [...new Set([...missing, ...missingDocs])];
-        dyn.missing_documents = allMissing.length > 0 ? allMissing.join(", ") : "wszystko skompletowane";
-        dyn.missing_documents_count = allMissing.length;
-        dyn.missing_step = allMissing[0] ?? "";
 
-        dyn.application_link =
-          app.return_link ??
-          (app.return_link_token ? `https://app.financeyou.pl/wniosek/${app.return_link_token}` : "");
-
-        // Status decyzji
-        const decision = (app.admin_decision ?? "").toLowerCase();
-        dyn.is_decision_available = decision === "approved" || decision === "rejected";
-        dyn.is_rejected = decision === "rejected" || app.status === "wniosek_odrzucony";
-        dyn.is_completed = app.status === "wyplacony" || app.status === "zamkniety";
-
-        // Wiadomość statusowa + akcja klienta
-        if (dyn.is_rejected) {
-          dyn.status_message = app.decision_reason ?? "Wniosek odrzucony.";
-          dyn.client_action = "Brak dalszych akcji";
-        } else if (dyn.is_completed) {
-          dyn.status_message = "Środki zostały wypłacone.";
-          dyn.client_action = "Brak dalszych akcji";
-        } else if (allMissing.length > 0) {
-          dyn.status_message = `Czekamy na: ${allMissing.join(", ")}.`;
-          dyn.client_action = "Uzupełnij brakujące dokumenty";
-        } else if (Number(app.completeness_percent ?? 0) < 100) {
-          dyn.status_message = "Wniosek wymaga dokończenia.";
-          dyn.client_action = "Dokończ wniosek online";
-        } else {
-          dyn.status_message = "Wniosek jest analizowany.";
-          dyn.client_action = "Czekaj na kontakt opiekuna";
-        }
-
-        // Nieruchomość
+        // Nieruchomość (potrzebne do wyliczenia kontekstowych braków)
         const { data: prop } = await supabaseAdmin
           .from("properties")
-          .select("property_type, city")
+          .select("property_type, city, land_register_number")
           .eq("loan_application_id", app.id)
           .order("updated_at", { ascending: false })
           .limit(1)
@@ -252,11 +220,50 @@ async function handler({ request }: { request: Request }) {
           .from("documents")
           .select("doc_type, file_name")
           .eq("loan_application_id", app.id);
-        if (docs && docs.length > 0) {
-          const names = docs.map((d: any) => d.doc_type ?? d.file_name).filter(Boolean);
+        const docList = docs ?? [];
+        if (docList.length > 0) {
+          const names = docList.map((d: any) => d.doc_type ?? d.file_name).filter(Boolean);
           dyn.uploaded_documents = names.join(", ");
           dyn.uploaded_documents_count = names.length;
         }
+
+        // ===== Kontekstowe missing_documents zależne od typu nieruchomości i kroku =====
+        const hasPhotos = docList.some((d: any) => {
+          const t = String(d.doc_type ?? d.file_name ?? "").toLowerCase();
+          return /zdjec|foto|photo|image|img/.test(t);
+        });
+        const hasFinancialDocs = docList.some((d: any) => {
+          const t = String(d.doc_type ?? "").toLowerCase();
+          return /zaswiadcz|wyciag|pit|umowa|dochod|dochód|bank/.test(t);
+        });
+        const hasKw = !!(prop?.land_register_number && String(prop.land_register_number).trim());
+        const ptype = String(prop?.property_type ?? "");
+
+        // Etykiety potrzebne dla agenta — czytelne, po polsku
+        const propPhotoLabel =
+          ptype === "dzialka" ? "zdjęcia działki"
+            : ptype === "lokal_uzytkowy" ? "zdjęcia lokalu"
+            : ptype === "dom" ? "zdjęcia domu"
+            : ptype === "mieszkanie" ? "zdjęcia mieszkania"
+            : "zdjęcia nieruchomości";
+
+        const contextual: string[] = [];
+        if (ptype) {
+          if (!hasPhotos) contextual.push(propPhotoLabel);
+          if (!hasKw) contextual.push("numer księgi wieczystej");
+        }
+        // Dokumenty finansowe wymagane od kroku weryfikacji (>=5) jeżeli klient
+        // nie wgrał jeszcze nic potwierdzającego dochód
+        const step = Number(app.current_form_step ?? 0);
+        if (step >= 5 && !hasFinancialDocs) {
+          contextual.push("dokument potwierdzający dochód (zaświadczenie, wyciąg lub PIT)");
+        }
+
+        // Złącz z brakami zapisanymi w bazie (priorytet: kontekstowe + DB)
+        const allMissing = [...new Set([...contextual, ...missing, ...missingDocs])];
+        dyn.missing_documents = allMissing.length > 0 ? allMissing.join(", ") : "wszystko skompletowane";
+        dyn.missing_documents_count = allMissing.length;
+        dyn.missing_step = allMissing[0] ?? "";
       }
     } else {
       // Fallback: lead z Meta po telefonie
