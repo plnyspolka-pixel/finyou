@@ -434,16 +434,8 @@ function KlientWniosek() {
     setSubmitting(true);
     try {
       await persistAll(5);
-      await supabase.from("loan_applications").update({
-        status: "wniosek_kompletny" as any,
-        completeness_percent: 100,
-        available_to_investors: true,
-      }).eq("id", loanId);
-      setLoanStatus("wniosek_kompletny");
-      setEditing(false);
-      setStep(1);
-      toast.success("Wniosek wysłany do analizy");
-      void navigate({ to: "/klient" });
+      toast.success("Dane zapisane — ostatni krok: opis dla inwestora");
+      void navigate({ to: "/wniosek-opis" });
     } finally {
       setSubmitting(false);
     }
