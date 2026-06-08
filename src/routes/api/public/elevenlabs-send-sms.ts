@@ -169,8 +169,10 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           );
         }
 
-        const { phone, message, application_url, amount, months, sec_type, next } = parsed.data;
+        const { phone, message } = parsed.data;
         let { email, first_name, last_name } = parsed.data;
+        void email;
+        void last_name;
 
         // Jeśli brak emaila — spróbuj znaleźć po numerze telefonu
         if (!email) {
@@ -182,43 +184,30 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           }
         }
 
-        // Tryb magic link — gdy mamy email
-        let url = application_url || DEFAULT_URL;
-        let magicLinkUsed = false;
-        if (email) {
-          const r = await generateAutoLoginLink({ email, first_name, last_name, phone, amount, months, sec_type, next });
-          if (!r.ok) {
-            return json({ ok: false, error: r.error }, 500);
-          }
-          url = r.url;
-          magicLinkUsed = true;
-        }
-
+        // SMS od Ani prowadzi po prostu na stronę główną financeyou.pl
+        const url = "https://financeyou.pl";
 
         const name = first_name ? ` ${first_name}` : "";
         const body =
           message ||
-          (magicLinkUsed
-            ? `Finance You: Cześć${name}! Tu Ania. Kliknij, aby kontynuować wniosek (zalogujemy Cię automatycznie): ${url}`
-            : `FinanceYou: Aby kontynuować wniosek o kredyt hipoteczny, wypełnij formularz: ${url}`);
+          `Finance You: Cześć${name}! Tu Ania. Wejdź na ${url} i dokończ wniosek.`;
 
         const result = await sendSmsInternal({
           phone,
           body,
-          source: magicLinkUsed ? "elevenlabs_agent_magic" : "elevenlabs_agent",
+          source: "elevenlabs_agent",
         });
 
         console.log("[elevenlabs-send-sms] sms result", {
           ok: result.ok,
           sid: result.sid,
-          magic: magicLinkUsed,
           error: result.error,
         });
 
         if (!result.ok) {
           return json({ ok: false, error: result.error ?? "SMS send failed" }, 502);
         }
-        return json({ ok: true, sid: result.sid ?? null, magic_link: magicLinkUsed });
+        return json({ ok: true, sid: result.sid ?? null, magic_link: false });
       },
     },
   },
