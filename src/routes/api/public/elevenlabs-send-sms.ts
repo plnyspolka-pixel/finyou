@@ -30,6 +30,31 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function normalizePhone(p: string): string {
+  return p.replace(/[^\d+]/g, "");
+}
+
+async function lookupProfileByPhone(
+  phone: string,
+): Promise<{ email: string; first_name?: string; last_name?: string } | null> {
+  const norm = normalizePhone(phone);
+  const variants = Array.from(
+    new Set([phone, norm, norm.replace(/^\+/, ""), "+" + norm.replace(/^\+/, "")]),
+  );
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("email, first_name, last_name, phone")
+    .in("phone", variants)
+    .limit(1);
+  const row = data?.[0];
+  if (!row?.email) return null;
+  return {
+    email: row.email,
+    first_name: row.first_name ?? undefined,
+    last_name: row.last_name ?? undefined,
+  };
+}
+
 async function generateAutoLoginLink(input: {
   email: string;
   first_name?: string;
@@ -63,43 +88,22 @@ async function generateAutoLoginLink(input: {
     }
     userId = created.user.id;
   }
-}
-
-function normalizePhone(p: string): string {
-  return p.replace(/[^\d+]/g, "");
-}
-
-async function lookupEmailByPhone(phone: string): Promise<{ email: string; first_name?: string; last_name?: string } | null> {
-  const norm = normalizePhone(phone);
-  const variants = Array.from(new Set([phone, norm, norm.replace(/^\+/, ""), "+" + norm.replace(/^\+/, "")]));
-  const { data } = await supabaseAdmin
-    .from("profiles")
-    .select("email, first_name, last_name, phone")
-    .in("phone", variants)
-    .limit(1);
-  const row = data?.[0];
-  if (!row?.email) return null;
-  return { email: row.email, first_name: row.first_name ?? undefined, last_name: row.last_name ?? undefined };
-}
-
-async function _unused() {
 
   // Wypełnij profil
-  await supabaseAdmin
-    .from("profiles")
-    .upsert(
-      {
-        user_id: userId,
-        email: emailNorm,
-        first_name: input.first_name ?? null,
-        last_name: input.last_name ?? null,
-        phone: input.phone,
-      },
-      { onConflict: "user_id" },
-    );
+  await supabaseAdmin.from("profiles").upsert(
+    {
+      user_id: userId,
+      email: emailNorm,
+      first_name: input.first_name ?? null,
+      last_name: input.last_name ?? null,
+      phone: input.phone,
+    },
+    { onConflict: "user_id" },
+  );
 
   // Zbuduj URL docelowy
-  const nextPath = input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/wniosek-start";
+  const nextPath =
+    input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/wniosek-start";
   const ret = new URL(nextPath, SITE_URL);
   if (input.amount) ret.searchParams.set("amount", String(input.amount));
   if (input.months) ret.searchParams.set("months", String(input.months));
@@ -117,6 +121,7 @@ async function _unused() {
   }
   return { ok: true, url: link.properties.action_link };
 }
+
 
 export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
   server: {
