@@ -112,8 +112,8 @@ async function bumpPreferredHourFromOpens(loanId: string) {
   for (const [h, c] of counts.entries()) {
     if (c > bestC) { bestC = c; bestH = h; }
   }
-  if (bestH < 9) bestH = 9;
-  if (bestH > 20) bestH = 20;
+  if (bestH < 7) bestH = 7;
+  if (bestH > 23) bestH = 23;
   await s.from("loan_applications").update({ preferred_email_hour: bestH }).eq("id", loanId);
 }
 
@@ -131,8 +131,8 @@ export async function runDailyReminderEmailsBatch(): Promise<{
   const hour = warsawHour(now);
   const weekday = warsawWeekday(now);
 
-  // Sztywne okno mailingu: 9:00–20:00 Warszawa, bez niedziel.
-  if (weekday === "Sun" || hour < 9 || hour > 20) {
+  // Sztywne okno mailingu: 7:00–23:59 Warszawa, bez niedziel.
+  if (weekday === "Sun" || hour < 7) {
     return { ok: false, skipped: weekday === "Sun" ? "sunday" : "outside_hours", hour, weekday };
   }
 
