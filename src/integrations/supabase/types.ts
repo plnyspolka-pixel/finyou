@@ -4654,6 +4654,9 @@ export type Database = {
       tracking_settings: {
         Row: {
           client_pixel_id: string | null
+          ga4_measurement_id: string | null
+          google_ads_conversion_id: string | null
+          gtm_container_id: string | null
           id: number
           investor_pixel_id: string | null
           meta_audience_converters_id: string | null
@@ -4667,6 +4670,9 @@ export type Database = {
         }
         Insert: {
           client_pixel_id?: string | null
+          ga4_measurement_id?: string | null
+          google_ads_conversion_id?: string | null
+          gtm_container_id?: string | null
           id?: number
           investor_pixel_id?: string | null
           meta_audience_converters_id?: string | null
@@ -4680,6 +4686,9 @@ export type Database = {
         }
         Update: {
           client_pixel_id?: string | null
+          ga4_measurement_id?: string | null
+          google_ads_conversion_id?: string | null
+          gtm_container_id?: string | null
           id?: number
           investor_pixel_id?: string | null
           meta_audience_converters_id?: string | null
