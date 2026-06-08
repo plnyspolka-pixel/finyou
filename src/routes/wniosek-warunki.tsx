@@ -350,7 +350,7 @@ function WniosekWarunkiPage() {
                   <div className="mt-1 text-lg font-bold text-white">{formatPLN(totalPay)}</div>
                 </div>
                 <div className="rounded-xl border border-white/20 bg-white/5 p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-white/75">Wynagrodzenie inwestora</div>
+                  <div className="text-[11px] uppercase tracking-wider text-white/75">Całkowity koszt pożyczki</div>
                   <div className="mt-1 text-lg font-bold text-white">{formatPLN(investorComp)}</div>
                 </div>
                 {exceedsMax && (
