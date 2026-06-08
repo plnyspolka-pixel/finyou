@@ -23,6 +23,10 @@ type Settings = {
   ga4_measurement_id: string | null;
   gtm_container_id: string | null;
   google_ads_conversion_id: string | null;
+  google_ads_label_registration: string | null;
+  google_ads_label_lead: string | null;
+  google_ads_label_submit: string | null;
+  google_ads_label_subscribe: string | null;
 };
 
 function PixelePage() {
@@ -35,6 +39,8 @@ function PixelePage() {
         client_pixel_id: "", investor_pixel_id: "",
         track_lead: true, track_registration: true, track_subscribe: true, track_contact: true,
         ga4_measurement_id: "", gtm_container_id: "", google_ads_conversion_id: "",
+        google_ads_label_registration: "", google_ads_label_lead: "",
+        google_ads_label_submit: "", google_ads_label_subscribe: "",
       });
     });
   }, []);
@@ -52,11 +58,16 @@ function PixelePage() {
       ga4_measurement_id: s.ga4_measurement_id?.trim() || null,
       gtm_container_id: s.gtm_container_id?.trim() || null,
       google_ads_conversion_id: s.google_ads_conversion_id?.trim() || null,
+      google_ads_label_registration: s.google_ads_label_registration?.trim() || null,
+      google_ads_label_lead: s.google_ads_label_lead?.trim() || null,
+      google_ads_label_submit: s.google_ads_label_submit?.trim() || null,
+      google_ads_label_subscribe: s.google_ads_label_subscribe?.trim() || null,
     }).eq("id", 1);
     setSaving(false);
     if (error) toast.error(error.message);
     else toast.success("Zapisano. Skrypty załadują się przy następnym przeładowaniu strony.");
   };
+
 
   const testFire = (event: string) => {
     const w = window as any;
