@@ -315,8 +315,9 @@ function WniosekStartPage() {
               </div>
               <ConsentCheckboxes docs={consentDocs} accepted={accepted} onChange={setAccepted} />
               <Button type="submit" className="w-full" disabled={busy}>
-                {busy ? "Tworzenie konta…" : "Podaj dane i oblicz swoją ratę"}
+                {busy ? "Tworzenie konta…" : "Podaj dane i odbierz SMS z harmonogramem spłat"}
               </Button>
+
               <p className="text-center text-sm text-muted-foreground">
                 Masz już konto?{" "}
                 <button type="button" className="font-medium text-accent hover:underline" onClick={() => setMode("signin")}>
