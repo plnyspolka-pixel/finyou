@@ -166,6 +166,23 @@ function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logowanie…" : "Zaloguj się"}
             </Button>
+            {confirmationEmail ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="font-medium">Adres e-mail nie jest jeszcze potwierdzony.</p>
+                <p className="mt-1 text-amber-800">
+                  Wyślij ponownie link na {confirmationEmail} i po kliknięciu wróć do logowania.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 w-full border-amber-300 bg-white text-amber-950 hover:bg-amber-100"
+                  disabled={resendingConfirmation}
+                  onClick={resendConfirmation}
+                >
+                  {resendingConfirmation ? "Wysyłanie…" : "Wyślij ponownie potwierdzenie"}
+                </Button>
+              </div>
+            ) : null}
             <p className="text-center text-sm text-muted-foreground">
               Nie masz konta?{" "}
               <Link to="/rejestracja" className="font-medium text-accent hover:underline">
