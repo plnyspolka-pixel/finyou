@@ -189,7 +189,7 @@ export async function runDailyReminderEmailsBatch(): Promise<{
   const results: SendReminderResult[] = [];
   let sent = 0, errors = 0;
 
-  for (const loan of candidates) {
+  for (const loan of candidates as any[]) {
     if (alreadyToday.has(loan.id)) {
       results.push({ ok: false, skipped: "already_sent_today" });
       continue;
