@@ -109,8 +109,8 @@ export async function placeReminderCall(
 ): Promise<{ ok: boolean; error?: string; skipped?: string; conversationId?: string }> {
   const full = await loadLoanLeadData(loanApplicationId);
   if (!full) return { ok: false, error: "Wniosek nie znaleziony" };
-  if (full.progress.is_complete || full.progress.missing_documents.length === 0) {
-    // nic do przypominania
+  if (full.progress.is_complete) {
+    // nic do przypominania — wniosek kompletny
     return { ok: true, skipped: "complete" };
   }
   // Klient poprosił o usunięcie / nie dzwonić — zatrzymaj.
