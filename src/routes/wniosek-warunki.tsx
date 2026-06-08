@@ -52,22 +52,37 @@ function monthlyAnnuity(amount: number, monthlyRatePct: number, months: number):
 
 type Row = { i: number; payment: number; interest: number; principal: number; balance: number };
 
-function buildSchedule(amount: number, monthlyRatePct: number, months: number): Row[] {
+function buildSchedule(
+  amount: number,
+  monthlyRatePct: number,
+  months: number,
+  maxPayment?: number,
+): Row[] {
   const rows: Row[] = [];
   if (!amount || !months) return rows;
   const r = monthlyRatePct / 100;
   const ann = monthlyAnnuity(amount, monthlyRatePct, months);
+  const cap = maxPayment && maxPayment > 0 ? Math.min(ann, maxPayment) : ann;
   let balance = amount;
   for (let i = 1; i <= months; i++) {
     const interest = balance * r;
-    let principal = ann - interest;
-    if (i === months) principal = balance;
-    const payment = interest + principal;
+    let principal: number;
+    let payment: number;
+    if (i === months) {
+      // ostatnia rata: spłata pozostałego kapitału + odsetki (rata balonowa)
+      principal = balance;
+      payment = interest + principal;
+    } else {
+      payment = cap;
+      principal = Math.max(0, payment - interest);
+      if (principal > balance) principal = balance;
+    }
     balance = Math.max(0, balance - principal);
     rows.push({ i, payment, interest, principal, balance });
   }
   return rows;
 }
+
 
 function WniosekWarunkiPage() {
   const navigate = useNavigate();
@@ -105,7 +120,11 @@ function WniosekWarunkiPage() {
   const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
   const exceedsMax = balloon > 0;
 
-  const schedule = useMemo(() => buildSchedule(amount, monthlyRate, months), [amount, monthlyRate, months]);
+  const schedule = useMemo(
+    () => buildSchedule(amount, monthlyRate, months, maxPayment),
+    [amount, monthlyRate, months, maxPayment],
+  );
+
 
   const goNext = () => {
     try {
