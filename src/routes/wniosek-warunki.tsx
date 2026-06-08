@@ -406,7 +406,7 @@ function WniosekWarunkiPage() {
                 {exceedsMax && (
                   <div className="col-span-2 rounded-xl border border-white/20 bg-white/5 p-4">
                     <div className="text-[11px] uppercase tracking-wider text-white/75">Ostatnia rata (z nadwyżką balonową)</div>
-                    <div className="mt-1 text-lg font-bold text-white">{formatPLN(rata + balloon)}</div>
+                    <div className="mt-1 text-lg font-bold text-white">{formatPLN(lastPayment)}</div>
                   </div>
                 )}
               </div>
