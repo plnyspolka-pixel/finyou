@@ -17,6 +17,7 @@ import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
@@ -136,6 +137,11 @@ const KlientRoute = KlientRouteImport.update({
 const InwestorRoute = InwestorRouteImport.update({
   id: '/inwestor',
   path: '/inwestor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -554,6 +560,7 @@ const ApiPublicHooksDispatchCampaignsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -643,6 +650,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-start': typeof WniosekStartRoute
@@ -732,6 +740,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/auth': typeof AuthRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -824,6 +833,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/auth'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -913,6 +923,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/logowanie'
     | '/rejestracja'
     | '/wniosek-start'
@@ -1001,6 +1012,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/auth'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1092,6 +1104,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  AuthRoute: typeof AuthRoute
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -1178,6 +1191,13 @@ declare module '@tanstack/react-router' {
       path: '/inwestor'
       fullPath: '/inwestor'
       preLoaderRoute: typeof InwestorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -1909,6 +1929,7 @@ const KlientRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  AuthRoute: AuthRoute,
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
