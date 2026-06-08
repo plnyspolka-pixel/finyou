@@ -180,7 +180,7 @@ function WniosekWarunkiPage() {
           <li className="text-muted-foreground">→</li>
           <li className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-muted-foreground">
             <span className="grid h-5 w-5 place-items-center rounded-full bg-border text-[10px]">4</span>
-            Nieruchomość (KW + zdjęcia)
+            Zabezpieczenie
           </li>
         </ol>
 
