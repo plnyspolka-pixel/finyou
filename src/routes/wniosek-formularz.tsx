@@ -26,7 +26,7 @@ import { loanStatusLabels } from "@/lib/labels";
 import { ArrowLeft, ArrowRight, Send, Loader2, Upload, AlertTriangle, Calculator, CheckCircle2, Pencil, Sparkles, FileText, Camera } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/klient/")({
+export const Route = createFileRoute("/wniosek-formularz")({
   component: KlientWniosek,
 });
 
