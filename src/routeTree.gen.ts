@@ -107,6 +107,7 @@ import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/a
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
+import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 
 const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
   id: '/zapomniane-haslo',
@@ -615,6 +616,11 @@ const ApiPublicHooksDispatchCampaignsRoute =
     path: '/api/public/hooks/dispatch-campaigns',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
+  id: '/api/public/email/open',
+  path: '/api/public/email/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -703,6 +709,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
@@ -800,6 +807,7 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
+  '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
@@ -901,6 +909,7 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
+  '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
@@ -1003,6 +1012,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
+    | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
@@ -1100,6 +1110,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski'
+    | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
@@ -1200,6 +1211,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/admin/wnioski/'
+    | '/api/public/email/open'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
@@ -1248,6 +1260,7 @@ export interface RootRouteChildren {
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
+  ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
@@ -1950,6 +1963,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDispatchCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/open': {
+      id: '/api/public/email/open'
+      path: '/api/public/email/open'
+      fullPath: '/api/public/email/open'
+      preLoaderRoute: typeof ApiPublicEmailOpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -2140,6 +2160,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
+  ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,
