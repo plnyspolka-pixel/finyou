@@ -234,6 +234,10 @@ function WniosekStartPage() {
       await supabase.auth.signInWithPassword({ email, password });
     }
     toast.success("Konto utworzone");
+    try {
+      const { trackEvent } = await import("@/lib/fb-pixel");
+      await trackEvent("StartApplication", { content_name: "Start wniosku" }, { email, phone, firstName, lastName });
+    } catch {}
     navigate({ to: getNextPath() });
   };
 
