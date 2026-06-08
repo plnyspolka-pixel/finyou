@@ -51,7 +51,7 @@ function KlientWniosekSummary() {
         <CardHeader><CardTitle>Nie masz jeszcze wniosku</CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">Złóż wniosek, żeby zobaczyć tu jego podsumowanie.</p>
-          <Button onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>Złóż wniosek</Button>
+          <Button variant="cta" size="cta" onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>Złóż wniosek</Button>
         </CardContent>
       </Card>
     );
