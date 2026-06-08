@@ -4892,6 +4892,14 @@ export type Database = {
         | "do_umowy"
         | "zamkniety"
         | "archiwalny"
+        | "oczekuje_podpisania_umowy"
+        | "umowa_podpisana"
+        | "oczekuje_ustanowienia_zabezpieczen"
+        | "zabezpieczenia_ustanowione"
+        | "dokumenty_dostarczone_do_inwestora"
+        | "oczekuje_wyplaty"
+        | "wyplacony"
+        | "wniosek_odrzucony"
       offer_status:
         | "szkic"
         | "zlozona"
@@ -5090,6 +5098,14 @@ export const Constants = {
         "do_umowy",
         "zamkniety",
         "archiwalny",
+        "oczekuje_podpisania_umowy",
+        "umowa_podpisana",
+        "oczekuje_ustanowienia_zabezpieczen",
+        "zabezpieczenia_ustanowione",
+        "dokumenty_dostarczone_do_inwestora",
+        "oczekuje_wyplaty",
+        "wyplacony",
+        "wniosek_odrzucony",
       ],
       offer_status: [
         "szkic",
