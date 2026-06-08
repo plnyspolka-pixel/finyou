@@ -137,7 +137,7 @@ function WniosekWarunkiPage() {
     } catch {
       /* noop */
     }
-    void navigate({ to: "/klient" });
+    void navigate({ to: "/wniosek-formularz" });
   };
 
 

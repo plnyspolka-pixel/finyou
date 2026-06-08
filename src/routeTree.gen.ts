@@ -21,6 +21,7 @@ import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -158,6 +159,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const KlientIndexRoute = KlientIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => KlientRoute,
 } as any)
 const InwestorIndexRoute = InwestorIndexRouteImport.update({
   id: '/',
@@ -620,6 +626,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
+  '/klient/': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -651,7 +658,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/rejestracja': typeof RejestracjaRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -709,6 +715,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
+  '/klient': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -801,6 +808,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
+  '/klient/': typeof KlientIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -894,6 +902,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
+    | '/klient/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -925,7 +934,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/klient'
     | '/logowanie'
     | '/rejestracja'
     | '/wniosek-formularz'
@@ -983,6 +991,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/blog'
     | '/inwestor'
+    | '/klient'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1074,6 +1083,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
+    | '/klient/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1223,6 +1233,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/klient/': {
+      id: '/klient/'
+      path: '/'
+      fullPath: '/klient/'
+      preLoaderRoute: typeof KlientIndexRouteImport
+      parentRoute: typeof KlientRoute
     }
     '/inwestor/': {
       id: '/inwestor/'
@@ -1911,6 +1928,7 @@ interface KlientRouteChildren {
   KlientProfilRoute: typeof KlientProfilRoute
   KlientStatusRoute: typeof KlientStatusRoute
   KlientWiadomosciRoute: typeof KlientWiadomosciRoute
+  KlientIndexRoute: typeof KlientIndexRoute
   KlientUmowaOfferIdRoute: typeof KlientUmowaOfferIdRoute
 }
 
@@ -1921,6 +1939,7 @@ const KlientRouteChildren: KlientRouteChildren = {
   KlientProfilRoute: KlientProfilRoute,
   KlientStatusRoute: KlientStatusRoute,
   KlientWiadomosciRoute: KlientWiadomosciRoute,
+  KlientIndexRoute: KlientIndexRoute,
   KlientUmowaOfferIdRoute: KlientUmowaOfferIdRoute,
 }
 
