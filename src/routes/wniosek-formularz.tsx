@@ -37,6 +37,7 @@ type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
 
 function KlientWniosek() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
