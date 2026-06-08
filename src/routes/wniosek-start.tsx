@@ -67,6 +67,7 @@ function WniosekStartPage() {
   const [busy, setBusy] = useState(false);
   const [consentDocs, setConsentDocs] = useState<Record<ConsentKind, ConsentDoc | null>>({ privacy: null, marketing: null, terms: null });
   const [accepted, setAccepted] = useState<Record<ConsentKind, boolean>>({ privacy: false, marketing: false, terms: false });
+  const [contactConsent, setContactConsent] = useState(false);
 
   // Stan "user jest zalogowany przez OAuth, ale brak numeru telefonu"
   const [needsPhone, setNeedsPhone] = useState<null | { userId: string }>(null);

@@ -18,6 +18,8 @@ import { Route as WniosekOpisRouteImport } from './routes/wniosek-opis'
 import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
+import { Route as RegulaminRouteImport } from './routes/regulamin'
+import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
@@ -148,6 +150,16 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
   path: '/rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegulaminRoute = RegulaminRouteImport.update({
+  id: '/regulamin',
+  path: '/regulamin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
+  id: '/polityka-prywatnosci',
+  path: '/polityka-prywatnosci',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NoweHasloRoute = NoweHasloRouteImport.update({
@@ -605,6 +617,8 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -699,6 +713,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -797,6 +813,8 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-formularz': typeof WniosekFormularzRoute
@@ -896,6 +914,8 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/polityka-prywatnosci'
+    | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -990,6 +1010,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/polityka-prywatnosci'
+    | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -1087,6 +1109,8 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/polityka-prywatnosci'
+    | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-formularz'
@@ -1185,6 +1209,8 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   NoweHasloRoute: typeof NoweHasloRoute
+  PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
+  RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WniosekFormularzRoute: typeof WniosekFormularzRoute
@@ -1285,6 +1311,20 @@ declare module '@tanstack/react-router' {
       path: '/rejestracja'
       fullPath: '/rejestracja'
       preLoaderRoute: typeof RejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regulamin': {
+      id: '/regulamin'
+      path: '/regulamin'
+      fullPath: '/regulamin'
+      preLoaderRoute: typeof RegulaminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/polityka-prywatnosci': {
+      id: '/polityka-prywatnosci'
+      path: '/polityka-prywatnosci'
+      fullPath: '/polityka-prywatnosci'
+      preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nowe-haslo': {
@@ -2053,6 +2093,8 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   NoweHasloRoute: NoweHasloRoute,
+  PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
+  RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WniosekFormularzRoute: WniosekFormularzRoute,
