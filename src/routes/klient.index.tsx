@@ -30,7 +30,7 @@ export const Route = createFileRoute("/klient/")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Dane kontaktowe", "Nieruchomość", "Dokumenty", "Podsumowanie"];
+const STEPS = ["Kalkulator", "Dane kontaktowe", "Zabezpieczenie", "Dokumenty", "Podsumowanie"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
@@ -55,7 +55,7 @@ function KlientWniosek() {
   const [annualRate, setAnnualRate] = useState<number>(20);
   // slider wynagrodzenia: 15-60%
   const [months, setMonths] = useState<number>(24);
-  const [maxPayment, setMaxPayment] = useState<number>(5000);
+  const [maxPayment, setMaxPayment] = useState<number>(1500);
   const [secType, setSecType] = useState<SecurityType | null>(null);
 
   // Działalność
@@ -600,21 +600,64 @@ function KlientWniosek() {
       )}
 
       {step === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Gdzie leży ta nieruchomość?</CardTitle>
-            <CardDescription>Wybrany typ: <b>{secType ? securityTypeLabels[secType] : "—"}</b>{" "}
-              <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setStep(1)}>Zmień rodzaj zabezpieczenia</Button>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Czy znasz numer księgi wieczystej nieruchomości?</Label>
-              <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)}>
-                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="znam" /><span>Tak, znam numer księgi wieczystej</span></label>
-                <label className="flex items-center gap-2 cursor-pointer rounded border p-3"><RadioGroupItem value="nie_znam" /><span>Nie znam numeru księgi wieczystej</span></label>
-              </RadioGroup>
+        <div className="space-y-5">
+          {/* Hero zabezpieczenia */}
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.15_0.09_265)] p-6 text-primary-foreground shadow-2xl md:p-8">
+            <div aria-hidden className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(ellipse_at_top_left,oklch(0.65_0.13_235/0.5),transparent_60%),radial-gradient(ellipse_at_bottom_right,oklch(0.78_0.18_85/0.35),transparent_60%)]" />
+            <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white backdrop-blur">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  Krok 3 z 5 · Zabezpieczenie
+                </div>
+                <h2 className="mt-3 text-2xl font-extrabold tracking-tight md:text-3xl">
+                  Numer księgi wieczystej Twojej nieruchomości
+                </h2>
+                <p className="mt-2 text-sm text-white/85 md:text-base">
+                  To kluczowy dokument — pozwala inwestorowi błyskawicznie zweryfikować nieruchomość i wydać decyzję do 24 h.
+                  Jeśli nie znasz numeru, pomożemy Ci go znaleźć w mObywatelu lub odczytamy go ze zdjęcia dokumentu.
+                </p>
+              </div>
+              <div className="hidden h-24 w-24 shrink-0 place-items-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur md:grid">
+                <FileText className="h-12 w-12 text-accent" />
+              </div>
             </div>
+            <div className="relative mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/90 backdrop-blur">
+              <span className="text-white/70">Wybrany typ zabezpieczenia:</span>
+              <b className="text-white">{secType ? securityTypeLabels[secType] : "—"}</b>
+              <Button variant="link" size="sm" className="h-auto p-0 text-xs text-accent hover:text-accent/80" onClick={() => setStep(1)}>
+                Zmień
+              </Button>
+            </div>
+          </div>
+
+          <Card>
+            <CardContent className="space-y-5 pt-6">
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Czy znasz numer księgi wieczystej?</Label>
+                <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)} className="grid gap-3 md:grid-cols-2">
+                  <label className={`group relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition hover:border-accent/60 hover:bg-accent/5 ${kwStatus === "znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
+                    <RadioGroupItem value="znam" className="mt-0.5" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <CheckCircle2 className="h-4 w-4 text-accent" />
+                        Tak, znam numer
+                      </div>
+                      <p className="text-xs text-muted-foreground">Wpiszesz go ręcznie. Format np. <span className="font-mono">LU1I/00012345/6</span>.</p>
+                    </div>
+                  </label>
+                  <label className={`group relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition hover:border-accent/60 hover:bg-accent/5 ${kwStatus === "nie_znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
+                    <RadioGroupItem value="nie_znam" className="mt-0.5" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <Sparkles className="h-4 w-4 text-accent" />
+                        Nie znam — pomóżcie mi
+                      </div>
+                      <p className="text-xs text-muted-foreground">Sprawdzimy mObywatel albo odczytamy ze zdjęcia dokumentu.</p>
+                    </div>
+                  </label>
+                </RadioGroup>
+              </div>
 
             {kwStatus === "znam" && (
               <div className="space-y-3">
@@ -781,6 +824,7 @@ function KlientWniosek() {
             )}
           </CardContent>
         </Card>
+        </div>
       )}
 
       {step === 4 && secType && (

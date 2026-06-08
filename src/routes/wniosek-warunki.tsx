@@ -75,7 +75,7 @@ function WniosekWarunkiPage() {
 
   const [step1, setStep1] = useState<Step1 | null>(null);
   const [monthlyRate, setMonthlyRate] = useState(2.0);
-  const [maxPayment, setMaxPayment] = useState(8000);
+  const [maxPayment, setMaxPayment] = useState(1500);
 
   // Restore step 1 z sessionStorage
   useEffect(() => {
@@ -180,7 +180,7 @@ function WniosekWarunkiPage() {
           <li className="text-muted-foreground">→</li>
           <li className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-muted-foreground">
             <span className="grid h-5 w-5 place-items-center rounded-full bg-border text-[10px]">4</span>
-            Nieruchomość (KW + zdjęcia)
+            Zabezpieczenie
           </li>
         </ol>
 
@@ -253,15 +253,15 @@ function WniosekWarunkiPage() {
                 </div>
               </div>
 
-              {/* Wynagrodzenie miesięczne inwestora */}
+              {/* Twoja propozycja oprocentowania */}
               <div>
                 <div className="flex items-baseline justify-between">
                   <div>
                     <Label className="text-sm font-semibold text-foreground">
-                      Miesięczne wynagrodzenie inwestora
+                      Twoja propozycja: oprocentowanie miesięczne
                     </Label>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Zaproponuj, ile możesz miesięcznie pokryć — ustalimy z Tobą indywidualne warunki.
+                      Im wyższe oprocentowanie zaproponujesz, tym większa szansa, że inwestor szybciej przyjmie wniosek.
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
@@ -350,7 +350,7 @@ function WniosekWarunkiPage() {
                   <div className="mt-1 text-lg font-bold text-white">{formatPLN(totalPay)}</div>
                 </div>
                 <div className="rounded-xl border border-white/20 bg-white/5 p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-white/75">Wynagrodzenie inwestora</div>
+                  <div className="text-[11px] uppercase tracking-wider text-white/75">Całkowity koszt pożyczki</div>
                   <div className="mt-1 text-lg font-bold text-white">{formatPLN(investorComp)}</div>
                 </div>
                 {exceedsMax && (
@@ -376,7 +376,7 @@ function WniosekWarunkiPage() {
                 onClick={goNext}
                 className="mt-6 w-full bg-accent text-accent-foreground hover:bg-accent/90"
               >
-                Dalej — nieruchomość i KW
+                Dalej — zabezpieczenie
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
