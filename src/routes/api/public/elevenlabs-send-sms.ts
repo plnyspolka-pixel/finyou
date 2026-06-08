@@ -169,8 +169,10 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           );
         }
 
-        const { phone, message, application_url, amount, months, sec_type, next } = parsed.data;
+        const { phone, message } = parsed.data;
         let { email, first_name, last_name } = parsed.data;
+        void email;
+        void last_name;
 
         // Jeśli brak emaila — spróbuj znaleźć po numerze telefonu
         if (!email) {
