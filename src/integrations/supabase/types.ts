@@ -3579,6 +3579,7 @@ export type Database = {
           reminder_email_count: number
           reminder_email_first_sent_at: string | null
           reminder_email_unsubscribed: boolean
+          reminder_email_unsubscribed_at: string | null
           reminder_paused: boolean
           return_link: string | null
           return_link_token: string | null
@@ -3645,6 +3646,7 @@ export type Database = {
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
           reminder_email_unsubscribed?: boolean
+          reminder_email_unsubscribed_at?: string | null
           reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
@@ -3711,6 +3713,7 @@ export type Database = {
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
           reminder_email_unsubscribed?: boolean
+          reminder_email_unsubscribed_at?: string | null
           reminder_paused?: boolean
           return_link?: string | null
           return_link_token?: string | null
@@ -4975,6 +4978,18 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_email_variant_clicked: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
+      increment_email_variant_opened: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
+      increment_email_variant_sent: {
+        Args: { p_variant_id: string }
+        Returns: undefined
       }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
       match_text_agent_knowledge: {
