@@ -23,6 +23,10 @@ type Settings = {
   ga4_measurement_id: string | null;
   gtm_container_id: string | null;
   google_ads_conversion_id: string | null;
+  google_ads_label_registration: string | null;
+  google_ads_label_lead: string | null;
+  google_ads_label_submit: string | null;
+  google_ads_label_subscribe: string | null;
 };
 
 function PixelePage() {
@@ -35,6 +39,8 @@ function PixelePage() {
         client_pixel_id: "", investor_pixel_id: "",
         track_lead: true, track_registration: true, track_subscribe: true, track_contact: true,
         ga4_measurement_id: "", gtm_container_id: "", google_ads_conversion_id: "",
+        google_ads_label_registration: "", google_ads_label_lead: "",
+        google_ads_label_submit: "", google_ads_label_subscribe: "",
       });
     });
   }, []);
@@ -52,11 +58,16 @@ function PixelePage() {
       ga4_measurement_id: s.ga4_measurement_id?.trim() || null,
       gtm_container_id: s.gtm_container_id?.trim() || null,
       google_ads_conversion_id: s.google_ads_conversion_id?.trim() || null,
+      google_ads_label_registration: s.google_ads_label_registration?.trim() || null,
+      google_ads_label_lead: s.google_ads_label_lead?.trim() || null,
+      google_ads_label_submit: s.google_ads_label_submit?.trim() || null,
+      google_ads_label_subscribe: s.google_ads_label_subscribe?.trim() || null,
     }).eq("id", 1);
     setSaving(false);
     if (error) toast.error(error.message);
     else toast.success("Zapisano. Skrypty załadują się przy następnym przeładowaniu strony.");
   };
+
 
   const testFire = (event: string) => {
     const w = window as any;
@@ -134,7 +145,31 @@ function PixelePage() {
             <Label>Google Ads — Conversion ID (opcjonalne)</Label>
             <Input value={s.google_ads_conversion_id ?? ""} onChange={(e) => setS({ ...s, google_ads_conversion_id: e.target.value })} placeholder="np. AW-123456789" />
           </div>
+          <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Etykiety konwersji (tylko sam ciąg po ukośniku z tagu, np. <code>foxcCOqrrLscEOidscUB</code> z <code>AW-413945576/foxcCOqrrLscEOidscUB</code>). Wystrzelają się automatycznie razem ze zdarzeniami Meta Pixel.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Rejestracja klienta</Label>
+                <Input value={s.google_ads_label_registration ?? ""} onChange={(e) => setS({ ...s, google_ads_label_registration: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lead pożyczkowy</Label>
+                <Input value={s.google_ads_label_lead ?? ""} onChange={(e) => setS({ ...s, google_ads_label_lead: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Wniosek wysłany</Label>
+                <Input value={s.google_ads_label_submit ?? ""} onChange={(e) => setS({ ...s, google_ads_label_submit: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Subskrypcja inwestora</Label>
+                <Input value={s.google_ads_label_subscribe ?? ""} onChange={(e) => setS({ ...s, google_ads_label_subscribe: e.target.value })} placeholder="etykieta konwersji" />
+              </div>
+            </div>
+          </div>
         </CardContent>
+
       </Card>
 
       <div className="flex gap-2">

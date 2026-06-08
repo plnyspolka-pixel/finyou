@@ -102,6 +102,33 @@ export async function trackEvent(
   } catch {
     /* ignore */
   }
+  // Mirror to Google Ads conversion (if AW id + label configured for this event)
+  try {
+    const w = window as any;
+    const adsId: string | null | undefined = w.__gAdsConversionId;
+    const labels = w.__gAdsLabels || {};
+    const adsMap: Record<string, string | undefined> = {
+      CompleteRegistration: labels.registration,
+      StartApplication: labels.registration,
+      Lead: labels.lead,
+      SubmitApplication: labels.submit,
+      Subscribe: labels.subscribe,
+      Purchase: labels.subscribe,
+    };
+    const label = adsMap[event];
+    if (adsId && label && w.gtag) {
+      const payload: Record<string, unknown> = {
+        send_to: `${adsId}/${label}`,
+        transaction_id: eventId,
+      };
+      if (typeof params?.value === "number") payload.value = params.value;
+      if (typeof params?.currency === "string") payload.currency = params.currency;
+      w.gtag("event", "conversion", payload);
+    }
+  } catch {
+    /* ignore */
+  }
+
   try {
     const area: "client" | "investor" = window.location.pathname.startsWith("/inwestor")
       ? "investor"

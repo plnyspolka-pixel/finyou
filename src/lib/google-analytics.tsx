@@ -10,6 +10,13 @@ declare global {
     __ga4Loaded?: Record<string, boolean>;
     __gtmLoaded?: Record<string, boolean>;
     __gAdsLoaded?: Record<string, boolean>;
+    __gAdsConversionId?: string | null;
+    __gAdsLabels?: {
+      registration?: string | null;
+      lead?: string | null;
+      submit?: string | null;
+      subscribe?: string | null;
+    };
   }
 }
 
@@ -17,16 +24,21 @@ type Settings = {
   ga4_measurement_id: string | null;
   gtm_container_id: string | null;
   google_ads_conversion_id: string | null;
+  google_ads_label_registration: string | null;
+  google_ads_label_lead: string | null;
+  google_ads_label_submit: string | null;
+  google_ads_label_subscribe: string | null;
 };
 
 async function loadGoogleSettings(): Promise<Settings | null> {
   const { data } = await supabase
     .from("tracking_settings")
-    .select("ga4_measurement_id, gtm_container_id, google_ads_conversion_id")
+    .select("ga4_measurement_id, gtm_container_id, google_ads_conversion_id, google_ads_label_registration, google_ads_label_lead, google_ads_label_submit, google_ads_label_subscribe")
     .eq("id", 1)
     .maybeSingle();
   return (data as Settings) ?? null;
 }
+
 
 function ensureGtag() {
   if (typeof window === "undefined") return;
@@ -98,7 +110,17 @@ export function GoogleAnalytics() {
     if (settings.ga4_measurement_id) loadGa4(settings.ga4_measurement_id);
     if (settings.gtm_container_id) loadGtm(settings.gtm_container_id);
     if (settings.google_ads_conversion_id) loadGoogleAds(settings.google_ads_conversion_id);
+    if (typeof window !== "undefined") {
+      window.__gAdsConversionId = settings.google_ads_conversion_id;
+      window.__gAdsLabels = {
+        registration: settings.google_ads_label_registration,
+        lead: settings.google_ads_label_lead,
+        submit: settings.google_ads_label_submit,
+        subscribe: settings.google_ads_label_subscribe,
+      };
+    }
   }, [settings]);
+
 
   useEffect(() => {
     if (!settings?.ga4_measurement_id || typeof window === "undefined" || !window.gtag) return;
