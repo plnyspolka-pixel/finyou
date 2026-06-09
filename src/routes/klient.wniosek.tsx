@@ -37,7 +37,7 @@ function KlientWniosek() {
   const [loading, setLoading] = useState(true);
   const [loan, setLoan] = useState<any | null>(null);
   const [prop, setProp] = useState<any | null>(null);
-  const [docsCount, setDocsCount] = useState(0);
+  const [, setDocsCount] = useState(0);
   const [client, setClient] = useState<any | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
