@@ -116,14 +116,15 @@ function KlientWniosek() {
     }
 
     const loanPayload = {
-      client_id: clientId,
+      client_id: clientId!,
       loan_amount: draft.amount,
       preferred_period_months: draft.months,
       annual_investor_rate: draft.annualRate,
       max_monthly_payment: draft.maxPayment,
-      status: "do_analizy",
+      status: "do_analizy" as const,
       source: loan?.source ?? "panel_klienta",
     };
+
     let loanId = loan?.id as string | undefined;
     if (loanId) {
       const { error: ue } = await supabase.from("loan_applications").update(loanPayload).eq("id", loanId);
