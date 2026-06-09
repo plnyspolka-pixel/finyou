@@ -563,9 +563,11 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           </div>
         </section>
 
+        {!embedded && (
         <div className="lg:sticky lg:top-6 lg:h-fit">
           <SummaryPanel draft={draft} figures={figures} photos={photos} />
         </div>
+        )}
       </div>
     </Shell>
   );
