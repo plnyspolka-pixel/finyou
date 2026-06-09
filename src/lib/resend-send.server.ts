@@ -1,8 +1,8 @@
 // Wysyłka maili wychodzących przez Resend (przez Lovable connector gateway).
 const GATEWAY = "https://connector-gateway.lovable.dev/resend";
 
-const FROM_DOMAIN = process.env.RESEND_FROM_DOMAIN ?? "app.financeyou.pl";
-const FROM_ADDR = process.env.RESEND_FROM_ADDRESS ?? `kontakt@${FROM_DOMAIN}`;
+const FROM_DOMAIN = process.env.RESEND_FROM_DOMAIN ?? "financeyou.pl";
+const FROM_ADDR = process.env.RESEND_FROM_ADDRESS ?? `kontakt@financeyou.pl`;
 
 export async function sendResendEmail(opts: {
   to: string;
