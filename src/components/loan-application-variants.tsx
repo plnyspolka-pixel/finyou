@@ -369,7 +369,6 @@ export function LinearLoanApplication() {
 
   return (
     <VariantShell
-      variant="one"
       title="Krok po kroku, bez gubienia miejsca"
       subtitle="Jedna decyzja na ekran. Wstecz i Dalej zmieniają tylko aktualny krok — bez przeskoków między trasami."
     >
