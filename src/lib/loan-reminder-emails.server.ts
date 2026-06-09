@@ -268,11 +268,14 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
     const subject = renderTemplate(variant.subject, vars);
     const bodyInner = renderTemplate(variant.body_html, vars);
     const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#111">
-<a href="https://financeyou.pl" style="display:block;text-align:center;text-decoration:none"><img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style="display:block;margin:0 auto 16px;border:0" /></a>
+<a href="https://financeyou.pl" style="display:block;text-align:center;text-decoration:none"><img src="https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png" width="72" height="72" alt="FinanceYou" style="display:block;margin:0 auto 12px;border:0" /></a>
 ${bodyInner}
-<p style="font-size:13px;color:#444;margin:20px 0 0">PS. Jeśli chcesz najpierw przypomnieć sobie, jak działa pożyczka pod zastaw nieruchomości — zajrzyj na <a href="https://financeyou.pl" style="color:#111">financeyou.pl</a> albo do <a href="https://financeyou.pl/blog" style="color:#111">naszego bloga</a>. Tam pokazujemy konkretne historie ludzi, którzy uwolnili kapitał ze swoich mieszkań i domów — i co z nim potem zrobili.</p>
+<p style="font-size:14px;color:#111;margin:24px 0 8px"><strong>Masz pytanie? Po prostu odpisz na tego maila.</strong></p>
+<p style="font-size:13px;color:#444;margin:0 0 16px">Czytamy i <strong>odpowiadamy osobiście na każdą wiadomość</strong> — bez automatów, bez formularzy. Nie wiesz jakie dokumenty przygotować? Wahasz się przy kwocie? Coś w warunkach jest niejasne? Napisz wprost — pomożemy rozplątać każdą wątpliwość, nawet jeśli ostatecznie nie zdecydujesz się na pożyczkę.</p>
+<p style="font-size:13px;color:#444;margin:0 0 20px">PS. Jeśli chcesz najpierw przypomnieć sobie, jak działa pożyczka pod zastaw nieruchomości — zajrzyj na <a href="https://financeyou.pl" style="color:#111">financeyou.pl</a> albo do <a href="https://financeyou.pl/blog" style="color:#111">naszego bloga</a>. Pokazujemy tam konkretne historie ludzi, którzy uwolnili kapitał ze swoich mieszkań i domów — i co z nim potem zrobili.</p>
 <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
-<p style="font-size:11px;color:#888">Finance You — pożyczki pod zastaw nieruchomości. Otrzymujesz tę wiadomość bo złożyłeś wniosek na <a href="https://financeyou.pl" style="color:#888">financeyou.pl</a>. <a href="${baseUrl}/email/unsubscribe?s=${sendId}" style="color:#888">Wypisz mnie z przypomnień</a>.</p>
+<a href="https://financeyou.pl" style="display:block;text-align:center;text-decoration:none;margin:0 0 12px"><img src="https://financeyou.pl/__l5e/assets-v1/78c589be-8669-4bdf-a471-ff97875e8d7a/financeyou-wordmark.png" width="180" alt="financeyou.pl" style="display:block;margin:0 auto;border:0;max-width:60%;height:auto" /></a>
+<p style="font-size:11px;color:#888;text-align:center;margin:0">Finance You — pożyczki pod zastaw nieruchomości. Otrzymujesz tę wiadomość bo złożyłeś wniosek na <a href="https://financeyou.pl" style="color:#888">financeyou.pl</a>. <a href="${baseUrl}/email/unsubscribe?s=${sendId}" style="color:#888">Wypisz mnie z przypomnień</a>.</p>
 <img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;border:0" />
 </body></html>`;
     const text = bodyInner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() + `\n\nLink: ${wniosekLink}`;

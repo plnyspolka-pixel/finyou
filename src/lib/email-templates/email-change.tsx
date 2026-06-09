@@ -33,7 +33,7 @@ export const EmailChangeEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Link href="https://financeyou.pl">
-          <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={logo} />
+          <Img src="https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png" width="64" height="64" alt="FinanceYou" style={logo} />
         </Link>
         <Heading style={h1}>Nowy adres, ta sama historia</Heading>
         <Text style={text}>
@@ -60,6 +60,12 @@ export const EmailChangeEmail = ({
         </Text>
         <Text style={footer}>
           Jeśli to nie Ty prosiłeś o zmianę adresu, zignoruj tę wiadomość — zmiana nie zostanie wykonana.
+        </Text>
+        <Link href="https://financeyou.pl" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', margin: '24px 0 8px' }}>
+          <Img src="https://financeyou.pl/__l5e/assets-v1/78c589be-8669-4bdf-a471-ff97875e8d7a/financeyou-wordmark.png" width="180" alt="financeyou.pl" style={{ display: 'block', margin: '0 auto', maxWidth: '60%', height: 'auto' }} />
+        </Link>
+        <Text style={{ fontSize: '13px', color: '#55575d', textAlign: 'center', margin: '0 0 8px' }}>
+          Masz pytanie? <strong>Po prostu odpisz na tego maila</strong> — odpowiada żywy człowiek.
         </Text>
         <Text style={unsubStyle}>
           <Link href="https://financeyou.pl/email/unsubscribe" style={unsubLink}>Nie chcę otrzymywać tych wiadomości</Link>
