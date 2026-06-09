@@ -32,7 +32,7 @@ export const EmailChangeEmail = ({
     <Preview>Potwierdź zmianę adresu e-mail w {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://app.financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
+        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
         <Heading style={h1}>Potwierdź zmianę adresu e-mail</Heading>
         <Text style={text}>
           Otrzymaliśmy prośbę o zmianę adresu e-mail w {siteName} z{' '}
