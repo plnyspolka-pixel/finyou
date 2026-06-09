@@ -207,37 +207,13 @@ function KlientProfil() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Powiadomienia o wniosku</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Decyduj, jak mamy Ci przypominać o dokończeniu wniosku. Możesz w każdej chwili zmienić ustawienia.
-          </p>
+          <CardTitle className="text-base">Powiadomienia i przypomnienia</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <PrefRow
-            icon={<Phone className="h-4 w-4" />}
-            title="Połączenia telefoniczne"
-            desc="Asystent głosowy nie będzie do Ciebie dzwonił."
-            checked={!prefs.do_not_call}
-            disabled={savingPrefs || !row}
-            onChange={(on) => updatePref("do_not_call", !on)}
-          />
-          <PrefRow
-            icon={<MessageSquare className="h-4 w-4" />}
-            title="Powiadomienia SMS"
-            desc="Nie wyślemy Ci przypomnień SMS o wniosku."
-            checked={!prefs.do_not_sms}
-            disabled={savingPrefs || !row}
-            onChange={(on) => updatePref("do_not_sms", !on)}
-          />
-          <PrefRow
-            icon={<Mail className="h-4 w-4" />}
-            title="Powiadomienia e-mail"
-            desc="Nie wyślemy Ci przypomnień e-mail o wniosku."
-            checked={!prefs.do_not_email}
-            disabled={savingPrefs || !row}
-            onChange={(on) => updatePref("do_not_email", !on)}
-          />
-          {!row && <p className="text-xs text-muted-foreground">Zapisz najpierw dane profilu, aby zarządzać powiadomieniami.</p>}
+        <CardContent className="flex items-center justify-between gap-4 text-sm">
+          <p className="text-muted-foreground">Wyciszanie SMS, e-mail i połączeń przenieśliśmy do osobnej zakładki.</p>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/klient/powiadomienia">Otwórz</a>
+          </Button>
         </CardContent>
       </Card>
 
