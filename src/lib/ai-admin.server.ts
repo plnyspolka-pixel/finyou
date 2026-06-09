@@ -194,6 +194,28 @@ export async function runTool(
       return { ok: true, output: { path: rel, size: stat.size, content } };
     }
 
+    if (call.name === "write_project_file") {
+      if (!opts.enableFileWrite) return { ok: false, output: null, error: "Zapis plików wyłączony." };
+      const rel = String(call.input.path ?? "");
+      const content = String(call.input.content ?? "");
+      const safe = safeFilePath(rel);
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane)." };
+      if (content.length > 500 * 1024) return { ok: false, output: null, error: "Zawartość za duża (>500 KB)." };
+      await fs.mkdir(path.dirname(safe), { recursive: true });
+      await fs.writeFile(safe, content, "utf8");
+      return { ok: true, output: { path: rel, bytes: content.length, action: "written" } };
+    }
+
+    if (call.name === "delete_project_file") {
+      if (!opts.enableFileWrite) return { ok: false, output: null, error: "Zapis plików wyłączony." };
+      const rel = String(call.input.path ?? "");
+      const safe = safeFilePath(rel);
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona." };
+      await fs.unlink(safe).catch((e) => { throw new Error(e instanceof Error ? e.message : String(e)); });
+      return { ok: true, output: { path: rel, action: "deleted" } };
+    }
+
+
     return { ok: false, output: null, error: `Nieznane narzędzie: ${call.name}` };
   } catch (e) {
     return { ok: false, output: null, error: e instanceof Error ? e.message : String(e) };
