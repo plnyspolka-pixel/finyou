@@ -116,7 +116,7 @@ function safeFilePath(rel: string): string | null {
 
 export async function runTool(
   call: ToolCall,
-  opts: { enableDbRead: boolean; enableDbWrite: boolean; enableFileRead: boolean }
+  opts: { enableDbRead: boolean; enableDbWrite: boolean; enableFileRead: boolean; enableFileWrite: boolean }
 ): Promise<{ ok: boolean; output: unknown; error?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
