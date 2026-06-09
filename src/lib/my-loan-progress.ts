@@ -107,9 +107,9 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
       description:
         missing.length === 1
           ? "To ostatni dokument, którego potrzebujemy do tego typu nieruchomości."
-          : "Wgraj brakujące dokumenty — to przyspieszy ocenę Twojego wniosku.",
-      ctaHref: DOCS_HREF,
-      ctaLabel: "Otwórz dokumenty",
+          : "Wgraj brakujące dokumenty we wniosku — to przyspieszy ocenę.",
+      ctaHref: WNIOSEK_HREF,
+      ctaLabel: "Otwórz wniosek",
     };
   } else if (!ctx.hasInvestorDescription) {
     next_step = {
