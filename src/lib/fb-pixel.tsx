@@ -25,8 +25,9 @@ let cached: Settings | null = null;
 
 export async function loadTrackingSettings(): Promise<Settings | null> {
   if (cached) return cached;
-  const { data } = await supabase.from("tracking_settings").select("*").eq("id", 1).maybeSingle();
-  if (data) cached = data as Settings;
+  const { data } = await supabase.rpc("get_public_tracking_settings");
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row) cached = row as Settings;
   return cached;
 }
 
