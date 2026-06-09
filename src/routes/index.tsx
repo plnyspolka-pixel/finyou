@@ -140,6 +140,7 @@ function Landing() {
             <a href="#kalkulator" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
             <a href="#jak-to-dziala" className="text-sm font-medium text-muted-foreground hover:text-foreground">Jak to działa</a>
             <a href="#faq" className="text-sm font-medium text-muted-foreground hover:text-foreground">FAQ</a>
+            <Link to="/blog" className="text-sm font-medium text-muted-foreground hover:text-foreground">Blog</Link>
           </nav>
           <div className="hidden items-center gap-4 md:flex">
             <a
