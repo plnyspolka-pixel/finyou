@@ -156,6 +156,26 @@ function KlientDokumenty() {
 
       {loanId && progress && (
         <>
+          {/* Banner z typem nieruchomości — kontekst dla wymaganych dokumentów */}
+          <Card className={propertyType ? "border-primary/30 bg-primary/5" : "border-amber-300 bg-amber-50/60 dark:bg-amber-950/20"}>
+            <CardContent className="pt-5 flex flex-wrap items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-background border">
+                <Home className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Typ nieruchomości</div>
+                <div className="text-base font-bold">
+                  {propertyType
+                    ? (PROPERTY_TYPE_LABELS[propertyType] ?? propertyType)
+                    : "Jeszcze nie wybrano — wybierz, żebyśmy wiedzieli, jakich dokumentów potrzebujemy"}
+                </div>
+              </div>
+              <Button size="sm" variant={propertyType ? "outline" : "cta"} onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>
+                {propertyType ? "Zmień" : "Wybierz typ"}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Pola tekstowe — KW + powierzchnia */}
           {progress.required_documents.some((r) => r.kind === "kw_number") && (
             <Card>
