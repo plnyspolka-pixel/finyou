@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench, Mic, Square } from "lucide-react";
+import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench, Mic, Square, Paperclip, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -25,12 +25,19 @@ type Message = {
   created_at: string;
 };
 
+type Attachment = { name: string; size: number; type: string; text?: string; skipped?: boolean };
+
+const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|log|yml|yaml|xml|html|htm|css|scss|js|jsx|ts|tsx|sql|sh|env|ini|toml|conf|py|rb|go|rs|java|kt|swift|php|vue|svelte)$/i;
+const MAX_INLINE = 200_000;
+
 export function AiAdminChat() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [convId, setConvId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [view, setView] = useState<"chat" | "list">("chat");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
   const sendFn = useServerFn(sendAdminChat);
@@ -135,40 +142,76 @@ export function AiAdminChat() {
     setRecording(false);
   };
 
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const next: Attachment[] = [];
+    for (const f of Array.from(files)) {
+      if (f.size > 2_000_000) {
+        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
+        toast.error(`${f.name}: plik > 2MB, pominięty`);
+        continue;
+      }
+      const isText = TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json";
+      if (!isText) {
+        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
+        toast.warning(`${f.name}: format binarny (PDF/obraz) niewspierany — wgraj tekst, CSV, MD, JSON itp.`);
+        continue;
+      }
+      try {
+        const text = await f.text();
+        next.push({ name: f.name, size: f.size, type: f.type, text: text.slice(0, MAX_INLINE) });
+      } catch (e) {
+        toast.error(`${f.name}: nie udało się odczytać (${(e as Error).message})`);
+      }
+    }
+    setAttachments((prev) => [...prev, ...next]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const submit = () => {
     const text = input.trim();
-    if (!text || send.isPending) return;
-    // Optimistic: render user message immediately
+    const validAtt = attachments.filter((a) => a.text);
+    if ((!text && validAtt.length === 0) || send.isPending) return;
+    let full = text;
+    if (validAtt.length > 0) {
+      const parts = validAtt.map(
+        (a) => `\n\n----- ZAŁĄCZNIK: ${a.name} (${a.size} B) -----\n${a.text}\n----- KONIEC ZAŁĄCZNIKA -----`
+      );
+      full = (text || "(załączniki w wiadomości)") + parts.join("");
+    }
     qc.setQueryData(["ai-admin-msgs", convId], (old: { messages: Message[] } | undefined) => ({
       messages: [
         ...(old?.messages ?? []),
         {
           id: `tmp-${Date.now()}`,
           role: "user" as const,
-          content: text,
+          content: full,
           tool_calls: null,
           tool_results: null,
           created_at: new Date().toISOString(),
         },
       ],
     }));
-    send.mutate(text);
+    send.mutate(full);
+    setAttachments([]);
   };
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105"
+        className="fixed top-3 right-3 z-50 hidden md:flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105"
         aria-label="AI Administrator"
       >
-        <Bot className="h-6 w-6" />
+        <Bot className="h-4 w-4" />
+        AI Administrator
+        <ChevronDown className="h-4 w-4" />
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex h-[640px] max-h-[90vh] w-[440px] max-w-[95vw] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
+    <div className="fixed top-3 right-3 z-50 flex h-[640px] max-h-[85vh] w-[460px] max-w-[95vw] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
       {/* Header */}
       <div className="flex items-center gap-2 border-b bg-muted/40 px-3 py-2">
         <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/15 text-primary">
@@ -184,8 +227,8 @@ export function AiAdminChat() {
         <Button size="icon" variant="ghost" asChild>
           <Link to="/admin/ai-administrator"><Settings className="h-4 w-4" /></Link>
         </Button>
-        <Button size="icon" variant="ghost" onClick={() => setOpen(false)}>
-          <X className="h-4 w-4" />
+        <Button size="icon" variant="ghost" onClick={() => setOpen(false)} aria-label="Zwiń">
+          <ChevronUp className="h-4 w-4" />
         </Button>
       </div>
 
@@ -239,7 +282,7 @@ export function AiAdminChat() {
                   <li>Odpytać bazę (np. „pokaż 10 ostatnich leadów")</li>
                   <li>Wprowadzić zmiany w danych po Twoim potwierdzeniu</li>
                   <li>Przeczytać pliki w <code>src/</code></li>
-                  <li>Analizować, debugować, sugerować zmiany</li>
+                  <li>Przyjąć załączniki tekstowe (TXT, MD, CSV, JSON, kod) do 2 MB</li>
                 </ul>
               </div>
             )}
@@ -252,7 +295,29 @@ export function AiAdminChat() {
             )}
           </div>
 
-          <div className="border-t p-2">
+          <div className="border-t p-2 space-y-2">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((a, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${
+                      a.skipped ? "border-destructive/40 text-muted-foreground line-through" : "bg-muted/40"
+                    }`}
+                  >
+                    <FileText className="h-3 w-3" />
+                    <span className="max-w-[150px] truncate">{a.name}</span>
+                    <button
+                      onClick={() => setAttachments((p) => p.filter((_, j) => j !== i))}
+                      className="ml-1 text-muted-foreground hover:text-destructive"
+                      aria-label="Usuń załącznik"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
               <Textarea
                 value={input}
@@ -267,23 +332,47 @@ export function AiAdminChat() {
                 rows={2}
                 className="resize-none text-sm"
               />
+              <div className="flex flex-col gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFiles(e.target.files)}
+                  accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.log,.yml,.yaml,.xml,.html,.htm,.css,.scss,.js,.jsx,.ts,.tsx,.sql,.sh,.env,.ini,.toml,.conf,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.vue,.svelte,text/*,application/json"
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={send.isPending}
+                  aria-label="Dołącz pliki"
+                  title="Dołącz pliki tekstowe"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant={recording ? "destructive" : "outline"}
+                  onClick={recording ? stopRecording : startRecording}
+                  disabled={transcribing || send.isPending}
+                  aria-label={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                  title={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                >
+                  {transcribing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : recording ? (
+                    <Square className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
               <Button
                 size="icon"
-                variant={recording ? "destructive" : "outline"}
-                onClick={recording ? stopRecording : startRecording}
-                disabled={transcribing || send.isPending}
-                aria-label={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
-                title={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                onClick={submit}
+                disabled={send.isPending || (!input.trim() && attachments.filter((a) => a.text).length === 0)}
               >
-                {transcribing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : recording ? (
-                  <Square className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
-              <Button size="icon" onClick={submit} disabled={send.isPending || !input.trim()}>
                 {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>

@@ -92,7 +92,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
     z
       .object({
         conversation_id: z.string().uuid().optional(),
-        message: z.string().min(1).max(20000),
+        message: z.string().min(1).max(500000),
       })
       .parse(d)
   )
