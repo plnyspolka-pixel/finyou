@@ -324,7 +324,7 @@ export function AiAdminChat() {
                   <li>Odpytać bazę (np. „pokaż 10 ostatnich leadów")</li>
                   <li>Wprowadzić zmiany w danych po Twoim potwierdzeniu</li>
                   <li>Przeczytać pliki w <code>src/</code></li>
-                  <li>Przyjąć załączniki tekstowe (TXT, MD, CSV, JSON, kod) do 2 MB</li>
+                  <li>Przyjąć dowolne załączniki (tekst, PDF, obrazy, binarki) do 25 MB / plik</li>
                 </ul>
               </div>
             )}
