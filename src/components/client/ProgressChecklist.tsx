@@ -206,7 +206,7 @@ export function ProgressChecklist({
           </p>
         </CardHeader>
         <CardContent>
-          <ul className="grid gap-2 md:grid-cols-3">
+          <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             {boostItems.map((it) => (
               <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card p-3">
                 <div className="flex items-center gap-2">
