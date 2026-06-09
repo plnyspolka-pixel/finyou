@@ -547,6 +547,62 @@ function KwTile({ value, current, title, description }: { value: KwChoice; curre
   );
 }
 
+function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: (value: string) => void }) {
+  const steps: { title: string; body: string }[] = [
+    { title: "Otwórz aplikację mObywatel", body: "Zaloguj się profilem zaufanym albo e-dowodem. Usługa działa od kwietnia 2026, więc upewnij się, że masz najnowszą wersję aplikacji ze sklepu Google Play lub App Store." },
+    { title: "Wejdź w usługę „Księgi wieczyste”", body: "Na ekranie głównym dotknij „Usługi” → „Księgi wieczyste” → „Twoje księgi”. mObywatel po Twoim numerze PESEL pokaże WSZYSTKIE księgi, w których jesteś właścicielem, współwłaścicielem lub użytkownikiem wieczystym — nie musisz znać numeru." },
+    { title: "Wybierz właściwą nieruchomość", body: "Z listy wybierz tę, którą chcesz oddać w zabezpieczenie. Zobaczysz: numer KW, typ nieruchomości, sąd prowadzący i położenie." },
+    { title: "Skopiuj numer KW i wklej poniżej", body: "Format: KOD_WYDZIAŁU/NUMER/CYFRA KONTROLNA, np. WA1M/00123456/7. Przepisz lub wklej numer w pole obok — resztę danych (adres, powierzchnię, właściciela, obciążenia) odczytamy automatycznie z rejestru." },
+  ];
+  return (
+    <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
+      <div className="flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+          <Smartphone className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-sm font-bold uppercase tracking-wide text-accent">Sprawdź numer KW w mObywatelu</div>
+          <p className="mt-1 text-sm text-foreground/80">
+            Nie musisz nigdzie dzwonić ani jechać do sądu. mObywatel pokaże Twoje księgi po PESEL-u.
+          </p>
+        </div>
+      </div>
+
+      <ol className="mt-5 space-y-3">
+        {steps.map((s, i) => (
+          <li key={s.title} className="flex gap-3 rounded-lg bg-background/70 p-3">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent text-xs font-bold text-accent-foreground">{i + 1}</span>
+            <div className="space-y-1">
+              <div className="text-sm font-semibold text-foreground">{s.title}</div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{s.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+        <Button asChild type="button" variant="outline" size="sm">
+          <a href="https://www.mobywatel.gov.pl" target="_blank" rel="noreferrer">Pobierz mObywatel</a>
+        </Button>
+        <Button asChild type="button" variant="ghost" size="sm">
+          <a href="https://info.mobywatel.gov.pl/aktualnosci/twoje-ksiegi-wieczyste-w-telefonie" target="_blank" rel="noreferrer">Oficjalna instrukcja Ministerstwa</a>
+        </Button>
+      </div>
+
+      <div className="mt-5 space-y-2">
+        <Label htmlFor="mobywatel-kw">Wklej skopiowany numer KW</Label>
+        <Input
+          id="mobywatel-kw"
+          value={kwNumber}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="np. WA1M/00123456/7"
+          className="font-mono"
+        />
+        <p className="text-xs text-muted-foreground">Po wpisaniu numeru pobierzemy adres, powierzchnię, dane właściciela i obciążenia bezpośrednio z rejestru — nic więcej nie musisz uzupełniać.</p>
+      </div>
+    </div>
+  );
+
 export function SinglePageLoanApplication() {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
 
