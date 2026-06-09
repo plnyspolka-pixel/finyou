@@ -64,7 +64,7 @@ function LeadDetailPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Link to="/admin/leady-all"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Wróć</Button></Link>
         <h1 className="text-xl font-semibold flex-1">
           {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "Lead bez nazwy"}
@@ -72,13 +72,28 @@ function LeadDetailPage() {
         <Badge variant={lead.type === "inwestorski" ? "secondary" : "default"}>{lead.type}</Badge>
         <Badge variant="outline">{lead.status}</Badge>
         {lead.source && <Badge variant="outline">{lead.source}</Badge>}
+        {lead.quality_tier && (
+          <Badge
+            className={
+              lead.quality_tier === "A" ? "bg-green-600 text-white" :
+              lead.quality_tier === "B" ? "bg-blue-600 text-white" :
+              lead.quality_tier === "D" ? "bg-red-600 text-white" :
+              "bg-gray-500 text-white"
+            }
+          >
+            Tier {lead.quality_tier}
+          </Badge>
+        )}
       </div>
+
+      <QualitySection lead={lead} />
 
       <Tabs defaultValue="komunikacja">
         <TabsList>
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
+          <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>
           <TabsTrigger value="raw">Surowe dane</TabsTrigger>
         </TabsList>
 
