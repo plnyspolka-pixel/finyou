@@ -162,10 +162,10 @@ export async function runTool(
       if (!opts.enableFileRead) return { ok: false, output: null, error: "Odczyt plików wyłączony." };
       const rel = String(call.input.path ?? "");
       const safe = safeFilePath(rel);
-      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (dozwolone: src/**, supabase/migrations/**, public/**, package.json, vite.config.ts, tsconfig.json)." };
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane)." };
       const stat = await fs.stat(safe).catch(() => null);
       if (!stat || !stat.isFile()) return { ok: false, output: null, error: "Plik nie istnieje." };
-      if (stat.size > 200 * 1024) return { ok: false, output: null, error: "Plik za duży (>200 KB)." };
+      if (stat.size > 1024 * 1024) return { ok: false, output: null, error: "Plik za duży (>1 MB)." };
       const content = await fs.readFile(safe, "utf8");
       return { ok: true, output: { path: rel, size: stat.size, content } };
     }
