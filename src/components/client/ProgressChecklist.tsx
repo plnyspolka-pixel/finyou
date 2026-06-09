@@ -109,7 +109,7 @@ export function ProgressChecklist({
     {
       done: hasInvestorDescription,
       label: "Opis dla inwestora",
-      ctaHref: "/wniosek-opis",
+      ctaHref: "/klient/wniosek",
       ctaLabel: hasInvestorDescription ? "Edytuj" : "Dodaj",
       hint: "Krótka historia, dlaczego potrzebujesz finansowania — buduje zaufanie inwestorów.",
     },
