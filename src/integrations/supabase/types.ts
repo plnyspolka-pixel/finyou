@@ -883,12 +883,17 @@ export type Database = {
       ai_seo_articles: {
         Row: {
           content_md: string
+          content_refreshed_at: string | null
+          cover_image_alt: string | null
+          cover_image_url: string | null
           created_at: string
           created_by: string | null
           cta_label: string | null
           cta_url: string | null
           excerpt: string | null
+          external_links: Json | null
           id: string
+          internal_link_slugs: string[] | null
           keywords: string[] | null
           meta_description: string | null
           meta_title: string | null
@@ -907,12 +912,17 @@ export type Database = {
         }
         Insert: {
           content_md: string
+          content_refreshed_at?: string | null
+          cover_image_alt?: string | null
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           cta_label?: string | null
           cta_url?: string | null
           excerpt?: string | null
+          external_links?: Json | null
           id?: string
+          internal_link_slugs?: string[] | null
           keywords?: string[] | null
           meta_description?: string | null
           meta_title?: string | null
@@ -931,12 +941,17 @@ export type Database = {
         }
         Update: {
           content_md?: string
+          content_refreshed_at?: string | null
+          cover_image_alt?: string | null
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           cta_label?: string | null
           cta_url?: string | null
           excerpt?: string | null
+          external_links?: Json | null
           id?: string
+          internal_link_slugs?: string[] | null
           keywords?: string[] | null
           meta_description?: string | null
           meta_title?: string | null
