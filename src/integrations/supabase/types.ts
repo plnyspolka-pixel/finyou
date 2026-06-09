@@ -3523,13 +3523,21 @@ export type Database = {
           investor_id: string | null
           last_name: string | null
           loan_application_id: string | null
+          marked_bad_lead: boolean | null
+          marked_bad_reason: string | null
+          marked_by: string | null
           messenger_psid: string | null
           meta_campaign_id: string | null
+          meta_capi_last_event: string | null
+          meta_capi_last_sent_at: string | null
           meta_form_id: string | null
           meta_lead_id: string | null
           notes: string | null
           phone_normalized: string | null
           phone_raw: string | null
+          quality_reason: string | null
+          quality_score: number | null
+          quality_tier: string | null
           return_link: string | null
           return_link_token: string | null
           source: string | null
@@ -3560,13 +3568,21 @@ export type Database = {
           investor_id?: string | null
           last_name?: string | null
           loan_application_id?: string | null
+          marked_bad_lead?: boolean | null
+          marked_bad_reason?: string | null
+          marked_by?: string | null
           messenger_psid?: string | null
           meta_campaign_id?: string | null
+          meta_capi_last_event?: string | null
+          meta_capi_last_sent_at?: string | null
           meta_form_id?: string | null
           meta_lead_id?: string | null
           notes?: string | null
           phone_normalized?: string | null
           phone_raw?: string | null
+          quality_reason?: string | null
+          quality_score?: number | null
+          quality_tier?: string | null
           return_link?: string | null
           return_link_token?: string | null
           source?: string | null
@@ -3597,13 +3613,21 @@ export type Database = {
           investor_id?: string | null
           last_name?: string | null
           loan_application_id?: string | null
+          marked_bad_lead?: boolean | null
+          marked_bad_reason?: string | null
+          marked_by?: string | null
           messenger_psid?: string | null
           meta_campaign_id?: string | null
+          meta_capi_last_event?: string | null
+          meta_capi_last_sent_at?: string | null
           meta_form_id?: string | null
           meta_lead_id?: string | null
           notes?: string | null
           phone_normalized?: string | null
           phone_raw?: string | null
+          quality_reason?: string | null
+          quality_score?: number | null
+          quality_tier?: string | null
           return_link?: string | null
           return_link_token?: string | null
           source?: string | null
@@ -4236,6 +4260,68 @@ export type Database = {
             columns: ["ad_account_id"]
             isOneToOne: false
             referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_capi_events: {
+        Row: {
+          created_at: string
+          currency: string | null
+          error: string | null
+          event_id: string
+          event_name: string
+          id: string
+          lead_id: string | null
+          loan_amount: number | null
+          payload: Json | null
+          pixel_id: string
+          response: Json | null
+          sent_at: string | null
+          status: string
+          tier: string | null
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          error?: string | null
+          event_id: string
+          event_name: string
+          id?: string
+          lead_id?: string | null
+          loan_amount?: number | null
+          payload?: Json | null
+          pixel_id: string
+          response?: Json | null
+          sent_at?: string | null
+          status?: string
+          tier?: string | null
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          error?: string | null
+          event_id?: string
+          event_name?: string
+          id?: string
+          lead_id?: string | null
+          loan_amount?: number | null
+          payload?: Json | null
+          pixel_id?: string
+          response?: Json | null
+          sent_at?: string | null
+          status?: string
+          tier?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_capi_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
