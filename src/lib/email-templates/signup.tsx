@@ -28,33 +28,39 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="pl" dir="ltr">
     <Head />
-    <Preview>Potwierdź swój adres e-mail w {siteName}</Preview>
+    <Preview>Potwierdź adres e-mail i zacznij korzystać z {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
-        <Heading style={h1}>Potwierdź swój adres e-mail</Heading>
+        <Link href="https://financeyou.pl">
+          <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={logo} />
+        </Link>
+        <Heading style={h1}>Cześć — i dziękujemy, że jesteś</Heading>
         <Text style={text}>
-          Dziękujemy za rejestrację w{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          !
+          Większość ludzi, którzy trafiają do <Link href="https://financeyou.pl" style={link}>FinanceYou</Link>, ma jedną wspólną rzecz: nieruchomość, która śpi, i pomysł, który nie może czekać.
+          Remont, spłata długów, zastrzyk kapitału do firmy, zaliczka na kolejną inwestycję — życie nie zawsze rozkłada raty równo, a banki nie zawsze mówią „tak" na czas.
         </Text>
         <Text style={text}>
-          Potwierdź swój adres e-mail (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ), klikając przycisk poniżej:
+          Założyliśmy FinanceYou właśnie dlatego: żeby kapitał ukryty w czterech ścianach można było uwolnić szybko, uczciwie i bez tygodni tłumaczeń.
+          Twoje konto na adres{' '}
+          <Link href={`mailto:${recipient}`} style={link}>{recipient}</Link>{' '}
+          jest już prawie gotowe — brakuje tylko jednego kliknięcia, żebyśmy wiedzieli, że to naprawdę Ty.
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Potwierdź e-mail
+          Potwierdź e-mail i wejdź do panelu
         </Button>
-        <Text style={footer}>
-          Jeśli nie zakładałeś konta, możesz zignorować tę wiadomość.
+        <Text style={text}>
+          Po potwierdzeniu zobaczysz, jak w praktyce wygląda pożyczka pod zastaw nieruchomości — bez ukrytych haczyków, z jasną kalkulacją i decyzją w 24 godziny.
         </Text>
-        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
-          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        <Text style={text}>
+          A jeśli chcesz najpierw się rozejrzeć — zajrzyj na{' '}
+          <Link href="https://financeyou.pl" style={link}>financeyou.pl</Link> albo poczytaj historie naszych klientów na{' '}
+          <Link href="https://financeyou.pl/blog" style={link}>blogu FinanceYou</Link>.
+        </Text>
+        <Text style={footer}>
+          Jeśli to nie Ty zakładałeś konto — po prostu zignoruj tę wiadomość. Nic się nie wydarzy.
+        </Text>
+        <Text style={unsubStyle}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={unsubLink}>Nie chcę otrzymywać tych wiadomości</Link>
         </Text>
       </Container>
     </Body>
@@ -64,26 +70,12 @@ export const SignupEmail = ({
 export default SignupEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const container = { padding: '20px 25px', maxWidth: '560px' }
+const logo = { display: 'block' as const, margin: '0 auto 16px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#000000', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#55575d', lineHeight: '1.6', margin: '0 0 18px' }
+const link = { color: '#000000', textDecoration: 'underline' }
+const button = { backgroundColor: '#000000', color: '#ffffff', fontSize: '14px', borderRadius: '8px', padding: '12px 20px', textDecoration: 'none', display: 'inline-block', margin: '6px 0 22px' }
+const footer = { fontSize: '12px', color: '#999999', margin: '24px 0 0' }
+const unsubStyle = { fontSize: '11px', color: '#bbbbbb', marginTop: '24px', textAlign: 'center' as const }
+const unsubLink = { color: '#bbbbbb', textDecoration: 'underline' }

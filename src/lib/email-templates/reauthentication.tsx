@@ -19,19 +19,32 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="pl" dir="ltr">
     <Head />
-    <Preview>Twój kod weryfikacyjny</Preview>
+    <Preview>Twój kod weryfikacyjny do FinanceYou</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
-        <Heading style={h1}>Potwierdź swoją tożsamość</Heading>
-        <Text style={text}>Użyj poniższego kodu, aby potwierdzić swoją tożsamość:</Text>
-        <Text style={codeStyle}>{token}</Text>
-        <Text style={footer}>
-          Kod wygaśnie wkrótce. Jeśli nie prosiłeś o ten kod, możesz zignorować
-          tę wiadomość.
+        <Link href="https://financeyou.pl">
+          <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={logo} />
+        </Link>
+        <Heading style={h1}>Jeszcze jeden krok dla bezpieczeństwa</Heading>
+        <Text style={text}>
+          Robisz w <Link href="https://financeyou.pl" style={link}>FinanceYou</Link> coś ważnego — zmieniasz ustawienia, zatwierdzasz operację albo wracasz do wrażliwej części panelu.
+          Dlatego prosimy o jedno dodatkowe potwierdzenie: krótki kod, który mamy tylko my i Ty.
         </Text>
-        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
-          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        <Text style={text}>Wpisz poniższy kod w okienku weryfikacji:</Text>
+        <Text style={codeStyle}>{token}</Text>
+        <Text style={text}>
+          Kod jest ważny tylko kilka minut. Nie przekazuj go nikomu — żaden konsultant FinanceYou ani z banku nigdy nie poprosi Cię o ten kod telefonicznie.
+        </Text>
+        <Text style={text}>
+          Więcej o tym, jak chronimy Twoje dane i jak działa proces pożyczki pod nieruchomość, znajdziesz na{' '}
+          <Link href="https://financeyou.pl" style={link}>financeyou.pl</Link> oraz na{' '}
+          <Link href="https://financeyou.pl/blog" style={link}>naszym blogu</Link>.
+        </Text>
+        <Text style={footer}>
+          Jeśli nie prosiłeś o ten kod, zignoruj tę wiadomość i — dla pewności — zmień hasło do swojego konta.
+        </Text>
+        <Text style={unsubStyle}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={unsubLink}>Nie chcę otrzymywać tych wiadomości</Link>
         </Text>
       </Container>
     </Body>
@@ -41,24 +54,12 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
 export default ReauthenticationEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 30px',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const container = { padding: '20px 25px', maxWidth: '560px' }
+const logo = { display: 'block' as const, margin: '0 auto 16px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#000000', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#55575d', lineHeight: '1.6', margin: '0 0 18px' }
+const link = { color: '#000000', textDecoration: 'underline' }
+const codeStyle = { fontSize: '28px', fontWeight: 'bold' as const, letterSpacing: '6px', color: '#000000', textAlign: 'center' as const, margin: '12px 0 22px' }
+const footer = { fontSize: '12px', color: '#999999', margin: '24px 0 0' }
+const unsubStyle = { fontSize: '11px', color: '#bbbbbb', marginTop: '24px', textAlign: 'center' as const }
+const unsubLink = { color: '#bbbbbb', textDecoration: 'underline' }
