@@ -607,23 +607,34 @@ export function SinglePageLoanApplication() {
             <CardContent className="space-y-6">
               <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />
 
-              <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
-                <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="space-y-3">
-                  <KwTile value="znam" current={draft.kwChoice} title="Znam KW" description="Wpiszę numer" />
-                  <KwTile value="pomoc" current={draft.kwChoice} title="Pomoc z KW" description="Dodam dokument" />
-                  <KwTile value="pozniej" current={draft.kwChoice} title="Później" description="Ustalimy telefonicznie" />
+              <div className="space-y-4">
+                <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
+                  <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
+                  <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Instrukcja krok po kroku" />
+                  <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument" description="Akt notarialny / skan KW" />
                 </RadioGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="flat-kw">Numer KW lub notatka</Label>
-                  <Textarea
-                    id="flat-kw"
-                    value={draft.kwChoice === "znam" ? draft.kwNumber : draft.propertyNote}
-                    onChange={(event) => draft.kwChoice === "znam" ? update("kwNumber", event.target.value.toUpperCase()) : update("propertyNote", event.target.value)}
-                    placeholder={draft.kwChoice === "znam" ? "LU1I/00012345/6" : "Napisz, co wiesz o nieruchomości albo dokumentach"}
-                    rows={6}
+
+                {draft.kwChoice === "znam" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="flat-kw">Numer księgi wieczystej</Label>
+                    <Input id="flat-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
+                  </div>
+                )}
+
+                {draft.kwChoice === "mobywatel" && (
+                  <MobywatelKwGuide
+                    kwNumber={draft.kwNumber}
+                    onChange={(value) => update("kwNumber", value.toUpperCase())}
                   />
-                </div>
+                )}
+
+                {draft.kwChoice === "pomoc" && (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    Wgraj dokument z numerem KW (akt notarialny, wypis, zaświadczenie) w sekcji „Zdjęcia i dokumenty” poniżej — odczytamy wszystkie dane automatycznie.
+                  </div>
+                )}
               </div>
+
             </CardContent>
           </Card>
 
