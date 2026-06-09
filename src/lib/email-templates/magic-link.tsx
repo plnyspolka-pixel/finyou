@@ -56,7 +56,7 @@ export const MagicLinkEmail = ({
           <Img src="https://financeyou.pl/__l5e/assets-v1/78c589be-8669-4bdf-a471-ff97875e8d7a/financeyou-wordmark.png" width="180" alt="financeyou.pl" style={{ display: 'block', margin: '0 auto', maxWidth: '60%', height: 'auto' }} />
         </Link>
         <Text style={{ fontSize: '13px', color: '#55575d', textAlign: 'center', margin: '0 0 8px' }}>
-          Masz pytanie? <strong>Po prostu odpisz na tego maila</strong> — odpowiada żywy człowiek.
+          Masz pytanie? <strong>Po prostu odpisz na tego maila</strong>, czytamy każdą wiadomość i odpowiadamy.
         </Text>
         <Text style={unsubStyle}>
           <Link href="https://financeyou.pl/email/unsubscribe" style={unsubLink}>Nie chcę otrzymywać tych wiadomości</Link>
