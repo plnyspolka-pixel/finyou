@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getMyLoanProgress, claimLoanApplication } from "@/lib/my-loan.functions";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { NextStepCard } from "@/components/client/NextStepCard";
 import { ProgressChecklist } from "@/components/client/ProgressChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
