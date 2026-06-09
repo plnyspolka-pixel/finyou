@@ -123,6 +123,7 @@ export type Database = {
           enable_db_read: boolean
           enable_db_write: boolean
           enable_file_read: boolean
+          enable_file_write: boolean
           id: string
           max_tokens: number
           model: string
@@ -135,6 +136,7 @@ export type Database = {
           enable_db_read?: boolean
           enable_db_write?: boolean
           enable_file_read?: boolean
+          enable_file_write?: boolean
           id?: string
           max_tokens?: number
           model?: string
@@ -147,6 +149,7 @@ export type Database = {
           enable_db_read?: boolean
           enable_db_write?: boolean
           enable_file_read?: boolean
+          enable_file_write?: boolean
           id?: string
           max_tokens?: number
           model?: string

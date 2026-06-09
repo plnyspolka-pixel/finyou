@@ -78,6 +78,30 @@ export const ANTHROPIC_TOOLS = [
     description: "Zwraca listę tabel w schemie public z liczbą kolumn.",
     input_schema: { type: "object", properties: {} },
   },
+  {
+    name: "write_project_file",
+    description:
+      "Zapisz/utwórz plik tekstowy w projekcie (max 500 KB). Nadpisuje istniejący plik. Tworzy też brakujące katalogi. Pliki z sekretami (.env*) są zablokowane.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Ścieżka pliku względem roota projektu." },
+        content: { type: "string", description: "Pełna nowa zawartość pliku." },
+      },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "delete_project_file",
+    description: "Usuń plik z projektu. Pliki z sekretami (.env*) są zablokowane.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Ścieżka pliku względem roota projektu." },
+      },
+      required: ["path"],
+    },
+  },
 ];
 
 // Blokujemy tylko pliki z sekretami; reszta projektu dostępna do odczytu.
@@ -92,7 +116,7 @@ function safeFilePath(rel: string): string | null {
 
 export async function runTool(
   call: ToolCall,
-  opts: { enableDbRead: boolean; enableDbWrite: boolean; enableFileRead: boolean }
+  opts: { enableDbRead: boolean; enableDbWrite: boolean; enableFileRead: boolean; enableFileWrite: boolean }
 ): Promise<{ ok: boolean; output: unknown; error?: string }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -169,6 +193,28 @@ export async function runTool(
       const content = await fs.readFile(safe, "utf8");
       return { ok: true, output: { path: rel, size: stat.size, content } };
     }
+
+    if (call.name === "write_project_file") {
+      if (!opts.enableFileWrite) return { ok: false, output: null, error: "Zapis plików wyłączony." };
+      const rel = String(call.input.path ?? "");
+      const content = String(call.input.content ?? "");
+      const safe = safeFilePath(rel);
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane)." };
+      if (content.length > 500 * 1024) return { ok: false, output: null, error: "Zawartość za duża (>500 KB)." };
+      await fs.mkdir(path.dirname(safe), { recursive: true });
+      await fs.writeFile(safe, content, "utf8");
+      return { ok: true, output: { path: rel, bytes: content.length, action: "written" } };
+    }
+
+    if (call.name === "delete_project_file") {
+      if (!opts.enableFileWrite) return { ok: false, output: null, error: "Zapis plików wyłączony." };
+      const rel = String(call.input.path ?? "");
+      const safe = safeFilePath(rel);
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona." };
+      await fs.unlink(safe).catch((e) => { throw new Error(e instanceof Error ? e.message : String(e)); });
+      return { ok: true, output: { path: rel, action: "deleted" } };
+    }
+
 
     return { ok: false, output: null, error: `Nieznane narzędzie: ${call.name}` };
   } catch (e) {

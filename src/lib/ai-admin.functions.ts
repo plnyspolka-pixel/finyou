@@ -36,6 +36,7 @@ export const updateAiSettings = createServerFn({ method: "POST" })
         enable_db_read: z.boolean(),
         enable_db_write: z.boolean(),
         enable_file_read: z.boolean(),
+        enable_file_write: z.boolean(),
         max_tokens: z.number().int().min(500).max(16000),
         temperature: z.number().min(0).max(1),
       })
@@ -114,6 +115,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       enable_db_read: boolean;
       enable_db_write: boolean;
       enable_file_read: boolean;
+      enable_file_write: boolean;
       max_tokens: number;
       temperature: number;
     };
@@ -222,7 +224,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       for (const tc of toolBlocks) {
         const r = await runTool(
           { name: tc.name, input: tc.input },
-          { enableDbRead: s.enable_db_read, enableDbWrite: s.enable_db_write, enableFileRead: s.enable_file_read }
+          { enableDbRead: s.enable_db_read, enableDbWrite: s.enable_db_write, enableFileRead: s.enable_file_read, enableFileWrite: s.enable_file_write }
         );
         const content = r.ok
           ? typeof r.output === "string"
