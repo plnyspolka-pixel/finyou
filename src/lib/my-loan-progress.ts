@@ -132,6 +132,6 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
     ...base,
     missing,
     next_step,
-    has_loan: ctx.hasLoan,
+    flags: ctx,
   };
 }
