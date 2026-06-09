@@ -85,8 +85,10 @@ function WniosekOpisPage() {
       };
       if (markComplete) {
         payload.status = "wniosek_kompletny";
-        payload.completeness_percent = 100;
         payload.available_to_investors = true;
+        // UWAGA: nie nadpisujemy completeness_percent na sztywno 100 —
+        // faktyczny postęp liczymy z computeLoanProgress (my-loan.functions),
+        // żeby status w bazie nie kłamał, jeśli brak np. dokumentów.
       }
       const { error } = await supabase.from("loan_applications").update(payload).eq("id", loanId);
       if (error) throw error;

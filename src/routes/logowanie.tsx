@@ -1,13 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  claim: z.string().optional(),
+  next: z.string().optional(),
+});
 
 export const Route = createFileRoute("/logowanie")({
+  validateSearch: (s) => searchSchema.parse(s),
   head: () => ({
     meta: [
       { title: "Finance You — Zaloguj się do panelu klienta" },
@@ -31,11 +39,44 @@ export const Route = createFileRoute("/logowanie")({
 });
 
 function LoginPage() {
+  const navigate = useNavigate();
+  const { claim, next } = useSearch({ from: "/logowanie" });
+
+  // Zapisz token claim w localStorage, żeby pulpit go „odebrał" po logowaniu
+  if (typeof window !== "undefined" && claim) {
+    try {
+      window.localStorage.setItem("pendingClaimToken", claim);
+    } catch {}
+  }
+
+  const target = next && next.startsWith("/") ? next : "/klient";
+
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const submit = async (e: FormEvent) => {
+  const submitPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      toast.error("Podaj e-mail i hasło");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error("Nie udało się zalogować", { description: error.message });
+      return;
+    }
+    toast.success("Witaj z powrotem!");
+    void navigate({ to: target });
+  };
+
+  const submitMagic = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       toast.error("Wpisz adres e-mail");
@@ -46,7 +87,7 @@ function LoginPage() {
       email: email.trim(),
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}${target}`,
       },
     });
     setLoading(false);
@@ -60,12 +101,28 @@ function LoginPage() {
     });
   };
 
+  const signInGoogle = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}${target}` },
+    });
+    if (error) {
+      setLoading(false);
+      toast.error("Nie udało się zalogować Google", { description: error.message });
+    }
+  };
+
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Zaloguj się</CardTitle>
-          <CardDescription>Podaj swój e-mail — wyślemy Ci link do logowania. Bez haseł.</CardDescription>
+          <CardDescription>
+            {claim
+              ? "Zaloguj się, aby dokończyć swój wniosek — automatycznie połączymy go z Twoim kontem."
+              : "Wybierz sposób logowania — hasło, link e-mail lub Google."}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {sent ? (
@@ -76,27 +133,82 @@ function LoginPage() {
               </p>
             </div>
           ) : (
-            <form className="space-y-4" onSubmit={submit}>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Wysyłanie linku…" : "Wyślij link do logowania"}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Nie masz konta?{" "}
-                <Link to="/rejestracja" className="font-medium text-accent hover:underline">
-                  Zarejestruj się
-                </Link>
-              </p>
-            </form>
+            <Tabs defaultValue="password" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="password">Hasło</TabsTrigger>
+                <TabsTrigger value="magic">Link e-mail</TabsTrigger>
+                <TabsTrigger value="google">Google</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="password" className="mt-4">
+                <form className="space-y-4" onSubmit={submitPassword}>
+                  <div className="space-y-2">
+                    <Label htmlFor="email-pw">E-mail</Label>
+                    <Input
+                      id="email-pw"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Hasło</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Logowanie…" : "Zaloguj się"}
+                  </Button>
+                  <div className="flex items-center justify-between text-sm">
+                    <Link to="/zapomniane-haslo" className="text-muted-foreground hover:underline">
+                      Nie pamiętam hasła
+                    </Link>
+                    <Link to="/rejestracja" className="font-medium text-accent hover:underline">
+                      Zarejestruj się
+                    </Link>
+                  </div>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="magic" className="mt-4">
+                <form className="space-y-4" onSubmit={submitMagic}>
+                  <div className="space-y-2">
+                    <Label htmlFor="email-magic">E-mail</Label>
+                    <Input
+                      id="email-magic"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Wysyłanie linku…" : "Wyślij link do logowania"}
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Bez haseł — kliknij link z maila, by się zalogować.
+                  </p>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="google" className="mt-4 space-y-4">
+                <Button type="button" variant="outline" className="w-full" disabled={loading} onClick={signInGoogle}>
+                  {loading ? "Przekierowanie…" : "Kontynuuj przez Google"}
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Użyjemy Twojego adresu Google, by stworzyć lub odnaleźć konto.
+                </p>
+              </TabsContent>
+            </Tabs>
           )}
         </CardContent>
       </Card>
