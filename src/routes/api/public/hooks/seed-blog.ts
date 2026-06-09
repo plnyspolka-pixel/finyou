@@ -59,6 +59,16 @@ async function seed(count: number) {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("LOVABLE_API_KEY missing");
 
+  // Idempotency guard: don't re-seed if we already have enough autopilot articles.
+  const { count: existing } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("id", { count: "exact", head: true })
+    .eq("source", "ai_autopilot")
+    .eq("status", "published");
+  if ((existing ?? 0) >= count) {
+    return { ok: true, skipped: true, existing };
+  }
+
   // 1) plan topics
   const planTool = {
     type: "function",
