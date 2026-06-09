@@ -28,7 +28,7 @@ export const MagicLinkEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Link href="https://financeyou.pl">
-          <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={logo} />
+          <Img src="https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png" width="64" height="64" alt="FinanceYou" style={logo} />
         </Link>
         <Heading style={h1}>Twoje wejście do FinanceYou</Heading>
         <Text style={text}>
