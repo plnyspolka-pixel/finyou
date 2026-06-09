@@ -133,7 +133,9 @@ async function writeArticleFromNews(
   lovableKey: string,
   brief: NewsBrief,
   internal: RelatedArticle[],
+  audience: Audience,
 ): Promise<ArticleDraft> {
+
   const internalList = internal
     .map((a) => `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`)
     .join("\n");
