@@ -874,10 +874,9 @@ function KlientWniosek() {
           <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Row k="Kwota pożyczki" v={formatPLN(amount)} />
-            <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
             <Row k="Okres finansowania" v={`${months} mies.`} />
             <Row k="Rata miesięczna" v={formatPLN(rata)} />
-            <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
+
             <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
             <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
             <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
