@@ -114,13 +114,6 @@ export function ProgressChecklist({
       hint: "Krótka historia, dlaczego potrzebujesz finansowania — buduje zaufanie inwestorów.",
     },
     {
-      done: hasIncomeDocs,
-      label: "Dokumenty dochodowe",
-      ctaHref: "/klient/dokumenty",
-      ctaLabel: hasIncomeDocs ? "Zarządzaj" : "Wgraj",
-      hint: "PIT, zaświadczenie z firmy, KPiR — inwestor widzi realny dochód.",
-    },
-    {
       done: hasBankAccount,
       label: "Rachunek bankowy do spłat",
       ctaHref: "/klient/profil",
