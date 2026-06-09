@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-type KwChoice = "znam" | "pomoc" | "pozniej";
+type KwChoice = "znam" | "mobywatel" | "pomoc";
 
 type PhotoItem = {
   id: string;
