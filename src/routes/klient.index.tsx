@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getMyLoanProgress, claimLoanApplication } from "@/lib/my-loan.functions";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { NextStepCard } from "@/components/client/NextStepCard";
 import { ProgressChecklist } from "@/components/client/ProgressChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,17 @@ function KlientDashboard() {
   const { data: progress, isLoading, refetch } = useQuery({
     queryKey: ["my-loan-progress", user?.id],
     queryFn: () => fetchProgress(),
+    enabled: Boolean(user),
+  });
+
+  const { data: clientRow } = useQuery({
+    queryKey: ["client-bank-status", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients")
+        .select("bank_account, bank_account_verified_at, nip, company_name")
+        .eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
     enabled: Boolean(user),
   });
 
@@ -101,6 +113,8 @@ function KlientDashboard() {
             hasPropertyType={progress.flags.hasPropertyType}
             hasLoanTerms={progress.flags.hasLoanTerms}
             hasInvestorDescription={progress.flags.hasInvestorDescription}
+            hasBankAccount={Boolean(clientRow?.bank_account_verified_at)}
+            hasCompanyData={Boolean(clientRow?.nip && clientRow?.company_name)}
           />
         </div>
 

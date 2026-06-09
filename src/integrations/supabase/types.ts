@@ -1472,6 +1472,9 @@ export type Database = {
         Row: {
           address: string | null
           bank_account: string | null
+          bank_account_document_path: string | null
+          bank_account_holder_ocr: string | null
+          bank_account_verified_at: string | null
           city: string | null
           company_name: string | null
           consent_email: boolean
@@ -1514,6 +1517,9 @@ export type Database = {
         Insert: {
           address?: string | null
           bank_account?: string | null
+          bank_account_document_path?: string | null
+          bank_account_holder_ocr?: string | null
+          bank_account_verified_at?: string | null
           city?: string | null
           company_name?: string | null
           consent_email?: boolean
@@ -1556,6 +1562,9 @@ export type Database = {
         Update: {
           address?: string | null
           bank_account?: string | null
+          bank_account_document_path?: string | null
+          bank_account_holder_ocr?: string | null
+          bank_account_verified_at?: string | null
           city?: string | null
           company_name?: string | null
           consent_email?: boolean
