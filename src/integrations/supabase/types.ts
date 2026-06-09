@@ -4993,6 +4993,24 @@ export type Database = {
       }
       exec_admin_select: { Args: { _sql: string }; Returns: Json }
       exec_admin_write: { Args: { _sql: string }; Returns: Json }
+      get_public_tracking_settings: {
+        Args: never
+        Returns: {
+          client_pixel_id: string
+          ga4_measurement_id: string
+          google_ads_conversion_id: string
+          google_ads_label_lead: string
+          google_ads_label_registration: string
+          google_ads_label_submit: string
+          google_ads_label_subscribe: string
+          gtm_container_id: string
+          investor_pixel_id: string
+          track_contact: boolean
+          track_lead: boolean
+          track_registration: boolean
+          track_subscribe: boolean
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

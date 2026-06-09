@@ -31,12 +31,9 @@ type Settings = {
 };
 
 async function loadGoogleSettings(): Promise<Settings | null> {
-  const { data } = await supabase
-    .from("tracking_settings")
-    .select("ga4_measurement_id, gtm_container_id, google_ads_conversion_id, google_ads_label_registration, google_ads_label_lead, google_ads_label_submit, google_ads_label_subscribe")
-    .eq("id", 1)
-    .maybeSingle();
-  return (data as Settings) ?? null;
+  const { data } = await supabase.rpc("get_public_tracking_settings");
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row as Settings) ?? null;
 }
 
 
