@@ -230,6 +230,15 @@ export type AnthropicMessage = {
         | { type: "text"; text: string }
         | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
         | { type: "tool_result"; tool_use_id: string; content: string; is_error?: boolean }
+        | {
+            type: "image";
+            source: { type: "base64"; media_type: string; data: string };
+          }
+        | {
+            type: "document";
+            source: { type: "base64"; media_type: "application/pdf"; data: string };
+            title?: string;
+          }
       >;
 };
 
