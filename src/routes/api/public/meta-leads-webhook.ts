@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
+import { sendResendEmail } from "@/lib/resend-send.server";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -245,6 +246,20 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                   body: smsBody,
                   source: "meta_lead_return_link",
                 }).catch((e) => console.error("[meta-leads-webhook] sms", e));
+              }
+
+              // 3b) E-mail z linkiem do dokończenia wniosku
+              if (email && capture.returnLink) {
+                const greeting = capture.firstName ? `Cześć ${capture.firstName}!` : "Cześć!";
+                const text = `${greeting}\n\nDziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w Finance You.\n\nDokończ wniosek tutaj: ${capture.returnLink}\n\nZajmie Ci to ok. 3 minut. W razie pytań — zadzwonimy lub odpisz na tego maila.\n\nZespół Finance You`;
+                const html = `<p>${greeting}</p><p>Dziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w <b>Finance You</b>.</p><p><a href="${capture.returnLink}" style="display:inline-block;padding:12px 20px;background:#0f3460;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Dokończ wniosek</a></p><p style="color:#666;font-size:13px">Zajmie Ci to ok. 3 minut. W razie pytań — zadzwonimy lub odpisz na tego maila.</p><p>Zespół Finance You</p>`;
+                await sendResendEmail({
+                  to: email,
+                  subject: "Dokończ wniosek o pożyczkę — Finance You",
+                  text,
+                  html,
+                  fromName: "Ania z Finance You",
+                }).catch((e) => console.error("[meta-leads-webhook] email", e));
               }
 
               // 4) Auto-trigger połączenia (jeśli włączone)
