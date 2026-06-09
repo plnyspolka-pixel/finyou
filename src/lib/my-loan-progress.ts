@@ -66,14 +66,15 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
     .map((r) => kindToMissingItem(r.kind, r.label));
 
   // Wyznaczamy „next step" — pierwsza rzecz do zrobienia
+  const WNIOSEK_HREF = "/klient/wniosek";
   let next_step: NextStep;
   if (!ctx.hasLoan) {
     next_step = {
       section: "zabezpieczenie",
       title: "Rozpocznij wniosek",
-      description: "Wybierz typ nieruchomości, którą chcesz zabezpieczyć pożyczkę.",
-      ctaHref: "/wniosek-zabezpieczenie",
-      ctaLabel: "Rozpocznij",
+      description: "Wypełnij krótki wniosek krok po kroku — wybierzesz kwotę, okres i zabezpieczenie.",
+      ctaHref: WNIOSEK_HREF,
+      ctaLabel: "Rozpocznij wniosek",
     };
   } else if (!ctx.hasContact) {
     next_step = {
@@ -86,18 +87,18 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
   } else if (!ctx.hasPropertyType) {
     next_step = {
       section: "zabezpieczenie",
-      title: "Wybierz typ zabezpieczenia",
-      description: "Wskaż, jaką nieruchomością chcesz zabezpieczyć pożyczkę.",
-      ctaHref: "/wniosek-zabezpieczenie",
-      ctaLabel: "Wybierz zabezpieczenie",
+      title: "Wróć do wniosku",
+      description: "Wskaż w wniosku, jaką nieruchomością chcesz zabezpieczyć pożyczkę.",
+      ctaHref: WNIOSEK_HREF,
+      ctaLabel: "Otwórz wniosek",
     };
   } else if (!ctx.hasLoanTerms) {
     next_step = {
       section: "warunki",
-      title: "Ustal warunki pożyczki",
-      description: "Określ kwotę, okres i maksymalną ratę miesięczną.",
-      ctaHref: "/wniosek-warunki",
-      ctaLabel: "Ustal warunki",
+      title: "Dokończ warunki we wniosku",
+      description: "Określ we wniosku kwotę, okres i maksymalną ratę miesięczną.",
+      ctaHref: WNIOSEK_HREF,
+      ctaLabel: "Otwórz wniosek",
     };
   } else if (missing.length > 0) {
     next_step = {
@@ -113,10 +114,10 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
   } else if (!ctx.hasInvestorDescription) {
     next_step = {
       section: "opis",
-      title: "Dodaj opis dla inwestora",
-      description: "Krótko opisz, na co przeznaczysz środki — to ostatni krok przed wysłaniem wniosku.",
-      ctaHref: "/wniosek-opis",
-      ctaLabel: "Dodaj opis",
+      title: "Wróć do wniosku i wyślij",
+      description: "Sprawdź całość i wyślij wniosek do analizy.",
+      ctaHref: WNIOSEK_HREF,
+      ctaLabel: "Otwórz wniosek",
     };
   } else {
     next_step = {
