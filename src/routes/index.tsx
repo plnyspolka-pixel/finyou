@@ -26,12 +26,7 @@ import {
   IconPhone,
   IconMail,
   IconCheck,
-  BgMoney,
-  BgPeriod,
-  BgScale,
-  BgRocket,
 } from "@/components/brand-icons";
-import { QuickCalculator } from "@/components/landing/quick-calculator";
 import { LinearLoanApplication } from "@/components/loan-application-variants";
 import { PropertyTypesShowcase } from "@/components/landing/property-types-showcase";
 import { AuroraText } from "@/components/ui/aurora-text";
