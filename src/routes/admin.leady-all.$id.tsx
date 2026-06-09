@@ -181,6 +181,10 @@ function LeadDetailPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="meta-capi">
+          <CapiEventsList leadId={id} />
+        </TabsContent>
+
         <TabsContent value="raw">
           <Card className="p-4">
             <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{JSON.stringify(lead, null, 2)}</pre>
@@ -188,6 +192,122 @@ function LeadDetailPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function QualitySection({ lead }: { lead: any }) {
+  const qc = useQueryClient();
+  const rescoreFn = useServerFn(rescoreLead);
+  const goodFn = useServerFn(markGoodLead);
+  const badFn = useServerFn(markBadLead);
+  const unbadFn = useServerFn(unmarkBadLead);
+  const [badOpen, setBadOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["lead", lead.id] });
+
+  const mRescore = useMutation({
+    mutationFn: () => rescoreFn({ data: { leadId: lead.id } }),
+    onSuccess: (r: any) => {
+      toast.success(`Przeliczono: Tier ${r.tier} (${r.reason})${r.capi?.ok ? " • event wysłany do Mety" : r.capi?.error ? ` • CAPI: ${r.capi.error}` : ""}`);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const mGood = useMutation({
+    mutationFn: () => goodFn({ data: { leadId: lead.id } }),
+    onSuccess: () => { toast.success("Oznaczono jako TOP lead — sygnał wysłany do Mety"); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const mBad = useMutation({
+    mutationFn: () => badFn({ data: { leadId: lead.id, reason } }),
+    onSuccess: () => { toast.success("Oznaczono jako zły lead — Meta dostała sygnał negatywny"); setBadOpen(false); setReason(""); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const mUnbad = useMutation({
+    mutationFn: () => unbadFn({ data: { leadId: lead.id } }),
+    onSuccess: () => { toast.success("Cofnięto oznaczenie spam"); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <div className="text-sm font-medium flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" /> Jakość leadu dla algorytmu Mety
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {lead.quality_reason ?? "Jeszcze nie sklasyfikowano — kliknij Przelicz"}
+            {lead.meta_capi_last_event && (
+              <> • Ostatni event: <code>{lead.meta_capi_last_event}</code> ({lead.meta_capi_last_sent_at ? new Date(lead.meta_capi_last_sent_at).toLocaleString("pl-PL") : "—"})</>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => mRescore.mutate()} disabled={mRescore.isPending}>
+            <RefreshCw className="h-4 w-4 mr-1" /> Przelicz + wyślij do Mety
+          </Button>
+          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => mGood.mutate()} disabled={mGood.isPending}>
+            <ThumbsUp className="h-4 w-4 mr-1" /> Dobry lead
+          </Button>
+          {lead.marked_bad_lead ? (
+            <Button size="sm" variant="outline" onClick={() => mUnbad.mutate()} disabled={mUnbad.isPending}>
+              Cofnij spam
+            </Button>
+          ) : (
+            <Button size="sm" variant="destructive" onClick={() => setBadOpen(!badOpen)}>
+              <ThumbsDown className="h-4 w-4 mr-1" /> Odrzuć / spam
+            </Button>
+          )}
+        </div>
+      </div>
+      {badOpen && (
+        <div className="flex gap-2 items-end pt-2 border-t">
+          <div className="flex-1">
+            <label className="text-xs text-muted-foreground">Powód (np. fałszywe dane, bot, niezainteresowany)</label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Powód odrzucenia…" />
+          </div>
+          <Button size="sm" variant="destructive" onClick={() => mBad.mutate()} disabled={!reason.trim() || mBad.isPending}>
+            Potwierdź odrzucenie
+          </Button>
+        </div>
+      )}
+      {lead.marked_bad_lead && (
+        <div className="text-xs text-destructive">⚠ Oznaczony jako zły lead: {lead.marked_bad_reason}</div>
+      )}
+    </Card>
+  );
+}
+
+function CapiEventsList({ leadId }: { leadId: string }) {
+  const fn = useServerFn(listCapiEvents);
+  const q = useQuery({ queryKey: ["capi-events", leadId], queryFn: () => fn({ data: { leadId } }) });
+  if (q.isLoading) return <Card className="p-4 text-sm text-muted-foreground">Ładowanie…</Card>;
+  const rows = (q.data ?? []) as any[];
+  if (rows.length === 0) return <Card className="p-4 text-sm text-muted-foreground">Brak eventów wysłanych do Mety.</Card>;
+  return (
+    <Card className="p-4">
+      <table className="w-full text-sm">
+        <thead className="text-xs text-muted-foreground">
+          <tr><th className="text-left p-1">Event</th><th className="text-left p-1">Tier</th><th className="text-right p-1">Value</th><th className="text-left p-1">Status</th><th className="text-left p-1">Kiedy</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id} className="border-t">
+              <td className="p-1"><code className="text-xs">{r.event_name}</code></td>
+              <td className="p-1"><Badge variant="outline">{r.tier}</Badge></td>
+              <td className="p-1 text-right">{r.value ?? "—"}</td>
+              <td className="p-1">
+                <Badge variant={r.status === "sent" ? "default" : "destructive"} className="text-[10px]">{r.status}</Badge>
+                {r.error && <div className="text-[10px] text-destructive mt-1">{r.error}</div>}
+              </td>
+              <td className="p-1 text-xs text-muted-foreground">{new Date(r.sent_at).toLocaleString("pl-PL")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
   );
 }
 
