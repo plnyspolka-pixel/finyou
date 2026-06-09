@@ -107,7 +107,32 @@ function WniosekWarunkiPage() {
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("calc_step1_v1");
-      if (raw) setStep1(JSON.parse(raw));
+      if (raw) {
+        setStep1(JSON.parse(raw));
+        return;
+      }
+      // Fallback: parametry z embedowanego kalkulatora (/embed/wniosek → /wniosek-start)
+      const embedRaw = sessionStorage.getItem("embed_calc_v1");
+      if (embedRaw) {
+        const p = JSON.parse(embedRaw) as {
+          amount?: number; months?: number; secType?: SecurityType | null;
+          annualRate?: number; maxPayment?: number; source?: string;
+        };
+        if (p.amount && p.months) {
+          setStep1({
+            amount: Number(p.amount),
+            months: Number(p.months),
+            secType: (p.secType ?? null) as SecurityType | null,
+            source: p.source,
+          });
+          if (typeof p.annualRate === "number" && p.annualRate > 0) {
+            setMonthlyRate(Math.round((p.annualRate / 12) * 100) / 100);
+          }
+          if (typeof p.maxPayment === "number" && p.maxPayment > 0) {
+            setMaxPayment(p.maxPayment);
+          }
+        }
+      }
     } catch {
       /* noop */
     }
