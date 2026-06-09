@@ -13,6 +13,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getMyLoanProgress } from "@/lib/my-loan.functions";
 import { detectKwNumbers } from "@/lib/kw-ocr.functions";
+import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
+import { Home } from "lucide-react";
 
 export const Route = createFileRoute("/klient/dokumenty")({
   component: KlientDokumenty,
