@@ -69,13 +69,13 @@ export function ProgressChecklist({
         {
           done: hasPropertyType,
           label: "Typ zabezpieczenia",
-          ctaHref: "/wniosek-zabezpieczenie",
+          ctaHref: "/klient/wniosek",
           ctaLabel: hasPropertyType ? "Zmień" : "Wybierz",
         },
         {
           done: hasLoanTerms,
           label: "Warunki pożyczki (kwota, okres, rata)",
-          ctaHref: "/wniosek-warunki",
+          ctaHref: "/klient/wniosek",
           ctaLabel: hasLoanTerms ? "Zmień" : "Ustal",
         },
       ],
