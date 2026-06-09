@@ -360,3 +360,8 @@ function Metric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function formatPLNCompact(n: number): string {
+  const v = Math.round(n);
+  return new Intl.NumberFormat("pl-PL").format(v) + " zł";
+}
