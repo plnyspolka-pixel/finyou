@@ -40,7 +40,35 @@ interface NewsBrief {
   citations: { url: string; title?: string }[];
 }
 
-async function fetchFreshNewsBrief(pplxKey: string): Promise<NewsBrief> {
+type Audience = "borrower" | "investor";
+
+async function pickNextAudience(): Promise<Audience> {
+  // Alternate: look at last autopilot article; pick the opposite.
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("audience")
+    .eq("source", "ai_autopilot")
+    .order("published_at", { ascending: false })
+    .limit(1);
+  const last = data?.[0]?.audience as Audience | undefined;
+  if (last === "investor") return "borrower";
+  if (last === "borrower") return "investor";
+  return "investor"; // first run → start with investor (mamy już duży stack borrower)
+}
+
+const BRIEFS: Record<Audience, { sys: string; user: string }> = {
+  borrower: {
+    sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
+    user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla OSOBY POŻYCZAJĄCEJ pod zastaw nieruchomości w PL: stopy procentowe (RPP), WIBOR/inflacja, ceny mieszkań i nieruchomości w PL, sytuacja na rynku kredytów hipotecznych, regulacje konsumenckie (UOKiK, KNF), wyroki istotne dla kredytobiorców. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_POŻYCZKOBIORCY:' i jeden akapit (4-6 zdań) co to oznacza dla osoby rozważającej pożyczkę pozabankową pod zastaw mieszkania/domu/działki.",
+  },
+  investor: {
+    sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
+    user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla INWESTORA prywatnego w PL: stopy procentowe (RPP, FED, EBC), kurs PLN/EUR/USD, WIG20, S&P 500, ropa, złoto, BTC/ETH, ceny nieruchomości komercyjnych i mieszkaniowych w PL, alternatywne klasy aktywów (pożyczki prywatne, crowdfunding nieruchomościowy), regulacje wpływające na inwestowanie. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_INWESTORSKI:' i jeden akapit (4-6 zdań) co to oznacza dla inwestora prywatnego, w szczególności rozważającego inwestowanie w pożyczki pod zastaw nieruchomości w PL (oczekiwana stopa zwrotu, ryzyko, dywersyfikacja).",
+  },
+};
+
+async function fetchFreshNewsBrief(pplxKey: string, audience: Audience): Promise<NewsBrief> {
+  const b = BRIEFS[audience];
   const res = await fetch(PPLX_URL, {
     method: "POST",
     headers: {
@@ -51,16 +79,8 @@ async function fetchFreshNewsBrief(pplxKey: string): Promise<NewsBrief> {
       model: "sonar",
       search_recency_filter: "day",
       messages: [
-        {
-          role: "system",
-          content:
-            "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
-        },
-        {
-          role: "user",
-          content:
-            "Wypisz 5 najważniejszych wiadomości z ostatnich 24h z rynków finansowych istotnych dla polskiego inwestora: stopy procentowe (RPP, FED, EBC), kurs PLN/EUR/USD, WIG20, S&P 500, ropa, złoto, BTC/ETH, kluczowe wydarzenia geopolityczne wpływające na rynek, regulacje finansowe w PL/UE. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_INWESTORSKI:' i jeden akapit (4-6 zdań) co to oznacza dla inwestora w pożyczki pod zastaw nieruchomości w PL.",
-        },
+        { role: "system", content: b.sys },
+        { role: "user", content: b.user },
       ],
     }),
   });
@@ -73,6 +93,7 @@ async function fetchFreshNewsBrief(pplxKey: string): Promise<NewsBrief> {
   const citations = rawCitations.slice(0, 6).map((url) => ({ url }));
   return { summary, citations };
 }
+
 
 interface RelatedArticle {
   slug: string;
@@ -112,7 +133,9 @@ async function writeArticleFromNews(
   lovableKey: string,
   brief: NewsBrief,
   internal: RelatedArticle[],
+  audience: Audience,
 ): Promise<ArticleDraft> {
+
   const internalList = internal
     .map((a) => `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`)
     .join("\n");
@@ -160,7 +183,11 @@ async function writeArticleFromNews(
     },
   ];
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://app.financeyou.pl/embed/wniosek)" wpleć naturalnie 1-2 razy.`;
+  const audienceBrief = audience === "investor"
+    ? `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl/inwestor)" wpleć 1 raz.`
+    : `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://app.financeyou.pl/embed/wniosek)" wpleć 1-2 razy.`;
+
+  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}`;
 
   const userMsg = `BRIEFING (świeże wiadomości z ostatnich 24h):
 ${brief.summary}
@@ -171,7 +198,8 @@ ${externalList || "(brak)"}
 LINKI WEWNĘTRZNE do wplecenia w treść (2-3 z poniższych, naturalnie w kontekście):
 ${internalList || "(brak — pomiń linki wewnętrzne)"}
 
-Napisz codzienny post blogowy w stylu 'finance morning briefing'. Tytuł musi sugerować datę/aktualność (np. "Co dziś warto wiedzieć…").`;
+Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
+
 
   const res = await fetch(AI_URL, {
     method: "POST",
@@ -241,13 +269,17 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     }
   }
 
-  const brief = await fetchFreshNewsBrief(pplxKey);
+  const audience = await pickNextAudience();
+  const brief = await fetchFreshNewsBrief(pplxKey, audience);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(lovableKey, brief, internal);
+  const draft = await writeArticleFromNews(lovableKey, brief, internal, audience);
   const cover = await generateCover(lovableKey, draft.cover_prompt);
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
+
+  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://app.financeyou.pl/embed/wniosek";
+  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek";
 
   const { data: inserted, error } = await supabaseAdmin
     .from("ai_seo_articles")
@@ -263,8 +295,10 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       word_count: wordCount,
       reading_minutes: Math.max(1, Math.round(wordCount / 200)),
       status: "published",
-      cta_url: "https://app.financeyou.pl/embed/wniosek",
-      cta_label: "Złóż wniosek",
+      audience,
+      cta_url: ctaUrl,
+      cta_label: ctaLabel,
+
       source: "ai_autopilot",
       raw_ai_output: draft as any,
       published_at: new Date().toISOString(),

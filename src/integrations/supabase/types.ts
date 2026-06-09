@@ -882,6 +882,7 @@ export type Database = {
       }
       ai_seo_articles: {
         Row: {
+          audience: string
           content_md: string
           content_refreshed_at: string | null
           cover_image_alt: string | null
@@ -911,6 +912,7 @@ export type Database = {
           word_count: number | null
         }
         Insert: {
+          audience?: string
           content_md: string
           content_refreshed_at?: string | null
           cover_image_alt?: string | null
@@ -940,6 +942,7 @@ export type Database = {
           word_count?: number | null
         }
         Update: {
+          audience?: string
           content_md?: string
           content_refreshed_at?: string | null
           cover_image_alt?: string | null
