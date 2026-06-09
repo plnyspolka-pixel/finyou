@@ -355,6 +355,12 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
   const [step, setStep] = useState(0);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
 
+  // Krok 2 ("Poznaj ofertę / Zostaw kontakt") jest tylko dla niezalogowanych —
+  // zalogowanego klienta przeskakujemy automatycznie.
+  useEffect(() => {
+    if (user && step === 2) setStep(3);
+  }, [user, step]);
+
   const gateUnlocked =
     !!user ||
     (!!draft.firstName.trim() && !!draft.email.trim() && !!draft.phone.trim());
@@ -372,12 +378,19 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
     return true;
   };
 
+  const advance = (delta: 1 | -1) => {
+    let target = step + delta;
+    // Omijaj krok 2 dla zalogowanych w obie strony
+    if (user && target === 2) target += delta;
+    return Math.max(0, Math.min(linearSteps.length - 1, target));
+  };
+
   const next = () => {
     if (!canContinue()) {
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
       return;
     }
-    if (step < linearSteps.length - 1) setStep((current) => current + 1);
+    if (step < linearSteps.length - 1) setStep(advance(1));
     else toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
   };
 
@@ -406,6 +419,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           <Progress value={currentProgress} />
           <ol className="mt-5 space-y-2">
             {linearSteps.map((label, index) => {
+              if (user && index === 2) return null;
               const done = index < step;
               const active = index === step;
               return (
@@ -554,7 +568,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           )}
 
           <div className="mt-10 flex items-center justify-between gap-3 border-t border-border pt-5">
-            <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>
+            <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep(advance(-1))}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
             </Button>
             <Button type="button" variant="cta" size="lg" className="min-w-0 flex-1 whitespace-normal text-center leading-tight sm:flex-none" onClick={next}>
