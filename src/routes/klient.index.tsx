@@ -54,6 +54,17 @@ function KlientDashboard() {
     enabled: Boolean(user),
   });
 
+  const { data: clientRow } = useQuery({
+    queryKey: ["client-bank-status", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients")
+        .select("bank_account, bank_account_verified_at, nip, company_name")
+        .eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+    enabled: Boolean(user),
+  });
+
   if (authLoading || isLoading) {
     return (
       <div className="space-y-6 max-w-5xl">
