@@ -152,24 +152,44 @@ export function AiAdminChat() {
     setRecording(false);
   };
 
+  const fileToBase64 = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const s = String(r.result ?? "");
+        const i = s.indexOf(",");
+        resolve(i >= 0 ? s.slice(i + 1) : s);
+      };
+      r.onerror = () => reject(r.error ?? new Error("read error"));
+      r.readAsDataURL(f);
+    });
+
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const next: Attachment[] = [];
     for (const f of Array.from(files)) {
-      if (f.size > 2_000_000) {
-        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
-        toast.error(`${f.name}: plik > 2MB, pominięty`);
+      if (f.size > MAX_FILE_BYTES) {
+        toast.error(`${f.name}: plik > 25 MB, pominięty`);
         continue;
       }
       const isText = TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json";
-      if (!isText) {
-        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
-        toast.warning(`${f.name}: format binarny (PDF/obraz) niewspierany — wgraj tekst, CSV, MD, JSON itp.`);
-        continue;
-      }
+      const isImage = ANTHROPIC_IMAGE_MIME.test(f.type);
+      const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
       try {
-        const text = await f.text();
-        next.push({ name: f.name, size: f.size, type: f.type, text: text.slice(0, MAX_INLINE) });
+        if (isText) {
+          const text = await f.text();
+          next.push({ name: f.name, size: f.size, mediaType: f.type || "text/plain", kind: "text", text });
+        } else if (isImage) {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, size: f.size, mediaType: f.type, kind: "image", data });
+        } else if (isPdf) {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, size: f.size, mediaType: "application/pdf", kind: "pdf", data });
+        } else {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, size: f.size, mediaType: f.type || "application/octet-stream", kind: "other", data });
+          toast.info(`${f.name}: typ ${f.type || "binarny"} — przekażę jako załącznik, ale model może go nie odczytać.`);
+        }
       } catch (e) {
         toast.error(`${f.name}: nie udało się odczytać (${(e as Error).message})`);
       }
@@ -177,6 +197,7 @@ export function AiAdminChat() {
     setAttachments((prev) => [...prev, ...next]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
 
   const submit = () => {
     const text = input.trim();
