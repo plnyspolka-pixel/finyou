@@ -18,7 +18,13 @@ export const Route = createFileRoute("/blog/$slug")({
       { property: "og:description", content: loaderData.article.meta_description || loaderData.article.excerpt || "" },
       { property: "og:type", content: "article" },
       { property: "og:url", content: `https://financeyou.pl/blog/${params.slug}` },
+      ...(loaderData.article.cover_image_url ? [
+        { property: "og:image", content: loaderData.article.cover_image_url },
+        { name: "twitter:image", content: loaderData.article.cover_image_url },
+        { name: "twitter:card", content: "summary_large_image" },
+      ] : []),
     ] : [],
+
     links: loaderData?.article ? [
       { rel: "canonical", href: `https://financeyou.pl/blog/${params.slug}` },
     ] : [],
