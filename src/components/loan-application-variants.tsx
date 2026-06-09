@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { extractKwFromUpload } from "@/lib/kw-ocr.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
