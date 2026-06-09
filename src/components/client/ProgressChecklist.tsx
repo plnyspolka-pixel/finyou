@@ -182,12 +182,12 @@ export function ProgressChecklist({
             ) : (
               <ul className="space-y-2">
                 {missingItems.map((it) => (
-                  <li key={it.label} className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
+                  <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <Circle className="h-4 w-4 shrink-0 text-amber-500" />
                       <span className="truncate text-sm font-medium">{it.label}</span>
                     </div>
-                    <Button asChild size="sm" variant="outline">
+                    <Button asChild size="sm" variant="outline" className="w-full sm:w-auto shrink-0">
                       <Link to={it.ctaHref}>
                         {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Link>
