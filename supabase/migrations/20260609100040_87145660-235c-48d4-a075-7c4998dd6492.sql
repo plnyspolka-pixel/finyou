@@ -1,0 +1,2 @@
+ALTER TABLE public.ai_seo_articles ADD COLUMN IF NOT EXISTS audience TEXT NOT NULL DEFAULT 'borrower' CHECK (audience IN ('borrower','investor'));
+CREATE INDEX IF NOT EXISTS ai_seo_articles_audience_idx ON public.ai_seo_articles(audience, published_at DESC);
