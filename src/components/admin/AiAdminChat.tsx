@@ -343,12 +343,12 @@ export function AiAdminChat() {
                 {attachments.map((a, i) => (
                   <div
                     key={i}
-                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${
-                      a.skipped ? "border-destructive/40 text-muted-foreground line-through" : "bg-muted/40"
-                    }`}
+                    className="flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 text-[11px]"
+                    title={`${a.mediaType} · ${(a.size / 1024).toFixed(0)} KB`}
                   >
                     <FileText className="h-3 w-3" />
                     <span className="max-w-[150px] truncate">{a.name}</span>
+                    <span className="text-muted-foreground">[{a.kind}]</span>
                     <button
                       onClick={() => setAttachments((p) => p.filter((_, j) => j !== i))}
                       className="ml-1 text-muted-foreground hover:text-destructive"
