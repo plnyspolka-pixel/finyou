@@ -224,7 +224,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       for (const tc of toolBlocks) {
         const r = await runTool(
           { name: tc.name, input: tc.input },
-          { enableDbRead: s.enable_db_read, enableDbWrite: s.enable_db_write, enableFileRead: s.enable_file_read }
+          { enableDbRead: s.enable_db_read, enableDbWrite: s.enable_db_write, enableFileRead: s.enable_file_read, enableFileWrite: s.enable_file_write }
         );
         const content = r.ok
           ? typeof r.output === "string"
