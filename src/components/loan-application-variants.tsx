@@ -588,20 +588,11 @@ export function SinglePageLoanApplication() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Home className="h-5 w-5 text-accent" /> Nieruchomość</CardTitle>
-              <CardDescription>Typ zabezpieczenia, adres i księga wieczysta są obok siebie.</CardDescription>
+              <CardDescription>Typ zabezpieczenia i księga wieczysta. Adres pobierzemy automatycznie z KW.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="flat-city">Miasto / miejscowość</Label>
-                  <Input id="flat-city" value={draft.city} onChange={(event) => update("city", event.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="flat-street">Ulica lub opis lokalizacji</Label>
-                  <Input id="flat-street" value={draft.street} onChange={(event) => update("street", event.target.value)} />
-                </div>
-              </div>
+
               <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
                 <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="space-y-3">
                   <KwTile value="znam" current={draft.kwChoice} title="Znam KW" description="Wpiszę numer" />
