@@ -28,6 +28,9 @@ function KlientProfil() {
   });
   const [pwd, setPwd] = useState({ next: "", confirm: "" });
   const [savingPwd, setSavingPwd] = useState(false);
+  const [verifyingBank, setVerifyingBank] = useState(false);
+  const [bankVerification, setBankVerification] = useState<null | { ok: boolean; reason: string; ibanMatch: boolean; holderMatch: boolean; foundIbans: string[]; foundHolder: string }>(null);
+  const verifyBank = useServerFn(verifyBankAccountDocument);
 
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
