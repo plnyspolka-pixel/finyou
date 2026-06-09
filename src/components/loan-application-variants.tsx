@@ -617,3 +617,66 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
   );
 }
 
+
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background px-3 py-2">
+      <span className="text-xs font-bold uppercase text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-semibold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function RequirementsPhotoStep({
+  secType,
+  photos,
+  addPhotos,
+  removePhoto,
+}: {
+  secType: SecurityType | null;
+  photos: PhotoItem[];
+  addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
+  removePhoto: (id: string) => void;
+}) {
+  const propKey = secType ? SEC_TO_PROP[secType] : "inna";
+  const reqs: DocRequirement[] = REQUIREMENTS_BY_TYPE[propKey] ?? REQUIREMENTS_BY_TYPE.inna;
+  // KW number i powierzchnia użytkowa to dane tekstowe — nie sloty plikowe.
+  const fileReqs = reqs.filter((r) => r.kind !== "kw_number" && r.kind !== "usable_area");
+  const typeLabel = PROPERTY_TYPE_LABELS[propKey] ?? "nieruchomość";
+
+  const hints: Partial<Record<DocRequirementKind, string>> = {
+    photos_interior: "Po jednym zdjęciu z każdego pomieszczenia. Dobre światło, cała przestrzeń w kadrze.",
+    photos_exterior: "Elewacja z każdej strony, podjazd, najbliższe otoczenie.",
+    mpzp: "Wydruk z systemu gminy albo zdjęcie decyzji o warunkach zabudowy.",
+    land_registry: "Aktualny wypis z rejestru gruntów (PDF lub zdjęcie).",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm">
+        <div className="font-bold text-foreground">
+          Dla typu „{typeLabel}” potrzebujemy {fileReqs.length} kompletów plików:
+        </div>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+          {fileReqs.map((r) => (
+            <li key={r.kind}>{r.label}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {fileReqs.map((r) => (
+          <PhotoUploader
+            key={r.kind}
+            label={r.label}
+            hint={hints[r.kind]}
+            bucket={r.kind}
+            photos={photos}
+            addPhotos={addPhotos}
+            removePhoto={removePhoto}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
