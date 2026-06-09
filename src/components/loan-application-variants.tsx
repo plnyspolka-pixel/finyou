@@ -434,7 +434,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
               {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
               {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
-              {step === 2 && "Zostaw kontakt, żeby zobaczyć ofertę"}
+              {step === 2 && "Zostaw kontakt"}
               {step === 3 && "Jaką ratę miesięczną realnie udźwigniesz?"}
               {step === 4 && "Jaki koszt finansowania akceptujesz?"}
               {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
