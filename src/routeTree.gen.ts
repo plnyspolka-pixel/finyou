@@ -38,7 +38,6 @@ import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
-import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -261,11 +260,6 @@ const KlientProfilRoute = KlientProfilRouteImport.update({
 const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   id: '/powiadomienia',
   path: '/powiadomienia',
-  getParentRoute: () => KlientRoute,
-} as any)
-const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
-  id: '/dokumenty',
-  path: '/dokumenty',
   getParentRoute: () => KlientRoute,
 } as any)
 const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
@@ -738,7 +732,6 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
@@ -845,7 +838,6 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
@@ -956,7 +948,6 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/klient/dokumenty': typeof KlientDokumentyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
@@ -1068,7 +1059,6 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/klient/dokumenty'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
@@ -1175,7 +1165,6 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/klient/dokumenty'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
@@ -1285,7 +1274,6 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/klient/dokumenty'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
@@ -1594,13 +1582,6 @@ declare module '@tanstack/react-router' {
       path: '/powiadomienia'
       fullPath: '/klient/powiadomienia'
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
-      parentRoute: typeof KlientRoute
-    }
-    '/klient/dokumenty': {
-      id: '/klient/dokumenty'
-      path: '/dokumenty'
-      fullPath: '/klient/dokumenty'
-      preLoaderRoute: typeof KlientDokumentyRouteImport
       parentRoute: typeof KlientRoute
     }
     '/inwestor/wiadomosci': {
@@ -2293,7 +2274,6 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 )
 
 interface KlientRouteChildren {
-  KlientDokumentyRoute: typeof KlientDokumentyRoute
   KlientPowiadomieniaRoute: typeof KlientPowiadomieniaRoute
   KlientProfilRoute: typeof KlientProfilRoute
   KlientWniosekRoute: typeof KlientWniosekRoute
@@ -2301,7 +2281,6 @@ interface KlientRouteChildren {
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
-  KlientDokumentyRoute: KlientDokumentyRoute,
   KlientPowiadomieniaRoute: KlientPowiadomieniaRoute,
   KlientProfilRoute: KlientProfilRoute,
   KlientWniosekRoute: KlientWniosekRoute,
