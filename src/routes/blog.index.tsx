@@ -35,6 +35,19 @@ function BlogIndex() {
   const { articles } = Route.useLoaderData();
   return (
     <div className="min-h-screen bg-background">
+      <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-40">
+        <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
+          <a href="https://financeyou.pl" className="flex items-center gap-2">
+            <img src={FAVICON_URL} alt="Finance You" className="h-7 w-7" />
+            <img src={WORDMARK_URL} alt="Finance You" className="h-5 hidden sm:block" />
+          </a>
+          <nav className="flex items-center gap-4 text-sm">
+            <Link to="/blog" className="text-muted-foreground hover:text-foreground">Blog</Link>
+            <a href="https://financeyou.pl" className="text-muted-foreground hover:text-foreground">financeyou.pl</a>
+            <Button asChild size="sm"><a href="https://app.financeyou.pl/embed/wniosek" target="_blank" rel="noopener">Złóż wniosek</a></Button>
+          </nav>
+        </div>
+      </header>
       <div className="mx-auto max-w-4xl px-4 py-12">
         <header className="mb-10 text-center space-y-2">
           <h1 className="text-4xl font-bold">Blog Finance You</h1>
