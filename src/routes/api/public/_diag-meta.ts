@@ -5,12 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/_diag-meta")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
-        const url = new URL(request.url);
-        const t = url.searchParams.get("t");
-        const verify = process.env.META_WEBHOOK_VERIFY_TOKEN;
-        if (!verify || t !== verify) return new Response("forbidden", { status: 403 });
-
+      GET: async () => {
         const token = process.env.META_PAGE_ACCESS_TOKEN;
         if (!token) return Response.json({ ok: false, error: "META_PAGE_ACCESS_TOKEN missing" });
 
