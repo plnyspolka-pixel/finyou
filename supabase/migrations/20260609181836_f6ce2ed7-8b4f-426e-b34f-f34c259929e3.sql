@@ -1,0 +1,1 @@
+UPDATE public.ai_admin_settings SET enable_db_read = true, enable_db_write = true, enable_file_read = true WHERE singleton = true;

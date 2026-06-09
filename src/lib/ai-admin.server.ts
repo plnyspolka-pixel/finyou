@@ -80,18 +80,14 @@ export const ANTHROPIC_TOOLS = [
   },
 ];
 
+// Blokujemy tylko pliki z sekretami; reszta projektu dostępna do odczytu.
+const FORBIDDEN_FILE = /(^|\/)(\.env(\..*)?|\.git\/|node_modules\/)/i;
+
 function safeFilePath(rel: string): string | null {
   const normalized = path.normalize(rel).replace(/^[/\\]+/, "");
   if (normalized.includes("..")) return null;
-  const allowed =
-    normalized.startsWith("src/") ||
-    normalized.startsWith("src\\") ||
-    normalized.startsWith("supabase/migrations/") ||
-    normalized.startsWith("public/") ||
-    normalized === "package.json" ||
-    normalized === "vite.config.ts" ||
-    normalized === "tsconfig.json";
-  return allowed ? path.join(PROJECT_ROOT, normalized) : null;
+  if (FORBIDDEN_FILE.test(normalized.replace(/\\/g, "/"))) return null;
+  return path.join(PROJECT_ROOT, normalized);
 }
 
 export async function runTool(
@@ -166,10 +162,10 @@ export async function runTool(
       if (!opts.enableFileRead) return { ok: false, output: null, error: "Odczyt plików wyłączony." };
       const rel = String(call.input.path ?? "");
       const safe = safeFilePath(rel);
-      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (dozwolone: src/**, supabase/migrations/**, public/**, package.json, vite.config.ts, tsconfig.json)." };
+      if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona (pliki z sekretami są zablokowane)." };
       const stat = await fs.stat(safe).catch(() => null);
       if (!stat || !stat.isFile()) return { ok: false, output: null, error: "Plik nie istnieje." };
-      if (stat.size > 200 * 1024) return { ok: false, output: null, error: "Plik za duży (>200 KB)." };
+      if (stat.size > 1024 * 1024) return { ok: false, output: null, error: "Plik za duży (>1 MB)." };
       const content = await fs.readFile(safe, "utf8");
       return { ok: true, output: { path: rel, size: stat.size, content } };
     }
