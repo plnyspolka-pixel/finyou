@@ -40,7 +40,7 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
     if (row?.id) {
       await supabase.from("clients").update(payload).eq("id", row.id);
     } else {
-      await supabase.from("clients").insert({ ...payload, user_id: userId });
+      await supabase.from("clients").insert({ ...payload, user_id: userId, first_name: "", last_name: "" });
     }
 
     const sms = await sendSmsInternal({
