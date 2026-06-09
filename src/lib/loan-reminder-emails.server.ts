@@ -161,7 +161,7 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       id, status, current_form_step, loan_amount, preferred_period_months,
       preferred_email_hour, reminder_email_count, reminder_email_unsubscribed,
       return_link_token, created_at,
-      client:clients!inner(id, first_name, last_name, email, phone_normalized, phone)
+      client:clients!inner(id, first_name, last_name, email, phone_normalized, phone, do_not_email)
     `)
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .eq("reminder_email_unsubscribed", false)
@@ -170,7 +170,8 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   if (opts?.onlyLoanId) q = q.eq("id", opts.onlyLoanId);
   const { data: loans } = await q;
 
-  const candidates = (loans ?? []).filter((l: any) => !!l.client?.email);
+  const candidates = (loans ?? []).filter((l: any) => !!l.client?.email && l.client?.do_not_email !== true);
+
 
   if (candidates.length === 0) {
     return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
