@@ -93,7 +93,7 @@ export function ProgressChecklist({
         return {
           done,
           label: r.label,
-          ctaHref: m?.ctaHref ?? "/klient/dokumenty",
+          ctaHref: m?.ctaHref ?? "/klient/wniosek",
           ctaLabel: done ? "Zarządzaj" : m?.ctaLabel ?? "Dodaj",
         };
       }),
