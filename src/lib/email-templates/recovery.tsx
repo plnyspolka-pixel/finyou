@@ -24,24 +24,36 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="pl" dir="ltr">
     <Head />
-    <Preview>Resetowanie hasła w {siteName}</Preview>
+    <Preview>Zresetuj hasło i wróć do swojego wniosku w {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
-        <Heading style={h1}>Zresetuj swoje hasło</Heading>
+        <Link href="https://financeyou.pl">
+          <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={logo} />
+        </Link>
+        <Heading style={h1}>Spokojnie — to się zdarza najlepszym</Heading>
         <Text style={text}>
-          Otrzymaliśmy prośbę o zresetowanie hasła w {siteName}. Kliknij przycisk
-          poniżej, aby ustawić nowe hasło.
+          Hasła to taka rzecz, którą zapomina się zwykle w najgorszym momencie: tuż przed rozmową z doradcą, w dniu finalizacji albo gdy klient czeka na decyzję.
+          Dlatego nie pytamy „dlaczego" — po prostu zostawiamy Ci jeden klik, żeby wrócić do swojej sprawy w <Link href="https://financeyou.pl" style={link}>FinanceYou</Link>.
+        </Text>
+        <Text style={text}>
+          Jeśli to Ty poprosiłeś o reset hasła, użyj przycisku poniżej. Link działa krótko — celowo, żeby nikt inny nie mógł go wykorzystać.
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Zresetuj hasło
+          Ustaw nowe hasło
         </Button>
-        <Text style={footer}>
-          Jeśli to nie Ty prosiłeś o reset hasła, możesz zignorować tę wiadomość.
-          Twoje hasło nie zostanie zmienione.
+        <Text style={text}>
+          Po ustawieniu nowego hasła wrócisz prosto do swojego panelu — z wnioskiem dokładnie w miejscu, w którym go zostawiłeś.
         </Text>
-        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
-          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        <Text style={text}>
+          A jeśli przy okazji chcesz sprawdzić, co u nas nowego — zajrzyj na{' '}
+          <Link href="https://financeyou.pl" style={link}>financeyou.pl</Link> lub poczytaj{' '}
+          <Link href="https://financeyou.pl/blog" style={link}>nasz blog</Link>, gdzie tłumaczymy pożyczki pod nieruchomość po ludzku.
+        </Text>
+        <Text style={footer}>
+          Jeśli nie prosiłeś o reset hasła, zignoruj tę wiadomość — Twoje konto jest bezpieczne.
+        </Text>
+        <Text style={unsubStyle}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={unsubLink}>Nie chcę otrzymywać tych wiadomości</Link>
         </Text>
       </Container>
     </Body>
@@ -51,25 +63,12 @@ export const RecoveryEmail = ({
 export default RecoveryEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const container = { padding: '20px 25px', maxWidth: '560px' }
+const logo = { display: 'block' as const, margin: '0 auto 16px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#000000', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#55575d', lineHeight: '1.6', margin: '0 0 18px' }
+const link = { color: '#000000', textDecoration: 'underline' }
+const button = { backgroundColor: '#000000', color: '#ffffff', fontSize: '14px', borderRadius: '8px', padding: '12px 20px', textDecoration: 'none', display: 'inline-block', margin: '6px 0 22px' }
+const footer = { fontSize: '12px', color: '#999999', margin: '24px 0 0' }
+const unsubStyle = { fontSize: '11px', color: '#bbbbbb', marginTop: '24px', textAlign: 'center' as const }
+const unsubLink = { color: '#bbbbbb', textDecoration: 'underline' }
