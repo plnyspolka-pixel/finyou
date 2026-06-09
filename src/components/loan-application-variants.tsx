@@ -567,16 +567,28 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          <div className="mt-10 flex items-center justify-between gap-3 border-t border-border pt-5">
-            <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep(advance(-1))}>
+          <div className="mt-10 flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={step === 0}
+              onClick={() => setStep(advance(-1))}
+              className="w-full whitespace-nowrap sm:w-auto"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
             </Button>
-            <Button type="button" variant="cta" size="lg" className="min-w-0 flex-1 whitespace-normal text-center leading-tight sm:flex-none" onClick={next}>
-              {step === linearSteps.length - 1
-                ? <><Send className="mr-2 h-4 w-4" /> Wyślij wniosek</>
-                : step === 2
-                  ? <>Przejdź do kalkulacji <ArrowRight className="ml-2 h-4 w-4" /></>
-                  : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}
+            <Button
+              type="button"
+              variant="cta"
+              size="lg"
+              onClick={next}
+              className="w-full whitespace-nowrap sm:w-auto sm:min-w-[200px]"
+            >
+              {step === linearSteps.length - 1 ? (
+                <><Send className="mr-2 h-4 w-4" /> Wyślij wniosek</>
+              ) : (
+                <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>
+              )}
             </Button>
           </div>
         </section>
