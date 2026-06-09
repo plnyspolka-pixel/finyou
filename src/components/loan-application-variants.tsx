@@ -541,7 +541,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           <SummaryPanel draft={draft} figures={figures} photos={photos} />
         </div>
       </div>
-    </VariantShell>
+    </Shell>
   );
 }
 
