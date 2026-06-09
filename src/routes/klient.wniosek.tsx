@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Pencil, FileText, CalendarDays, Info, Lock } from "lucide-react";
+import { Pencil, CalendarDays, Info, Lock } from "lucide-react";
 import { formatPLN, securityTypeLabels, monthlyPayment, type SecurityType } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { LinearLoanApplication, type LoanWizardPrefill } from "@/components/loan-application-variants";
