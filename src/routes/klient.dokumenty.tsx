@@ -247,7 +247,7 @@ function KlientDokumenty() {
 
           {/* Inne wgrane dokumenty (nieprzypisane do slotów) */}
           {(() => {
-            const handled = new Set(progress.required_documents.map((r) => r.kind));
+            const handled = new Set<string>(progress.required_documents.map((r) => r.kind as string));
             const other = docs.filter((d) => !handled.has(d.document_type));
             if (other.length === 0) return null;
             return (
