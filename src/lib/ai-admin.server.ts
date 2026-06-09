@@ -78,6 +78,30 @@ export const ANTHROPIC_TOOLS = [
     description: "Zwraca listę tabel w schemie public z liczbą kolumn.",
     input_schema: { type: "object", properties: {} },
   },
+  {
+    name: "write_project_file",
+    description:
+      "Zapisz/utwórz plik tekstowy w projekcie (max 500 KB). Nadpisuje istniejący plik. Tworzy też brakujące katalogi. Pliki z sekretami (.env*) są zablokowane.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Ścieżka pliku względem roota projektu." },
+        content: { type: "string", description: "Pełna nowa zawartość pliku." },
+      },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "delete_project_file",
+    description: "Usuń plik z projektu. Pliki z sekretami (.env*) są zablokowane.",
+    input_schema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Ścieżka pliku względem roota projektu." },
+      },
+      required: ["path"],
+    },
+  },
 ];
 
 // Blokujemy tylko pliki z sekretami; reszta projektu dostępna do odczytu.
