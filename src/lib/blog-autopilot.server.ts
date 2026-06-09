@@ -269,13 +269,17 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     }
   }
 
-  const brief = await fetchFreshNewsBrief(pplxKey);
+  const audience = await pickNextAudience();
+  const brief = await fetchFreshNewsBrief(pplxKey, audience);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(lovableKey, brief, internal);
+  const draft = await writeArticleFromNews(lovableKey, brief, internal, audience);
   const cover = await generateCover(lovableKey, draft.cover_prompt);
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
+
+  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://app.financeyou.pl/embed/wniosek";
+  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek";
 
   const { data: inserted, error } = await supabaseAdmin
     .from("ai_seo_articles")
@@ -291,8 +295,10 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       word_count: wordCount,
       reading_minutes: Math.max(1, Math.round(wordCount / 200)),
       status: "published",
-      cta_url: "https://app.financeyou.pl/embed/wniosek",
-      cta_label: "Złóż wniosek",
+      audience,
+      cta_url: ctaUrl,
+      cta_label: ctaLabel,
+
       source: "ai_autopilot",
       raw_ai_output: draft as any,
       published_at: new Date().toISOString(),
