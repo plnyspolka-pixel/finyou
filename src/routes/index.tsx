@@ -140,6 +140,7 @@ function Landing() {
             <a href="#kalkulator" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
             <a href="#jak-to-dziala" className="text-sm font-medium text-muted-foreground hover:text-foreground">Jak to działa</a>
             <a href="#faq" className="text-sm font-medium text-muted-foreground hover:text-foreground">FAQ</a>
+            <Link to="/blog" className="text-sm font-medium text-muted-foreground hover:text-foreground">Blog</Link>
           </nav>
           <div className="hidden items-center gap-4 md:flex">
             <a
@@ -556,6 +557,7 @@ function Landing() {
                 <li><a href="#kalkulator" className="hover:text-foreground">Kalkulator</a></li>
                 <li><a href="#jak-to-dziala" className="hover:text-foreground">Jak to działa</a></li>
                 <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
+                <li><Link to="/blog" className="hover:text-foreground">Blog</Link></li>
                 <li><a href="/polityka-prywatnosci" className="hover:text-foreground">Polityka prywatności</a></li>
                 <li><a href="/regulamin" className="hover:text-foreground">Regulamin serwisu</a></li>
               </ul>
