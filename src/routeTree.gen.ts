@@ -68,6 +68,7 @@ import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
+import { Route as AdminClarityRouteImport } from './routes/admin.clarity'
 import { Route as AdminAiSerpRouteImport } from './routes/admin.ai-serp'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
@@ -410,6 +411,11 @@ const AdminDokumentyRoute = AdminDokumentyRouteImport.update({
   path: '/dokumenty',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminClarityRoute = AdminClarityRouteImport.update({
+  id: '/clarity',
+  path: '/clarity',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAiSerpRoute = AdminAiSerpRouteImport.update({
   id: '/ai-serp',
   path: '/ai-serp',
@@ -687,6 +693,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/clarity': typeof AdminClarityRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -791,6 +798,7 @@ export interface FileRoutesByTo {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/clarity': typeof AdminClarityRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -899,6 +907,7 @@ export interface FileRoutesById {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/clarity': typeof AdminClarityRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
@@ -1008,6 +1017,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/clarity'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -1112,6 +1122,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/clarity'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -1219,6 +1230,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/clarity'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
@@ -1769,6 +1781,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDokumentyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/clarity': {
+      id: '/admin/clarity'
+      path: '/clarity'
+      fullPath: '/admin/clarity'
+      preLoaderRoute: typeof AdminClarityRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ai-serp': {
       id: '/admin/ai-serp'
       path: '/ai-serp'
@@ -2127,6 +2146,7 @@ interface AdminRouteChildren {
   AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminAiSerpRoute: typeof AdminAiSerpRoute
+  AdminClarityRoute: typeof AdminClarityRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
@@ -2169,6 +2189,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
   AdminAiSerpRoute: AdminAiSerpRoute,
+  AdminClarityRoute: AdminClarityRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,

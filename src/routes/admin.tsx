@@ -41,6 +41,7 @@ const groups: Group[] = [
     label: "Marketing",
     items: [
       { to: "/admin/marketing/tracking", label: "Tracking UTM", icon: Link2 },
+      { to: "/admin/clarity", label: "Clarity (UX & analiza AI)", icon: Eye },
       { to: "/admin/marketing/email", label: "Email Marketing", icon: Mail },
       { to: "/admin/marketing/landing", label: "Landing Pages", icon: FileText },
       { to: "/admin/marketing/social", label: "Social Media AI", icon: Sparkles },
