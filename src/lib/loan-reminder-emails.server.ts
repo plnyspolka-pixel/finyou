@@ -277,7 +277,7 @@ ${bodyInner}
 </body></html>`;
     const text = bodyInner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() + `\n\nLink: ${wniosekLink}`;
 
-    const res = await sendMailgunEmail({ to: loan.client.email, subject, text, html });
+    const res = await sendResendEmail({ to: loan.client.email, subject, text, html, replyTo: "kontakt@app.financeyou.pl" });
 
     if (!res.ok) {
       errors++;
