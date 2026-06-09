@@ -112,7 +112,15 @@ function RootComponent() {
       <AuthProvider>
         <FacebookPixel />
         <GoogleAnalytics />
-        <Outlet />
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        >
+          Przejdź do treści
+        </a>
+        <main id="main">
+          <Outlet />
+        </main>
         <Toaster />
       </AuthProvider>
     </QueryClientProvider>
