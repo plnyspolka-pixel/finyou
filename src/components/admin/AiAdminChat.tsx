@@ -81,7 +81,21 @@ export function AiAdminChat() {
   }, [messages.length, open]);
 
   const send = useMutation({
-    mutationFn: (text: string) => sendFn({ data: { conversation_id: convId, message: text } }),
+    mutationFn: (payload: { text: string; attachments: Attachment[] }) =>
+      sendFn({
+        data: {
+          conversation_id: convId,
+          message: payload.text,
+          attachments: payload.attachments.map((a) => ({
+            name: a.name,
+            mediaType: a.mediaType,
+            kind: a.kind,
+            size: a.size,
+            text: a.text,
+            data: a.data,
+          })),
+        },
+      }),
     onSuccess: async (r) => {
       setConvId(r.conversation_id);
       setInput("");
@@ -90,6 +104,7 @@ export function AiAdminChat() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
