@@ -1485,6 +1485,8 @@ export type Database = {
           do_not_call_at: string | null
           do_not_call_reason: string | null
           do_not_call_source: string | null
+          do_not_email: boolean
+          do_not_sms: boolean
           email: string | null
           external_id: string | null
           first_name: string
@@ -1525,6 +1527,8 @@ export type Database = {
           do_not_call_at?: string | null
           do_not_call_reason?: string | null
           do_not_call_source?: string | null
+          do_not_email?: boolean
+          do_not_sms?: boolean
           email?: string | null
           external_id?: string | null
           first_name: string
@@ -1565,6 +1569,8 @@ export type Database = {
           do_not_call_at?: string | null
           do_not_call_reason?: string | null
           do_not_call_source?: string | null
+          do_not_email?: boolean
+          do_not_sms?: boolean
           email?: string | null
           external_id?: string | null
           first_name?: string
