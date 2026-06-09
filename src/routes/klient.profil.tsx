@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Phone, MessageSquare, Mail, Lock } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 
@@ -24,18 +25,62 @@ function KlientProfil() {
     pesel: "", address: "", bank_account: "",
     company_name: "", nip: "", regon: "", krs: "",
   });
+  const [prefs, setPrefs] = useState({ do_not_call: false, do_not_sms: false, do_not_email: false });
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [pwd, setPwd] = useState({ next: "", confirm: "" });
+  const [savingPwd, setSavingPwd] = useState(false);
 
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
     setRow(data);
-    if (data) setF({
-      first_name: data.first_name ?? "", last_name: data.last_name ?? "",
-      email: data.email ?? user.email ?? "", phone: data.phone ?? "",
-      pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
-      company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
-    });
+    if (data) {
+      setF({
+        first_name: data.first_name ?? "", last_name: data.last_name ?? "",
+        email: data.email ?? user.email ?? "", phone: data.phone ?? "",
+        pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
+        company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
+      });
+      setPrefs({
+        do_not_call: (data as any).do_not_call === true,
+        do_not_sms: (data as any).do_not_sms === true,
+        do_not_email: (data as any).do_not_email === true,
+      });
+    }
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
+
+  const updatePref = async (key: "do_not_call" | "do_not_sms" | "do_not_email", value: boolean) => {
+    if (!row) { toast.error("Najpierw zapisz profil"); return; }
+    setSavingPrefs(true);
+    setPrefs((p) => ({ ...p, [key]: value }));
+    const patch: any = { [key]: value };
+    if (key === "do_not_call" && value) {
+      patch.do_not_call_at = new Date().toISOString();
+      patch.do_not_call_reason = "Wyłączone w panelu klienta";
+      patch.do_not_call_source = "client_panel";
+    }
+    const { error } = await supabase.from("clients").update(patch).eq("id", row.id);
+    setSavingPrefs(false);
+    if (error) {
+      setPrefs((p) => ({ ...p, [key]: !value }));
+      toast.error(error.message);
+      return;
+    }
+    toast.success(value ? "Powiadomienia wyłączone" : "Powiadomienia włączone");
+  };
+
+  const changePassword = async () => {
+    if (pwd.next.length < 8) { toast.error("Hasło musi mieć min. 8 znaków"); return; }
+    if (pwd.next !== pwd.confirm) { toast.error("Hasła nie są takie same"); return; }
+    setSavingPwd(true);
+    const { error } = await supabase.auth.updateUser({ password: pwd.next });
+    setSavingPwd(false);
+    if (error) { toast.error(error.message); return; }
+    setPwd({ next: "", confirm: "" });
+    toast.success("Hasło zostało zmienione");
+  };
+
+
 
   const autoFill = async () => {
     const payload: { nip?: string; regon?: string; krs?: string } = {};
@@ -159,6 +204,80 @@ function KlientProfil() {
       </Card>
 
       <Button onClick={save}>Zapisz</Button>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Powiadomienia o wniosku</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Decyduj, jak mamy Ci przypominać o dokończeniu wniosku. Możesz w każdej chwili zmienić ustawienia.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <PrefRow
+            icon={<Phone className="h-4 w-4" />}
+            title="Połączenia telefoniczne"
+            desc="Asystent głosowy nie będzie do Ciebie dzwonił."
+            checked={!prefs.do_not_call}
+            disabled={savingPrefs || !row}
+            onChange={(on) => updatePref("do_not_call", !on)}
+          />
+          <PrefRow
+            icon={<MessageSquare className="h-4 w-4" />}
+            title="Powiadomienia SMS"
+            desc="Nie wyślemy Ci przypomnień SMS o wniosku."
+            checked={!prefs.do_not_sms}
+            disabled={savingPrefs || !row}
+            onChange={(on) => updatePref("do_not_sms", !on)}
+          />
+          <PrefRow
+            icon={<Mail className="h-4 w-4" />}
+            title="Powiadomienia e-mail"
+            desc="Nie wyślemy Ci przypomnień e-mail o wniosku."
+            checked={!prefs.do_not_email}
+            disabled={savingPrefs || !row}
+            onChange={(on) => updatePref("do_not_email", !on)}
+          />
+          {!row && <p className="text-xs text-muted-foreground">Zapisz najpierw dane profilu, aby zarządzać powiadomieniami.</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Zmiana hasła</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          <div>
+            <Label>Nowe hasło</Label>
+            <Input type="password" autoComplete="new-password" value={pwd.next} onChange={(e) => setPwd({ ...pwd, next: e.target.value })} placeholder="min. 8 znaków" />
+          </div>
+          <div>
+            <Label>Powtórz hasło</Label>
+            <Input type="password" autoComplete="new-password" value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} />
+          </div>
+          <div className="md:col-span-2">
+            <Button onClick={changePassword} disabled={savingPwd || !pwd.next || !pwd.confirm}>
+              {savingPwd && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Zmień hasło
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PrefRow({ icon, title, desc, checked, disabled, onChange }: {
+  icon: React.ReactNode; title: string; desc: string; checked: boolean; disabled?: boolean; onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 text-muted-foreground">{icon}</div>
+        <div>
+          <div className="font-medium text-sm">{title}</div>
+          <div className="text-xs text-muted-foreground">{desc}</div>
+        </div>
+      </div>
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </div>
   );
 }
