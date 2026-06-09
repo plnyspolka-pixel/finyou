@@ -346,7 +346,7 @@ function PhotoUploader({
   );
 }
 
-export function LinearLoanApplication() {
+export function LinearLoanApplication({ embedded = false }: { embedded?: boolean } = {}) {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
   const [step, setStep] = useState(0);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
@@ -369,14 +369,22 @@ export function LinearLoanApplication() {
       return;
     }
     if (step < linearSteps.length - 1) setStep((current) => current + 1);
-    else toast.success("Wersja 1 gotowa do dalszego podpięcia po akceptacji");
+    else toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
   };
 
+  const Shell = embedded
+    ? ({ children }: { children: ReactNode }) => <div className="bg-background">{children}</div>
+    : ({ children }: { children: ReactNode }) => (
+        <VariantShell
+          title="Krok po kroku, bez gubienia miejsca"
+          subtitle="Jedna decyzja na ekran. Wstecz i Dalej zmieniają tylko aktualny krok — bez przeskoków między trasami."
+        >
+          {children}
+        </VariantShell>
+      );
+
   return (
-    <VariantShell
-      title="Krok po kroku, bez gubienia miejsca"
-      subtitle="Jedna decyzja na ekran. Wstecz i Dalej zmieniają tylko aktualny krok — bez przeskoków między trasami."
-    >
+    <Shell>
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
         <aside className="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6">
           <div className="mb-4 flex items-center justify-between">
@@ -533,7 +541,7 @@ export function LinearLoanApplication() {
           <SummaryPanel draft={draft} figures={figures} photos={photos} />
         </div>
       </div>
-    </VariantShell>
+    </Shell>
   );
 }
 
