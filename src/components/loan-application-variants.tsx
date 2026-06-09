@@ -24,6 +24,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Smartphone,
   Send,
   ShieldCheck,
   Upload,
