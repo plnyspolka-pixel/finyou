@@ -212,20 +212,3 @@ function KlientProfil() {
     </div>
   );
 }
-
-function PrefRow({ icon, title, desc, checked, disabled, onChange }: {
-  icon: React.ReactNode; title: string; desc: string; checked: boolean; disabled?: boolean; onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 text-muted-foreground">{icon}</div>
-        <div>
-          <div className="font-medium text-sm">{title}</div>
-          <div className="text-xs text-muted-foreground">{desc}</div>
-        </div>
-      </div>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
-    </div>
-  );
-}
