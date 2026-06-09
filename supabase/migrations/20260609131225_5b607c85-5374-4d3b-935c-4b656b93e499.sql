@@ -1,0 +1,12 @@
+
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS phone_verified_value TEXT,
+  ADD COLUMN IF NOT EXISTS phone_otp_hash TEXT,
+  ADD COLUMN IF NOT EXISTS phone_otp_target TEXT,
+  ADD COLUMN IF NOT EXISTS phone_otp_expires_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS phone_otp_attempts SMALLINT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS phone_otp_sent_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS bik_report_path TEXT,
+  ADD COLUMN IF NOT EXISTS bik_report_uploaded_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS bik_report_name TEXT;
