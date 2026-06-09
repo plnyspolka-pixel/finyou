@@ -40,7 +40,35 @@ interface NewsBrief {
   citations: { url: string; title?: string }[];
 }
 
-async function fetchFreshNewsBrief(pplxKey: string): Promise<NewsBrief> {
+type Audience = "borrower" | "investor";
+
+async function pickNextAudience(): Promise<Audience> {
+  // Alternate: look at last autopilot article; pick the opposite.
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("audience")
+    .eq("source", "ai_autopilot")
+    .order("published_at", { ascending: false })
+    .limit(1);
+  const last = data?.[0]?.audience as Audience | undefined;
+  if (last === "investor") return "borrower";
+  if (last === "borrower") return "investor";
+  return "investor"; // first run → start with investor (mamy już duży stack borrower)
+}
+
+const BRIEFS: Record<Audience, { sys: string; user: string }> = {
+  borrower: {
+    sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
+    user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla OSOBY POŻYCZAJĄCEJ pod zastaw nieruchomości w PL: stopy procentowe (RPP), WIBOR/inflacja, ceny mieszkań i nieruchomości w PL, sytuacja na rynku kredytów hipotecznych, regulacje konsumenckie (UOKiK, KNF), wyroki istotne dla kredytobiorców. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_POŻYCZKOBIORCY:' i jeden akapit (4-6 zdań) co to oznacza dla osoby rozważającej pożyczkę pozabankową pod zastaw mieszkania/domu/działki.",
+  },
+  investor: {
+    sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
+    user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla INWESTORA prywatnego w PL: stopy procentowe (RPP, FED, EBC), kurs PLN/EUR/USD, WIG20, S&P 500, ropa, złoto, BTC/ETH, ceny nieruchomości komercyjnych i mieszkaniowych w PL, alternatywne klasy aktywów (pożyczki prywatne, crowdfunding nieruchomościowy), regulacje wpływające na inwestowanie. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_INWESTORSKI:' i jeden akapit (4-6 zdań) co to oznacza dla inwestora prywatnego, w szczególności rozważającego inwestowanie w pożyczki pod zastaw nieruchomości w PL (oczekiwana stopa zwrotu, ryzyko, dywersyfikacja).",
+  },
+};
+
+async function fetchFreshNewsBrief(pplxKey: string, audience: Audience): Promise<NewsBrief> {
+  const b = BRIEFS[audience];
   const res = await fetch(PPLX_URL, {
     method: "POST",
     headers: {
@@ -51,16 +79,8 @@ async function fetchFreshNewsBrief(pplxKey: string): Promise<NewsBrief> {
       model: "sonar",
       search_recency_filter: "day",
       messages: [
-        {
-          role: "system",
-          content:
-            "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
-        },
-        {
-          role: "user",
-          content:
-            "Wypisz 5 najważniejszych wiadomości z ostatnich 24h z rynków finansowych istotnych dla polskiego inwestora: stopy procentowe (RPP, FED, EBC), kurs PLN/EUR/USD, WIG20, S&P 500, ropa, złoto, BTC/ETH, kluczowe wydarzenia geopolityczne wpływające na rynek, regulacje finansowe w PL/UE. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_INWESTORSKI:' i jeden akapit (4-6 zdań) co to oznacza dla inwestora w pożyczki pod zastaw nieruchomości w PL.",
-        },
+        { role: "system", content: b.sys },
+        { role: "user", content: b.user },
       ],
     }),
   });
@@ -73,6 +93,7 @@ async function fetchFreshNewsBrief(pplxKey: string): Promise<NewsBrief> {
   const citations = rawCitations.slice(0, 6).map((url) => ({ url }));
   return { summary, citations };
 }
+
 
 interface RelatedArticle {
   slug: string;
