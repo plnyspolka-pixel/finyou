@@ -26,7 +26,7 @@ async function clarityCall(
   token: string,
   numOfDays: 1 | 2 | 3,
   dims: Dim[],
-): Promise<unknown> {
+): Promise<any> {
   const params = new URLSearchParams();
   params.set("numOfDays", String(numOfDays));
   dims.slice(0, 3).forEach((d, i) => params.set(`dimension${i + 1}`, d));

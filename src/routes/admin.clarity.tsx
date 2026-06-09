@@ -28,7 +28,7 @@ function extractRows(payload: unknown): Array<Record<string, unknown>> {
   return rows;
 }
 
-function MetricBlock({ title, payload }: { title: string; payload: unknown }) {
+function MetricBlock({ title, payload }: { title: string; payload: any }) {
   const rows = extractRows(payload);
   const cols = rows[0] ? Object.keys(rows[0]) : [];
   return (
