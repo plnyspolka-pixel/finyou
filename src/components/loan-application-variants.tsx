@@ -392,7 +392,10 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
 
   return (
     <Shell>
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+      <div className={embedded
+        ? "mx-auto max-w-3xl px-4 py-6 md:px-6"
+        : "mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]"}>
+        {!embedded && (
         <aside className="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6">
           <div className="mb-4 flex items-center justify-between">
             <Badge variant="secondary">Krok {step + 1} z {linearSteps.length}</Badge>
@@ -423,6 +426,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             })}
           </ol>
         </aside>
+        )}
 
         <section className="min-h-[620px] rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
           <div className="mb-8">
