@@ -25,10 +25,20 @@ type Message = {
   created_at: string;
 };
 
-type Attachment = { name: string; size: number; type: string; text?: string; skipped?: boolean };
+type AttachmentKind = "text" | "image" | "pdf" | "other";
+type Attachment = {
+  name: string;
+  size: number;
+  mediaType: string;
+  kind: AttachmentKind;
+  text?: string;     // dla plików tekstowych
+  data?: string;     // base64 dla binarek (obrazy, PDF, inne)
+};
 
 const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|log|yml|yaml|xml|html|htm|css|scss|js|jsx|ts|tsx|sql|sh|env|ini|toml|conf|py|rb|go|rs|java|kt|swift|php|vue|svelte)$/i;
-const MAX_INLINE = 200_000;
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB / plik (limit Anthropica dla dokumentów)
+const ANTHROPIC_IMAGE_MIME = /^image\/(jpeg|png|gif|webp)$/i;
+
 
 export function AiAdminChat() {
   const [open, setOpen] = useState(true);
