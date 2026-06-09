@@ -587,7 +587,17 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
         </div>
         )}
       </div>
-    </Shell>
+  );
+
+  return embedded ? (
+    <div className="bg-background">{innerContent}</div>
+  ) : (
+    <VariantShell
+      title="Krok po kroku, bez gubienia miejsca"
+      subtitle="Jedna decyzja na ekran. Wstecz i Dalej zmieniają tylko aktualny krok — bez przeskoków między trasami."
+    >
+      {innerContent}
+    </VariantShell>
   );
 }
 
