@@ -556,18 +556,29 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
     { title: "Wybierz właściwą nieruchomość", body: "Z listy wybierz tę, którą chcesz oddać w zabezpieczenie. Zobaczysz: numer KW, typ nieruchomości, sąd prowadzący i położenie." },
     { title: "Skopiuj numer KW i wklej poniżej", body: "Format: KOD_WYDZIAŁU/NUMER/CYFRA KONTROLNA, np. WA1M/00123456/7. Przepisz lub wklej numer w pole obok — resztę danych (adres, powierzchnię, właściciela, obciążenia) odczytamy automatycznie z rejestru." },
   ];
+  const isMobile = useIsMobile();
+  const mobywatelUrl = "https://www.mobywatel.gov.pl";
   return (
     <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
-      <div className="flex items-start gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
-          <Smartphone className="h-5 w-5" />
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+            <Smartphone className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold uppercase tracking-wide text-accent">Sprawdź numer KW w mObywatelu</div>
+            <p className="mt-1 text-sm text-foreground/80">
+              Nie musisz nigdzie dzwonić ani jechać do sądu. mObywatel pokaże Twoje księgi po PESEL-u.
+            </p>
+          </div>
         </div>
-        <div>
-          <div className="text-sm font-bold uppercase tracking-wide text-accent">Sprawdź numer KW w mObywatelu</div>
-          <p className="mt-1 text-sm text-foreground/80">
-            Nie musisz nigdzie dzwonić ani jechać do sądu. mObywatel pokaże Twoje księgi po PESEL-u.
-          </p>
-        </div>
+        {!isMobile && (
+          <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-accent/30 bg-background p-3">
+            <QRCodeSVG value={mobywatelUrl} size={104} />
+            <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Zeskanuj telefonem</div>
+            <div className="text-[10px] text-muted-foreground">otworzy mObywatel</div>
+          </div>
+        )}
       </div>
 
       <ol className="mt-5 space-y-3">
