@@ -109,6 +109,7 @@ import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/a
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
+import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 
@@ -630,6 +631,12 @@ const ApiPublicHooksDispatchCampaignsRoute =
     path: '/api/public/hooks/dispatch-campaigns',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksDailyBlogTickRoute =
+  ApiPublicHooksDailyBlogTickRouteImport.update({
+    id: '/api/public/hooks/daily-blog-tick',
+    path: '/api/public/hooks/daily-blog-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
   id: '/api/public/email/open',
   path: '/api/public/email/open',
@@ -731,6 +738,7 @@ export interface FileRoutesByFullPath {
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
@@ -832,6 +840,7 @@ export interface FileRoutesByTo {
   '/admin/wnioski': typeof AdminWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
@@ -937,6 +946,7 @@ export interface FileRoutesById {
   '/admin/wnioski/': typeof AdminWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
@@ -1043,6 +1053,7 @@ export interface FileRouteTypes {
     | '/admin/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
@@ -1144,6 +1155,7 @@ export interface FileRouteTypes {
     | '/admin/wnioski'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
@@ -1248,6 +1260,7 @@ export interface FileRouteTypes {
     | '/admin/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
@@ -1300,6 +1313,7 @@ export interface RootRouteChildren {
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
+  ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
@@ -2017,6 +2031,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDispatchCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/daily-blog-tick': {
+      id: '/api/public/hooks/daily-blog-tick'
+      path: '/api/public/hooks/daily-blog-tick'
+      fullPath: '/api/public/hooks/daily-blog-tick'
+      preLoaderRoute: typeof ApiPublicHooksDailyBlogTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/open': {
       id: '/api/public/email/open'
       path: '/api/public/email/open'
@@ -2224,6 +2245,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
+  ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,

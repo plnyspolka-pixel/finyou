@@ -7,12 +7,13 @@ export const Route = createFileRoute("/blog/")({
   loader: async () => {
     const { data } = await supabase
       .from("ai_seo_articles")
-      .select("id,slug,title,excerpt,reading_minutes,published_at")
+      .select("id,slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,primary_keyword")
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(50);
     return { articles: data ?? [] };
   },
+
   head: () => ({
     meta: [
       { title: "Blog Finance You — pożyczki pod zastaw nieruchomości" },
