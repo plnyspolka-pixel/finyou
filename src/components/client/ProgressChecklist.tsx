@@ -93,7 +93,7 @@ export function ProgressChecklist({
         return {
           done,
           label: r.label,
-          ctaHref: m?.ctaHref ?? "/klient/dokumenty",
+          ctaHref: m?.ctaHref ?? "/klient/wniosek",
           ctaLabel: done ? "Zarządzaj" : m?.ctaLabel ?? "Dodaj",
         };
       }),
@@ -112,13 +112,6 @@ export function ProgressChecklist({
       ctaHref: "/klient/wniosek",
       ctaLabel: hasInvestorDescription ? "Edytuj" : "Dodaj",
       hint: "Krótka historia, dlaczego potrzebujesz finansowania — buduje zaufanie inwestorów.",
-    },
-    {
-      done: hasIncomeDocs,
-      label: "Dokumenty dochodowe",
-      ctaHref: "/klient/dokumenty",
-      ctaLabel: hasIncomeDocs ? "Zarządzaj" : "Wgraj",
-      hint: "PIT, zaświadczenie z firmy, KPiR — inwestor widzi realny dochód.",
     },
     {
       done: hasBankAccount,

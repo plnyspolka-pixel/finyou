@@ -125,10 +125,7 @@ function KlientDashboard() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button asChild variant="outline" className="w-full justify-start">
-                <Link to="/klient/dokumenty"><FileText className="mr-2 h-4 w-4" /> Dokumenty</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
-                <Link to="/klient/wniosek"><FileText className="mr-2 h-4 w-4" /> Pełny wniosek</Link>
+                <Link to="/klient/wniosek"><FileText className="mr-2 h-4 w-4" /> Mój wniosek</Link>
               </Button>
               <Button asChild variant="outline" className="w-full justify-start">
                 <Link to="/klient/profil"><User className="mr-2 h-4 w-4" /> Profil</Link>

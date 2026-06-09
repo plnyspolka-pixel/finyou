@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Pencil, FileText, CalendarDays, Info, Lock } from "lucide-react";
+import { Pencil, CalendarDays, Info, Lock } from "lucide-react";
 import { formatPLN, securityTypeLabels, monthlyPayment, type SecurityType } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { LinearLoanApplication, type LoanWizardPrefill } from "@/components/loan-application-variants";
@@ -37,7 +37,7 @@ function KlientWniosek() {
   const [loading, setLoading] = useState(true);
   const [loan, setLoan] = useState<any | null>(null);
   const [prop, setProp] = useState<any | null>(null);
-  const [docsCount, setDocsCount] = useState(0);
+  const [, setDocsCount] = useState(0);
   const [client, setClient] = useState<any | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -281,17 +281,6 @@ function KlientWniosek() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Dokumenty</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <Row label="Wgranych plików">{docsCount}</Row>
-                <Row label="Status KW">{prop?.land_register_number ? "Podany" : (loan.kw_status ?? "—")}</Row>
-                <Separator className="my-2" />
-                <Button size="sm" variant="ghost" asChild>
-                  <Link to="/klient/dokumenty"><Pencil className="mr-2 h-4 w-4" /> Zarządzaj</Link>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
 
           {/* 3. Harmonogram — annuity z balonem */}
