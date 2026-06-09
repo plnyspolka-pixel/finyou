@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, Circle, Upload, Trash2, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Upload, Trash2, FileText, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
