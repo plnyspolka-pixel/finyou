@@ -658,6 +658,125 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
 }
 
 
+function KwDocumentOcr({
+  kwNumber,
+  onDetected,
+  onSwitchToMobywatel,
+}: {
+  kwNumber: string;
+  onDetected: (num: string) => void;
+  onSwitchToMobywatel: () => void;
+}) {
+  const runOcr = useServerFn(extractKwFromUpload);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const handleFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Plik jest za duży (maks. 10 MB).");
+      return;
+    }
+    setError(null);
+    setFileName(file.name);
+    setBusy(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const result = await runOcr({ data: { dataUrl, mimeType: file.type || "application/octet-stream", fileName: file.name } });
+      if (result.found && result.numbers[0]) {
+        onDetected(result.numbers[0]);
+        toast.success(`Znaleziono numer KW: ${result.numbers[0]}`);
+      } else if (result.reason === "not_found") {
+        setError("Nie znaleźliśmy numeru KW w tym dokumencie. Wgraj inny plik (np. akt notarialny lub wypis z KW) albo sprawdź numer w mObywatelu.");
+      } else if (result.reason === "unsupported") {
+        setError("Nieobsługiwany format. Wgraj PDF lub zdjęcie (JPG, PNG).");
+      } else if (result.reason === "ai_quota") {
+        setError("Skończył się limit AI — sprawdź numer w mObywatelu lub wpisz ręcznie.");
+      } else {
+        setError("Nie udało się odczytać dokumentu. Spróbuj jeszcze raz lub sprawdź numer w mObywatelu.");
+      }
+    } catch {
+      setError("Nie udało się przetworzyć pliku. Spróbuj ponownie.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+            <Upload className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <div className="text-sm font-bold uppercase tracking-wide text-accent">Wgraj dokument z numerem KW</div>
+            <p className="mt-1 text-sm text-foreground/80">
+              Akt notarialny, wypis z księgi wieczystej, zaświadczenie. Automatycznie odczytamy numer KW.
+            </p>
+          </div>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="cta"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+          >
+            {busy ? "Odczytujemy dokument..." : "Wybierz plik"}
+          </Button>
+          {fileName && !busy && (
+            <span className="self-center text-xs text-muted-foreground truncate">{fileName}</span>
+          )}
+        </div>
+      </div>
+
+      {kwNumber && !error && !busy && (
+        <div className="flex items-start gap-3 rounded-lg border border-green-500/40 bg-green-500/10 p-4">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+          <div className="text-sm">
+            <div className="font-bold text-foreground">Znaleźliśmy numer KW</div>
+            <div className="font-mono text-base text-foreground">{kwNumber}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z rejestru. Możesz przejść dalej.</p>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4">
+          <p className="text-sm text-foreground">{error}</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+              Wgraj inny dokument
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onSwitchToMobywatel}>
+              Sprawdzę w mObywatelu
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background px-3 py-2">
