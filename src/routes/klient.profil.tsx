@@ -25,7 +25,6 @@ function KlientProfil() {
     company_name: "", nip: "", regon: "", krs: "",
   });
   const [pwd, setPwd] = useState({ next: "", confirm: "" });
-  const [pwd, setPwd] = useState({ next: "", confirm: "" });
   const [savingPwd, setSavingPwd] = useState(false);
 
   useEffect(() => { if (!user) return; void (async () => {
@@ -38,34 +37,9 @@ function KlientProfil() {
         pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
         company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
       });
-      setPrefs({
-        do_not_call: (data as any).do_not_call === true,
-        do_not_sms: (data as any).do_not_sms === true,
-        do_not_email: (data as any).do_not_email === true,
-      });
     }
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
-
-  const updatePref = async (key: "do_not_call" | "do_not_sms" | "do_not_email", value: boolean) => {
-    if (!row) { toast.error("Najpierw zapisz profil"); return; }
-    setSavingPrefs(true);
-    setPrefs((p) => ({ ...p, [key]: value }));
-    const patch: any = { [key]: value };
-    if (key === "do_not_call" && value) {
-      patch.do_not_call_at = new Date().toISOString();
-      patch.do_not_call_reason = "Wyłączone w panelu klienta";
-      patch.do_not_call_source = "client_panel";
-    }
-    const { error } = await supabase.from("clients").update(patch).eq("id", row.id);
-    setSavingPrefs(false);
-    if (error) {
-      setPrefs((p) => ({ ...p, [key]: !value }));
-      toast.error(error.message);
-      return;
-    }
-    toast.success(value ? "Powiadomienia wyłączone" : "Powiadomienia włączone");
-  };
 
   const changePassword = async () => {
     if (pwd.next.length < 8) { toast.error("Hasło musi mieć min. 8 znaków"); return; }
