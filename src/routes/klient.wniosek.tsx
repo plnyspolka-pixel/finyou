@@ -281,17 +281,6 @@ function KlientWniosek() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Dokumenty</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <Row label="Wgranych plików">{docsCount}</Row>
-                <Row label="Status KW">{prop?.land_register_number ? "Podany" : (loan.kw_status ?? "—")}</Row>
-                <Separator className="my-2" />
-                <Button size="sm" variant="ghost" asChild>
-                  <Link to="/klient/dokumenty"><Pencil className="mr-2 h-4 w-4" /> Zarządzaj</Link>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
 
           {/* 3. Harmonogram — annuity z balonem */}
