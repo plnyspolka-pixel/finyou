@@ -185,7 +185,7 @@ function KlientProfil() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
-            <span>Rachunek bankowy</span>
+            <span>Zweryfikowany rachunek bankowy</span>
             {row?.bank_account_verified_at ? (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="h-4 w-4" /> Zweryfikowany
