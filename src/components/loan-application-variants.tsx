@@ -84,6 +84,7 @@ const emptyDraft: LoanDraft = {
 const linearSteps = [
   "Kwota",
   "Okres",
+  "Poznaj ofertę",
   "Maksymalna rata",
   "Koszt finansowania",
   "Zabezpieczenie",
