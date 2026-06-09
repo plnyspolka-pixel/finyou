@@ -366,7 +366,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
     if (step === 3) return draft.maxPayment >= 500;
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
-    if (step === 6) return draft.kwChoice === "pomoc" || !!draft.kwNumber.trim();
+    if (step === 6) return !!draft.kwNumber.trim();
     if (step === 7) return photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
