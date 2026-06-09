@@ -113,6 +113,8 @@ function KlientDashboard() {
             hasPropertyType={progress.flags.hasPropertyType}
             hasLoanTerms={progress.flags.hasLoanTerms}
             hasInvestorDescription={progress.flags.hasInvestorDescription}
+            hasBankAccount={Boolean(clientRow?.bank_account_verified_at)}
+            hasCompanyData={Boolean(clientRow?.nip && clientRow?.company_name)}
           />
         </div>
 
