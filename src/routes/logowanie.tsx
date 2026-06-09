@@ -103,14 +103,18 @@ function LoginPage() {
 
   const signInGoogle = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}${target}` },
+    const { lovable } = await import("@/integrations/lovable");
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: `${window.location.origin}${target}`,
     });
-    if (error) {
+    if (result.error) {
       setLoading(false);
-      toast.error("Nie udało się zalogować Google", { description: error.message });
+      toast.error("Nie udało się zalogować Google", { description: result.error.message });
+      return;
     }
+    if (result.redirected) return;
+    setLoading(false);
+    void navigate({ to: target });
   };
 
   return (
