@@ -66,6 +66,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "google-site-verification", content: "d6rVA0W-j2dnMAaXoxXJbkOo71EwtTo6xvtHjfmjVGE" },
       { title: "Panel Finance You" },
       { name: "description", content: "Centralny system obsługi leadów pożyczkowych Finance You" },
       { property: "og:title", content: "Panel Finance You" },
