@@ -251,12 +251,30 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body { height: 100%; }
+  * { border-color: var(--color-border); min-width: 0; }
+  html, body {
+    height: 100%;
+    /* Twardy bezpiecznik na mobile — żaden element nie wymusi poziomego scrolla */
+    max-width: 100%;
+    overflow-x: clip;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-feature-settings: "cv02","cv03","cv04","cv11";
+    overflow-wrap: break-word;
+    -webkit-text-size-adjust: 100%;
   }
+  /* Długie słowa / linki / e-maile / IBAN / kody nie rozpychają układu na wąskich ekranach */
+  h1, h2, h3, h4, h5, h6, p, li, a, span, label, td, th, dd, dt, blockquote, code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  /* Media zawsze skalują się do kontenera */
+  img, video, canvas {
+    max-width: 100%;
+    height: auto;
+  }
+  pre, code { white-space: pre-wrap; }
 }
