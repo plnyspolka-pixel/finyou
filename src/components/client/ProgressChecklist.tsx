@@ -121,6 +121,13 @@ export function ProgressChecklist({
       hint: "PIT, zaświadczenie z firmy, KPiR — inwestor widzi realny dochód.",
     },
     {
+      done: hasBankAccount,
+      label: "Rachunek bankowy do spłat",
+      ctaHref: "/klient/profil",
+      ctaLabel: hasBankAccount ? "Zarządzaj" : "Dodaj i zweryfikuj",
+      hint: "Podaj numer rachunku i wgraj dokument bankowy — OCR sprawdzi czy dane się zgadzają.",
+    },
+    {
       done: hasCompanyData,
       label: "Pełne dane firmowe",
       ctaHref: "/klient/profil",
@@ -128,6 +135,7 @@ export function ProgressChecklist({
       hint: "NIP, REGON, KRS i adres — automatycznie pobierzemy z rejestrów państwowych.",
     },
   ];
+
   const boostDone = boostItems.filter((b) => b.done).length;
 
   return (
