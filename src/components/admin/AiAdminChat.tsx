@@ -211,7 +211,7 @@ export function AiAdminChat() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex h-[640px] max-h-[90vh] w-[440px] max-w-[95vw] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
+    <div className="fixed top-3 right-3 z-50 flex h-[640px] max-h-[85vh] w-[460px] max-w-[95vw] flex-col overflow-hidden rounded-xl border bg-background shadow-2xl">
       {/* Header */}
       <div className="flex items-center gap-2 border-b bg-muted/40 px-3 py-2">
         <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/15 text-primary">
@@ -227,8 +227,8 @@ export function AiAdminChat() {
         <Button size="icon" variant="ghost" asChild>
           <Link to="/admin/ai-administrator"><Settings className="h-4 w-4" /></Link>
         </Button>
-        <Button size="icon" variant="ghost" onClick={() => setOpen(false)}>
-          <X className="h-4 w-4" />
+        <Button size="icon" variant="ghost" onClick={() => setOpen(false)} aria-label="Zwiń">
+          <ChevronUp className="h-4 w-4" />
         </Button>
       </div>
 
@@ -282,7 +282,7 @@ export function AiAdminChat() {
                   <li>Odpytać bazę (np. „pokaż 10 ostatnich leadów")</li>
                   <li>Wprowadzić zmiany w danych po Twoim potwierdzeniu</li>
                   <li>Przeczytać pliki w <code>src/</code></li>
-                  <li>Analizować, debugować, sugerować zmiany</li>
+                  <li>Przyjąć załączniki tekstowe (TXT, MD, CSV, JSON, kod) do 2 MB</li>
                 </ul>
               </div>
             )}
@@ -295,7 +295,29 @@ export function AiAdminChat() {
             )}
           </div>
 
-          <div className="border-t p-2">
+          <div className="border-t p-2 space-y-2">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((a, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${
+                      a.skipped ? "border-destructive/40 text-muted-foreground line-through" : "bg-muted/40"
+                    }`}
+                  >
+                    <FileText className="h-3 w-3" />
+                    <span className="max-w-[150px] truncate">{a.name}</span>
+                    <button
+                      onClick={() => setAttachments((p) => p.filter((_, j) => j !== i))}
+                      className="ml-1 text-muted-foreground hover:text-destructive"
+                      aria-label="Usuń załącznik"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
               <Textarea
                 value={input}
@@ -310,23 +332,47 @@ export function AiAdminChat() {
                 rows={2}
                 className="resize-none text-sm"
               />
+              <div className="flex flex-col gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFiles(e.target.files)}
+                  accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.log,.yml,.yaml,.xml,.html,.htm,.css,.scss,.js,.jsx,.ts,.tsx,.sql,.sh,.env,.ini,.toml,.conf,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.vue,.svelte,text/*,application/json"
+                />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={send.isPending}
+                  aria-label="Dołącz pliki"
+                  title="Dołącz pliki tekstowe"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant={recording ? "destructive" : "outline"}
+                  onClick={recording ? stopRecording : startRecording}
+                  disabled={transcribing || send.isPending}
+                  aria-label={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                  title={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                >
+                  {transcribing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : recording ? (
+                    <Square className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
               <Button
                 size="icon"
-                variant={recording ? "destructive" : "outline"}
-                onClick={recording ? stopRecording : startRecording}
-                disabled={transcribing || send.isPending}
-                aria-label={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
-                title={recording ? "Zatrzymaj nagrywanie" : "Nagraj głosówkę"}
+                onClick={submit}
+                disabled={send.isPending || (!input.trim() && attachments.filter((a) => a.text).length === 0)}
               >
-                {transcribing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : recording ? (
-                  <Square className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
-              <Button size="icon" onClick={submit} disabled={send.isPending || !input.trim()}>
                 {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
