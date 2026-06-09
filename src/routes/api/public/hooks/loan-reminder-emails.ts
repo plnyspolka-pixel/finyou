@@ -10,7 +10,10 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails")({
         if (expected && apiKey && apiKey !== expected) {
           return new Response(JSON.stringify({ error: "invalid apikey" }), { status: 401 });
         }
-        const result = await runDailyReminderEmailsBatch();
+        const url = new URL(request.url);
+        const force = url.searchParams.get("force") === "1";
+        const onlyLoanId = url.searchParams.get("loan_id") || undefined;
+        const result = await runDailyReminderEmailsBatch({ force, onlyLoanId });
         return new Response(JSON.stringify(result), { headers: { "content-type": "application/json" } });
       },
       GET: async () => new Response(JSON.stringify({ ok: true, hint: "POST to trigger" })),

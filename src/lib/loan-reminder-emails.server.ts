@@ -118,7 +118,7 @@ async function bumpPreferredHourFromOpens(loanId: string) {
 }
 
 /** Główna procedura cron: znajduje odbiorców na bieżącą godzinę i wysyła. */
-export async function runDailyReminderEmailsBatch(): Promise<{
+export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; onlyLoanId?: string }): Promise<{
   ok: true;
   hour: number;
   weekday: string;
@@ -130,17 +130,23 @@ export async function runDailyReminderEmailsBatch(): Promise<{
   const now = new Date();
   const hour = warsawHour(now);
   const weekday = warsawWeekday(now);
+  const force = !!opts?.force;
 
-  // Sztywne okno mailingu: 6:00–23:59 Warszawa, bez niedziel.
-  if (weekday === "Sun" || hour < 6) {
-    return { ok: false, skipped: weekday === "Sun" ? "sunday" : "outside_hours", hour, weekday };
+  // Stałe okna wysyłki: ~8:00 i ~21:00 Warszawa, bez niedziel. `force` omija reguły.
+  const ALLOWED_HOURS = new Set([8, 21]);
+  if (!force) {
+    if (weekday === "Sun") {
+      return { ok: false, skipped: "sunday", hour, weekday };
+    }
+    if (!ALLOWED_HOURS.has(hour)) {
+      return { ok: false, skipped: "outside_send_window", hour, weekday };
+    }
   }
 
   const s = admin();
   const dayKey = warsawDateKey(now);
-  const dayStartIso = new Date(`${dayKey}T00:00:00+02:00`).toISOString(); // przybliżenie strefy, wystarcza do dedup dziennego
+  const dayStartIso = new Date(`${dayKey}T00:00:00+02:00`).toISOString();
 
-  // Aktywne warianty
   const { data: variants } = await s
     .from("loan_reminder_email_variants")
     .select("id,subject,preview_text,body_html,weight,sent_count,opened_count")
@@ -149,9 +155,7 @@ export async function runDailyReminderEmailsBatch(): Promise<{
     return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
   }
 
-  // Kandydaci: wnioski w odpowiednich statusach, z mailem, nie wypisali się, nie wysłano dziś,
-  // i preferowana godzina = aktualna (albo NULL — wtedy losujemy i wysyłamy teraz dla nowych).
-  const { data: loans } = await s
+  let q = s
     .from("loan_applications")
     .select(`
       id, status, current_form_step, loan_amount, preferred_period_months,
@@ -163,35 +167,35 @@ export async function runDailyReminderEmailsBatch(): Promise<{
     .eq("reminder_email_unsubscribed", false)
     .lt("reminder_email_count", 365)
     .limit(500);
+  if (opts?.onlyLoanId) q = q.eq("id", opts.onlyLoanId);
+  const { data: loans } = await q;
 
-  const candidates = (loans ?? []).filter((l: any) => {
-    const email = l.client?.email;
-    if (!email) return false;
-    const ph = l.preferred_email_hour;
-    if (ph == null) return true; // pierwszy raz — wyślemy teraz i zapiszemy godzinę
-    return Number(ph) === hour;
-  });
+  const candidates = (loans ?? []).filter((l: any) => !!l.client?.email);
 
   if (candidates.length === 0) {
     return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
   }
 
-  // Sprawdzenie czy nie wysłano już dziś
+  // Limit 2 wysyłki dziennie na wniosek (chyba że `force`).
   const loanIds = candidates.map((l: any) => l.id);
   const { data: sentToday } = await s
     .from("loan_reminder_email_sends")
     .select("loan_application_id")
     .in("loan_application_id", loanIds)
     .gte("sent_at", dayStartIso);
-  const alreadyToday = new Set((sentToday ?? []).map((r: any) => r.loan_application_id));
+  const todayCounts = new Map<string, number>();
+  for (const r of sentToday ?? []) {
+    const id = (r as any).loan_application_id as string;
+    todayCounts.set(id, (todayCounts.get(id) ?? 0) + 1);
+  }
 
   const baseUrl = publicBaseUrl();
   const results: SendReminderResult[] = [];
   let sent = 0, errors = 0;
 
   for (const loan of candidates as any[]) {
-    if (alreadyToday.has(loan.id)) {
-      results.push({ ok: false, skipped: "already_sent_today" });
+    if (!force && (todayCounts.get(loan.id) ?? 0) >= 2) {
+      results.push({ ok: false, skipped: "daily_limit_reached" });
       continue;
     }
 
