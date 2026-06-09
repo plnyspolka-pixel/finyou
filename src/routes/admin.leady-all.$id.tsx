@@ -3,13 +3,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getLead, updateLead, addManualNote } from "@/lib/leads-admin.functions";
+import { rescoreLead, markBadLead, unmarkBadLead, markGoodLead, listCapiEvents } from "@/lib/lead-quality.functions";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ArrowLeft } from "lucide-react";
+import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ArrowLeft, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/admin/leady-all/$id")({
   component: LeadDetailPage,
