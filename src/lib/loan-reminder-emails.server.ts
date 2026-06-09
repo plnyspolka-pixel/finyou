@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { computeLoanProgress } from "./loan-progress";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "./loan-progress.server";
-import { sendMailgunEmail } from "./mailgun-send.server";
+import { sendResendEmail } from "./resend-send.server";
 
 function admin() {
   const url = process.env.SUPABASE_URL!;
