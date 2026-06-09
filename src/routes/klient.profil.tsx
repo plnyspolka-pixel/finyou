@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Phone, MessageSquare, Mail, Lock } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 
@@ -24,18 +25,62 @@ function KlientProfil() {
     pesel: "", address: "", bank_account: "",
     company_name: "", nip: "", regon: "", krs: "",
   });
+  const [prefs, setPrefs] = useState({ do_not_call: false, do_not_sms: false, do_not_email: false });
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [pwd, setPwd] = useState({ next: "", confirm: "" });
+  const [savingPwd, setSavingPwd] = useState(false);
 
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
     setRow(data);
-    if (data) setF({
-      first_name: data.first_name ?? "", last_name: data.last_name ?? "",
-      email: data.email ?? user.email ?? "", phone: data.phone ?? "",
-      pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
-      company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
-    });
+    if (data) {
+      setF({
+        first_name: data.first_name ?? "", last_name: data.last_name ?? "",
+        email: data.email ?? user.email ?? "", phone: data.phone ?? "",
+        pesel: data.pesel ?? "", address: data.address ?? "", bank_account: data.bank_account ?? "",
+        company_name: data.company_name ?? "", nip: data.nip ?? "", regon: data.regon ?? "", krs: (data as any).krs ?? "",
+      });
+      setPrefs({
+        do_not_call: (data as any).do_not_call === true,
+        do_not_sms: (data as any).do_not_sms === true,
+        do_not_email: (data as any).do_not_email === true,
+      });
+    }
     else setF((x) => ({ ...x, email: user.email ?? "" }));
   })(); }, [user]);
+
+  const updatePref = async (key: "do_not_call" | "do_not_sms" | "do_not_email", value: boolean) => {
+    if (!row) { toast.error("Najpierw zapisz profil"); return; }
+    setSavingPrefs(true);
+    setPrefs((p) => ({ ...p, [key]: value }));
+    const patch: any = { [key]: value };
+    if (key === "do_not_call" && value) {
+      patch.do_not_call_at = new Date().toISOString();
+      patch.do_not_call_reason = "Wyłączone w panelu klienta";
+      patch.do_not_call_source = "client_panel";
+    }
+    const { error } = await supabase.from("clients").update(patch).eq("id", row.id);
+    setSavingPrefs(false);
+    if (error) {
+      setPrefs((p) => ({ ...p, [key]: !value }));
+      toast.error(error.message);
+      return;
+    }
+    toast.success(value ? "Powiadomienia wyłączone" : "Powiadomienia włączone");
+  };
+
+  const changePassword = async () => {
+    if (pwd.next.length < 8) { toast.error("Hasło musi mieć min. 8 znaków"); return; }
+    if (pwd.next !== pwd.confirm) { toast.error("Hasła nie są takie same"); return; }
+    setSavingPwd(true);
+    const { error } = await supabase.auth.updateUser({ password: pwd.next });
+    setSavingPwd(false);
+    if (error) { toast.error(error.message); return; }
+    setPwd({ next: "", confirm: "" });
+    toast.success("Hasło zostało zmienione");
+  };
+
+
 
   const autoFill = async () => {
     const payload: { nip?: string; regon?: string; krs?: string } = {};
