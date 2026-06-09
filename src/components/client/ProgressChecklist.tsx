@@ -89,31 +89,54 @@ export function ProgressChecklist({
     });
   }
 
+  const allItems = groups.flatMap((g) => g.items);
+  const haveItems = allItems.filter((i) => i.done);
+  const missingItems = allItems.filter((i) => !i.done);
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Czego jeszcze brakuje</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {groups.map((g) => (
-          <div key={g.title} className="space-y-2">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {g.title}
-            </div>
-            <ul className="divide-y rounded-lg border">
-              {g.items.map((it) => (
-                <li key={it.label} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {it.done ? (
-                      <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-                    ) : (
-                      <Circle className="h-5 w-5 shrink-0 text-muted-foreground/40" />
-                    )}
-                    <span className={`text-sm truncate ${it.done ? "text-muted-foreground line-through" : "font-medium"}`}>
-                      {it.label}
-                    </span>
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card className="border-emerald-200 dark:border-emerald-900/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="h-5 w-5" /> Co już mamy
+            <span className="ml-auto text-xs font-normal text-muted-foreground">{haveItems.length}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {haveItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Jeszcze nic — uzupełnij pierwszy krok, a tu pojawią się ✓.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {haveItems.map((it) => (
+                <li key={it.label} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span className="text-muted-foreground line-through">{it.label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-amber-200 dark:border-amber-900/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+            <Circle className="h-5 w-5" /> Czego jeszcze potrzebujemy
+            <span className="ml-auto text-xs font-normal text-muted-foreground">{missingItems.length}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {missingItems.length === 0 ? (
+            <p className="text-sm text-emerald-700 dark:text-emerald-400">Wszystko gotowe — wniosek kompletny.</p>
+          ) : (
+            <ul className="space-y-2">
+              {missingItems.map((it) => (
+                <li key={it.label} className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Circle className="h-4 w-4 shrink-0 text-amber-500" />
+                    <span className="truncate text-sm font-medium">{it.label}</span>
                   </div>
-                  <Button asChild size="sm" variant={it.done ? "ghost" : "outline"}>
+                  <Button asChild size="sm" variant="outline">
                     <Link to={it.ctaHref}>
                       {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                     </Link>
@@ -121,9 +144,9 @@ export function ProgressChecklist({
                 </li>
               ))}
             </ul>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

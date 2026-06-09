@@ -37,6 +37,7 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
+import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
 import { Route as KlientDokumentyRouteImport } from './routes/klient.dokumenty'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
@@ -255,6 +256,11 @@ const KlientWniosekRoute = KlientWniosekRouteImport.update({
 const KlientProfilRoute = KlientProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
+  id: '/powiadomienia',
+  path: '/powiadomienia',
   getParentRoute: () => KlientRoute,
 } as any)
 const KlientDokumentyRoute = KlientDokumentyRouteImport.update({
@@ -733,6 +739,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
+  '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
@@ -839,6 +846,7 @@ export interface FileRoutesByTo {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
+  '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
@@ -949,6 +957,7 @@ export interface FileRoutesById {
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/dokumenty': typeof KlientDokumentyRoute
+  '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
@@ -1060,6 +1069,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
+    | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
@@ -1166,6 +1176,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
+    | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
@@ -1275,6 +1286,7 @@ export interface FileRouteTypes {
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/klient/dokumenty'
+    | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
@@ -1575,6 +1587,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/klient/profil'
       preLoaderRoute: typeof KlientProfilRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/powiadomienia': {
+      id: '/klient/powiadomienia'
+      path: '/powiadomienia'
+      fullPath: '/klient/powiadomienia'
+      preLoaderRoute: typeof KlientPowiadomieniaRouteImport
       parentRoute: typeof KlientRoute
     }
     '/klient/dokumenty': {
@@ -2275,6 +2294,7 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 
 interface KlientRouteChildren {
   KlientDokumentyRoute: typeof KlientDokumentyRoute
+  KlientPowiadomieniaRoute: typeof KlientPowiadomieniaRoute
   KlientProfilRoute: typeof KlientProfilRoute
   KlientWniosekRoute: typeof KlientWniosekRoute
   KlientIndexRoute: typeof KlientIndexRoute
@@ -2282,6 +2302,7 @@ interface KlientRouteChildren {
 
 const KlientRouteChildren: KlientRouteChildren = {
   KlientDokumentyRoute: KlientDokumentyRoute,
+  KlientPowiadomieniaRoute: KlientPowiadomieniaRoute,
   KlientProfilRoute: KlientProfilRoute,
   KlientWniosekRoute: KlientWniosekRoute,
   KlientIndexRoute: KlientIndexRoute,
