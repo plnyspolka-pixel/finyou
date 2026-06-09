@@ -451,6 +451,16 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
+          {step === 2 && (
+            <OfferGate
+              user={user}
+              authLoading={authLoading}
+              draft={draft}
+              update={update}
+              figures={figures}
+            />
+          )}
+
           {step === 3 && (
             <div className="space-y-5">
               <Label htmlFor="linear-max-payment" className="text-lg font-bold">Maksymalna rata miesięczna</Label>
