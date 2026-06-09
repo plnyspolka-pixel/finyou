@@ -248,6 +248,17 @@ export async function rescoreAndSend(opts: {
       .eq("id", lead.loan_application_id)
       .single();
     loan = la ?? null;
+
+    // Dociągnij property_type z tabeli properties (priorytet: mieszkanie)
+    const { data: props } = await opts.supabaseAdmin
+      .from("properties")
+      .select("property_type")
+      .eq("loan_application_id", lead.loan_application_id);
+    if (props && props.length > 0) {
+      const types = props.map((p: any) => String(p.property_type ?? "").toLowerCase());
+      const chosen = types.includes("mieszkanie") ? "mieszkanie" : types[0];
+      loan = { ...(loan ?? {}), property_type: chosen, has_property_record: true };
+    }
   }
 
   const result = scoreLead(lead, loan);
