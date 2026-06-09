@@ -267,7 +267,7 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
     };
     const subject = renderTemplate(variant.subject, vars);
     const bodyInner = renderTemplate(variant.body_html, vars);
-    const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#111">
+    const html = `<!doctype html><html><body data-fy-branded style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#111">
 <a href="https://financeyou.pl" style="display:block;text-align:center;text-decoration:none"><img src="https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png" width="72" height="72" alt="FinanceYou" style="display:block;margin:0 auto 12px;border:0" /></a>
 ${bodyInner}
 <p style="font-size:14px;color:#111;margin:24px 0 8px"><strong>Masz pytanie? Po prostu odpisz na tego maila.</strong></p>
