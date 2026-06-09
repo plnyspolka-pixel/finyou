@@ -110,8 +110,10 @@ export const Route = createFileRoute("/blog/$slug")({
 function ArticlePage() {
   const { article } = Route.useLoaderData();
   const cta = article.cta_url || "https://app.financeyou.pl/embed/wniosek";
+  const shareUrl = `https://financeyou.pl/blog/${article.slug}`;
   return (
     <div className="min-h-screen bg-background">
+      <BrandHeader />
       <div className="mx-auto max-w-3xl px-4 py-12">
         <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground">← Wróć do bloga</Link>
         <header className="mt-6 mb-8 space-y-4">
@@ -129,6 +131,7 @@ function ArticlePage() {
               />
             </div>
           )}
+          <ShareBar url={shareUrl} title={article.title} />
         </header>
         <article className="prose prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-a:text-primary">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content_md}</ReactMarkdown>
@@ -138,7 +141,19 @@ function ArticlePage() {
           <p className="text-sm text-muted-foreground">Sprawdź warunki w 2 minuty — bez BIK, decyzja w 24h.</p>
           <Button asChild size="lg"><a href={cta} target="_blank" rel="noopener">{article.cta_label || "Złóż wniosek"}</a></Button>
         </div>
-
+        <div className="mt-8 flex justify-center">
+          <ShareBar url={shareUrl} title={article.title} />
+        </div>
+        <footer className="mt-12 pt-6 border-t flex items-center justify-between text-xs text-muted-foreground">
+          <a href="https://financeyou.pl" className="flex items-center gap-2 hover:text-foreground">
+            <img src={FAVICON_URL} alt="" className="h-5 w-5" />
+            <span>© Finance You</span>
+          </a>
+          <div className="flex gap-3">
+            <Link to="/blog" className="hover:text-foreground">Blog</Link>
+            <a href="mailto:kontakt@app.financeyou.pl" className="hover:text-foreground">Kontakt</a>
+          </div>
+        </footer>
       </div>
     </div>
   );
