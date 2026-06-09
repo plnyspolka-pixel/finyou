@@ -394,19 +394,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
     else toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
   };
 
-  const Shell = embedded
-    ? ({ children }: { children: ReactNode }) => <div className="bg-background">{children}</div>
-    : ({ children }: { children: ReactNode }) => (
-        <VariantShell
-          title="Krok po kroku, bez gubienia miejsca"
-          subtitle="Jedna decyzja na ekran. Wstecz i Dalej zmieniają tylko aktualny krok — bez przeskoków między trasami."
-        >
-          {children}
-        </VariantShell>
-      );
-
-  return (
-    <Shell>
+  const innerContent = (
       <div className={embedded
         ? "mx-auto max-w-3xl px-4 py-6 md:px-6"
         : "mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]"}>
