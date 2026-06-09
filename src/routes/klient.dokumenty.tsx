@@ -36,14 +36,23 @@ function KlientDokumenty() {
   const runKwOcr = useServerFn(detectKwNumbers);
 
   const [loanId, setLoanId] = useState<string | null>(null);
+  const [loanStatus, setLoanStatus] = useState<string | null>(null);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyType, setPropertyType] = useState<string | null>(null);
   const [kwNumber, setKwNumber] = useState("");
   const [areaSqm, setAreaSqm] = useState("");
   const [docs, setDocs] = useState<DocRow[]>([]);
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [savingProp, setSavingProp] = useState(false);
   const [scanningKw, setScanningKw] = useState(false);
+
+  const LOCKED_STATUSES = new Set<string>([
+    "wniosek_kompletny","do_analizy","rokuje","nie_rokuje",
+    "wyslany_do_inwestorow","oferta_od_inwestora","oferta_przekazana_klientowi",
+    "zaakceptowany_przez_klienta","do_umowy","zamkniety","archiwalny",
+  ]);
+  const locked = !!(loanStatus && LOCKED_STATUSES.has(loanStatus));
 
   const { data: progress, refetch: refetchProgress, isLoading } = useQuery({
     queryKey: ["my-loan-progress", user?.id, "docs"],
