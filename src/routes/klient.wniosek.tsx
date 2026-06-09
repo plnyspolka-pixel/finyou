@@ -302,26 +302,26 @@ function KlientWniosek() {
                 </div>
 
                 <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full text-xs">
-                    <thead className="bg-muted/50 text-left">
+                  <table className="w-full text-[11px] tabular-nums sm:text-xs">
+                    <thead className="bg-muted/50 text-left text-muted-foreground uppercase tracking-wide text-[10px]">
                       <tr>
-                        <th className="px-3 py-2">#</th>
-                        <th className="px-3 py-2">Data</th>
-                        <th className="px-3 py-2 text-right">Rata</th>
-                        <th className="px-3 py-2 text-right">Odsetki</th>
-                        <th className="px-3 py-2 text-right">Kapitał</th>
-                        <th className="px-3 py-2 text-right">Pozostały kapitał</th>
+                        <th className="px-2 py-1.5 font-normal">#</th>
+                        <th className="px-2 py-1.5 font-normal">data</th>
+                        <th className="px-2 py-1.5 font-normal text-right">rata</th>
+                        <th className="px-2 py-1.5 font-normal text-right">odsetki</th>
+                        <th className="px-2 py-1.5 font-normal text-right">kapitał</th>
+                        <th className="px-2 py-1.5 font-normal text-right">saldo</th>
                       </tr>
                     </thead>
                     <tbody>
                       {schedule.rows.map((r) => (
                         <tr key={String(r.index)} className={r.index === "Balon" ? "border-t bg-primary/5 font-medium" : "border-t"}>
-                          <td className="px-3 py-2">{r.index}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">{r.date}</td>
-                          <td className="px-3 py-2 text-right">{formatPLN(r.payment)}</td>
-                          <td className="px-3 py-2 text-right">{formatPLN(r.interest)}</td>
-                          <td className="px-3 py-2 text-right">{formatPLN(r.capital)}</td>
-                          <td className="px-3 py-2 text-right">{formatPLN(r.remaining)}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{r.index}</td>
+                          <td className="px-2 py-1.5 whitespace-nowrap">{r.date}</td>
+                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.payment)}</td>
+                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.interest)}</td>
+                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.capital)}</td>
+                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.remaining)}</td>
                         </tr>
                       ))}
                     </tbody>
