@@ -354,12 +354,12 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
   const canContinue = () => {
     if (step === 0) return draft.amount >= 20_000;
     if (step === 1) return draft.months >= 3;
-    if (step === 2) return draft.maxPayment >= 500;
-    if (step === 3) return draft.annualRate >= 15;
-    if (step === 4) return !!draft.secType;
-    if (step === 5) return draft.kwChoice === "pomoc" || !!draft.kwNumber.trim();
-    if (step === 6) return photos.length > 0;
-    if (step === 7) return !!draft.phone.trim() && !!draft.email.trim();
+    if (step === 3) return draft.maxPayment >= 500;
+    if (step === 4) return draft.annualRate >= 15;
+    if (step === 5) return !!draft.secType;
+    if (step === 6) return draft.kwChoice === "pomoc" || !!draft.kwNumber.trim();
+    if (step === 7) return photos.length > 0;
+    if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
   };
 
@@ -423,13 +423,13 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
               {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
               {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
-              {step === 2 && "Jaką ratę miesięczną realnie udźwigniesz?"}
-              {step === 3 && "Jaki koszt finansowania akceptujesz?"}
-              {step === 4 && "Co będzie zabezpieczeniem pożyczki?"}
-              {step === 5 && "Czy znasz numer księgi wieczystej?"}
-              {step === 6 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
-              {step === 7 && "Jak mamy się z Tobą skontaktować?"}
-              {step === 8 && "Sprawdź całość przed wysłaniem"}
+              {step === 3 && "Jaką ratę miesięczną realnie udźwigniesz?"}
+              {step === 4 && "Jaki koszt finansowania akceptujesz?"}
+              {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
+              {step === 6 && "Czy znasz numer księgi wieczystej?"}
+              {step === 7 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
+              {step === 8 && "Jak mamy się z Tobą skontaktować?"}
+              {step === 9 && "Sprawdź całość przed wysłaniem"}
             </h2>
           </div>
 
@@ -444,7 +444,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-5">
               <Label htmlFor="linear-max-payment" className="text-lg font-bold">Maksymalna rata miesięczna</Label>
               <Input id="linear-max-payment" type="number" value={draft.maxPayment} onChange={(event) => update("maxPayment", Number(event.target.value) || 0)} className="h-14 text-2xl font-extrabold tabular-nums" />
@@ -453,7 +453,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-5">
               <Label htmlFor="linear-rate" className="text-lg font-bold">Roczne wynagrodzenie inwestora</Label>
               <div className="flex items-center gap-3">
@@ -464,9 +464,9 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 4 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
+          {step === 5 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-5">
               <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
                 <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
@@ -497,7 +497,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <RequirementsPhotoStep
               secType={draft.secType}
               photos={photos}
@@ -506,7 +506,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             />
           )}
 
-          {step === 7 && (
+          {step === 8 && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2"><Label>Imię</Label><Input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
               <div className="space-y-2"><Label>Nazwisko</Label><Input value={draft.lastName} onChange={(event) => update("lastName", event.target.value)} /></div>
@@ -515,7 +515,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 8 && (
+          {step === 9 && (
             <div className="space-y-3 text-sm">
               <ReviewRow label="Kwota" value={formatPLN(draft.amount)} />
               <ReviewRow label="Okres" value={`${draft.months} mies.`} />
