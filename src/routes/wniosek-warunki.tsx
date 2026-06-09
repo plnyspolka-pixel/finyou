@@ -191,7 +191,7 @@ function WniosekWarunkiPage() {
           annualRate,
           secType: step1?.secType ?? null,
           source: step1?.source ?? "wniosek_warunki",
-          startStep: 3,
+          startStep: 2,
         }),
       );
     } catch {

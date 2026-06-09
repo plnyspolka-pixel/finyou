@@ -30,7 +30,7 @@ export const Route = createFileRoute("/wniosek-formularz")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Dane kontaktowe", "Zabezpieczenie", "Dokumenty", "Podsumowanie"];
+const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Dane kontaktowe"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
@@ -366,12 +366,6 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 2) {
-      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
-      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
-      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
-      return { ok: true };
-    }
-    if (step === 3) {
       if (!kwStatus) return { ok: false, msg: "Zaznacz jedną z opcji dotyczących numeru księgi wieczystej." };
       if (kwStatus === "znam") {
         const valid = kwNumbers.map((s) => s.trim()).filter(Boolean);
@@ -390,7 +384,7 @@ function KlientWniosek() {
       }
       return { ok: true };
     }
-    if (step === 4) {
+    if (step === 3) {
       if (!secType) return { ok: false, msg: "Brak typu zabezpieczenia." };
       if (secType === "mieszkanie" && docsByType("zdjecia_pomieszczen").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
@@ -412,39 +406,42 @@ function KlientWniosek() {
       }
       return { ok: true };
     }
+    if (step === 4) {
+      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
+      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
+      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
+      return { ok: true };
+    }
     return { ok: true };
   };
 
   const goNext = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
-    const wasStep2 = step === 2;
     await persistAll(step + 1);
-    if (wasStep2 && loanId && !leadFiredRef.current && phone.trim()) {
-      leadFiredRef.current = true;
-      try {
-        await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
-        toast.success("Dziękujemy! Za chwilę zadzwoni Ania, nasza asystentka.");
-        const { trackEvent } = await import("@/lib/fb-pixel");
-        await trackEvent(
-          "Lead",
-          { content_name: "Wniosek pożyczkowy — krok 2", value: amount, currency: "PLN" },
-          { phone: phone.trim(), firstName: firstName || undefined },
-        );
-
-      } catch (e: any) {
-        console.warn("[lead-capture]", e);
-      }
-    }
   };
 
-
   const submit = async () => {
-    if (!loanId) { toast.error("Brak wniosku"); return; }
+    const v = canNext();
+    if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
-      await persistAll(5);
-      toast.success("Dane zapisane — ostatni krok: opis dla inwestora");
+      await persistAll(STEPS.length);
+      if (loanId && !leadFiredRef.current && phone.trim()) {
+        leadFiredRef.current = true;
+        try {
+          await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
+          const { trackEvent } = await import("@/lib/fb-pixel");
+          await trackEvent(
+            "Lead",
+            { content_name: "Wniosek pożyczkowy — wysłany", value: amount, currency: "PLN" },
+            { phone: phone.trim(), firstName: firstName || undefined },
+          );
+        } catch (e: any) {
+          console.warn("[lead-capture]", e);
+        }
+      }
+      toast.success("Wniosek wysłany! Zwiększ jeszcze swoje szanse na sukces.");
       void navigate({ to: "/wniosek-opis" });
     } finally {
       setSubmitting(false);
@@ -600,9 +597,12 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 2 && (
+      {step === 4 && (
         <Card>
-          <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Dane kontaktowe</CardTitle>
+            <CardDescription>Ostatni krok — podaj dane, na które wyślemy wniosek do inwestora. Po kliknięciu „Wyślij wniosek do inwestora” skontaktuje się z Tobą Ania, nasza asystentka.</CardDescription>
+          </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
             <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
@@ -612,7 +612,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 3 && (
+      {step === 2 && (
         <div className="space-y-5">
           {/* Hero zabezpieczenia */}
           <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.15_0.09_265)] p-6 text-primary-foreground shadow-2xl md:p-8">
@@ -621,7 +621,7 @@ function KlientWniosek() {
               <div className="max-w-xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white backdrop-blur">
                   <Sparkles className="h-3.5 w-3.5 text-accent" />
-                  Krok 3 z 5 · Zabezpieczenie
+                  Krok 2 z 4 · Zabezpieczenie
                 </div>
                 <h2 className="mt-3 text-2xl font-extrabold tracking-tight md:text-3xl">
                   Numer księgi wieczystej Twojej nieruchomości
@@ -840,7 +840,7 @@ function KlientWniosek() {
         </div>
       )}
 
-      {step === 4 && secType && (
+      {step === 3 && secType && (
         <Card>
           <CardHeader>
             <CardTitle>Dokumenty — {securityTypeLabels[secType]}</CardTitle>
@@ -926,7 +926,7 @@ function KlientWniosek() {
           </Button>
         ) : (
           <Button variant="cta" size="cta" disabled={submitting} onClick={() => void submit()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij kompletny wniosek do analizy</>}
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek do inwestora</>}
           </Button>
         )}
       </div>
