@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CheckCircle2,
   Clock3,
   FileImage,
   FileText,
@@ -84,6 +85,7 @@ const emptyDraft: LoanDraft = {
 const linearSteps = [
   "Kwota",
   "Okres",
+  "Poznaj ofertę",
   "Maksymalna rata",
   "Koszt finansowania",
   "Zabezpieczenie",
@@ -351,15 +353,20 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
   const [step, setStep] = useState(0);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
 
+  const gateUnlocked =
+    !!user ||
+    (!!draft.firstName.trim() && !!draft.email.trim() && !!draft.phone.trim());
+
   const canContinue = () => {
     if (step === 0) return draft.amount >= 20_000;
     if (step === 1) return draft.months >= 3;
-    if (step === 2) return draft.maxPayment >= 500;
-    if (step === 3) return draft.annualRate >= 15;
-    if (step === 4) return !!draft.secType;
-    if (step === 5) return draft.kwChoice === "pomoc" || !!draft.kwNumber.trim();
-    if (step === 6) return photos.length > 0;
-    if (step === 7) return !!draft.phone.trim() && !!draft.email.trim();
+    if (step === 2) return gateUnlocked;
+    if (step === 3) return draft.maxPayment >= 500;
+    if (step === 4) return draft.annualRate >= 15;
+    if (step === 5) return !!draft.secType;
+    if (step === 6) return draft.kwChoice === "pomoc" || !!draft.kwNumber.trim();
+    if (step === 7) return photos.length > 0;
+    if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
   };
 
@@ -423,13 +430,14 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
               {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
               {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
-              {step === 2 && "Jaką ratę miesięczną realnie udźwigniesz?"}
-              {step === 3 && "Jaki koszt finansowania akceptujesz?"}
-              {step === 4 && "Co będzie zabezpieczeniem pożyczki?"}
-              {step === 5 && "Czy znasz numer księgi wieczystej?"}
-              {step === 6 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
-              {step === 7 && "Jak mamy się z Tobą skontaktować?"}
-              {step === 8 && "Sprawdź całość przed wysłaniem"}
+              {step === 2 && "Zostaw kontakt, żeby zobaczyć ofertę"}
+              {step === 3 && "Jaką ratę miesięczną realnie udźwigniesz?"}
+              {step === 4 && "Jaki koszt finansowania akceptujesz?"}
+              {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
+              {step === 6 && "Czy znasz numer księgi wieczystej?"}
+              {step === 7 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
+              {step === 8 && "Jak mamy się z Tobą skontaktować?"}
+              {step === 9 && "Sprawdź całość przed wysłaniem"}
             </h2>
           </div>
 
@@ -445,6 +453,16 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           )}
 
           {step === 2 && (
+            <OfferGate
+              user={user}
+              authLoading={authLoading}
+              draft={draft}
+              update={update}
+              figures={figures}
+            />
+          )}
+
+          {step === 3 && (
             <div className="space-y-5">
               <Label htmlFor="linear-max-payment" className="text-lg font-bold">Maksymalna rata miesięczna</Label>
               <Input id="linear-max-payment" type="number" value={draft.maxPayment} onChange={(event) => update("maxPayment", Number(event.target.value) || 0)} className="h-14 text-2xl font-extrabold tabular-nums" />
@@ -453,7 +471,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-5">
               <Label htmlFor="linear-rate" className="text-lg font-bold">Roczne wynagrodzenie inwestora</Label>
               <div className="flex items-center gap-3">
@@ -464,9 +482,9 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 4 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
+          {step === 5 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-5">
               <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
                 <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
@@ -497,7 +515,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <RequirementsPhotoStep
               secType={draft.secType}
               photos={photos}
@@ -506,7 +524,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             />
           )}
 
-          {step === 7 && (
+          {step === 8 && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2"><Label>Imię</Label><Input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
               <div className="space-y-2"><Label>Nazwisko</Label><Input value={draft.lastName} onChange={(event) => update("lastName", event.target.value)} /></div>
@@ -515,7 +533,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          {step === 8 && (
+          {step === 9 && (
             <div className="space-y-3 text-sm">
               <ReviewRow label="Kwota" value={formatPLN(draft.amount)} />
               <ReviewRow label="Okres" value={`${draft.months} mies.`} />
@@ -532,7 +550,11 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
               <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
             </Button>
             <Button type="button" variant="cta" size="cta" onClick={next}>
-              {step === linearSteps.length - 1 ? <><Send className="mr-2 h-4 w-4" /> Wyślij testowo</> : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}
+              {step === linearSteps.length - 1
+                ? <><Send className="mr-2 h-4 w-4" /> Wyślij wniosek</>
+                : step === 2
+                  ? <>Poznaj ofertę <ArrowRight className="ml-2 h-4 w-4" /></>
+                  : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </div>
         </section>
@@ -684,6 +706,114 @@ function RequirementsPhotoStep({
             removePhoto={removePhoto}
           />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function OfferGate({
+  user,
+  authLoading,
+  draft,
+  update,
+  figures,
+}: {
+  user: ReturnType<typeof useAuth>["user"];
+  authLoading: boolean;
+  draft: LoanDraft;
+  update: ReturnType<typeof useLoanDraft>["update"];
+  figures: { monthly: number; total: number; investorCompensation: number };
+}) {
+  if (user) {
+    return (
+      <div className="space-y-5">
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-5">
+          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="h-5 w-5" /> Jesteś zalogowany jako {user.email}
+          </div>
+          <p className="mt-2 text-sm text-foreground/80">
+            Twoje dane kontaktowe mamy zapisane. Kliknij <b>Poznaj ofertę</b>, żeby przejść do indywidualnych warunków.
+          </p>
+        </div>
+        <OfferPreviewCard amount={draft.amount} months={draft.months} figures={figures} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <OfferPreviewCard amount={draft.amount} months={draft.months} figures={figures} />
+
+      <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold uppercase tracking-wide text-accent">
+              Aby zobaczyć indywidualną ofertę
+            </div>
+            <p className="mt-1 text-sm text-foreground/80">
+              Zostaw kontakt — wyślemy Ci link do dokończenia wniosku i indywidualne warunki dopasowane do Twojej sytuacji. Bez zobowiązań.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="gate-firstname">Imię *</Label>
+            <Input id="gate-firstname" value={draft.firstName} onChange={(e) => update("firstName", e.target.value)} placeholder="Anna" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gate-phone">Telefon *</Label>
+            <Input id="gate-phone" type="tel" inputMode="tel" value={draft.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+48 600 000 000" />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="gate-email">E-mail *</Label>
+            <Input id="gate-email" type="email" inputMode="email" value={draft.email} onChange={(e) => update("email", e.target.value)} placeholder="anna@example.com" />
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs text-muted-foreground">
+          Masz już konto?{" "}
+          <a href="/logowanie" className="font-semibold text-accent underline-offset-2 hover:underline">
+            Zaloguj się
+          </a>{" "}
+          — wczytamy Twoje dane automatycznie.
+          {authLoading && <span className="ml-2">(sprawdzam logowanie…)</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OfferPreviewCard({
+  amount,
+  months,
+  figures,
+}: {
+  amount: number;
+  months: number;
+  figures: { monthly: number; total: number; investorCompensation: number };
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-primary p-5 text-primary-foreground">
+      <div className="text-xs font-bold uppercase tracking-wide text-primary-foreground/70">
+        Twoja wstępna kalkulacja
+      </div>
+      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+        <div>
+          <div className="text-xs text-primary-foreground/70">Kwota</div>
+          <div className="text-xl font-extrabold tabular-nums">{formatPLN(amount)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-primary-foreground/70">Okres</div>
+          <div className="text-xl font-extrabold tabular-nums">{months} mies.</div>
+        </div>
+        <div>
+          <div className="text-xs text-primary-foreground/70">Szacowana rata</div>
+          <div className="text-xl font-extrabold tabular-nums">{formatPLN(figures.monthly)}</div>
+        </div>
       </div>
     </div>
   );
