@@ -709,3 +709,111 @@ function RequirementsPhotoStep({
     </div>
   );
 }
+
+function OfferGate({
+  user,
+  authLoading,
+  draft,
+  update,
+  figures,
+}: {
+  user: ReturnType<typeof useAuth>["user"];
+  authLoading: boolean;
+  draft: LoanDraft;
+  update: ReturnType<typeof useLoanDraft>["update"];
+  figures: { monthly: number; total: number; investorCompensation: number };
+}) {
+  if (user) {
+    return (
+      <div className="space-y-5">
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-5">
+          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="h-5 w-5" /> Jesteś zalogowany jako {user.email}
+          </div>
+          <p className="mt-2 text-sm text-foreground/80">
+            Twoje dane kontaktowe mamy zapisane. Kliknij <b>Poznaj ofertę</b>, żeby przejść do indywidualnych warunków.
+          </p>
+        </div>
+        <OfferPreviewCard amount={draft.amount} months={draft.months} figures={figures} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <OfferPreviewCard amount={draft.amount} months={draft.months} figures={figures} />
+
+      <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold uppercase tracking-wide text-accent">
+              Aby zobaczyć indywidualną ofertę
+            </div>
+            <p className="mt-1 text-sm text-foreground/80">
+              Zostaw kontakt — wyślemy Ci link do dokończenia wniosku i indywidualne warunki dopasowane do Twojej sytuacji. Bez zobowiązań.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="gate-firstname">Imię *</Label>
+            <Input id="gate-firstname" value={draft.firstName} onChange={(e) => update("firstName", e.target.value)} placeholder="Anna" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gate-phone">Telefon *</Label>
+            <Input id="gate-phone" type="tel" inputMode="tel" value={draft.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+48 600 000 000" />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="gate-email">E-mail *</Label>
+            <Input id="gate-email" type="email" inputMode="email" value={draft.email} onChange={(e) => update("email", e.target.value)} placeholder="anna@example.com" />
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs text-muted-foreground">
+          Masz już konto?{" "}
+          <a href="/logowanie" className="font-semibold text-accent underline-offset-2 hover:underline">
+            Zaloguj się
+          </a>{" "}
+          — wczytamy Twoje dane automatycznie.
+          {authLoading && <span className="ml-2">(sprawdzam logowanie…)</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OfferPreviewCard({
+  amount,
+  months,
+  figures,
+}: {
+  amount: number;
+  months: number;
+  figures: { monthly: number; total: number; investorCompensation: number };
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-primary p-5 text-primary-foreground">
+      <div className="text-xs font-bold uppercase tracking-wide text-primary-foreground/70">
+        Twoja wstępna kalkulacja
+      </div>
+      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+        <div>
+          <div className="text-xs text-primary-foreground/70">Kwota</div>
+          <div className="text-xl font-extrabold tabular-nums">{formatPLN(amount)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-primary-foreground/70">Okres</div>
+          <div className="text-xl font-extrabold tabular-nums">{months} mies.</div>
+        </div>
+        <div>
+          <div className="text-xs text-primary-foreground/70">Szacowana rata</div>
+          <div className="text-xl font-extrabold tabular-nums">{formatPLN(figures.monthly)}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
