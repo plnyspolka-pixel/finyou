@@ -36,10 +36,20 @@ function BlogIndex() {
           <h1 className="text-4xl font-bold">Blog Finance You</h1>
           <p className="text-muted-foreground">Pożyczki pod zastaw nieruchomości — wiedza, porady, analizy.</p>
         </header>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           {articles.map((a: any) => (
-            <Link key={a.id} to="/blog/$slug" params={{ slug: a.slug }} className="block">
-              <Card className="h-full hover:border-primary transition-colors">
+            <Link key={a.id} to="/blog/$slug" params={{ slug: a.slug }} className="block group">
+              <Card className="h-full overflow-hidden hover:border-primary transition-colors">
+                {a.cover_image_url && (
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                    <img
+                      src={a.cover_image_url}
+                      alt={a.cover_image_alt || a.title}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  </div>
+                )}
                 <CardHeader>
                   <CardTitle className="text-lg leading-snug">{a.title}</CardTitle>
                   {a.excerpt && <CardDescription className="line-clamp-3">{a.excerpt}</CardDescription>}
@@ -53,6 +63,7 @@ function BlogIndex() {
           ))}
           {articles.length === 0 && <div className="col-span-full text-center text-muted-foreground py-12">Brak artykułów.</div>}
         </div>
+
       </div>
     </div>
   );
