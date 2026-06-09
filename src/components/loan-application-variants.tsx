@@ -172,12 +172,10 @@ function useLoanDraft() {
 function VariantShell({
   title,
   subtitle,
-  variant,
   children,
 }: {
   title: string;
   subtitle: string;
-  variant: "one" | "two";
   children: ReactNode;
 }) {
   return (
@@ -185,23 +183,10 @@ function VariantShell({
       <header className="border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-6">
           <div>
-            <div className="text-xs font-bold uppercase text-muted-foreground">
-              {variant === "one" ? "Wniosek 1" : "Wniosek 2"}
-            </div>
+            <div className="text-xs font-bold uppercase text-muted-foreground">Wniosek</div>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">{title}</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
           </div>
-          <nav className="flex flex-wrap gap-2" aria-label="Porównanie wersji wniosku">
-            <Button asChild variant={variant === "one" ? "default" : "outline"}>
-              <a href="/wniosek-1">Wniosek 1</a>
-            </Button>
-            <Button asChild variant={variant === "two" ? "default" : "outline"}>
-              <a href="/wniosek-2">Wniosek 2</a>
-            </Button>
-            <Button asChild variant="ghost">
-              <a href="/wniosek-formularz">Obecny wniosek</a>
-            </Button>
-          </nav>
         </div>
       </header>
       {children}
