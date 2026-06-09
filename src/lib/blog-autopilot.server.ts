@@ -266,7 +266,7 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       cta_url: "https://app.financeyou.pl/embed/wniosek",
       cta_label: "Złóż wniosek",
       source: "ai_autopilot",
-      raw_ai_output: draft as unknown as Record<string, unknown>,
+      raw_ai_output: draft as any,
       published_at: new Date().toISOString(),
       content_refreshed_at: new Date().toISOString(),
       cover_image_url: cover,
