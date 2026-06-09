@@ -26,14 +26,20 @@ export interface LoanForScoring {
   loan_amount?: number | null;
   property_quality?: string | null;
   status?: string | null;
+  /** typ nieruchomości z tabeli properties (mieszkanie/dom/...) */
+  property_type?: string | null;
+  /** czy istnieje wpis w properties dla wniosku */
+  has_property_record?: boolean | null;
 }
 
 /**
- * Klasyfikuje lead na A/B/C/D.
+ * Klasyfikuje lead na A/B/C/D — priorytet: MIESZKANIE jako zabezpieczenie.
  *   D — oznaczony ręcznie jako spam/zły.
- *   A — komplet danych + ma nieruchomość (loan + property_quality) + kwota < 100k.
- *   B — wypełnił cały wniosek (loan_application istnieje).
- *   C — wszystko inne.
+ *   A — komplet danych + MIESZKANIE + kwota < 100k (najlepszy lead).
+ *   A (90) — komplet danych + mieszkanie (bez progu kwoty).
+ *   B — komplet + jakakolwiek inna nieruchomość (dom/lokal/działka…).
+ *   B (50) — wypełniony wniosek bez nieruchomości.
+ *   C — tylko podstawowe dane kontaktowe.
  */
 export function scoreLead(lead: LeadForScoring, loan: LoanForScoring | null): {
   tier: Tier;
@@ -47,14 +53,40 @@ export function scoreLead(lead: LeadForScoring, loan: LoanForScoring | null): {
   const hasContact = Boolean(lead.email && lead.phone_normalized);
   const hasName = Boolean(lead.first_name && lead.last_name);
   const hasLoan = Boolean(lead.loan_application_id);
-  const hasProperty = Boolean(loan?.property_quality);
+  const hasAnyProperty = Boolean(
+    loan?.has_property_record || loan?.property_type || loan?.property_quality
+  );
+  const isFlat = (loan?.property_type ?? "").toLowerCase() === "mieszkanie";
   const amount = Number(loan?.loan_amount ?? 0);
+  const smallAmount = amount > 0 && amount < 100_000;
+  const completeProfile = hasContact && hasName && hasLoan;
 
-  if (hasContact && hasName && hasLoan && hasProperty && amount > 0 && amount < 100_000) {
-    return { tier: "A", score: 100, reason: `Komplet danych + nieruchomość + ${Math.round(amount / 1000)}k zł` };
+  if (completeProfile && isFlat && smallAmount) {
+    return {
+      tier: "A",
+      score: 100,
+      reason: `Mieszkanie + komplet danych + ${Math.round(amount / 1000)}k zł`,
+    };
+  }
+  if (completeProfile && isFlat) {
+    return { tier: "A", score: 90, reason: "Mieszkanie jako zabezpieczenie + komplet danych" };
+  }
+  if (completeProfile && hasAnyProperty && smallAmount) {
+    return {
+      tier: "B",
+      score: 75,
+      reason: `Nieruchomość (${loan?.property_type ?? "inna"}) + komplet + ${Math.round(amount / 1000)}k zł`,
+    };
+  }
+  if (completeProfile && hasAnyProperty) {
+    return {
+      tier: "B",
+      score: 65,
+      reason: `Nieruchomość (${loan?.property_type ?? "inna"}) + komplet danych`,
+    };
   }
   if (hasLoan && loan?.status && loan.status !== "draft") {
-    return { tier: "B", score: 60, reason: "Wypełniony wniosek" };
+    return { tier: "B", score: 50, reason: "Wypełniony wniosek (bez nieruchomości)" };
   }
   if (hasContact) {
     return { tier: "C", score: 30, reason: "Podstawowe dane kontaktowe" };
