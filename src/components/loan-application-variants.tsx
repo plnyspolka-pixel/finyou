@@ -392,7 +392,10 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
 
   return (
     <Shell>
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]">
+      <div className={embedded
+        ? "mx-auto max-w-3xl px-4 py-6 md:px-6"
+        : "mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]"}>
+        {!embedded && (
         <aside className="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6">
           <div className="mb-4 flex items-center justify-between">
             <Badge variant="secondary">Krok {step + 1} z {linearSteps.length}</Badge>
@@ -423,6 +426,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             })}
           </ol>
         </aside>
+        )}
 
         <section className="min-h-[620px] rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
           <div className="mb-8">
@@ -430,7 +434,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
               {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
               {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
-              {step === 2 && "Zostaw kontakt, żeby zobaczyć ofertę"}
+              {step === 2 && "Zostaw kontakt"}
               {step === 3 && "Jaką ratę miesięczną realnie udźwigniesz?"}
               {step === 4 && "Jaki koszt finansowania akceptujesz?"}
               {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
@@ -549,19 +553,21 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
             <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
             </Button>
-            <Button type="button" variant="cta" size="cta" onClick={next}>
+            <Button type="button" variant="cta" size="lg" className="min-w-0 flex-1 whitespace-normal text-center leading-tight sm:flex-none" onClick={next}>
               {step === linearSteps.length - 1
                 ? <><Send className="mr-2 h-4 w-4" /> Wyślij wniosek</>
                 : step === 2
-                  ? <>Poznaj ofertę <ArrowRight className="ml-2 h-4 w-4" /></>
+                  ? <>Przejdź do kalkulacji <ArrowRight className="ml-2 h-4 w-4" /></>
                   : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </div>
         </section>
 
+        {!embedded && (
         <div className="lg:sticky lg:top-6 lg:h-fit">
           <SummaryPanel draft={draft} figures={figures} photos={photos} />
         </div>
+        )}
       </div>
     </Shell>
   );
@@ -726,63 +732,36 @@ function OfferGate({
 }) {
   if (user) {
     return (
-      <div className="space-y-5">
-        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-5">
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="h-5 w-5" /> Jesteś zalogowany jako {user.email}
-          </div>
-          <p className="mt-2 text-sm text-foreground/80">
-            Twoje dane kontaktowe mamy zapisane. Kliknij <b>Poznaj ofertę</b>, żeby przejść do indywidualnych warunków.
-          </p>
+      <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-5">
+        <div className="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="h-5 w-5" /> Jesteś zalogowany jako {user.email}
         </div>
-        <OfferPreviewCard amount={draft.amount} months={draft.months} figures={figures} />
+        <p className="mt-2 text-sm text-foreground/80">Kliknij „Przejdź do kalkulacji".</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <OfferPreviewCard amount={draft.amount} months={draft.months} figures={figures} />
-
-      <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
-        <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-sm font-bold uppercase tracking-wide text-accent">
-              Aby zobaczyć indywidualną ofertę
-            </div>
-            <p className="mt-1 text-sm text-foreground/80">
-              Zostaw kontakt — wyślemy Ci link do dokończenia wniosku i indywidualne warunki dopasowane do Twojej sytuacji. Bez zobowiązań.
-            </p>
-          </div>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="gate-firstname">Imię *</Label>
+          <Input id="gate-firstname" value={draft.firstName} onChange={(e) => update("firstName", e.target.value)} placeholder="Anna" />
         </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="gate-firstname">Imię *</Label>
-            <Input id="gate-firstname" value={draft.firstName} onChange={(e) => update("firstName", e.target.value)} placeholder="Anna" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="gate-phone">Telefon *</Label>
-            <Input id="gate-phone" type="tel" inputMode="tel" value={draft.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+48 600 000 000" />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="gate-email">E-mail *</Label>
-            <Input id="gate-email" type="email" inputMode="email" value={draft.email} onChange={(e) => update("email", e.target.value)} placeholder="anna@example.com" />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="gate-phone">Telefon *</Label>
+          <Input id="gate-phone" type="tel" inputMode="tel" value={draft.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+48 600 000 000" />
         </div>
-
-        <p className="mt-4 text-xs text-muted-foreground">
-          Masz już konto?{" "}
-          <a href="/logowanie" className="font-semibold text-accent underline-offset-2 hover:underline">
-            Zaloguj się
-          </a>{" "}
-          — wczytamy Twoje dane automatycznie.
-          {authLoading && <span className="ml-2">(sprawdzam logowanie…)</span>}
-        </p>
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="gate-email">E-mail *</Label>
+          <Input id="gate-email" type="email" inputMode="email" value={draft.email} onChange={(e) => update("email", e.target.value)} placeholder="anna@example.com" />
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Masz już konto?{" "}
+        <a href="/logowanie" className="font-semibold text-accent underline-offset-2 hover:underline">Zaloguj się</a>.
+        {authLoading && <span className="ml-2">(sprawdzam logowanie…)</span>}
+      </p>
     </div>
   );
 }
