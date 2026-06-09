@@ -216,31 +216,27 @@ export function AiAdminChat() {
 
   const submit = () => {
     const text = input.trim();
-    const validAtt = attachments.filter((a) => a.text);
-    if ((!text && validAtt.length === 0) || send.isPending) return;
-    let full = text;
-    if (validAtt.length > 0) {
-      const parts = validAtt.map(
-        (a) => `\n\n----- ZAŁĄCZNIK: ${a.name} (${a.size} B) -----\n${a.text}\n----- KONIEC ZAŁĄCZNIKA -----`
-      );
-      full = (text || "(załączniki w wiadomości)") + parts.join("");
-    }
+    if ((!text && attachments.length === 0) || send.isPending) return;
+    const labelParts = attachments.map((a) => `${a.name} (${(a.size / 1024).toFixed(0)} KB, ${a.kind})`);
+    const userVisible =
+      text + (labelParts.length ? `\n\n📎 Załączniki: ${labelParts.join(", ")}` : "");
     qc.setQueryData(["ai-admin-msgs", convId], (old: { messages: Message[] } | undefined) => ({
       messages: [
         ...(old?.messages ?? []),
         {
           id: `tmp-${Date.now()}`,
           role: "user" as const,
-          content: full,
+          content: userVisible || "(załączniki)",
           tool_calls: null,
           tool_results: null,
           created_at: new Date().toISOString(),
         },
       ],
     }));
-    send.mutate(full);
+    send.mutate({ text: text || "(załączniki)", attachments });
     setAttachments([]);
   };
+
 
   if (!open) {
     return (
