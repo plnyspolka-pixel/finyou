@@ -87,7 +87,6 @@ import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
-import { Route as ApiPublicDiagMetaRouteImport } from './routes/api/public/_diag-meta'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
 import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
@@ -511,11 +510,6 @@ const ApiPublicElevenlabsSendSmsRoute =
     path: '/api/public/elevenlabs-send-sms',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicDiagMetaRoute = ApiPublicDiagMetaRouteImport.update({
-  id: '/api/public/_diag-meta',
-  path: '/api/public',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/wnioski/$id',
   path: '/wnioski/$id',
@@ -730,7 +724,6 @@ export interface FileRoutesByFullPath {
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public': typeof ApiPublicDiagMetaRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -833,7 +826,6 @@ export interface FileRoutesByTo {
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public': typeof ApiPublicDiagMetaRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -940,7 +932,6 @@ export interface FileRoutesById {
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/_diag-meta': typeof ApiPublicDiagMetaRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -1048,7 +1039,6 @@ export interface FileRouteTypes {
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
-    | '/api/public'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -1151,7 +1141,6 @@ export interface FileRouteTypes {
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
-    | '/api/public'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -1257,7 +1246,6 @@ export interface FileRouteTypes {
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
     | '/admin/wnioski/$id'
-    | '/api/public/_diag-meta'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -1314,7 +1302,6 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
-  ApiPublicDiagMetaRoute: typeof ApiPublicDiagMetaRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
@@ -1890,13 +1877,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicElevenlabsSendSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/_diag-meta': {
-      id: '/api/public/_diag-meta'
-      path: '/api/public'
-      fullPath: '/api/public'
-      preLoaderRoute: typeof ApiPublicDiagMetaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
       path: '/wnioski/$id'
@@ -2254,7 +2234,6 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
-  ApiPublicDiagMetaRoute: ApiPublicDiagMetaRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
@@ -2287,3 +2266,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
