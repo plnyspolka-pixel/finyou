@@ -1,7 +1,9 @@
 // Server-only helpers for email marketing (Resend + AI + segments)
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
+
 
 export type SegmentFilters = {
   tags?: string[];
