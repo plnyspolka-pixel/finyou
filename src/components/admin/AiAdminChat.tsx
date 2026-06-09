@@ -25,12 +25,19 @@ type Message = {
   created_at: string;
 };
 
+type Attachment = { name: string; size: number; type: string; text?: string; skipped?: boolean };
+
+const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|log|yml|yaml|xml|html|htm|css|scss|js|jsx|ts|tsx|sql|sh|env|ini|toml|conf|py|rb|go|rs|java|kt|swift|php|vue|svelte)$/i;
+const MAX_INLINE = 200_000;
+
 export function AiAdminChat() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [convId, setConvId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [view, setView] = useState<"chat" | "list">("chat");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
   const sendFn = useServerFn(sendAdminChat);
