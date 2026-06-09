@@ -35,7 +35,7 @@ async function runBatch() {
     .from("loan_applications")
     .select(`
       id, status, return_link_token, reminder_sms_count, reminder_sms_last_sent_at, created_at,
-      client:clients!inner(first_name, phone_normalized, phone)
+      client:clients!inner(first_name, phone_normalized, phone, do_not_sms)
     `)
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .gte("created_at", since14d)
@@ -43,12 +43,14 @@ async function runBatch() {
     .limit(500);
 
   const candidates = (loans ?? []).filter((l: any) => {
+    if (l.client?.do_not_sms === true) return false;
     const phone = l.client?.phone_normalized || l.client?.phone;
     if (!phone) return false;
     // Nie częściej niż raz na 6 dni
     if (l.reminder_sms_last_sent_at && l.reminder_sms_last_sent_at > sixDaysAgo) return false;
     return true;
   });
+
 
   let sent = 0, errors = 0;
   const results: any[] = [];
