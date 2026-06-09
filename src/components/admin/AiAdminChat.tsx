@@ -25,10 +25,20 @@ type Message = {
   created_at: string;
 };
 
-type Attachment = { name: string; size: number; type: string; text?: string; skipped?: boolean };
+type AttachmentKind = "text" | "image" | "pdf" | "other";
+type Attachment = {
+  name: string;
+  size: number;
+  mediaType: string;
+  kind: AttachmentKind;
+  text?: string;     // dla plików tekstowych
+  data?: string;     // base64 dla binarek (obrazy, PDF, inne)
+};
 
 const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|log|yml|yaml|xml|html|htm|css|scss|js|jsx|ts|tsx|sql|sh|env|ini|toml|conf|py|rb|go|rs|java|kt|swift|php|vue|svelte)$/i;
-const MAX_INLINE = 200_000;
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB / plik (limit Anthropica dla dokumentów)
+const ANTHROPIC_IMAGE_MIME = /^image\/(jpeg|png|gif|webp)$/i;
+
 
 export function AiAdminChat() {
   const [open, setOpen] = useState(true);
@@ -71,7 +81,21 @@ export function AiAdminChat() {
   }, [messages.length, open]);
 
   const send = useMutation({
-    mutationFn: (text: string) => sendFn({ data: { conversation_id: convId, message: text } }),
+    mutationFn: (payload: { text: string; attachments: Attachment[] }) =>
+      sendFn({
+        data: {
+          conversation_id: convId,
+          message: payload.text,
+          attachments: payload.attachments.map((a) => ({
+            name: a.name,
+            mediaType: a.mediaType,
+            kind: a.kind,
+            size: a.size,
+            text: a.text,
+            data: a.data,
+          })),
+        },
+      }),
     onSuccess: async (r) => {
       setConvId(r.conversation_id);
       setInput("");
@@ -80,6 +104,7 @@ export function AiAdminChat() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
@@ -142,24 +167,44 @@ export function AiAdminChat() {
     setRecording(false);
   };
 
+  const fileToBase64 = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const s = String(r.result ?? "");
+        const i = s.indexOf(",");
+        resolve(i >= 0 ? s.slice(i + 1) : s);
+      };
+      r.onerror = () => reject(r.error ?? new Error("read error"));
+      r.readAsDataURL(f);
+    });
+
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const next: Attachment[] = [];
     for (const f of Array.from(files)) {
-      if (f.size > 2_000_000) {
-        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
-        toast.error(`${f.name}: plik > 2MB, pominięty`);
+      if (f.size > MAX_FILE_BYTES) {
+        toast.error(`${f.name}: plik > 25 MB, pominięty`);
         continue;
       }
       const isText = TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json";
-      if (!isText) {
-        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
-        toast.warning(`${f.name}: format binarny (PDF/obraz) niewspierany — wgraj tekst, CSV, MD, JSON itp.`);
-        continue;
-      }
+      const isImage = ANTHROPIC_IMAGE_MIME.test(f.type);
+      const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
       try {
-        const text = await f.text();
-        next.push({ name: f.name, size: f.size, type: f.type, text: text.slice(0, MAX_INLINE) });
+        if (isText) {
+          const text = await f.text();
+          next.push({ name: f.name, size: f.size, mediaType: f.type || "text/plain", kind: "text", text });
+        } else if (isImage) {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, size: f.size, mediaType: f.type, kind: "image", data });
+        } else if (isPdf) {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, size: f.size, mediaType: "application/pdf", kind: "pdf", data });
+        } else {
+          const data = await fileToBase64(f);
+          next.push({ name: f.name, size: f.size, mediaType: f.type || "application/octet-stream", kind: "other", data });
+          toast.info(`${f.name}: typ ${f.type || "binarny"} — przekażę jako załącznik, ale model może go nie odczytać.`);
+        }
       } catch (e) {
         toast.error(`${f.name}: nie udało się odczytać (${(e as Error).message})`);
       }
@@ -168,33 +213,30 @@ export function AiAdminChat() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+
   const submit = () => {
     const text = input.trim();
-    const validAtt = attachments.filter((a) => a.text);
-    if ((!text && validAtt.length === 0) || send.isPending) return;
-    let full = text;
-    if (validAtt.length > 0) {
-      const parts = validAtt.map(
-        (a) => `\n\n----- ZAŁĄCZNIK: ${a.name} (${a.size} B) -----\n${a.text}\n----- KONIEC ZAŁĄCZNIKA -----`
-      );
-      full = (text || "(załączniki w wiadomości)") + parts.join("");
-    }
+    if ((!text && attachments.length === 0) || send.isPending) return;
+    const labelParts = attachments.map((a) => `${a.name} (${(a.size / 1024).toFixed(0)} KB, ${a.kind})`);
+    const userVisible =
+      text + (labelParts.length ? `\n\n📎 Załączniki: ${labelParts.join(", ")}` : "");
     qc.setQueryData(["ai-admin-msgs", convId], (old: { messages: Message[] } | undefined) => ({
       messages: [
         ...(old?.messages ?? []),
         {
           id: `tmp-${Date.now()}`,
           role: "user" as const,
-          content: full,
+          content: userVisible || "(załączniki)",
           tool_calls: null,
           tool_results: null,
           created_at: new Date().toISOString(),
         },
       ],
     }));
-    send.mutate(full);
+    send.mutate({ text: text || "(załączniki)", attachments });
     setAttachments([]);
   };
+
 
   if (!open) {
     return (
@@ -282,7 +324,7 @@ export function AiAdminChat() {
                   <li>Odpytać bazę (np. „pokaż 10 ostatnich leadów")</li>
                   <li>Wprowadzić zmiany w danych po Twoim potwierdzeniu</li>
                   <li>Przeczytać pliki w <code>src/</code></li>
-                  <li>Przyjąć załączniki tekstowe (TXT, MD, CSV, JSON, kod) do 2 MB</li>
+                  <li>Przyjąć dowolne załączniki (tekst, PDF, obrazy, binarki) do 25 MB / plik</li>
                 </ul>
               </div>
             )}
@@ -301,12 +343,12 @@ export function AiAdminChat() {
                 {attachments.map((a, i) => (
                   <div
                     key={i}
-                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${
-                      a.skipped ? "border-destructive/40 text-muted-foreground line-through" : "bg-muted/40"
-                    }`}
+                    className="flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 text-[11px]"
+                    title={`${a.mediaType} · ${(a.size / 1024).toFixed(0)} KB`}
                   >
                     <FileText className="h-3 w-3" />
                     <span className="max-w-[150px] truncate">{a.name}</span>
+                    <span className="text-muted-foreground">[{a.kind}]</span>
                     <button
                       onClick={() => setAttachments((p) => p.filter((_, j) => j !== i))}
                       className="ml-1 text-muted-foreground hover:text-destructive"
@@ -339,7 +381,6 @@ export function AiAdminChat() {
                   multiple
                   className="hidden"
                   onChange={(e) => handleFiles(e.target.files)}
-                  accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.log,.yml,.yaml,.xml,.html,.htm,.css,.scss,.js,.jsx,.ts,.tsx,.sql,.sh,.env,.ini,.toml,.conf,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.vue,.svelte,text/*,application/json"
                 />
                 <Button
                   size="icon"
@@ -347,7 +388,7 @@ export function AiAdminChat() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={send.isPending}
                   aria-label="Dołącz pliki"
-                  title="Dołącz pliki tekstowe"
+                  title="Dołącz dowolne pliki (tekst, PDF, obrazy, binarki — do 25 MB)"
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>

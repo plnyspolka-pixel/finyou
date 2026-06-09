@@ -86,6 +86,15 @@ export const deleteConversation = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const attachmentSchema = z.object({
+  name: z.string().min(1).max(300),
+  mediaType: z.string().min(1).max(200),
+  kind: z.enum(["text", "image", "pdf", "other"]),
+  size: z.number().int().nonnegative(),
+  text: z.string().max(2_000_000).optional(),
+  data: z.string().max(40_000_000).optional(), // base64, max ~30 MB plik
+});
+
 export const sendAdminChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -93,6 +102,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       .object({
         conversation_id: z.string().uuid().optional(),
         message: z.string().min(1).max(500000),
+        attachments: z.array(attachmentSchema).max(20).optional(),
       })
       .parse(d)
   )
@@ -101,6 +111,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { callAnthropic, runTool } = await import("./ai-admin.server");
     type AnthropicMessage = import("./ai-admin.server").AnthropicMessage;
+    type AnthropicContent = Exclude<AnthropicMessage["content"], string>;
 
     // Load settings
     const { data: settings, error: sErr } = await supabaseAdmin
@@ -134,12 +145,17 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       await supabaseAdmin.from("ai_admin_conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
     }
 
-    // Append user message
+    // Append user message (z notką o załącznikach, surowych danych nie trzymamy w DB)
+    const attList = (data.attachments ?? []).map((a) => `${a.name} (${a.kind}, ${a.size} B)`).join(", ");
+    const persistedContent = attList
+      ? `${data.message}\n\n📎 Załączniki: ${attList}`
+      : data.message;
     await supabaseAdmin.from("ai_admin_messages").insert({
       conversation_id: convId,
       role: "user",
-      content: data.message,
+      content: persistedContent,
     });
+
 
     // Load full history → Anthropic format
     const { data: history, error: hErr } = await supabaseAdmin
@@ -173,6 +189,47 @@ export const sendAdminChat = createServerFn({ method: "POST" })
         });
       }
     }
+
+    // Wpięcie załączników z tej tury w ostatnią wiadomość użytkownika.
+    const atts = data.attachments ?? [];
+    if (atts.length > 0) {
+      const lastUserIdx = (() => {
+        for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
+        return -1;
+      })();
+      if (lastUserIdx >= 0) {
+        const existing = messages[lastUserIdx].content;
+        const baseText = typeof existing === "string" ? existing : "";
+        const blocks: AnthropicContent = [];
+        if (baseText) blocks.push({ type: "text", text: baseText });
+        for (const a of atts) {
+          if (a.kind === "image" && a.data) {
+            blocks.push({
+              type: "image",
+              source: { type: "base64", media_type: a.mediaType, data: a.data },
+            } as never);
+          } else if (a.kind === "pdf" && a.data) {
+            blocks.push({
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: a.data },
+              title: a.name,
+            } as never);
+          } else if (a.kind === "text" && a.text) {
+            blocks.push({
+              type: "text",
+              text: `\n\n----- ZAŁĄCZNIK: ${a.name} (${a.size} B, ${a.mediaType}) -----\n${a.text}\n----- KONIEC ZAŁĄCZNIKA -----`,
+            });
+          } else {
+            blocks.push({
+              type: "text",
+              text: `\n\n[Załącznik binarny ${a.name} (${a.mediaType}, ${a.size} B) — typ nieobsługiwany natywnie przez model, pomijam zawartość.]`,
+            });
+          }
+        }
+        messages[lastUserIdx] = { role: "user", content: blocks };
+      }
+    }
+
 
     // Agentic loop — max 8 tool rounds
     let totalIn = 0;
