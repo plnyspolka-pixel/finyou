@@ -1,7 +1,9 @@
 // Server-only helpers for email marketing (Resend + AI + segments)
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
+
 
 export type SegmentFilters = {
   tags?: string[];
@@ -45,6 +47,10 @@ export async function sendViaResend(payload: {
   if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
   if (!resendKey) throw new Error("RESEND_API_KEY missing");
 
+  const brandedHtml = isAlreadyBranded(payload.html)
+    ? payload.html
+    : wrapBrandedEmail({ innerHtml: payload.html });
+
   const res = await fetch(`${RESEND_GATEWAY}/emails`, {
     method: "POST",
     headers: {
@@ -56,13 +62,14 @@ export async function sendViaResend(payload: {
       from: payload.from,
       to: [payload.to],
       subject: payload.subject,
-      html: payload.html,
+      html: brandedHtml,
       text: payload.text,
       reply_to: payload.reply_to,
       tags: payload.tags,
       headers: payload.headers,
     }),
   });
+
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`Resend ${res.status}: ${JSON.stringify(body)}`);
   return { id: (body as { id: string }).id };
