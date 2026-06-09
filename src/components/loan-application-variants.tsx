@@ -1,29 +1,25 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { formatPLN, monthlyPayment, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { REQUIREMENTS_BY_TYPE, PROPERTY_TYPE_LABELS, type DocRequirement, type DocRequirementKind } from "@/lib/property-documents";
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
   Check,
-  CheckCircle2,
   Clock3,
   FileImage,
   FileText,
   Home,
-  Mail,
-  MapPin,
-  Phone,
   Smartphone,
   Send,
   ShieldCheck,
@@ -33,6 +29,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Mapping SecurityType -> property_documents key
+const SEC_TO_PROP: Record<SecurityType, string> = {
+  mieszkanie: "mieszkanie",
+  dom: "dom",
+  lokal_uslugowy: "lokal_uslugowy",
+  dzialka_budowlana: "dzialka_budowlana",
+  grunt_rolny: "grunt_rolny",
+  inna: "inna",
+};
+
 type KwChoice = "znam" | "mobywatel" | "pomoc";
 
 type PhotoItem = {
@@ -40,7 +46,7 @@ type PhotoItem = {
   name: string;
   type: string;
   url: string;
-  bucket: "wnetrze" | "zewnetrze" | "dokument";
+  bucket: string;
 };
 
 type LoanDraft = {
@@ -166,12 +172,10 @@ function useLoanDraft() {
 function VariantShell({
   title,
   subtitle,
-  variant,
   children,
 }: {
   title: string;
   subtitle: string;
-  variant: "one" | "two";
   children: ReactNode;
 }) {
   return (
@@ -179,23 +183,10 @@ function VariantShell({
       <header className="border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-6">
           <div>
-            <div className="text-xs font-bold uppercase text-muted-foreground">
-              {variant === "one" ? "Wniosek 1" : "Wniosek 2"}
-            </div>
+            <div className="text-xs font-bold uppercase text-muted-foreground">Wniosek</div>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">{title}</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subtitle}</p>
           </div>
-          <nav className="flex flex-wrap gap-2" aria-label="Porównanie wersji wniosku">
-            <Button asChild variant={variant === "one" ? "default" : "outline"}>
-              <a href="/wniosek-1">Wniosek 1</a>
-            </Button>
-            <Button asChild variant={variant === "two" ? "default" : "outline"}>
-              <a href="/wniosek-2">Wniosek 2</a>
-            </Button>
-            <Button asChild variant="ghost">
-              <a href="/wniosek-formularz">Obecny wniosek</a>
-            </Button>
-          </nav>
         </div>
       </header>
       {children}
@@ -288,12 +279,14 @@ function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnTyp
 
 function PhotoUploader({
   label,
+  hint,
   bucket,
   photos,
   addPhotos,
   removePhoto,
 }: {
   label: string;
+  hint?: string;
   bucket: PhotoItem["bucket"];
   photos: PhotoItem[];
   addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
@@ -304,7 +297,10 @@ function PhotoUploader({
 
   return (
     <div className="space-y-3">
-      <Label className="text-base font-bold">{label}</Label>
+      <div>
+        <Label className="text-base font-bold">{label}</Label>
+        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      </div>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
@@ -378,7 +374,6 @@ export function LinearLoanApplication() {
 
   return (
     <VariantShell
-      variant="one"
       title="Krok po kroku, bez gubienia miejsca"
       subtitle="Jedna decyzja na ekran. Wstecz i Dalej zmieniają tylko aktualny krok — bez przeskoków między trasami."
     >
@@ -494,7 +489,14 @@ export function LinearLoanApplication() {
             </div>
           )}
 
-          {step === 6 && <PhotoUploader label="Zdjęcia wnętrza, elewacji albo dokumentów" bucket="wnetrze" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />}
+          {step === 6 && (
+            <RequirementsPhotoStep
+              secType={draft.secType}
+              photos={photos}
+              addPhotos={addPhotos}
+              removePhoto={removePhoto}
+            />
+          )}
 
           {step === 7 && (
             <div className="grid gap-4 md:grid-cols-2">
@@ -554,18 +556,29 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
     { title: "Wybierz właściwą nieruchomość", body: "Z listy wybierz tę, którą chcesz oddać w zabezpieczenie. Zobaczysz: numer KW, typ nieruchomości, sąd prowadzący i położenie." },
     { title: "Skopiuj numer KW i wklej poniżej", body: "Format: KOD_WYDZIAŁU/NUMER/CYFRA KONTROLNA, np. WA1M/00123456/7. Przepisz lub wklej numer w pole obok — resztę danych (adres, powierzchnię, właściciela, obciążenia) odczytamy automatycznie z rejestru." },
   ];
+  const isMobile = useIsMobile();
+  const mobywatelUrl = "https://www.mobywatel.gov.pl";
   return (
     <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
-      <div className="flex items-start gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
-          <Smartphone className="h-5 w-5" />
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+            <Smartphone className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold uppercase tracking-wide text-accent">Sprawdź numer KW w mObywatelu</div>
+            <p className="mt-1 text-sm text-foreground/80">
+              Nie musisz nigdzie dzwonić ani jechać do sądu. mObywatel pokaże Twoje księgi po PESEL-u.
+            </p>
+          </div>
         </div>
-        <div>
-          <div className="text-sm font-bold uppercase tracking-wide text-accent">Sprawdź numer KW w mObywatelu</div>
-          <p className="mt-1 text-sm text-foreground/80">
-            Nie musisz nigdzie dzwonić ani jechać do sądu. mObywatel pokaże Twoje księgi po PESEL-u.
-          </p>
-        </div>
+        {!isMobile && (
+          <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-accent/30 bg-background p-3">
+            <QRCodeSVG value={mobywatelUrl} size={104} />
+            <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Zeskanuj telefonem</div>
+            <div className="text-[10px] text-muted-foreground">otworzy mObywatel</div>
+          </div>
+        )}
       </div>
 
       <ol className="mt-5 space-y-3">
@@ -605,166 +618,65 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
 }
 
 
-export function SinglePageLoanApplication() {
-  const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
-
-  const saveDraft = () => toast.success("Szkic zapisany w tej sesji");
-
+function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <VariantShell
-      variant="two"
-      title="Wszystko na jednej płaszczyźnie"
-      subtitle="Bez kreatora krokowego — klient widzi cały wniosek, zdjęcia, dokumenty i podsumowanie naraz."
-    >
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
-          <section className="rounded-lg border border-border bg-primary p-5 text-primary-foreground md:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <Badge variant="secondary" className="mb-3">{authLoading ? "Sprawdzam logowanie" : user ? "Zalogowany użytkownik" : "Podgląd UX"}</Badge>
-                <h2 className="text-2xl font-extrabold tracking-tight md:text-3xl">Jeden widok, jedna decyzja na końcu</h2>
-                <p className="mt-2 max-w-2xl text-sm text-primary-foreground/80">
-                  Układ jest płaski: parametry, nieruchomość, zdjęcia i kontakt są widoczne bez cofania się po krokach.
-                </p>
-              </div>
-              <div className="rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 p-4 text-sm">
-                <div className="text-primary-foreground/70">Szacowana rata</div>
-                <div className="text-3xl font-extrabold tabular-nums">{formatPLN(figures.monthly)}</div>
-              </div>
-            </div>
-          </section>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-accent" /> Warunki pożyczki</CardTitle>
-              <CardDescription>Najważniejsze liczby są na górze, bez przechodzenia między ekranami.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 lg:grid-cols-2">
-              <AmountQuestion draft={draft} update={update} />
-              <div className="space-y-5">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4"><Label>Okres</Label><b>{draft.months} mies.</b></div>
-                  <Slider value={[draft.months]} min={3} max={72} step={1} onValueChange={(value) => update("months", value[0] ?? draft.months)} />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="flat-payment">Maksymalna rata</Label>
-                  <Input id="flat-payment" type="number" value={draft.maxPayment} onChange={(event) => update("maxPayment", Number(event.target.value) || 0)} />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="flat-rate">Roczne wynagrodzenie inwestora (%)</Label>
-                  <Input id="flat-rate" type="number" step="0.5" value={draft.annualRate} onChange={(event) => update("annualRate", Number(event.target.value) || 0)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Home className="h-5 w-5 text-accent" /> Nieruchomość</CardTitle>
-              <CardDescription>Typ zabezpieczenia i księga wieczysta. Adres pobierzemy automatycznie z KW.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />
-
-              <div className="space-y-4">
-                <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
-                  <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
-                  <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Instrukcja krok po kroku" />
-                  <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument" description="Akt notarialny / skan KW" />
-                </RadioGroup>
-
-                {draft.kwChoice === "znam" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="flat-kw">Numer księgi wieczystej</Label>
-                    <Input id="flat-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
-                  </div>
-                )}
-
-                {draft.kwChoice === "mobywatel" && (
-                  <MobywatelKwGuide
-                    kwNumber={draft.kwNumber}
-                    onChange={(value) => update("kwNumber", value.toUpperCase())}
-                  />
-                )}
-
-                {draft.kwChoice === "pomoc" && (
-                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                    Wgraj dokument z numerem KW (akt notarialny, wypis, zaświadczenie) w sekcji „Zdjęcia i dokumenty” poniżej — odczytamy wszystkie dane automatycznie.
-                  </div>
-                )}
-              </div>
-
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Camera className="h-5 w-5 text-accent" /> Zdjęcia i dokumenty</CardTitle>
-              <CardDescription>W tej wersji zdjęcia są częścią głównego widoku, nie osobnym krokiem.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 lg:grid-cols-3">
-              <PhotoUploader label="Wnętrze" bucket="wnetrze" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />
-              <PhotoUploader label="Z zewnątrz" bucket="zewnetrze" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />
-              <PhotoUploader label="Dokumenty" bucket="dokument" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5 text-accent" /> Kontakt</CardTitle>
-              <CardDescription>Dane są na końcu płaskiego formularza, ale cały czas w tym samym widoku.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2"><Label>Imię</Label><Input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
-              <div className="space-y-2"><Label>Nazwisko</Label><Input value={draft.lastName} onChange={(event) => update("lastName", event.target.value)} /></div>
-              <div className="space-y-2"><Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> E-mail</Label><Input type="email" value={draft.email} onChange={(event) => update("email", event.target.value)} /></div>
-              <div className="space-y-2"><Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Telefon</Label><Input type="tel" value={draft.phone} onChange={(event) => update("phone", event.target.value)} /></div>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-              Widok zapisuje się automatycznie w trakcie porównania.
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={saveDraft}>Zapisz szkic</Button>
-              <Button type="button" variant="cta" size="cta" onClick={() => toast.success("Wersja 2 gotowa do dalszego podpięcia po akceptacji")}>
-                <Send className="mr-2 h-4 w-4" /> Wyślij testowo
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
-          <SummaryPanel draft={draft} figures={figures} photos={photos} />
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-3 flex items-center gap-2 font-bold"><MapPin className="h-4 w-4 text-accent" /> Szybki przegląd zdjęć</div>
-            {photos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Po dodaniu zdjęć pojawią się tutaj miniatury, cały czas przy podsumowaniu.</p>
-            ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {photos.slice(0, 9).map((photo) => (
-                  photo.type.startsWith("image/") ? (
-                    <img key={photo.id} src={photo.url} alt={photo.name} className="aspect-square rounded-md object-cover" />
-                  ) : (
-                    <div key={photo.id} className="grid aspect-square place-items-center rounded-md bg-secondary"><FileText className="h-5 w-5 text-muted-foreground" /></div>
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
-      </div>
-    </VariantShell>
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-background px-3 py-2">
+      <span className="text-xs font-bold uppercase text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-semibold text-foreground">{value}</span>
+    </div>
   );
 }
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
+function RequirementsPhotoStep({
+  secType,
+  photos,
+  addPhotos,
+  removePhoto,
+}: {
+  secType: SecurityType | null;
+  photos: PhotoItem[];
+  addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
+  removePhoto: (id: string) => void;
+}) {
+  const propKey = secType ? SEC_TO_PROP[secType] : "inna";
+  const reqs: DocRequirement[] = REQUIREMENTS_BY_TYPE[propKey] ?? REQUIREMENTS_BY_TYPE.inna;
+  // KW number i powierzchnia użytkowa to dane tekstowe — nie sloty plikowe.
+  const fileReqs = reqs.filter((r) => r.kind !== "kw_number" && r.kind !== "usable_area");
+  const typeLabel = PROPERTY_TYPE_LABELS[propKey] ?? "nieruchomość";
+
+  const hints: Partial<Record<DocRequirementKind, string>> = {
+    photos_interior: "Po jednym zdjęciu z każdego pomieszczenia. Dobre światło, cała przestrzeń w kadrze.",
+    photos_exterior: "Elewacja z każdej strony, podjazd, najbliższe otoczenie.",
+    mpzp: "Wydruk z systemu gminy albo zdjęcie decyzji o warunkach zabudowy.",
+    land_registry: "Aktualny wypis z rejestru gruntów (PDF lub zdjęcie).",
+  };
+
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <b className="max-w-[60%] text-right text-foreground">{value}</b>
+    <div className="space-y-6">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm">
+        <div className="font-bold text-foreground">
+          Dla typu „{typeLabel}” potrzebujemy {fileReqs.length} kompletów plików:
+        </div>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+          {fileReqs.map((r) => (
+            <li key={r.kind}>{r.label}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {fileReqs.map((r) => (
+          <PhotoUploader
+            key={r.kind}
+            label={r.label}
+            hint={hints[r.kind]}
+            bucket={r.kind}
+            photos={photos}
+            addPhotos={addPhotos}
+            removePhoto={removePhoto}
+          />
+        ))}
+      </div>
     </div>
   );
 }

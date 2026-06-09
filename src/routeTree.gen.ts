@@ -16,7 +16,6 @@ import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
 import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
 import { Route as WniosekOpisRouteImport } from './routes/wniosek-opis'
 import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
-import { Route as Wniosek2RouteImport } from './routes/wniosek-2'
 import { Route as Wniosek1RouteImport } from './routes/wniosek-1'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
@@ -151,11 +150,6 @@ const WniosekOpisRoute = WniosekOpisRouteImport.update({
 const WniosekFormularzRoute = WniosekFormularzRouteImport.update({
   id: '/wniosek-formularz',
   path: '/wniosek-formularz',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Wniosek2Route = Wniosek2RouteImport.update({
-  id: '/wniosek-2',
-  path: '/wniosek-2',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Wniosek1Route = Wniosek1RouteImport.update({
@@ -691,7 +685,6 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-1': typeof Wniosek1Route
-  '/wniosek-2': typeof Wniosek2Route
   '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-opis': typeof WniosekOpisRoute
   '/wniosek-start': typeof WniosekStartRoute
@@ -798,7 +791,6 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-1': typeof Wniosek1Route
-  '/wniosek-2': typeof Wniosek2Route
   '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-opis': typeof WniosekOpisRoute
   '/wniosek-start': typeof WniosekStartRoute
@@ -909,7 +901,6 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wniosek-1': typeof Wniosek1Route
-  '/wniosek-2': typeof Wniosek2Route
   '/wniosek-formularz': typeof WniosekFormularzRoute
   '/wniosek-opis': typeof WniosekOpisRoute
   '/wniosek-start': typeof WniosekStartRoute
@@ -1021,7 +1012,6 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-1'
-    | '/wniosek-2'
     | '/wniosek-formularz'
     | '/wniosek-opis'
     | '/wniosek-start'
@@ -1128,7 +1118,6 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-1'
-    | '/wniosek-2'
     | '/wniosek-formularz'
     | '/wniosek-opis'
     | '/wniosek-start'
@@ -1238,7 +1227,6 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wniosek-1'
-    | '/wniosek-2'
     | '/wniosek-formularz'
     | '/wniosek-opis'
     | '/wniosek-start'
@@ -1349,7 +1337,6 @@ export interface RootRouteChildren {
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Wniosek1Route: typeof Wniosek1Route
-  Wniosek2Route: typeof Wniosek2Route
   WniosekFormularzRoute: typeof WniosekFormularzRoute
   WniosekOpisRoute: typeof WniosekOpisRoute
   WniosekStartRoute: typeof WniosekStartRoute
@@ -1441,13 +1428,6 @@ declare module '@tanstack/react-router' {
       path: '/wniosek-formularz'
       fullPath: '/wniosek-formularz'
       preLoaderRoute: typeof WniosekFormularzRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-2': {
-      id: '/wniosek-2'
-      path: '/wniosek-2'
-      fullPath: '/wniosek-2'
-      preLoaderRoute: typeof Wniosek2RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wniosek-1': {
@@ -2323,7 +2303,6 @@ const rootRouteChildren: RootRouteChildren = {
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Wniosek1Route: Wniosek1Route,
-  Wniosek2Route: Wniosek2Route,
   WniosekFormularzRoute: WniosekFormularzRoute,
   WniosekOpisRoute: WniosekOpisRoute,
   WniosekStartRoute: WniosekStartRoute,
