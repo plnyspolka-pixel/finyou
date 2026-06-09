@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CheckCircle2, Circle, Upload, Trash2, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Upload, Trash2, FileText, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -36,14 +36,23 @@ function KlientDokumenty() {
   const runKwOcr = useServerFn(detectKwNumbers);
 
   const [loanId, setLoanId] = useState<string | null>(null);
+  const [loanStatus, setLoanStatus] = useState<string | null>(null);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyType, setPropertyType] = useState<string | null>(null);
   const [kwNumber, setKwNumber] = useState("");
   const [areaSqm, setAreaSqm] = useState("");
   const [docs, setDocs] = useState<DocRow[]>([]);
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState<string | null>(null);
   const [savingProp, setSavingProp] = useState(false);
   const [scanningKw, setScanningKw] = useState(false);
+
+  const LOCKED_STATUSES = new Set<string>([
+    "wniosek_kompletny","do_analizy","rokuje","nie_rokuje",
+    "wyslany_do_inwestorow","oferta_od_inwestora","oferta_przekazana_klientowi",
+    "zaakceptowany_przez_klienta","do_umowy","zamkniety","archiwalny",
+  ]);
+  const locked = !!(loanStatus && LOCKED_STATUSES.has(loanStatus));
 
   const { data: progress, refetch: refetchProgress, isLoading } = useQuery({
     queryKey: ["my-loan-progress", user?.id, "docs"],
@@ -56,10 +65,11 @@ function KlientDokumenty() {
     const { data: c } = await supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle();
     if (!c) return;
     const { data: la } = await supabase
-      .from("loan_applications").select("id").eq("client_id", c.id)
+      .from("loan_applications").select("id, status").eq("client_id", c.id)
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
-    if (!la) { setLoanId(null); return; }
+    if (!la) { setLoanId(null); setLoanStatus(null); return; }
     setLoanId(la.id);
+    setLoanStatus((la as any).status ?? null);
     const { data: p } = await supabase.from("properties")
       .select("id, property_type, land_register_number, area_sqm").eq("loan_application_id", la.id).maybeSingle();
     if (p) {
@@ -73,13 +83,23 @@ function KlientDokumenty() {
     }
     const { data: ds } = await supabase.from("documents").select("id, file_name, file_path, document_type, created_at")
       .eq("loan_application_id", la.id).order("created_at", { ascending: false });
-    setDocs((ds as DocRow[]) ?? []);
+    const rows = (ds as DocRow[]) ?? [];
+    setDocs(rows);
+    // Signed URLs (1 h) — used for thumbnails / preview, especially after submission
+    const urlMap: Record<string, string> = {};
+    await Promise.all(rows.map(async (d) => {
+      if (!d.file_path) return;
+      const { data: s } = await supabase.storage.from("documents").createSignedUrl(d.file_path, 3600);
+      if (s?.signedUrl) urlMap[d.id] = s.signedUrl;
+    }));
+    setDocUrls(urlMap);
   };
 
   useEffect(() => { void loadAll(); /* eslint-disable-next-line */ }, [user]);
 
   const uploadDoc = async (file: File, docType: string, slotKey: string) => {
-    if (!loanId || !user) { toast.error("Najpierw utwórz wniosek"); navigate({ to: "/wniosek-zabezpieczenie" }); return; }
+    if (locked) { toast.info("Wniosek jest w analizie — dokumenty są zamknięte do edycji."); return; }
+    if (!loanId || !user) { toast.error("Najpierw utwórz wniosek"); navigate({ to: "/klient/wniosek" }); return; }
     setUploading(slotKey);
     const safeName = file.name
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -102,6 +122,7 @@ function KlientDokumenty() {
   };
 
   const deleteDoc = async (d: DocRow) => {
+    if (locked) { toast.info("Wniosek jest w analizie — dokumentów nie można już usuwać."); return; }
     if (!confirm(`Usunąć dokument "${d.file_name}"?`)) return;
     if (d.file_path) await supabase.storage.from("documents").remove([d.file_path]);
     await supabase.from("documents").delete().eq("id", d.id);
@@ -111,7 +132,8 @@ function KlientDokumenty() {
   };
 
   const saveProp = async (fields: { land_register_number?: string | null; area_sqm?: number | null }) => {
-    if (!propertyId) { toast.error("Najpierw uzupełnij typ nieruchomości"); navigate({ to: "/wniosek-zabezpieczenie" }); return; }
+    if (locked) { toast.info("Wniosek jest w analizie — dane są zablokowane do edycji."); return; }
+    if (!propertyId) { toast.error("Najpierw uzupełnij typ nieruchomości"); navigate({ to: "/klient/wniosek" }); return; }
     setSavingProp(true);
     const { error } = await supabase.from("properties").update(fields).eq("id", propertyId);
     setSavingProp(false);
@@ -149,39 +171,56 @@ function KlientDokumenty() {
         <Card>
           <CardContent className="pt-6 space-y-3">
             <p className="text-sm">Nie masz jeszcze rozpoczętego wniosku.</p>
-            <Button onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>Rozpocznij wniosek</Button>
+            <Button onClick={() => navigate({ to: "/klient/wniosek" })}>Rozpocznij wniosek</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {loanId && locked && (
+        <Card className="border-emerald-300 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+          <CardContent className="pt-5 flex items-start gap-3">
+            <Lock className="h-5 w-5 mt-0.5 text-emerald-700 dark:text-emerald-300 shrink-0" />
+            <div className="text-sm">
+              <div className="font-bold text-emerald-700 dark:text-emerald-300">Wniosek wysłany do analizy</div>
+              <p className="text-muted-foreground">
+                Komplet dokumentów został przekazany do analityka. Nie możesz już dodawać ani usuwać plików.
+                Poniżej widzisz wszystko, co przesłaliśmy razem z wnioskiem.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {loanId && progress && (
         <>
-          {/* Banner z typem nieruchomości — kontekst dla wymaganych dokumentów */}
-          <Card className={propertyType ? "border-primary/30 bg-primary/5" : "border-amber-300 bg-amber-50/60 dark:bg-amber-950/20"}>
-            <CardContent className="pt-5 flex flex-wrap items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-background border">
-                <Home className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Typ nieruchomości</div>
-                <div className="text-base font-bold">
-                  {propertyType
-                    ? (PROPERTY_TYPE_LABELS[propertyType] ?? propertyType)
-                    : "Jeszcze nie wybrano — wybierz, żebyśmy wiedzieli, jakich dokumentów potrzebujemy"}
+          {/* Banner z typem nieruchomości — ukryty po wysłaniu wniosku */}
+          {!locked && (
+            <Card className={propertyType ? "border-primary/30 bg-primary/5" : "border-amber-300 bg-amber-50/60 dark:bg-amber-950/20"}>
+              <CardContent className="pt-5 flex flex-wrap items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-background border">
+                  <Home className="h-5 w-5" />
                 </div>
-              </div>
-              <Button size="sm" variant={propertyType ? "outline" : "cta"} onClick={() => navigate({ to: "/wniosek-zabezpieczenie" })}>
-                {propertyType ? "Zmień" : "Wybierz typ"}
-              </Button>
-            </CardContent>
-          </Card>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Typ nieruchomości</div>
+                  <div className="text-base font-bold">
+                    {propertyType
+                      ? (PROPERTY_TYPE_LABELS[propertyType] ?? propertyType)
+                      : "Jeszcze nie wybrano — wybierz, żebyśmy wiedzieli, jakich dokumentów potrzebujemy"}
+                  </div>
+                </div>
+                <Button size="sm" variant={propertyType ? "outline" : "cta"} onClick={() => navigate({ to: "/klient/wniosek" })}>
+                  {propertyType ? "Zmień" : "Wybierz typ"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Pola tekstowe — KW + powierzchnia */}
-          {progress.required_documents.some((r) => r.kind === "kw_number") && (
+          {/* Numer KW — pokazujemy tylko, gdy nie jest jeszcze podany i wniosek nie jest zamknięty */}
+          {!locked && !kwNumber && progress.required_documents.some((r) => r.kind === "kw_number") && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  {kwNumber ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-muted-foreground/40" />}
+                  <Circle className="h-5 w-5 text-muted-foreground/40" />
                   Numer księgi wieczystej
                 </CardTitle>
                 <CardDescription>Wpisz numer KW lub wgraj wypis — odczytamy automatycznie.</CardDescription>
@@ -202,7 +241,20 @@ function KlientDokumenty() {
             </Card>
           )}
 
-          {progress.required_documents.some((r) => r.kind === "usable_area") && (
+          {/* Numer KW — potwierdzenie, gdy już podany */}
+          {kwNumber && (
+            <Card className="border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+              <CardContent className="pt-5 flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div className="text-sm">
+                  <div className="font-bold text-foreground">Numer księgi wieczystej</div>
+                  <div className="font-mono text-base">{kwNumber}</div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!locked && progress.required_documents.some((r) => r.kind === "usable_area") && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -224,13 +276,14 @@ function KlientDokumenty() {
             </Card>
           )}
 
-          {/* Sloty plikowe — pozostałe wymagania */}
+          {/* Sloty plikowe — po wysłaniu wniosku tylko galeria zdjęć */}
           {progress.required_documents
             .filter((r) => r.kind !== "kw_number" && r.kind !== "usable_area")
             .map((r) => {
               const done = progress.uploaded_documents.includes(r.label);
               const slotDocs = docs.filter((d) => (d.document_type ?? "").includes(r.kind));
               const slotKey = r.kind;
+              if (locked && slotDocs.length === 0) return null;
               return (
                 <Card key={r.kind}>
                   <CardHeader>
@@ -241,32 +294,49 @@ function KlientDokumenty() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {slotDocs.length > 0 && (
-                      <ul className="space-y-1.5">
-                        {slotDocs.map((d) => (
-                          <li key={d.id} className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded px-2.5 py-1.5">
-                            <span className="flex items-center gap-2 min-w-0 truncate"><FileText className="h-4 w-4 shrink-0" /> {d.file_name}</span>
-                            <Button size="icon" variant="ghost" onClick={() => deleteDoc(d)}><Trash2 className="h-4 w-4" /></Button>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {slotDocs.map((d) => {
+                          const url = docUrls[d.id];
+                          const isImg = url && /\.(jpe?g|png|webp|heic|gif|bmp)$/i.test(d.file_name);
+                          return (
+                            <a key={d.id} href={url ?? "#"} target="_blank" rel="noreferrer"
+                              className="group block overflow-hidden rounded-lg border bg-card hover:border-accent">
+                              {isImg
+                                ? <img src={url} alt={d.file_name} loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                                : <div className="aspect-[4/3] grid place-items-center bg-secondary"><FileText className="h-8 w-8 text-muted-foreground" /></div>}
+                              <div className="p-2 space-y-1.5">
+                                <div className="truncate text-xs font-medium">{d.file_name}</div>
+                                {!locked && (
+                                  <Button size="sm" variant="ghost" className="h-7 w-full"
+                                    onClick={(e) => { e.preventDefault(); void deleteDoc(d); }}>
+                                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Usuń
+                                  </Button>
+                                )}
+                              </div>
+                            </a>
+                          );
+                        })}
+                      </div>
                     )}
-                    <label className="inline-flex items-center gap-2 cursor-pointer">
-                      <input type="file" multiple className="hidden"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files ?? []);
-                          void (async () => {
-                            for (const f of files) await uploadDoc(f, r.kind, slotKey);
-                          })();
-                          e.target.value = "";
-                        }} />
-                      <Button asChild variant={done ? "outline" : "cta"}>
-                        <span>
-                          {uploading === slotKey
-                            ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…</>
-                            : <><Upload className="mr-2 h-4 w-4" /> {done ? "Dodaj kolejny" : "Wgraj plik"}</>}
-                        </span>
-                      </Button>
-                    </label>
+                    {!locked && (
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="file" multiple className="hidden"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files ?? []);
+                            void (async () => {
+                              for (const f of files) await uploadDoc(f, r.kind, slotKey);
+                            })();
+                            e.target.value = "";
+                          }} />
+                        <Button asChild variant={done ? "outline" : "cta"}>
+                          <span>
+                            {uploading === slotKey
+                              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…</>
+                              : <><Upload className="mr-2 h-4 w-4" /> {done ? "Dodaj kolejny" : "Wgraj plik"}</>}
+                          </span>
+                        </Button>
+                      </label>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -283,14 +353,29 @@ function KlientDokumenty() {
                   <CardTitle className="text-base">Inne dokumenty <Badge variant="secondary" className="ml-1">{other.length}</Badge></CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-1.5">
-                    {other.map((d) => (
-                      <li key={d.id} className="flex items-center justify-between gap-2 text-sm bg-muted/40 rounded px-2.5 py-1.5">
-                        <span className="flex items-center gap-2 min-w-0 truncate"><FileText className="h-4 w-4 shrink-0" /> {d.file_name}</span>
-                        <Button size="icon" variant="ghost" onClick={() => deleteDoc(d)}><Trash2 className="h-4 w-4" /></Button>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {other.map((d) => {
+                      const url = docUrls[d.id];
+                      const isImg = url && /\.(jpe?g|png|webp|heic|gif|bmp)$/i.test(d.file_name);
+                      return (
+                        <a key={d.id} href={url ?? "#"} target="_blank" rel="noreferrer"
+                          className="group block overflow-hidden rounded-lg border bg-card hover:border-accent">
+                          {isImg
+                            ? <img src={url} alt={d.file_name} loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                            : <div className="aspect-[4/3] grid place-items-center bg-secondary"><FileText className="h-8 w-8 text-muted-foreground" /></div>}
+                          <div className="p-2 space-y-1.5">
+                            <div className="truncate text-xs font-medium">{d.file_name}</div>
+                            {!locked && (
+                              <Button size="sm" variant="ghost" className="h-7 w-full"
+                                onClick={(e) => { e.preventDefault(); void deleteDoc(d); }}>
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Usuń
+                              </Button>
+                            )}
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             );
