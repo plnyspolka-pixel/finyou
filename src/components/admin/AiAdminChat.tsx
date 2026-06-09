@@ -381,7 +381,6 @@ export function AiAdminChat() {
                   multiple
                   className="hidden"
                   onChange={(e) => handleFiles(e.target.files)}
-                  accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.log,.yml,.yaml,.xml,.html,.htm,.css,.scss,.js,.jsx,.ts,.tsx,.sql,.sh,.env,.ini,.toml,.conf,.py,.rb,.go,.rs,.java,.kt,.swift,.php,.vue,.svelte,text/*,application/json"
                 />
                 <Button
                   size="icon"
@@ -389,7 +388,7 @@ export function AiAdminChat() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={send.isPending}
                   aria-label="Dołącz pliki"
-                  title="Dołącz pliki tekstowe"
+                  title="Dołącz dowolne pliki (tekst, PDF, obrazy, binarki — do 25 MB)"
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
