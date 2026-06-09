@@ -183,7 +183,11 @@ async function writeArticleFromNews(
     },
   ];
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://app.financeyou.pl/embed/wniosek)" wpleć naturalnie 1-2 razy.`;
+  const audienceBrief = audience === "investor"
+    ? `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl/inwestor)" wpleć 1 raz.`
+    : `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://app.financeyou.pl/embed/wniosek)" wpleć 1-2 razy.`;
+
+  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}`;
 
   const userMsg = `BRIEFING (świeże wiadomości z ostatnich 24h):
 ${brief.summary}
@@ -194,7 +198,8 @@ ${externalList || "(brak)"}
 LINKI WEWNĘTRZNE do wplecenia w treść (2-3 z poniższych, naturalnie w kontekście):
 ${internalList || "(brak — pomiń linki wewnętrzne)"}
 
-Napisz codzienny post blogowy w stylu 'finance morning briefing'. Tytuł musi sugerować datę/aktualność (np. "Co dziś warto wiedzieć…").`;
+Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
+
 
   const res = await fetch(AI_URL, {
     method: "POST",
