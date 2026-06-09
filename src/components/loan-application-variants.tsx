@@ -48,8 +48,6 @@ type LoanDraft = {
   annualRate: number;
   maxPayment: number;
   secType: SecurityType | null;
-  city: string;
-  street: string;
   kwChoice: KwChoice;
   kwNumber: string;
   propertyNote: string;
@@ -67,8 +65,6 @@ const emptyDraft: LoanDraft = {
   annualRate: 24,
   maxPayment: 3500,
   secType: "mieszkanie",
-  city: "",
-  street: "",
   kwChoice: "znam",
   kwNumber: "",
   propertyNote: "",
@@ -84,7 +80,6 @@ const linearSteps = [
   "Maksymalna rata",
   "Koszt finansowania",
   "Zabezpieczenie",
-  "Adres",
   "Księga wieczysta",
   "Zdjęcia",
   "Kontakt",
