@@ -12,7 +12,9 @@ interface Props {
   hasInvestorDescription: boolean;
   hasIncomeDocs?: boolean;
   hasCompanyData?: boolean;
+  hasBankAccount?: boolean;
 }
+
 
 interface GroupItem {
   done: boolean;
@@ -43,7 +45,9 @@ export function ProgressChecklist({
   hasInvestorDescription,
   hasIncomeDocs = false,
   hasCompanyData = false,
+  hasBankAccount = false,
 }: Props) {
+
   const missingByLabel = new Map<string, MissingItem>(progress.missing.map((m) => [m.label, m]));
   const uploadedLabels = new Set(progress.uploaded_documents);
 
@@ -117,6 +121,13 @@ export function ProgressChecklist({
       hint: "PIT, zaświadczenie z firmy, KPiR — inwestor widzi realny dochód.",
     },
     {
+      done: hasBankAccount,
+      label: "Rachunek bankowy do spłat",
+      ctaHref: "/klient/profil",
+      ctaLabel: hasBankAccount ? "Zarządzaj" : "Dodaj i zweryfikuj",
+      hint: "Podaj numer rachunku i wgraj dokument bankowy — OCR sprawdzi czy dane się zgadzają.",
+    },
+    {
       done: hasCompanyData,
       label: "Pełne dane firmowe",
       ctaHref: "/klient/profil",
@@ -124,6 +135,7 @@ export function ProgressChecklist({
       hint: "NIP, REGON, KRS i adres — automatycznie pobierzemy z rejestrów państwowych.",
     },
   ];
+
   const boostDone = boostItems.filter((b) => b.done).length;
 
   return (
@@ -194,7 +206,7 @@ export function ProgressChecklist({
           </p>
         </CardHeader>
         <CardContent>
-          <ul className="grid gap-2 md:grid-cols-3">
+          <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             {boostItems.map((it) => (
               <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card p-3">
                 <div className="flex items-center gap-2">
