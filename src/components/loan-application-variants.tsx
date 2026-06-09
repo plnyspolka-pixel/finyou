@@ -512,9 +512,11 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
               )}
 
               {draft.kwChoice === "pomoc" && (
-                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                  Świetnie. Dokument z numerem KW (akt notarialny, wypis, zaświadczenie) wgrasz w następnym kroku „Zdjęcia i dokumenty”. Wszystkie dane odczytamy z dokumentu.
-                </div>
+                <KwDocumentOcr
+                  kwNumber={draft.kwNumber}
+                  onDetected={(num) => update("kwNumber", num)}
+                  onSwitchToMobywatel={() => update("kwChoice", "mobywatel")}
+                />
               )}
             </div>
           )}
