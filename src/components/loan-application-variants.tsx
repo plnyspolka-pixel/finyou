@@ -485,7 +485,7 @@ export function LinearLoanApplication({
           <Progress value={currentProgress} />
           <ol className="mt-5 space-y-2">
             {linearSteps.map((label, index) => {
-              if (user && index === 2) return null;
+              if (isHiddenStep(index)) return null;
               const done = index < step;
               const active = index === step;
               return (
@@ -510,7 +510,7 @@ export function LinearLoanApplication({
         </aside>
         )}
 
-        <section className="min-h-[620px] rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
           <div className="mb-8">
             <div className="text-xs font-bold uppercase text-accent">{linearSteps[step]}</div>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
@@ -521,7 +521,7 @@ export function LinearLoanApplication({
               {step === 4 && "Jaki koszt finansowania akceptujesz?"}
               {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
               {step === 6 && "Czy znasz numer księgi wieczystej?"}
-              {step === 7 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
+              {step === 7 && (user ? "Gotowe — dodaj zdjęcia i dokumenty, a wniosek trafi do inwestora" : "Dodaj zdjęcia lub dokumenty nieruchomości")}
               {step === 8 && "Jak mamy się z Tobą skontaktować?"}
               {step === 9 && "Sprawdź całość przed wysłaniem"}
             </h2>
