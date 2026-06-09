@@ -65,10 +65,11 @@ function KlientDokumenty() {
     const { data: c } = await supabase.from("clients").select("id").eq("user_id", user.id).maybeSingle();
     if (!c) return;
     const { data: la } = await supabase
-      .from("loan_applications").select("id").eq("client_id", c.id)
+      .from("loan_applications").select("id, status").eq("client_id", c.id)
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
-    if (!la) { setLoanId(null); return; }
+    if (!la) { setLoanId(null); setLoanStatus(null); return; }
     setLoanId(la.id);
+    setLoanStatus((la as any).status ?? null);
     const { data: p } = await supabase.from("properties")
       .select("id, property_type, land_register_number, area_sqm").eq("loan_application_id", la.id).maybeSingle();
     if (p) {
@@ -82,13 +83,23 @@ function KlientDokumenty() {
     }
     const { data: ds } = await supabase.from("documents").select("id, file_name, file_path, document_type, created_at")
       .eq("loan_application_id", la.id).order("created_at", { ascending: false });
-    setDocs((ds as DocRow[]) ?? []);
+    const rows = (ds as DocRow[]) ?? [];
+    setDocs(rows);
+    // Signed URLs (1 h) — used for thumbnails / preview, especially after submission
+    const urlMap: Record<string, string> = {};
+    await Promise.all(rows.map(async (d) => {
+      if (!d.file_path) return;
+      const { data: s } = await supabase.storage.from("documents").createSignedUrl(d.file_path, 3600);
+      if (s?.signedUrl) urlMap[d.id] = s.signedUrl;
+    }));
+    setDocUrls(urlMap);
   };
 
   useEffect(() => { void loadAll(); /* eslint-disable-next-line */ }, [user]);
 
   const uploadDoc = async (file: File, docType: string, slotKey: string) => {
-    if (!loanId || !user) { toast.error("Najpierw utwórz wniosek"); navigate({ to: "/wniosek-zabezpieczenie" }); return; }
+    if (locked) { toast.info("Wniosek jest w analizie — dokumenty są zamknięte do edycji."); return; }
+    if (!loanId || !user) { toast.error("Najpierw utwórz wniosek"); navigate({ to: "/klient/wniosek" }); return; }
     setUploading(slotKey);
     const safeName = file.name
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
