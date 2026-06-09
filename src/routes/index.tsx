@@ -230,7 +230,7 @@ function Landing() {
           </div>
 
           {/* Prawa kolumna — WNIOSEK jako główny element */}
-          <div className="relative">
+          <div id="wniosek" className="relative scroll-mt-24">
             <div className="absolute -inset-4 -rotate-1 rounded-3xl bg-gradient-to-br from-accent/25 to-[oklch(0.65_0.13_235)]/25 blur-2xl" />
             <div className="relative w-full max-w-full overflow-hidden rounded-3xl border border-white/15 bg-card text-foreground shadow-2xl">
               <BorderBeam size={260} duration={11} colorFrom="#fbbf24" colorTo="#38bdf8" borderWidth={1.5} />
