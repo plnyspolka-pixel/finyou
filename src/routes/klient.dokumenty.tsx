@@ -122,6 +122,7 @@ function KlientDokumenty() {
   };
 
   const deleteDoc = async (d: DocRow) => {
+    if (locked) { toast.info("Wniosek jest w analizie — dokumentów nie można już usuwać."); return; }
     if (!confirm(`Usunąć dokument "${d.file_name}"?`)) return;
     if (d.file_path) await supabase.storage.from("documents").remove([d.file_path]);
     await supabase.from("documents").delete().eq("id", d.id);
@@ -131,7 +132,8 @@ function KlientDokumenty() {
   };
 
   const saveProp = async (fields: { land_register_number?: string | null; area_sqm?: number | null }) => {
-    if (!propertyId) { toast.error("Najpierw uzupełnij typ nieruchomości"); navigate({ to: "/wniosek-zabezpieczenie" }); return; }
+    if (locked) { toast.info("Wniosek jest w analizie — dane są zablokowane do edycji."); return; }
+    if (!propertyId) { toast.error("Najpierw uzupełnij typ nieruchomości"); navigate({ to: "/klient/wniosek" }); return; }
     setSavingProp(true);
     const { error } = await supabase.from("properties").update(fields).eq("id", propertyId);
     setSavingProp(false);
