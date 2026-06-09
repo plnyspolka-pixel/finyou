@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { extractKwFromUpload } from "@/lib/kw-ocr.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -365,6 +366,7 @@ export function LinearLoanApplication({
   onSubmit?: (draft: LoanDraft) => Promise<void> | void;
 } = {}) {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const prefillAppliedRef = useRef(false);
@@ -382,10 +384,21 @@ export function LinearLoanApplication({
     });
   }, [prefill]);
 
-  // Krok 2 ("Poznaj ofertę / Zostaw kontakt") jest tylko dla niezalogowanych —
-  // zalogowanego klienta przeskakujemy automatycznie.
+  // Dla zalogowanych pomijamy kroki: 2 (Poznaj ofertę / kontakt gate), 8 (Kontakt), 9 (Podsumowanie)
+  const isHiddenStep = (i: number) => !!user && (i === 2 || i === 8 || i === 9);
+  const lastVisibleStep = user ? 7 : linearSteps.length - 1;
+
   useEffect(() => {
-    if (user && step === 2) setStep(3);
+    if (isHiddenStep(step)) {
+      // przeskocz do następnego widocznego kroku w przód, a jeśli koniec — wstecz
+      let t = step + 1;
+      while (t < linearSteps.length && isHiddenStep(t)) t++;
+      if (t > lastVisibleStep) {
+        t = step - 1;
+        while (t >= 0 && isHiddenStep(t)) t--;
+      }
+      setStep(Math.max(0, Math.min(linearSteps.length - 1, t)));
+    }
   }, [user, step]);
 
   const gateUnlocked =
@@ -407,7 +420,7 @@ export function LinearLoanApplication({
 
   const advance = (delta: 1 | -1) => {
     let target = step + delta;
-    if (user && target === 2) target += delta;
+    while (target >= 0 && target < linearSteps.length && isHiddenStep(target)) target += delta;
     return Math.max(0, Math.min(linearSteps.length - 1, target));
   };
 
@@ -416,7 +429,7 @@ export function LinearLoanApplication({
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
       return;
     }
-    if (step < linearSteps.length - 1) {
+    if (step < lastVisibleStep) {
       setStep(advance(1));
       return;
     }
@@ -424,12 +437,22 @@ export function LinearLoanApplication({
       try {
         setSubmitting(true);
         await onSubmit(draft);
+        if (user) void navigate({ to: "/wniosek-opis" });
       } catch (e) {
         console.error(e);
         toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
       } finally {
         setSubmitting(false);
       }
+    } else if (user) {
+      // Embedded na landingu — zalogowany użytkownik: przekieruj do panelu klienta, gdzie zapiszemy wniosek.
+      try {
+        sessionStorage.setItem("embed_calc_v1", JSON.stringify({
+          amount: draft.amount, annualRate: draft.annualRate, months: draft.months,
+          maxPayment: draft.maxPayment, secType: draft.secType, source: "landing_wizard",
+        }));
+      } catch { /* noop */ }
+      void navigate({ to: "/klient/wniosek" });
     } else {
       toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
     }
@@ -462,7 +485,7 @@ export function LinearLoanApplication({
           <Progress value={currentProgress} />
           <ol className="mt-5 space-y-2">
             {linearSteps.map((label, index) => {
-              if (user && index === 2) return null;
+              if (isHiddenStep(index)) return null;
               const done = index < step;
               const active = index === step;
               return (
@@ -487,7 +510,7 @@ export function LinearLoanApplication({
         </aside>
         )}
 
-        <section className="min-h-[620px] rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
           <div className="mb-8">
             <div className="text-xs font-bold uppercase text-accent">{linearSteps[step]}</div>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
@@ -498,7 +521,7 @@ export function LinearLoanApplication({
               {step === 4 && "Jaki koszt finansowania akceptujesz?"}
               {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
               {step === 6 && "Czy znasz numer księgi wieczystej?"}
-              {step === 7 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
+              {step === 7 && (user ? "Gotowe — dodaj zdjęcia i dokumenty, a wniosek trafi do inwestora" : "Dodaj zdjęcia lub dokumenty nieruchomości")}
               {step === 8 && "Jak mamy się z Tobą skontaktować?"}
               {step === 9 && "Sprawdź całość przed wysłaniem"}
             </h2>
@@ -628,8 +651,8 @@ export function LinearLoanApplication({
               disabled={submitting}
               className="w-full whitespace-nowrap sm:w-auto sm:min-w-[200px]"
             >
-              {step === linearSteps.length - 1 ? (
-                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : "Wyślij wniosek"}</>
+              {step === lastVisibleStep ? (
+                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij wniosek")}</>
               ) : (
                 <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
