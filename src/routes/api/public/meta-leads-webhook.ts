@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
+import { sendResendEmail } from "@/lib/resend-send.server";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
