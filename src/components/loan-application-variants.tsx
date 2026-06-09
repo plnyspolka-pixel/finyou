@@ -366,6 +366,7 @@ export function LinearLoanApplication({
   onSubmit?: (draft: LoanDraft) => Promise<void> | void;
 } = {}) {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const prefillAppliedRef = useRef(false);
@@ -383,10 +384,21 @@ export function LinearLoanApplication({
     });
   }, [prefill]);
 
-  // Krok 2 ("Poznaj ofertę / Zostaw kontakt") jest tylko dla niezalogowanych —
-  // zalogowanego klienta przeskakujemy automatycznie.
+  // Dla zalogowanych pomijamy kroki: 2 (Poznaj ofertę / kontakt gate), 8 (Kontakt), 9 (Podsumowanie)
+  const isHiddenStep = (i: number) => !!user && (i === 2 || i === 8 || i === 9);
+  const lastVisibleStep = user ? 7 : linearSteps.length - 1;
+
   useEffect(() => {
-    if (user && step === 2) setStep(3);
+    if (isHiddenStep(step)) {
+      // przeskocz do następnego widocznego kroku w przód, a jeśli koniec — wstecz
+      let t = step + 1;
+      while (t < linearSteps.length && isHiddenStep(t)) t++;
+      if (t > lastVisibleStep) {
+        t = step - 1;
+        while (t >= 0 && isHiddenStep(t)) t--;
+      }
+      setStep(Math.max(0, Math.min(linearSteps.length - 1, t)));
+    }
   }, [user, step]);
 
   const gateUnlocked =
@@ -408,7 +420,7 @@ export function LinearLoanApplication({
 
   const advance = (delta: 1 | -1) => {
     let target = step + delta;
-    if (user && target === 2) target += delta;
+    while (target >= 0 && target < linearSteps.length && isHiddenStep(target)) target += delta;
     return Math.max(0, Math.min(linearSteps.length - 1, target));
   };
 
@@ -417,7 +429,7 @@ export function LinearLoanApplication({
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
       return;
     }
-    if (step < linearSteps.length - 1) {
+    if (step < lastVisibleStep) {
       setStep(advance(1));
       return;
     }
@@ -425,12 +437,22 @@ export function LinearLoanApplication({
       try {
         setSubmitting(true);
         await onSubmit(draft);
+        if (user) void navigate({ to: "/wniosek-opis" });
       } catch (e) {
         console.error(e);
         toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
       } finally {
         setSubmitting(false);
       }
+    } else if (user) {
+      // Embedded na landingu — zalogowany użytkownik: przekieruj do panelu klienta, gdzie zapiszemy wniosek.
+      try {
+        sessionStorage.setItem("embed_calc_v1", JSON.stringify({
+          amount: draft.amount, annualRate: draft.annualRate, months: draft.months,
+          maxPayment: draft.maxPayment, secType: draft.secType, source: "landing_wizard",
+        }));
+      } catch { /* noop */ }
+      void navigate({ to: "/klient/wniosek" });
     } else {
       toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
     }
