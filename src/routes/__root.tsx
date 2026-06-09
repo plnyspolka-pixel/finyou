@@ -8,9 +8,16 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
+import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import faviconAsset from "@/assets/favicon.png.asset.json";
 import { AuthProvider } from "@/hooks/use-auth";
+import {
+  saveWniosekResume,
+  loadWniosekResume,
+  isTrackedWniosekPath,
+  canResumeFrom,
+} from "@/lib/wniosek-resume";
 import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
 import { GoogleAnalytics } from "@/lib/google-analytics";
