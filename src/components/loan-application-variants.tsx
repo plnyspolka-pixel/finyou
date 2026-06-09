@@ -489,7 +489,14 @@ export function LinearLoanApplication() {
             </div>
           )}
 
-          {step === 6 && <PhotoUploader label="Zdjęcia wnętrza, elewacji albo dokumentów" bucket="wnetrze" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />}
+          {step === 6 && (
+            <RequirementsPhotoStep
+              secType={draft.secType}
+              photos={photos}
+              addPhotos={addPhotos}
+              removePhoto={removePhoto}
+            />
+          )}
 
           {step === 7 && (
             <div className="grid gap-4 md:grid-cols-2">
