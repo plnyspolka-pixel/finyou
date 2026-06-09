@@ -6,6 +6,7 @@ import {
   Container,
   Head,
   Heading,
+  Img,
   Html,
   Link,
   Preview,
@@ -28,6 +29,7 @@ export const InviteEmail = ({
     <Preview>Zaproszenie do {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img src="https://app.financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
         <Heading style={h1}>Zostałeś zaproszony</Heading>
         <Text style={text}>
           Otrzymałeś zaproszenie do dołączenia do{' '}

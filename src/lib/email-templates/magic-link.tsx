@@ -6,6 +6,7 @@ import {
   Container,
   Head,
   Heading,
+  Img,
   Html,
   Preview,
   Text,
@@ -25,6 +26,7 @@ export const MagicLinkEmail = ({
     <Preview>Twój link do logowania w {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Img src="https://app.financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
         <Heading style={h1}>Twój link do logowania</Heading>
         <Text style={text}>
           Kliknij przycisk poniżej, aby zalogować się do {siteName}. Link wygaśnie
