@@ -279,11 +279,6 @@ function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnTyp
 
 function PhotoUploader({
   label,
-  bucket,
-  photos,
-  addPhotos,
-function PhotoUploader({
-  label,
   hint,
   bucket,
   photos,
