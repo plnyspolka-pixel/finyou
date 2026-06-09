@@ -282,9 +282,16 @@ function PhotoUploader({
   bucket,
   photos,
   addPhotos,
+function PhotoUploader({
+  label,
+  hint,
+  bucket,
+  photos,
+  addPhotos,
   removePhoto,
 }: {
   label: string;
+  hint?: string;
   bucket: PhotoItem["bucket"];
   photos: PhotoItem[];
   addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
@@ -295,7 +302,10 @@ function PhotoUploader({
 
   return (
     <div className="space-y-3">
-      <Label className="text-base font-bold">{label}</Label>
+      <div>
+        <Label className="text-base font-bold">{label}</Label>
+        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      </div>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
