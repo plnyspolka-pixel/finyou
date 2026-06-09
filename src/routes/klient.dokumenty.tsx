@@ -35,6 +35,7 @@ function KlientDokumenty() {
 
   const [loanId, setLoanId] = useState<string | null>(null);
   const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [propertyType, setPropertyType] = useState<string | null>(null);
   const [kwNumber, setKwNumber] = useState("");
   const [areaSqm, setAreaSqm] = useState("");
   const [docs, setDocs] = useState<DocRow[]>([]);
@@ -58,11 +59,15 @@ function KlientDokumenty() {
     if (!la) { setLoanId(null); return; }
     setLoanId(la.id);
     const { data: p } = await supabase.from("properties")
-      .select("id, land_register_number, area_sqm").eq("loan_application_id", la.id).maybeSingle();
+      .select("id, property_type, land_register_number, area_sqm").eq("loan_application_id", la.id).maybeSingle();
     if (p) {
       setPropertyId(p.id);
+      setPropertyType(p.property_type ?? null);
       setKwNumber(p.land_register_number ?? "");
       setAreaSqm(p.area_sqm ? String(p.area_sqm) : "");
+    } else {
+      setPropertyId(null);
+      setPropertyType(null);
     }
     const { data: ds } = await supabase.from("documents").select("id, file_name, file_path, document_type, created_at")
       .eq("loan_application_id", la.id).order("created_at", { ascending: false });
