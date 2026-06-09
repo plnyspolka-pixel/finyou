@@ -5,8 +5,9 @@ import {
   Container,
   Head,
   Heading,
-  Img,
   Html,
+  Img,
+  Link,
   Preview,
   Text,
 } from '@react-email/components'
@@ -21,13 +22,16 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
     <Preview>Twój kod weryfikacyjny</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://app.financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
+        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
         <Heading style={h1}>Potwierdź swoją tożsamość</Heading>
         <Text style={text}>Użyj poniższego kodu, aby potwierdzić swoją tożsamość:</Text>
         <Text style={codeStyle}>{token}</Text>
         <Text style={footer}>
           Kod wygaśnie wkrótce. Jeśli nie prosiłeś o ten kod, możesz zignorować
           tę wiadomość.
+        </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
         </Text>
       </Container>
     </Body>

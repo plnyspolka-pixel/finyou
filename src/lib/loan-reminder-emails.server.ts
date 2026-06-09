@@ -268,6 +268,7 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
     const subject = renderTemplate(variant.subject, vars);
     const bodyInner = renderTemplate(variant.body_html, vars);
     const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#111">
+<img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style="display:block;margin:0 auto 16px" />
 ${bodyInner}
 <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
 <p style="font-size:11px;color:#888">Finance You — pożyczki pod zastaw nieruchomości. Otrzymujesz tę wiadomość bo złożyłeś wniosek na financeyou.pl. <a href="${baseUrl}/email/unsubscribe?s=${sendId}" style="color:#888">Wypisz mnie z przypomnień</a>.</p>

@@ -6,8 +6,9 @@ import {
   Container,
   Head,
   Heading,
-  Img,
   Html,
+  Img,
+  Link,
   Preview,
   Text,
 } from '@react-email/components'
@@ -26,7 +27,7 @@ export const MagicLinkEmail = ({
     <Preview>Twój link do logowania w {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://app.financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
+        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
         <Heading style={h1}>Twój link do logowania</Heading>
         <Text style={text}>
           Kliknij przycisk poniżej, aby zalogować się do {siteName}. Link wygaśnie
@@ -37,6 +38,9 @@ export const MagicLinkEmail = ({
         </Button>
         <Text style={footer}>
           Jeśli nie prosiłeś o link logowania, możesz zignorować tę wiadomość.
+        </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
         </Text>
       </Container>
     </Body>

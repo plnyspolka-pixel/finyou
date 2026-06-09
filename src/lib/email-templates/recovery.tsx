@@ -6,8 +6,9 @@ import {
   Container,
   Head,
   Heading,
-  Img,
   Html,
+  Img,
+  Link,
   Preview,
   Text,
 } from '@react-email/components'
@@ -26,7 +27,7 @@ export const RecoveryEmail = ({
     <Preview>Resetowanie hasła w {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://app.financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
+        <Img src="https://financeyou.pl/__l5e/assets-v1/58b0a934-fc94-423a-95ed-aca9497ecd99/favicon.png" width="64" height="64" alt="FinanceYou" style={{ display: "block", margin: "0 auto 16px" }} />
         <Heading style={h1}>Zresetuj swoje hasło</Heading>
         <Text style={text}>
           Otrzymaliśmy prośbę o zresetowanie hasła w {siteName}. Kliknij przycisk
@@ -38,6 +39,9 @@ export const RecoveryEmail = ({
         <Text style={footer}>
           Jeśli to nie Ty prosiłeś o reset hasła, możesz zignorować tę wiadomość.
           Twoje hasło nie zostanie zmienione.
+        </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
         </Text>
       </Container>
     </Body>
