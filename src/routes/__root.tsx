@@ -14,6 +14,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
 import { GoogleAnalytics } from "@/lib/google-analytics";
+import { MicrosoftClarity } from "@/lib/clarity";
 
 function NotFoundComponent() {
   return (
@@ -113,6 +114,7 @@ function RootComponent() {
       <AuthProvider>
         <FacebookPixel />
         <GoogleAnalytics />
+        <MicrosoftClarity />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
