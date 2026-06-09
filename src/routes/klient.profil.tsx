@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Download, Loader2, Lock, ShieldCheck, ShieldAlert, Upload } from "lucide-react";
+import { Download, FileText, Loader2, Lock, Phone, ShieldCheck, ShieldAlert, Upload } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
+import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/klient/profil")({
