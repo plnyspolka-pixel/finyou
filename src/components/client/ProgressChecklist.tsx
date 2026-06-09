@@ -45,7 +45,9 @@ export function ProgressChecklist({
   hasInvestorDescription,
   hasIncomeDocs = false,
   hasCompanyData = false,
+  hasBankAccount = false,
 }: Props) {
+
   const missingByLabel = new Map<string, MissingItem>(progress.missing.map((m) => [m.label, m]));
   const uploadedLabels = new Set(progress.uploaded_documents);
 
