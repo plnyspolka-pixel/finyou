@@ -549,7 +549,11 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
               <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
             </Button>
             <Button type="button" variant="cta" size="cta" onClick={next}>
-              {step === linearSteps.length - 1 ? <><Send className="mr-2 h-4 w-4" /> Wyślij testowo</> : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}
+              {step === linearSteps.length - 1
+                ? <><Send className="mr-2 h-4 w-4" /> Wyślij wniosek</>
+                : step === 2
+                  ? <>Poznaj ofertę <ArrowRight className="ml-2 h-4 w-4" /></>
+                  : <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </div>
         </section>
