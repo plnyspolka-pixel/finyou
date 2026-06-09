@@ -24,6 +24,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Smartphone,
   Send,
   ShieldCheck,
   Upload,
@@ -32,7 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-type KwChoice = "znam" | "pomoc" | "pozniej";
+type KwChoice = "znam" | "mobywatel" | "pomoc";
 
 type PhotoItem = {
   id: string;
@@ -360,7 +361,7 @@ export function LinearLoanApplication() {
     if (step === 2) return draft.maxPayment >= 500;
     if (step === 3) return draft.annualRate >= 15;
     if (step === 4) return !!draft.secType;
-    if (step === 5) return draft.kwChoice !== "znam" || !!draft.kwNumber.trim();
+    if (step === 5) return draft.kwChoice === "pomoc" || !!draft.kwNumber.trim();
     if (step === 6) return photos.length > 0;
     if (step === 7) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
@@ -465,15 +466,29 @@ export function LinearLoanApplication() {
           {step === 5 && (
             <div className="space-y-5">
               <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
-                <KwTile value="znam" current={draft.kwChoice} title="Znam numer" description="Wpiszę KW ręcznie" />
-                <KwTile value="pomoc" current={draft.kwChoice} title="Potrzebuję pomocy" description="Dodam dokument lub zdjęcie" />
-                <KwTile value="pozniej" current={draft.kwChoice} title="Później" description="Ustalimy telefonicznie" />
+                <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
+                <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Pokażemy krok po kroku" />
+                <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument z KW" description="Skan, akt notarialny, zdjęcie" />
               </RadioGroup>
+
               {draft.kwChoice === "znam" && (
                 <div className="space-y-2">
                   <Label htmlFor="linear-kw">Numer księgi wieczystej</Label>
                   <Input id="linear-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
-                  <p className="text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z księgi wieczystej.</p>
+                  <p className="text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z KW.</p>
+                </div>
+              )}
+
+              {draft.kwChoice === "mobywatel" && (
+                <MobywatelKwGuide
+                  kwNumber={draft.kwNumber}
+                  onChange={(value) => update("kwNumber", value.toUpperCase())}
+                />
+              )}
+
+              {draft.kwChoice === "pomoc" && (
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  Świetnie. Dokument z numerem KW (akt notarialny, wypis, zaświadczenie) wgrasz w następnym kroku „Zdjęcia i dokumenty”. Wszystkie dane odczytamy z dokumentu.
                 </div>
               )}
             </div>
@@ -496,7 +511,7 @@ export function LinearLoanApplication() {
               <ReviewRow label="Okres" value={`${draft.months} mies.`} />
               <ReviewRow label="Rata" value={formatPLN(figures.monthly)} />
               <ReviewRow label="Zabezpieczenie" value={draft.secType ? securityTypeLabels[draft.secType] : "—"} />
-              <ReviewRow label="KW" value={draft.kwChoice === "znam" ? draft.kwNumber || "—" : "Pomoc / później"} />
+              <ReviewRow label="KW" value={draft.kwNumber || (draft.kwChoice === "pomoc" ? "Z wgranego dokumentu" : draft.kwChoice === "mobywatel" ? "Sprawdzę w mObywatelu" : "—")} />
               <ReviewRow label="Zdjęcia i pliki" value={`${photos.length}`} />
               <ReviewRow label="Kontakt" value={`${draft.email || "—"} · ${draft.phone || "—"}`} />
             </div>
@@ -531,6 +546,64 @@ function KwTile({ value, current, title, description }: { value: KwChoice; curre
     </label>
   );
 }
+
+function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: (value: string) => void }) {
+  const steps: { title: string; body: string }[] = [
+    { title: "Otwórz aplikację mObywatel", body: "Zaloguj się profilem zaufanym albo e-dowodem. Usługa działa od kwietnia 2026, więc upewnij się, że masz najnowszą wersję aplikacji ze sklepu Google Play lub App Store." },
+    { title: "Wejdź w usługę „Księgi wieczyste”", body: "Na ekranie głównym dotknij „Usługi” → „Księgi wieczyste” → „Twoje księgi”. mObywatel po Twoim numerze PESEL pokaże WSZYSTKIE księgi, w których jesteś właścicielem, współwłaścicielem lub użytkownikiem wieczystym — nie musisz znać numeru." },
+    { title: "Wybierz właściwą nieruchomość", body: "Z listy wybierz tę, którą chcesz oddać w zabezpieczenie. Zobaczysz: numer KW, typ nieruchomości, sąd prowadzący i położenie." },
+    { title: "Skopiuj numer KW i wklej poniżej", body: "Format: KOD_WYDZIAŁU/NUMER/CYFRA KONTROLNA, np. WA1M/00123456/7. Przepisz lub wklej numer w pole obok — resztę danych (adres, powierzchnię, właściciela, obciążenia) odczytamy automatycznie z rejestru." },
+  ];
+  return (
+    <div className="rounded-xl border border-accent/40 bg-accent/5 p-5">
+      <div className="flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+          <Smartphone className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-sm font-bold uppercase tracking-wide text-accent">Sprawdź numer KW w mObywatelu</div>
+          <p className="mt-1 text-sm text-foreground/80">
+            Nie musisz nigdzie dzwonić ani jechać do sądu. mObywatel pokaże Twoje księgi po PESEL-u.
+          </p>
+        </div>
+      </div>
+
+      <ol className="mt-5 space-y-3">
+        {steps.map((s, i) => (
+          <li key={s.title} className="flex gap-3 rounded-lg bg-background/70 p-3">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent text-xs font-bold text-accent-foreground">{i + 1}</span>
+            <div className="space-y-1">
+              <div className="text-sm font-semibold text-foreground">{s.title}</div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{s.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+        <Button asChild type="button" variant="outline" size="sm">
+          <a href="https://www.mobywatel.gov.pl" target="_blank" rel="noreferrer">Pobierz mObywatel</a>
+        </Button>
+        <Button asChild type="button" variant="ghost" size="sm">
+          <a href="https://info.mobywatel.gov.pl/aktualnosci/twoje-ksiegi-wieczyste-w-telefonie" target="_blank" rel="noreferrer">Oficjalna instrukcja Ministerstwa</a>
+        </Button>
+      </div>
+
+      <div className="mt-5 space-y-2">
+        <Label htmlFor="mobywatel-kw">Wklej skopiowany numer KW</Label>
+        <Input
+          id="mobywatel-kw"
+          value={kwNumber}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="np. WA1M/00123456/7"
+          className="font-mono"
+        />
+        <p className="text-xs text-muted-foreground">Po wpisaniu numeru pobierzemy adres, powierzchnię, dane właściciela i obciążenia bezpośrednio z rejestru — nic więcej nie musisz uzupełniać.</p>
+      </div>
+    </div>
+  );
+}
+
 
 export function SinglePageLoanApplication() {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
@@ -593,23 +666,34 @@ export function SinglePageLoanApplication() {
             <CardContent className="space-y-6">
               <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />
 
-              <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
-                <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="space-y-3">
-                  <KwTile value="znam" current={draft.kwChoice} title="Znam KW" description="Wpiszę numer" />
-                  <KwTile value="pomoc" current={draft.kwChoice} title="Pomoc z KW" description="Dodam dokument" />
-                  <KwTile value="pozniej" current={draft.kwChoice} title="Później" description="Ustalimy telefonicznie" />
+              <div className="space-y-4">
+                <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
+                  <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
+                  <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Instrukcja krok po kroku" />
+                  <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument" description="Akt notarialny / skan KW" />
                 </RadioGroup>
-                <div className="space-y-2">
-                  <Label htmlFor="flat-kw">Numer KW lub notatka</Label>
-                  <Textarea
-                    id="flat-kw"
-                    value={draft.kwChoice === "znam" ? draft.kwNumber : draft.propertyNote}
-                    onChange={(event) => draft.kwChoice === "znam" ? update("kwNumber", event.target.value.toUpperCase()) : update("propertyNote", event.target.value)}
-                    placeholder={draft.kwChoice === "znam" ? "LU1I/00012345/6" : "Napisz, co wiesz o nieruchomości albo dokumentach"}
-                    rows={6}
+
+                {draft.kwChoice === "znam" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="flat-kw">Numer księgi wieczystej</Label>
+                    <Input id="flat-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
+                  </div>
+                )}
+
+                {draft.kwChoice === "mobywatel" && (
+                  <MobywatelKwGuide
+                    kwNumber={draft.kwNumber}
+                    onChange={(value) => update("kwNumber", value.toUpperCase())}
                   />
-                </div>
+                )}
+
+                {draft.kwChoice === "pomoc" && (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                    Wgraj dokument z numerem KW (akt notarialny, wypis, zaświadczenie) w sekcji „Zdjęcia i dokumenty” poniżej — odczytamy wszystkie dane automatycznie.
+                  </div>
+                )}
               </div>
+
             </CardContent>
           </Card>
 
