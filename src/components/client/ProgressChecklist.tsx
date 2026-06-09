@@ -12,7 +12,9 @@ interface Props {
   hasInvestorDescription: boolean;
   hasIncomeDocs?: boolean;
   hasCompanyData?: boolean;
+  hasBankAccount?: boolean;
 }
+
 
 interface GroupItem {
   done: boolean;
