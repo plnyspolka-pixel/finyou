@@ -23,10 +23,18 @@ export interface NextStep {
   ctaLabel: string;
 }
 
+export interface ProgressFlags {
+  hasLoan: boolean;
+  hasContact: boolean;
+  hasPropertyType: boolean;
+  hasLoanTerms: boolean;
+  hasInvestorDescription: boolean;
+}
+
 export interface EnrichedProgress extends ProgressResult {
   missing: MissingItem[];
   next_step: NextStep;
-  has_loan: boolean;
+  flags: ProgressFlags;
 }
 
 const DOCS_HREF = "/klient/dokumenty";
@@ -51,16 +59,7 @@ function kindToMissingItem(kind: string, label: string): MissingItem {
   }
 }
 
-export function enrichLoanProgress(
-  base: ProgressResult,
-  ctx: {
-    hasLoan: boolean;
-    hasContact: boolean;
-    hasPropertyType: boolean;
-    hasInvestorDescription: boolean;
-    hasLoanTerms: boolean;
-  },
-): EnrichedProgress {
+export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): EnrichedProgress {
   // Lista braków dokumentowych z metadanymi
   const missing: MissingItem[] = base.required_documents
     .filter((r) => base.missing_documents_kinds.includes(r.kind))
