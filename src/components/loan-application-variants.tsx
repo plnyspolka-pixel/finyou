@@ -1,29 +1,25 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { formatPLN, monthlyPayment, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { REQUIREMENTS_BY_TYPE, PROPERTY_TYPE_LABELS, type DocRequirement, type DocRequirementKind } from "@/lib/property-documents";
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
   Check,
-  CheckCircle2,
   Clock3,
   FileImage,
   FileText,
   Home,
-  Mail,
-  MapPin,
-  Phone,
   Smartphone,
   Send,
   ShieldCheck,
@@ -32,6 +28,17 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+
+// Mapping SecurityType -> property_documents key
+const SEC_TO_PROP: Record<SecurityType, string> = {
+  mieszkanie: "mieszkanie",
+  dom: "dom",
+  lokal_uslugowy: "lokal_uslugowy",
+  dzialka_budowlana: "dzialka_budowlana",
+  grunt_rolny: "grunt_rolny",
+  udzial_w_nieruchomosci: "udzial_w_nieruchomosci",
+  inna: "inna",
+};
 
 type KwChoice = "znam" | "mobywatel" | "pomoc";
 
