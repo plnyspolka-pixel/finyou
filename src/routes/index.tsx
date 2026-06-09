@@ -148,7 +148,7 @@ function Landing() {
             </a>
           </div>
           <Button asChild size="sm" className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:brightness-110 transition">
-            {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#kalkulator">Sprawdź ratę</a>}
+            {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#wniosek">Sprawdź ratę</a>}
           </Button>
         </div>
       </header>
