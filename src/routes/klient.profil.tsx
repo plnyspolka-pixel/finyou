@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Download, Loader2, Phone, MessageSquare, Mail, Lock } from "lucide-react";
+import { Download, Loader2, Lock } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 
@@ -25,8 +24,7 @@ function KlientProfil() {
     pesel: "", address: "", bank_account: "",
     company_name: "", nip: "", regon: "", krs: "",
   });
-  const [prefs, setPrefs] = useState({ do_not_call: false, do_not_sms: false, do_not_email: false });
-  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [pwd, setPwd] = useState({ next: "", confirm: "" });
   const [pwd, setPwd] = useState({ next: "", confirm: "" });
   const [savingPwd, setSavingPwd] = useState(false);
 
