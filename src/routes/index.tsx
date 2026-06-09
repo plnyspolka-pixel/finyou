@@ -377,7 +377,7 @@ function Landing() {
             <Button asChild size="lg" className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:brightness-110 transition">
               <a href="#wniosek">
                 <IconCalc className="mr-2 h-4 w-4" />
-                Wróć do kalkulatora
+                Wróć do wniosku
               </a>
             </Button>
           </div>
