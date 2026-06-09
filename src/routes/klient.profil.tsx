@@ -174,9 +174,88 @@ function KlientProfil() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Rachunek bankowy</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-2">
+            <span>Rachunek bankowy</span>
+            {row?.bank_account_verified_at ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" /> Zweryfikowany
+              </span>
+            ) : null}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Numer konta, na które wypłacimy pieniądze z pożyczki. Wgraj dokument bankowy — sprawdzimy, czy rachunek i Twoje dane się zgadzają.</p>
+        </CardHeader>
         <CardContent className="grid gap-3">
           <div><Label>Numer konta (IBAN)</Label><Input maxLength={40} value={f.bank_account} onChange={(e) => setF({ ...f, bank_account: e.target.value })} placeholder="PL00 0000 0000 0000 0000 0000 0000" /></div>
+
+          <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+            <div className="text-sm font-medium">Weryfikacja dokumentem bankowym</div>
+            <p className="text-xs text-muted-foreground">Wgraj potwierdzenie konta, wyciąg lub umowę, na której widać Twój IBAN i imię, nazwisko lub nazwę firmy.</p>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  const iban = f.bank_account.replace(/\s+/g, "");
+                  if (!iban || iban.length < 20) { toast.error("Najpierw wpisz numer konta"); return; }
+                  const holder = f.company_name?.trim() || `${f.first_name} ${f.last_name}`.trim();
+                  if (!holder) { toast.error("Najpierw uzupełnij imię i nazwisko lub nazwę firmy"); return; }
+                  if (file.size > 12 * 1024 * 1024) { toast.error("Plik jest za duży (max 12 MB)"); return; }
+                  setVerifyingBank(true);
+                  setBankVerification(null);
+                  const t = toast.loading("Sprawdzam dokument…");
+                  try {
+                    const dataUrl: string = await new Promise((res, rej) => {
+                      const r = new FileReader();
+                      r.onload = () => res(String(r.result));
+                      r.onerror = () => rej(new Error("read_error"));
+                      r.readAsDataURL(file);
+                    });
+                    const result = await verifyBank({ data: {
+                      dataUrl, mimeType: file.type || "application/octet-stream", fileName: file.name,
+                      expectedIban: iban, expectedHolder: holder,
+                    }});
+                    setBankVerification(result);
+                    if (result.ok) {
+                      toast.success("Rachunek zweryfikowany", { id: t });
+                      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).maybeSingle();
+                      setRow(data);
+                    } else if (result.reason === "rate_limited") toast.error("Za dużo prób — spróbuj za chwilę", { id: t });
+                    else if (result.reason === "ai_quota") toast.error("Brak limitu AI — skontaktuj się z nami", { id: t });
+                    else if (result.reason === "unsupported") toast.error("Nieobsługiwany format pliku", { id: t });
+                    else toast.error("Nie udało się zweryfikować dokumentu", { id: t });
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Błąd weryfikacji", { id: t });
+                  } finally { setVerifyingBank(false); }
+                }}
+              />
+              <Button asChild variant={row?.bank_account_verified_at ? "outline" : "cta"} size="sm" disabled={verifyingBank}>
+                <span>
+                  {verifyingBank ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Weryfikuję…</>
+                    : <><Upload className="mr-2 h-4 w-4" /> {row?.bank_account_verified_at ? "Wgraj inny dokument" : "Wgraj dokument bankowy"}</>}
+                </span>
+              </Button>
+            </label>
+
+            {bankVerification && !bankVerification.ok && (
+              <div className="text-xs rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 space-y-1">
+                <div className="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-400">
+                  <ShieldAlert className="h-4 w-4" /> Nie udało się dopasować danych
+                </div>
+                <div>Numer rachunku w dokumencie: {bankVerification.ibanMatch ? "✓ zgadza się" : "✗ nie znaleziono lub inny"}</div>
+                <div>Właściciel rachunku: {bankVerification.holderMatch ? "✓ zgadza się" : "✗ nie pasuje do Twoich danych"}</div>
+                {bankVerification.foundHolder && <div className="text-muted-foreground">W dokumencie: {bankVerification.foundHolder}</div>}
+                <div className="text-muted-foreground">Wgraj inny dokument, gdzie widać numer konta i Twoje imię, nazwisko lub nazwę firmy.</div>
+              </div>
+            )}
+            {row?.bank_account_verified_at && (
+              <div className="text-xs text-muted-foreground">Ostatnia weryfikacja: {new Date(row.bank_account_verified_at).toLocaleString("pl-PL")}</div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
