@@ -32,6 +32,14 @@ function KlientProfil() {
   const [verifyingBank, setVerifyingBank] = useState(false);
   const [bankVerification, setBankVerification] = useState<null | { ok: boolean; reason: string; ibanMatch: boolean; holderMatch: boolean; foundIbans: string[]; foundHolder: string }>(null);
   const verifyBank = useServerFn(verifyBankAccountDocument);
+  const sendOtp = useServerFn(sendPhoneOtp);
+  const verifyOtp = useServerFn(verifyPhoneOtp);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [bikUploading, setBikUploading] = useState(false);
+  const [showBikInstructions, setShowBikInstructions] = useState(false);
 
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
