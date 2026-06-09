@@ -26,12 +26,7 @@ import {
   IconPhone,
   IconMail,
   IconCheck,
-  BgMoney,
-  BgPeriod,
-  BgScale,
-  BgRocket,
 } from "@/components/brand-icons";
-import { QuickCalculator } from "@/components/landing/quick-calculator";
 import { LinearLoanApplication } from "@/components/loan-application-variants";
 import { PropertyTypesShowcase } from "@/components/landing/property-types-showcase";
 import { AuroraText } from "@/components/ui/aurora-text";
@@ -158,26 +153,24 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero — nowoczesne tło: gradient mesh + soft orbs */}
-      <section className="relative overflow-hidden border-b border-border bg-[oklch(0.16_0.09_265)] text-primary-foreground">
+      {/* Hero z wbudowanym wnioskiem — wniosek jest GŁÓWNYM elementem */}
+      <section id="kalkulator" className="relative overflow-hidden border-b border-border bg-[oklch(0.16_0.09_265)] text-primary-foreground scroll-mt-20">
         {/* Aurora mesh */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-90 [background-image:radial-gradient(ellipse_70%_55%_at_15%_5%,oklch(0.45_0.22_265_/_0.55),transparent_60%),radial-gradient(ellipse_60%_45%_at_85%_15%,oklch(0.65_0.13_235_/_0.45),transparent_65%),radial-gradient(ellipse_70%_50%_at_50%_100%,oklch(0.78_0.18_85_/_0.18),transparent_65%)]"
         />
-        {/* Subtelne dot pattern - bardzo cichy */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:32px_32px]"
         />
-        {/* Animated soft orbs */}
         <div aria-hidden className="pointer-events-none absolute -left-32 top-10 h-96 w-96 rounded-full bg-[oklch(0.55_0.22_278)]/30 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[oklch(0.78_0.18_85)]/15 blur-3xl" />
-        {/* Premium particles — subtle, nowoczesny "stardust" */}
         <Particles className="absolute inset-0" quantity={90} staticity={40} ease={60} color="#fde68a" />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-[1.15fr_1fr] md:px-6 md:py-24">
-          <div>
+        <div className="relative mx-auto grid max-w-7xl items-start gap-10 px-4 py-12 md:px-6 md:py-16 lg:grid-cols-[1fr_minmax(0,640px)]">
+          {/* Lewa kolumna — krótkie wprowadzenie */}
+          <div className="lg:sticky lg:top-24">
             <BlurFade delay={0.05} inView>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
                 <IconBolt size={16} />
@@ -187,38 +180,40 @@ function Landing() {
               </div>
             </BlurFade>
             <BlurFade delay={0.15} inView>
-              <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
+              <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-5xl">
                 Pożyczka pod zastaw{" "}
                 <AuroraText
                   className="block"
                   colors={["#a78bfa", "#6366f1", "#38bdf8", "#22d3ee", "#a78bfa"]}
                 >nieruchomości</AuroraText>
-                <span className="mt-2 block text-2xl font-bold text-white/85 md:text-3xl">
-                  — szybka decyzja i do 1 mln zł
+                <span className="mt-2 block text-xl font-bold text-white/85 md:text-2xl">
+                  — do 1 mln zł, decyzja w 24 h
                 </span>
               </h1>
             </BlurFade>
             <BlurFade delay={0.3} inView>
-              <p className="mt-5 max-w-xl text-base text-white/80 md:text-lg">
-                Łatwa i szybka pożyczka pod zastaw nieruchomości — bez zbędnych procedur bankowych i dokumentów.
-                Zły BIK i istniejąca hipoteka — analizujemy indywidualnie.
+              <p className="mt-4 max-w-xl text-base text-white/80">
                 Liczy się <strong className="text-white">wartość zabezpieczenia</strong>, nie scoring banku.
+                Wypełnij wniosek obok — to zajmuje kilka minut, jest darmowe i bez zobowiązań.
               </p>
             </BlurFade>
             <BlurFade delay={0.4} inView>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  onClick={() => {
-                    const el = document.getElementById("kalkulator");
-                    el?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="group bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-xl shadow-accent/40 hover:shadow-2xl hover:brightness-110 transition"
-                >
-                  <IconCalc className="mr-2 h-4 w-4" />
-                  Sprawdź warunki pożyczki
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
+              <ul className="mt-6 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
+                {[
+                  "Złożenie wniosku darmowe",
+                  "Decyzja do 24 godzin",
+                  "Do 50% wartości nieruchomości",
+                  "Bez procedur bankowych",
+                ].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <IconCheck className="h-4 w-4 text-accent" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </BlurFade>
+            <BlurFade delay={0.5} inView>
+              <div className="mt-6 hidden lg:block">
                 <Button
                   asChild
                   size="lg"
@@ -232,97 +227,19 @@ function Landing() {
                 </Button>
               </div>
             </BlurFade>
-            <BlurFade delay={0.5} inView>
-              <ul className="mt-7 grid gap-2 text-sm text-white/85 sm:grid-cols-2">
-                {[
-                  "Złożenie wniosku darmowe",
-                  "Decyzja do 24 godzin",
-                  "Bez opłat za rozpatrzenie",
-                  "Bez zbędnych procedur bankowych",
-                ].map((t) => (
-                  <li key={t} className="flex items-center gap-2">
-                    <IconCheck className="h-4 w-4 text-accent" />
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </BlurFade>
           </div>
 
+          {/* Prawa kolumna — WNIOSEK jako główny element */}
           <div className="relative">
-            <div className="absolute inset-0 -rotate-3 rounded-3xl bg-gradient-to-br from-accent/30 to-[oklch(0.65_0.13_235)]/30 blur-2xl" />
-            <div className="relative grid grid-cols-2 gap-3 overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-5 shadow-2xl backdrop-blur-xl md:p-6">
-              <BorderBeam size={140} duration={9} colorFrom="#fbbf24" colorTo="#a78bfa" borderWidth={1.5} />
-              {[
-                { v: "do 1 mln", v2: "złotych", l: "kwota pożyczki", Bg: BgMoney },
-                { v: "6 – 72", v2: "miesięcy", l: "okres spłaty", Bg: BgPeriod },
-                { v: "do 50%", v2: "wartości", l: "maksymalne LTV", Bg: BgScale },
-                { v: "24 h", v2: "decyzja", l: "szybka analiza", Bg: BgRocket },
-              ].map((s) => (
-                <div
-                  key={s.l}
-                  className="group relative flex h-32 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/5 px-3 text-center ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-accent/40 md:h-36"
-                >
-                  <div className="pointer-events-none absolute inset-0 opacity-[0.13] transition group-hover:opacity-25 group-hover:scale-110">
-                    <s.Bg />
-                  </div>
-                  <div className="relative text-xl font-extrabold leading-tight text-white drop-shadow-md md:text-2xl">
-                    {s.v}
-                  </div>
-                  <div className="relative mt-0.5 text-[11px] font-semibold text-white/85 md:text-xs">
-                    {s.v2}
-                  </div>
-                  <div className="relative mt-2 text-[9px] uppercase tracking-[0.15em] text-white/60 md:text-[10px]">
-                    {s.l}
-                  </div>
-                </div>
-              ))}
+            <div className="absolute -inset-4 -rotate-1 rounded-3xl bg-gradient-to-br from-accent/25 to-[oklch(0.65_0.13_235)]/25 blur-2xl" />
+            <div className="relative w-full max-w-full overflow-hidden rounded-3xl border border-white/15 bg-card text-foreground shadow-2xl">
+              <BorderBeam size={260} duration={11} colorFrom="#fbbf24" colorTo="#38bdf8" borderWidth={1.5} />
+              <LinearLoanApplication embedded />
             </div>
           </div>
         </div>
       </section>
 
-      {/* (usunięto pasek przewijany z ikonami — na prośbę klienta) */}
-
-      {/* Trust strip */}
-      <section className="border-b border-border bg-card">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-4 md:px-6">
-          {[
-            { icon: IconHandCoins, t: "Złożenie wniosku darmowe", d: "Bez opłat za rozpatrzenie." },
-            { icon: IconLtv, t: "Do 50% wartości", d: "LTV liczone od wartości rynkowej." },
-            { icon: IconLock, t: "Bezpośrednio do inwestora", d: "Twój wniosek trafia do inwestora — bez pośredników." },
-            { icon: IconDoc, t: "Notariusz w całym kraju", d: "Umowa u wybranego przez Ciebie notariusza — bez zbędnych dojazdów." },
-          ].map((f) => (
-            <div key={f.t} className="flex items-start gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 text-primary ring-1 ring-border">
-                <f.icon className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-foreground">{f.t}</div>
-                <div className="text-xs text-muted-foreground">{f.d}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* KALKULATOR — main conversion tool */}
-      <section className="relative mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1 z 4</p>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground md:text-5xl">
-            Sprawdź warunki
-            <span className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] bg-clip-text text-transparent"> pożyczki pod zastaw</span>
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Wybierz kwotę, okres i typ zabezpieczenia. W kolejnych krokach ustalimy z Tobą indywidualne warunki — ratę dopasowaną do Twojego budżetu.
-          </p>
-        </div>
-        <div className="relative mt-10 w-full max-w-full overflow-hidden rounded-3xl border border-border bg-card">
-          <BorderBeam size={220} duration={11} colorFrom="#fbbf24" colorTo="#38bdf8" borderWidth={1.5} />
-          <LinearLoanApplication embedded />
-        </div>
-      </section>
 
 
       {/* For whom */}
