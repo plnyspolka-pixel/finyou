@@ -48,8 +48,6 @@ type LoanDraft = {
   annualRate: number;
   maxPayment: number;
   secType: SecurityType | null;
-  city: string;
-  street: string;
   kwChoice: KwChoice;
   kwNumber: string;
   propertyNote: string;
@@ -67,8 +65,6 @@ const emptyDraft: LoanDraft = {
   annualRate: 24,
   maxPayment: 3500,
   secType: "mieszkanie",
-  city: "",
-  street: "",
   kwChoice: "znam",
   kwNumber: "",
   propertyNote: "",
@@ -84,7 +80,6 @@ const linearSteps = [
   "Maksymalna rata",
   "Koszt finansowania",
   "Zabezpieczenie",
-  "Adres",
   "Księga wieczysta",
   "Zdjęcia",
   "Kontakt",
@@ -365,10 +360,9 @@ export function LinearLoanApplication() {
     if (step === 2) return draft.maxPayment >= 500;
     if (step === 3) return draft.annualRate >= 15;
     if (step === 4) return !!draft.secType;
-    if (step === 5) return !!draft.city.trim();
-    if (step === 6) return draft.kwChoice !== "znam" || !!draft.kwNumber.trim();
-    if (step === 7) return photos.length > 0;
-    if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
+    if (step === 5) return draft.kwChoice !== "znam" || !!draft.kwNumber.trim();
+    if (step === 6) return photos.length > 0;
+    if (step === 7) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
   };
 
@@ -428,11 +422,10 @@ export function LinearLoanApplication() {
               {step === 2 && "Jaką ratę miesięczną realnie udźwigniesz?"}
               {step === 3 && "Jaki koszt finansowania akceptujesz?"}
               {step === 4 && "Co będzie zabezpieczeniem pożyczki?"}
-              {step === 5 && "Gdzie znajduje się nieruchomość?"}
-              {step === 6 && "Czy znasz numer księgi wieczystej?"}
-              {step === 7 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
-              {step === 8 && "Jak mamy się z Tobą skontaktować?"}
-              {step === 9 && "Sprawdź całość przed wysłaniem"}
+              {step === 5 && "Czy znasz numer księgi wieczystej?"}
+              {step === 6 && "Dodaj zdjęcia lub dokumenty nieruchomości"}
+              {step === 7 && "Jak mamy się z Tobą skontaktować?"}
+              {step === 8 && "Sprawdź całość przed wysłaniem"}
             </h2>
           </div>
 
@@ -470,19 +463,6 @@ export function LinearLoanApplication() {
           {step === 4 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
 
           {step === 5 && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="linear-city">Miasto / miejscowość *</Label>
-                <Input id="linear-city" value={draft.city} onChange={(event) => update("city", event.target.value)} placeholder="np. Warszawa" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="linear-street">Ulica lub opis lokalizacji</Label>
-                <Input id="linear-street" value={draft.street} onChange={(event) => update("street", event.target.value)} placeholder="np. Mokotów, okolice metra" />
-              </div>
-            </div>
-          )}
-
-          {step === 6 && (
             <div className="space-y-5">
               <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
                 <KwTile value="znam" current={draft.kwChoice} title="Znam numer" description="Wpiszę KW ręcznie" />
@@ -493,14 +473,15 @@ export function LinearLoanApplication() {
                 <div className="space-y-2">
                   <Label htmlFor="linear-kw">Numer księgi wieczystej</Label>
                   <Input id="linear-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
+                  <p className="text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z księgi wieczystej.</p>
                 </div>
               )}
             </div>
           )}
 
-          {step === 7 && <PhotoUploader label="Zdjęcia wnętrza, elewacji albo dokumentów" bucket="wnetrze" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />}
+          {step === 6 && <PhotoUploader label="Zdjęcia wnętrza, elewacji albo dokumentów" bucket="wnetrze" photos={photos} addPhotos={addPhotos} removePhoto={removePhoto} />}
 
-          {step === 8 && (
+          {step === 7 && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2"><Label>Imię</Label><Input value={draft.firstName} onChange={(event) => update("firstName", event.target.value)} /></div>
               <div className="space-y-2"><Label>Nazwisko</Label><Input value={draft.lastName} onChange={(event) => update("lastName", event.target.value)} /></div>
@@ -509,13 +490,12 @@ export function LinearLoanApplication() {
             </div>
           )}
 
-          {step === 9 && (
+          {step === 8 && (
             <div className="space-y-3 text-sm">
               <ReviewRow label="Kwota" value={formatPLN(draft.amount)} />
               <ReviewRow label="Okres" value={`${draft.months} mies.`} />
               <ReviewRow label="Rata" value={formatPLN(figures.monthly)} />
               <ReviewRow label="Zabezpieczenie" value={draft.secType ? securityTypeLabels[draft.secType] : "—"} />
-              <ReviewRow label="Adres" value={[draft.city, draft.street].filter(Boolean).join(", ") || "—"} />
               <ReviewRow label="KW" value={draft.kwChoice === "znam" ? draft.kwNumber || "—" : "Pomoc / później"} />
               <ReviewRow label="Zdjęcia i pliki" value={`${photos.length}`} />
               <ReviewRow label="Kontakt" value={`${draft.email || "—"} · ${draft.phone || "—"}`} />
@@ -608,20 +588,11 @@ export function SinglePageLoanApplication() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Home className="h-5 w-5 text-accent" /> Nieruchomość</CardTitle>
-              <CardDescription>Typ zabezpieczenia, adres i księga wieczysta są obok siebie.</CardDescription>
+              <CardDescription>Typ zabezpieczenia i księga wieczysta. Adres pobierzemy automatycznie z KW.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="flat-city">Miasto / miejscowość</Label>
-                  <Input id="flat-city" value={draft.city} onChange={(event) => update("city", event.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="flat-street">Ulica lub opis lokalizacji</Label>
-                  <Input id="flat-street" value={draft.street} onChange={(event) => update("street", event.target.value)} />
-                </div>
-              </div>
+
               <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
                 <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="space-y-3">
                   <KwTile value="znam" current={draft.kwChoice} title="Znam KW" description="Wpiszę numer" />
