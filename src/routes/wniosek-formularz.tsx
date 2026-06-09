@@ -510,18 +510,6 @@ function KlientWniosek() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Jaki max koszt pożyczki akceptujesz</Label>
-                <div className="flex items-center gap-2">
-                  <Input type="number" step="0.5" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24" />
-                  <span className="text-sm">%</span>
-                </div>
-              </div>
-              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
                 <Label>Na jaki okres chcesz zaciągnąć zobowiązanie?</Label>
                 <span className="text-sm tabular-nums">{months} mies.</span>
               </div>
@@ -529,13 +517,6 @@ function KlientWniosek() {
               <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Jaką maksymalną ratę miesięczną możesz płacić?</Label>
-                <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
-              </div>
-              <Slider min={500} max={50000} step={250} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
-            </div>
 
             <div className="space-y-3">
               <Label>Co ma być zabezpieczeniem?</Label>
@@ -893,10 +874,9 @@ function KlientWniosek() {
           <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Row k="Kwota pożyczki" v={formatPLN(amount)} />
-            <Row k="Wynagrodzenie inwestora" v={`${annualRate}% rocznie`} />
             <Row k="Okres finansowania" v={`${months} mies.`} />
             <Row k="Rata miesięczna" v={formatPLN(rata)} />
-            <Row k="Maksymalna rata klienta" v={formatPLN(maxPayment)} />
+
             <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
             <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
             <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
