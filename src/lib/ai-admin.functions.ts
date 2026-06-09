@@ -190,6 +190,47 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       }
     }
 
+    // Wpięcie załączników z tej tury w ostatnią wiadomość użytkownika.
+    const atts = data.attachments ?? [];
+    if (atts.length > 0) {
+      const lastUserIdx = (() => {
+        for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
+        return -1;
+      })();
+      if (lastUserIdx >= 0) {
+        const existing = messages[lastUserIdx].content;
+        const baseText = typeof existing === "string" ? existing : "";
+        const blocks: AnthropicContent = [];
+        if (baseText) blocks.push({ type: "text", text: baseText });
+        for (const a of atts) {
+          if (a.kind === "image" && a.data) {
+            blocks.push({
+              type: "image",
+              source: { type: "base64", media_type: a.mediaType, data: a.data },
+            } as never);
+          } else if (a.kind === "pdf" && a.data) {
+            blocks.push({
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: a.data },
+              title: a.name,
+            } as never);
+          } else if (a.kind === "text" && a.text) {
+            blocks.push({
+              type: "text",
+              text: `\n\n----- ZAŁĄCZNIK: ${a.name} (${a.size} B, ${a.mediaType}) -----\n${a.text}\n----- KONIEC ZAŁĄCZNIKA -----`,
+            });
+          } else {
+            blocks.push({
+              type: "text",
+              text: `\n\n[Załącznik binarny ${a.name} (${a.mediaType}, ${a.size} B) — typ nieobsługiwany natywnie przez model, pomijam zawartość.]`,
+            });
+          }
+        }
+        messages[lastUserIdx] = { role: "user", content: blocks };
+      }
+    }
+
+
     // Agentic loop — max 8 tool rounds
     let totalIn = 0;
     let totalOut = 0;
