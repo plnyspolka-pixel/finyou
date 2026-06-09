@@ -996,9 +996,9 @@ function DocUploader({
           accept="image/*,application/pdf"
           className="hidden"
           onChange={async (e) => {
-            const files = e.target.files;
+            const files = e.target.files ? Array.from(e.target.files) : [];
+            for (const f of files) await onUpload(f, docType);
             if (ref.current) ref.current.value = "";
-            await handleFiles(files);
           }}
         />
         <input
@@ -1008,9 +1008,9 @@ function DocUploader({
           capture="environment"
           className="hidden"
           onChange={async (e) => {
-            const files = e.target.files;
+            const files = e.target.files ? Array.from(e.target.files) : [];
+            for (const f of files) await onUpload(f, docType);
             if (camRef.current) camRef.current.value = "";
-            await handleFiles(files);
           }}
         />
 
