@@ -47,33 +47,7 @@ async function fetchAgentPrompt(): Promise<{ prompt: string; firstMessage: strin
     console.error("[el-text-agent] db prompt fetch failed", e);
   }
 
-  // 2) Fallback: pobierz z ElevenLabs (jeśli skonfigurowany).
-  const agentId = process.env.ELEVENLABS_TEXT_AGENT_ID;
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (agentId && apiKey) {
-    try {
-      const res = await fetch(`${EL_BASE}/convai/agents/${encodeURIComponent(agentId)}`, {
-        headers: { "xi-api-key": apiKey },
-      });
-      if (res.ok) {
-        const json: any = await res.json();
-        const promptFromEL: string | undefined =
-          json?.conversation_config?.agent?.prompt?.prompt ??
-          json?.conversation_config?.prompt?.prompt ??
-          json?.prompt?.prompt;
-        const firstMessage: string | null =
-          json?.conversation_config?.agent?.first_message ?? null;
-        if (promptFromEL && promptFromEL.length > 20) {
-          cachedAgentPrompt = { prompt: promptFromEL, firstMessage, fetchedAt: now };
-          return { prompt: promptFromEL, firstMessage };
-        }
-      }
-    } catch (e) {
-      console.error("[el-text-agent] EL fetch failed", e);
-    }
-  }
-
-  // 3) Fallback ostateczny: zaszyty default.
+  // 2) Fallback ostateczny: zaszyty default. (Lovable AI generuje odpowiedź.)
   const fallback = { prompt: defaultSystemPrompt(), firstMessage: null };
   cachedAgentPrompt = { ...fallback, fetchedAt: now };
   return fallback;
