@@ -37,7 +37,7 @@ export interface EnrichedProgress extends ProgressResult {
   flags: ProgressFlags;
 }
 
-const DOCS_HREF = "/klient/dokumenty";
+const DOCS_HREF = "/klient/wniosek";
 
 function docCta(label: string): { ctaHref: string; ctaLabel: string } {
   return { ctaHref: DOCS_HREF, ctaLabel: `Wgraj: ${label}` };
