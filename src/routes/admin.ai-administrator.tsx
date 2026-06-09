@@ -122,10 +122,17 @@ function AiAdminSettings() {
             warn
           />
           <ToolRow
-            label="Odczyt plików projektu (src/**)"
-            desc="AI może czytać kod, by analizować i sugerować zmiany. Tylko odczyt — nie modyfikuje plików."
+            label="Odczyt plików projektu"
+            desc="AI może czytać kod, by analizować i sugerować zmiany."
             value={form.enable_file_read}
             onChange={(v) => setForm({ ...form, enable_file_read: v })}
+          />
+          <ToolRow
+            label="Edycja plików projektu (zapis/usuwanie)"
+            desc="AI może tworzyć, nadpisywać i usuwać pliki projektu. Pliki z sekretami (.env) są zablokowane."
+            value={form.enable_file_write}
+            onChange={(v) => setForm({ ...form, enable_file_write: v })}
+            warn
           />
         </CardContent>
       </Card>
