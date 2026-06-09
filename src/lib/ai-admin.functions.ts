@@ -115,6 +115,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
       enable_db_read: boolean;
       enable_db_write: boolean;
       enable_file_read: boolean;
+      enable_file_write: boolean;
       max_tokens: number;
       temperature: number;
     };
