@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Circle, ArrowRight, Sparkles } from "lucide-react";
 import type { EnrichedProgress, MissingItem } from "@/lib/my-loan-progress";
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   hasPropertyType: boolean;
   hasLoanTerms: boolean;
   hasInvestorDescription: boolean;
+  hasIncomeDocs?: boolean;
+  hasCompanyData?: boolean;
 }
 
 interface GroupItem {
@@ -25,14 +27,23 @@ interface Group {
   items: GroupItem[];
 }
 
+// Etykiety dokumentów traktowanych jako „boost szans" (nie blokują wniosku)
+const BOOST_DOC_LABELS = new Set<string>([
+  "Dokumenty dochodowe",
+  "Zaświadczenia o dochodach",
+  "Dochody",
+  "PIT za ostatni rok",
+]);
+
 export function ProgressChecklist({
   progress,
   hasContact,
   hasPropertyType,
   hasLoanTerms,
   hasInvestorDescription,
+  hasIncomeDocs = false,
+  hasCompanyData = false,
 }: Props) {
-  // Buduj listę z deduplikowanymi sekcjami
   const missingByLabel = new Map<string, MissingItem>(progress.missing.map((m) => [m.label, m]));
   const uploadedLabels = new Set(progress.uploaded_documents);
 
@@ -63,20 +74,16 @@ export function ProgressChecklist({
           ctaHref: "/wniosek-warunki",
           ctaLabel: hasLoanTerms ? "Zmień" : "Ustal",
         },
-        {
-          done: hasInvestorDescription,
-          label: "Opis dla inwestora",
-          ctaHref: "/wniosek-opis",
-          ctaLabel: hasInvestorDescription ? "Edytuj" : "Dodaj",
-        },
       ],
     },
   ];
 
-  if (progress.required_documents.length > 0) {
+  // Wymagane dokumenty nieruchomości — bez „boostujących"
+  const requiredDocs = progress.required_documents.filter((r) => !BOOST_DOC_LABELS.has(r.label));
+  if (requiredDocs.length > 0) {
     groups.push({
       title: "Dokumenty nieruchomości",
-      items: progress.required_documents.map((r) => {
+      items: requiredDocs.map((r) => {
         const done = uploadedLabels.has(r.label);
         const m = missingByLabel.get(r.label);
         return {
@@ -93,58 +100,120 @@ export function ProgressChecklist({
   const haveItems = allItems.filter((i) => i.done);
   const missingItems = allItems.filter((i) => !i.done);
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card className="border-emerald-200 dark:border-emerald-900/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400">
-            <CheckCircle2 className="h-5 w-5" /> Co już mamy
-            <span className="ml-auto text-xs font-normal text-muted-foreground">{haveItems.length}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {haveItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Jeszcze nic — uzupełnij pierwszy krok, a tu pojawią się ✓.</p>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {haveItems.map((it) => (
-                <li key={it.label} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                  <span className="text-muted-foreground line-through">{it.label}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+  // Sekcja „Zwiększ swoje szanse" — nieobowiązkowe, ale podnoszą sukces wniosku
+  const boostItems: GroupItem[] = [
+    {
+      done: hasInvestorDescription,
+      label: "Opis dla inwestora",
+      ctaHref: "/wniosek-opis",
+      ctaLabel: hasInvestorDescription ? "Edytuj" : "Dodaj",
+      hint: "Krótka historia, dlaczego potrzebujesz finansowania — buduje zaufanie inwestorów.",
+    },
+    {
+      done: hasIncomeDocs,
+      label: "Dokumenty dochodowe",
+      ctaHref: "/klient/dokumenty",
+      ctaLabel: hasIncomeDocs ? "Zarządzaj" : "Wgraj",
+      hint: "PIT, zaświadczenie z firmy, KPiR — inwestor widzi realny dochód.",
+    },
+    {
+      done: hasCompanyData,
+      label: "Pełne dane firmowe",
+      ctaHref: "/klient/profil",
+      ctaLabel: hasCompanyData ? "Zarządzaj" : "Uzupełnij",
+      hint: "NIP, REGON, KRS i adres — automatycznie pobierzemy z rejestrów państwowych.",
+    },
+  ];
+  const boostDone = boostItems.filter((b) => b.done).length;
 
-      <Card className="border-amber-200 dark:border-amber-900/50">
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-emerald-200 dark:border-emerald-900/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="h-5 w-5" /> Co już mamy
+              <span className="ml-auto text-xs font-normal text-muted-foreground">{haveItems.length}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {haveItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Jeszcze nic — uzupełnij pierwszy krok, a tu pojawią się ✓.</p>
+            ) : (
+              <ul className="space-y-1.5 text-sm">
+                {haveItems.map((it) => (
+                  <li key={it.label} className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span className="text-muted-foreground line-through">{it.label}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 dark:border-amber-900/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+              <Circle className="h-5 w-5" /> Czego jeszcze potrzebujemy
+              <span className="ml-auto text-xs font-normal text-muted-foreground">{missingItems.length}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {missingItems.length === 0 ? (
+              <p className="text-sm text-emerald-700 dark:text-emerald-400">Wszystko gotowe — wniosek kompletny.</p>
+            ) : (
+              <ul className="space-y-2">
+                {missingItems.map((it) => (
+                  <li key={it.label} className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Circle className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span className="truncate text-sm font-medium">{it.label}</span>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={it.ctaHref}>
+                        {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-violet-200 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/20">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
-            <Circle className="h-5 w-5" /> Czego jeszcze potrzebujemy
-            <span className="ml-auto text-xs font-normal text-muted-foreground">{missingItems.length}</span>
+          <CardTitle className="flex items-center gap-2 text-base text-violet-700 dark:text-violet-300">
+            <Sparkles className="h-5 w-5" /> Zwiększ swoje szanse na sukces
+            <span className="ml-auto text-xs font-normal text-muted-foreground">{boostDone} / {boostItems.length}</span>
           </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Te elementy nie są wymagane do złożenia wniosku — ale każdy z nich realnie zwiększa szansę, że inwestor wybierze właśnie Twój projekt.
+          </p>
         </CardHeader>
         <CardContent>
-          {missingItems.length === 0 ? (
-            <p className="text-sm text-emerald-700 dark:text-emerald-400">Wszystko gotowe — wniosek kompletny.</p>
-          ) : (
-            <ul className="space-y-2">
-              {missingItems.map((it) => (
-                <li key={it.label} className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Circle className="h-4 w-4 shrink-0 text-amber-500" />
-                    <span className="truncate text-sm font-medium">{it.label}</span>
-                  </div>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to={it.ctaHref}>
-                      {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul className="grid gap-2 md:grid-cols-3">
+            {boostItems.map((it) => (
+              <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card p-3">
+                <div className="flex items-center gap-2">
+                  {it.done ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 shrink-0 text-violet-500" />
+                  )}
+                  <span className="text-sm font-semibold">{it.label}</span>
+                </div>
+                {it.hint && <p className="text-xs text-muted-foreground">{it.hint}</p>}
+                <Button asChild size="sm" variant={it.done ? "outline" : "secondary"} className="mt-auto self-start">
+                  <Link to={it.ctaHref}>
+                    {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
     </div>
