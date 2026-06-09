@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Upload,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -175,7 +176,7 @@ function VariantShell({
   title: string;
   subtitle: string;
   variant: "one" | "two";
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <main className="min-h-dvh bg-background">
@@ -256,7 +257,7 @@ function SummaryPanel({
   );
 }
 
-function SummaryMetric({ icon: Icon, label, value }: { icon: typeof Wallet; label: string; value: string }) {
+function SummaryMetric({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border bg-background p-3">
       <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
