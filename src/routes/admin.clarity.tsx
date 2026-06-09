@@ -175,7 +175,7 @@ function ClarityPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Textarea
-                placeholder="Opcjonalne pytanie do AI (np. „Gdzie tracimy konwersję na /rejestracja?"). Puste = TOP 5 problemów UX."
+                placeholder='Opcjonalne pytanie do AI (np. „Gdzie tracimy konwersję na /rejestracja?"). Puste = TOP 5 problemów UX.'
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 rows={3}
