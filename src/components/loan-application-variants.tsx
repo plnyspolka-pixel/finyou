@@ -352,9 +352,14 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
   const [step, setStep] = useState(0);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
 
+  const gateUnlocked =
+    !!user ||
+    (!!draft.firstName.trim() && !!draft.email.trim() && !!draft.phone.trim());
+
   const canContinue = () => {
     if (step === 0) return draft.amount >= 20_000;
     if (step === 1) return draft.months >= 3;
+    if (step === 2) return gateUnlocked;
     if (step === 3) return draft.maxPayment >= 500;
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
