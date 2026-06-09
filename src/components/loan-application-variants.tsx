@@ -602,6 +602,8 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
       </div>
     </div>
   );
+}
+
 
 export function SinglePageLoanApplication() {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
