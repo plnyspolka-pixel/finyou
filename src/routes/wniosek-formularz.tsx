@@ -1125,8 +1125,8 @@ function SubmittedView(props: {
         <CardHeader>
           <CardTitle>Pozostałe dokumenty ({otherDocs.length})</CardTitle>
           <CardDescription>
-            Dokumenty załączone w trakcie składania wniosku. Możesz dodawać kolejne w zakładce{" "}
-            <Link to="/klient/dokumenty" className="underline">Dokumenty</Link>.
+            Dokumenty załączone w trakcie składania wniosku. Możesz dodawać kolejne w{" "}
+            <Link to="/klient/wniosek" className="underline">wniosku</Link>.
           </CardDescription>
         </CardHeader>
         <CardContent>
