@@ -510,7 +510,7 @@ export function LinearLoanApplication() {
               <ReviewRow label="Okres" value={`${draft.months} mies.`} />
               <ReviewRow label="Rata" value={formatPLN(figures.monthly)} />
               <ReviewRow label="Zabezpieczenie" value={draft.secType ? securityTypeLabels[draft.secType] : "—"} />
-              <ReviewRow label="KW" value={draft.kwChoice === "znam" ? draft.kwNumber || "—" : "Pomoc / później"} />
+              <ReviewRow label="KW" value={draft.kwNumber || (draft.kwChoice === "pomoc" ? "Z wgranego dokumentu" : draft.kwChoice === "mobywatel" ? "Sprawdzę w mObywatelu" : "—")} />
               <ReviewRow label="Zdjęcia i pliki" value={`${photos.length}`} />
               <ReviewRow label="Kontakt" value={`${draft.email || "—"} · ${draft.phone || "—"}`} />
             </div>
