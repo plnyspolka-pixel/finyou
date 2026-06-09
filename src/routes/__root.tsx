@@ -8,9 +8,16 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
+import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import faviconAsset from "@/assets/favicon.png.asset.json";
 import { AuthProvider } from "@/hooks/use-auth";
+import {
+  saveWniosekResume,
+  loadWniosekResume,
+  isTrackedWniosekPath,
+  canResumeFrom,
+} from "@/lib/wniosek-resume";
 import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
 import { GoogleAnalytics } from "@/lib/google-analytics";
@@ -109,6 +116,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useWniosekResume();
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -128,4 +136,29 @@ function RootComponent() {
       </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+function useWniosekResume() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Auto-redirect na ostatni etap, jeśli wchodzimy na "/" lub "/wniosek-start"
+    const loc = router.state.location;
+    if (canResumeFrom(loc.pathname)) {
+      const saved = loadWniosekResume();
+      if (saved && saved.path !== loc.pathname + loc.searchStr) {
+        router.navigate({ href: saved.path, replace: true });
+      }
+    }
+
+    // Subskrybuj kolejne nawigacje i zapamiętuj etap wniosku
+    const unsub = router.subscribe("onResolved", ({ toLocation }) => {
+      if (isTrackedWniosekPath(toLocation.pathname)) {
+        saveWniosekResume(toLocation.pathname, toLocation.searchStr);
+      }
+    });
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
