@@ -3,7 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { computeLoanProgress } from "./loan-progress";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "./loan-progress.server";
-import { sendMailgunEmail } from "./mailgun-send.server";
+import { sendResendEmail } from "./resend-send.server";
 
 function admin() {
   const url = process.env.SUPABASE_URL!;
@@ -277,7 +277,7 @@ ${bodyInner}
 </body></html>`;
     const text = bodyInner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() + `\n\nLink: ${wniosekLink}`;
 
-    const res = await sendMailgunEmail({ to: loan.client.email, subject, text, html });
+    const res = await sendResendEmail({ to: loan.client.email, subject, text, html, replyTo: "kontakt@app.financeyou.pl" });
 
     if (!res.ok) {
       errors++;
