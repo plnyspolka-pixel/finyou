@@ -58,7 +58,7 @@ function KlientDashboard() {
     queryKey: ["client-bank-status", user?.id],
     queryFn: async () => {
       const { data } = await supabase.from("clients")
-        .select("bank_account, bank_account_verified_at, nip, company_name")
+        .select("bank_account, bank_account_verified_at, nip, company_name, bik_report_uploaded_at")
         .eq("user_id", user!.id).maybeSingle();
       return data;
     },
@@ -115,6 +115,8 @@ function KlientDashboard() {
             hasInvestorDescription={progress.flags.hasInvestorDescription}
             hasBankAccount={Boolean(clientRow?.bank_account_verified_at)}
             hasCompanyData={Boolean(clientRow?.nip && clientRow?.company_name)}
+            hasIncomeDocsBoost={progress.uploaded_documents.some((d) => /doch[oó]d|pit|zaświadczen/i.test(d))}
+            hasBikReport={Boolean((clientRow as any)?.bik_report_uploaded_at)}
           />
         </div>
 
