@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Download, Loader2, Lock, ShieldCheck, ShieldAlert, Upload } from "lucide-react";
+import { Download, FileText, Loader2, Lock, Phone, ShieldCheck, ShieldAlert, Upload } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
+import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/klient/profil")({
@@ -31,6 +32,14 @@ function KlientProfil() {
   const [verifyingBank, setVerifyingBank] = useState(false);
   const [bankVerification, setBankVerification] = useState<null | { ok: boolean; reason: string; ibanMatch: boolean; holderMatch: boolean; foundIbans: string[]; foundHolder: string }>(null);
   const verifyBank = useServerFn(verifyBankAccountDocument);
+  const sendOtp = useServerFn(sendPhoneOtp);
+  const verifyOtp = useServerFn(verifyPhoneOtp);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [bikUploading, setBikUploading] = useState(false);
+  const [showBikInstructions, setShowBikInstructions] = useState(false);
 
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
@@ -176,7 +185,7 @@ function KlientProfil() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
-            <span>Rachunek bankowy</span>
+            <span>Zweryfikowany rachunek bankowy</span>
             {row?.bank_account_verified_at ? (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="h-4 w-4" /> Zweryfikowany
@@ -254,6 +263,176 @@ function KlientProfil() {
             )}
             {row?.bank_account_verified_at && (
               <div className="text-xs text-muted-foreground">Ostatnia weryfikacja: {new Date(row.bank_account_verified_at).toLocaleString("pl-PL")}</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><Phone className="h-4 w-4" /> Zweryfikowany numer telefonu</span>
+            {row?.phone_verified_at ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" /> Zweryfikowany
+              </span>
+            ) : null}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Potwierdź swój numer telefonu kodem SMS — to przyspiesza kontakt i zwiększa wiarygodność wniosku.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {row?.phone_verified_at && row?.phone_verified_value ? (
+            <div className="text-sm">
+              <div className="font-medium">{row.phone_verified_value}</div>
+              <div className="text-xs text-muted-foreground">Zweryfikowano: {new Date(row.phone_verified_at).toLocaleString("pl-PL")}</div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-3 md:grid-cols-[1fr_auto] items-end">
+            <div>
+              <Label>Numer telefonu</Label>
+              <Input maxLength={32} value={f.phone} onChange={(e) => { setF({ ...f, phone: e.target.value }); setOtpSent(false); }} placeholder="+48 600 000 000" />
+            </div>
+            <Button
+              variant="outline"
+              disabled={otpSending || !f.phone.trim()}
+              onClick={async () => {
+                setOtpSending(true);
+                const t = toast.loading("Wysyłam kod SMS…");
+                try {
+                  const r = await sendOtp({ data: { phone: f.phone } });
+                  if (r.ok) { setOtpSent(true); toast.success("Kod wysłany SMS-em", { id: t }); }
+                  else if (r.reason === "invalid_phone") toast.error("Niepoprawny numer telefonu", { id: t });
+                  else if (r.reason === "rate_limited") toast.error(`Poczekaj ${r.retryInSec ?? 60} s przed kolejnym kodem`, { id: t });
+                  else if (r.reason === "sms_failed") toast.error("Nie udało się wysłać SMS-a", { id: t });
+                  else toast.error("Nie udało się wysłać kodu", { id: t });
+                } catch (e: any) { toast.error(e?.message ?? "Błąd", { id: t }); }
+                finally { setOtpSending(false); }
+              }}
+            >
+              {otpSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {row?.phone_verified_at ? "Wyślij nowy kod" : "Wyślij kod SMS"}
+            </Button>
+          </div>
+
+          {otpSent && (
+            <div className="grid gap-3 md:grid-cols-[1fr_auto] items-end rounded-md border bg-muted/30 p-3">
+              <div>
+                <Label>Kod z SMS-a (6 cyfr)</Label>
+                <Input inputMode="numeric" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
+              </div>
+              <Button
+                disabled={otpVerifying || otpCode.length < 4}
+                onClick={async () => {
+                  setOtpVerifying(true);
+                  const t = toast.loading("Sprawdzam kod…");
+                  try {
+                    const r = await verifyOtp({ data: { code: otpCode } });
+                    if (r.ok) {
+                      toast.success("Numer zweryfikowany", { id: t });
+                      setOtpCode(""); setOtpSent(false);
+                      const { data } = await supabase.from("clients").select("*").eq("user_id", user!.id).maybeSingle();
+                      setRow(data);
+                      if (data?.phone) setF((x) => ({ ...x, phone: data.phone ?? x.phone }));
+                    } else if (r.reason === "wrong_code") toast.error("Nieprawidłowy kod", { id: t });
+                    else if (r.reason === "expired") toast.error("Kod wygasł — wyślij nowy", { id: t });
+                    else if (r.reason === "too_many") toast.error("Za dużo prób — wyślij nowy kod", { id: t });
+                    else toast.error("Najpierw wyślij kod", { id: t });
+                  } catch (e: any) { toast.error(e?.message ?? "Błąd", { id: t }); }
+                  finally { setOtpVerifying(false); }
+                }}
+              >
+                {otpVerifying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Potwierdź kod
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Raport BIK</span>
+            {row?.bik_report_uploaded_at ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" /> Wgrany
+              </span>
+            ) : null}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">Aktualny raport BIK (Biuro Informacji Kredytowej) o sobie — przyspiesza analizę i zwiększa szanse na lepsze warunki.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {row?.bik_report_uploaded_at && (
+            <div className="text-xs text-muted-foreground">
+              Plik: <span className="font-medium text-foreground">{row.bik_report_name ?? "raport"}</span> · wgrany {new Date(row.bik_report_uploaded_at).toLocaleString("pl-PL")}
+            </div>
+          )}
+
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="file"
+              accept="application/pdf,image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file || !user) return;
+                if (file.size > 20 * 1024 * 1024) { toast.error("Plik jest za duży (max 20 MB)"); return; }
+                setBikUploading(true);
+                const t = toast.loading("Wysyłam raport BIK…");
+                try {
+                  const path = `bik/${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+                  const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+                  if (up.error) { toast.error(up.error.message, { id: t }); return; }
+                  const payload = { bik_report_path: path, bik_report_uploaded_at: new Date().toISOString(), bik_report_name: file.name };
+                  const upd = row?.id
+                    ? await supabase.from("clients").update(payload).eq("id", row.id)
+                    : await supabase.from("clients").insert({ ...payload, user_id: user.id, first_name: f.first_name || "", last_name: f.last_name || "" });
+                  if (upd.error) { toast.error(upd.error.message, { id: t }); return; }
+                  const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
+                  setRow(data);
+                  toast.success("Raport BIK zapisany", { id: t });
+                } catch (err: any) { toast.error(err?.message ?? "Błąd uploadu", { id: t }); }
+                finally { setBikUploading(false); }
+              }}
+            />
+            <Button asChild variant={row?.bik_report_uploaded_at ? "outline" : "cta"} size="sm" disabled={bikUploading}>
+              <span>
+                {bikUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…</>
+                  : <><Upload className="mr-2 h-4 w-4" /> {row?.bik_report_uploaded_at ? "Wgraj nowy raport" : "Wgraj raport BIK (PDF)"}</>}
+              </span>
+            </Button>
+          </label>
+
+          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+            <button
+              type="button"
+              className="text-sm font-medium text-primary hover:underline"
+              onClick={() => setShowBikInstructions((v) => !v)}
+            >
+              {showBikInstructions ? "Ukryj instrukcję" : "Jak pobrać raport BIK o sobie — krok po kroku"}
+            </button>
+            {showBikInstructions && (
+              <div className="space-y-2 text-muted-foreground">
+                <p>Każda osoba ma prawo bezpłatnie raz na 6 miesięcy pobrać Informację Ustawową (kopia danych z BIK). Płatny „Raport BIK" (pełny scoring) kupisz w każdej chwili na <a href="https://www.bik.pl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">bik.pl</a>.</p>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li>Wejdź na <a href="https://www.bik.pl" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.bik.pl</a> i kliknij <b>Zaloguj się</b> (jeśli nie masz konta — <b>Zarejestruj się</b>).</li>
+                  <li>Załóż konto: podaj imię, nazwisko, PESEL, e-mail, numer telefonu, serię i numer dowodu osobistego.</li>
+                  <li>Potwierdź swoją tożsamość — najszybciej przelewem weryfikacyjnym 1 gr ze swojego konta bankowego (BIK porówna dane) lub przez mojeID / mObywatel.</li>
+                  <li>Po zalogowaniu wybierz produkt:
+                    <ul className="list-disc pl-5 mt-1">
+                      <li><b>Informacja Ustawowa</b> — bezpłatnie raz na 6 miesięcy (kopia danych z BIK, bez scoringu).</li>
+                      <li><b>Raport BIK</b> — pełny raport z oceną punktową (płatny, ok. 49 zł).</li>
+                      <li><b>Pakiet Raport BIK 6 / 12</b> — kilka raportów w pakiecie taniej.</li>
+                    </ul>
+                  </li>
+                  <li>Zapłać (jeśli wybrałeś płatny raport) — BLIK, karta lub przelew online.</li>
+                  <li>Raport pojawi się w sekcji <b>Moje produkty</b> w ciągu kilku minut. <b>Pobierz go w formacie PDF</b>.</li>
+                  <li>Wróć tutaj i kliknij „Wgraj raport BIK (PDF)" powyżej.</li>
+                </ol>
+                <p className="text-[11px]">Wskazówka: dla naszej analizy najlepszy jest pełny <b>Raport BIK</b> — zawiera scoring. Informacja Ustawowa też pomoże, ale ma mniej danych.</p>
+              </div>
             )}
           </div>
         </CardContent>

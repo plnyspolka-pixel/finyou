@@ -1475,6 +1475,9 @@ export type Database = {
           bank_account_document_path: string | null
           bank_account_holder_ocr: string | null
           bank_account_verified_at: string | null
+          bik_report_name: string | null
+          bik_report_path: string | null
+          bik_report_uploaded_at: string | null
           city: string | null
           company_name: string | null
           consent_email: boolean
@@ -1505,8 +1508,15 @@ export type Database = {
           pesel: string | null
           phone: string | null
           phone_normalized: string | null
+          phone_otp_attempts: number
+          phone_otp_expires_at: string | null
+          phone_otp_hash: string | null
+          phone_otp_sent_at: string | null
+          phone_otp_target: string | null
           phone_raw: string | null
           phone_valid: boolean | null
+          phone_verified_at: string | null
+          phone_verified_value: string | null
           postal_code: string | null
           regon: string | null
           source: string | null
@@ -1520,6 +1530,9 @@ export type Database = {
           bank_account_document_path?: string | null
           bank_account_holder_ocr?: string | null
           bank_account_verified_at?: string | null
+          bik_report_name?: string | null
+          bik_report_path?: string | null
+          bik_report_uploaded_at?: string | null
           city?: string | null
           company_name?: string | null
           consent_email?: boolean
@@ -1550,8 +1563,15 @@ export type Database = {
           pesel?: string | null
           phone?: string | null
           phone_normalized?: string | null
+          phone_otp_attempts?: number
+          phone_otp_expires_at?: string | null
+          phone_otp_hash?: string | null
+          phone_otp_sent_at?: string | null
+          phone_otp_target?: string | null
           phone_raw?: string | null
           phone_valid?: boolean | null
+          phone_verified_at?: string | null
+          phone_verified_value?: string | null
           postal_code?: string | null
           regon?: string | null
           source?: string | null
@@ -1565,6 +1585,9 @@ export type Database = {
           bank_account_document_path?: string | null
           bank_account_holder_ocr?: string | null
           bank_account_verified_at?: string | null
+          bik_report_name?: string | null
+          bik_report_path?: string | null
+          bik_report_uploaded_at?: string | null
           city?: string | null
           company_name?: string | null
           consent_email?: boolean
@@ -1595,8 +1618,15 @@ export type Database = {
           pesel?: string | null
           phone?: string | null
           phone_normalized?: string | null
+          phone_otp_attempts?: number
+          phone_otp_expires_at?: string | null
+          phone_otp_hash?: string | null
+          phone_otp_sent_at?: string | null
+          phone_otp_target?: string | null
           phone_raw?: string | null
           phone_valid?: boolean | null
+          phone_verified_at?: string | null
+          phone_verified_value?: string | null
           postal_code?: string | null
           regon?: string | null
           source?: string | null
