@@ -3447,6 +3447,62 @@ export type Database = {
           },
         ]
       }
+      lead_follow_up_schedule: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          error_message: string | null
+          external_id: string | null
+          id: string
+          lead_id: string
+          metadata: Json | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          step_index: number
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          step_index: number
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_index?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_follow_up_schedule_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           application_data: Json
@@ -4183,6 +4239,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meta_lead_forms: {
+        Row: {
+          created_at: string
+          form_name: string | null
+          id: string
+          is_enabled: boolean
+          last_error: string | null
+          last_lead_at: string | null
+          last_synced_at: string | null
+          meta_form_id: string
+          meta_page_id: string | null
+          page_name: string | null
+          total_leads_pulled: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          form_name?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_error?: string | null
+          last_lead_at?: string | null
+          last_synced_at?: string | null
+          meta_form_id: string
+          meta_page_id?: string | null
+          page_name?: string | null
+          total_leads_pulled?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          form_name?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_error?: string | null
+          last_lead_at?: string | null
+          last_synced_at?: string | null
+          meta_form_id?: string
+          meta_page_id?: string | null
+          page_name?: string | null
+          total_leads_pulled?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       meta_leads: {
         Row: {
