@@ -46,7 +46,7 @@ type PhotoItem = {
   name: string;
   type: string;
   url: string;
-  bucket: "wnetrze" | "zewnetrze" | "dokument";
+  bucket: string;
 };
 
 type LoanDraft = {
