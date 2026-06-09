@@ -13,6 +13,8 @@ interface Props {
   hasIncomeDocs?: boolean;
   hasCompanyData?: boolean;
   hasBankAccount?: boolean;
+  hasIncomeDocsBoost?: boolean;
+  hasBikReport?: boolean;
 }
 
 
@@ -46,7 +48,10 @@ export function ProgressChecklist({
   hasIncomeDocs = false,
   hasCompanyData = false,
   hasBankAccount = false,
+  hasIncomeDocsBoost = false,
+  hasBikReport = false,
 }: Props) {
+  void hasIncomeDocs; void hasBankAccount;
 
   const missingByLabel = new Map<string, MissingItem>(progress.missing.map((m) => [m.label, m]));
   const uploadedLabels = new Set(progress.uploaded_documents);
@@ -114,18 +119,25 @@ export function ProgressChecklist({
       hint: "Krótka historia, dlaczego potrzebujesz finansowania — buduje zaufanie inwestorów.",
     },
     {
-      done: hasBankAccount,
-      label: "Rachunek bankowy do spłat",
-      ctaHref: "/klient/profil",
-      ctaLabel: hasBankAccount ? "Zarządzaj" : "Dodaj i zweryfikuj",
-      hint: "Podaj numer rachunku i wgraj dokument bankowy — OCR sprawdzi czy dane się zgadzają.",
-    },
-    {
       done: hasCompanyData,
       label: "Pełne dane firmowe",
       ctaHref: "/klient/profil",
       ctaLabel: hasCompanyData ? "Zarządzaj" : "Uzupełnij",
       hint: "NIP, REGON, KRS i adres — automatycznie pobierzemy z rejestrów państwowych.",
+    },
+    {
+      done: hasIncomeDocsBoost,
+      label: "Dokumenty dochodowe",
+      ctaHref: "/klient/profil",
+      ctaLabel: hasIncomeDocsBoost ? "Zarządzaj" : "Dodaj",
+      hint: "PIT, zaświadczenia o dochodach — pokazują inwestorowi Twoją zdolność spłaty.",
+    },
+    {
+      done: hasBikReport,
+      label: "Raport BIK",
+      ctaHref: "/klient/profil",
+      ctaLabel: hasBikReport ? "Zarządzaj" : "Wgraj",
+      hint: "Pełny raport BIK — najmocniej zwiększa zaufanie inwestora do Twojej historii kredytowej.",
     },
   ];
 
