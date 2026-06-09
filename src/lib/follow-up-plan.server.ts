@@ -329,7 +329,7 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
           attempts: 1,
         }).eq("id", row.id);
         if (r.ok) {
-          await logComm(row.lead_id, "email", lead.email, tpl.body(vars), tpl.subject, r.id, row.step_index);
+          await logComm(row.lead_id, "email", lead.email, tpl.body(vars), tpl.subject, r.id ?? null, row.step_index);
           sent++;
         }
       } else if (row.channel === "sms") {
