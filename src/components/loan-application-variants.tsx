@@ -351,10 +351,36 @@ function PhotoUploader({
   );
 }
 
-export function LinearLoanApplication({ embedded = false }: { embedded?: boolean } = {}) {
+export type LoanWizardPrefill = Partial<LoanDraft>;
+
+export function LinearLoanApplication({
+  embedded = false,
+  prefill,
+  locked = false,
+  onSubmit,
+}: {
+  embedded?: boolean;
+  prefill?: LoanWizardPrefill;
+  locked?: boolean;
+  onSubmit?: (draft: LoanDraft) => Promise<void> | void;
+} = {}) {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
   const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const prefillAppliedRef = useRef(false);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
+
+  // Hydrate z istniejących danych klienta (raz, kiedy prefill się pojawi)
+  useEffect(() => {
+    if (!prefill || prefillAppliedRef.current) return;
+    const hasAny = Object.values(prefill).some((v) => v !== undefined && v !== null && v !== "");
+    if (!hasAny) return;
+    prefillAppliedRef.current = true;
+    (Object.keys(prefill) as (keyof LoanDraft)[]).forEach((k) => {
+      const v = prefill[k];
+      if (v !== undefined && v !== null && v !== "") update(k, v as never);
+    });
+  }, [prefill]);
 
   // Krok 2 ("Poznaj ofertę / Zostaw kontakt") jest tylko dla niezalogowanych —
   // zalogowanego klienta przeskakujemy automatycznie.
@@ -381,19 +407,47 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
 
   const advance = (delta: 1 | -1) => {
     let target = step + delta;
-    // Omijaj krok 2 dla zalogowanych w obie strony
     if (user && target === 2) target += delta;
     return Math.max(0, Math.min(linearSteps.length - 1, target));
   };
 
-  const next = () => {
+  const next = async () => {
     if (!canContinue()) {
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
       return;
     }
-    if (step < linearSteps.length - 1) setStep(advance(1));
-    else toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
+    if (step < linearSteps.length - 1) {
+      setStep(advance(1));
+      return;
+    }
+    if (onSubmit) {
+      try {
+        setSubmitting(true);
+        await onSubmit(draft);
+      } catch (e) {
+        console.error(e);
+        toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
+    }
   };
+
+  if (locked) {
+    return (
+      <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-6 text-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+        <div className="flex items-center gap-2 text-base font-bold text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="h-5 w-5" /> Wniosek wysłany do analizy
+        </div>
+        <p className="mt-2 text-muted-foreground">
+          Twój wniosek trafił do nas z pełnym kompletem danych. Nie możesz go już edytować — analityk skontaktuje się z Tobą jak tylko zakończy ocenę. Status na pulpicie aktualizuje się automatycznie.
+        </p>
+      </div>
+    );
+  }
+
 
   const innerContent = (
       <div className={embedded
