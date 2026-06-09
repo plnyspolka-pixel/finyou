@@ -36,6 +36,7 @@ export const updateAiSettings = createServerFn({ method: "POST" })
         enable_db_read: z.boolean(),
         enable_db_write: z.boolean(),
         enable_file_read: z.boolean(),
+        enable_file_write: z.boolean(),
         max_tokens: z.number().int().min(500).max(16000),
         temperature: z.number().min(0).max(1),
       })
