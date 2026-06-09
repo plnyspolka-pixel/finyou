@@ -355,6 +355,12 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
   const [step, setStep] = useState(0);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
 
+  // Krok 2 ("Poznaj ofertę / Zostaw kontakt") jest tylko dla niezalogowanych —
+  // zalogowanego klienta przeskakujemy automatycznie.
+  useEffect(() => {
+    if (user && step === 2) setStep(3);
+  }, [user, step]);
+
   const gateUnlocked =
     !!user ||
     (!!draft.firstName.trim() && !!draft.email.trim() && !!draft.phone.trim());
@@ -372,12 +378,19 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
     return true;
   };
 
+  const advance = (delta: 1 | -1) => {
+    let target = step + delta;
+    // Omijaj krok 2 dla zalogowanych w obie strony
+    if (user && target === 2) target += delta;
+    return Math.max(0, Math.min(linearSteps.length - 1, target));
+  };
+
   const next = () => {
     if (!canContinue()) {
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
       return;
     }
-    if (step < linearSteps.length - 1) setStep((current) => current + 1);
+    if (step < linearSteps.length - 1) setStep(advance(1));
     else toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
   };
 
