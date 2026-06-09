@@ -80,18 +80,14 @@ export const ANTHROPIC_TOOLS = [
   },
 ];
 
+// Blokujemy tylko pliki z sekretami; reszta projektu dostępna do odczytu.
+const FORBIDDEN_FILE = /(^|\/)(\.env(\..*)?|\.git\/|node_modules\/)/i;
+
 function safeFilePath(rel: string): string | null {
   const normalized = path.normalize(rel).replace(/^[/\\]+/, "");
   if (normalized.includes("..")) return null;
-  const allowed =
-    normalized.startsWith("src/") ||
-    normalized.startsWith("src\\") ||
-    normalized.startsWith("supabase/migrations/") ||
-    normalized.startsWith("public/") ||
-    normalized === "package.json" ||
-    normalized === "vite.config.ts" ||
-    normalized === "tsconfig.json";
-  return allowed ? path.join(PROJECT_ROOT, normalized) : null;
+  if (FORBIDDEN_FILE.test(normalized.replace(/\\/g, "/"))) return null;
+  return path.join(PROJECT_ROOT, normalized);
 }
 
 export async function runTool(
