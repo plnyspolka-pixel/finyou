@@ -567,7 +567,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           )}
 
           <div className="mt-10 flex items-center justify-between gap-3 border-t border-border pt-5">
-            <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>
+            <Button type="button" variant="outline" disabled={step === 0} onClick={() => setStep(advance(-1))}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
             </Button>
             <Button type="button" variant="cta" size="lg" className="min-w-0 flex-1 whitespace-normal text-center leading-tight sm:flex-none" onClick={next}>
