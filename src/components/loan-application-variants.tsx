@@ -465,15 +465,29 @@ export function LinearLoanApplication() {
           {step === 5 && (
             <div className="space-y-5">
               <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
-                <KwTile value="znam" current={draft.kwChoice} title="Znam numer" description="Wpiszę KW ręcznie" />
-                <KwTile value="pomoc" current={draft.kwChoice} title="Potrzebuję pomocy" description="Dodam dokument lub zdjęcie" />
-                <KwTile value="pozniej" current={draft.kwChoice} title="Później" description="Ustalimy telefonicznie" />
+                <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
+                <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Pokażemy krok po kroku" />
+                <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument z KW" description="Skan, akt notarialny, zdjęcie" />
               </RadioGroup>
+
               {draft.kwChoice === "znam" && (
                 <div className="space-y-2">
                   <Label htmlFor="linear-kw">Numer księgi wieczystej</Label>
                   <Input id="linear-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
-                  <p className="text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z księgi wieczystej.</p>
+                  <p className="text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z KW.</p>
+                </div>
+              )}
+
+              {draft.kwChoice === "mobywatel" && (
+                <MobywatelKwGuide
+                  kwNumber={draft.kwNumber}
+                  onChange={(value) => update("kwNumber", value.toUpperCase())}
+                />
+              )}
+
+              {draft.kwChoice === "pomoc" && (
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  Świetnie. Dokument z numerem KW (akt notarialny, wypis, zaświadczenie) wgrasz w następnym kroku „Zdjęcia i dokumenty”. Wszystkie dane odczytamy z dokumentu.
                 </div>
               )}
             </div>
