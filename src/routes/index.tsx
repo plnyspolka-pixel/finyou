@@ -133,7 +133,7 @@ function Landing() {
             <FinanceYouLogo variant="light" size="lg" />
           </Link>
           <nav className="hidden items-center gap-6 lg:flex">
-            <a href="#kalkulator" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
+            <a href="#wniosek" className="text-sm font-medium text-muted-foreground hover:text-foreground">Kalkulator</a>
             <a href="#jak-to-dziala" className="text-sm font-medium text-muted-foreground hover:text-foreground">Jak to działa</a>
             <a href="#faq" className="text-sm font-medium text-muted-foreground hover:text-foreground">FAQ</a>
             <Link to="/blog" className="text-sm font-medium text-muted-foreground hover:text-foreground">Blog</Link>
@@ -148,7 +148,7 @@ function Landing() {
             </a>
           </div>
           <Button asChild size="sm" className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:brightness-110 transition">
-            {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#kalkulator">Sprawdź ratę</a>}
+            {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#wniosek">Sprawdź ratę</a>}
           </Button>
         </div>
       </header>
@@ -230,7 +230,7 @@ function Landing() {
           </div>
 
           {/* Prawa kolumna — WNIOSEK jako główny element */}
-          <div className="relative">
+          <div id="wniosek" className="relative scroll-mt-24">
             <div className="absolute -inset-4 -rotate-1 rounded-3xl bg-gradient-to-br from-accent/25 to-[oklch(0.65_0.13_235)]/25 blur-2xl" />
             <div className="relative w-full max-w-full overflow-hidden rounded-3xl border border-white/15 bg-card text-foreground shadow-2xl">
               <BorderBeam size={260} duration={11} colorFrom="#fbbf24" colorTo="#38bdf8" borderWidth={1.5} />
@@ -257,7 +257,7 @@ function Landing() {
               </p>
             </div>
             <Button asChild variant="outline" className="border-primary/30 bg-card">
-              <a href="#kalkulator">
+              <a href="#wniosek">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Sprawdź swoją ratę
               </a>
@@ -318,7 +318,7 @@ function Landing() {
               </h2>
             </div>
             <Button asChild variant="outline" className="border-primary/30 bg-card">
-              <a href="#kalkulator">
+              <a href="#wniosek">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Zacznij od kalkulatora
               </a>
@@ -375,7 +375,7 @@ function Landing() {
 
           <div className="mt-10 text-center">
             <Button asChild size="lg" className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:brightness-110 transition">
-              <a href="#kalkulator">
+              <a href="#wniosek">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Wróć do kalkulatora
               </a>
@@ -398,7 +398,7 @@ function Landing() {
               sytuacji ma sens.
             </p>
             <Button asChild size="lg" className="mt-6 bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-xl shadow-accent/40 hover:shadow-2xl hover:brightness-110 transition">
-              <a href="#kalkulator">
+              <a href="#wniosek">
                 <IconCalc className="mr-2 h-4 w-4" />
                 Najpierw sprawdź ratę
               </a>
@@ -472,7 +472,7 @@ function Landing() {
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Informacje</h3>
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li><a href="#kalkulator" className="hover:text-foreground">Kalkulator</a></li>
+                <li><a href="#wniosek" className="hover:text-foreground">Kalkulator</a></li>
                 <li><a href="#jak-to-dziala" className="hover:text-foreground">Jak to działa</a></li>
                 <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
                 <li><Link to="/blog" className="hover:text-foreground">Blog</Link></li>
@@ -496,7 +496,7 @@ function Landing() {
           size="lg"
           className="w-full bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/40 hover:brightness-110 transition"
         >
-          <a href="#kalkulator">
+          <a href="#wniosek">
             <IconCalc className="mr-2 h-4 w-4" />
             Wylicz ratę
             <ArrowRight className="ml-2 h-4 w-4" />
