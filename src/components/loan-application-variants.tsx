@@ -36,7 +36,6 @@ const SEC_TO_PROP: Record<SecurityType, string> = {
   lokal_uslugowy: "lokal_uslugowy",
   dzialka_budowlana: "dzialka_budowlana",
   grunt_rolny: "grunt_rolny",
-  udzial_w_nieruchomosci: "udzial_w_nieruchomosci",
   inna: "inna",
 };
 
