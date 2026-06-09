@@ -142,34 +142,70 @@ export function AiAdminChat() {
     setRecording(false);
   };
 
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const next: Attachment[] = [];
+    for (const f of Array.from(files)) {
+      if (f.size > 2_000_000) {
+        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
+        toast.error(`${f.name}: plik > 2MB, pominięty`);
+        continue;
+      }
+      const isText = TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json";
+      if (!isText) {
+        next.push({ name: f.name, size: f.size, type: f.type, skipped: true });
+        toast.warning(`${f.name}: format binarny (PDF/obraz) niewspierany — wgraj tekst, CSV, MD, JSON itp.`);
+        continue;
+      }
+      try {
+        const text = await f.text();
+        next.push({ name: f.name, size: f.size, type: f.type, text: text.slice(0, MAX_INLINE) });
+      } catch (e) {
+        toast.error(`${f.name}: nie udało się odczytać (${(e as Error).message})`);
+      }
+    }
+    setAttachments((prev) => [...prev, ...next]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const submit = () => {
     const text = input.trim();
-    if (!text || send.isPending) return;
-    // Optimistic: render user message immediately
+    const validAtt = attachments.filter((a) => a.text);
+    if ((!text && validAtt.length === 0) || send.isPending) return;
+    let full = text;
+    if (validAtt.length > 0) {
+      const parts = validAtt.map(
+        (a) => `\n\n----- ZAŁĄCZNIK: ${a.name} (${a.size} B) -----\n${a.text}\n----- KONIEC ZAŁĄCZNIKA -----`
+      );
+      full = (text || "(załączniki w wiadomości)") + parts.join("");
+    }
     qc.setQueryData(["ai-admin-msgs", convId], (old: { messages: Message[] } | undefined) => ({
       messages: [
         ...(old?.messages ?? []),
         {
           id: `tmp-${Date.now()}`,
           role: "user" as const,
-          content: text,
+          content: full,
           tool_calls: null,
           tool_results: null,
           created_at: new Date().toISOString(),
         },
       ],
     }));
-    send.mutate(text);
+    send.mutate(full);
+    setAttachments([]);
   };
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105"
+        className="fixed top-3 right-3 z-50 hidden md:flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105"
         aria-label="AI Administrator"
       >
-        <Bot className="h-6 w-6" />
+        <Bot className="h-4 w-4" />
+        AI Administrator
+        <ChevronDown className="h-4 w-4" />
       </button>
     );
   }
