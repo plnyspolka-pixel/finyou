@@ -419,6 +419,7 @@ export function LinearLoanApplication({ embedded = false }: { embedded?: boolean
           <Progress value={currentProgress} />
           <ol className="mt-5 space-y-2">
             {linearSteps.map((label, index) => {
+              if (user && index === 2) return null;
               const done = index < step;
               const active = index === step;
               return (
