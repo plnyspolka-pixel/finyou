@@ -6,8 +6,9 @@ import {
   Container,
   Head,
   Heading,
-  Img,
   Html,
+  Img,
+  Link,
   Preview,
   Text,
 } from '@react-email/components'
