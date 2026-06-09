@@ -39,6 +39,9 @@ export const RecoveryEmail = ({
           Jeśli to nie Ty prosiłeś o reset hasła, możesz zignorować tę wiadomość.
           Twoje hasło nie zostanie zmienione.
         </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        </Text>
       </Container>
     </Body>
   </Html>

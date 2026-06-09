@@ -38,6 +38,9 @@ export const MagicLinkEmail = ({
         <Text style={footer}>
           Jeśli nie prosiłeś o link logowania, możesz zignorować tę wiadomość.
         </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        </Text>
       </Container>
     </Body>
   </Html>

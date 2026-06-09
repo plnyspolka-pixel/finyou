@@ -55,6 +55,9 @@ export const EmailChangeEmail = ({
           Jeśli to nie Ty prosiłeś o tę zmianę, natychmiast zabezpiecz swoje
           konto.
         </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        </Text>
       </Container>
     </Body>
   </Html>

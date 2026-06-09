@@ -46,6 +46,9 @@ export const InviteEmail = ({
           Jeśli nie spodziewałeś się tego zaproszenia, możesz zignorować tę
           wiadomość.
         </Text>
+        <Text style={{ fontSize: "11px", color: "#bbbbbb", marginTop: "32px", textAlign: "center" as const }}>
+          <Link href="https://financeyou.pl/email/unsubscribe" style={{ color: "#bbbbbb", textDecoration: "underline" }}>Nie chcę otrzymywać tych wiadomości</Link>
+        </Text>
       </Container>
     </Body>
   </Html>
