@@ -12,6 +12,13 @@ function normalizePhone(input: string): string {
   return s.startsWith("+") ? s : `+${d}`;
 }
 
+/** Wersja publiczna `normalizePhone` — używana m.in. przez calculator-followup, żeby
+ *  dedup i throttle widziały ten sam string co reszta toru voicebota. */
+export function normalizePhoneForVoicebot(input: string): string {
+  return normalizePhone(input);
+}
+
+
 function admin() {
   const url = process.env.SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
