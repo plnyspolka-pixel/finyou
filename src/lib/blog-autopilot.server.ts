@@ -184,8 +184,8 @@ async function writeArticleFromNews(
   ];
 
   const audienceBrief = audience === "investor"
-    ? `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl/inwestor)" wpleć 1 raz.`
-    : `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://app.financeyou.pl/embed/wniosek)" wpleć 1-2 razy.`;
+    ? `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl)" wpleć 1 raz.`
+    : `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[sprawdź warunki na financeyou.pl](https://financeyou.pl)" wpleć 1-2 razy.`;
 
   const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}`;
 
@@ -220,14 +220,14 @@ Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "PO�
   return args as ArticleDraft;
 }
 
-async function generateCover(lovableKey: string, prompt: string): Promise<string | null> {
+async function tryGenerate(lovableKey: string, model: string, prompt: string): Promise<string | null> {
   try {
     const res = await fetch(IMAGE_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        prompt: `Editorial finance magazine cover photo, photorealistic, soft natural light, Polish/European context, no text, no logos. Scene: ${prompt}. 16:9, cinematic.`,
+        model,
+        prompt,
         n: 1,
         size: "1536x1024",
         response_format: "url",
@@ -235,13 +235,32 @@ async function generateCover(lovableKey: string, prompt: string): Promise<string
     });
     if (!res.ok) return null;
     const j: any = await res.json();
-    const url: string | undefined = j.data?.[0]?.url ?? j.data?.[0]?.b64_json
-      ? (j.data?.[0]?.url ?? `data:image/png;base64,${j.data[0].b64_json}`)
-      : undefined;
-    return url ?? null;
+    const item = j.data?.[0];
+    if (!item) return null;
+    if (item.url) return item.url as string;
+    if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    return null;
   } catch {
     return null;
   }
+}
+
+async function generateCover(lovableKey: string, prompt: string): Promise<string> {
+  // Każdy artykuł MUSI mieć okładkę. Sygnujemy "Finance You" w narożniku
+  // (wordmark prompt-based; zarówno Gemini jak i fallback openai/gpt-image-2
+  // potrafią narysować małą czystą typografię).
+  const fullPrompt = `Editorial finance magazine cover, photorealistic, soft natural light, Polish/European context. Scene: ${prompt}. 16:9 cinematic.
+In the bottom-right corner render a small clean white sans-serif wordmark text exactly: "Finance You" — subtle soft drop shadow, no other text, no logos, no UI elements anywhere else in the image.`;
+
+  for (const model of [
+    "google/gemini-2.5-flash-image-preview",
+    "openai/gpt-image-2",
+    "google/gemini-2.5-flash-image-preview",
+  ]) {
+    const url = await tryGenerate(lovableKey, model, fullPrompt);
+    if (url) return url;
+  }
+  throw new Error("Cover generation failed for all models — refusing to publish without an image.");
 }
 
 export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
@@ -278,8 +297,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
 
-  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://app.financeyou.pl/embed/wniosek";
-  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek";
+  const ctaUrl = "https://financeyou.pl";
+  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Sprawdź na financeyou.pl";
 
   const { data: inserted, error } = await supabaseAdmin
     .from("ai_seo_articles")

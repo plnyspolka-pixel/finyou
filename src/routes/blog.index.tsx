@@ -44,7 +44,7 @@ function BlogIndex() {
           <nav className="flex items-center gap-4 text-sm">
             <Link to="/blog" className="text-muted-foreground hover:text-foreground">Blog</Link>
             <a href="https://financeyou.pl" className="text-muted-foreground hover:text-foreground">financeyou.pl</a>
-            <Button asChild size="sm"><a href="https://app.financeyou.pl/embed/wniosek" target="_blank" rel="noopener">Złóż wniosek</a></Button>
+            <Button asChild size="sm"><a href="https://financeyou.pl" target="_blank" rel="noopener">Finance You</a></Button>
           </nav>
         </div>
       </header>
