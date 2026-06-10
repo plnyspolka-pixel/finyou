@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { NextStepCard } from "@/components/client/NextStepCard";
 import { ProgressChecklist } from "@/components/client/ProgressChecklist";
+import { InlineMissingActions } from "@/components/client/InlineMissingActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,16 +55,45 @@ function KlientDashboard() {
     enabled: Boolean(user),
   });
 
-  const { data: clientRow } = useQuery({
-    queryKey: ["client-bank-status", user?.id],
+  const { data: clientRow, refetch: refetchClient } = useQuery({
+    queryKey: ["client-dashboard-row", user?.id],
     queryFn: async () => {
       const { data } = await supabase.from("clients")
-        .select("bank_account, bank_account_verified_at, nip, company_name, bik_report_uploaded_at")
+        .select("id, user_id, first_name, last_name, email, phone, bank_account, bank_account_verified_at, nip, company_name, bik_report_uploaded_at")
         .eq("user_id", user!.id).maybeSingle();
       return data;
     },
     enabled: Boolean(user),
   });
+
+  const { data: loanRow, refetch: refetchLoan } = useQuery({
+    queryKey: ["client-dashboard-loan", clientRow?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("loan_applications")
+        .select("id, loan_amount, preferred_period_months, max_monthly_payment, annual_investor_rate, investor_description")
+        .eq("client_id", clientRow!.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+    enabled: Boolean(clientRow?.id),
+  });
+
+  const { data: propertyRow, refetch: refetchProperty } = useQuery({
+    queryKey: ["client-dashboard-property", loanRow?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("properties")
+        .select("id, property_type, land_register_number, area_sqm, loan_application_id")
+        .eq("loan_application_id", loanRow!.id).maybeSingle();
+      return data;
+    },
+    enabled: Boolean(loanRow?.id),
+  });
+
+  const refetchAll = () => {
+    void refetch();
+    void refetchClient();
+    void refetchLoan();
+    void refetchProperty();
+  };
 
   if (authLoading || isLoading) {
     return (
@@ -105,6 +135,17 @@ function KlientDashboard() {
 
       <NextStepCard progress={progress} />
 
+      {user && (
+        <InlineMissingActions
+          progress={progress}
+          userId={user.id}
+          client={clientRow ?? null}
+          loan={loanRow ?? null}
+          property={propertyRow ?? null}
+          onChanged={refetchAll}
+        />
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ProgressChecklist
@@ -117,6 +158,7 @@ function KlientDashboard() {
             hasCompanyData={Boolean(clientRow?.nip && clientRow?.company_name)}
             hasIncomeDocsBoost={progress.uploaded_documents.some((d) => /doch[oó]d|pit|zaświadczen/i.test(d))}
             hasBikReport={Boolean((clientRow as any)?.bik_report_uploaded_at)}
+            hideMissing
           />
         </div>
 
