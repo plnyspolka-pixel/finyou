@@ -21,10 +21,13 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
       .eq("user_id", userId)
       .maybeSingle();
 
-    const phone = (profile?.phone ?? "").trim();
-    if (!phone || phone.length < 9) {
+    const rawPhone = (profile?.phone ?? "").trim();
+    if (!rawPhone || rawPhone.length < 9) {
       return { ok: false, reason: "no_phone" as const };
     }
+    // Normalizacja do +48… żeby dedup i throttle w placeOutboundCallInternal działały.
+    const { normalizePhoneForVoicebot } = await import("@/lib/voicebot.functions");
+    const phone = normalizePhoneForVoicebot(rawPhone);
 
     // Znajdź wpis klienta (best effort)
     const { data: client } = await supabaseAdmin
@@ -35,8 +38,9 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
 
     const source = "calculator-entry";
 
-    // Dedup: zaplanowane / wykonane w ostatnich 30 min
-    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    // Dedup #1: zaplanowane / w trakcie / wykonane w ostatnich 24 h dla TEGO źródła.
+    // (placeOutboundCallInternal i tak ma globalny throttle 24 h dla wszystkich źródeł.)
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: existing } = await supabaseAdmin
       .from("call_queue")
       .select("id")
@@ -49,9 +53,21 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
       return { ok: true, deduped: true as const };
     }
 
+    // Dedup #2: jakikolwiek telefon (każde źródło) do tego numeru w ostatnich 24 h.
+    const { data: anyRecent } = await supabaseAdmin
+      .from("call_queue")
+      .select("id, source")
+      .eq("phone_normalized", phone)
+      .in("status", ["w_trakcie", "wykonane"])
+      .gte("created_at", cutoff)
+      .neq("source", "test")
+      .limit(1);
+    if (anyRecent && anyRecent.length > 0) {
+      return { ok: true, deduped: true as const, reason: "daily_throttle" as const };
+    }
+
     // Druga zapora: jeśli „za 60 s" wypada poza 8:00–22:00 Warszawa lub w niedzielę,
-    // przesuń na najbliższe 8:00 (pn–sob). placeOutboundCallInternal i tak ma guard,
-    // ale nie chcemy mieć w kolejce wpisów z nocną godziną.
+    // przesuń na najbliższe 8:00 (pn–sob).
     const { getCallingWindow } = await import("@/lib/voicebot.functions");
     const target = new Date(Date.now() + 60 * 1000);
     const win = getCallingWindow(target);
@@ -69,3 +85,4 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
     }
     return { ok: true, scheduledAt };
   });
+

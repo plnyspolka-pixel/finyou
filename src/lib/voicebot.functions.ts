@@ -12,6 +12,13 @@ function normalizePhone(input: string): string {
   return s.startsWith("+") ? s : `+${d}`;
 }
 
+/** Wersja publiczna `normalizePhone` — używana m.in. przez calculator-followup, żeby
+ *  dedup i throttle widziały ten sam string co reszta toru voicebota. */
+export function normalizePhoneForVoicebot(input: string): string {
+  return normalizePhone(input);
+}
+
+
 function admin() {
   const url = process.env.SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -194,6 +201,44 @@ export async function placeOutboundCallInternal(opts: {
   const s = admin();
   const phone = normalizePhone(opts.phone);
 
+  // GLOBALNY THROTTLE: max 1 telefon na 24 h per numer (z dowolnego źródła).
+  // Niezależnie od tego, ile torów follow-upu próbuje dzwonić, Ania wybiera tylko raz dziennie.
+  // Test (`source === "test"`) z panelu admina pomijamy.
+  if (opts.source !== "test") {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recent } = await s
+      .from("call_queue")
+      .select("id, started_at, created_at, source")
+      .eq("phone_normalized", phone)
+      .in("status", ["w_trakcie", "wykonane"])
+      .gte("created_at", since)
+      .neq("source", "test")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (recent && recent.length > 0) {
+      const last = recent[0];
+      const lastAt = new Date((last.started_at as string | null) ?? (last.created_at as string));
+      const nextAllowedRaw = new Date(lastAt.getTime() + 24 * 60 * 60 * 1000);
+      const win = getCallingWindow(nextAllowedRaw);
+      const scheduledAt = (win.allowed ? nextAllowedRaw : win.nextAllowedAt).toISOString();
+      await s.from("automation_events").insert({
+        automation_type: "elevenlabs_outbound_call",
+        status: "skipped",
+        sent_payload: { phone, source: opts.source },
+        response_payload: {
+          throttled_daily: true,
+          last_call_source: last.source,
+          last_call_at: lastAt.toISOString(),
+          next_allowed_at: scheduledAt,
+        },
+      });
+      return {
+        ok: false,
+        error: `Daily throttle — ostatni telefon ${lastAt.toISOString()} (źródło: ${last.source}). Następny dozwolony: ${scheduledAt}`,
+      };
+    }
+  }
+
   // SZTYWNE OGRANICZENIE: dzwonimy tylko 8:00–22:00 Europe/Warsaw, oprócz niedziel.
   // Test (`source === "test"`) z panelu admina wykonujemy zawsze.
   const window = getCallingWindow();
@@ -224,6 +269,7 @@ export async function placeOutboundCallInternal(opts: {
     });
     return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${nextIso}` };
   }
+
 
   // SMS before call (jeśli włączone)
   await maybeSendSms("before_call", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
