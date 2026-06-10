@@ -1,0 +1,2 @@
+ALTER TABLE public.voicebot_settings ADD COLUMN IF NOT EXISTS document_reminder_agent_id text;
+UPDATE public.voicebot_settings SET document_reminder_agent_id = 'agent_4101kt24sjhzejet6rkt7d6kp6e7' WHERE id = 1;

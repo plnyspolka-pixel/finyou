@@ -5174,6 +5174,7 @@ export type Database = {
           agent_phone_number_id: string | null
           call_delay_seconds: number
           call_trigger: string
+          document_reminder_agent_id: string | null
           id: number
           retry_count: number
           retry_delay_minutes: number
@@ -5189,6 +5190,7 @@ export type Database = {
           agent_phone_number_id?: string | null
           call_delay_seconds?: number
           call_trigger?: string
+          document_reminder_agent_id?: string | null
           id?: number
           retry_count?: number
           retry_delay_minutes?: number
@@ -5204,6 +5206,7 @@ export type Database = {
           agent_phone_number_id?: string | null
           call_delay_seconds?: number
           call_trigger?: string
+          document_reminder_agent_id?: string | null
           id?: number
           retry_count?: number
           retry_delay_minutes?: number
