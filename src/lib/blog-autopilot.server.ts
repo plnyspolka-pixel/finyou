@@ -271,15 +271,31 @@ async function stampWordmark(baseSrc: string): Promise<Buffer> {
   const base = await Jimp.read(baseBuf);
   const mark = await Jimp.read(markBuf);
 
-  // Wordmark ~22% szerokości okładki, przyklejony w prawym dolnym rogu z marginesem.
-  const targetW = Math.round(base.bitmap.width * 0.22);
+  // Karty bloga renderują okładkę w aspect-[16/9]. Jeżeli generacja zwróci inne
+  // proporcje, object-cover obetnie góra/dół (i pożre wordmark). Przycinamy
+  // bazę do 16:9 PRZED naklejeniem logo — wtedy stamp ląduje w widocznej części.
+  const targetRatio = 16 / 9;
+  const curRatio = base.bitmap.width / base.bitmap.height;
+  if (Math.abs(curRatio - targetRatio) > 0.01) {
+    if (curRatio > targetRatio) {
+      const newW = Math.round(base.bitmap.height * targetRatio);
+      base.crop({ x: Math.round((base.bitmap.width - newW) / 2), y: 0, w: newW, h: base.bitmap.height });
+    } else {
+      const newH = Math.round(base.bitmap.width / targetRatio);
+      base.crop({ x: 0, y: Math.round((base.bitmap.height - newH) / 2), w: base.bitmap.width, h: newH });
+    }
+  }
+
+  // Przytnij wordmark do faktycznego bounding boxu (alpha), żeby skala była zgodna.
+  mark.autocrop({ cropOnlyFrames: false, cropSymmetric: false });
+
+  // Wordmark ~20% szerokości okładki, przyklejony w prawym dolnym rogu z marginesem.
+  const targetW = Math.round(base.bitmap.width * 0.20);
   const scale = targetW / mark.bitmap.width;
   mark.resize({ w: targetW, h: Math.round(mark.bitmap.height * scale) });
+  mark.opacity(0.95);
 
-  // Lekka przezroczystość — żeby wordmark był wyraźny ale nie krzyczał.
-  mark.opacity(0.92);
-
-  const pad = Math.round(base.bitmap.width * 0.025);
+  const pad = Math.round(base.bitmap.width * 0.03);
   const x = base.bitmap.width - mark.bitmap.width - pad;
   const y = base.bitmap.height - mark.bitmap.height - pad;
   base.composite(mark, x, y);
