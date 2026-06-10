@@ -217,7 +217,44 @@ function KlientWniosek() {
     }
     const total = rows.reduce((a, x) => a + x.payment, 0);
     return { rows, monthly, balloon, total, nominalMonthly };
-  }, [loan]);
+  }, [editAmount, editMonths, editRate, editMaxPayment]);
+
+  const missingForInvestors = useMemo(() => {
+    const m: string[] = [];
+    if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
+    if (!prop?.property_type) m.push("typ zabezpieczenia");
+    if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
+    if (!loan?.investor_description) m.push("krótki opis dla inwestora");
+    if (!editAmount || !editMonths || !editRate) m.push("warunki finansowe");
+    return m;
+  }, [client, prop, loan, editAmount, editMonths, editRate]);
+
+  const sendToInvestors = async () => {
+    if (!loan?.id) return;
+    if (missingForInvestors.length > 0) {
+      toast.error(`Aby wysłać do inwestorów uzupełnij: ${missingForInvestors.join(", ")}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setSendingToInvestors(true);
+    try {
+      const { error } = await supabase.from("loan_applications").update({
+        loan_amount: editAmount,
+        preferred_period_months: editMonths,
+        annual_investor_rate: editRate,
+        max_monthly_payment: editMaxPayment || null,
+        status: "wyslany_do_inwestorow",
+      }).eq("id", loan.id);
+      if (error) throw error;
+      toast.success("Wniosek wysłany do inwestorów. Powiadomimy Cię o decyzji.");
+      setRefreshTick((t) => t + 1);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się wysłać wniosku");
+    } finally {
+      setSendingToInvestors(false);
+    }
+  };
+
 
   const statusLabel = loan ? (loanStatusLabels[loan.status as keyof typeof loanStatusLabels] ?? loan.status) : null;
   const completeness = Number(loan?.completeness_percent ?? 0);
