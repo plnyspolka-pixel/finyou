@@ -412,6 +412,12 @@ function KlientWniosek() {
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
       return { ok: true };
     }
+    if (step === 5) {
+      if (!amount || amount < 20000) return { ok: false, msg: "Podaj kwotę pożyczki (min. 20 000 zł)." };
+      if (!months || months < 3) return { ok: false, msg: "Podaj okres spłaty (min. 3 mies.)." };
+      if (!annualRate || annualRate < 15) return { ok: false, msg: "Podaj wynagrodzenie inwestora (min. 15% rocznie)." };
+      return { ok: true };
+    }
     return { ok: true };
   };
 
@@ -421,12 +427,13 @@ function KlientWniosek() {
     await persistAll(step + 1);
   };
 
-  const submit = async () => {
+  // Krok 4 → 5: zapisz kontakt, odpal lead capture, pokaż propozycję dla inwestora (kalkulator-magnes)
+  const advanceToProposal = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
-      await persistAll(STEPS.length);
+      await persistAll(5);
       if (loanId && !leadFiredRef.current && phone.trim()) {
         leadFiredRef.current = true;
         try {
@@ -434,14 +441,27 @@ function KlientWniosek() {
           const { trackEvent } = await import("@/lib/fb-pixel");
           await trackEvent(
             "Lead",
-            { content_name: "Wniosek pożyczkowy — wysłany", value: amount, currency: "PLN" },
+            { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
             { phone: phone.trim(), firstName: firstName || undefined },
           );
         } catch (e: any) {
           console.warn("[lead-capture]", e);
         }
       }
-      toast.success("Wniosek wysłany! Zwiększ jeszcze swoje szanse na sukces.");
+      toast.success("Dane zapisane. Dopasuj propozycję dla inwestora.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Krok 5: zapisz propozycję i wyślij wniosek do inwestora
+  const saveProposalAndSubmit = async () => {
+    const v = canNext();
+    if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
+    setSubmitting(true);
+    try {
+      await persistAll(STEPS.length);
+      toast.success("Propozycja zapisana — wniosek trafia do inwestora.");
       void navigate({ to: "/wniosek-opis" });
     } finally {
       setSubmitting(false);
