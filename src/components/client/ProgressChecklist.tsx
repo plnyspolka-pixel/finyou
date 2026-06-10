@@ -15,6 +15,7 @@ interface Props {
   hasBankAccount?: boolean;
   hasIncomeDocsBoost?: boolean;
   hasBikReport?: boolean;
+  hideMissing?: boolean;
 }
 
 
@@ -50,6 +51,7 @@ export function ProgressChecklist({
   hasBankAccount = false,
   hasIncomeDocsBoost = false,
   hasBikReport = false,
+  hideMissing = false,
 }: Props) {
   void hasIncomeDocs; void hasBankAccount;
 
@@ -145,7 +147,7 @@ export function ProgressChecklist({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={hideMissing ? "" : "grid gap-4 md:grid-cols-2"}>
         <Card className="border-emerald-200 dark:border-emerald-900/50">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-emerald-700 dark:text-emerald-400">
@@ -169,35 +171,37 @@ export function ProgressChecklist({
           </CardContent>
         </Card>
 
-        <Card className="border-amber-200 dark:border-amber-900/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
-              <Circle className="h-5 w-5" /> Czego jeszcze potrzebujemy
-              <span className="ml-auto text-xs font-normal text-muted-foreground">{missingItems.length}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {missingItems.length === 0 ? (
-              <p className="text-sm text-emerald-700 dark:text-emerald-400">Wszystko gotowe — wniosek kompletny.</p>
-            ) : (
-              <ul className="space-y-2">
-                {missingItems.map((it) => (
-                  <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Circle className="h-4 w-4 shrink-0 text-amber-500" />
-                      <span className="truncate text-sm font-medium">{it.label}</span>
-                    </div>
-                    <Button asChild size="sm" variant="outline" className="w-full sm:w-auto shrink-0">
-                      <Link to={it.ctaHref}>
-                        {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        {!hideMissing && (
+          <Card className="border-amber-200 dark:border-amber-900/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
+                <Circle className="h-5 w-5" /> Czego jeszcze potrzebujemy
+                <span className="ml-auto text-xs font-normal text-muted-foreground">{missingItems.length}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {missingItems.length === 0 ? (
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">Wszystko gotowe — wniosek kompletny.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {missingItems.map((it) => (
+                    <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Circle className="h-4 w-4 shrink-0 text-amber-500" />
+                        <span className="truncate text-sm font-medium">{it.label}</span>
+                      </div>
+                      <Button asChild size="sm" variant="outline" className="w-full sm:w-auto shrink-0">
+                        <Link to={it.ctaHref}>
+                          {it.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card className="border-violet-200 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/20">
