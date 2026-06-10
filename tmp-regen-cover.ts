@@ -13,35 +13,15 @@ async function gen() {
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-image-preview",
-      prompt,
-      n: 1,
-      size: "1536x1024",
-      response_format: "url",
+      prompt, n: 1, size: "1536x1024", response_format: "url",
     }),
   });
   if (!res.ok) throw new Error(`gen ${res.status}: ${await res.text()}`);
   const j: any = await res.json();
+  console.error("KEYS:", JSON.stringify(j).slice(0, 800));
   const item = j.data?.[0];
-  if (item.url) return item.url;
-  return `data:image/png;base64,${item.b64_json}`;
+  if (item?.url) return item.url;
+  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  throw new Error("no image");
 }
-
-async function buf(src: string): Promise<Buffer> {
-  if (src.startsWith("data:")) return Buffer.from(src.split(",", 2)[1], "base64");
-  const r = await fetch(src);
-  return Buffer.from(await r.arrayBuffer());
-}
-
-const rawSrc = await gen();
-const [baseBuf, markBuf] = await Promise.all([buf(rawSrc), buf(WORDMARK_URL)]);
-const base = await Jimp.read(baseBuf);
-const mark = await Jimp.read(markBuf);
-const targetW = Math.round(base.bitmap.width * 0.22);
-const scale = targetW / mark.bitmap.width;
-mark.resize({ w: targetW, h: Math.round(mark.bitmap.height * scale) });
-mark.opacity(0.92);
-const pad = Math.round(base.bitmap.width * 0.025);
-base.composite(mark, base.bitmap.width - mark.bitmap.width - pad, base.bitmap.height - mark.bitmap.height - pad);
-const out = await base.getBuffer("image/jpeg", { quality: 88 });
-await Bun.write("/tmp/cover-koszty-mieszkania.jpg", out);
-console.log("ok", out.length);
+console.log(await gen());
