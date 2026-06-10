@@ -125,12 +125,12 @@ function KlientDashboard() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">Twój pulpit</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Twój pulpit</h1>
           <p className="text-sm text-muted-foreground">Wszystko, czego potrzebujesz, w jednym miejscu.</p>
         </div>
-        <Badge variant="secondary">{statusLabel}</Badge>
+        <Badge variant="secondary" className="shrink-0">{statusLabel}</Badge>
       </div>
 
       <NextStepCard progress={progress} />
