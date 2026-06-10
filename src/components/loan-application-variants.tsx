@@ -517,8 +517,8 @@ export function LinearLoanApplication({
               {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
               {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
               {step === 2 && "Zostaw kontakt"}
-              {step === 3 && "Jaką ratę miesięczną realnie udźwigniesz?"}
-              {step === 4 && "Jaki koszt finansowania akceptujesz?"}
+              {step === 3 && "Jaką ratę miesięczną możesz spłacać?"}
+              {step === 4 && "Jakie wynagrodzenie inwestora proponujesz w skali roku?"}
               {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
               {step === 6 && "Czy znasz numer księgi wieczystej?"}
               {step === 7 && (user ? "Gotowe — dodaj zdjęcia i dokumenty, a wniosek trafi do inwestora" : "Dodaj zdjęcia lub dokumenty nieruchomości")}
