@@ -245,22 +245,78 @@ async function tryGenerate(lovableKey: string, model: string, prompt: string): P
   }
 }
 
-async function generateCover(lovableKey: string, prompt: string): Promise<string> {
-  // Każdy artykuł MUSI mieć okładkę. Sygnujemy "Finance You" w narożniku
-  // (wordmark prompt-based; zarówno Gemini jak i fallback openai/gpt-image-2
-  // potrafią narysować małą czystą typografię).
-  const fullPrompt = `Editorial finance magazine cover, photorealistic, soft natural light, Polish/European context. Scene: ${prompt}. 16:9 cinematic.
-In the bottom-right corner render a small clean white sans-serif wordmark text exactly: "Finance You" — subtle soft drop shadow, no other text, no logos, no UI elements anywhere else in the image.`;
+// Oficjalny wordmark Finance You (asset CDN). Tę grafikę NAKLEJAMY na okładki —
+// nigdy nie prosimy modelu, żeby wyrenderował tekst "Finance You".
+const WORDMARK_URL =
+  "https://financeyou.pl/__l5e/assets-v1/78c589be-8669-4bdf-a471-ff97875e8d7a/financeyou-wordmark.png";
 
+async function fetchImageBuffer(src: string): Promise<Buffer> {
+  if (src.startsWith("data:")) {
+    const b64 = src.split(",", 2)[1] ?? "";
+    return Buffer.from(b64, "base64");
+  }
+  const res = await fetch(src);
+  if (!res.ok) throw new Error(`fetch image ${res.status}`);
+  const ab = await res.arrayBuffer();
+  return Buffer.from(ab);
+}
+
+async function stampWordmark(baseSrc: string): Promise<Buffer> {
+  // Lazy import — jimp jest ciężki i nie chcemy ładować go na zimno gdy generacja padnie.
+  const { Jimp } = await import("jimp");
+  const [baseBuf, markBuf] = await Promise.all([
+    fetchImageBuffer(baseSrc),
+    fetchImageBuffer(WORDMARK_URL),
+  ]);
+  const base = await Jimp.read(baseBuf);
+  const mark = await Jimp.read(markBuf);
+
+  // Wordmark ~22% szerokości okładki, przyklejony w prawym dolnym rogu z marginesem.
+  const targetW = Math.round(base.bitmap.width * 0.22);
+  const scale = targetW / mark.bitmap.width;
+  mark.resize({ w: targetW, h: Math.round(mark.bitmap.height * scale) });
+
+  // Lekka przezroczystość — żeby wordmark był wyraźny ale nie krzyczał.
+  mark.opacity(0.92);
+
+  const pad = Math.round(base.bitmap.width * 0.025);
+  const x = base.bitmap.width - mark.bitmap.width - pad;
+  const y = base.bitmap.height - mark.bitmap.height - pad;
+  base.composite(mark, x, y);
+
+  return await base.getBuffer("image/jpeg", { quality: 88 });
+}
+
+async function uploadCover(buffer: Buffer): Promise<string> {
+  const path = `blog-covers/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabaseAdmin.storage
+    .from("ad-creatives")
+    .upload(path, buffer, { contentType: "image/jpeg", upsert: false });
+  if (error) throw new Error(`upload cover: ${error.message}`);
+  const { data } = supabaseAdmin.storage.from("ad-creatives").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function generateCover(lovableKey: string, prompt: string): Promise<string> {
+  // Każdy artykuł MUSI mieć okładkę z naklejonym oficjalnym wordmarkiem Finance You.
+  // Model dostarcza tylko bazową fotografię — wordmark dokleja jimp.
+  const fullPrompt = `Editorial finance magazine cover photograph, photorealistic, soft natural light, Polish/European context. Scene: ${prompt}. 16:9 cinematic composition. Absolutely NO text, NO letters, NO words, NO logos, NO watermarks, NO UI elements anywhere in the image — pure photograph only. Leave the bottom-right area visually calm (uncluttered background) so a small logo can be overlaid later.`;
+
+  let rawUrl: string | null = null;
   for (const model of [
     "google/gemini-2.5-flash-image-preview",
     "openai/gpt-image-2",
     "google/gemini-2.5-flash-image-preview",
   ]) {
-    const url = await tryGenerate(lovableKey, model, fullPrompt);
-    if (url) return url;
+    rawUrl = await tryGenerate(lovableKey, model, fullPrompt);
+    if (rawUrl) break;
   }
-  throw new Error("Cover generation failed for all models — refusing to publish without an image.");
+  if (!rawUrl) {
+    throw new Error("Cover generation failed for all models — refusing to publish without an image.");
+  }
+
+  const stamped = await stampWordmark(rawUrl);
+  return await uploadCover(stamped);
 }
 
 export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
