@@ -271,6 +271,14 @@ export async function placeOutboundCallInternal(opts: {
   }
 
 
+  // Wybór agenta: jeśli rozmowa dotyczy konkretnego wniosku (przypomnienie o
+  // dokumentach), używamy osobnego agenta `document_reminder_agent_id`.
+  // W przeciwnym razie domyślny `agent_id`.
+  const effectiveAgentId =
+    (opts.loanApplicationId && (settings as any).document_reminder_agent_id)
+      ? (settings as any).document_reminder_agent_id as string
+      : settings.agent_id;
+
   // SMS before call (jeśli włączone)
   await maybeSendSms("before_call", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
 
@@ -283,7 +291,8 @@ export async function placeOutboundCallInternal(opts: {
       loan_application_id: opts.loanApplicationId ?? null,
       meta_lead_id: opts.metaLeadId ?? null,
       source: opts.source,
-      agent_id: settings.agent_id,
+      agent_id: effectiveAgentId,
+
       status: "w_trakcie",
       started_at: new Date().toISOString(),
       attempts: 1,
@@ -293,7 +302,7 @@ export async function placeOutboundCallInternal(opts: {
 
   try {
     const body: Record<string, unknown> = {
-      agent_id: settings.agent_id,
+      agent_id: effectiveAgentId,
       agent_phone_number_id: settings.agent_phone_number_id,
       to_number: phone,
     };
@@ -315,7 +324,8 @@ export async function placeOutboundCallInternal(opts: {
     await s.from("automation_events").insert({
       automation_type: "elevenlabs_outbound_call",
       status: res.ok ? "sent" : "error",
-      sent_payload: { phone, source: opts.source, agent_id: settings.agent_id },
+      sent_payload: { phone, source: opts.source, agent_id: effectiveAgentId },
+
       response_payload: json,
       error_message: res.ok ? null : (json?.detail?.message ?? json?.message ?? `HTTP ${res.status}`),
     });
@@ -346,7 +356,7 @@ export async function placeOutboundCallInternal(opts: {
         .from("call_queue")
         .update({
           conversation_id: conversationId ?? null,
-          agent_id: conversationId ?? settings.agent_id,
+          agent_id: conversationId ?? effectiveAgentId,
           raw_result: json,
         })
         .eq("id", queueRow.id);
@@ -363,7 +373,7 @@ export async function placeOutboundCallInternal(opts: {
         status: "initiated",
         content: "Inicjacja rozmowy voicebota",
         externalId: conversationId ?? callSid ?? null,
-        agentId: settings.agent_id,
+        agentId: effectiveAgentId,
         metadata: { source: opts.source, callSid },
       });
     } catch (e) {
