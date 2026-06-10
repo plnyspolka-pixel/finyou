@@ -446,6 +446,11 @@ export function LinearLoanApplication({
       try {
         setSubmitting(true);
         await onSubmit(draft);
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(`${STORAGE_KEY}__step`);
+        } catch { /* noop */ }
+        setStep(0);
         if (user) void navigate({ to: "/wniosek-opis" });
       } catch (e) {
         console.error(e);
