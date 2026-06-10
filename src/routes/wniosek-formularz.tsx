@@ -30,7 +30,7 @@ export const Route = createFileRoute("/wniosek-formularz")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Dane kontaktowe"];
+const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Dane kontaktowe", "Twoja propozycja dla inwestora"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
@@ -412,6 +412,12 @@ function KlientWniosek() {
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
       return { ok: true };
     }
+    if (step === 5) {
+      if (!amount || amount < 20000) return { ok: false, msg: "Podaj kwotę pożyczki (min. 20 000 zł)." };
+      if (!months || months < 3) return { ok: false, msg: "Podaj okres spłaty (min. 3 mies.)." };
+      if (!annualRate || annualRate < 15) return { ok: false, msg: "Podaj wynagrodzenie inwestora (min. 15% rocznie)." };
+      return { ok: true };
+    }
     return { ok: true };
   };
 
@@ -421,12 +427,13 @@ function KlientWniosek() {
     await persistAll(step + 1);
   };
 
-  const submit = async () => {
+  // Krok 4 → 5: zapisz kontakt, odpal lead capture, pokaż propozycję dla inwestora (kalkulator-magnes)
+  const advanceToProposal = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
-      await persistAll(STEPS.length);
+      await persistAll(5);
       if (loanId && !leadFiredRef.current && phone.trim()) {
         leadFiredRef.current = true;
         try {
@@ -434,14 +441,27 @@ function KlientWniosek() {
           const { trackEvent } = await import("@/lib/fb-pixel");
           await trackEvent(
             "Lead",
-            { content_name: "Wniosek pożyczkowy — wysłany", value: amount, currency: "PLN" },
+            { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
             { phone: phone.trim(), firstName: firstName || undefined },
           );
         } catch (e: any) {
           console.warn("[lead-capture]", e);
         }
       }
-      toast.success("Wniosek wysłany! Zwiększ jeszcze swoje szanse na sukces.");
+      toast.success("Dane zapisane. Dopasuj propozycję dla inwestora.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Krok 5: zapisz propozycję i wyślij wniosek do inwestora
+  const saveProposalAndSubmit = async () => {
+    const v = canNext();
+    if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
+    setSubmitting(true);
+    try {
+      await persistAll(STEPS.length);
+      toast.success("Propozycja zapisana — wniosek trafia do inwestora.");
       void navigate({ to: "/wniosek-opis" });
     } finally {
       setSubmitting(false);
@@ -489,6 +509,16 @@ function KlientWniosek() {
         <p className="text-sm text-muted-foreground">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></p>
       </div>
       <Progress value={progress} />
+
+      {step < 5 && (
+        <Alert className="border-accent/40 bg-accent/5">
+          <Sparkles className="h-4 w-4 text-accent" />
+          <AlertTitle>Twoja propozycja dla inwestora — czeka na Ciebie na końcu</AlertTitle>
+          <AlertDescription className="text-sm">
+            Po wypełnieniu wniosku zobaczysz interaktywny kalkulator: ratę, harmonogram spłaty i pełną propozycję dla inwestora. Możesz tam jeszcze zmienić kwotę, okres i wynagrodzenie inwestora.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {step === 1 && (
         <Card>
@@ -871,27 +901,95 @@ function KlientWniosek() {
 
       {step === 5 && (
         <Card>
-          <CardHeader><CardTitle>Podsumowanie wniosku</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Row k="Kwota pożyczki" v={formatPLN(amount)} />
-            <Row k="Okres finansowania" v={`${months} mies.`} />
-            <Row k="Rata miesięczna" v={formatPLN(rata)} />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-accent" /> Twoja propozycja dla inwestora
+            </CardTitle>
+            <CardDescription>
+              Dane są zapisane. Dopasuj jeszcze raz kwotę, okres i wynagrodzenie inwestora — od razu zobaczysz nową ratę i harmonogram spłaty. Kiedy będzie pasować, kliknij „Zapisz propozycję dla inwestora”.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="prop-amount">Kwota pożyczki</Label>
+                <Input id="prop-amount" type="number" inputMode="numeric" value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
+              </div>
+              <Slider min={20000} max={1_000_000} step={5000} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
+            </div>
 
-            <Row k="Łączne wynagrodzenie inwestora" v={formatPLN(investorComp)} />
-            <Row k="Łączna kwota do spłaty" v={formatPLN(totalPay)} />
-            <Row k="Imię i nazwisko" v={`${firstName} ${lastName}`} />
-            <Row k="E-mail" v={email} />
-            <Row k="Telefon" v={phone} />
-            <Row k="Typ zabezpieczenia" v={secType ? securityTypeLabels[secType] : "—"} />
-            
-            <Row k="Księga wieczysta" v={(() => {
-              const nums = kwNumbers.map((s) => s.trim()).filter(Boolean);
-              if (nums.length) return nums.join(", ");
-              if (kwNoDocsContact) return "Brak — klient prosi o kontakt";
-              if (kwStatus === "nie_znam" || kwStatus === "nie_pewien") return "Dokumenty załączone";
-              return "—";
-            })()} />
-            <Row k="Załączone dokumenty" v={`${docs.length}`} />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label>Okres spłaty</Label>
+                <span className="tabular-nums text-sm font-medium">{months} mies.</span>
+              </div>
+              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="prop-rate">Wynagrodzenie inwestora (rocznie)</Label>
+                <div className="flex items-center gap-1">
+                  <Input id="prop-rate" type="number" step="0.5" value={annualRate}
+                    onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24 text-right tabular-nums" />
+                  <span className="text-sm font-semibold">%</span>
+                </div>
+              </div>
+              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]}
+                onValueChange={(v) => setAnnualRate(v[0])} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="prop-max">Maksymalna rata miesięczna</Label>
+                <Input id="prop-max" type="number" inputMode="numeric" value={maxPayment}
+                  onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
+              </div>
+              <Slider min={500} max={50000} step={250} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
+              <p className="text-xs text-muted-foreground">Nadwyżka ponad maks. ratę trafia do raty balonowej na koniec okresu.</p>
+            </div>
+
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
+              {balloon > 0 && (
+                <div className="flex justify-between text-sm"><span>Ostatnia rata (z nadwyżką balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
+              )}
+              <div className="flex justify-between text-sm"><span>Łączne wynagrodzenie inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
+              <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
+            </div>
+
+            {schedule.length > 0 && (
+              <div className="rounded-lg border bg-card">
+                <div className="px-4 py-3 border-b">
+                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
+                  <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
+                </div>
+                <div className="max-h-72 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 sticky top-0">
+                      <tr className="text-left">
+                        <th className="px-3 py-2 font-medium">#</th>
+                        <th className="px-3 py-2 font-medium">Data spłaty</th>
+                        <th className="px-3 py-2 font-medium text-right">Rata</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedule.map((r) => (
+                        <tr key={r.idx} className="border-t">
+                          <td className="px-3 py-2 tabular-nums">{r.idx}</td>
+                          <td className="px-3 py-2 tabular-nums">{r.date}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -900,13 +998,17 @@ function KlientWniosek() {
         <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
         </Button>
-        {step < STEPS.length ? (
+        {step < 4 ? (
           <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
             {saving ? <Loader2 className="animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2" /></>}
           </Button>
+        ) : step === 4 ? (
+          <Button variant="cta" size="cta" disabled={submitting} onClick={() => void advanceToProposal()}>
+            {submitting ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — Twoja propozycja dla inwestora <ArrowRight className="ml-2" /></>}
+          </Button>
         ) : (
-          <Button variant="cta" size="cta" disabled={submitting} onClick={() => void submit()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek do inwestora</>}
+          <Button variant="cta" size="cta" disabled={submitting} onClick={() => void saveProposalAndSubmit()}>
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Zapisz propozycję dla inwestora</>}
           </Button>
         )}
       </div>
