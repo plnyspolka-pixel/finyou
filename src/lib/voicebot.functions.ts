@@ -302,7 +302,7 @@ export async function placeOutboundCallInternal(opts: {
 
   try {
     const body: Record<string, unknown> = {
-      agent_id: settings.agent_id,
+      agent_id: effectiveAgentId,
       agent_phone_number_id: settings.agent_phone_number_id,
       to_number: phone,
     };
@@ -324,7 +324,8 @@ export async function placeOutboundCallInternal(opts: {
     await s.from("automation_events").insert({
       automation_type: "elevenlabs_outbound_call",
       status: res.ok ? "sent" : "error",
-      sent_payload: { phone, source: opts.source, agent_id: settings.agent_id },
+      sent_payload: { phone, source: opts.source, agent_id: effectiveAgentId },
+
       response_payload: json,
       error_message: res.ok ? null : (json?.detail?.message ?? json?.message ?? `HTTP ${res.status}`),
     });
