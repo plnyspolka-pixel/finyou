@@ -1,0 +1,1 @@
+UPDATE public.ai_seo_articles SET cover_image_url = 'https://financeyou.pl/__l5e/assets-v1/05a91557-783a-4e37-b2e1-387e5bcfbb66/branded-koszty-mieszkania.jpg', cover_image_alt = 'Klucze, banknoty 200 zł i kalkulator na drewnianym stole — koszty pożyczki pod zastaw mieszkania' WHERE id = 'a15b3c4b-78ed-40af-acaf-15ddf769d8f7';
