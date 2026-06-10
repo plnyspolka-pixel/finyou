@@ -261,16 +261,16 @@ function KlientWniosek() {
 
   return (
     <div className="space-y-8 max-w-5xl">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">Mój wniosek</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Mój wniosek</h1>
           <p className="text-sm text-muted-foreground">
             {locked
               ? "Wniosek jest w analizie — dane są zablokowane do edycji."
               : "Uzupełnij dane, sprawdź podsumowanie i wstępny harmonogram spłat."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {locked && <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany</Badge>}
           {statusLabel && <Badge variant="secondary">{statusLabel}</Badge>}
         </div>
