@@ -356,7 +356,7 @@ export async function placeOutboundCallInternal(opts: {
         .from("call_queue")
         .update({
           conversation_id: conversationId ?? null,
-          agent_id: conversationId ?? settings.agent_id,
+          agent_id: conversationId ?? effectiveAgentId,
           raw_result: json,
         })
         .eq("id", queueRow.id);
@@ -373,7 +373,7 @@ export async function placeOutboundCallInternal(opts: {
         status: "initiated",
         content: "Inicjacja rozmowy voicebota",
         externalId: conversationId ?? callSid ?? null,
-        agentId: settings.agent_id,
+        agentId: effectiveAgentId,
         metadata: { source: opts.source, callSid },
       });
     } catch (e) {
