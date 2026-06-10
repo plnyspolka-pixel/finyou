@@ -248,7 +248,7 @@ async function tryGenerate(lovableKey: string, model: string, prompt: string): P
 // Oficjalny wordmark Finance You (asset CDN). Tę grafikę NAKLEJAMY na okładki —
 // nigdy nie prosimy modelu, żeby wyrenderował tekst "Finance You".
 const WORDMARK_URL =
-  "https://financeyou.pl/__l5e/assets-v1/78c589be-8669-4bdf-a471-ff97875e8d7a/financeyou-wordmark.png";
+  "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
 
 async function fetchImageBuffer(src: string): Promise<Buffer> {
   if (src.startsWith("data:")) {
