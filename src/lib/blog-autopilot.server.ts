@@ -220,14 +220,14 @@ Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "PO�
   return args as ArticleDraft;
 }
 
-async function generateCover(lovableKey: string, prompt: string): Promise<string | null> {
+async function tryGenerate(lovableKey: string, model: string, prompt: string): Promise<string | null> {
   try {
     const res = await fetch(IMAGE_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        prompt: `Editorial finance magazine cover photo, photorealistic, soft natural light, Polish/European context, no text, no logos. Scene: ${prompt}. 16:9, cinematic.`,
+        model,
+        prompt,
         n: 1,
         size: "1536x1024",
         response_format: "url",
@@ -235,13 +235,32 @@ async function generateCover(lovableKey: string, prompt: string): Promise<string
     });
     if (!res.ok) return null;
     const j: any = await res.json();
-    const url: string | undefined = j.data?.[0]?.url ?? j.data?.[0]?.b64_json
-      ? (j.data?.[0]?.url ?? `data:image/png;base64,${j.data[0].b64_json}`)
-      : undefined;
-    return url ?? null;
+    const item = j.data?.[0];
+    if (!item) return null;
+    if (item.url) return item.url as string;
+    if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    return null;
   } catch {
     return null;
   }
+}
+
+async function generateCover(lovableKey: string, prompt: string): Promise<string> {
+  // Każdy artykuł MUSI mieć okładkę. Sygnujemy "Finance You" w narożniku
+  // (wordmark prompt-based; zarówno Gemini jak i fallback openai/gpt-image-2
+  // potrafią narysować małą czystą typografię).
+  const fullPrompt = `Editorial finance magazine cover, photorealistic, soft natural light, Polish/European context. Scene: ${prompt}. 16:9 cinematic.
+In the bottom-right corner render a small clean white sans-serif wordmark text exactly: "Finance You" — subtle soft drop shadow, no other text, no logos, no UI elements anywhere else in the image.`;
+
+  for (const model of [
+    "google/gemini-2.5-flash-image-preview",
+    "openai/gpt-image-2",
+    "google/gemini-2.5-flash-image-preview",
+  ]) {
+    const url = await tryGenerate(lovableKey, model, fullPrompt);
+    if (url) return url;
+  }
+  throw new Error("Cover generation failed for all models — refusing to publish without an image.");
 }
 
 export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
