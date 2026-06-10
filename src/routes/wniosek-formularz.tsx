@@ -510,6 +510,16 @@ function KlientWniosek() {
       </div>
       <Progress value={progress} />
 
+      {step < 5 && (
+        <Alert className="border-accent/40 bg-accent/5">
+          <Sparkles className="h-4 w-4 text-accent" />
+          <AlertTitle>Twoja propozycja dla inwestora — czeka na Ciebie na końcu</AlertTitle>
+          <AlertDescription className="text-sm">
+            Po wypełnieniu wniosku zobaczysz interaktywny kalkulator: ratę, harmonogram spłaty i pełną propozycję dla inwestora. Możesz tam jeszcze zmienić kwotę, okres i wynagrodzenie inwestora.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {step === 1 && (
         <Card>
           <CardHeader>
