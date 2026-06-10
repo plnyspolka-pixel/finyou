@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Pencil, CalendarDays, Info, Lock } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pencil, CalendarDays, Info, Lock, Send, Loader2 } from "lucide-react";
 import { formatPLN, securityTypeLabels, monthlyPayment, type SecurityType } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { LinearLoanApplication, type LoanWizardPrefill } from "@/components/loan-application-variants";
@@ -150,13 +153,42 @@ function KlientWniosek() {
     setRefreshTick((t) => t + 1);
   };
 
-  // Poprawiony harmonogram — annuity z opcjonalną ratą balonową
+  // Edytowalne parametry harmonogramu — live preview
+  const [editAmount, setEditAmount] = useState<number>(0);
+  const [editMonths, setEditMonths] = useState<number>(0);
+  const [editRate, setEditRate] = useState<number>(0);
+  const [editMaxPayment, setEditMaxPayment] = useState<number>(0);
+  const [sendingToInvestors, setSendingToInvestors] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!loan) return;
+    setEditAmount(Number(loan.loan_amount ?? 200_000));
+    setEditMonths(Number(loan.preferred_period_months ?? 24));
+    setEditRate(Number(loan.annual_investor_rate ?? 24));
+    setEditMaxPayment(Number(loan.max_monthly_payment ?? 0));
+  }, [loan?.id]);
+
+  // Autozapis edycji harmonogramu (debounced) — tylko gdy wniosek nieblokowany
+  useEffect(() => {
+    if (!loan?.id || locked) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void supabase.from("loan_applications").update({
+        loan_amount: editAmount,
+        preferred_period_months: editMonths,
+        annual_investor_rate: editRate,
+        max_monthly_payment: editMaxPayment || null,
+      }).eq("id", loan.id);
+    }, 600);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [editAmount, editMonths, editRate, editMaxPayment, loan?.id, locked]);
+
   const schedule = useMemo(() => {
-    if (!loan) return null;
-    const amount = Number(loan.loan_amount ?? 0);
-    const months = Number(loan.preferred_period_months ?? 0);
-    const maxPayment = Number(loan.max_monthly_payment ?? 0);
-    const annual = Number(loan.annual_investor_rate ?? 0);
+    const amount = editAmount;
+    const months = editMonths;
+    const annual = editRate;
+    const maxPayment = editMaxPayment;
     if (!amount || !months || !annual) return null;
 
     const nominalMonthly = monthlyPayment(amount, annual, months);
@@ -185,23 +217,60 @@ function KlientWniosek() {
     }
     const total = rows.reduce((a, x) => a + x.payment, 0);
     return { rows, monthly, balloon, total, nominalMonthly };
-  }, [loan]);
+  }, [editAmount, editMonths, editRate, editMaxPayment]);
+
+  const missingForInvestors = useMemo(() => {
+    const m: string[] = [];
+    if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
+    if (!prop?.property_type) m.push("typ zabezpieczenia");
+    if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
+    if (!loan?.investor_description) m.push("krótki opis dla inwestora");
+    if (!editAmount || !editMonths || !editRate) m.push("warunki finansowe");
+    return m;
+  }, [client, prop, loan, editAmount, editMonths, editRate]);
+
+  const sendToInvestors = async () => {
+    if (!loan?.id) return;
+    if (missingForInvestors.length > 0) {
+      toast.error(`Aby wysłać do inwestorów uzupełnij: ${missingForInvestors.join(", ")}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setSendingToInvestors(true);
+    try {
+      const { error } = await supabase.from("loan_applications").update({
+        loan_amount: editAmount,
+        preferred_period_months: editMonths,
+        annual_investor_rate: editRate,
+        max_monthly_payment: editMaxPayment || null,
+        status: "wyslany_do_inwestorow",
+      }).eq("id", loan.id);
+      if (error) throw error;
+      toast.success("Wniosek wysłany do inwestorów. Powiadomimy Cię o decyzji.");
+      setRefreshTick((t) => t + 1);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się wysłać wniosku");
+    } finally {
+      setSendingToInvestors(false);
+    }
+  };
+
 
   const statusLabel = loan ? (loanStatusLabels[loan.status as keyof typeof loanStatusLabels] ?? loan.status) : null;
   const completeness = Number(loan?.completeness_percent ?? 0);
 
   return (
     <div className="space-y-8 max-w-5xl">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">Mój wniosek</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Mój wniosek</h1>
           <p className="text-sm text-muted-foreground">
             {locked
               ? "Wniosek jest w analizie — dane są zablokowane do edycji."
               : "Uzupełnij dane, sprawdź podsumowanie i wstępny harmonogram spłat."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {locked && <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany</Badge>}
           {statusLabel && <Badge variant="secondary">{statusLabel}</Badge>}
         </div>
@@ -283,60 +352,146 @@ function KlientWniosek() {
 
           </div>
 
-          {/* 3. Harmonogram — annuity z balonem */}
+          {/* 3. Edytowalny harmonogram + wysyłka do inwestorów */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Harmonogram spłat</CardTitle>
               <CardDescription>
-                {schedule
-                  ? "Wstępna kalkulacja na podstawie podanych warunków. Ostateczny harmonogram dostaniesz po przyjęciu oferty przez inwestora."
-                  : "Harmonogram pojawi się, kiedy uzupełnisz kwotę, okres, maks. ratę i oprocentowanie."}
+                Ustaw poniżej warunki — harmonogram przeliczy się od razu. Gdy będziesz gotowy, wyślij wniosek do inwestorów.
               </CardDescription>
             </CardHeader>
-            {schedule && (
-              <CardContent className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Metric label="Rata miesięczna" value={formatPLN(schedule.monthly)} />
-                  <Metric label="Rata balonowa" value={schedule.balloon > 0.5 ? formatPLN(schedule.balloon) : "—"} />
-                  <Metric label="Suma do spłaty" value={formatPLN(schedule.total)} />
-                </div>
-
-                <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full text-[11px] tabular-nums sm:text-xs">
-                    <thead className="bg-muted/50 text-left text-muted-foreground uppercase tracking-wide text-[10px]">
-                      <tr>
-                        <th className="px-2 py-1.5 font-normal">#</th>
-                        <th className="px-2 py-1.5 font-normal">data</th>
-                        <th className="px-2 py-1.5 font-normal text-right">rata</th>
-                        <th className="px-2 py-1.5 font-normal text-right">odsetki</th>
-                        <th className="px-2 py-1.5 font-normal text-right">kapitał</th>
-                        <th className="px-2 py-1.5 font-normal text-right">saldo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schedule.rows.map((r) => (
-                        <tr key={String(r.index)} className={r.index === "Balon" ? "border-t bg-primary/5 font-medium" : "border-t"}>
-                          <td className="px-2 py-1.5 whitespace-nowrap">{r.index}</td>
-                          <td className="px-2 py-1.5 whitespace-nowrap">{r.date}</td>
-                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.payment)}</td>
-                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.interest)}</td>
-                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.capital)}</td>
-                          <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.remaining)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {schedule.balloon > 0.5 && (
-                  <div className="flex items-start gap-2 rounded-md border border-amber-300/50 bg-amber-50/50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Twoja maksymalna rata jest niższa niż rata wymagana do pełnej spłaty w tym okresie — różnica trafia do ostatniej raty balonowej.
+            <CardContent className="space-y-5">
+              {/* Edytowalne kontrolki */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Kwota pożyczki</Label>
+                    <span className="text-sm font-bold tabular-nums">{formatPLN(editAmount)}</span>
                   </div>
-                )}
-              </CardContent>
-            )}
+                  <Input
+                    type="number" inputMode="numeric" min={10_000} max={5_000_000} step={5_000}
+                    value={editAmount || ""}
+                    onChange={(e) => setEditAmount(Math.max(0, Number(e.target.value) || 0))}
+                    disabled={locked}
+                  />
+                  <Slider value={[editAmount]} min={10_000} max={2_000_000} step={5_000}
+                    onValueChange={(v) => setEditAmount(v[0] ?? editAmount)} disabled={locked} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Okres spłaty</Label>
+                    <span className="text-sm font-bold tabular-nums">{editMonths} mies.</span>
+                  </div>
+                  <Input
+                    type="number" inputMode="numeric" min={3} max={120} step={1}
+                    value={editMonths || ""}
+                    onChange={(e) => setEditMonths(Math.max(0, Number(e.target.value) || 0))}
+                    disabled={locked}
+                  />
+                  <Slider value={[editMonths]} min={3} max={72} step={1}
+                    onValueChange={(v) => setEditMonths(v[0] ?? editMonths)} disabled={locked} />
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Wynagrodzenie inwestora w skali roku</Label>
+                    <span className="text-sm font-bold tabular-nums">{editRate}%</span>
+                  </div>
+                  <Input
+                    type="number" inputMode="decimal" min={15} max={60} step={0.5}
+                    value={editRate || ""}
+                    onChange={(e) => setEditRate(Math.max(0, Number(e.target.value) || 0))}
+                    disabled={locked}
+                  />
+                  <Slider value={[editRate]} min={15} max={60} step={0.5}
+                    onValueChange={(v) => setEditRate(v[0] ?? editRate)} disabled={locked} />
+                  <p className="text-[11px] text-muted-foreground">Im wyższe wynagrodzenie, tym szybciej znajdziemy inwestora.</p>
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-xs">Maks. miesięczna rata, którą udźwigniesz (opcjonalnie)</Label>
+                  <Input
+                    type="number" inputMode="numeric" min={0} step={100}
+                    placeholder="np. 3500"
+                    value={editMaxPayment || ""}
+                    onChange={(e) => setEditMaxPayment(Math.max(0, Number(e.target.value) || 0))}
+                    disabled={locked}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Gdy ustawisz limit niższy niż rata anuitetowa — różnica trafi do raty balonowej.</p>
+                </div>
+              </div>
+
+              {schedule ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Metric label="Rata miesięczna" value={formatPLN(schedule.monthly)} />
+                    <Metric label="Rata balonowa" value={schedule.balloon > 0.5 ? formatPLN(schedule.balloon) : "—"} />
+                    <Metric label="Suma do spłaty" value={formatPLN(schedule.total)} />
+                  </div>
+
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full text-[11px] tabular-nums sm:text-xs">
+                      <thead className="bg-muted/50 text-left text-muted-foreground uppercase tracking-wide text-[10px]">
+                        <tr>
+                          <th className="px-2 py-1.5 font-normal">#</th>
+                          <th className="px-2 py-1.5 font-normal">data</th>
+                          <th className="px-2 py-1.5 font-normal text-right">rata</th>
+                          <th className="px-2 py-1.5 font-normal text-right">odsetki</th>
+                          <th className="px-2 py-1.5 font-normal text-right">kapitał</th>
+                          <th className="px-2 py-1.5 font-normal text-right">saldo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {schedule.rows.map((r) => (
+                          <tr key={String(r.index)} className={r.index === "Balon" ? "border-t bg-primary/5 font-medium" : "border-t"}>
+                            <td className="px-2 py-1.5 whitespace-nowrap">{r.index}</td>
+                            <td className="px-2 py-1.5 whitespace-nowrap">{r.date}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.payment)}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.interest)}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.capital)}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatPLNCompact(r.remaining)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {schedule.balloon > 0.5 && (
+                    <div className="flex items-start gap-2 rounded-md border border-amber-300/50 bg-amber-50/50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      Twoja maksymalna rata jest niższa niż rata wymagana do pełnej spłaty w tym okresie — różnica trafia do ostatniej raty balonowej.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Uzupełnij kwotę, okres i wynagrodzenie, aby zobaczyć harmonogram.</p>
+              )}
+
+              {!locked && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                  {missingForInvestors.length > 0 && (
+                    <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>Aby wysłać wniosek do inwestorów, uzupełnij jeszcze: <strong>{missingForInvestors.join(", ")}</strong>.</span>
+                    </div>
+                  )}
+                  <Button
+                    onClick={() => void sendToInvestors()}
+                    disabled={sendingToInvestors}
+                    variant="cta"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
+                    {sendingToInvestors
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</>
+                      : <><Send className="mr-2 h-4 w-4" />Wyślij wniosek do inwestorów</>}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
           </Card>
+
         </>
       )}
     </div>
