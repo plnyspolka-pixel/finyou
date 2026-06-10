@@ -314,23 +314,22 @@ function Landing() {
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-widest text-accent">Jak to działa</p>
               <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground md:text-5xl">
-                Cztery kroki do gotówki
+                Trzy kroki do gotówki
               </h2>
             </div>
             <Button asChild variant="outline" className="border-primary/30 bg-card">
               <a href="#wniosek">
                 <IconCalc className="mr-2 h-4 w-4" />
-                Zacznij od kalkulatora
+                Złóż wniosek
               </a>
             </Button>
           </div>
 
-          <ol className="mt-12 grid gap-5 md:grid-cols-4">
+          <ol className="mt-12 grid gap-5 md:grid-cols-3">
             {[
-              { n: "1", t: "Wylicz ratę", d: "Suwaki, 5 sekund." },
-              { n: "2", t: "Złóż wniosek", d: "Numer KW i zdjęcia nieruchomości w formularzu." },
-              { n: "3", t: "Decyzja do 24 h", d: "Wniosek trafia od razu do inwestorów." },
-              { n: "4", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
+              { n: "1", t: "Złóż wniosek", d: "Numer KW i zdjęcia nieruchomości w formularzu." },
+              { n: "2", t: "Decyzja w 24 h", d: "Wniosek trafia od razu do inwestorów." },
+              { n: "3", t: "Wypłata", d: "Hipoteka u notariusza — i środki na koncie." },
             ].map((s, i, arr) => (
               <BlurFade key={s.n} delay={0.1 + i * 0.1} inView direction="up">
                 <li className="relative rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg">
