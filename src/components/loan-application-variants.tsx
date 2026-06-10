@@ -107,7 +107,7 @@ function useLoanDraft() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY);
       if (raw) setDraft({ ...emptyDraft, ...JSON.parse(raw) });
     } catch {
       /* noop */
@@ -122,7 +122,7 @@ function useLoanDraft() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     } catch {
       /* noop */
     }
@@ -367,7 +367,16 @@ export function LinearLoanApplication({
 } = {}) {
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const raw = localStorage.getItem(`${STORAGE_KEY}__step`);
+    const n = raw ? Number(raw) : 0;
+    return Number.isFinite(n) && n >= 0 && n < linearSteps.length ? n : 0;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.setItem(`${STORAGE_KEY}__step`, String(step)); } catch { /* noop */ }
+  }, [step]);
   const [submitting, setSubmitting] = useState(false);
   const prefillAppliedRef = useRef(false);
   const currentProgress = Math.round(((step + 1) / linearSteps.length) * 100);
@@ -437,6 +446,11 @@ export function LinearLoanApplication({
       try {
         setSubmitting(true);
         await onSubmit(draft);
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(`${STORAGE_KEY}__step`);
+        } catch { /* noop */ }
+        setStep(0);
         if (user) void navigate({ to: "/wniosek-opis" });
       } catch (e) {
         console.error(e);
