@@ -153,13 +153,42 @@ function KlientWniosek() {
     setRefreshTick((t) => t + 1);
   };
 
-  // Poprawiony harmonogram — annuity z opcjonalną ratą balonową
+  // Edytowalne parametry harmonogramu — live preview
+  const [editAmount, setEditAmount] = useState<number>(0);
+  const [editMonths, setEditMonths] = useState<number>(0);
+  const [editRate, setEditRate] = useState<number>(0);
+  const [editMaxPayment, setEditMaxPayment] = useState<number>(0);
+  const [sendingToInvestors, setSendingToInvestors] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!loan) return;
+    setEditAmount(Number(loan.loan_amount ?? 200_000));
+    setEditMonths(Number(loan.preferred_period_months ?? 24));
+    setEditRate(Number(loan.annual_investor_rate ?? 24));
+    setEditMaxPayment(Number(loan.max_monthly_payment ?? 0));
+  }, [loan?.id]);
+
+  // Autozapis edycji harmonogramu (debounced) — tylko gdy wniosek nieblokowany
+  useEffect(() => {
+    if (!loan?.id || locked) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void supabase.from("loan_applications").update({
+        loan_amount: editAmount,
+        preferred_period_months: editMonths,
+        annual_investor_rate: editRate,
+        max_monthly_payment: editMaxPayment || null,
+      }).eq("id", loan.id);
+    }, 600);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [editAmount, editMonths, editRate, editMaxPayment, loan?.id, locked]);
+
   const schedule = useMemo(() => {
-    if (!loan) return null;
-    const amount = Number(loan.loan_amount ?? 0);
-    const months = Number(loan.preferred_period_months ?? 0);
-    const maxPayment = Number(loan.max_monthly_payment ?? 0);
-    const annual = Number(loan.annual_investor_rate ?? 0);
+    const amount = editAmount;
+    const months = editMonths;
+    const annual = editRate;
+    const maxPayment = editMaxPayment;
     if (!amount || !months || !annual) return null;
 
     const nominalMonthly = monthlyPayment(amount, annual, months);
