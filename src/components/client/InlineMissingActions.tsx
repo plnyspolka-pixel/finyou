@@ -163,10 +163,10 @@ function ContactBox({ userId, client, onChanged }: { userId: string; client: Cli
     }
     setBusy(true);
     try {
-      const payload = { first_name: firstName.trim(), last_name: lastName.trim() || null, phone: phone.trim(), email: email.trim() || null };
+      const payload = { first_name: firstName.trim(), last_name: lastName.trim() || undefined, phone: phone.trim(), email: email.trim() || undefined };
       const res = client?.id
         ? await supabase.from("clients").update(payload).eq("id", client.id)
-        : await supabase.from("clients").insert({ ...payload, user_id: userId });
+        : await supabase.from("clients").insert({ first_name: payload.first_name, last_name: payload.last_name ?? "", phone: payload.phone, email: payload.email, user_id: userId });
       if (res.error) throw res.error;
       toast.success("Dane zapisane");
       onChanged();
@@ -339,8 +339,7 @@ function DocumentUploadBox({ userId, loanId, kind, label, onChanged }: { userId:
         document_type: kind,
         file_name: file.name,
         file_path: path,
-        file_size: file.size,
-        mime_type: file.type || "application/octet-stream",
+        uploaded_by: userId,
       });
       if (ins.error) throw ins.error;
       toast.success("Plik wgrany", { id: t });
