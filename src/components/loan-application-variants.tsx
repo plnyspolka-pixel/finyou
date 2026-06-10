@@ -107,7 +107,7 @@ function useLoanDraft() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY);
       if (raw) setDraft({ ...emptyDraft, ...JSON.parse(raw) });
     } catch {
       /* noop */
@@ -122,7 +122,7 @@ function useLoanDraft() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     } catch {
       /* noop */
     }
