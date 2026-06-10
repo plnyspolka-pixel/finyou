@@ -271,6 +271,14 @@ export async function placeOutboundCallInternal(opts: {
   }
 
 
+  // Wybór agenta: jeśli rozmowa dotyczy konkretnego wniosku (przypomnienie o
+  // dokumentach), używamy osobnego agenta `document_reminder_agent_id`.
+  // W przeciwnym razie domyślny `agent_id`.
+  const effectiveAgentId =
+    (opts.loanApplicationId && (settings as any).document_reminder_agent_id)
+      ? (settings as any).document_reminder_agent_id as string
+      : settings.agent_id;
+
   // SMS before call (jeśli włączone)
   await maybeSendSms("before_call", { phone, source: opts.source, firstName: opts.firstName }).catch(() => {});
 
@@ -283,7 +291,8 @@ export async function placeOutboundCallInternal(opts: {
       loan_application_id: opts.loanApplicationId ?? null,
       meta_lead_id: opts.metaLeadId ?? null,
       source: opts.source,
-      agent_id: settings.agent_id,
+      agent_id: effectiveAgentId,
+
       status: "w_trakcie",
       started_at: new Date().toISOString(),
       attempts: 1,
