@@ -38,6 +38,7 @@ import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
+import { Route as KlientKalkulatorRouteImport } from './routes/klient.kalkulator'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -260,6 +261,11 @@ const KlientProfilRoute = KlientProfilRouteImport.update({
 const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   id: '/powiadomienia',
   path: '/powiadomienia',
+  getParentRoute: () => KlientRoute,
+} as any)
+const KlientKalkulatorRoute = KlientKalkulatorRouteImport.update({
+  id: '/kalkulator',
+  path: '/kalkulator',
   getParentRoute: () => KlientRoute,
 } as any)
 const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
@@ -732,6 +738,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/klient/kalkulator': typeof KlientKalkulatorRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
@@ -838,6 +845,7 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/klient/kalkulator': typeof KlientKalkulatorRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
@@ -948,6 +956,7 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/klient/kalkulator': typeof KlientKalkulatorRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
@@ -1059,6 +1068,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/klient/kalkulator'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
@@ -1165,6 +1175,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/klient/kalkulator'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
@@ -1274,6 +1285,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/klient/kalkulator'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/wniosek'
@@ -1582,6 +1594,13 @@ declare module '@tanstack/react-router' {
       path: '/powiadomienia'
       fullPath: '/klient/powiadomienia'
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
+      parentRoute: typeof KlientRoute
+    }
+    '/klient/kalkulator': {
+      id: '/klient/kalkulator'
+      path: '/kalkulator'
+      fullPath: '/klient/kalkulator'
+      preLoaderRoute: typeof KlientKalkulatorRouteImport
       parentRoute: typeof KlientRoute
     }
     '/inwestor/wiadomosci': {
@@ -2274,6 +2293,7 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 )
 
 interface KlientRouteChildren {
+  KlientKalkulatorRoute: typeof KlientKalkulatorRoute
   KlientPowiadomieniaRoute: typeof KlientPowiadomieniaRoute
   KlientProfilRoute: typeof KlientProfilRoute
   KlientWniosekRoute: typeof KlientWniosekRoute
@@ -2281,6 +2301,7 @@ interface KlientRouteChildren {
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
+  KlientKalkulatorRoute: KlientKalkulatorRoute,
   KlientPowiadomieniaRoute: KlientPowiadomieniaRoute,
   KlientProfilRoute: KlientProfilRoute,
   KlientWniosekRoute: KlientWniosekRoute,

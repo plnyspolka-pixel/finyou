@@ -17,7 +17,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LogOut, User, FileText, LayoutDashboard, Bell } from "lucide-react";
+import { LogOut, User, FileText, LayoutDashboard, Bell, Calculator } from "lucide-react";
 
 export const Route = createFileRoute("/klient")({
   component: KlientLayout,
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/klient")({
 const items = [
   { to: "/klient", label: "Pulpit", icon: LayoutDashboard, exact: true },
   { to: "/klient/wniosek", label: "Mój wniosek", icon: FileText, exact: false },
+  { to: "/klient/kalkulator", label: "Propozycja dla inwestora", icon: Calculator, exact: false },
   { to: "/klient/profil", label: "Profil", icon: User, exact: false },
   { to: "/klient/powiadomienia", label: "Powiadomienia", icon: Bell, exact: false },
 ];
