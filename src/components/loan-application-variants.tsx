@@ -19,6 +19,7 @@ import { REQUIREMENTS_BY_TYPE, PROPERTY_TYPE_LABELS, type DocRequirement, type D
 import {
   ArrowLeft,
   ArrowRight,
+  Calculator,
   Check,
   CheckCircle2,
   Clock3,
