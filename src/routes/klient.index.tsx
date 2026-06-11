@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { loanStatusLabels } from "@/lib/labels";
-import { FileText, User, Phone, Mail } from "lucide-react";
+import { FileText, User } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
