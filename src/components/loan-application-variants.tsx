@@ -393,9 +393,11 @@ export function LinearLoanApplication({
     });
   }, [prefill]);
 
-  // Dla zalogowanych pomijamy kroki: 2 (Poznaj ofertę / kontakt gate), 8 (Kontakt), 9 (Podsumowanie)
-  const isHiddenStep = (i: number) => !!user && (i === 2 || i === 8 || i === 9);
+  // Ukrywamy: 2 (gate kontaktu), 3 (max rata), 4 (wynagrodzenie inwestora) — dla wszystkich.
+  // Dla zalogowanych dodatkowo: 8 (Kontakt), 9 (Podsumowanie).
+  const isHiddenStep = (i: number) => i === 2 || i === 3 || i === 4 || (!!user && (i === 8 || i === 9));
   const lastVisibleStep = user ? 7 : linearSteps.length - 1;
+
 
   useEffect(() => {
     if (isHiddenStep(step)) {
