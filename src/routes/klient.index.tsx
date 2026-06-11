@@ -177,16 +177,6 @@ function KlientDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Pomoc</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p className="text-muted-foreground">Masz pytania? Napisz lub zadzwoń:</p>
-              <a className="flex items-center gap-2 hover:underline" href="tel:+48000000000"><Phone className="h-4 w-4" /> +48 000 000 000</a>
-              <a className="flex items-center gap-2 hover:underline" href="mailto:kontakt@financeyou.pl"><Mail className="h-4 w-4" /> kontakt@financeyou.pl</a>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
