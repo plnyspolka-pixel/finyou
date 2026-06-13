@@ -296,6 +296,7 @@ function PhotoUploader({
   photos,
   addPhotos,
   removePhoto,
+  extraBuckets = [],
 }: {
   label: string;
   hint?: string;
@@ -303,9 +304,11 @@ function PhotoUploader({
   photos: PhotoItem[];
   addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
   removePhoto: (id: string) => void;
+  extraBuckets?: PhotoItem["bucket"][];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const ownPhotos = photos.filter((photo) => photo.bucket === bucket);
+  const visibleBuckets = [bucket, ...extraBuckets];
+  const ownPhotos = photos.filter((photo) => visibleBuckets.includes(photo.bucket));
 
   return (
     <div className="space-y-3">
@@ -972,32 +975,67 @@ function RequirementsPhotoStep({
     land_registry: "Aktualny wypis z rejestru gruntów (PDF lub zdjęcie).",
   };
 
+  const hasInterior = fileReqs.some((r) => r.kind === "photos_interior");
+  const hasExterior = fileReqs.some((r) => r.kind === "photos_exterior");
+  const hasPhotos = hasInterior || hasExterior;
+  const otherReqs = fileReqs.filter((r) => r.kind !== "photos_interior" && r.kind !== "photos_exterior");
+  const photosLabel =
+    hasInterior && hasExterior
+      ? "Zdjęcia nieruchomości — z zewnątrz i z wewnątrz"
+      : hasInterior
+        ? "Zdjęcia wnętrz"
+        : "Zdjęcia z zewnątrz";
+  const photosHint =
+    hasInterior && hasExterior
+      ? "Wystarczą zwykłe zdjęcia z telefonu — kilka kadrów elewacji z każdej strony i po jednym ujęciu z każdego pomieszczenia. Nie musi być profesjonalnie, ważne żeby było widać przestrzeń."
+      : hasInterior
+        ? "Wystarczy po jednym zdjęciu z każdego pomieszczenia, zrobionym telefonem. Najlepiej w dziennym świetle, z całą przestrzenią w kadrze."
+        : "Wystarczy kilka kadrów telefonem — elewacja z każdej strony, podjazd, najbliższe otoczenie.";
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm">
         <div className="font-bold text-foreground">
-          Dla typu „{typeLabel}” potrzebujemy {fileReqs.length} kompletów plików:
+          Dla typu „{typeLabel}" zbierzemy {hasPhotos ? "zdjęcia" : "dokumenty"}{otherReqs.length > 0 ? " i dokumenty" : ""} — pokaż, co masz pod ręką:
         </div>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-          {fileReqs.map((r) => (
+          {hasPhotos && <li>{photosLabel}</li>}
+          {otherReqs.map((r) => (
             <li key={r.kind}>{r.label}</li>
           ))}
         </ul>
+        <p className="mt-3 text-xs text-foreground/70">
+          Nie musisz mieć wszystkiego od razu — dorzucisz brakujące pliki później w panelu klienta.
+        </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {fileReqs.map((r) => (
-          <PhotoUploader
-            key={r.kind}
-            label={r.label}
-            hint={hints[r.kind]}
-            bucket={r.kind}
-            photos={photos}
-            addPhotos={addPhotos}
-            removePhoto={removePhoto}
-          />
-        ))}
-      </div>
+      {hasPhotos && (
+        <PhotoUploader
+          label={photosLabel}
+          hint={photosHint}
+          bucket={hasExterior ? "photos_exterior" : "photos_interior"}
+          photos={photos}
+          addPhotos={addPhotos}
+          removePhoto={removePhoto}
+          extraBuckets={hasInterior && hasExterior ? ["photos_interior"] : []}
+        />
+      )}
+
+      {otherReqs.length > 0 && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {otherReqs.map((r) => (
+            <PhotoUploader
+              key={r.kind}
+              label={r.label}
+              hint={hints[r.kind]}
+              bucket={r.kind}
+              photos={photos}
+              addPhotos={addPhotos}
+              removePhoto={removePhoto}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
