@@ -374,21 +374,24 @@ export function LinearLoanApplication({
   const { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading } = useLoanDraft();
   const navigate = useNavigate();
   const [step, setStep] = useState<number>(0);
+  const stepHydratedRef = useRef(false);
   // Rehydratacja kroku z localStorage dopiero po zamontowaniu (zero mismatch SSR).
   // Pomijamy kroki ukryte (2,3,4) — kontakt zbieramy dopiero na końcu (krok 8).
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") { stepHydratedRef.current = true; return; }
     try {
       const raw = localStorage.getItem(`${STORAGE_KEY}__step`);
       const n = raw ? Number(raw) : 0;
-      if (!Number.isFinite(n) || n < 0 || n >= linearSteps.length) return;
-      // jeśli zapisany krok jest ukryty, zostań na 0 — useEffect-skip dopchnie do najbliższego widocznego
-      if (n === 2 || n === 3 || n === 4) return;
-      setStep(n);
-    } catch { /* noop */ }
+      if (Number.isFinite(n) && n >= 0 && n < linearSteps.length && n !== 2 && n !== 3 && n !== 4) {
+        setStep(n);
+      }
+    } catch { /* noop */ } finally {
+      stepHydratedRef.current = true;
+    }
   }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!stepHydratedRef.current) return; // nie nadpisuj zapisu przed pierwszym odczytem
     try { localStorage.setItem(`${STORAGE_KEY}__step`, String(step)); } catch { /* noop */ }
   }, [step]);
   const [submitting, setSubmitting] = useState(false);
