@@ -16,8 +16,9 @@ import {
   testOutboundCall,
   testSms,
 } from "@/lib/voicebot.functions";
+import { syncAndPullMetaLeads } from "@/lib/meta-leads-sync.functions";
 import { toast } from "sonner";
-import { Phone, RefreshCw, PhoneCall, Save, MessageSquare, Megaphone } from "lucide-react";
+import { Phone, RefreshCw, PhoneCall, Save, MessageSquare, Megaphone, DownloadCloud } from "lucide-react";
 
 
 export const Route = createFileRoute("/admin/voicebot")({
