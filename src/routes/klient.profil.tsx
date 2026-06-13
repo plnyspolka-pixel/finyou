@@ -166,7 +166,7 @@ function KlientProfil() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Dane firmy (opcjonalnie)</span>
+            <span>Dane firmy</span>
             <Button size="sm" variant="outline" onClick={autoFill} disabled={fetching}>
               {fetching ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
               Pobierz dane
