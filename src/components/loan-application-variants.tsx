@@ -45,7 +45,7 @@ const SEC_TO_PROP: Record<SecurityType, string> = {
   inna: "inna",
 };
 
-type KwChoice = "znam" | "mobywatel" | "pomoc";
+type KwChoice = "znam" | "mobywatel";
 
 type PhotoItem = {
   id: string;
@@ -614,10 +614,9 @@ export function LinearLoanApplication({
 
           {step === 6 && (
             <div className="space-y-5">
-              <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
+              <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-2">
                 <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
                 <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Pokażemy krok po kroku" />
-                <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument z KW" description="Skan, akt notarialny, zdjęcie" />
               </RadioGroup>
 
               {draft.kwChoice === "znam" && (
@@ -632,14 +631,6 @@ export function LinearLoanApplication({
                 <MobywatelKwGuide
                   kwNumber={draft.kwNumber}
                   onChange={(value) => update("kwNumber", value.toUpperCase())}
-                />
-              )}
-
-              {draft.kwChoice === "pomoc" && (
-                <KwDocumentOcr
-                  kwNumber={draft.kwNumber}
-                  onDetected={(num) => update("kwNumber", num)}
-                  onSwitchToMobywatel={() => update("kwChoice", "mobywatel")}
                 />
               )}
             </div>
@@ -669,7 +660,7 @@ export function LinearLoanApplication({
               <ReviewRow label="Okres" value={`${draft.months} mies.`} />
               <ReviewRow label="Rata" value={formatPLN(figures.monthly)} />
               <ReviewRow label="Zabezpieczenie" value={draft.secType ? securityTypeLabels[draft.secType] : "—"} />
-              <ReviewRow label="KW" value={draft.kwNumber || (draft.kwChoice === "pomoc" ? "Z wgranego dokumentu" : draft.kwChoice === "mobywatel" ? "Sprawdzę w mObywatelu" : "—")} />
+              <ReviewRow label="KW" value={draft.kwNumber || (draft.kwChoice === "mobywatel" ? "Sprawdzę w mObywatelu" : "—")} />
               <ReviewRow label="Zdjęcia i pliki" value={`${photos.length}`} />
               <ReviewRow label="Kontakt" value={`${draft.email || "—"} · ${draft.phone || "—"}`} />
             </div>
