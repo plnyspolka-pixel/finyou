@@ -294,8 +294,7 @@ function VoicebotAdmin() {
             onClick={async () => {
               const t = toast.loading("Pobieram formularze i leady z Meta…");
               try {
-                const pull = useServerFn(syncAndPullMetaLeads);
-                const r: any = await pull();
+                const r: any = await doSyncMeta();
                 toast.success("Pobrano z Meta", {
                   id: t,
                   description: `Formularzy: ${r.forms_discovered} • Leadów nowych: ${r.leads_new} • Połączeń: ${r.calls_queued}${r.errors?.length ? ` • Błędów: ${r.errors.length}` : ""}`,
