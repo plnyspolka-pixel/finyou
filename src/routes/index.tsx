@@ -170,7 +170,7 @@ function Landing() {
 
         <div className="relative mx-auto grid max-w-7xl items-start gap-10 px-4 py-12 md:px-6 md:py-16 lg:grid-cols-[1fr_minmax(0,640px)]">
           {/* Lewa kolumna — krótkie wprowadzenie */}
-          <div className="lg:sticky lg:top-24">
+          <div className="order-2 lg:order-none lg:sticky lg:top-24">
             <BlurFade delay={0.05} inView>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
                 <IconBolt size={16} />
