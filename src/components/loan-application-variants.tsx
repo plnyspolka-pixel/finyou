@@ -45,7 +45,7 @@ const SEC_TO_PROP: Record<SecurityType, string> = {
   inna: "inna",
 };
 
-type KwChoice = "znam" | "mobywatel" | "pomoc";
+type KwChoice = "znam" | "mobywatel";
 
 type PhotoItem = {
   id: string;
