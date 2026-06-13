@@ -614,10 +614,9 @@ export function LinearLoanApplication({
 
           {step === 6 && (
             <div className="space-y-5">
-              <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-3">
+              <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-2">
                 <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
                 <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Pokażemy krok po kroku" />
-                <KwTile value="pomoc" current={draft.kwChoice} title="Wgram dokument z KW" description="Skan, akt notarialny, zdjęcie" />
               </RadioGroup>
 
               {draft.kwChoice === "znam" && (
@@ -632,14 +631,6 @@ export function LinearLoanApplication({
                 <MobywatelKwGuide
                   kwNumber={draft.kwNumber}
                   onChange={(value) => update("kwNumber", value.toUpperCase())}
-                />
-              )}
-
-              {draft.kwChoice === "pomoc" && (
-                <KwDocumentOcr
-                  kwNumber={draft.kwNumber}
-                  onDetected={(num) => update("kwNumber", num)}
-                  onSwitchToMobywatel={() => update("kwChoice", "mobywatel")}
                 />
               )}
             </div>
