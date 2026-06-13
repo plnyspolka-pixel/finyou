@@ -4340,6 +4340,7 @@ export type Database = {
           page_name: string | null
           total_leads_pulled: number
           updated_at: string
+          voicebot_enabled: boolean
         }
         Insert: {
           created_at?: string
@@ -4354,6 +4355,7 @@ export type Database = {
           page_name?: string | null
           total_leads_pulled?: number
           updated_at?: string
+          voicebot_enabled?: boolean
         }
         Update: {
           created_at?: string
@@ -4368,6 +4370,7 @@ export type Database = {
           page_name?: string | null
           total_leads_pulled?: number
           updated_at?: string
+          voicebot_enabled?: boolean
         }
         Relationships: []
       }

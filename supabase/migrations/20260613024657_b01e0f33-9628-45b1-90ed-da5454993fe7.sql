@@ -1,0 +1,1 @@
+ALTER TABLE public.meta_lead_forms ADD COLUMN IF NOT EXISTS voicebot_enabled boolean NOT NULL DEFAULT true;
