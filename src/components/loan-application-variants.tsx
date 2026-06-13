@@ -553,7 +553,7 @@ export function LinearLoanApplication({
               {step === 3 && "Jaką ratę miesięczną możesz spłacać?"}
               {step === 4 && "Jakie wynagrodzenie inwestora proponujesz w skali roku?"}
               {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
-              {step === 6 && "Czy znasz numer księgi wieczystej?"}
+              {step === 6 && "Wpisz numer księgi wieczystej"}
               {step === 7 && (user ? "Gotowe — dodaj zdjęcia i dokumenty, a wniosek trafi do inwestora" : "Dodaj zdjęcia lub dokumenty nieruchomości")}
               {step === 8 && "Jak mamy się z Tobą skontaktować?"}
               {step === 9 && "Sprawdź całość przed wysłaniem"}
