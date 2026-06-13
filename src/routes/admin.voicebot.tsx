@@ -275,6 +275,43 @@ function VoicebotAdmin() {
         </CardContent>
       </Card>
 
+      {/* FORMULARZE META */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />Formularze Meta — do których dzwonić</CardTitle>
+          <CardDescription>
+            Włącz przełącznik dla formularzy błyskawicznych, z których Ania ma automatycznie dzwonić do leadów.
+            Formularze pojawiają się tu automatycznie po pierwszym leadzie z webhooka.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {forms.map((f) => (
+              <div key={f.id} className="flex items-center justify-between border rounded-md p-3 text-sm">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{f.form_name || `Formularz ${f.meta_form_id}`}</div>
+                  <div className="text-muted-foreground text-xs">
+                    ID: <code>{f.meta_form_id}</code>
+                    {f.page_name && <> • {f.page_name}</>}
+                    {f.last_lead_at && <> • Ostatni lead: {new Date(f.last_lead_at).toLocaleString("pl-PL")}</>}
+                    {typeof f.total_leads_pulled === "number" && <> • Leadów: {f.total_leads_pulled}</>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Label className="text-xs text-muted-foreground">Ania dzwoni</Label>
+                  <Switch checked={!!f.voicebot_enabled} onCheckedChange={(b) => void toggleFormVoicebot(f.id, b)} />
+                </div>
+              </div>
+            ))}
+            {forms.length === 0 && (
+              <div className="text-sm text-muted-foreground">
+                Brak formularzy. Pojawią się tu po pierwszym leadzie z Meta Ads.
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* KOLEJKA */}
       <Card>
         <CardHeader><CardTitle>Kolejka rozmów ({rows.length})</CardTitle></CardHeader>
