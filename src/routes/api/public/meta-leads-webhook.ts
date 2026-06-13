@@ -262,10 +262,27 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 }).catch((e) => console.error("[meta-leads-webhook] email", e));
               }
 
-              // 4) Auto-trigger połączenia (jeśli włączone)
+              // 3c) Upsert formularza Meta (źródło prawdy dla przełączników w panelu Voicebot)
+              const formId = v.form_id ?? details.form_id;
+              if (formId) {
+                await supabaseAdmin.from("meta_lead_forms").upsert({
+                  meta_form_id: String(formId),
+                  meta_page_id: v.page_id ?? entry.id ?? null,
+                  form_name: details.form_name ?? null,
+                  last_lead_at: new Date().toISOString(),
+                }, { onConflict: "meta_form_id" });
+              }
+
+              // 4) Auto-trigger połączenia (jeśli włączone globalnie i dla tego formularza)
               const { data: settings } = await supabaseAdmin
                 .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
-              if (phone && settings && settings.call_trigger !== "manual") {
+              let formAllowsCall = true;
+              if (formId) {
+                const { data: form } = await supabaseAdmin
+                  .from("meta_lead_forms").select("voicebot_enabled").eq("meta_form_id", String(formId)).maybeSingle();
+                formAllowsCall = form?.voicebot_enabled !== false;
+              }
+              if (phone && settings && settings.call_trigger !== "manual" && formAllowsCall) {
                 await placeOutboundCallInternal({
                   phone,
                   source: "meta_lead",
@@ -275,6 +292,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                   firstName: capture.firstName,
                 }).catch((e) => console.error("[meta-leads-webhook] call trigger", e));
               }
+
             }
           }
           return new Response("ok", { status: 200 });
