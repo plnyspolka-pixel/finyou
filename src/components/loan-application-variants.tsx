@@ -104,6 +104,7 @@ function useLoanDraft() {
   const { user, loading } = useAuth();
   const [draft, setDraft] = useState<LoanDraft>(emptyDraft);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const draftHydratedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -112,6 +113,9 @@ function useLoanDraft() {
       if (raw) setDraft({ ...emptyDraft, ...JSON.parse(raw) });
     } catch {
       /* noop */
+    } finally {
+      // Oznaczamy "zhydratowane" PO odczycie — żeby pierwszy zapis nie nadpisał localStorage pustym draftem.
+      draftHydratedRef.current = true;
     }
   }, []);
 
@@ -122,6 +126,7 @@ function useLoanDraft() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!draftHydratedRef.current) return; // nie nadpisuj zapisu przed pierwszym odczytem
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     } catch {
