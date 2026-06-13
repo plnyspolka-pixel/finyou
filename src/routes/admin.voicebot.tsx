@@ -78,6 +78,24 @@ function VoicebotAdmin() {
     setLoading(false);
   };
 
+  const loadForms = async () => {
+    const { data } = await supabase
+      .from("meta_lead_forms")
+      .select("*")
+      .order("last_lead_at", { ascending: false, nullsFirst: false });
+    setForms(data ?? []);
+  };
+
+  const toggleFormVoicebot = async (id: string, value: boolean) => {
+    setForms((prev) => prev.map((f) => (f.id === id ? { ...f, voicebot_enabled: value } : f)));
+    const { error } = await supabase.from("meta_lead_forms").update({ voicebot_enabled: value }).eq("id", id);
+    if (error) {
+      toast.error("Nie udało się zapisać", { description: error.message });
+      void loadForms();
+    }
+  };
+
+
   useEffect(() => {
     void loadQueue();
     fetchSettings().then((s) => {
