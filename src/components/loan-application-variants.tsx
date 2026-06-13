@@ -413,10 +413,10 @@ export function LinearLoanApplication({
     });
   }, [prefill]);
 
-  // Ukrywamy: 2 (gate kontaktu), 3 (max rata), 4 (wynagrodzenie inwestora) — dla wszystkich.
-  // Dla zalogowanych dodatkowo: 8 (Kontakt), 9 (Podsumowanie).
-  const isHiddenStep = (i: number) => i === 2 || i === 3 || i === 4 || (!!user && (i === 8 || i === 9));
-  const lastVisibleStep = user ? 7 : linearSteps.length - 1;
+  // Ukrywamy: 2 (gate kontaktu), 3 (max rata), 4 (wynagrodzenie inwestora), 9 (podsumowanie) — dla wszystkich.
+  // Dla zalogowanych dodatkowo: 8 (Kontakt).
+  const isHiddenStep = (i: number) => i === 2 || i === 3 || i === 4 || i === 9 || (!!user && i === 8);
+  const lastVisibleStep = user ? 7 : 8;
 
 
   useEffect(() => {
