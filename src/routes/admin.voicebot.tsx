@@ -67,6 +67,7 @@ function VoicebotAdmin() {
   const saveSettings = useServerFn(updateVoicebotSettings);
   const doTest = useServerFn(testOutboundCall);
   const doTestSms = useServerFn(testSms);
+  const doSyncMeta = useServerFn(syncAndPullMetaLeads);
 
   const loadQueue = async () => {
     setLoading(true);
