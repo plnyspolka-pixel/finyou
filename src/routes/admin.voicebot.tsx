@@ -278,12 +278,36 @@ function VoicebotAdmin() {
 
       {/* FORMULARZE META */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />Formularze Meta — do których dzwonić</CardTitle>
-          <CardDescription>
-            Włącz przełącznik dla formularzy błyskawicznych, z których Ania ma automatycznie dzwonić do leadów.
-            Formularze pojawiają się tu automatycznie po pierwszym leadzie z webhooka.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />Formularze Meta — do których dzwonić</CardTitle>
+            <CardDescription>
+              Włącz przełącznik dla formularzy błyskawicznych, z których Ania ma automatycznie dzwonić do leadów.
+              Przycisk „Pobierz z Meta" odkrywa formularze ze stron, do których mamy dostęp, i ściąga nowe leady (od ostatniego pobrania)
+              — od razu zapisuje klienta, tworzy wniosek z linkiem powrotu, wysyła SMS/email i — jeśli tryb wyzwalania ≠ ręczny — zleca rozmowę Ani.
+              Nie musisz czekać na webhook.
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const t = toast.loading("Pobieram formularze i leady z Meta…");
+              try {
+                const pull = useServerFn(syncAndPullMetaLeads);
+                const r: any = await pull();
+                toast.success("Pobrano z Meta", {
+                  id: t,
+                  description: `Formularzy: ${r.forms_discovered} • Leadów nowych: ${r.leads_new} • Połączeń: ${r.calls_queued}${r.errors?.length ? ` • Błędów: ${r.errors.length}` : ""}`,
+                });
+                void loadForms();
+                void loadQueue();
+              } catch (e: any) {
+                toast.error("Błąd pobrania", { id: t, description: e?.message });
+              }
+            }}
+          >
+            <DownloadCloud className="mr-2 h-4 w-4" />Pobierz z Meta
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
