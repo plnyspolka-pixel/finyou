@@ -230,17 +230,25 @@ async function tryGenerate(lovableKey: string, model: string, prompt: string): P
         prompt,
         n: 1,
         size: "1536x1024",
-        response_format: "url",
+        // UWAGA: nie wysyłamy response_format — gpt-image-2 go nie wspiera,
+        // a gemini-image-preview przy response_format:"url" zwracał data:null.
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`[blog-autopilot] image gen ${model} ${res.status}:`, await res.text().catch(() => ""));
+      return null;
+    }
     const j: any = await res.json();
     const item = j.data?.[0];
-    if (!item) return null;
+    if (!item) {
+      console.error(`[blog-autopilot] image gen ${model} returned no data:`, JSON.stringify(j).slice(0, 200));
+      return null;
+    }
     if (item.url) return item.url as string;
     if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
     return null;
-  } catch {
+  } catch (e) {
+    console.error(`[blog-autopilot] image gen ${model} threw:`, e);
     return null;
   }
 }
