@@ -613,26 +613,51 @@ export function LinearLoanApplication({
           {step === 5 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
 
           {step === 6 && (
-            <div className="space-y-5">
-              <RadioGroup value={draft.kwChoice} onValueChange={(value) => update("kwChoice", value as KwChoice)} className="grid gap-3 md:grid-cols-2">
-                <KwTile value="znam" current={draft.kwChoice} title="Znam numer KW" description="Wpiszę go ręcznie" />
-                <KwTile value="mobywatel" current={draft.kwChoice} title="Sprawdzę w mObywatelu" description="Pokażemy krok po kroku" />
-              </RadioGroup>
-
-              {draft.kwChoice === "znam" && (
-                <div className="space-y-2">
-                  <Label htmlFor="linear-kw">Numer księgi wieczystej</Label>
-                  <Input id="linear-kw" value={draft.kwNumber} onChange={(event) => update("kwNumber", event.target.value.toUpperCase())} placeholder="LU1I/00012345/6" />
-                  <p className="text-xs text-muted-foreground">Adres i dane nieruchomości pobierzemy automatycznie z KW.</p>
-                </div>
-              )}
-
-              {draft.kwChoice === "mobywatel" && (
-                <MobywatelKwGuide
-                  kwNumber={draft.kwNumber}
-                  onChange={(value) => update("kwNumber", value.toUpperCase())}
+            <div className="space-y-6">
+              {/* GŁÓWNE: duże pole na numer KW */}
+              <div className="space-y-3 rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/5 to-transparent p-5 md:p-6">
+                <Label htmlFor="linear-kw" className="text-sm font-bold uppercase tracking-wide text-accent">
+                  Numer księgi wieczystej
+                </Label>
+                <Input
+                  id="linear-kw"
+                  value={draft.kwNumber}
+                  onChange={(event) => {
+                    update("kwNumber", event.target.value.toUpperCase());
+                    if (draft.kwChoice !== "znam") update("kwChoice", "znam");
+                  }}
+                  placeholder="LU1I / 00012345 / 6"
+                  className="h-16 font-mono text-2xl font-extrabold tracking-wider tabular-nums md:text-3xl"
+                  autoFocus
                 />
-              )}
+                <p className="text-xs text-muted-foreground">
+                  Adres i dane nieruchomości pobierzemy automatycznie z KW. Format:{" "}
+                  <span className="font-mono">XX1X/00000000/0</span>
+                </p>
+              </div>
+
+              {/* PODPOWIEDŹ: mObywatel */}
+              <details
+                className="group rounded-xl border border-border bg-muted/30 transition-colors hover:bg-muted/50"
+                onToggle={(e) => {
+                  if ((e.currentTarget as HTMLDetailsElement).open) update("kwChoice", "mobywatel");
+                  else if (!draft.kwNumber) update("kwChoice", "znam");
+                }}
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm">
+                  <Smartphone className="h-4 w-4 shrink-0 text-accent" />
+                  <span className="flex-1 font-semibold text-foreground">
+                    Nie znasz numeru? Sprawdź go w aplikacji mObywatel
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+                </summary>
+                <div className="border-t border-border px-4 py-4">
+                  <MobywatelKwGuide
+                    kwNumber={draft.kwNumber}
+                    onChange={(value) => update("kwNumber", value.toUpperCase())}
+                  />
+                </div>
+              </details>
             </div>
           )}
 
