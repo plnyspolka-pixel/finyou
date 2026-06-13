@@ -98,6 +98,7 @@ function VoicebotAdmin() {
 
   useEffect(() => {
     void loadQueue();
+    void loadForms();
     fetchSettings().then((s) => {
       if (s) setSettings({ ...settings, ...s });
     }).catch(() => {});
