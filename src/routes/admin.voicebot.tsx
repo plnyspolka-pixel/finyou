@@ -17,7 +17,8 @@ import {
   testSms,
 } from "@/lib/voicebot.functions";
 import { toast } from "sonner";
-import { Phone, RefreshCw, PhoneCall, Save, MessageSquare } from "lucide-react";
+import { Phone, RefreshCw, PhoneCall, Save, MessageSquare, Megaphone } from "lucide-react";
+
 
 export const Route = createFileRoute("/admin/voicebot")({
   component: VoicebotAdmin,
