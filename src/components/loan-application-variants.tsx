@@ -713,7 +713,7 @@ export function LinearLoanApplication({
               className="w-full whitespace-nowrap sm:w-auto sm:min-w-[200px]"
             >
               {step === lastVisibleStep ? (
-                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij wniosek")}</>
+                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij i przejdź do kalkulatora rat")}</>
               ) : (
                 <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
