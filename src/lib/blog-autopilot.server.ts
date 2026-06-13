@@ -328,7 +328,6 @@ async function generateCover(lovableKey: string, prompt: string): Promise<string
 
   let rawUrl: string | null = null;
   for (const model of [
-    "google/gemini-2.5-flash-image-preview",
     "openai/gpt-image-2",
     "google/gemini-2.5-flash-image-preview",
   ]) {
