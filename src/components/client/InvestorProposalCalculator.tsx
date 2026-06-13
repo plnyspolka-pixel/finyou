@@ -12,9 +12,10 @@ import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
 
+// Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
+// pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
 const LOCKED_STATUSES = new Set<string>([
-  "wniosek_kompletny", "do_analizy", "rokuje", "nie_rokuje",
-  "wyslany_do_inwestorow", "oferta_od_inwestora", "oferta_przekazana_klientowi",
+  "oferta_od_inwestora", "oferta_przekazana_klientowi",
   "zaakceptowany_przez_klienta", "do_umowy", "zamkniety", "archiwalny",
 ]);
 
