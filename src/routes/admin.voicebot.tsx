@@ -41,6 +41,8 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function VoicebotAdmin() {
   const [rows, setRows] = useState<any[]>([]);
+  const [forms, setForms] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
