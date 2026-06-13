@@ -296,6 +296,7 @@ function PhotoUploader({
   photos,
   addPhotos,
   removePhoto,
+  extraBuckets = [],
 }: {
   label: string;
   hint?: string;
@@ -303,9 +304,11 @@ function PhotoUploader({
   photos: PhotoItem[];
   addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
   removePhoto: (id: string) => void;
+  extraBuckets?: PhotoItem["bucket"][];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const ownPhotos = photos.filter((photo) => photo.bucket === bucket);
+  const visibleBuckets = [bucket, ...extraBuckets];
+  const ownPhotos = photos.filter((photo) => visibleBuckets.includes(photo.bucket));
 
   return (
     <div className="space-y-3">
