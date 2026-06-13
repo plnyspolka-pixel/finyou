@@ -265,13 +265,19 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               // 3c) Upsert formularza Meta (źródło prawdy dla przełączników w panelu Voicebot)
               const formId = v.form_id ?? details.form_id;
               if (formId) {
+                let formName: string | null = null;
+                try {
+                  const fr = await fetch(`${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN}&fields=name`);
+                  if (fr.ok) formName = (await fr.json())?.name ?? null;
+                } catch { /* noop */ }
                 await supabaseAdmin.from("meta_lead_forms").upsert({
                   meta_form_id: String(formId),
                   meta_page_id: v.page_id ?? entry.id ?? null,
-                  form_name: details.form_name ?? null,
+                  form_name: formName,
                   last_lead_at: new Date().toISOString(),
-                }, { onConflict: "meta_form_id" });
+                }, { onConflict: "meta_form_id", ignoreDuplicates: false });
               }
+
 
               // 4) Auto-trigger połączenia (jeśli włączone globalnie i dla tego formularza)
               const { data: settings } = await supabaseAdmin
