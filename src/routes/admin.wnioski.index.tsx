@@ -33,6 +33,7 @@ function WnioskiPage() {
   const [status, setStatus] = useState<string>("all");
   const [propType, setPropType] = useState<string>("all");
   const [source, setSource] = useState<string>("all");
+  const [completeness, setCompleteness] = useState<"all" | "complete" | "incomplete">("all");
 
   useEffect(() => {
     void (async () => {
