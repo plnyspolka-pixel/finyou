@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin/wnioski/")({
 });
 
 type DocRow = { id: string; document_type: string | null; file_name: string | null; file_path: string | null };
-type PropRow = { property_type: string; city: string | null; land_register_number: string | null; estimated_value: number | null };
+type PropRow = { property_type: string; city: string | null; land_register_number: string | null; estimated_value: number | null; photos: string[] | null };
 
 type Row = {
   id: string;
@@ -46,7 +46,7 @@ function WnioskiPage() {
       setLoading(true);
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city, land_register_number, estimated_value), documents(id, document_type, file_name, file_path)")
+        .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city, land_register_number, estimated_value, photos), documents(id, document_type, file_name, file_path)")
         .order("created_at", { ascending: false });
       setRows((data as unknown as Row[]) ?? []);
       setLoading(false);
@@ -151,6 +151,7 @@ function WnioskiPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Nieruchomość</TableHead>
                     <TableHead>Kwota / Okres</TableHead>
+                    <TableHead>Zdjęcia</TableHead>
                     <TableHead>Dokumenty</TableHead>
                     <TableHead>Kompl.</TableHead>
                     <TableHead>Źródło</TableHead>
@@ -187,6 +188,9 @@ function WnioskiPage() {
                         <div className="text-xs text-muted-foreground">{r.preferred_period_months ? `${r.preferred_period_months} mies.` : "—"}</div>
                       </TableCell>
                       <TableCell>
+                        <PhotosCell paths={p?.photos ?? []} />
+                      </TableCell>
+                      <TableCell>
                         <DocumentsCell docs={r.documents ?? []} />
                       </TableCell>
                       <TableCell>{r.completeness_percent}%</TableCell>
@@ -207,40 +211,97 @@ function WnioskiPage() {
   );
 }
 
+const IMAGE_RE = /\.(jpe?g|png|webp|gif|heic|avif)$/i;
+
+async function signUrls(bucket: string, paths: string[]): Promise<Record<string, string>> {
+  if (!paths.length) return {};
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(paths, 600);
+  const out: Record<string, string> = {};
+  (data ?? []).forEach((d) => { if (d.path && d.signedUrl) out[d.path] = d.signedUrl; });
+  return out;
+}
+
+function PhotosCell({ paths }: { paths: string[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open || Object.keys(urls).length) return;
+    void signUrls("property-photos", paths).then(setUrls);
+  }, [open, paths, urls]);
+  if (!paths.length) return <span className="text-xs text-muted-foreground">brak</span>;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 gap-1">
+          <FileText className="h-3.5 w-3.5" /> {paths.length}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-96 p-2">
+        <div className="grid grid-cols-3 gap-2 max-h-96 overflow-auto">
+          {paths.map((p) => (
+            <a key={p} href={urls[p] ?? "#"} target="_blank" rel="noreferrer" className="block aspect-square rounded overflow-hidden bg-muted">
+              {urls[p] ? (
+                <img src={urls[p]} alt="" loading="lazy" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full animate-pulse" />
+              )}
+            </a>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function DocumentsCell({ docs }: { docs: DocRow[] }) {
-  const openDoc = async (path: string | null) => {
-    if (!path) return;
-    const { data, error } = await supabase.storage.from("documents").createSignedUrl(path, 300);
-    if (error || !data?.signedUrl) {
-      toast.error("Nie udało się pobrać dokumentu");
-      return;
-    }
-    window.open(data.signedUrl, "_blank");
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open || Object.keys(urls).length) return;
+    const paths = docs.map((d) => d.file_path).filter((x): x is string => !!x);
+    void signUrls("documents", paths).then(setUrls);
+  }, [open, docs, urls]);
+
+  const openDoc = (path: string | null) => {
+    const url = path ? urls[path] : undefined;
+    if (!url) { toast.error("Nie udało się pobrać dokumentu"); return; }
+    window.open(url, "_blank");
   };
+
   if (!docs.length) return <span className="text-xs text-muted-foreground">brak</span>;
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-7 gap-1">
           <FileText className="h-3.5 w-3.5" /> {docs.length}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-2">
-        <div className="space-y-1 max-h-72 overflow-auto">
-          {docs.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => openDoc(d.file_path)}
-              className="w-full text-left text-sm rounded px-2 py-1.5 hover:bg-muted flex items-center gap-2"
-            >
-              <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate">{d.file_name ?? d.document_type ?? "Dokument"}</div>
-                {d.document_type ? <div className="text-xs text-muted-foreground truncate">{d.document_type}</div> : null}
-              </div>
-              <Download className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          ))}
+      <PopoverContent className="w-96 p-2">
+        <div className="grid grid-cols-3 gap-2 max-h-96 overflow-auto">
+          {docs.map((d) => {
+            const isImg = d.file_name && IMAGE_RE.test(d.file_name);
+            const url = d.file_path ? urls[d.file_path] : undefined;
+            return (
+              <button
+                key={d.id}
+                onClick={() => openDoc(d.file_path)}
+                className="block aspect-square rounded overflow-hidden bg-muted relative group"
+                title={d.file_name ?? d.document_type ?? "Dokument"}
+              >
+                {isImg && url ? (
+                  <img src={url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center">
+                    <FileText className="h-6 w-6 text-muted-foreground mb-1" />
+                    <div className="text-[10px] text-muted-foreground truncate w-full">{d.document_type ?? d.file_name ?? "Plik"}</div>
+                  </div>
+                )}
+                <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition">
+                  {d.file_name ?? d.document_type ?? "Dokument"}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>
