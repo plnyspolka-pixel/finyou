@@ -46,7 +46,7 @@ function WnioskiPage() {
       setLoading(true);
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city)")
+        .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city, land_register_number, estimated_value), documents(id, document_type, file_name, file_path)")
         .order("created_at", { ascending: false });
       setRows((data as unknown as Row[]) ?? []);
       setLoading(false);
