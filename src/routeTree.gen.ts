@@ -109,6 +109,7 @@ import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
+import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
@@ -631,6 +632,12 @@ const ApiPublicHooksProcessScheduledCallsRoute =
     path: '/api/public/hooks/process-scheduled-calls',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMetaLeadsPullRoute =
+  ApiPublicHooksMetaLeadsPullRouteImport.update({
+    id: '/api/public/hooks/meta-leads-pull',
+    path: '/api/public/hooks/meta-leads-pull',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanRemindersRoute =
   ApiPublicHooksLoanRemindersRouteImport.update({
     id: '/api/public/hooks/loan-reminders',
@@ -778,6 +785,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
@@ -885,6 +893,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
@@ -996,6 +1005,7 @@ export interface FileRoutesById {
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
@@ -1108,6 +1118,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
@@ -1215,6 +1226,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
@@ -1325,6 +1337,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
@@ -1380,6 +1393,7 @@ export interface RootRouteChildren {
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
+  ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
@@ -2093,6 +2107,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessScheduledCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/meta-leads-pull': {
+      id: '/api/public/hooks/meta-leads-pull'
+      path: '/api/public/hooks/meta-leads-pull'
+      fullPath: '/api/public/hooks/meta-leads-pull'
+      preLoaderRoute: typeof ApiPublicHooksMetaLeadsPullRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminders': {
       id: '/api/public/hooks/loan-reminders'
       path: '/api/public/hooks/loan-reminders'
@@ -2356,6 +2377,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
+  ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
   ApiPublicHooksSaturdaySmsRemindersRoute:
@@ -2371,13 +2393,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
