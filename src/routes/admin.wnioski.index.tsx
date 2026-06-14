@@ -58,6 +58,8 @@ function WnioskiPage() {
   const [source, setSource] = useState<string>("all");
   const [completeness, setCompleteness] = useState<"all" | "complete" | "incomplete">("all");
 
+  const [comms, setComms] = useState<Record<string, CommSummary>>({});
+
   useEffect(() => {
     void (async () => {
       setLoading(true);
@@ -65,8 +67,44 @@ function WnioskiPage() {
         .from("loan_applications")
         .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city, land_register_number, estimated_value, photos), documents(id, document_type, file_name, file_path)")
         .order("created_at", { ascending: false });
-      setRows((data as unknown as Row[]) ?? []);
+      const list = (data as unknown as Row[]) ?? [];
+      setRows(list);
       setLoading(false);
+
+      // liczniki komunikacji per klient (po telefonie / e-mailu)
+      const phones = Array.from(new Set(list.map((r) => r.client?.phone).filter(Boolean) as string[]));
+      const emails = Array.from(new Set(list.map((r) => r.client?.email).filter(Boolean) as string[]));
+      const all: any[] = [];
+      if (phones.length) {
+        const { data: c1 } = await supabase
+          .from("lead_communications")
+          .select("phone_normalized, email, channel, created_at")
+          .in("phone_normalized", phones);
+        if (c1) all.push(...c1);
+      }
+      if (emails.length) {
+        const { data: c2 } = await supabase
+          .from("lead_communications")
+          .select("phone_normalized, email, channel, created_at")
+          .in("email", emails);
+        if (c2) all.push(...c2);
+      }
+      const map: Record<string, CommSummary> = {};
+      for (const r of list) {
+        const key = r.id;
+        const s: CommSummary = { calls: 0, sms: 0, emails: 0, lastAt: null };
+        for (const c of all) {
+          const match = (r.client?.phone && c.phone_normalized === r.client.phone)
+            || (r.client?.email && c.email === r.client.email);
+          if (!match) continue;
+          if (c.channel === "voicebot_call" || c.channel === "call") s.calls += 1;
+          else if (c.channel === "sms") s.sms += 1;
+          else if (c.channel === "email") s.emails += 1;
+          if (!s.lastAt || new Date(c.created_at) > new Date(s.lastAt)) s.lastAt = c.created_at;
+        }
+        map[key] = s;
+      }
+      setComms(map);
     })();
   }, []);
 
