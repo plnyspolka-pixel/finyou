@@ -151,6 +151,7 @@ function WnioskiPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Nieruchomość</TableHead>
                     <TableHead>Kwota / Okres</TableHead>
+                    <TableHead>Zdjęcia</TableHead>
                     <TableHead>Dokumenty</TableHead>
                     <TableHead>Kompl.</TableHead>
                     <TableHead>Źródło</TableHead>
