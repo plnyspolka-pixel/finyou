@@ -33,6 +33,7 @@ function WnioskiPage() {
   const [status, setStatus] = useState<string>("all");
   const [propType, setPropType] = useState<string>("all");
   const [source, setSource] = useState<string>("all");
+  const [completeness, setCompleteness] = useState<"all" | "complete" | "incomplete">("all");
 
   useEffect(() => {
     void (async () => {
@@ -52,11 +53,19 @@ function WnioskiPage() {
     if (status !== "all" && r.status !== status) return false;
     if (propType !== "all" && !r.properties.some((p) => p.property_type === propType)) return false;
     if (source !== "all" && r.source !== source) return false;
+    if (completeness === "complete" && (r.completeness_percent ?? 0) < 100) return false;
+    if (completeness === "incomplete" && (r.completeness_percent ?? 0) >= 100) return false;
     const t = q.trim().toLowerCase();
     if (!t) return true;
     const fields = [r.client?.first_name, r.client?.last_name, r.client?.phone, r.client?.email, r.id];
     return fields.some((f) => (f ?? "").toLowerCase().includes(t));
   });
+
+  const counts = useMemo(() => {
+    const all = rows.length;
+    const complete = rows.filter((r) => (r.completeness_percent ?? 0) >= 100).length;
+    return { all, complete, incomplete: all - complete };
+  }, [rows]);
 
   const exportCsv = () => {
     const header = ["ID", "Imię", "Nazwisko", "Telefon", "E-mail", "Status", "Kwota", "Okres", "Źródło", "Utworzono"];
@@ -78,6 +87,23 @@ function WnioskiPage() {
           <p className="text-sm text-muted-foreground">Wszystkie wnioski pożyczkowe z filtrami i wyszukiwaniem.</p>
         </div>
         <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" /> Eksportuj CSV</Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {([
+          { v: "all", label: `Wszystkie (${counts.all})` },
+          { v: "complete", label: `Kompletne (${counts.complete})` },
+          { v: "incomplete", label: `Niekompletne (${counts.incomplete})` },
+        ] as const).map((t) => (
+          <Button
+            key={t.v}
+            variant={completeness === t.v ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCompleteness(t.v)}
+          >
+            {t.label}
+          </Button>
+        ))}
       </div>
 
       <Card>
