@@ -278,7 +278,7 @@ export async function placeOutboundCallInternal(opts: {
       sent_payload: { phone, source: opts.source },
       response_payload: { quiet_hours: true, reason: window.reason, hour: window.hour, weekday: window.weekday, next_allowed_at: nextIso },
     });
-    return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${nextIso}` };
+    return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${fmtWarsaw(nextIso)}` };
   }
 
 
