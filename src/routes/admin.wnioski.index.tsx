@@ -6,13 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { loanStatusLabels, formatPLN, formatDate, propertyTypeLabels } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/wnioski/")({
   component: WnioskiPage,
 });
+
+type DocRow = { id: string; document_type: string | null; file_name: string | null; file_path: string | null };
+type PropRow = { property_type: string; city: string | null; land_register_number: string | null; estimated_value: number | null };
 
 type Row = {
   id: string;
@@ -23,7 +28,8 @@ type Row = {
   source: string | null;
   created_at: string;
   client: { first_name: string; last_name: string; phone: string | null; email: string | null } | null;
-  properties: { property_type: string; city: string | null }[];
+  properties: PropRow[];
+  documents: DocRow[];
 };
 
 function WnioskiPage() {
@@ -40,7 +46,7 @@ function WnioskiPage() {
       setLoading(true);
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city)")
+        .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city, land_register_number, estimated_value), documents(id, document_type, file_name, file_path)")
         .order("created_at", { ascending: false });
       setRows((data as unknown as Row[]) ?? []);
       setLoading(false);
@@ -143,8 +149,9 @@ function WnioskiPage() {
                     <TableHead>Klient</TableHead>
                     <TableHead>Kontakt</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Kwota</TableHead>
-                    <TableHead>Okres</TableHead>
+                    <TableHead>Nieruchomość</TableHead>
+                    <TableHead>Kwota / Okres</TableHead>
+                    <TableHead>Dokumenty</TableHead>
                     <TableHead>Kompl.</TableHead>
                     <TableHead>Źródło</TableHead>
                     <TableHead>Utworzono</TableHead>
@@ -152,19 +159,36 @@ function WnioskiPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {filtered.map((r) => {
+                    const p = r.properties[0];
+                    return (
                     <TableRow key={r.id}>
                       <TableCell>
                         <div className="font-medium">{r.client ? `${r.client.first_name} ${r.client.last_name}` : "—"}</div>
-                        <div className="text-xs text-muted-foreground">{r.properties[0] ? `${propertyTypeLabels[r.properties[0].property_type] ?? r.properties[0].property_type}${r.properties[0].city ? ", " + r.properties[0].city : ""}` : "—"}</div>
+                        <div className="text-xs text-muted-foreground">ID: {r.id.slice(0, 8)}</div>
                       </TableCell>
                       <TableCell className="text-sm">
                         <div>{r.client?.phone ?? "—"}</div>
                         <div className="text-xs text-muted-foreground">{r.client?.email ?? "—"}</div>
                       </TableCell>
                       <TableCell><Badge variant="secondary">{loanStatusLabels[r.status] ?? r.status}</Badge></TableCell>
-                      <TableCell>{formatPLN(r.loan_amount)}</TableCell>
-                      <TableCell>{r.preferred_period_months ? `${r.preferred_period_months} mies.` : "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {p ? (
+                          <>
+                            <div className="font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}</div>
+                            <div className="text-xs text-muted-foreground">{p.city ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">KW: {p.land_register_number ?? "—"}</div>
+                            {p.estimated_value ? <div className="text-xs text-muted-foreground">Wartość: {formatPLN(p.estimated_value)}</div> : null}
+                          </>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <div className="font-medium">{formatPLN(r.loan_amount)}</div>
+                        <div className="text-xs text-muted-foreground">{r.preferred_period_months ? `${r.preferred_period_months} mies.` : "—"}</div>
+                      </TableCell>
+                      <TableCell>
+                        <DocumentsCell docs={r.documents ?? []} />
+                      </TableCell>
                       <TableCell>{r.completeness_percent}%</TableCell>
                       <TableCell>{r.source ?? "—"}</TableCell>
                       <TableCell>{formatDate(r.created_at)}</TableCell>
@@ -172,7 +196,7 @@ function WnioskiPage() {
                         <Link to="/admin/wnioski/$id" params={{ id: r.id }} className="text-sm text-primary hover:underline">Otwórz</Link>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );})}
                 </TableBody>
               </Table>
             </div>
@@ -180,5 +204,45 @@ function WnioskiPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function DocumentsCell({ docs }: { docs: DocRow[] }) {
+  const openDoc = async (path: string | null) => {
+    if (!path) return;
+    const { data, error } = await supabase.storage.from("documents").createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) {
+      toast.error("Nie udało się pobrać dokumentu");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
+  if (!docs.length) return <span className="text-xs text-muted-foreground">brak</span>;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 gap-1">
+          <FileText className="h-3.5 w-3.5" /> {docs.length}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-2">
+        <div className="space-y-1 max-h-72 overflow-auto">
+          {docs.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => openDoc(d.file_path)}
+              className="w-full text-left text-sm rounded px-2 py-1.5 hover:bg-muted flex items-center gap-2"
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate">{d.file_name ?? d.document_type ?? "Dokument"}</div>
+                {d.document_type ? <div className="text-xs text-muted-foreground truncate">{d.document_type}</div> : null}
+              </div>
+              <Download className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
