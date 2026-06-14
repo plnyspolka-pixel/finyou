@@ -35,6 +35,17 @@ function renderTemplate(tpl: string, vars: Record<string, string | null | undefi
   return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? "").toString());
 }
 
+/** Formatuje datę jako czas Warszawy (np. "2026-06-15 08:00 (Europe/Warsaw)"). */
+function fmtWarsaw(d: Date | string): string {
+  const dt = typeof d === "string" ? new Date(d) : d;
+  const s = new Intl.DateTimeFormat("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(dt);
+  return `${s} (Europe/Warsaw)`;
+}
+
 /** Sztywne godziny dzwonienia: 8:00–22:00 czasu Warszawy, oprócz niedziel. */
 export function getCallingWindow(now: Date = new Date()): {
   allowed: boolean;
