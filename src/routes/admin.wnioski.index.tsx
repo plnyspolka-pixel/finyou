@@ -53,11 +53,19 @@ function WnioskiPage() {
     if (status !== "all" && r.status !== status) return false;
     if (propType !== "all" && !r.properties.some((p) => p.property_type === propType)) return false;
     if (source !== "all" && r.source !== source) return false;
+    if (completeness === "complete" && (r.completeness_percent ?? 0) < 100) return false;
+    if (completeness === "incomplete" && (r.completeness_percent ?? 0) >= 100) return false;
     const t = q.trim().toLowerCase();
     if (!t) return true;
     const fields = [r.client?.first_name, r.client?.last_name, r.client?.phone, r.client?.email, r.id];
     return fields.some((f) => (f ?? "").toLowerCase().includes(t));
   });
+
+  const counts = useMemo(() => {
+    const all = rows.length;
+    const complete = rows.filter((r) => (r.completeness_percent ?? 0) >= 100).length;
+    return { all, complete, incomplete: all - complete };
+  }, [rows]);
 
   const exportCsv = () => {
     const header = ["ID", "Imię", "Nazwisko", "Telefon", "E-mail", "Status", "Kwota", "Okres", "Źródło", "Utworzono"];
