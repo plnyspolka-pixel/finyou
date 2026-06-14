@@ -16,6 +16,9 @@ export const Route = createFileRoute("/admin/wnioski/")({
   component: WnioskiPage,
 });
 
+type DocRow = { id: string; document_type: string | null; file_name: string | null; file_path: string | null };
+type PropRow = { property_type: string; city: string | null; land_register_number: string | null; estimated_value: number | null };
+
 type Row = {
   id: string;
   status: string;
@@ -25,7 +28,8 @@ type Row = {
   source: string | null;
   created_at: string;
   client: { first_name: string; last_name: string; phone: string | null; email: string | null } | null;
-  properties: { property_type: string; city: string | null }[];
+  properties: PropRow[];
+  documents: DocRow[];
 };
 
 function WnioskiPage() {
