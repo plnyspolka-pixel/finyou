@@ -264,7 +264,7 @@ export async function placeOutboundCallInternal(opts: {
       agent_id: settings.agent_id,
       status: "oczekuje",
       scheduled_at: nextIso,
-      result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${nextIso}`,
+      result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${fmtWarsaw(nextIso)}`,
     });
     if (opts.loanApplicationId) {
       await s
