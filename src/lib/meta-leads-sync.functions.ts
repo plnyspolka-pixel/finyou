@@ -103,9 +103,12 @@ export const syncAndPullMetaLeads = createServerFn({ method: "POST" })
     for (const form of enabledForms ?? []) {
       const formId = form.meta_form_id;
       const pageToken = (form.meta_page_id && pageTokens[form.meta_page_id]) || token;
-      const sinceMs = form.last_lead_at
+      // Jeśli nigdy nic nie pociągnęliśmy z tego formularza – cofnij się głębiej (30 dni),
+      // żeby zaciągnąć historyczne leady, których nie złapał webhook.
+      const fallbackDays = (form.total_leads_pulled ?? 0) === 0 ? 30 : 7;
+      const sinceMs = form.last_lead_at && (form.total_leads_pulled ?? 0) > 0
         ? new Date(form.last_lead_at).getTime()
-        : Date.now() - 7 * 24 * 3600 * 1000;
+        : Date.now() - fallbackDays * 24 * 3600 * 1000;
       const sinceSec = Math.floor(sinceMs / 1000);
       const filter = encodeURIComponent(JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: sinceSec }]));
       let url: string | null = `${GRAPH}/${formId}/leads?fields=id,created_time,field_data,form_id,campaign_id,ad_id&limit=50&filtering=${filter}&access_token=${pageToken}`;
