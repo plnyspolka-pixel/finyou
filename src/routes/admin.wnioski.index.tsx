@@ -89,6 +89,23 @@ function WnioskiPage() {
         <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" /> Eksportuj CSV</Button>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {([
+          { v: "all", label: `Wszystkie (${counts.all})` },
+          { v: "complete", label: `Kompletne (${counts.complete})` },
+          { v: "incomplete", label: `Niekompletne (${counts.incomplete})` },
+        ] as const).map((t) => (
+          <Button
+            key={t.v}
+            variant={completeness === t.v ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCompleteness(t.v)}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </div>
+
       <Card>
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap gap-3">
