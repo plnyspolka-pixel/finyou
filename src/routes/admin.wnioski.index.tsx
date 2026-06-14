@@ -197,7 +197,62 @@ function WnioskiPage() {
         </CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Ładowanie…</p> : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Mobile: karty */}
+              <div className="lg:hidden space-y-3">
+                {filtered.map((r) => {
+                  const p = r.properties[0];
+                  const c = comms[r.id] ?? EMPTY_COMM;
+                  return (
+                    <Link
+                      key={r.id}
+                      to="/admin/wnioski/$id"
+                      params={{ id: r.id }}
+                      className="block rounded-lg border bg-card p-3 hover:bg-muted/40 active:bg-muted/60"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{r.client ? `${r.client.first_name} ${r.client.last_name}` : "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{r.client?.phone ?? "—"} · {r.client?.email ?? "—"}</div>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 text-xs">{loanStatusLabels[r.status] ?? r.status}</Badge>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <div className="text-muted-foreground">Kwota</div>
+                          <div className="font-medium">{formatPLN(r.loan_amount)}{r.preferred_period_months ? ` · ${r.preferred_period_months} mc` : ""}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Kompletność</div>
+                          <div className="font-medium">{r.completeness_percent}%</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground">Nieruchomość</div>
+                          <div className="font-medium truncate">
+                            {p ? `${propertyTypeLabels[p.property_type] ?? p.property_type}${p.city ? ` · ${p.city}` : ""}` : "—"}
+                          </div>
+                          {p?.land_register_number ? <div className="text-muted-foreground truncate">KW: {p.land_register_number}</div> : null}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{c.calls}</span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{c.sms}</span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{c.emails}</span>
+                        <span className="text-muted-foreground">· {formatRelative(c.lastAt)}</span>
+                        <span className="ml-auto text-muted-foreground">{formatDate(r.created_at)}</span>
+                      </div>
+                      <div className="mt-2 flex gap-2" onClick={(e) => e.preventDefault()}>
+                        <PhotosCell paths={p?.photos ?? []} />
+                        <DocumentsCell docs={r.documents ?? []} />
+                      </div>
+                    </Link>
+                  );
+                })}
+                {filtered.length === 0 ? <p className="text-sm text-muted-foreground">Brak wniosków.</p> : null}
+              </div>
+
+              {/* Desktop: tabela */}
+              <div className="hidden lg:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -206,6 +261,7 @@ function WnioskiPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Nieruchomość</TableHead>
                     <TableHead>Kwota / Okres</TableHead>
+                    <TableHead>Aktywność</TableHead>
                     <TableHead>Zdjęcia</TableHead>
                     <TableHead>Dokumenty</TableHead>
                     <TableHead>Kompl.</TableHead>
@@ -217,6 +273,7 @@ function WnioskiPage() {
                 <TableBody>
                   {filtered.map((r) => {
                     const p = r.properties[0];
+                    const c = comms[r.id] ?? EMPTY_COMM;
                     return (
                     <TableRow key={r.id}>
                       <TableCell>
@@ -242,6 +299,14 @@ function WnioskiPage() {
                         <div className="font-medium">{formatPLN(r.loan_amount)}</div>
                         <div className="text-xs text-muted-foreground">{r.preferred_period_months ? `${r.preferred_period_months} mies.` : "—"}</div>
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{c.calls}</span>
+                          <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{c.sms}</span>
+                          <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{c.emails}</span>
+                        </div>
+                        <div className="text-muted-foreground">{formatRelative(c.lastAt)}</div>
+                      </TableCell>
                       <TableCell>
                         <PhotosCell paths={p?.photos ?? []} />
                       </TableCell>
@@ -258,7 +323,8 @@ function WnioskiPage() {
                   );})}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
