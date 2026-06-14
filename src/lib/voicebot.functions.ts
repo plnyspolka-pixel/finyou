@@ -245,7 +245,7 @@ export async function placeOutboundCallInternal(opts: {
       });
       return {
         ok: false,
-        error: `Daily throttle — ostatni telefon ${lastAt.toISOString()} (źródło: ${last.source}). Następny dozwolony: ${scheduledAt}`,
+        error: `Daily throttle — ostatni telefon ${fmtWarsaw(lastAt)} (źródło: ${last.source}). Następny dozwolony: ${fmtWarsaw(scheduledAt)}`,
       };
     }
   }
