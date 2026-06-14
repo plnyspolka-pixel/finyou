@@ -35,6 +35,17 @@ function renderTemplate(tpl: string, vars: Record<string, string | null | undefi
   return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? "").toString());
 }
 
+/** Formatuje datę jako czas Warszawy (np. "2026-06-15 08:00 (Europe/Warsaw)"). */
+function fmtWarsaw(d: Date | string): string {
+  const dt = typeof d === "string" ? new Date(d) : d;
+  const s = new Intl.DateTimeFormat("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(dt);
+  return `${s} (Europe/Warsaw)`;
+}
+
 /** Sztywne godziny dzwonienia: 8:00–22:00 czasu Warszawy, oprócz niedziel. */
 export function getCallingWindow(now: Date = new Date()): {
   allowed: boolean;
@@ -234,7 +245,7 @@ export async function placeOutboundCallInternal(opts: {
       });
       return {
         ok: false,
-        error: `Daily throttle — ostatni telefon ${lastAt.toISOString()} (źródło: ${last.source}). Następny dozwolony: ${scheduledAt}`,
+        error: `Daily throttle — ostatni telefon ${fmtWarsaw(lastAt)} (źródło: ${last.source}). Następny dozwolony: ${fmtWarsaw(scheduledAt)}`,
       };
     }
   }
@@ -253,7 +264,7 @@ export async function placeOutboundCallInternal(opts: {
       agent_id: settings.agent_id,
       status: "oczekuje",
       scheduled_at: nextIso,
-      result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${nextIso}`,
+      result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${fmtWarsaw(nextIso)}`,
     });
     if (opts.loanApplicationId) {
       await s
@@ -267,7 +278,7 @@ export async function placeOutboundCallInternal(opts: {
       sent_payload: { phone, source: opts.source },
       response_payload: { quiet_hours: true, reason: window.reason, hour: window.hour, weekday: window.weekday, next_allowed_at: nextIso },
     });
-    return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${nextIso}` };
+    return { ok: false, error: `Quiet hours — połączenie zaplanowano na ${fmtWarsaw(nextIso)}` };
   }
 
 

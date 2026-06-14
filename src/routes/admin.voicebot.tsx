@@ -342,22 +342,33 @@ function VoicebotAdmin() {
         <CardHeader><CardTitle>Kolejka rozmów ({rows.length})</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {rows.map((r) => (
+            {rows.map((r) => {
+              const fmtPl = (iso: string) => new Date(iso).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", hour12: false });
+              const humanized = r.result_summary
+                ? String(r.result_summary).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})/g, (m: string) => fmtPl(m))
+                : null;
+              return (
               <div key={r.id} className="flex items-start justify-between border rounded-md p-3 text-sm">
                 <div>
                   <div className="font-medium">{r.phone_normalized}</div>
                   <div className="text-muted-foreground text-xs">
                     Źródło: {SOURCE_LABELS[r.source] ?? r.source ?? "—"} • Próby: {r.attempts} •{" "}
-                    {new Date(r.created_at).toLocaleString("pl-PL")}
+                    {new Date(r.created_at).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", hour12: false })}
                   </div>
-                  {r.result_summary && <div className="mt-1 text-xs">{r.result_summary}</div>}
+                  {r.scheduled_at && (
+                    <div className="text-muted-foreground text-xs">
+                      Zaplanowano na: {fmtPl(r.scheduled_at)} <span className="opacity-60">(Europe/Warsaw)</span>
+                    </div>
+                  )}
+                  {humanized && <div className="mt-1 text-xs">{humanized}</div>}
                   {r.conversation_id && <div className="mt-1 text-xs text-muted-foreground">conv: {r.conversation_id}</div>}
                 </div>
                 <Badge variant={r.status === "blad" ? "destructive" : r.status === "zakonczona" ? "default" : "secondary"}>
                   {STATUS_LABELS[r.status] ?? r.status}
                 </Badge>
               </div>
-            ))}
+              );
+            })}
             {rows.length === 0 && <div className="text-muted-foreground">Kolejka pusta.</div>}
           </div>
         </CardContent>
