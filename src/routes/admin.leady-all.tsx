@@ -54,7 +54,37 @@ function LeadsUnifiedPage() {
       </Card>
 
       <Card>
-        <div className="overflow-x-auto">
+        {/* Mobile: karty */}
+        <div className="md:hidden divide-y">
+          {q.isLoading && <div className="p-6 text-center text-sm text-muted-foreground">Ładowanie…</div>}
+          {q.data?.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Brak leadów.</div>}
+          {q.data?.map((l: any) => (
+            <Link
+              key={l.id}
+              to="/admin/leady-all/$id"
+              params={{ id: l.id }}
+              className="block p-3 hover:bg-muted/40 active:bg-muted/60"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{[l.first_name, l.last_name].filter(Boolean).join(" ") || "—"}</div>
+                  <div className="text-xs text-muted-foreground truncate">{l.email || l.phone_normalized || "—"}</div>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <Badge variant={l.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{l.type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{l.status}</Badge>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span className="truncate">{l.source || "—"}{l.current_form_step ? ` · krok ${l.current_form_step}` : ""}</span>
+                <span className="shrink-0">{new Date(l.created_at).toLocaleDateString("pl-PL")}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop: tabela */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground border-b">
               <tr>

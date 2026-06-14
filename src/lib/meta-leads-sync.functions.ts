@@ -83,11 +83,10 @@ export const syncAndPullMetaLeads = createServerFn({ method: "POST" })
       summary.errors.push(`discover: ${e?.message ?? e}`);
     }
 
-    // 2) Dla każdego włączonego formularza pociągnij nowe leady
+    // 2) Pociągnij leady ze WSZYSTKICH wykrytych formularzy (voicebot_enabled steruje tylko auto-callem)
     const { data: enabledForms } = await supabaseAdmin
       .from("meta_lead_forms")
-      .select("*")
-      .eq("voicebot_enabled", true);
+      .select("*");
 
     const { data: settings } = await supabaseAdmin
       .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
@@ -104,9 +103,12 @@ export const syncAndPullMetaLeads = createServerFn({ method: "POST" })
     for (const form of enabledForms ?? []) {
       const formId = form.meta_form_id;
       const pageToken = (form.meta_page_id && pageTokens[form.meta_page_id]) || token;
-      const sinceMs = form.last_lead_at
+      // Jeśli nigdy nic nie pociągnęliśmy z tego formularza – cofnij się głębiej (30 dni),
+      // żeby zaciągnąć historyczne leady, których nie złapał webhook.
+      const fallbackDays = (form.total_leads_pulled ?? 0) === 0 ? 30 : 7;
+      const sinceMs = form.last_lead_at && (form.total_leads_pulled ?? 0) > 0
         ? new Date(form.last_lead_at).getTime()
-        : Date.now() - 7 * 24 * 3600 * 1000;
+        : Date.now() - fallbackDays * 24 * 3600 * 1000;
       const sinceSec = Math.floor(sinceMs / 1000);
       const filter = encodeURIComponent(JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: sinceSec }]));
       let url: string | null = `${GRAPH}/${formId}/leads?fields=id,created_time,field_data,form_id,campaign_id,ad_id&limit=50&filtering=${filter}&access_token=${pageToken}`;
@@ -219,8 +221,8 @@ export const syncAndPullMetaLeads = createServerFn({ method: "POST" })
               await sendResendEmail({ to: email, subject: "Dokończ wniosek o pożyczkę — Finance You", text, html, fromName: "Ania z Finance You" }).catch(() => {});
             }
 
-            // call Ani
-            if (phone && autoCall) {
+            // call Ani – tylko jeśli formularz ma włączony voicebot
+            if (phone && autoCall && form.voicebot_enabled) {
               await placeOutboundCallInternal({
                 phone, source: "meta_lead",
                 metaLeadId: inserted?.id ?? null,

@@ -9,8 +9,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { loanStatusLabels, formatPLN, formatDate, propertyTypeLabels } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Phone, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+
+type CommSummary = { calls: number; sms: number; emails: number; lastAt: string | null };
+const EMPTY_COMM: CommSummary = { calls: 0, sms: 0, emails: 0, lastAt: null };
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const d = Math.floor(diff / 86400000);
+  if (d === 0) {
+    const h = Math.floor(diff / 3600000);
+    if (h <= 0) return "przed chwilą";
+    return `${h}h temu`;
+  }
+  if (d === 1) return "wczoraj";
+  if (d < 7) return `${d} dni temu`;
+  return new Date(iso).toLocaleDateString("pl-PL");
+}
 
 export const Route = createFileRoute("/admin/wnioski/")({
   component: WnioskiPage,
@@ -41,6 +58,8 @@ function WnioskiPage() {
   const [source, setSource] = useState<string>("all");
   const [completeness, setCompleteness] = useState<"all" | "complete" | "incomplete">("all");
 
+  const [comms, setComms] = useState<Record<string, CommSummary>>({});
+
   useEffect(() => {
     void (async () => {
       setLoading(true);
@@ -48,8 +67,44 @@ function WnioskiPage() {
         .from("loan_applications")
         .select("id, status, loan_amount, preferred_period_months, completeness_percent, source, created_at, client:clients(first_name,last_name,phone,email), properties(property_type, city, land_register_number, estimated_value, photos), documents(id, document_type, file_name, file_path)")
         .order("created_at", { ascending: false });
-      setRows((data as unknown as Row[]) ?? []);
+      const list = (data as unknown as Row[]) ?? [];
+      setRows(list);
       setLoading(false);
+
+      // liczniki komunikacji per klient (po telefonie / e-mailu)
+      const phones = Array.from(new Set(list.map((r) => r.client?.phone).filter(Boolean) as string[]));
+      const emails = Array.from(new Set(list.map((r) => r.client?.email).filter(Boolean) as string[]));
+      const all: any[] = [];
+      if (phones.length) {
+        const { data: c1 } = await supabase
+          .from("lead_communications")
+          .select("phone_normalized, email, channel, created_at")
+          .in("phone_normalized", phones);
+        if (c1) all.push(...c1);
+      }
+      if (emails.length) {
+        const { data: c2 } = await supabase
+          .from("lead_communications")
+          .select("phone_normalized, email, channel, created_at")
+          .in("email", emails);
+        if (c2) all.push(...c2);
+      }
+      const map: Record<string, CommSummary> = {};
+      for (const r of list) {
+        const key = r.id;
+        const s: CommSummary = { calls: 0, sms: 0, emails: 0, lastAt: null };
+        for (const c of all) {
+          const match = (r.client?.phone && c.phone_normalized === r.client.phone)
+            || (r.client?.email && c.email === r.client.email);
+          if (!match) continue;
+          if (c.channel === "voicebot_call" || c.channel === "call") s.calls += 1;
+          else if (c.channel === "sms") s.sms += 1;
+          else if (c.channel === "email") s.emails += 1;
+          if (!s.lastAt || new Date(c.created_at) > new Date(s.lastAt)) s.lastAt = c.created_at;
+        }
+        map[key] = s;
+      }
+      setComms(map);
     })();
   }, []);
 
@@ -142,7 +197,62 @@ function WnioskiPage() {
         </CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Ładowanie…</p> : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Mobile: karty */}
+              <div className="lg:hidden space-y-3">
+                {filtered.map((r) => {
+                  const p = r.properties[0];
+                  const c = comms[r.id] ?? EMPTY_COMM;
+                  return (
+                    <Link
+                      key={r.id}
+                      to="/admin/wnioski/$id"
+                      params={{ id: r.id }}
+                      className="block rounded-lg border bg-card p-3 hover:bg-muted/40 active:bg-muted/60"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{r.client ? `${r.client.first_name} ${r.client.last_name}` : "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{r.client?.phone ?? "—"} · {r.client?.email ?? "—"}</div>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 text-xs">{loanStatusLabels[r.status] ?? r.status}</Badge>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <div className="text-muted-foreground">Kwota</div>
+                          <div className="font-medium">{formatPLN(r.loan_amount)}{r.preferred_period_months ? ` · ${r.preferred_period_months} mc` : ""}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Kompletność</div>
+                          <div className="font-medium">{r.completeness_percent}%</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-muted-foreground">Nieruchomość</div>
+                          <div className="font-medium truncate">
+                            {p ? `${propertyTypeLabels[p.property_type] ?? p.property_type}${p.city ? ` · ${p.city}` : ""}` : "—"}
+                          </div>
+                          {p?.land_register_number ? <div className="text-muted-foreground truncate">KW: {p.land_register_number}</div> : null}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{c.calls}</span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{c.sms}</span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{c.emails}</span>
+                        <span className="text-muted-foreground">· {formatRelative(c.lastAt)}</span>
+                        <span className="ml-auto text-muted-foreground">{formatDate(r.created_at)}</span>
+                      </div>
+                      <div className="mt-2 flex gap-2" onClick={(e) => e.preventDefault()}>
+                        <PhotosCell paths={p?.photos ?? []} />
+                        <DocumentsCell docs={r.documents ?? []} />
+                      </div>
+                    </Link>
+                  );
+                })}
+                {filtered.length === 0 ? <p className="text-sm text-muted-foreground">Brak wniosków.</p> : null}
+              </div>
+
+              {/* Desktop: tabela */}
+              <div className="hidden lg:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -151,6 +261,7 @@ function WnioskiPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Nieruchomość</TableHead>
                     <TableHead>Kwota / Okres</TableHead>
+                    <TableHead>Aktywność</TableHead>
                     <TableHead>Zdjęcia</TableHead>
                     <TableHead>Dokumenty</TableHead>
                     <TableHead>Kompl.</TableHead>
@@ -162,6 +273,7 @@ function WnioskiPage() {
                 <TableBody>
                   {filtered.map((r) => {
                     const p = r.properties[0];
+                    const c = comms[r.id] ?? EMPTY_COMM;
                     return (
                     <TableRow key={r.id}>
                       <TableCell>
@@ -187,6 +299,14 @@ function WnioskiPage() {
                         <div className="font-medium">{formatPLN(r.loan_amount)}</div>
                         <div className="text-xs text-muted-foreground">{r.preferred_period_months ? `${r.preferred_period_months} mies.` : "—"}</div>
                       </TableCell>
+                      <TableCell className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{c.calls}</span>
+                          <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{c.sms}</span>
+                          <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{c.emails}</span>
+                        </div>
+                        <div className="text-muted-foreground">{formatRelative(c.lastAt)}</div>
+                      </TableCell>
                       <TableCell>
                         <PhotosCell paths={p?.photos ?? []} />
                       </TableCell>
@@ -203,7 +323,8 @@ function WnioskiPage() {
                   );})}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
