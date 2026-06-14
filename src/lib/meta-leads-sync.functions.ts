@@ -218,8 +218,8 @@ export const syncAndPullMetaLeads = createServerFn({ method: "POST" })
               await sendResendEmail({ to: email, subject: "Dokończ wniosek o pożyczkę — Finance You", text, html, fromName: "Ania z Finance You" }).catch(() => {});
             }
 
-            // call Ani
-            if (phone && autoCall) {
+            // call Ani – tylko jeśli formularz ma włączony voicebot
+            if (phone && autoCall && form.voicebot_enabled) {
               await placeOutboundCallInternal({
                 phone, source: "meta_lead",
                 metaLeadId: inserted?.id ?? null,
