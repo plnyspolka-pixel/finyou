@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin/wnioski/")({
 });
 
 type DocRow = { id: string; document_type: string | null; file_name: string | null; file_path: string | null };
-type PropRow = { property_type: string; city: string | null; land_register_number: string | null; estimated_value: number | null };
+type PropRow = { property_type: string; city: string | null; land_register_number: string | null; estimated_value: number | null; photos: string[] | null };
 
 type Row = {
   id: string;
