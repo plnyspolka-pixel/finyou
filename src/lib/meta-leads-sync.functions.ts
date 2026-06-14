@@ -83,11 +83,10 @@ export const syncAndPullMetaLeads = createServerFn({ method: "POST" })
       summary.errors.push(`discover: ${e?.message ?? e}`);
     }
 
-    // 2) Dla każdego włączonego formularza pociągnij nowe leady
+    // 2) Pociągnij leady ze WSZYSTKICH wykrytych formularzy (voicebot_enabled steruje tylko auto-callem)
     const { data: enabledForms } = await supabaseAdmin
       .from("meta_lead_forms")
-      .select("*")
-      .eq("voicebot_enabled", true);
+      .select("*");
 
     const { data: settings } = await supabaseAdmin
       .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
