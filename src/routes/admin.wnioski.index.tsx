@@ -188,6 +188,9 @@ function WnioskiPage() {
                         <div className="text-xs text-muted-foreground">{r.preferred_period_months ? `${r.preferred_period_months} mies.` : "—"}</div>
                       </TableCell>
                       <TableCell>
+                        <PhotosCell paths={p?.photos ?? []} />
+                      </TableCell>
+                      <TableCell>
                         <DocumentsCell docs={r.documents ?? []} />
                       </TableCell>
                       <TableCell>{r.completeness_percent}%</TableCell>
