@@ -9,8 +9,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { loanStatusLabels, formatPLN, formatDate, propertyTypeLabels } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Phone, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+
+type CommSummary = { calls: number; sms: number; emails: number; lastAt: string | null };
+const EMPTY_COMM: CommSummary = { calls: 0, sms: 0, emails: 0, lastAt: null };
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const d = Math.floor(diff / 86400000);
+  if (d === 0) {
+    const h = Math.floor(diff / 3600000);
+    if (h <= 0) return "przed chwilą";
+    return `${h}h temu`;
+  }
+  if (d === 1) return "wczoraj";
+  if (d < 7) return `${d} dni temu`;
+  return new Date(iso).toLocaleDateString("pl-PL");
+}
 
 export const Route = createFileRoute("/admin/wnioski/")({
   component: WnioskiPage,
