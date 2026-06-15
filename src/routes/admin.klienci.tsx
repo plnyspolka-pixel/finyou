@@ -238,6 +238,7 @@ function KlienciPage() {
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground border-b">
               <tr>
+                <th className="px-2 py-2 w-6"></th>
                 <th className="px-3 py-2">Klient</th>
                 <th className="px-3 py-2">Kontakt</th>
                 <th className="px-3 py-2">Typ / Status</th>
@@ -249,58 +250,80 @@ function KlienciPage() {
               </tr>
             </thead>
             <tbody>
-              {q.isLoading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Ładowanie…</td></tr>}
-              {!q.isLoading && rows.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Brak rekordów.</td></tr>}
+              {q.isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Ładowanie…</td></tr>}
+              {!q.isLoading && rows.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Brak rekordów.</td></tr>}
               {rows.map((r) => {
                 const p = r.loan?.properties?.[0];
+                const isOpen = expandedId === r.id;
                 return (
-                  <tr key={r.id} className="border-b hover:bg-muted/40">
-                    <td className="px-3 py-2">
-                      <Link to="/admin/klienci/$id" params={{ id: r.id }} className="font-medium hover:underline">
-                        {[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}
-                      </Link>
-                      <div className="text-[11px] text-muted-foreground">ID: {r.id.slice(0, 8)}</div>
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      <div>{r.phone_normalized ?? "—"}</div>
-                      <div className="text-muted-foreground">{r.email ?? "—"}</div>
-                    </td>
-                    <td className="px-3 py-2 text-xs space-y-1">
-                      <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
-                      <div><Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge></div>
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {r.loan ? (
-                        <>
-                          <div className="font-medium">{formatPLN(r.loan.loan_amount)}</div>
-                          <div className="text-muted-foreground">{r.loan.preferred_period_months ? `${r.loan.preferred_period_months} mc` : "—"} · {r.loan.completeness_percent ?? 0}%</div>
-                        </>
-                      ) : r.current_form_step ? <span className="text-muted-foreground">krok {r.current_form_step}</span> : <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {p ? (
-                        <>
-                          <div className="font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}</div>
-                          <div className="text-muted-foreground">{p.city ?? "—"}{p.estimated_value ? ` · ${formatPLN(p.estimated_value)}` : ""}</div>
-                        </>
-                      ) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
-                        <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
-                        <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
-                        {r.comms.notes > 0 && <span className="inline-flex items-center gap-1" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
-                      </div>
-                      <div className="text-muted-foreground">{formatRelative(r.comms.lastAt)}</div>
-                    </td>
-                    <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("pl-PL")}</td>
-                  </tr>
+                  <>
+                    <tr
+                      key={r.id}
+                      onClick={() => toggle(r.id)}
+                      className={`border-b cursor-pointer ${isOpen ? "bg-muted/50" : "hover:bg-muted/40"}`}
+                    >
+                      <td className="px-2 py-2 text-muted-foreground">
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="font-medium">{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</div>
+                        <div className="text-[11px] text-muted-foreground">ID: {r.id.slice(0, 8)}</div>
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        <div>{r.phone_normalized ?? "—"}</div>
+                        <div className="text-muted-foreground">{r.email ?? "—"}</div>
+                      </td>
+                      <td className="px-3 py-2 text-xs space-y-1">
+                        <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
+                        <div><Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge></div>
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {r.loan ? (
+                          <>
+                            <div className="font-medium">{formatPLN(r.loan.loan_amount)}</div>
+                            <div className="text-muted-foreground">{r.loan.preferred_period_months ? `${r.loan.preferred_period_months} mc` : "—"} · {r.loan.completeness_percent ?? 0}%</div>
+                          </>
+                        ) : r.current_form_step ? <span className="text-muted-foreground">krok {r.current_form_step}</span> : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {p ? (
+                          <>
+                            <div className="font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}</div>
+                            <div className="text-muted-foreground">{p.city ?? "—"}{p.estimated_value ? ` · ${formatPLN(p.estimated_value)}` : ""}</div>
+                          </>
+                        ) : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
+                          <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
+                          <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                          {r.comms.notes > 0 && <span className="inline-flex items-center gap-1" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                        </div>
+                        <div className="text-muted-foreground">{formatRelative(r.comms.lastAt)}</div>
+                      </td>
+                      <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("pl-PL")}</td>
+                    </tr>
+                    {isOpen && (
+                      <tr key={`${r.id}-expanded`} className="border-b bg-muted/20">
+                        <td></td>
+                        <td colSpan={8} className="px-3 py-4">
+                          <div className="mb-2 flex justify-end">
+                            <Link to="/admin/klienci/$id" params={{ id: r.id }} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                              Otwórz pełny widok <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          </div>
+                          <LeadDetailView id={r.id} compact />
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>
           </table>
+
         </div>
       </Card>
     </div>
