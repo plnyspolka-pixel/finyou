@@ -344,11 +344,14 @@ ${bodyInner}
 
     // Aktualizuj wniosek
     const newPrefHour = loan.preferred_email_hour ?? hour;
+    const nowIso = new Date().toISOString();
     await s.from("loan_applications").update({
       reminder_email_count: (loan.reminder_email_count ?? 0) + 1,
-      reminder_email_first_sent_at: loan.reminder_email_count ? undefined : new Date().toISOString(),
+      reminder_email_first_sent_at: loan.reminder_email_count ? undefined : nowIso,
+      reminder_email_last_sent_at: nowIso,
       preferred_email_hour: newPrefHour,
     }).eq("id", loan.id);
+
 
     results.push({ ok: true, sendId, variantId: variant.id });
   }
