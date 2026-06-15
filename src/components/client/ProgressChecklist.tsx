@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Circle, ArrowRight, Sparkles } from "lucide-react";
+import { BorderBeam } from "@/components/ui/border-beam";
 import type { EnrichedProgress, MissingItem } from "@/lib/my-loan-progress";
 
 interface Props {
