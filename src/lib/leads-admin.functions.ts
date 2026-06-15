@@ -103,6 +103,7 @@ export const getLead = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
 
     let documents: any[] = [];
+    let emailSequence: any = null;
     if (lead.loan_application_id) {
       const { data: docs } = await context.supabase
         .from("documents")
@@ -110,9 +111,31 @@ export const getLead = createServerFn({ method: "GET" })
         .eq("loan_application_id", lead.loan_application_id)
         .order("created_at", { ascending: false });
       documents = docs ?? [];
+
+      const { data: loanRow } = await context.supabase
+        .from("loan_applications")
+        .select("id, created_at, completeness_percent, status, reminder_email_count, reminder_email_first_sent_at, reminder_email_last_sent_at, reminder_email_unsubscribed, reminder_email_unsubscribed_at")
+        .eq("id", lead.loan_application_id)
+        .maybeSingle();
+
+      const { data: sends } = await context.supabase
+        .from("loan_reminder_email_sends")
+        .select("id, subject, sent_at, sent_hour_warsaw, opened_at, open_count, clicked_at, click_count, error_message, variant_id, variant:loan_reminder_email_variants(sequence_index, day_index, slot, phase)")
+        .eq("loan_application_id", lead.loan_application_id)
+        .order("sent_at", { ascending: false });
+
+      const nextIndex = (loanRow?.reminder_email_count ?? 0) + 1;
+      const { data: nextVariant } = await context.supabase
+        .from("loan_reminder_email_variants")
+        .select("id, subject, preview_text, body_html, sequence_index, day_index, slot, phase")
+        .eq("sequence_index", nextIndex)
+        .maybeSingle();
+
+      emailSequence = { loan: loanRow, sends: sends ?? [], nextVariant, totalVariants: 150 };
     }
-    return { lead, communications: comms ?? [], documents };
+    return { lead, communications: comms ?? [], documents, emailSequence };
   });
+
 
 export const updateLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

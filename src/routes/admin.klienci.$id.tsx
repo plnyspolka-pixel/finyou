@@ -59,7 +59,7 @@ function LeadDetailPage() {
   if (q.error) return <div className="p-6 text-destructive">Błąd: {(q.error as Error).message}</div>;
   if (!q.data) return null;
 
-  const { lead, communications, documents } = q.data;
+  const { lead, communications, documents, emailSequence } = q.data as any;
   const filtered = filter === "all" ? communications : communications.filter((c: any) => c.channel === filter);
 
   return (
@@ -91,11 +91,13 @@ function LeadDetailPage() {
       <Tabs defaultValue="komunikacja">
         <TabsList>
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
+          <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
           <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>
           <TabsTrigger value="raw">Surowe dane</TabsTrigger>
         </TabsList>
+
 
         {/* KOMUNIKACJA */}
         <TabsContent value="komunikacja" className="space-y-3">
@@ -146,7 +148,13 @@ function LeadDetailPage() {
           </div>
         </TabsContent>
 
+        {/* SEKWENCJA MAILI */}
+        <TabsContent value="sekwencja">
+          <EmailSequenceTab data={emailSequence} />
+        </TabsContent>
+
         {/* DANE */}
+
         <TabsContent value="dane">
           <Card className="p-4 grid gap-3 md:grid-cols-2">
             <Field label="Imię" value={lead.first_name} onSave={(v) => mUpdate.mutate({ first_name: v })} />
@@ -320,3 +328,88 @@ function Field({ label, value, onSave }: { label: string; value: any; onSave: (v
     </div>
   );
 }
+
+function EmailSequenceTab({ data }: { data: any }) {
+  if (!data) {
+    return <Card className="p-4 text-sm text-muted-foreground">Ten lead nie ma jeszcze wniosku pożyczkowego — sekwencja maili startuje po utworzeniu wniosku.</Card>;
+  }
+  const { loan, sends, nextVariant, totalVariants } = data;
+  const sent = sends.length;
+  const opened = sends.filter((s: any) => s.opened_at).length;
+  const clicked = sends.filter((s: any) => s.clicked_at).length;
+  const pct = (n: number) => sent ? Math.round((n / sent) * 100) : 0;
+  const stopped = loan?.reminder_email_unsubscribed || (loan?.completeness_percent ?? 0) >= 100;
+  return (
+    <div className="space-y-3">
+      <Card className="p-4 grid gap-2 md:grid-cols-4 text-sm">
+        <Stat label="Wysłane" value={`${sent} / ${totalVariants}`} />
+        <Stat label="Otwarte" value={`${opened} (${pct(opened)}%)`} />
+        <Stat label="Kliknięte" value={`${clicked} (${pct(clicked)}%)`} />
+        <Stat label="Status" value={
+          loan?.reminder_email_unsubscribed ? "Wypisany" :
+          (loan?.completeness_percent ?? 0) >= 100 ? "Wniosek kompletny — stop" :
+          sent >= totalVariants ? "Zakończona (150/150)" : "Aktywna"
+        } />
+      </Card>
+
+      {!stopped && nextVariant && (
+        <Card className="p-4 space-y-2">
+          <div className="text-sm font-medium">Następny mail w kolejce</div>
+          <div className="text-xs text-muted-foreground">
+            #{nextVariant.sequence_index} • dzień {nextVariant.day_index} • {nextVariant.slot === "morning" ? "8:00" : "20:00"} • faza {nextVariant.phase}
+          </div>
+          <div className="text-sm font-semibold">{nextVariant.subject}</div>
+          {nextVariant.preview_text && <div className="text-xs text-muted-foreground italic">{nextVariant.preview_text}</div>}
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Podgląd HTML</summary>
+            <div className="mt-2 border rounded p-2 bg-muted/30" dangerouslySetInnerHTML={{ __html: nextVariant.body_html }} />
+          </details>
+        </Card>
+      )}
+
+      <Card className="p-0 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-foreground bg-muted/40">
+            <tr>
+              <th className="text-left p-2">#</th>
+              <th className="text-left p-2">Dzień / slot</th>
+              <th className="text-left p-2">Temat</th>
+              <th className="text-left p-2">Wysłany</th>
+              <th className="text-center p-2">Dostarczony</th>
+              <th className="text-center p-2">Otwarcia</th>
+              <th className="text-center p-2">Kliknięcia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sends.length === 0 && (
+              <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">Jeszcze nie wysłano żadnego maila z sekwencji.</td></tr>
+            )}
+            {sends.map((s: any) => (
+              <tr key={s.id} className="border-t align-top">
+                <td className="p-2 text-xs">{s.variant?.sequence_index ?? "—"}</td>
+                <td className="p-2 text-xs">{s.variant ? `D${s.variant.day_index} / ${s.variant.slot === "morning" ? "8:00" : "20:00"}` : "—"}</td>
+                <td className="p-2">{s.subject}</td>
+                <td className="p-2 text-xs whitespace-nowrap">{new Date(s.sent_at).toLocaleString("pl-PL")}</td>
+                <td className="p-2 text-center">
+                  {s.error_message ? <Badge variant="destructive" className="text-[10px]">błąd</Badge> : <Badge variant="outline" className="text-[10px]">OK</Badge>}
+                </td>
+                <td className="p-2 text-center text-xs">{s.open_count ?? 0}{s.opened_at && <div className="text-[10px] text-muted-foreground">{new Date(s.opened_at).toLocaleString("pl-PL")}</div>}</td>
+                <td className="p-2 text-center text-xs">{s.click_count ?? 0}{s.clicked_at && <div className="text-[10px] text-muted-foreground">{new Date(s.clicked_at).toLocaleString("pl-PL")}</div>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-semibold">{value}</div>
+    </div>
+  );
+}
+
