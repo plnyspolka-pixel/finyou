@@ -485,3 +485,94 @@ function KlientProfil() {
     </div>
   );
 }
+
+function PropertyDocsCard({ userId, kind, title, icon, description }: {
+  userId: string | null; kind: string; title: string; icon: React.ReactNode; description: string;
+}) {
+  const [loanId, setLoanId] = useState<string | null>(null);
+  const [docs, setDocs] = useState<Array<{ id: string; file_name: string; file_path: string; uploaded_at?: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => { if (!userId) return; void (async () => {
+    const { data: c } = await supabase.from("clients").select("id").eq("user_id", userId).maybeSingle();
+    if (!c) return;
+    const { data: la } = await supabase.from("loan_applications").select("id")
+      .eq("client_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!la) return;
+    setLoanId(la.id);
+    const { data: ds } = await supabase.from("documents")
+      .select("id, file_name, file_path, uploaded_at")
+      .eq("loan_application_id", la.id)
+      .eq("document_type", kind)
+      .order("uploaded_at", { ascending: false });
+    setDocs((ds as any) ?? []);
+  })(); }, [userId, kind, refresh]);
+
+  const upload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !userId || !loanId) {
+      if (!loanId) toast.error("Najpierw wypełnij wniosek, aby dodać pliki do niego.");
+      return;
+    }
+    setBusy(true);
+    const t = toast.loading(`Wysyłam ${files.length} plik(ów)…`);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: za duży (max 20 MB)`); continue; }
+        const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const path = `klient/${userId}/${loanId}/${kind}-${Date.now()}-${safe}`;
+        const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+        if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
+        await supabase.from("documents").insert({
+          loan_application_id: loanId, document_type: kind, file_name: file.name, file_path: path, uploaded_by: userId,
+        });
+      }
+      toast.success("Wgrano", { id: t });
+      setRefresh((x) => x + 1);
+    } catch (e: any) { toast.error(e?.message ?? "Błąd", { id: t }); }
+    finally { setBusy(false); }
+  };
+
+  const remove = async (d: { id: string; file_path: string }) => {
+    if (!confirm("Usunąć ten plik?")) return;
+    await supabase.storage.from("documents").remove([d.file_path]);
+    await supabase.from("documents").delete().eq("id", d.id);
+    setRefresh((x) => x + 1);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">{icon} {title}</CardTitle>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!loanId ? (
+          <p className="text-xs text-muted-foreground">Najpierw wypełnij wniosek, aby tu wgrywać pliki.</p>
+        ) : (
+          <>
+            <label className="inline-flex">
+              <input type="file" multiple accept={kind === "photos_all" ? "image/*" : "image/*,application/pdf"}
+                className="hidden" onChange={(e) => { const fs = e.target.files; e.target.value = ""; void upload(fs); }} />
+              <Button asChild size="sm" variant="cta" disabled={busy}>
+                <span>{busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</> : <><Upload className="mr-2 h-4 w-4" />Wybierz pliki</>}</span>
+              </Button>
+            </label>
+            {docs.length > 0 && (
+              <ul className="space-y-1.5">
+                {docs.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-1.5 text-xs">
+                    <span className="truncate">{d.file_name}</span>
+                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => void remove(d)} aria-label="Usuń">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
