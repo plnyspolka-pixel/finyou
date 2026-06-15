@@ -53,8 +53,12 @@ export function InvestorProposalCalculator() {
   const [editMonths, setEditMonths] = useState<number>(0);
   const [editRate, setEditRate] = useState<number>(0);
   const [editMaxPayment, setEditMaxPayment] = useState<number>(0);
+  const [investorDesc, setInvestorDesc] = useState<string>("");
+  const [savingDesc, setSavingDesc] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const [sendingToInvestors, setSendingToInvestors] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const assistDesc = useServerFn(assistBusinessDescription);
 
   useEffect(() => {
     if (!loan) return;
@@ -62,6 +66,7 @@ export function InvestorProposalCalculator() {
     setEditMonths(Number(loan.preferred_period_months ?? 24));
     setEditRate(Number(loan.annual_investor_rate ?? 24));
     setEditMaxPayment(Number(loan.max_monthly_payment ?? 0));
+    setInvestorDesc(String(loan.investor_description ?? ""));
   }, [loan?.id]);
 
   useEffect(() => {
