@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Download, FileText, Loader2, Lock, Phone, ShieldCheck, ShieldAlert, Upload } from "lucide-react";
+import { Download, FileText, Image as ImageIcon, Loader2, Lock, Phone, ShieldCheck, ShieldAlert, Trash2, Upload, Wallet } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
