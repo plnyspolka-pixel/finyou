@@ -132,8 +132,8 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   const weekday = warsawWeekday(now);
   const force = !!opts?.force;
 
-  // Stałe okna wysyłki: ~8:00 i ~21:00 Warszawa, bez niedziel. `force` omija reguły.
-  const ALLOWED_HOURS = new Set([8, 21]);
+  // Stałe okna wysyłki: ~8:00 i ~20:00 Warszawa, bez niedziel. `force` omija reguły.
+  const ALLOWED_HOURS = new Set([8, 20]);
   if (!force) {
     if (weekday === "Sun") {
       return { ok: false, skipped: "sunday", hour, weekday };
@@ -147,26 +147,32 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   const dayKey = warsawDateKey(now);
   const dayStartIso = new Date(`${dayKey}T00:00:00+02:00`).toISOString();
 
+  // Pełna sekwencja 150 maili (P1 = 1..60, dni 1..30 × 2/dzień; P2 = 61..150, co 2 dni o 8:00)
   const { data: variants } = await s
     .from("loan_reminder_email_variants")
-    .select("id,subject,preview_text,body_html,weight,sent_count,opened_count")
-    .eq("active", true);
+    .select("id,subject,preview_text,body_html,weight,sent_count,opened_count,sequence_index,phase,slot")
+    .eq("active", true)
+    .not("sequence_index", "is", null)
+    .order("sequence_index", { ascending: true });
   if (!variants || variants.length === 0) {
     return { ok: true, hour, weekday, candidates: 0, sent: 0, errors: 0, results: [] };
   }
+  const variantBySeq = new Map<number, any>();
+  for (const v of variants as any[]) variantBySeq.set(Number(v.sequence_index), v);
 
   let q = s
     .from("loan_applications")
     .select(`
       id, status, current_form_step, loan_amount, preferred_period_months,
       preferred_email_hour, reminder_email_count, reminder_email_unsubscribed,
-      return_link_token, created_at,
+      reminder_email_last_sent_at, return_link_token, created_at,
       client:clients!inner(id, first_name, last_name, email, phone_normalized, phone, do_not_email)
     `)
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .eq("reminder_email_unsubscribed", false)
-    .lt("reminder_email_count", 365)
+    .lt("reminder_email_count", 150)
     .limit(500);
+
   if (opts?.onlyLoanId) q = q.eq("id", opts.onlyLoanId);
   const { data: loans } = await q;
 
