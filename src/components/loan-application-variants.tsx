@@ -280,7 +280,7 @@ function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnTyp
         onChange={(event) => update("amount", Number(event.target.value) || 0)}
         className="h-14 text-2xl font-extrabold tabular-nums"
       />
-      <Slider value={[draft.amount]} min={20_000} max={1_000_000} step={5_000} onValueChange={(value) => update("amount", value[0] ?? draft.amount)} />
+      <Slider value={[draft.amount]} min={20_000} max={1_000_000} step={100} onValueChange={(value) => update("amount", value[0] ?? draft.amount)} />
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>20 000 zł</span>
         <span>1 000 000 zł</span>
