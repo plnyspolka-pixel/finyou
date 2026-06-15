@@ -256,12 +256,12 @@ function KlienciPage() {
                 const p = r.loan?.properties?.[0];
                 const isOpen = expandedId === r.id;
                 return (
-                  <>
+                  <Fragment key={r.id}>
                     <tr
-                      key={r.id}
                       onClick={() => toggle(r.id)}
                       className={`border-b cursor-pointer ${isOpen ? "bg-muted/50" : "hover:bg-muted/40"}`}
                     >
+
                       <td className="px-2 py-2 text-muted-foreground">
                         {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </td>
