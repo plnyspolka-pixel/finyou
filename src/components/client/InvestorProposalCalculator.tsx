@@ -157,7 +157,7 @@ export function InvestorProposalCalculator() {
     return (
       <Card>
         <CardContent className="py-6 text-sm text-muted-foreground">
-          Najpierw wypełnij wniosek — wtedy uruchomimy tu kalkulator propozycji dla inwestora.
+          Najpierw wypełnij wniosek — wtedy uruchomimy tu kalkulator raty.
         </CardContent>
       </Card>
     );
@@ -167,11 +167,11 @@ export function InvestorProposalCalculator() {
     <div className="space-y-4 max-w-4xl">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold sm:text-2xl">Moja propozycja dla inwestora</h1>
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Oblicz ratę</h1>
           <p className="text-sm text-muted-foreground">
             {locked
               ? "Wniosek jest w analizie — dane są zablokowane do edycji."
-              : "Dopasuj warunki — harmonogram przeliczy się od razu. Gdy będziesz gotowy, wyślij wniosek do inwestorów."}
+              : "Dopasuj warunki — rata i harmonogram przeliczą się od razu. Gdy będziesz gotowy, wyślij wniosek do inwestorów."}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
