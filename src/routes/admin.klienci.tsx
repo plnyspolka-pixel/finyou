@@ -77,6 +77,9 @@ function KlienciPage() {
   const [status, setStatus] = useState<string>("all");
   const [source, setSource] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
+
 
   const q = useQuery({
     queryKey: ["klienci", type, status, source, search],
