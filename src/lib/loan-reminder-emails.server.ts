@@ -201,9 +201,35 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   let sent = 0, errors = 0;
 
   for (const loan of candidates as any[]) {
-    if (!force && (todayCounts.get(loan.id) ?? 0) >= 2) {
-      results.push({ ok: false, skipped: "daily_limit_reached" });
+    const sentCount = Number(loan.reminder_email_count ?? 0);
+    const nextSeq = sentCount + 1;
+    if (nextSeq > 150) {
+      results.push({ ok: false, skipped: "sequence_complete" });
       continue;
+    }
+
+    // Faza 1: 1..60 — 2 razy dziennie (8 i 20). Faza 2: 61..150 — raz dziennie o 8:00, co 2 dni.
+    const inPhase2 = nextSeq > 60;
+    if (!force) {
+      if (inPhase2) {
+        if (hour !== 8) {
+          results.push({ ok: false, skipped: "p2_morning_only" });
+          continue;
+        }
+        const lastIso: string | null = loan.reminder_email_last_sent_at ?? null;
+        if (lastIso) {
+          const ageHours = (Date.now() - new Date(lastIso).getTime()) / 3_600_000;
+          if (ageHours < 40) { // ~co 2 dni z buforem
+            results.push({ ok: false, skipped: "p2_too_soon" });
+            continue;
+          }
+        }
+      } else {
+        if ((todayCounts.get(loan.id) ?? 0) >= 2) {
+          results.push({ ok: false, skipped: "daily_limit_reached" });
+          continue;
+        }
+      }
     }
 
     // Pobierz dane uzupełniające (property, documents) — postęp wniosku
@@ -229,15 +255,18 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       documents: docs ?? [],
     });
     if (progress.is_complete) {
+      // Wniosek kompletny — wyłącz autopilota dla tego klienta.
       results.push({ ok: false, skipped: "complete" });
       continue;
     }
 
-    const variant = pickVariantEpsilonGreedy(variants as any);
+    const variant = variantBySeq.get(nextSeq);
     if (!variant) {
-      results.push({ ok: false, skipped: "no_variant" });
+      results.push({ ok: false, skipped: `no_variant_for_seq_${nextSeq}` });
       continue;
     }
+
+
 
     const token = await ensureReturnToken(loan.id);
 
