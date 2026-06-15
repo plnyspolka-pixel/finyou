@@ -318,7 +318,8 @@ function KlienciPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
+
                 );
               })}
             </tbody>
