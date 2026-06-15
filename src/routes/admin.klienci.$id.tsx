@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ArrowLeft, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp } from "lucide-react";
 
-export const Route = createFileRoute("/admin/leady-all/$id")({
+export const Route = createFileRoute("/admin/klienci/$id")({
   component: LeadDetailPage,
 });
 
