@@ -79,8 +79,8 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
   },
 };
 
-async function fetchFreshNewsBrief(pplxKey: string, audience: Audience): Promise<NewsBrief> {
-  const b = BRIEFS[audience];
+async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<NewsBrief> {
+  const b = BRIEFS[kind];
   const res = await fetch(PPLX_URL, {
     method: "POST",
     headers: {
@@ -89,7 +89,7 @@ async function fetchFreshNewsBrief(pplxKey: string, audience: Audience): Promise
     },
     body: JSON.stringify({
       model: "sonar",
-      search_recency_filter: "day",
+      search_recency_filter: kind === "investor_review" ? "month" : "day",
       messages: [
         { role: "system", content: b.sys },
         { role: "user", content: b.user },
@@ -102,7 +102,7 @@ async function fetchFreshNewsBrief(pplxKey: string, audience: Audience): Promise
   const json: any = await res.json();
   const summary: string = json.choices?.[0]?.message?.content ?? "";
   const rawCitations: string[] = json.citations ?? json.search_results?.map((r: any) => r.url) ?? [];
-  const citations = rawCitations.slice(0, 6).map((url) => ({ url }));
+  const citations = rawCitations.slice(0, 8).map((url) => ({ url }));
   return { summary, citations };
 }
 
@@ -145,20 +145,25 @@ async function writeArticleFromNews(
   lovableKey: string,
   brief: NewsBrief,
   internal: RelatedArticle[],
-  audience: Audience,
+  kind: PostKind,
 ): Promise<ArticleDraft> {
+  const audience = audienceOf(kind);
 
   const internalList = internal
     .map((a) => `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`)
     .join("\n");
   const externalList = brief.citations.map((c) => `- ${c.url}`).join("\n");
 
+  const structureHint = kind === "investor_review"
+    ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
+    : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
+
   const tools = [
     {
       type: "function",
       function: {
         name: "write_daily_post",
-        description: "Codzienny post blogowy SEO z linkami",
+        description: "Post blogowy SEO z linkami",
         parameters: {
           type: "object",
           properties: {
@@ -168,11 +173,7 @@ async function writeArticleFromNews(
             excerpt: { type: "string", description: "1-2 zdania zajawki" },
             primary_keyword: { type: "string" },
             keywords: { type: "array", items: { type: "string" } },
-            content_md: {
-              type: "string",
-              description:
-                "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEC naturalnie 2-3 linki wewnętrzne z podanej listy (format markdown z pełnymi ścieżkami /blog/...). NA KOŃCU sekcji 'Linki i źródła' wymień zewnętrzne źródła (z podanej listy URL).",
-            },
+            content_md: { type: "string", description: structureHint },
             cover_prompt: {
               type: "string",
               description: "Krótki opis okładki po angielsku, edytorial finansowy, bez tekstu na obrazku",
@@ -180,14 +181,8 @@ async function writeArticleFromNews(
             cover_alt: { type: "string", description: "Alt po polsku, 5-10 słów" },
           },
           required: [
-            "title",
-            "meta_title",
-            "meta_description",
-            "excerpt",
-            "primary_keyword",
-            "content_md",
-            "cover_prompt",
-            "cover_alt",
+            "title", "meta_title", "meta_description", "excerpt",
+            "primary_keyword", "content_md", "cover_prompt", "cover_alt",
           ],
           additionalProperties: false,
         },
@@ -195,13 +190,25 @@ async function writeArticleFromNews(
     },
   ];
 
-  const audienceBrief = audience === "investor"
-    ? `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl)" wpleć 1 raz.`
-    : `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[sprawdź warunki na financeyou.pl](https://financeyou.pl)" wpleć 1-2 razy.`;
+  let audienceBrief: string;
+  if (kind === "investor_review") {
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
+  } else if (audience === "investor") {
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl)" wpleć 1 raz.`;
+  } else {
+    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[sprawdź warunki na financeyou.pl](https://financeyou.pl)" wpleć 1-2 razy.`;
+  }
 
   const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}`;
 
-  const userMsg = `BRIEFING (świeże wiadomości z ostatnich 24h):
+  const briefLabel = kind === "investor_review"
+    ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
+    : "BRIEFING (świeże wiadomości z ostatnich 24h):";
+  const taskLabel = kind === "investor_review"
+    ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
+    : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
+
+  const userMsg = `${briefLabel}
 ${brief.summary}
 
 ŹRÓDŁA do podlinkowania w sekcji "Linki i źródła":
@@ -210,14 +217,13 @@ ${externalList || "(brak)"}
 LINKI WEWNĘTRZNE do wplecenia w treść (2-3 z poniższych, naturalnie w kontekście):
 ${internalList || "(brak — pomiń linki wewnętrzne)"}
 
-Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
-
+${taskLabel}`;
 
   const res = await fetch(AI_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-pro",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: userMsg },
@@ -379,10 +385,11 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     }
   }
 
-  const audience = await pickNextAudience();
-  const brief = await fetchFreshNewsBrief(pplxKey, audience);
+  const kind = await pickNextKind();
+  const audience = audienceOf(kind);
+  const brief = await fetchFreshNewsBrief(pplxKey, kind);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(lovableKey, brief, internal, audience);
+  const draft = await writeArticleFromNews(lovableKey, brief, internal, kind);
   const cover = await generateCover(lovableKey, draft.cover_prompt);
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
@@ -410,7 +417,7 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       cta_label: ctaLabel,
 
       source: "ai_autopilot",
-      raw_ai_output: draft as any,
+      raw_ai_output: { ...draft, post_kind: kind } as any,
       published_at: new Date().toISOString(),
       content_refreshed_at: new Date().toISOString(),
       cover_image_url: cover,
@@ -427,8 +434,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     module: "seo_content_engine",
     action: "daily_autopost",
     status: "ok",
-    summary: `Codzienny post: ${draft.title}`,
-    payload: { article_id: inserted.id, slug: inserted.slug, sources: brief.citations.length },
+    summary: `[${kind}] ${draft.title}`,
+    payload: { article_id: inserted.id, slug: inserted.slug, kind, sources: brief.citations.length },
   });
 
   return { ok: true, slug: inserted.slug, id: inserted.id };
