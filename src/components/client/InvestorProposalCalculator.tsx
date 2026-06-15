@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Info, Lock, Send, Loader2 } from "lucide-react";
+import { CalendarDays, Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { assistBusinessDescription } from "@/lib/ai-assist.functions";
 
 // Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
 // pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
