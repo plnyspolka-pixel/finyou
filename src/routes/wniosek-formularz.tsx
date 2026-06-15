@@ -534,7 +534,7 @@ function KlientWniosek() {
                 <Label>Jakiej kwoty potrzebujesz?</Label>
                 <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
               </div>
-              <Slider min={20000} max={1_000_000} step={5000} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
+              <Slider min={20000} max={1_000_000} step={100} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             </div>
 
