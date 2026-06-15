@@ -28,7 +28,10 @@ async function runBatch() {
   if (h < 8 || h > 11) return { ok: false, skipped: "outside_morning", weekday: wd, hour: h };
 
   const s = admin();
-  const since14d = new Date(Date.now() - 14 * 86400_000).toISOString();
+  // SMS-y startują dopiero 7+ dni po złożeniu wniosku (wcześniej działają tylko maile + telefony).
+  // Górne ograniczenie: 30 dni, max 2 SMS-y na wniosek (raz na 7 dni).
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
   const sixDaysAgo = new Date(Date.now() - 6 * 86400_000).toISOString();
 
   const { data: loans } = await s
@@ -38,9 +41,11 @@ async function runBatch() {
       client:clients!inner(first_name, phone_normalized, phone, do_not_sms)
     `)
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
-    .gte("created_at", since14d)
+    .lte("created_at", sevenDaysAgo)
+    .gte("created_at", thirtyDaysAgo)
     .lt("reminder_sms_count", 2)
     .limit(500);
+
 
   const candidates = (loans ?? []).filter((l: any) => {
     if (l.client?.do_not_sms === true) return false;

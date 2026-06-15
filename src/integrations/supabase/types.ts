@@ -3724,6 +3724,7 @@ export type Database = {
           reminder_attempts: number
           reminder_email_count: number
           reminder_email_first_sent_at: string | null
+          reminder_email_last_sent_at: string | null
           reminder_email_unsubscribed: boolean
           reminder_email_unsubscribed_at: string | null
           reminder_paused: boolean
@@ -3793,6 +3794,7 @@ export type Database = {
           reminder_attempts?: number
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
+          reminder_email_last_sent_at?: string | null
           reminder_email_unsubscribed?: boolean
           reminder_email_unsubscribed_at?: string | null
           reminder_paused?: boolean
@@ -3862,6 +3864,7 @@ export type Database = {
           reminder_attempts?: number
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
+          reminder_email_last_sent_at?: string | null
           reminder_email_unsubscribed?: boolean
           reminder_email_unsubscribed_at?: string | null
           reminder_paused?: boolean
@@ -3961,10 +3964,14 @@ export type Database = {
           category: string
           clicked_count: number
           created_at: string
+          day_index: number | null
           id: string
           opened_count: number
+          phase: string | null
           preview_text: string | null
           sent_count: number
+          sequence_index: number | null
+          slot: string | null
           subject: string
           updated_at: string
           weight: number
@@ -3975,10 +3982,14 @@ export type Database = {
           category?: string
           clicked_count?: number
           created_at?: string
+          day_index?: number | null
           id?: string
           opened_count?: number
+          phase?: string | null
           preview_text?: string | null
           sent_count?: number
+          sequence_index?: number | null
+          slot?: string | null
           subject: string
           updated_at?: string
           weight?: number
@@ -3989,10 +4000,14 @@ export type Database = {
           category?: string
           clicked_count?: number
           created_at?: string
+          day_index?: number | null
           id?: string
           opened_count?: number
+          phase?: string | null
           preview_text?: string | null
           sent_count?: number
+          sequence_index?: number | null
+          slot?: string | null
           subject?: string
           updated_at?: string
           weight?: number
