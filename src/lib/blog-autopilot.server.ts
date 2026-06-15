@@ -238,127 +238,24 @@ ${taskLabel}`;
   return args as ArticleDraft;
 }
 
-async function tryGenerate(lovableKey: string, model: string, prompt: string): Promise<string | null> {
-  try {
-    const res = await fetch(IMAGE_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        prompt,
-        n: 1,
-        size: "1536x1024",
-        // UWAGA: nie wysyłamy response_format — gpt-image-2 go nie wspiera,
-        // a gemini-image-preview przy response_format:"url" zwracał data:null.
-      }),
-    });
-    if (!res.ok) {
-      console.error(`[blog-autopilot] image gen ${model} ${res.status}:`, await res.text().catch(() => ""));
-      return null;
-    }
-    const j: any = await res.json();
-    const item = j.data?.[0];
-    if (!item) {
-      console.error(`[blog-autopilot] image gen ${model} returned no data:`, JSON.stringify(j).slice(0, 200));
-      return null;
-    }
-    if (item.url) return item.url as string;
-    if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
-    return null;
-  } catch (e) {
-    console.error(`[blog-autopilot] image gen ${model} threw:`, e);
-    return null;
-  }
+import { pickStockPhoto } from "./blog-stock-photos";
+
+/**
+ * Okładka artykułu = darmowe zdjęcie stockowe (Unsplash) + wordmark Finance You
+ * nakładany jako overlay CSS po stronie klienta (komponent BlogCover).
+ *
+ * Wcześniej okładki były generowane modelem AI i stamplowane jimp-em po stronie
+ * serwera. Na Cloudflare Workers jimp wybucha ("Inflate cannot be invoked
+ * without new" — pako/zlib nie działa w środowisku Workera), przez co od
+ * 10.06.2026 codzienny tick padał przy generacji okładki i żaden nowy artykuł
+ * nie był publikowany. Stock + overlay rozwiązuje to bez kompozycji serwerowej.
+ */
+function pickCover(kind: PostKind): { url: string; alt: string } {
+  const audience = audienceOf(kind);
+  const photo = pickStockPhoto(audience, kind === "investor_review");
+  return { url: photo.url, alt: photo.alt };
 }
 
-// Oficjalny wordmark Finance You (asset CDN). Tę grafikę NAKLEJAMY na okładki —
-// nigdy nie prosimy modelu, żeby wyrenderował tekst "Finance You".
-const WORDMARK_URL =
-  "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
-
-async function fetchImageBuffer(src: string): Promise<Buffer> {
-  if (src.startsWith("data:")) {
-    const b64 = src.split(",", 2)[1] ?? "";
-    return Buffer.from(b64, "base64");
-  }
-  const res = await fetch(src);
-  if (!res.ok) throw new Error(`fetch image ${res.status}`);
-  const ab = await res.arrayBuffer();
-  return Buffer.from(ab);
-}
-
-async function stampWordmark(baseSrc: string): Promise<Buffer> {
-  // Lazy import — jimp jest ciężki i nie chcemy ładować go na zimno gdy generacja padnie.
-  const { Jimp } = await import("jimp");
-  const [baseBuf, markBuf] = await Promise.all([
-    fetchImageBuffer(baseSrc),
-    fetchImageBuffer(WORDMARK_URL),
-  ]);
-  const base = await Jimp.read(baseBuf);
-  const mark = await Jimp.read(markBuf);
-
-  // Karty bloga renderują okładkę w aspect-[16/9]. Jeżeli generacja zwróci inne
-  // proporcje, object-cover obetnie góra/dół (i pożre wordmark). Przycinamy
-  // bazę do 16:9 PRZED naklejeniem logo — wtedy stamp ląduje w widocznej części.
-  const targetRatio = 16 / 9;
-  const curRatio = base.bitmap.width / base.bitmap.height;
-  if (Math.abs(curRatio - targetRatio) > 0.01) {
-    if (curRatio > targetRatio) {
-      const newW = Math.round(base.bitmap.height * targetRatio);
-      base.crop({ x: Math.round((base.bitmap.width - newW) / 2), y: 0, w: newW, h: base.bitmap.height });
-    } else {
-      const newH = Math.round(base.bitmap.width / targetRatio);
-      base.crop({ x: 0, y: Math.round((base.bitmap.height - newH) / 2), w: base.bitmap.width, h: newH });
-    }
-  }
-
-  // Przytnij wordmark do faktycznego bounding boxu (alpha), żeby skala była zgodna.
-  mark.autocrop({ cropOnlyFrames: false, cropSymmetric: false });
-
-  // Wordmark ~20% szerokości okładki, przyklejony w prawym dolnym rogu z marginesem.
-  const targetW = Math.round(base.bitmap.width * 0.20);
-  const scale = targetW / mark.bitmap.width;
-  mark.resize({ w: targetW, h: Math.round(mark.bitmap.height * scale) });
-  mark.opacity(0.95);
-
-  const pad = Math.round(base.bitmap.width * 0.03);
-  const x = base.bitmap.width - mark.bitmap.width - pad;
-  const y = base.bitmap.height - mark.bitmap.height - pad;
-  base.composite(mark, x, y);
-
-  return await base.getBuffer("image/jpeg", { quality: 88 });
-}
-
-async function uploadCover(buffer: Buffer): Promise<string> {
-  const path = `blog-covers/${crypto.randomUUID()}.jpg`;
-  const { error } = await supabaseAdmin.storage
-    .from("ad-creatives")
-    .upload(path, buffer, { contentType: "image/jpeg", upsert: false });
-  if (error) throw new Error(`upload cover: ${error.message}`);
-  const { data } = supabaseAdmin.storage.from("ad-creatives").getPublicUrl(path);
-  return data.publicUrl;
-}
-
-async function generateCover(lovableKey: string, prompt: string): Promise<string> {
-  // Każdy artykuł MUSI mieć okładkę z naklejonym oficjalnym wordmarkiem Finance You.
-  // Model dostarcza tylko bazową fotografię — wordmark dokleja jimp.
-  const fullPrompt = `Editorial finance magazine cover photograph, photorealistic, soft natural light, Polish/European context. Scene: ${prompt}. 16:9 cinematic composition. Absolutely NO text, NO letters, NO words, NO logos, NO watermarks, NO UI elements anywhere in the image — pure photograph only. Leave the bottom-right area visually calm (uncluttered background) so a small logo can be overlaid later.`;
-
-  let rawUrl: string | null = null;
-  for (const model of [
-    "openai/gpt-image-2",
-    "google/gemini-2.5-flash-image-preview",
-  ]) {
-    rawUrl = await tryGenerate(lovableKey, model, fullPrompt);
-    if (rawUrl) break;
-  }
-  if (!rawUrl) {
-    throw new Error("Cover generation failed for all models — refusing to publish without an image.");
-  }
-
-  const stamped = await stampWordmark(rawUrl);
-  return await uploadCover(stamped);
-}
 
 export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
   ok: boolean;
@@ -390,7 +287,7 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const brief = await fetchFreshNewsBrief(pplxKey, kind);
   const internal = await pickInternalLinks();
   const draft = await writeArticleFromNews(lovableKey, brief, internal, kind);
-  const cover = await generateCover(lovableKey, draft.cover_prompt);
+  const cover = pickCover(kind);
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
@@ -420,8 +317,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       raw_ai_output: { ...draft, post_kind: kind } as any,
       published_at: new Date().toISOString(),
       content_refreshed_at: new Date().toISOString(),
-      cover_image_url: cover,
-      cover_image_alt: draft.cover_alt,
+      cover_image_url: cover.url,
+      cover_image_alt: cover.alt || draft.cover_alt,
       external_links: brief.citations,
       internal_link_slugs: internal.map((i) => i.slug),
     })

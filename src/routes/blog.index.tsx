@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BlogCover } from "@/components/blog/BlogCover";
 
 const FAVICON_URL = "https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png";
 const WORDMARK_URL = "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
@@ -58,14 +59,7 @@ function BlogIndex() {
             <Link key={a.id} to="/blog/$slug" params={{ slug: a.slug }} className="block group">
               <Card className="h-full overflow-hidden hover:border-primary transition-colors">
                 {a.cover_image_url && (
-                  <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                    <img
-                      src={a.cover_image_url}
-                      alt={a.cover_image_alt || a.title}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  </div>
+                  <BlogCover src={a.cover_image_url} alt={a.cover_image_alt || a.title} />
                 )}
                 <CardHeader>
                   <CardTitle className="text-lg leading-snug">{a.title}</CardTitle>
