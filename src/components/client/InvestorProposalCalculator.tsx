@@ -315,19 +315,53 @@ export function InvestorProposalCalculator() {
           )}
 
           {!locked && (
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-              {missingForInvestors.length > 0 && (
-                <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>Aby wysłać wniosek do inwestorów, uzupełnij jeszcze: <strong>{missingForInvestors.join(", ")}</strong>.</span>
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-semibold">Krótki opis dla inwestora</Label>
+                  {hasDesc && <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ uzupełniony</span>}
                 </div>
-              )}
-              <Button onClick={() => void sendToInvestors()} disabled={sendingToInvestors}
-                variant="cta" size="lg" className="w-full sm:w-auto">
-                {sendingToInvestors
-                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</>
-                  : <><Send className="mr-2 h-4 w-4" />Wyślij wniosek do inwestorów</>}
-              </Button>
+                <p className="text-xs text-muted-foreground">
+                  2–5 zdań: po co potrzebujesz finansowania, na co pójdą pieniądze i jak planujesz spłacić. AI pomoże, ale Ty decydujesz, co zostanie.
+                </p>
+                <Textarea
+                  rows={5}
+                  value={investorDesc}
+                  onChange={(e) => setInvestorDesc(e.target.value)}
+                  placeholder="Np. Potrzebuję 200 000 zł na uruchomienie kolejnego sklepu, mam już 2 lokalizacje. Spłatę pokryję z bieżących przychodów…"
+                  disabled={aiBusy}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => void generateDesc(investorDesc.trim() ? "improve" : "draft")} disabled={aiBusy}>
+                    {aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {investorDesc.trim() ? "Popraw opis (AI)" : "Wygeneruj opis (AI)"}
+                  </Button>
+                  {investorDesc.trim() && (
+                    <Button size="sm" variant="ghost" onClick={() => void generateDesc("expand")} disabled={aiBusy}>
+                      Rozwiń (AI)
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => void saveInvestorDesc()} disabled={savingDesc || aiBusy}>
+                    {savingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Zapisz opis
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                {missingForInvestors.length > 0 && (
+                  <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>Aby wysłać wniosek do inwestorów, uzupełnij jeszcze: <strong>{missingForInvestors.join(", ")}</strong>.</span>
+                  </div>
+                )}
+                <Button onClick={() => void sendToInvestors()} disabled={sendingToInvestors}
+                  variant="cta" size="lg" className="w-full sm:w-auto">
+                  {sendingToInvestors
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</>
+                    : <><Send className="mr-2 h-4 w-4" />Wyślij wniosek do inwestorów</>}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
