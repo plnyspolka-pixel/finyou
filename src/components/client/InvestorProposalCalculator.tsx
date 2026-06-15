@@ -118,15 +118,44 @@ export function InvestorProposalCalculator() {
     return { rows, monthly, balloon, total, nominalMonthly };
   }, [editAmount, editMonths, editRate, editMaxPayment]);
 
+  const hasDesc = investorDesc.trim().length >= 20;
+
   const missingForInvestors = useMemo(() => {
     const m: string[] = [];
     if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
     if (!prop?.property_type) m.push("typ zabezpieczenia");
     if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
-    if (!loan?.investor_description) m.push("krótki opis dla inwestora");
+    if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!editAmount || !editMonths || !editRate) m.push("warunki finansowe");
     return m;
-  }, [client, prop, loan, editAmount, editMonths, editRate]);
+  }, [client, prop, hasDesc, editAmount, editMonths, editRate]);
+
+  const saveInvestorDesc = async () => {
+    if (!loan?.id) return;
+    if (investorDesc.trim().length < 20) { toast.error("Opis powinien mieć min. 20 znaków"); return; }
+    setSavingDesc(true);
+    try {
+      const { error } = await supabase.from("loan_applications")
+        .update({ investor_description: investorDesc.trim() }).eq("id", loan.id);
+      if (error) throw error;
+      toast.success("Opis zapisany");
+      setRefreshTick((t) => t + 1);
+    } catch (e: any) { toast.error(e?.message ?? "Błąd zapisu"); }
+    finally { setSavingDesc(false); }
+  };
+
+  const generateDesc = async (mode: "draft" | "improve" | "expand") => {
+    if (!loan?.id) { toast.error("Brak wniosku"); return; }
+    setAiBusy(true);
+    const t = toast.loading("Generuję opis…");
+    try {
+      const res: any = await assistDesc({ data: { currentText: investorDesc, mode, loanId: loan.id } });
+      if (res?.text) setInvestorDesc(String(res.text));
+      toast.success("Gotowe — sprawdź i popraw wedle uznania.", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd AI", { id: t });
+    } finally { setAiBusy(false); }
+  };
 
   const sendToInvestors = async () => {
     if (!loan?.id) return;
