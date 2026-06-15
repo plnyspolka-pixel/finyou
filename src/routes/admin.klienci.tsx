@@ -171,48 +171,67 @@ function KlienciPage() {
           {rows.map((r) => {
             const p = r.loan?.properties?.[0];
             const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "—";
+            const isOpen = expandedId === r.id;
             return (
-              <Link key={r.id} to="/admin/klienci/$id" params={{ id: r.id }} className="block p-3 hover:bg-muted/40 active:bg-muted/60">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate">{name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{r.phone_normalized ?? "—"} · {r.email ?? "—"}</div>
+              <div key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => toggle(r.id)}
+                  className="w-full text-left p-3 hover:bg-muted/40 active:bg-muted/60"
+                >
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                    {isOpen ? <ChevronDown className="h-4 w-4 mt-0.5 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 mt-0.5 text-muted-foreground" />}
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{r.phone_normalized ?? "—"} · {r.email ?? "—"}</div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>
+                  {(r.loan || p) && (
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs pl-6">
+                      {r.loan && (
+                        <div className="min-w-0">
+                          <div className="text-muted-foreground">Wniosek</div>
+                          <div className="truncate font-medium">{formatPLN(r.loan.loan_amount)}{r.loan.preferred_period_months ? ` · ${r.loan.preferred_period_months} mc` : ""}</div>
+                          <div className="text-muted-foreground">Kompletność: {r.loan.completeness_percent ?? 0}%</div>
+                        </div>
+                      )}
+                      {p && (
+                        <div className="min-w-0">
+                          <div className="text-muted-foreground">Nieruchomość</div>
+                          <div className="truncate font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}{p.city ? ` · ${p.city}` : ""}</div>
+                          {p.estimated_value ? <div className="text-muted-foreground truncate">{formatPLN(p.estimated_value)}</div> : null}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] pl-6">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{r.comms.calls}</span>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                    {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                    <span className="text-muted-foreground">· {formatRelative(r.comms.lastAt)}</span>
+                    <span className="ml-auto text-muted-foreground">{r.source ?? "—"}</span>
                   </div>
-                </div>
-                {(r.loan || p) && (
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    {r.loan && (
-                      <div className="min-w-0">
-                        <div className="text-muted-foreground">Wniosek</div>
-                        <div className="truncate font-medium">{formatPLN(r.loan.loan_amount)}{r.loan.preferred_period_months ? ` · ${r.loan.preferred_period_months} mc` : ""}</div>
-                        <div className="text-muted-foreground">Kompletność: {r.loan.completeness_percent ?? 0}%</div>
-                      </div>
-                    )}
-                    {p && (
-                      <div className="min-w-0">
-                        <div className="text-muted-foreground">Nieruchomość</div>
-                        <div className="truncate font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}{p.city ? ` · ${p.city}` : ""}</div>
-                        {p.estimated_value ? <div className="text-muted-foreground truncate">{formatPLN(p.estimated_value)}</div> : null}
-                      </div>
-                    )}
+                </button>
+                {isOpen && (
+                  <div className="p-3 bg-muted/30 border-t">
+                    <div className="mb-2 flex justify-end">
+                      <Link to="/admin/klienci/$id" params={{ id: r.id }} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                        Otwórz pełny widok <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                    <LeadDetailView id={r.id} compact />
                   </div>
                 )}
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{r.comms.calls}</span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{r.comms.emails}</span>
-                  {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
-                  <span className="text-muted-foreground">· {formatRelative(r.comms.lastAt)}</span>
-                  <span className="ml-auto text-muted-foreground">{r.source ?? "—"}</span>
-                </div>
-              </Link>
+              </div>
             );
           })}
         </div>
+
 
         {/* Desktop: tabela */}
         <div className="hidden lg:block overflow-x-auto">
