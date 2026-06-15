@@ -148,7 +148,13 @@ function LeadDetailPage() {
           </div>
         </TabsContent>
 
+        {/* SEKWENCJA MAILI */}
+        <TabsContent value="sekwencja">
+          <EmailSequenceTab data={emailSequence} />
+        </TabsContent>
+
         {/* DANE */}
+
         <TabsContent value="dane">
           <Card className="p-4 grid gap-3 md:grid-cols-2">
             <Field label="Imię" value={lead.first_name} onSave={(v) => mUpdate.mutate({ first_name: v })} />
