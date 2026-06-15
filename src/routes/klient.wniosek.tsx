@@ -352,17 +352,17 @@ function KlientWniosek() {
 
           </div>
 
-          {/* Kalkulator propozycji dla inwestora przeniesiony do osobnego modułu: /klient/kalkulator */}
+          {/* Kalkulator raty przeniesiony do osobnego modułu: /klient/kalkulator */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Harmonogram i wysyłka do inwestorów</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Oblicz ratę i wyślij do inwestorów</CardTitle>
               <CardDescription>
-                Edycja warunków, harmonogram spłat i wysyłka wniosku znajdują się teraz w osobnym module „Propozycja dla inwestora”.
+                Edycja warunków, harmonogram spłat i wysyłka wniosku znajdują się teraz w osobnym module „Oblicz ratę”.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="cta" size="lg" className="w-full sm:w-auto">
-                <Link to="/klient/kalkulator"><Send className="mr-2 h-4 w-4" />Przejdź do propozycji dla inwestora</Link>
+                <Link to="/klient/kalkulator"><Send className="mr-2 h-4 w-4" />Przejdź do kalkulatora raty</Link>
               </Button>
             </CardContent>
           </Card>

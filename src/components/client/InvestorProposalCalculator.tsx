@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Info, Lock, Send, Loader2 } from "lucide-react";
+import { CalendarDays, Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { assistBusinessDescription } from "@/lib/ai-assist.functions";
 
 // Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
 // pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
@@ -50,8 +53,12 @@ export function InvestorProposalCalculator() {
   const [editMonths, setEditMonths] = useState<number>(0);
   const [editRate, setEditRate] = useState<number>(0);
   const [editMaxPayment, setEditMaxPayment] = useState<number>(0);
+  const [investorDesc, setInvestorDesc] = useState<string>("");
+  const [savingDesc, setSavingDesc] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const [sendingToInvestors, setSendingToInvestors] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const assistDesc = useServerFn(assistBusinessDescription);
 
   useEffect(() => {
     if (!loan) return;
@@ -59,6 +66,7 @@ export function InvestorProposalCalculator() {
     setEditMonths(Number(loan.preferred_period_months ?? 24));
     setEditRate(Number(loan.annual_investor_rate ?? 24));
     setEditMaxPayment(Number(loan.max_monthly_payment ?? 0));
+    setInvestorDesc(String(loan.investor_description ?? ""));
   }, [loan?.id]);
 
   useEffect(() => {
@@ -110,15 +118,44 @@ export function InvestorProposalCalculator() {
     return { rows, monthly, balloon, total, nominalMonthly };
   }, [editAmount, editMonths, editRate, editMaxPayment]);
 
+  const hasDesc = investorDesc.trim().length >= 20;
+
   const missingForInvestors = useMemo(() => {
     const m: string[] = [];
     if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
     if (!prop?.property_type) m.push("typ zabezpieczenia");
     if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
-    if (!loan?.investor_description) m.push("krótki opis dla inwestora");
+    if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!editAmount || !editMonths || !editRate) m.push("warunki finansowe");
     return m;
-  }, [client, prop, loan, editAmount, editMonths, editRate]);
+  }, [client, prop, hasDesc, editAmount, editMonths, editRate]);
+
+  const saveInvestorDesc = async () => {
+    if (!loan?.id) return;
+    if (investorDesc.trim().length < 20) { toast.error("Opis powinien mieć min. 20 znaków"); return; }
+    setSavingDesc(true);
+    try {
+      const { error } = await supabase.from("loan_applications")
+        .update({ investor_description: investorDesc.trim() }).eq("id", loan.id);
+      if (error) throw error;
+      toast.success("Opis zapisany");
+      setRefreshTick((t) => t + 1);
+    } catch (e: any) { toast.error(e?.message ?? "Błąd zapisu"); }
+    finally { setSavingDesc(false); }
+  };
+
+  const generateDesc = async (mode: "draft" | "improve" | "expand") => {
+    if (!loan?.id) { toast.error("Brak wniosku"); return; }
+    setAiBusy(true);
+    const t = toast.loading("Generuję opis…");
+    try {
+      const res: any = await assistDesc({ data: { currentText: investorDesc, mode, loanId: loan.id } });
+      if (res?.text) setInvestorDesc(String(res.text));
+      toast.success("Gotowe — sprawdź i popraw wedle uznania.", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd AI", { id: t });
+    } finally { setAiBusy(false); }
+  };
 
   const sendToInvestors = async () => {
     if (!loan?.id) return;
@@ -154,7 +191,7 @@ export function InvestorProposalCalculator() {
     return (
       <Card>
         <CardContent className="py-6 text-sm text-muted-foreground">
-          Najpierw wypełnij wniosek — wtedy uruchomimy tu kalkulator propozycji dla inwestora.
+          Najpierw wypełnij wniosek — wtedy uruchomimy tu kalkulator raty.
         </CardContent>
       </Card>
     );
@@ -164,11 +201,11 @@ export function InvestorProposalCalculator() {
     <div className="space-y-4 max-w-4xl">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold sm:text-2xl">Moja propozycja dla inwestora</h1>
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Oblicz ratę</h1>
           <p className="text-sm text-muted-foreground">
             {locked
               ? "Wniosek jest w analizie — dane są zablokowane do edycji."
-              : "Dopasuj warunki — harmonogram przeliczy się od razu. Gdy będziesz gotowy, wyślij wniosek do inwestorów."}
+              : "Dopasuj warunki — rata i harmonogram przeliczą się od razu. Gdy będziesz gotowy, wyślij wniosek do inwestorów."}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -189,9 +226,9 @@ export function InvestorProposalCalculator() {
                 <Label className="text-xs">Kwota pożyczki</Label>
                 <span className="text-sm font-bold tabular-nums">{formatPLN(editAmount)}</span>
               </div>
-              <Input type="number" inputMode="numeric" min={10_000} max={5_000_000} step={5_000}
+              <Input type="number" inputMode="numeric" min={10_000} max={5_000_000} step={100}
                 value={editAmount || ""} onChange={(e) => setEditAmount(Math.max(0, Number(e.target.value) || 0))} disabled={locked} />
-              <Slider value={[editAmount]} min={10_000} max={2_000_000} step={5_000}
+              <Slider value={[editAmount]} min={10_000} max={2_000_000} step={100}
                 onValueChange={(v) => setEditAmount(v[0] ?? editAmount)} disabled={locked} />
             </div>
 
@@ -219,9 +256,14 @@ export function InvestorProposalCalculator() {
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs">Maks. miesięczna rata, którą udźwigniesz (opcjonalnie)</Label>
-              <Input type="number" inputMode="numeric" min={0} step={100} placeholder="np. 3500"
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs">Maks. miesięczna rata, którą udźwigniesz (opcjonalnie)</Label>
+                <span className="text-sm font-bold tabular-nums">{editMaxPayment > 0 ? formatPLN(editMaxPayment) : "bez limitu"}</span>
+              </div>
+              <Input type="number" inputMode="numeric" min={0} max={50_000} step={100} placeholder="np. 3500"
                 value={editMaxPayment || ""} onChange={(e) => setEditMaxPayment(Math.max(0, Number(e.target.value) || 0))} disabled={locked} />
+              <Slider value={[Math.min(50_000, editMaxPayment)]} min={0} max={50_000} step={100}
+                onValueChange={(v) => setEditMaxPayment(v[0] ?? editMaxPayment)} disabled={locked} />
               <p className="text-[11px] text-muted-foreground">Gdy ustawisz limit niższy niż rata anuitetowa — różnica trafi do raty balonowej.</p>
             </div>
           </div>
@@ -273,19 +315,53 @@ export function InvestorProposalCalculator() {
           )}
 
           {!locked && (
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-              {missingForInvestors.length > 0 && (
-                <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>Aby wysłać wniosek do inwestorów, uzupełnij jeszcze: <strong>{missingForInvestors.join(", ")}</strong>.</span>
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-sm font-semibold">Krótki opis dla inwestora</Label>
+                  {hasDesc && <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ uzupełniony</span>}
                 </div>
-              )}
-              <Button onClick={() => void sendToInvestors()} disabled={sendingToInvestors}
-                variant="cta" size="lg" className="w-full sm:w-auto">
-                {sendingToInvestors
-                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</>
-                  : <><Send className="mr-2 h-4 w-4" />Wyślij wniosek do inwestorów</>}
-              </Button>
+                <p className="text-xs text-muted-foreground">
+                  2–5 zdań: po co potrzebujesz finansowania, na co pójdą pieniądze i jak planujesz spłacić. AI pomoże, ale Ty decydujesz, co zostanie.
+                </p>
+                <Textarea
+                  rows={5}
+                  value={investorDesc}
+                  onChange={(e) => setInvestorDesc(e.target.value)}
+                  placeholder="Np. Potrzebuję 200 000 zł na uruchomienie kolejnego sklepu, mam już 2 lokalizacje. Spłatę pokryję z bieżących przychodów…"
+                  disabled={aiBusy}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => void generateDesc(investorDesc.trim() ? "improve" : "draft")} disabled={aiBusy}>
+                    {aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {investorDesc.trim() ? "Popraw opis (AI)" : "Wygeneruj opis (AI)"}
+                  </Button>
+                  {investorDesc.trim() && (
+                    <Button size="sm" variant="ghost" onClick={() => void generateDesc("expand")} disabled={aiBusy}>
+                      Rozwiń (AI)
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => void saveInvestorDesc()} disabled={savingDesc || aiBusy}>
+                    {savingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Zapisz opis
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                {missingForInvestors.length > 0 && (
+                  <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>Aby wysłać wniosek do inwestorów, uzupełnij jeszcze: <strong>{missingForInvestors.join(", ")}</strong>.</span>
+                  </div>
+                )}
+                <Button onClick={() => void sendToInvestors()} disabled={sendingToInvestors}
+                  variant="cta" size="lg" className="w-full sm:w-auto">
+                  {sendingToInvestors
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</>
+                    : <><Send className="mr-2 h-4 w-4" />Wyślij wniosek do inwestorów</>}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

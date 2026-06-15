@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Circle, ArrowRight, Sparkles } from "lucide-react";
+import { BorderBeam } from "@/components/ui/border-beam";
 import type { EnrichedProgress, MissingItem } from "@/lib/my-loan-progress";
 
 interface Props {
@@ -204,7 +205,8 @@ export function ProgressChecklist({
         )}
       </div>
 
-      <Card className="border-violet-200 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/20">
+      <Card className="relative overflow-hidden border-violet-300 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/20">
+        <BorderBeam size={120} duration={8} colorFrom="#a78bfa" colorTo="#22d3ee" />
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base text-violet-700 dark:text-violet-300">
             <Sparkles className="h-5 w-5" /> Zwiększ swoje szanse na sukces
@@ -217,7 +219,7 @@ export function ProgressChecklist({
         <CardContent>
           <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
             {boostItems.map((it) => (
-              <li key={it.label} className="flex flex-col gap-2 rounded-md border bg-card p-3">
+              <li key={it.label} className={`relative overflow-hidden flex flex-col gap-2 rounded-md border bg-card p-3 ${it.done ? "" : "ring-1 ring-violet-300/60 dark:ring-violet-700/60 shadow-[0_0_0_4px_rgba(167,139,250,0.08)]"}`}>
                 <div className="flex items-center gap-2">
                   {it.done ? (
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />

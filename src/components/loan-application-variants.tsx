@@ -280,7 +280,7 @@ function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnTyp
         onChange={(event) => update("amount", Number(event.target.value) || 0)}
         className="h-14 text-2xl font-extrabold tabular-nums"
       />
-      <Slider value={[draft.amount]} min={20_000} max={1_000_000} step={5_000} onValueChange={(value) => update("amount", value[0] ?? draft.amount)} />
+      <Slider value={[draft.amount]} min={20_000} max={1_000_000} step={100} onValueChange={(value) => update("amount", value[0] ?? draft.amount)} />
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>20 000 zł</span>
         <span>1 000 000 zł</span>
@@ -597,7 +597,7 @@ export function LinearLoanApplication({
             <div className="space-y-5">
               <Label htmlFor="linear-max-payment" className="text-lg font-bold">Maksymalna rata miesięczna</Label>
               <Input id="linear-max-payment" type="number" value={draft.maxPayment} onChange={(event) => update("maxPayment", Number(event.target.value) || 0)} className="h-14 text-2xl font-extrabold tabular-nums" />
-              <Slider value={[Math.min(50_000, draft.maxPayment)]} min={500} max={50_000} step={250} onValueChange={(value) => update("maxPayment", value[0] ?? draft.maxPayment)} />
+              <Slider value={[Math.min(50_000, draft.maxPayment)]} min={500} max={50_000} step={100} onValueChange={(value) => update("maxPayment", value[0] ?? draft.maxPayment)} />
               <p className="text-sm text-muted-foreground">Jeśli rata z kalkulacji będzie wyższa, nadwyżkę pokażemy jako ostatnią ratę balonową.</p>
             </div>
           )}

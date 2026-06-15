@@ -70,7 +70,7 @@ export function QuickCalculator() {
               value={[amount]}
               min={20_000}
               max={1_000_000}
-              step={5_000}
+              step={100}
               onValueChange={(v) => setAmount(v[0] ?? amount)}
               className="mt-3"
             />

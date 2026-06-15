@@ -233,7 +233,7 @@ function LoanTermsBox({ loan, onChanged }: { loan: LoanRow; onChanged: () => voi
       <div className="space-y-3">
         <div>
           <div className="flex justify-between text-xs"><span>Kwota</span><span className="font-bold">{formatPLN(amount)}</span></div>
-          <Slider value={[amount]} min={10_000} max={2_000_000} step={5_000} onValueChange={(v) => setAmount(v[0] ?? amount)} />
+          <Slider value={[amount]} min={10_000} max={2_000_000} step={100} onValueChange={(v) => setAmount(v[0] ?? amount)} />
         </div>
         <div>
           <div className="flex justify-between text-xs"><span>Okres</span><span className="font-bold">{months} mies.</span></div>

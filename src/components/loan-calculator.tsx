@@ -150,7 +150,7 @@ export function LoanCalculator({
               <Label>Kwota nominalna pożyczki</Label>
               <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
             </div>
-            <Slider min={20000} max={1_000_000} step={5000} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
+            <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Od tej kwoty liczone odsetki</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
@@ -208,7 +208,7 @@ export function LoanCalculator({
               <Label>Maksymalna rata dla klienta</Label>
               <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
             </div>
-            <Slider min={500} max={50000} step={250} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
+            <Slider min={500} max={50000} step={100} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>500 zł</span><span>50 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Rata nominalna (annuitet)</span><b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b></div>
