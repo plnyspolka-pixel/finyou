@@ -41,29 +41,41 @@ interface NewsBrief {
 }
 
 type Audience = "borrower" | "investor";
+type PostKind = "borrower_news" | "investor_news" | "investor_review";
 
-async function pickNextAudience(): Promise<Audience> {
-  // Alternate: look at last autopilot article; pick the opposite.
+async function pickNextKind(): Promise<PostKind> {
+  // Rotacja 3-elementowa: borrower_news → investor_news → investor_review → ...
   const { data } = await supabaseAdmin
     .from("ai_seo_articles")
-    .select("audience")
+    .select("audience,raw_ai_output,published_at")
     .eq("source", "ai_autopilot")
     .order("published_at", { ascending: false })
     .limit(1);
-  const last = data?.[0]?.audience as Audience | undefined;
-  if (last === "investor") return "borrower";
-  if (last === "borrower") return "investor";
-  return "investor"; // first run → start with investor (mamy już duży stack borrower)
+  const lastRow: any = data?.[0];
+  const last: PostKind | undefined = lastRow?.raw_ai_output?.post_kind
+    ?? (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
+  if (last === "borrower_news") return "investor_news";
+  if (last === "investor_news") return "investor_review";
+  if (last === "investor_review") return "borrower_news";
+  return "investor_review"; // first run
 }
 
-const BRIEFS: Record<Audience, { sys: string; user: string }> = {
-  borrower: {
+function audienceOf(kind: PostKind): Audience {
+  return kind === "borrower_news" ? "borrower" : "investor";
+}
+
+const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
+  borrower_news: {
     sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
     user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla OSOBY POŻYCZAJĄCEJ pod zastaw nieruchomości w PL: stopy procentowe (RPP), WIBOR/inflacja, ceny mieszkań i nieruchomości w PL, sytuacja na rynku kredytów hipotecznych, regulacje konsumenckie (UOKiK, KNF), wyroki istotne dla kredytobiorców. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_POŻYCZKOBIORCY:' i jeden akapit (4-6 zdań) co to oznacza dla osoby rozważającej pożyczkę pozabankową pod zastaw mieszkania/domu/działki.",
   },
-  investor: {
+  investor_news: {
     sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
     user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla INWESTORA prywatnego w PL: stopy procentowe (RPP, FED, EBC), kurs PLN/EUR/USD, WIG20, S&P 500, ropa, złoto, BTC/ETH, ceny nieruchomości komercyjnych i mieszkaniowych w PL, alternatywne klasy aktywów (pożyczki prywatne, crowdfunding nieruchomościowy), regulacje wpływające na inwestowanie. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_INWESTORSKI:' i jeden akapit (4-6 zdań) co to oznacza dla inwestora prywatnego, w szczególności rozważającego inwestowanie w pożyczki pod zastaw nieruchomości w PL (oczekiwana stopa zwrotu, ryzyko, dywersyfikacja).",
+  },
+  investor_review: {
+    sys: "Jesteś senior analitykiem inwestycyjnym dla polskiego inwestora prywatnego (HNW, 100k–2M PLN kapitału). Po polsku, konkretnie, bez clickbaitu.",
+    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
   },
 };
 
