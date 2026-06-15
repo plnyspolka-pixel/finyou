@@ -192,9 +192,9 @@ export function InvestorProposalCalculator() {
                 <Label className="text-xs">Kwota pożyczki</Label>
                 <span className="text-sm font-bold tabular-nums">{formatPLN(editAmount)}</span>
               </div>
-              <Input type="number" inputMode="numeric" min={10_000} max={5_000_000} step={5_000}
+              <Input type="number" inputMode="numeric" min={10_000} max={5_000_000} step={100}
                 value={editAmount || ""} onChange={(e) => setEditAmount(Math.max(0, Number(e.target.value) || 0))} disabled={locked} />
-              <Slider value={[editAmount]} min={10_000} max={2_000_000} step={5_000}
+              <Slider value={[editAmount]} min={10_000} max={2_000_000} step={100}
                 onValueChange={(v) => setEditAmount(v[0] ?? editAmount)} disabled={locked} />
             </div>
 
@@ -222,9 +222,14 @@ export function InvestorProposalCalculator() {
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs">Maks. miesięczna rata, którą udźwigniesz (opcjonalnie)</Label>
-              <Input type="number" inputMode="numeric" min={0} step={100} placeholder="np. 3500"
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs">Maks. miesięczna rata, którą udźwigniesz (opcjonalnie)</Label>
+                <span className="text-sm font-bold tabular-nums">{editMaxPayment > 0 ? formatPLN(editMaxPayment) : "bez limitu"}</span>
+              </div>
+              <Input type="number" inputMode="numeric" min={0} max={50_000} step={100} placeholder="np. 3500"
                 value={editMaxPayment || ""} onChange={(e) => setEditMaxPayment(Math.max(0, Number(e.target.value) || 0))} disabled={locked} />
+              <Slider value={[Math.min(50_000, editMaxPayment)]} min={0} max={50_000} step={100}
+                onValueChange={(v) => setEditMaxPayment(v[0] ?? editMaxPayment)} disabled={locked} />
               <p className="text-[11px] text-muted-foreground">Gdy ustawisz limit niższy niż rata anuitetowa — różnica trafi do raty balonowej.</p>
             </div>
           </div>
