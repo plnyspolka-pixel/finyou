@@ -438,6 +438,16 @@ function KlientProfil() {
         </CardContent>
       </Card>
 
+      <PropertyDocsCard userId={user?.id ?? null} kind="photos_all"
+        title="Zdjęcia nieruchomości (wnętrza i z zewnątrz)"
+        icon={<ImageIcon className="h-4 w-4" />}
+        description="Wrzuć tutaj wszystkie zdjęcia w jednym miejscu — z zewnątrz i każdego pomieszczenia. Możesz wybrać wiele plików na raz." />
+
+      <PropertyDocsCard userId={user?.id ?? null} kind="income_docs"
+        title="Dokumenty dochodowe"
+        icon={<Wallet className="h-4 w-4" />}
+        description="PIT, zaświadczenia o dochodach, wyciągi — wszystko, co pokazuje inwestorowi Twoją zdolność spłaty. Niewymagane, ale mocno zwiększa szanse." />
+
       <Button onClick={save}>Zapisz</Button>
 
       <Card>
