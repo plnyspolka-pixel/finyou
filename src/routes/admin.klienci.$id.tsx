@@ -59,7 +59,7 @@ function LeadDetailPage() {
   if (q.error) return <div className="p-6 text-destructive">Błąd: {(q.error as Error).message}</div>;
   if (!q.data) return null;
 
-  const { lead, communications, documents } = q.data;
+  const { lead, communications, documents, emailSequence } = q.data as any;
   const filtered = filter === "all" ? communications : communications.filter((c: any) => c.channel === filter);
 
   return (
@@ -91,11 +91,13 @@ function LeadDetailPage() {
       <Tabs defaultValue="komunikacja">
         <TabsList>
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
+          <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
           <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>
           <TabsTrigger value="raw">Surowe dane</TabsTrigger>
         </TabsList>
+
 
         {/* KOMUNIKACJA */}
         <TabsContent value="komunikacja" className="space-y-3">
