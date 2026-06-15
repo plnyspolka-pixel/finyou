@@ -80,7 +80,7 @@ function WniosekDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/wnioski" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-1 h-4 w-4" /> Wróć</Link>
+      <Link to="/admin/klienci" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-1 h-4 w-4" /> Wróć</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{c ? `${c.first_name} ${c.last_name}` : "Wniosek"}</h1>
