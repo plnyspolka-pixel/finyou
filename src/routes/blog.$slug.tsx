@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Facebook, Linkedin, Twitter, Link2, Mail, MessageCircle, Check } from "lucide-react";
 import { useState } from "react";
+import { BlogCover } from "@/components/blog/BlogCover";
 
 const FAVICON_URL = "https://financeyou.pl/__l5e/assets-v1/73e2df85-6890-4ae6-a18a-debbc0970e07/favicon-mark.png";
 const WORDMARK_URL = "https://financeyou.pl/__l5e/assets-v1/f4352ffd-618d-446b-a632-fc3a5abb0bdd/financeyou-wordmark.png";
@@ -123,13 +124,7 @@ function ArticlePage() {
             {article.published_at ? ` • ${new Date(article.published_at).toLocaleDateString("pl-PL")}` : null}
           </div>
           {article.cover_image_url && (
-            <div className="aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
-              <img
-                src={article.cover_image_url}
-                alt={article.cover_image_alt || article.title}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <BlogCover src={article.cover_image_url} alt={article.cover_image_alt || article.title} rounded />
           )}
           <ShareBar url={shareUrl} title={article.title} />
         </header>
