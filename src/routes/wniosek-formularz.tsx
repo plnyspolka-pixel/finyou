@@ -949,7 +949,7 @@ function KlientWniosek() {
                 <Input id="prop-max" type="number" inputMode="numeric" value={maxPayment}
                   onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
               </div>
-              <Slider min={500} max={50000} step={250} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
+              <Slider min={500} max={50000} step={100} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
               <p className="text-xs text-muted-foreground">Nadwyżka ponad maks. ratę trafia do raty balonowej na koniec okresu.</p>
             </div>
 
