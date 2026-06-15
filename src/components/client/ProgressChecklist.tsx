@@ -205,7 +205,8 @@ export function ProgressChecklist({
         )}
       </div>
 
-      <Card className="border-violet-200 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/20">
+      <Card className="relative overflow-hidden border-violet-300 bg-violet-50/40 dark:border-violet-900/50 dark:bg-violet-950/20">
+        <BorderBeam size={120} duration={8} colorFrom="#a78bfa" colorTo="#22d3ee" />
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base text-violet-700 dark:text-violet-300">
             <Sparkles className="h-5 w-5" /> Zwiększ swoje szanse na sukces
