@@ -5,8 +5,8 @@ import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/resend";
 
-const FROM_DOMAIN = process.env.RESEND_FROM_DOMAIN ?? "app.financeyou.pl";
-const FROM_ADDR = process.env.RESEND_FROM_ADDRESS ?? `kontakt@app.financeyou.pl`;
+const FROM_DOMAIN = process.env.RESEND_FROM_DOMAIN ?? "financeyou.pl";
+const FROM_ADDR = process.env.RESEND_FROM_ADDRESS ?? `kontakt@financeyou.pl`;
 
 export async function sendResendEmail(opts: {
   to: string;
