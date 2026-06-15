@@ -150,7 +150,7 @@ export function LoanCalculator({
               <Label>Kwota nominalna pożyczki</Label>
               <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
             </div>
-            <Slider min={20000} max={1_000_000} step={5000} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
+            <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Od tej kwoty liczone odsetki</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
