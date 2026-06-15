@@ -1,255 +1,284 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { listLeads } from "@/lib/leads-admin.functions";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { formatDate } from "@/lib/labels";
-import { LogIn, Plus, FileUp, Trash2, Download } from "lucide-react";
-import { loginAsUser } from "@/lib/impersonate-client";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw } from "lucide-react";
+import { formatPLN, propertyTypeLabels, loanStatusLabels } from "@/lib/labels";
 
 export const Route = createFileRoute("/admin/klienci")({
   component: KlienciPage,
 });
 
-const emptyForm = {
-  first_name: "", last_name: "", company_name: "",
-  email: "", phone: "",
-  pesel: "", nip: "", regon: "",
-  street: "", postal_code: "", city: "", country: "Polska",
-  address: "", bank_account: "",
-  land_register_number: "", notes: "",
-  source: "wewnetrzny", consent_rodo: true,
+const LEAD_STATUS_LABELS: Record<string, string> = {
+  nowy: "Nowy",
+  w_kontakcie: "W kontakcie",
+  rozmowa: "Po rozmowie",
+  wniosek_wyslany: "Wniosek wysłany",
+  wniosek_zlozony: "Wniosek złożony",
+  zakwalifikowany: "Zakwalifikowany",
+  odrzucony: "Odrzucony",
+  zamkniety: "Zamknięty",
+  bad_lead: "Zły lead",
+};
+
+function statusLabel(s: string | null | undefined) {
+  if (!s) return "—";
+  return LEAD_STATUS_LABELS[s] ?? loanStatusLabels[s] ?? s;
+}
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "przed chwilą";
+  if (m < 60) return `${m} min temu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h temu`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return "wczoraj";
+  if (d < 7) return `${d} dni temu`;
+  return new Date(iso).toLocaleDateString("pl-PL");
+}
+
+type Row = {
+  id: string;
+  type: string;
+  status: string;
+  source: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone_normalized: string | null;
+  current_form_step: number | null;
+  created_at: string;
+  loan_application_id: string | null;
+  loan: {
+    id: string;
+    status: string;
+    loan_amount: number | null;
+    preferred_period_months: number | null;
+    completeness_percent: number | null;
+    properties: { property_type: string; city: string | null; estimated_value: number | null }[];
+  } | null;
+  comms: { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null };
 };
 
 function KlienciPage() {
-  const [rows, setRows] = useState<any[]>([]);
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [f, setF] = useState({ ...emptyForm });
-  const [docsFor, setDocsFor] = useState<any | null>(null);
+  const fn = useServerFn(listLeads);
+  const [type, setType] = useState<"all" | "pozyczkowy" | "inwestorski">("all");
+  const [status, setStatus] = useState<string>("all");
+  const [source, setSource] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
-  const load = async () => {
-    const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
-    setRows(data ?? []);
-  };
-  useEffect(() => { void load(); }, []);
-
-  const openNew = () => { setEditingId(null); setF({ ...emptyForm }); setOpen(true); };
-  const openEdit = (r: any) => {
-    setEditingId(r.id);
-    setF({
-      first_name: r.first_name ?? "", last_name: r.last_name ?? "", company_name: r.company_name ?? "",
-      email: r.email ?? "", phone: r.phone ?? "",
-      pesel: r.pesel ?? "", nip: r.nip ?? "", regon: r.regon ?? "",
-      street: r.street ?? "", postal_code: r.postal_code ?? "", city: r.city ?? "", country: r.country ?? "Polska",
-      address: r.address ?? "", bank_account: r.bank_account ?? "",
-      land_register_number: r.land_register_number ?? "", notes: r.notes ?? "",
-      source: r.source ?? "wewnetrzny", consent_rodo: !!r.consent_rodo,
-    });
-    setOpen(true);
-  };
-
-  const save = async () => {
-    if (!f.first_name.trim() || !f.last_name.trim()) { toast.error("Imię i nazwisko są wymagane"); return; }
-    if (f.pesel && !/^\d{11}$/.test(f.pesel)) { toast.error("PESEL musi mieć 11 cyfr"); return; }
-    if (f.nip && !/^\d{10}$/.test(f.nip)) { toast.error("NIP musi mieć 10 cyfr"); return; }
-    const payload = {
-      first_name: f.first_name.trim(),
-      last_name: f.last_name.trim(),
-      company_name: f.company_name.trim() || null,
-      email: f.email.trim() || null,
-      phone: f.phone.trim() || null,
-      pesel: f.pesel.trim() || null,
-      nip: f.nip.trim() || null,
-      regon: f.regon.trim() || null,
-      street: f.street.trim() || null,
-      postal_code: f.postal_code.trim() || null,
-      city: f.city.trim() || null,
-      country: f.country.trim() || null,
-      address: f.address.trim() || null,
-      bank_account: f.bank_account.replace(/\s+/g, "") || null,
-      land_register_number: f.land_register_number.trim() || null,
-      notes: f.notes.trim() || null,
-      source: f.source || null,
-      consent_rodo: f.consent_rodo,
-    };
-    const { error } = editingId
-      ? await supabase.from("clients").update(payload).eq("id", editingId)
-      : await supabase.from("clients").insert(payload);
-    if (error) { toast.error(error.message); return; }
-    toast.success(editingId ? "Zaktualizowano" : "Dodano klienta");
-    setOpen(false);
-    setF({ ...emptyForm });
-    void load();
-  };
-
-  const filtered = rows.filter((r) => {
-    const t = q.toLowerCase();
-    return !t || [r.first_name, r.last_name, r.phone, r.email, r.nip, r.company_name].some((v) => (v ?? "").toLowerCase().includes(t));
+  const q = useQuery({
+    queryKey: ["klienci", type, status, source, search],
+    queryFn: () => fn({ data: { type, status: status === "all" ? "" : status, source: source === "all" ? "" : source, search } }),
   });
 
+  const rows = (q.data ?? []) as Row[];
+
+  const sources = useMemo(() => Array.from(new Set(rows.map((r) => r.source).filter(Boolean) as string[])), [rows]);
+  const statuses = useMemo(() => Array.from(new Set(rows.map((r) => r.status).filter(Boolean))), [rows]);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: rows.length, nieobsluzone: 0, ma_wniosek: 0, bez_kontaktu: 0 };
+    for (const r of rows) {
+      if (r.status === "nowy") c.nieobsluzone++;
+      if (r.loan_application_id) c.ma_wniosek++;
+      if (!r.comms.lastAt) c.bez_kontaktu++;
+    }
+    return c;
+  }, [rows]);
+
+  const exportCsv = () => {
+    const header = ["ID","Imię","Nazwisko","Telefon","E-mail","Typ","Status","Źródło","Kwota","Okres","Kompl.%","Tel.","SMS","E-mail#","Ostatni kontakt","Utworzono"];
+    const lines = rows.map((r) => [
+      r.id, r.first_name ?? "", r.last_name ?? "", r.phone_normalized ?? "", r.email ?? "",
+      r.type, statusLabel(r.status), r.source ?? "",
+      r.loan?.loan_amount ?? "", r.loan?.preferred_period_months ?? "", r.loan?.completeness_percent ?? "",
+      r.comms.calls, r.comms.sms, r.comms.emails, r.comms.lastAt ?? "", r.created_at,
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `klienci-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold">Klienci</h1><p className="text-sm text-muted-foreground">Baza klientów ({rows.length}).</p></div>
-        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" />Dodaj klienta</Button>
+    <div className="space-y-4">
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Klienci</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Leady, wnioski, follow-up — wszystko w jednym widoku.</p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" size="sm" onClick={() => q.refetch()}><RefreshCw className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">CSV</span></Button>
+        </div>
+      </header>
+
+      <div className="flex flex-wrap gap-2 text-xs">
+        <Badge variant="outline">Wszystkie: {counts.all}</Badge>
+        <Badge variant="outline">Nieobsłużone: {counts.nieobsluzone}</Badge>
+        <Badge variant="outline">Z wnioskiem: {counts.ma_wniosek}</Badge>
+        <Badge variant="outline">Bez kontaktu: {counts.bez_kontaktu}</Badge>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? "Edytuj klienta" : "Nowy klient wewnętrzny"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <section>
-              <h3 className="text-sm font-semibold mb-2">Dane osobowe / firmowe</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Imię *</Label><Input value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></div>
-                <div><Label>Nazwisko *</Label><Input value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></div>
-                <div className="col-span-2"><Label>Nazwa firmy</Label><Input value={f.company_name} onChange={(e) => setF({ ...f, company_name: e.target.value })} /></div>
-                <div><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value.replace(/\D/g, "") })} /></div>
-                <div><Label>NIP</Label><Input maxLength={10} value={f.nip} onChange={(e) => setF({ ...f, nip: e.target.value.replace(/\D/g, "") })} /></div>
-                <div><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-sm font-semibold mb-2">Kontakt</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>E-mail</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
-                <div><Label>Telefon</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-sm font-semibold mb-2">Adres</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2"><Label>Ulica i numer</Label><Input value={f.street} onChange={(e) => setF({ ...f, street: e.target.value })} /></div>
-                <div><Label>Kod pocztowy</Label><Input maxLength={10} value={f.postal_code} onChange={(e) => setF({ ...f, postal_code: e.target.value })} /></div>
-                <div><Label>Miasto</Label><Input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} /></div>
-                <div><Label>Kraj</Label><Input value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} /></div>
-                <div className="col-span-2"><Label>Adres dodatkowy / korespondencyjny</Label><Input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-sm font-semibold mb-2">Rachunek i nieruchomość</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2"><Label>Numer konta (IBAN)</Label><Input value={f.bank_account} onChange={(e) => setF({ ...f, bank_account: e.target.value })} /></div>
-                <div className="col-span-2"><Label>Numer KW</Label><Input value={f.land_register_number} onChange={(e) => setF({ ...f, land_register_number: e.target.value })} placeholder="np. WA1M/00012345/6" /></div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-sm font-semibold mb-2">Dodatkowe</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Źródło</Label><Input value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} /></div>
-                <div className="flex items-center gap-2 mt-6">
-                  <Checkbox id="rodo" checked={f.consent_rodo} onCheckedChange={(v) => setF({ ...f, consent_rodo: !!v })} />
-                  <Label htmlFor="rodo">Zgoda RODO</Label>
-                </div>
-                <div className="col-span-2"><Label>Notatki</Label><Textarea rows={3} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
-              </div>
-            </section>
-          </div>
-          <DialogFooter><Button onClick={save}>{editingId ? "Zapisz zmiany" : "Zapisz"}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Card>
-        <CardHeader><Input placeholder="Szukaj…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" /><CardTitle className="text-sm text-muted-foreground mt-2">Wyniki: {filtered.length}</CardTitle></CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto"><Table>
-            <TableHeader><TableRow><TableHead>Klient</TableHead><TableHead>NIP</TableHead><TableHead>Telefon</TableHead><TableHead>KW</TableHead><TableHead>Dodano</TableHead><TableHead className="text-right">Akcje</TableHead></TableRow></TableHeader>
-            <TableBody>{filtered.map((r) => (
-              <TableRow key={r.id} className="cursor-pointer" onClick={() => openEdit(r)}>
-                <TableCell className="font-medium">{r.first_name} {r.last_name}{r.company_name ? <span className="text-muted-foreground"> · {r.company_name}</span> : null}</TableCell>
-                <TableCell>{r.nip ?? "—"}</TableCell>
-                <TableCell>{r.phone ?? "—"}</TableCell>
-                <TableCell>{r.land_register_number ?? "—"}</TableCell>
-                <TableCell>{formatDate(r.created_at)}</TableCell>
-                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <Button size="sm" variant="ghost" onClick={() => setDocsFor(r)}><FileUp className="mr-1 h-3 w-3" />Dokumenty</Button>
-                  <Button size="sm" variant="outline" className="ml-2" disabled={!r.email} onClick={() => void loginAsUser(r.email)}>
-                    <LogIn className="mr-1 h-3 w-3" /> Zaloguj jako
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}</TableBody>
-          </Table></div>
-        </CardContent>
+      <Card className="p-3 space-y-2">
+        <Input placeholder="Szukaj: imię, e-mail, telefon…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Select value={type} onValueChange={(v) => setType(v as any)}>
+            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie typy</SelectItem>
+              <SelectItem value="pozyczkowy">Pożyczkowy</SelectItem>
+              <SelectItem value="inwestorski">Inwestorski</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie statusy</SelectItem>
+              {statuses.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={source} onValueChange={setSource}>
+            <SelectTrigger className="h-9 text-xs col-span-2 sm:col-auto"><SelectValue placeholder="Źródło" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie źródła</SelectItem>
+              {sources.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </Card>
 
-      <ClientDocsDialog client={docsFor} onClose={() => setDocsFor(null)} />
-    </div>
-  );
-}
-
-function ClientDocsDialog({ client, onClose }: { client: any | null; onClose: () => void }) {
-  const [files, setFiles] = useState<any[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const folder = client ? `clients/${client.id}` : "";
-
-  const list = async () => {
-    if (!client) return;
-    const { data } = await supabase.storage.from("documents").list(folder, { sortBy: { column: "created_at", order: "desc" } });
-    setFiles(data ?? []);
-  };
-  useEffect(() => { if (client) void list(); /* eslint-disable-next-line */ }, [client?.id]);
-
-  const upload = async (file: File) => {
-    if (!client) return;
-    setUploading(true);
-    const path = `${folder}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("documents").upload(path, file);
-    setUploading(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Wgrano");
-    void list();
-  };
-
-  const remove = async (name: string) => {
-    const { error } = await supabase.storage.from("documents").remove([`${folder}/${name}`]);
-    if (error) { toast.error(error.message); return; }
-    void list();
-  };
-
-  const download = async (name: string) => {
-    const { data } = await supabase.storage.from("documents").createSignedUrl(`${folder}/${name}`, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  };
-
-  return (
-    <Dialog open={!!client} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Dokumenty — {client?.first_name} {client?.last_name}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <input ref={inputRef} type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
-            <Button disabled={uploading} onClick={() => inputRef.current?.click()}><FileUp className="mr-2 h-4 w-4" />{uploading ? "Wgrywanie…" : "Dodaj plik"}</Button>
-            <span className="text-xs text-muted-foreground">Bucket: documents/{folder}</span>
-          </div>
-          <div className="border rounded-md divide-y">
-            {files.length === 0 && <div className="p-4 text-sm text-muted-foreground">Brak dokumentów.</div>}
-            {files.map((f) => (
-              <div key={f.name} className="flex items-center justify-between p-2 text-sm">
-                <span className="truncate">{f.name}</span>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => void download(f.name)}><Download className="h-3 w-3" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => void remove(f.name)}><Trash2 className="h-3 w-3" /></Button>
+      <Card>
+        {/* Mobile: karty */}
+        <div className="lg:hidden divide-y">
+          {q.isLoading && <div className="p-6 text-center text-sm text-muted-foreground">Ładowanie…</div>}
+          {!q.isLoading && rows.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Brak rekordów.</div>}
+          {rows.map((r) => {
+            const p = r.loan?.properties?.[0];
+            const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "—";
+            return (
+              <Link key={r.id} to="/admin/klienci/$id" params={{ id: r.id }} className="block p-3 hover:bg-muted/40 active:bg-muted/60">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{r.phone_normalized ?? "—"} · {r.email ?? "—"}</div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+                {(r.loan || p) && (
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                    {r.loan && (
+                      <div className="min-w-0">
+                        <div className="text-muted-foreground">Wniosek</div>
+                        <div className="truncate font-medium">{formatPLN(r.loan.loan_amount)}{r.loan.preferred_period_months ? ` · ${r.loan.preferred_period_months} mc` : ""}</div>
+                        <div className="text-muted-foreground">Kompletność: {r.loan.completeness_percent ?? 0}%</div>
+                      </div>
+                    )}
+                    {p && (
+                      <div className="min-w-0">
+                        <div className="text-muted-foreground">Nieruchomość</div>
+                        <div className="truncate font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}{p.city ? ` · ${p.city}` : ""}</div>
+                        {p.estimated_value ? <div className="text-muted-foreground truncate">{formatPLN(p.estimated_value)}</div> : null}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{r.comms.calls}</span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                  {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                  <span className="text-muted-foreground">· {formatRelative(r.comms.lastAt)}</span>
+                  <span className="ml-auto text-muted-foreground">{r.source ?? "—"}</span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Desktop: tabela */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs uppercase text-muted-foreground border-b">
+              <tr>
+                <th className="px-3 py-2">Klient</th>
+                <th className="px-3 py-2">Kontakt</th>
+                <th className="px-3 py-2">Typ / Status</th>
+                <th className="px-3 py-2">Wniosek</th>
+                <th className="px-3 py-2">Nieruchomość</th>
+                <th className="px-3 py-2">Aktywność</th>
+                <th className="px-3 py-2">Źródło</th>
+                <th className="px-3 py-2">Utworzono</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.isLoading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Ładowanie…</td></tr>}
+              {!q.isLoading && rows.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Brak rekordów.</td></tr>}
+              {rows.map((r) => {
+                const p = r.loan?.properties?.[0];
+                return (
+                  <tr key={r.id} className="border-b hover:bg-muted/40">
+                    <td className="px-3 py-2">
+                      <Link to="/admin/klienci/$id" params={{ id: r.id }} className="font-medium hover:underline">
+                        {[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}
+                      </Link>
+                      <div className="text-[11px] text-muted-foreground">ID: {r.id.slice(0, 8)}</div>
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      <div>{r.phone_normalized ?? "—"}</div>
+                      <div className="text-muted-foreground">{r.email ?? "—"}</div>
+                    </td>
+                    <td className="px-3 py-2 text-xs space-y-1">
+                      <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
+                      <div><Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge></div>
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {r.loan ? (
+                        <>
+                          <div className="font-medium">{formatPLN(r.loan.loan_amount)}</div>
+                          <div className="text-muted-foreground">{r.loan.preferred_period_months ? `${r.loan.preferred_period_months} mc` : "—"} · {r.loan.completeness_percent ?? 0}%</div>
+                        </>
+                      ) : r.current_form_step ? <span className="text-muted-foreground">krok {r.current_form_step}</span> : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {p ? (
+                        <>
+                          <div className="font-medium">{propertyTypeLabels[p.property_type] ?? p.property_type}</div>
+                          <div className="text-muted-foreground">{p.city ?? "—"}{p.estimated_value ? ` · ${formatPLN(p.estimated_value)}` : ""}</div>
+                        </>
+                      ) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
+                        <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
+                        <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                        {r.comms.notes > 0 && <span className="inline-flex items-center gap-1" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                      </div>
+                      <div className="text-muted-foreground">{formatRelative(r.comms.lastAt)}</div>
+                    </td>
+                    <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("pl-PL")}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   );
 }
