@@ -597,7 +597,7 @@ export function LinearLoanApplication({
             <div className="space-y-5">
               <Label htmlFor="linear-max-payment" className="text-lg font-bold">Maksymalna rata miesięczna</Label>
               <Input id="linear-max-payment" type="number" value={draft.maxPayment} onChange={(event) => update("maxPayment", Number(event.target.value) || 0)} className="h-14 text-2xl font-extrabold tabular-nums" />
-              <Slider value={[Math.min(50_000, draft.maxPayment)]} min={500} max={50_000} step={250} onValueChange={(value) => update("maxPayment", value[0] ?? draft.maxPayment)} />
+              <Slider value={[Math.min(50_000, draft.maxPayment)]} min={500} max={50_000} step={100} onValueChange={(value) => update("maxPayment", value[0] ?? draft.maxPayment)} />
               <p className="text-sm text-muted-foreground">Jeśli rata z kalkulacji będzie wyższa, nadwyżkę pokażemy jako ostatnią ratę balonową.</p>
             </div>
           )}
