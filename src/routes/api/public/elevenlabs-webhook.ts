@@ -53,18 +53,43 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           }
         }
 
-        const body = (() => {
-          try {
-            return JSON.parse(rawBody);
-          } catch {
-            return {} as any;
-          }
+        const envelope = (() => {
+          try { return JSON.parse(rawBody); } catch { return {} as any; }
         })();
+        // ElevenLabs zwykle wysyła { type, event_timestamp, data: {...} } — wspieramy też płaski payload
+        const body: any = envelope?.data && typeof envelope.data === "object" ? envelope.data : envelope;
 
-        const callId: string | undefined = body.call_id || body.id || body.conversation_id;
-        const phone: string | undefined = body.phone_number || body.to_number;
-        const transcript: string | undefined = body.transcript || body.summary_transcript;
-        const summary: string | undefined = body.summary || body.analysis?.summary;
+        const callId: string | undefined =
+          body.conversation_id || body.call_id || body.id || envelope.conversation_id;
+        const phone: string | undefined =
+          body.phone_number || body.to_number || body?.metadata?.phone_call?.external_number || body?.conversation_initiation_client_data?.dynamic_variables?.phone;
+        const transcript: string | undefined = body.transcript_text || body.summary_transcript ||
+          (Array.isArray(body.transcript) ? body.transcript.map((t: any) => `${t.role ?? t.speaker ?? ""}: ${t.message ?? t.text ?? ""}`.trim()).filter(Boolean).join("\n") : undefined);
+        const summary: string | undefined =
+          body?.analysis?.transcript_summary || body?.analysis?.summary || body.summary;
+
+        // ── Mapowanie wyniku rozmowy ─────────────────────────────────────────
+        const callSuccessful: string | undefined = body?.analysis?.call_successful || body.call_successful;
+        const callStatus: string | undefined = body.status || body.call_status;
+        const disconnectionReason: string | undefined =
+          body?.metadata?.termination_reason || body.disconnection_reason || body.termination_reason;
+        const durationSec = Number(
+          body?.metadata?.call_duration_secs ?? body?.duration_seconds ?? body?.call_duration_secs
+        ) || null;
+
+        function classifyOutcome(): { outcome: string; label: string } {
+          const d = (disconnectionReason || "").toLowerCase();
+          const s = (callStatus || "").toLowerCase();
+          const succ = (callSuccessful || "").toLowerCase();
+          if (d.includes("no_answer") || d.includes("noanswer") || s === "no-answer") return { outcome: "no_answer", label: "Nieodebrana" };
+          if (d.includes("busy")) return { outcome: "busy", label: "Zajęte" };
+          if (d.includes("voicemail") || d.includes("machine")) return { outcome: "voicemail", label: "Poczta głosowa" };
+          if (d.includes("failed") || s === "failed" || succ === "failure") return { outcome: "failed", label: "Błąd połączenia" };
+          if ((durationSec ?? 0) < 5 && (d || s)) return { outcome: "no_answer", label: "Nieodebrana" };
+          if (succ === "success" || (durationSec ?? 0) >= 5) return { outcome: "answered", label: "Odebrana" };
+          return { outcome: "completed", label: "Zakończona" };
+        }
+        const { outcome, label: outcomeLabel } = classifyOutcome();
 
         let queueRow: any = null;
         if (callId) {
@@ -81,10 +106,17 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           queueRow = r.data;
         }
         if (queueRow) {
+          const queueStatus =
+            outcome === "answered" ? "zakonczona" :
+            outcome === "no_answer" ? "nieodebrana" :
+            outcome === "busy" ? "nieodebrana" :
+            outcome === "voicemail" ? "poczta_glosowa" :
+            outcome === "failed" ? "blad" :
+            "zakonczona";
           await supabase
             .from("call_queue")
             .update({
-              status: "zakonczona",
+              status: queueStatus,
               finished_at: new Date().toISOString(),
               transcript: transcript || null,
               result_summary: summary || null,
@@ -96,7 +128,6 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
         try {
           const { logLeadCommunication } = await import("@/lib/lead-comms.server");
-          const durationSec = Number(body?.metadata?.call_duration_secs ?? body?.duration_seconds ?? body?.call_duration_secs) || null;
           const recordingUrl = body?.recording_url || body?.audio_url || body?.metadata?.recording_url || null;
           await logLeadCommunication({
             loanApplicationId: queueRow?.loan_application_id ?? null,
@@ -105,15 +136,25 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             phoneNormalized: queueRow?.phone_normalized ?? phone ?? null,
             channel: "voicebot_call",
             direction: "outbound",
-            status: "completed",
-            subject: summary ? "Rozmowa voicebota" : null,
+            status: outcomeLabel,
+            subject: summary ? "Rozmowa voicebota" : `Próba połączenia — ${outcomeLabel}`,
             content: summary || transcript || null,
-            transcript: body?.transcript_segments || body?.turns || body?.messages || (transcript ? { text: transcript } : null),
+            transcript: body?.transcript || body?.transcript_segments || body?.turns || body?.messages || (transcript ? { text: transcript } : null),
             recordingUrl,
             durationSeconds: durationSec,
             externalId: callId ?? null,
             agentId: body?.agent_id ?? queueRow?.agent_id ?? null,
-            metadata: { source: "elevenlabs_webhook", raw: body },
+            metadata: {
+              source: "elevenlabs_webhook",
+              call_outcome: outcome,
+              call_outcome_label: outcomeLabel,
+              call_successful: callSuccessful ?? null,
+              call_status: callStatus ?? null,
+              disconnection_reason: disconnectionReason ?? null,
+              transcript_full: body?.transcript || body?.transcript_segments || body?.turns || null,
+              summary: summary ?? null,
+              raw: body,
+            },
           });
         } catch (e) {
           console.error("[elevenlabs-webhook] log lead comm failed", e);
@@ -121,10 +162,11 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
 
         await supabase.from("automation_events").insert({
           automation_type: "elevenlabs_webhook",
-          status: "received",
+          status: outcome,
           sent_payload: {},
           response_payload: body,
         });
+
 
         return new Response(JSON.stringify({ ok: true }), {
           headers: { "content-type": "application/json" },

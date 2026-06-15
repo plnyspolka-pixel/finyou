@@ -120,14 +120,31 @@ function LeadDetailPage() {
             {filtered.map((c: any) => {
               const Icon = channelIcon[c.channel] ?? MessageSquare;
               const fullTranscript = c.transcript || c.metadata?.transcript_full;
+              const isCall = c.channel === "voicebot_call";
+              const outcome = c.metadata?.call_outcome;
+              const outcomeLabel = c.metadata?.call_outcome_label || c.status;
+              const outcomeColor =
+                outcome === "answered" ? "bg-green-600 text-white" :
+                outcome === "no_answer" ? "bg-amber-500 text-white" :
+                outcome === "busy" ? "bg-amber-500 text-white" :
+                outcome === "voicemail" ? "bg-blue-500 text-white" :
+                outcome === "failed" ? "bg-red-600 text-white" :
+                "";
+              const turns = Array.isArray(fullTranscript) ? fullTranscript : null;
               return (
                 <Card key={c.id} className="p-4 space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
                     <Icon className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{channelLabel[c.channel] ?? c.channel}</span>
                     <Badge variant="outline" className="text-[10px]">{c.direction}</Badge>
-                    {c.status && <Badge variant="outline" className="text-[10px]">{c.status}</Badge>}
+                    {isCall && outcomeLabel && (
+                      <Badge className={`text-[10px] ${outcomeColor}`}>{outcomeLabel}</Badge>
+                    )}
+                    {!isCall && c.status && <Badge variant="outline" className="text-[10px]">{c.status}</Badge>}
                     {c.duration_seconds != null && <span className="text-xs text-muted-foreground">{c.duration_seconds}s</span>}
+                    {c.metadata?.disconnection_reason && (
+                      <span className="text-[10px] text-muted-foreground">• {c.metadata.disconnection_reason}</span>
+                    )}
                     <span className="ml-auto text-xs text-muted-foreground">{new Date(c.created_at).toLocaleString("pl-PL")}</span>
                   </div>
                   {c.subject && <div className="text-sm font-medium">{c.subject}</div>}
@@ -135,7 +152,25 @@ function LeadDetailPage() {
                   {c.recording_url && (
                     <audio controls src={c.recording_url} className="w-full" />
                   )}
-                  {fullTranscript && (
+                  {turns && turns.length > 0 && (
+                    <details className="text-xs" open={isCall}>
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Transkrypcja rozmowy ({turns.length} wypowiedzi)</summary>
+                      <div className="mt-2 space-y-1 bg-muted/40 p-3 rounded max-h-96 overflow-y-auto">
+                        {turns.map((t: any, i: number) => {
+                          const role = (t.role || t.speaker || "agent").toString().toLowerCase();
+                          const isUser = role.includes("user") || role.includes("client") || role.includes("caller");
+                          const msg = t.message ?? t.text ?? t.content ?? "";
+                          return (
+                            <div key={i} className={`text-[12px] ${isUser ? "text-foreground" : "text-foreground/70"}`}>
+                              <span className={`font-semibold ${isUser ? "text-primary" : ""}`}>{isUser ? "Klient" : "Voicebot"}:</span>{" "}
+                              <span className="whitespace-pre-wrap">{msg}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  )}
+                  {!turns && fullTranscript && (
                     <details className="text-xs">
                       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Pełna transkrypcja</summary>
                       <pre className="mt-2 whitespace-pre-wrap bg-muted/50 p-2 rounded text-[11px] max-h-96 overflow-y-auto">{typeof fullTranscript === "string" ? fullTranscript : JSON.stringify(fullTranscript, null, 2)}</pre>
@@ -145,6 +180,7 @@ function LeadDetailPage() {
                 </Card>
               );
             })}
+
           </div>
         </TabsContent>
 
