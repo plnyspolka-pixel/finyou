@@ -3961,10 +3961,14 @@ export type Database = {
           category: string
           clicked_count: number
           created_at: string
+          day_index: number | null
           id: string
           opened_count: number
+          phase: string | null
           preview_text: string | null
           sent_count: number
+          sequence_index: number | null
+          slot: string | null
           subject: string
           updated_at: string
           weight: number
@@ -3975,10 +3979,14 @@ export type Database = {
           category?: string
           clicked_count?: number
           created_at?: string
+          day_index?: number | null
           id?: string
           opened_count?: number
+          phase?: string | null
           preview_text?: string | null
           sent_count?: number
+          sequence_index?: number | null
+          slot?: string | null
           subject: string
           updated_at?: string
           weight?: number
@@ -3989,10 +3997,14 @@ export type Database = {
           category?: string
           clicked_count?: number
           created_at?: string
+          day_index?: number | null
           id?: string
           opened_count?: number
+          phase?: string | null
           preview_text?: string | null
           sent_count?: number
+          sequence_index?: number | null
+          slot?: string | null
           subject?: string
           updated_at?: string
           weight?: number
