@@ -125,7 +125,7 @@ function PrzypomnieniaPage() {
                     <><Pause className="h-3.5 w-3.5 mr-1" /> Wstrzymaj</>
                   )}
                 </Button>
-                <Link to="/admin/leady-all/$id" params={{ id: r.id }}>
+                <Link to="/admin/klienci/$id" params={{ id: r.id }}>
                   <Button size="sm" variant="ghost">
                     <ExternalLink className="h-3.5 w-3.5 mr-1" /> Szczegóły leada
                   </Button>

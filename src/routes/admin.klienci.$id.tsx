@@ -65,7 +65,7 @@ function LeadDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <Link to="/admin/leady-all"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Wróć</Button></Link>
+        <Link to="/admin/klienci"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Wróć</Button></Link>
         <h1 className="text-xl font-semibold flex-1">
           {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "Lead bez nazwy"}
         </h1>
