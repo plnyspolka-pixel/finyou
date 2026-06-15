@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw } from "lucide-react";
+import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { formatPLN, propertyTypeLabels, loanStatusLabels } from "@/lib/labels";
+import { LeadDetailView } from "@/components/admin/LeadDetailView";
+
 
 export const Route = createFileRoute("/admin/klienci")({
   component: KlienciPage,
