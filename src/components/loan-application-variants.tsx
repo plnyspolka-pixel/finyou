@@ -975,78 +975,34 @@ function RequirementsPhotoStep({
 }) {
   const propKey = secType ? SEC_TO_PROP[secType] : "inna";
   const reqs: DocRequirement[] = REQUIREMENTS_BY_TYPE[propKey] ?? REQUIREMENTS_BY_TYPE.inna;
-  // KW number i powierzchnia użytkowa to dane tekstowe — nie sloty plikowe.
-  const fileReqs = reqs.filter((r) => r.kind !== "kw_number" && r.kind !== "usable_area");
-  const typeLabel = PROPERTY_TYPE_LABELS[propKey] ?? "nieruchomość";
-
-  const hints: Partial<Record<DocRequirementKind, string>> = {
-    photos_interior: "Po jednym zdjęciu z każdego pomieszczenia. Dobre światło, cała przestrzeń w kadrze.",
-    photos_exterior: "Elewacja z każdej strony, podjazd, najbliższe otoczenie.",
-    mpzp: "Wydruk z systemu gminy albo zdjęcie decyzji o warunkach zabudowy.",
-    land_registry: "Aktualny wypis z rejestru gruntów (PDF lub zdjęcie).",
-  };
-
-  const hasInterior = fileReqs.some((r) => r.kind === "photos_interior");
-  const hasExterior = fileReqs.some((r) => r.kind === "photos_exterior");
-  const hasPhotos = hasInterior || hasExterior;
-  const otherReqs = fileReqs.filter((r) => r.kind !== "photos_interior" && r.kind !== "photos_exterior");
-  const photosLabel =
-    hasInterior && hasExterior
-      ? "Zdjęcia nieruchomości — z zewnątrz i z wewnątrz"
-      : hasInterior
-        ? "Zdjęcia wnętrz"
-        : "Zdjęcia z zewnątrz";
-  const photosHint =
-    hasInterior && hasExterior
-      ? "Wystarczą zwykłe zdjęcia z telefonu — kilka kadrów elewacji z każdej strony i po jednym ujęciu z każdego pomieszczenia. Nie musi być profesjonalnie, ważne żeby było widać przestrzeń."
-      : hasInterior
-        ? "Wystarczy po jednym zdjęciu z każdego pomieszczenia, zrobionym telefonem. Najlepiej w dziennym świetle, z całą przestrzenią w kadrze."
-        : "Wystarczy kilka kadrów telefonem — elewacja z każdej strony, podjazd, najbliższe otoczenie.";
+  const extraDocs = reqs.filter((r) => r.kind === "mpzp" || r.kind === "land_registry");
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm">
-        <div className="font-bold text-foreground">
-          Dla typu „{typeLabel}" zbierzemy {hasPhotos ? "zdjęcia" : "dokumenty"}{otherReqs.length > 0 ? " i dokumenty" : ""} — pokaż, co masz pod ręką:
-        </div>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-          {hasPhotos && <li>{photosLabel}</li>}
-          {otherReqs.map((r) => (
-            <li key={r.kind}>{r.label}</li>
-          ))}
-        </ul>
-        <p className="mt-3 text-xs text-foreground/70">
-          Nie musisz mieć wszystkiego od razu — dorzucisz brakujące pliki później w panelu klienta.
-        </p>
-      </div>
-
-      {hasPhotos && (
+    <div className="space-y-4">
+      <PhotoUploader
+        label="Zdjęcia z zewnątrz"
+        bucket="photos_exterior"
+        photos={photos}
+        addPhotos={addPhotos}
+        removePhoto={removePhoto}
+      />
+      <PhotoUploader
+        label="Zdjęcia wnętrz"
+        bucket="photos_interior"
+        photos={photos}
+        addPhotos={addPhotos}
+        removePhoto={removePhoto}
+      />
+      {extraDocs.map((r) => (
         <PhotoUploader
-          label={photosLabel}
-          hint={photosHint}
-          bucket={hasExterior ? "photos_exterior" : "photos_interior"}
+          key={r.kind}
+          label={r.label}
+          bucket={r.kind}
           photos={photos}
           addPhotos={addPhotos}
           removePhoto={removePhoto}
-          extraBuckets={hasInterior && hasExterior ? ["photos_interior"] : []}
         />
-      )}
-
-      {otherReqs.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {otherReqs.map((r) => (
-            <PhotoUploader
-              key={r.kind}
-              label={r.label}
-              hint={hints[r.kind]}
-              bucket={r.kind}
-              photos={photos}
-              addPhotos={addPhotos}
-              removePhoto={removePhoto}
-            />
-          ))}
-        </div>
-      )}
+      ))}
     </div>
   );
 }
