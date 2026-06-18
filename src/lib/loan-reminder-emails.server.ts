@@ -286,6 +286,11 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       .select("id")
       .single();
     if (insErr || !pending) {
+      // 23505 = unique_violation → ten wariant został już wysłany do tego wniosku przez równoległy tick.
+      if ((insErr as any)?.code === "23505") {
+        results.push({ ok: false, skipped: "duplicate_variant_for_loan" });
+        continue;
+      }
       errors++;
       results.push({ ok: false, error: insErr?.message ?? "insert failed" });
       continue;
