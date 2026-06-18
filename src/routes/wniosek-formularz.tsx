@@ -412,15 +412,15 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 4) {
-      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
-      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
-      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
-      return { ok: true };
-    }
-    if (step === 5) {
       if (!amount || amount < 20000) return { ok: false, msg: "Podaj kwotę pożyczki (min. 20 000 zł)." };
       if (!months || months < 3) return { ok: false, msg: "Podaj okres spłaty (min. 3 mies.)." };
       if (!annualRate || annualRate < 15) return { ok: false, msg: "Podaj wynagrodzenie inwestora (min. 15% rocznie)." };
+      return { ok: true };
+    }
+    if (step === 5) {
+      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
+      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
+      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
       return { ok: true };
     }
     return { ok: true };
