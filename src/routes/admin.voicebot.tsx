@@ -28,20 +28,6 @@ export const Route = createFileRoute("/admin/voicebot")({
   component: VoicebotAdmin,
 });
 
-const STATUS_LABELS: Record<string, string> = {
-  oczekuje: "Oczekuje",
-  w_trakcie: "W trakcie",
-  zakonczona: "Zakończona",
-  blad: "Błąd",
-  anulowana: "Anulowana",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  meta_lead: "Meta Ads",
-  wniosek_krok2: "Wniosek (krok 2)",
-  manual: "Ręcznie",
-  test: "Test",
-};
 
 function VoicebotAdmin() {
   const [rows, setRows] = useState<any[]>([]);
