@@ -563,14 +563,6 @@ export function LinearLoanApplication({
             </h2>
           </div>
 
-          {step < lastVisibleStep && (
-            <div className="mb-6 flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm">
-              <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-              <p className="text-foreground/80">
-                <b>Uzupełnij dane i oblicz swoją ratę.</b> Po wypełnieniu wszystkich kroków zobaczysz dokładną wysokość raty oraz harmonogram spłaty.
-              </p>
-            </div>
-          )}
 
           {step === 0 && <AmountQuestion draft={draft} update={update} />}
 
@@ -694,7 +686,7 @@ export function LinearLoanApplication({
             </div>
           )}
 
-          <div className="mt-10 flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="sticky bottom-0 z-20 -mx-5 mt-10 flex flex-col-reverse gap-3 border-t border-border bg-card/95 px-5 py-4 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:static sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:bg-transparent sm:px-0 sm:pt-5 sm:pb-0 sm:shadow-none sm:backdrop-blur-none md:-mx-8 md:px-8">
             <Button
               type="button"
               variant="outline"
@@ -720,6 +712,7 @@ export function LinearLoanApplication({
             </Button>
 
           </div>
+
         </section>
 
         {!embedded && (
