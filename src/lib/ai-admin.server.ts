@@ -8,7 +8,7 @@ const ANTHROPIC_VERSION = "2023-06-01";
 // Project root (works in dev sandbox + Worker bundle that includes src/)
 const PROJECT_ROOT = process.cwd();
 
-const FORBIDDEN_SQL = /\b(drop\s+(table|database|schema|function|trigger|policy|role|user)|truncate|alter\s+role|alter\s+system|grant\s+all|revoke\s+all|create\s+role|create\s+user|drop\s+role)\b/i;
+const FORBIDDEN_SQL = /\b(alter\s+role|alter\s+system|create\s+role|drop\s+role|create\s+user|drop\s+user)\b/i;
 
 function isSelectOnly(sql: string): boolean {
   const trimmed = sql.trim().replace(/^with\s+[^;]+;/i, "").trim();
