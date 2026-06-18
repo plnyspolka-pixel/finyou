@@ -229,6 +229,17 @@ export async function runTool(
     }
 
 
+    if (call.name === "execute_sql") {
+      if (!opts.enableDbRead && !opts.enableDbWrite) return { ok: false, output: null, error: "Dostęp do bazy wyłączony." };
+      const sql = String(call.input.sql ?? "");
+      if (!sql.trim()) return { ok: false, output: null, error: "Puste zapytanie." };
+      if (FORBIDDEN_SQL.test(sql)) return { ok: false, output: null, error: "Zablokowane: operacje na rolach / ustawieniach systemu." };
+      const { data, error } = await supabaseAdmin.rpc("exec_admin_any" as never, { _sql: sql } as never);
+      if (error) return { ok: false, output: null, error: `DB: ${error.message}` };
+      return { ok: true, output: data };
+    }
+
+
     return { ok: false, output: null, error: `Nieznane narzędzie: ${call.name}` };
   } catch (e) {
     return { ok: false, output: null, error: e instanceof Error ? e.message : String(e) };
