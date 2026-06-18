@@ -4871,6 +4871,39 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_email_schedule: {
+        Row: {
+          cron_expression: string
+          enabled: boolean
+          id: number
+          last_result: Json | null
+          last_run_at: string | null
+          last_tick_at: string | null
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          cron_expression?: string
+          enabled?: boolean
+          id?: number
+          last_result?: Json | null
+          last_run_at?: string | null
+          last_tick_at?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          cron_expression?: string
+          enabled?: boolean
+          id?: number
+          last_result?: Json | null
+          last_run_at?: string | null
+          last_tick_at?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       representation_web_enrichment_cache: {
         Row: {
           cache_key: string
