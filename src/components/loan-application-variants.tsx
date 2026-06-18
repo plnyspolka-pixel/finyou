@@ -976,20 +976,16 @@ function RequirementsPhotoStep({
 
   return (
     <div className="space-y-4">
-      <PhotoUploader
-        label="Zdjęcia z zewnątrz"
-        bucket="photos_exterior"
-        photos={photos}
-        addPhotos={addPhotos}
-        removePhoto={removePhoto}
-      />
-      <PhotoUploader
-        label="Zdjęcia wnętrz"
-        bucket="photos_interior"
-        photos={photos}
-        addPhotos={addPhotos}
-        removePhoto={removePhoto}
-      />
+      {(reqs.some((r) => r.kind === "photos_exterior" || r.kind === "photos_interior")) && (
+        <PhotoUploader
+          label="Zdjęcia nieruchomości"
+          bucket="photos_exterior"
+          extraBuckets={["photos_interior"]}
+          photos={photos}
+          addPhotos={addPhotos}
+          removePhoto={removePhoto}
+        />
+      )}
       {extraDocs.map((r) => (
         <PhotoUploader
           key={r.kind}
