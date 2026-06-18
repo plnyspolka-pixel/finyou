@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhoneCall, Pause, Play, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ReminderScheduleCard } from "@/components/admin/ReminderScheduleCard";
 
 export const Route = createFileRoute("/admin/przypomnienia")({
   component: PrzypomnieniaPage,
@@ -62,6 +63,10 @@ function PrzypomnieniaPage() {
           Możesz w każdej chwili zadzwonić ręcznie lub wstrzymać.
         </p>
       </div>
+
+      <ReminderScheduleCard />
+
+
 
       {q.isLoading && <Card className="p-6 text-muted-foreground">Ładowanie…</Card>}
       {q.error && <Card className="p-6 text-destructive">Błąd: {(q.error as Error).message}</Card>}

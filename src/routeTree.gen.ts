@@ -107,6 +107,7 @@ import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
+import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
@@ -620,6 +621,12 @@ const ApiPublicHooksLoanRemindersRoute =
     path: '/api/public/hooks/loan-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksLoanReminderEmailsTickRoute =
+  ApiPublicHooksLoanReminderEmailsTickRouteImport.update({
+    id: '/api/public/hooks/loan-reminder-emails-tick',
+    path: '/api/public/hooks/loan-reminder-emails-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanReminderEmailsRoute =
   ApiPublicHooksLoanReminderEmailsRouteImport.update({
     id: '/api/public/hooks/loan-reminder-emails',
@@ -756,6 +763,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
+  '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -860,6 +868,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
+  '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -968,6 +977,7 @@ export interface FileRoutesById {
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
+  '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -1077,6 +1087,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminder-emails'
+    | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
@@ -1181,6 +1192,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminder-emails'
+    | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
@@ -1288,6 +1300,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
     | '/api/public/hooks/loan-reminder-emails'
+    | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
@@ -1344,6 +1357,7 @@ export interface RootRouteChildren {
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
+  ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
@@ -2045,6 +2059,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLoanRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/loan-reminder-emails-tick': {
+      id: '/api/public/hooks/loan-reminder-emails-tick'
+      path: '/api/public/hooks/loan-reminder-emails-tick'
+      fullPath: '/api/public/hooks/loan-reminder-emails-tick'
+      preLoaderRoute: typeof ApiPublicHooksLoanReminderEmailsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminder-emails': {
       id: '/api/public/hooks/loan-reminder-emails'
       path: '/api/public/hooks/loan-reminder-emails'
@@ -2292,6 +2313,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksElevenlabsConversationInitRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
+  ApiPublicHooksLoanReminderEmailsTickRoute:
+    ApiPublicHooksLoanReminderEmailsTickRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
