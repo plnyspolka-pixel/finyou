@@ -78,16 +78,42 @@ function VoicebotAdmin() {
   const doTest = useServerFn(testOutboundCall);
   const doTestSms = useServerFn(testSms);
   const doSyncMeta = useServerFn(syncAndPullMetaLeads);
+  const listConv = useServerFn(listVoicebotConversations);
+  const enrichPending = useServerFn(enrichPendingVoicebotConversations);
 
   const loadQueue = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("call_queue")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setRows(data ?? []);
-    setLoading(false);
+    try {
+      const dateFrom = days === "all" ? undefined : new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000).toISOString();
+      const data: any = await listConv({
+        data: {
+          status: filterStatus,
+          source: filterSource,
+          search: search || undefined,
+          dateFrom,
+          limit: 100,
+        },
+      });
+      setRows(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      toast.error("Nie udało się załadować rozmów", { description: e?.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnrich = async () => {
+    setEnriching(true);
+    const tid = toast.loading("Odświeżam dane rozmów z ElevenLabs…");
+    try {
+      const r: any = await enrichPending();
+      toast.success("Zaktualizowano rozmowy", { id: tid, description: `Sprawdzono ${r.checked}, zaktualizowano ${r.updated}${r.errors?.length ? `, błędów ${r.errors.length}` : ""}` });
+      void loadQueue();
+    } catch (e: any) {
+      toast.error("Błąd odświeżania", { id: tid, description: e?.message });
+    } finally {
+      setEnriching(false);
+    }
   };
 
   const loadForms = async () => {
@@ -116,6 +142,11 @@ function VoicebotAdmin() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    void loadQueue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatus, filterSource, days]);
 
   const handleSave = async () => {
     setSaving(true);
