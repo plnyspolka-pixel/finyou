@@ -30,7 +30,7 @@ export const Route = createFileRoute("/wniosek-formularz")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Dane kontaktowe", "Twoja propozycja dla inwestora"];
+const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Twoja propozycja dla inwestora", "Dane kontaktowe"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
