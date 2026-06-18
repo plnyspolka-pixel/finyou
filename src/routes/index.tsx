@@ -125,10 +125,10 @@ function Landing() {
 
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background font-[Montserrat] pb-16 md:pb-0">
+    <div className="min-h-screen overflow-x-hidden bg-background font-[Montserrat]">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 md:px-6">
           <Link to="/" className="shrink-0">
             <FinanceYouLogo variant="light" size="lg" />
           </Link>
@@ -138,18 +138,23 @@ function Landing() {
             <a href="#faq" className="text-sm font-medium text-muted-foreground hover:text-foreground">FAQ</a>
             <Link to="/blog" className="text-sm font-medium text-muted-foreground hover:text-foreground">Blog</Link>
           </nav>
-          <div className="hidden items-center gap-4 md:flex">
-            <a
-              href={`tel:${PHONE_HREF}`}
-              className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent"
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              size="sm"
+              className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:brightness-110 transition"
             >
-              <Phone className="h-4 w-4" />
-              {PHONE_DISPLAY}
-            </a>
+              <a href={`tel:${PHONE_HREF}`} aria-label={`Zadzwoń ${PHONE_DISPLAY}`}>
+                <Phone className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Zadzwoń teraz</span>
+              </a>
+            </Button>
+            {panelHref && (
+              <Button asChild size="sm" variant="outline" className="hidden md:inline-flex">
+                <Link to={panelHref}>Panel</Link>
+              </Button>
+            )}
           </div>
-          <Button asChild size="sm" className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 hover:brightness-110 transition">
-            {panelHref ? <Link to={panelHref}>Panel</Link> : <a href="#wniosek">Sprawdź ratę</a>}
-          </Button>
         </div>
       </header>
 
@@ -488,20 +493,6 @@ function Landing() {
         </div>
       </footer>
 
-      {/* Sticky mobile CTA */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
-        <Button
-          asChild
-          size="lg"
-          className="w-full bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/40 hover:brightness-110 transition"
-        >
-          <a href="#wniosek">
-            <IconCalc className="mr-2 h-4 w-4" />
-            Wylicz ratę
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </a>
-        </Button>
-      </div>
     </div>
   );
 }

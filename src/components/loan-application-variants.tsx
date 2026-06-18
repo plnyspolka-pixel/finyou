@@ -570,8 +570,7 @@ export function LinearLoanApplication({
 
         <section className="rounded-lg border border-border bg-card p-4 shadow-sm md:p-6">
           <div className="mb-4">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-accent">{linearSteps[step]}</div>
-            <h2 className="mt-1 text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
+            <h2 className="text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
               {step === 0 && "Ile chcesz pożyczyć?"}
               {step === 1 && "Na jak długo?"}
               {step === 2 && "Zostaw kontakt"}
@@ -590,7 +589,6 @@ export function LinearLoanApplication({
 
           {step === 1 && (
             <div className="space-y-5">
-              <Label className="text-lg font-bold">Okres finansowania</Label>
               <div className="text-5xl font-extrabold tabular-nums text-foreground">{draft.months} mies.</div>
               <Slider value={[draft.months]} min={3} max={72} step={1} onValueChange={(value) => update("months", value[0] ?? draft.months)} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
@@ -609,16 +607,13 @@ export function LinearLoanApplication({
 
           {step === 3 && (
             <div className="space-y-5">
-              <Label htmlFor="linear-max-payment" className="text-lg font-bold">Maksymalna rata miesięczna</Label>
               <Input id="linear-max-payment" type="number" value={draft.maxPayment} onChange={(event) => update("maxPayment", Number(event.target.value) || 0)} className="h-14 text-2xl font-extrabold tabular-nums" />
               <Slider value={[Math.min(50_000, draft.maxPayment)]} min={500} max={50_000} step={100} onValueChange={(value) => update("maxPayment", value[0] ?? draft.maxPayment)} />
-              <p className="text-sm text-muted-foreground">Jeśli rata z kalkulacji będzie wyższa, nadwyżkę pokażemy jako ostatnią ratę balonową.</p>
             </div>
           )}
 
           {step === 4 && (
             <div className="space-y-5">
-              <Label htmlFor="linear-rate" className="text-lg font-bold">Roczne wynagrodzenie inwestora</Label>
               <div className="flex items-center gap-3">
                 <Input id="linear-rate" type="number" step="0.5" value={draft.annualRate} onChange={(event) => update("annualRate", Number(event.target.value) || 0)} className="h-14 max-w-40 text-2xl font-extrabold tabular-nums" />
                 <span className="text-2xl font-bold">%</span>
