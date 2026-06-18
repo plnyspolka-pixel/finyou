@@ -10,6 +10,7 @@ import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/le
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
 // signed payload: `${svix-id}.${svix-timestamp}.${body}` with HMAC-SHA256 key = base64-decoded secret after `whsec_`.
