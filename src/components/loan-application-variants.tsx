@@ -564,20 +564,20 @@ export function LinearLoanApplication({
         </aside>
         )}
 
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
-          <div className="mb-8">
-            <div className="text-xs font-bold uppercase text-accent">{linearSteps[step]}</div>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
-              {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
-              {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
+        <section className="rounded-lg border border-border bg-card p-4 shadow-sm md:p-6">
+          <div className="mb-4">
+            <div className="text-[10px] font-bold uppercase tracking-wide text-accent">{linearSteps[step]}</div>
+            <h2 className="mt-1 text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
+              {step === 0 && "Ile chcesz pożyczyć?"}
+              {step === 1 && "Na jak długo?"}
               {step === 2 && "Zostaw kontakt"}
-              {step === 3 && "Jaką ratę miesięczną możesz spłacać?"}
-              {step === 4 && "Jakie wynagrodzenie inwestora proponujesz w skali roku?"}
-              {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
-              {step === 6 && "Wpisz numer księgi wieczystej"}
-              {step === 7 && (user ? "Gotowe — dodaj zdjęcia i dokumenty, a wniosek trafi do inwestora" : "Dodaj zdjęcia lub dokumenty nieruchomości")}
-              {step === 8 && "Jak mamy się z Tobą skontaktować?"}
-              {step === 9 && "Sprawdź całość przed wysłaniem"}
+              {step === 3 && "Maks. rata miesięczna"}
+              {step === 4 && "Wynagrodzenie inwestora (rocznie)"}
+              {step === 5 && "Zabezpieczenie"}
+              {step === 6 && "Numer księgi wieczystej"}
+              {step === 7 && "Dodaj zdjęcia"}
+              {step === 8 && "Dane kontaktowe"}
+              {step === 9 && "Sprawdź i wyślij"}
             </h2>
           </div>
 
