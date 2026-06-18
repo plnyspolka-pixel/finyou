@@ -432,8 +432,12 @@ export function LinearLoanApplication({
   }, [prefill]);
 
   // Ukrywamy: 2 (gate kontaktu), 3 (max rata), 4 (wynagrodzenie inwestora), 9 (podsumowanie) — dla wszystkich.
-  // Dla zalogowanych dodatkowo: 8 (Kontakt).
-  const isHiddenStep = (i: number) => i === 2 || i === 3 || i === 4 || i === 9 || (!!user && i === 8);
+  // Dla zalogowanych dodatkowo: 8 (Kontakt). Dla typów bez wymogu zdjęć — krok 7.
+  const propKeyForStep = draft.secType ? SEC_TO_PROP[draft.secType] : "inna";
+  const reqsForStep = REQUIREMENTS_BY_TYPE[propKeyForStep] ?? REQUIREMENTS_BY_TYPE.inna;
+  const photosRequired = reqsForStep.some((r) => r.kind === "photos_exterior" || r.kind === "photos_interior");
+  const isHiddenStep = (i: number) =>
+    i === 2 || i === 3 || i === 4 || i === 9 || (!!user && i === 8) || (i === 7 && !photosRequired);
   const lastVisibleStep = user ? 7 : 8;
 
 
@@ -448,7 +452,7 @@ export function LinearLoanApplication({
       }
       setStep(Math.max(0, Math.min(linearSteps.length - 1, t)));
     }
-  }, [user, step]);
+  }, [user, step, photosRequired]);
 
   const gateUnlocked =
     !!user ||
@@ -462,7 +466,7 @@ export function LinearLoanApplication({
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
     if (step === 6) return !!draft.kwNumber.trim();
-    if (step === 7) return photos.length > 0;
+    if (step === 7) return !photosRequired || photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
   };
