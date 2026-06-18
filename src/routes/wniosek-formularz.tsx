@@ -482,126 +482,14 @@ function KlientWniosek() {
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Wniosek o pożyczkę pod zastaw nieruchomości</h1>
-        <p className="text-sm text-muted-foreground">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></p>
+    <div className="min-h-screen bg-background p-3 md:p-8">
+      <div className="mx-auto max-w-2xl space-y-3 md:space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-base md:text-2xl font-bold leading-tight">Wniosek o pożyczkę</h1>
+        <span className="text-xs text-muted-foreground shrink-0">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></span>
       </div>
-      <Progress value={progress} />
+      <Progress value={progress} className="h-1.5" />
 
-      {step < 4 && (
-        <Alert className="border-accent/40 bg-accent/5">
-          <Sparkles className="h-4 w-4 text-accent" />
-          <AlertTitle>Twoja propozycja dla inwestora — czeka na Ciebie na końcu</AlertTitle>
-          <AlertDescription className="text-sm">
-            Po wypełnieniu wniosku zobaczysz interaktywny kalkulator: ratę, harmonogram spłaty i pełną propozycję dla inwestora. Możesz tam jeszcze zmienić kwotę, okres i wynagrodzenie inwestora.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {step === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" /> Sprawdź warunki pożyczki pod zastaw nieruchomości
-            </CardTitle>
-            <CardDescription>Ustaw parametry — od razu zobaczysz wysokość raty i koszt finansowania.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Jakiej kwoty potrzebujesz?</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
-              </div>
-              <Slider min={20000} max={1_000_000} step={100} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Na jaki okres chcesz zaciągnąć zobowiązanie?</Label>
-                <span className="text-sm tabular-nums">{months} mies.</span>
-              </div>
-              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
-            </div>
-
-
-            <div className="space-y-3">
-              <Label>Co ma być zabezpieczeniem?</Label>
-              <SecurityTypePicker value={secType} onChange={setSecType} />
-            </div>
-
-
-
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
-              {balloon > 0 && (
-                <div className="flex justify-between text-sm"><span>Ostatnia rata (zawiera nadwyżkę balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
-              )}
-              <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
-              <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
-              <p className="text-xs text-muted-foreground pt-2">
-                Kalkulacja poglądowa. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
-              </p>
-            </div>
-
-            {exceedsMax && (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu umowy.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {schedule.length > 0 && (
-              <div className="rounded-lg border bg-card">
-                <div className="px-4 py-3 border-b">
-                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
-                  <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
-                </div>
-                <div className="max-h-72 overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40 sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2 font-medium">#</th>
-                        <th className="px-3 py-2 font-medium">Data spłaty</th>
-                        <th className="px-3 py-2 font-medium text-right">Rata</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schedule.map((r) => (
-                        <tr key={r.idx} className="border-t">
-                          <td className="px-3 py-2 tabular-nums">{r.idx}</td>
-                          <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 5 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dane kontaktowe</CardTitle>
-            <CardDescription>Ostatni krok — podaj dane, na które wyślemy wniosek do inwestora. Po kliknięciu „Wyślij wniosek do inwestora” skontaktuje się z Tobą Ania, nasza asystentka.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-            <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-          </CardContent>
-        </Card>
-      )}
 
       {step === 2 && (
         <div className="space-y-5">
