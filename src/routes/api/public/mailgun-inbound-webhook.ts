@@ -9,6 +9,7 @@ import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/le
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { shouldSkipAutoReply } from "@/lib/email-guard.server";
 
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
   const key = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
