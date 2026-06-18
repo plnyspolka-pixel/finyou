@@ -50,7 +50,14 @@ function VoicebotAdmin() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [testPhone, setTestPhone] = useState("+48889888700");
+
+  // filtry
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
+  const [days, setDays] = useState<string>("7");
 
   const [settings, setSettings] = useState<any>({
     agent_id: "",
