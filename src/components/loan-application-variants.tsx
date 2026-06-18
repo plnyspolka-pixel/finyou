@@ -570,8 +570,7 @@ export function LinearLoanApplication({
 
         <section className="rounded-lg border border-border bg-card p-4 shadow-sm md:p-6">
           <div className="mb-4">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-accent">{linearSteps[step]}</div>
-            <h2 className="mt-1 text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
+            <h2 className="text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
               {step === 0 && "Ile chcesz pożyczyć?"}
               {step === 1 && "Na jak długo?"}
               {step === 2 && "Zostaw kontakt"}
