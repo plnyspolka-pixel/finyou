@@ -30,7 +30,7 @@ export const Route = createFileRoute("/wniosek-formularz")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Twoja propozycja dla inwestora", "Dane kontaktowe"];
+const STEPS = ["Zabezpieczenie", "Zdjęcia", "Dane kontaktowe"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
@@ -134,10 +134,11 @@ function KlientWniosek() {
       if (p.months) setMonths(p.months);
       if (p.maxPayment) setMaxPayment(p.maxPayment);
       if (p.secType) setSecType(p.secType);
-      // przeskocz krok 1 — kalkulator już wypełniony w embedzie / na wniosek-warunki
-      const targetStep = p.startStep && p.startStep >= 1 && p.startStep <= 5 ? p.startStep : 2;
+      // przeskocz do kroku zabezpieczenia (krok 1 w nowym uproszczonym formularzu)
+      const mapped = p.startStep === 3 ? 2 : p.startStep === 5 ? 3 : 1;
+      const targetStep = mapped >= 1 && mapped <= STEPS.length ? mapped : 1;
       setStep(targetStep);
-      // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu do kroku KW
+      // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu
       setEditing(true);
       sessionStorage.removeItem("embed_calc_v1");
     } catch {
@@ -363,15 +364,11 @@ function KlientWniosek() {
 
   const docsByType = (t: string) => docs.filter((d) => d.document_type === t);
 
-  // Walidacja kroków
+  // Walidacja kroków (1=Zabezpieczenie, 2=Zdjęcia, 3=Dane kontaktowe)
   const canNext = (): { ok: boolean; msg?: string } => {
     if (step === 1) {
       if (!secType) return { ok: false, msg: "Wybierz rodzaj zabezpieczenia." };
-      if (!amount || !months || !annualRate) return { ok: false, msg: "Uzupełnij parametry kalkulatora." };
-      return { ok: true };
-    }
-    if (step === 2) {
-      if (!kwStatus) return { ok: false, msg: "Zaznacz jedną z opcji dotyczących numeru księgi wieczystej." };
+      if (!kwStatus) return { ok: false, msg: "Zaznacz, czy znasz numer KW." };
       if (kwStatus === "znam") {
         const valid = kwNumbers.map((s) => s.trim()).filter(Boolean);
         if (valid.length === 0) return { ok: false, msg: "Wpisz numer księgi wieczystej." };
@@ -385,39 +382,29 @@ function KlientWniosek() {
       }
       if (kwStatus === "nie_pewien") {
         const hasDocs = docsByType("dokument_wlasnosci").length > 0;
-        if (!hasDocs) return { ok: false, msg: "Dodaj zdjęcie dokumentu — spróbujemy odczytać numer KW." };
+        if (!hasDocs) return { ok: false, msg: "Dodaj zdjęcie dokumentu." };
       }
       return { ok: true };
     }
-    if (step === 3) {
+    if (step === 2) {
       if (!secType) return { ok: false, msg: "Brak typu zabezpieczenia." };
       if (secType === "mieszkanie" && docsByType("zdjecia_pomieszczen").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
       if (secType === "dom") {
-        if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową domu." };
         if (docsByType("zdjecia_pomieszczen").length === 0) return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
         if (docsByType("zdjecia_bryly").length === 0) return { ok: false, msg: "Wgraj zdjęcia bryły budynku." };
       }
-      if (secType === "lokal_uslugowy") {
-        if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową lokalu." };
-        if (docsByType("zdjecia_lokalu").length === 0) return { ok: false, msg: "Wgraj zdjęcia lokalu." };
-      }
+      if (secType === "lokal_uslugowy" && docsByType("zdjecia_lokalu").length === 0)
+        return { ok: false, msg: "Wgraj zdjęcia lokalu." };
       if (secType === "dzialka_budowlana" && docsByType("mpzp").length === 0)
-        return { ok: false, msg: "Wgraj dokument MPZP lub warunki zabudowy." };
+        return { ok: false, msg: "Wgraj MPZP / warunki zabudowy." };
       if (secType === "grunt_rolny" && docsByType("wypis_rejestru").length === 0)
         return { ok: false, msg: "Wgraj wypis z rejestru gruntów." };
-      if (secType === "inna" && docsByType("inne").length === 0) {
-        return { ok: false, msg: "Wgraj dokumenty lub zdjęcia nieruchomości." };
-      }
+      if (secType === "inna" && docsByType("inne").length === 0)
+        return { ok: false, msg: "Wgraj dokumenty lub zdjęcia." };
       return { ok: true };
     }
-    if (step === 4) {
-      if (!amount || amount < 20000) return { ok: false, msg: "Podaj kwotę pożyczki (min. 20 000 zł)." };
-      if (!months || months < 3) return { ok: false, msg: "Podaj okres spłaty (min. 3 mies.)." };
-      if (!annualRate || annualRate < 15) return { ok: false, msg: "Podaj wynagrodzenie inwestora (min. 15% rocznie)." };
-      return { ok: true };
-    }
-    if (step === 5) {
+    if (step === 3) {
       if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
       if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
@@ -495,183 +482,38 @@ function KlientWniosek() {
   const progress = Math.round(((step - 1) / (STEPS.length - 1)) * 100);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Wniosek o pożyczkę pod zastaw nieruchomości</h1>
-        <p className="text-sm text-muted-foreground">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></p>
+    <div className="min-h-screen bg-background p-3 md:p-8">
+      <div className="mx-auto max-w-2xl space-y-3 md:space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-base md:text-2xl font-bold leading-tight">Wniosek o pożyczkę</h1>
+        <span className="text-xs text-muted-foreground shrink-0">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></span>
       </div>
-      <Progress value={progress} />
+      <Progress value={progress} className="h-1.5" />
 
-      {step < 4 && (
-        <Alert className="border-accent/40 bg-accent/5">
-          <Sparkles className="h-4 w-4 text-accent" />
-          <AlertTitle>Twoja propozycja dla inwestora — czeka na Ciebie na końcu</AlertTitle>
-          <AlertDescription className="text-sm">
-            Po wypełnieniu wniosku zobaczysz interaktywny kalkulator: ratę, harmonogram spłaty i pełną propozycję dla inwestora. Możesz tam jeszcze zmienić kwotę, okres i wynagrodzenie inwestora.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {step === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" /> Sprawdź warunki pożyczki pod zastaw nieruchomości
-            </CardTitle>
-            <CardDescription>Ustaw parametry — od razu zobaczysz wysokość raty i koszt finansowania.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Jakiej kwoty potrzebujesz?</Label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
+        <div className="space-y-3">
+          <Card>
+            <CardContent className="space-y-3 pt-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Co stanowi zabezpieczenie?</Label>
+                <SecurityTypePicker value={secType} onChange={setSecType} />
               </div>
-              <Slider min={20000} max={1_000_000} step={100} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Na jaki okres chcesz zaciągnąć zobowiązanie?</Label>
-                <span className="text-sm tabular-nums">{months} mies.</span>
-              </div>
-              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
-            </div>
-
-
-            <div className="space-y-3">
-              <Label>Co ma być zabezpieczeniem?</Label>
-              <SecurityTypePicker value={secType} onChange={setSecType} />
-            </div>
-
-
-
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
-              {balloon > 0 && (
-                <div className="flex justify-between text-sm"><span>Ostatnia rata (zawiera nadwyżkę balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
-              )}
-              <div className="flex justify-between text-sm"><span>Łączna kwota wynagrodzenia inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
-              <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
-              <p className="text-xs text-muted-foreground pt-2">
-                Kalkulacja poglądowa. Nie stanowi oferty ani decyzji pożyczkowej. Ostateczne warunki zależą od analizy nieruchomości, dokumentów oraz decyzji inwestora.
-              </p>
-            </div>
-
-            {exceedsMax && (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu umowy.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {schedule.length > 0 && (
-              <div className="rounded-lg border bg-card">
-                <div className="px-4 py-3 border-b">
-                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
-                  <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
-                </div>
-                <div className="max-h-72 overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40 sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2 font-medium">#</th>
-                        <th className="px-3 py-2 font-medium">Data spłaty</th>
-                        <th className="px-3 py-2 font-medium text-right">Rata</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schedule.map((r) => (
-                        <tr key={r.idx} className="border-t">
-                          <td className="px-3 py-2 tabular-nums">{r.idx}</td>
-                          <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 5 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dane kontaktowe</CardTitle>
-            <CardDescription>Ostatni krok — podaj dane, na które wyślemy wniosek do inwestora. Po kliknięciu „Wyślij wniosek do inwestora” skontaktuje się z Tobą Ania, nasza asystentka.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            <div><Label>Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div><Label>Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-            <div><Label>E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 2 && (
-        <div className="space-y-5">
-          {/* Hero zabezpieczenia */}
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary via-primary to-[oklch(0.15_0.09_265)] p-6 text-primary-foreground shadow-2xl md:p-8">
-            <div aria-hidden className="pointer-events-none absolute inset-0 opacity-30 [background-image:radial-gradient(ellipse_at_top_left,oklch(0.65_0.13_235/0.5),transparent_60%),radial-gradient(ellipse_at_bottom_right,oklch(0.78_0.18_85/0.35),transparent_60%)]" />
-            <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="max-w-xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white backdrop-blur">
-                  <Sparkles className="h-3.5 w-3.5 text-accent" />
-                  Krok 2 z 4 · Zabezpieczenie
-                </div>
-                <h2 className="mt-3 text-2xl font-extrabold tracking-tight md:text-3xl">
-                  Numer księgi wieczystej Twojej nieruchomości
-                </h2>
-                <p className="mt-2 text-sm text-white/85 md:text-base">
-                  To kluczowy dokument — pozwala inwestorowi błyskawicznie zweryfikować nieruchomość i wydać decyzję do 24 h.
-                  Jeśli nie znasz numeru, pomożemy Ci go znaleźć w mObywatelu lub odczytamy go ze zdjęcia dokumentu.
-                </p>
-              </div>
-              <div className="hidden h-24 w-24 shrink-0 place-items-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur md:grid">
-                <FileText className="h-12 w-12 text-accent" />
-              </div>
-            </div>
-            <div className="relative mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/90 backdrop-blur">
-              <span className="text-white/70">Wybrany typ zabezpieczenia:</span>
-              <b className="text-white">{secType ? securityTypeLabels[secType] : "—"}</b>
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs text-accent hover:text-accent/80" onClick={() => setStep(1)}>
-                Zmień
-              </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           <Card>
-            <CardContent className="space-y-5 pt-6">
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Czy znasz numer księgi wieczystej?</Label>
-                <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)} className="grid gap-3 md:grid-cols-2">
-                  <label className={`group relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition hover:border-accent/60 hover:bg-accent/5 ${kwStatus === "znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
-                    <RadioGroupItem value="znam" className="mt-0.5" />
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <CheckCircle2 className="h-4 w-4 text-accent" />
-                        Tak, znam numer
-                      </div>
-                      <p className="text-xs text-muted-foreground">Wpiszesz go ręcznie. Format np. <span className="font-mono">LU1I/00012345/6</span>.</p>
-                    </div>
+            <CardContent className="space-y-3 pt-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Numer księgi wieczystej</Label>
+                <RadioGroup value={kwStatus} onValueChange={(v) => setKwStatus(v as KwStatus)} className="grid gap-2 sm:grid-cols-2">
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 p-3 text-sm transition ${kwStatus === "znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
+                    <RadioGroupItem value="znam" />
+                    <span className="font-medium">Znam numer</span>
                   </label>
-                  <label className={`group relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition hover:border-accent/60 hover:bg-accent/5 ${kwStatus === "nie_znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
-                    <RadioGroupItem value="nie_znam" className="mt-0.5" />
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Sparkles className="h-4 w-4 text-accent" />
-                        Nie znam — pomóżcie mi
-                      </div>
-                      <p className="text-xs text-muted-foreground">Sprawdzimy mObywatel albo odczytamy ze zdjęcia dokumentu.</p>
-                    </div>
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 p-3 text-sm transition ${kwStatus === "nie_znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
+                    <RadioGroupItem value="nie_znam" />
+                    <span className="font-medium">Nie znam</span>
                   </label>
                 </RadioGroup>
               </div>
@@ -844,11 +686,10 @@ function KlientWniosek() {
         </div>
       )}
 
-      {step === 3 && secType && (
+      {step === 2 && secType && (
         <Card>
-          <CardHeader>
-            <CardTitle>Dokumenty — {securityTypeLabels[secType]}</CardTitle>
-            <CardDescription>Uzupełnij wymagane informacje i załączniki.</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Wgraj zdjęcia / dokumenty</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {secType === "mieszkanie" && (
@@ -892,116 +733,31 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 4 && (
+      {step === 3 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-accent" /> Twoja propozycja dla inwestora
-            </CardTitle>
-            <CardDescription>
-              Dane są zapisane. Dopasuj jeszcze raz kwotę, okres i wynagrodzenie inwestora — od razu zobaczysz nową ratę i harmonogram spłaty. Kiedy będzie pasować, kliknij „Zapisz propozycję dla inwestora”.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Dane kontaktowe</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prop-amount">Kwota pożyczki</Label>
-                <Input id="prop-amount" type="number" inputMode="numeric" value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
-              </div>
-              <Slider min={20000} max={1_000_000} step={100} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label>Okres spłaty</Label>
-                <span className="tabular-nums text-sm font-medium">{months} mies.</span>
-              </div>
-              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prop-rate">Wynagrodzenie inwestora (rocznie)</Label>
-                <div className="flex items-center gap-1">
-                  <Input id="prop-rate" type="number" step="0.5" value={annualRate}
-                    onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24 text-right tabular-nums" />
-                  <span className="text-sm font-semibold">%</span>
-                </div>
-              </div>
-              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]}
-                onValueChange={(v) => setAnnualRate(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prop-max">Maksymalna rata miesięczna</Label>
-                <Input id="prop-max" type="number" inputMode="numeric" value={maxPayment}
-                  onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
-              </div>
-              <Slider min={500} max={50000} step={100} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
-              <p className="text-xs text-muted-foreground">Nadwyżka ponad maks. ratę trafia do raty balonowej na koniec okresu.</p>
-            </div>
-
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
-              {balloon > 0 && (
-                <div className="flex justify-between text-sm"><span>Ostatnia rata (z nadwyżką balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
-              )}
-              <div className="flex justify-between text-sm"><span>Łączne wynagrodzenie inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
-              <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
-            </div>
-
-            {schedule.length > 0 && (
-              <div className="rounded-lg border bg-card">
-                <div className="px-4 py-3 border-b">
-                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
-                  <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
-                </div>
-                <div className="max-h-72 overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40 sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2 font-medium">#</th>
-                        <th className="px-3 py-2 font-medium">Data spłaty</th>
-                        <th className="px-3 py-2 font-medium text-right">Rata</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schedule.map((r) => (
-                        <tr key={r.idx} className="border-t">
-                          <td className="px-3 py-2 tabular-nums">{r.idx}</td>
-                          <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div><Label className="text-xs">Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+            <div><Label className="text-xs">Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+            <div><Label className="text-xs">E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label className="text-xs">Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
           </CardContent>
         </Card>
       )}
 
-      <div className="flex justify-between">
-        <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+      <div className="flex justify-between gap-2">
+        <Button variant="outline" size="sm" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Wstecz
         </Button>
-        {step < 4 ? (
+        {step < STEPS.length ? (
           <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
-            {saving ? <Loader2 className="animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2" /></>}
-          </Button>
-        ) : step === 4 ? (
-          <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
-            {saving ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — dane kontaktowe <ArrowRight className="ml-2" /></>}
+            {saving ? <Loader2 className="animate-spin" /> : <>Dalej <ArrowRight className="ml-2" /></>}
           </Button>
         ) : (
           <Button variant="cta" size="cta" disabled={submitting} onClick={() => void saveProposalAndSubmit()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek do inwestora</>}
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek</>}
           </Button>
         )}
       </div>
