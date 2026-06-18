@@ -432,8 +432,12 @@ export function LinearLoanApplication({
   }, [prefill]);
 
   // Ukrywamy: 2 (gate kontaktu), 3 (max rata), 4 (wynagrodzenie inwestora), 9 (podsumowanie) — dla wszystkich.
-  // Dla zalogowanych dodatkowo: 8 (Kontakt).
-  const isHiddenStep = (i: number) => i === 2 || i === 3 || i === 4 || i === 9 || (!!user && i === 8);
+  // Dla zalogowanych dodatkowo: 8 (Kontakt). Dla typów bez wymogu zdjęć — krok 7.
+  const propKeyForStep = draft.secType ? SEC_TO_PROP[draft.secType] : "inna";
+  const reqsForStep = REQUIREMENTS_BY_TYPE[propKeyForStep] ?? REQUIREMENTS_BY_TYPE.inna;
+  const photosRequired = reqsForStep.some((r) => r.kind === "photos_exterior" || r.kind === "photos_interior");
+  const isHiddenStep = (i: number) =>
+    i === 2 || i === 3 || i === 4 || i === 9 || (!!user && i === 8) || (i === 7 && !photosRequired);
   const lastVisibleStep = user ? 7 : 8;
 
 
@@ -448,7 +452,7 @@ export function LinearLoanApplication({
       }
       setStep(Math.max(0, Math.min(linearSteps.length - 1, t)));
     }
-  }, [user, step]);
+  }, [user, step, photosRequired]);
 
   const gateUnlocked =
     !!user ||
@@ -462,7 +466,7 @@ export function LinearLoanApplication({
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
     if (step === 6) return !!draft.kwNumber.trim();
-    if (step === 7) return photos.length > 0;
+    if (step === 7) return !photosRequired || photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
   };
@@ -626,30 +630,23 @@ export function LinearLoanApplication({
           {step === 5 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
 
           {step === 6 && (
-            <div className="space-y-6">
-              {/* GŁÓWNE: duże pole na numer KW */}
-              <div className="space-y-3 rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/5 to-transparent p-5 md:p-6">
-                <Label htmlFor="linear-kw" className="text-sm font-bold uppercase tracking-wide text-accent">
-                  Numer księgi wieczystej
-                </Label>
-                <Input
-                  id="linear-kw"
-                  value={draft.kwNumber}
-                  onChange={(event) => {
-                    update("kwNumber", event.target.value.toUpperCase());
-                    if (draft.kwChoice !== "znam") update("kwChoice", "znam");
-                  }}
-                  placeholder="LU1I / 00012345 / 6"
-                  className="h-16 font-mono text-2xl font-extrabold tracking-wider tabular-nums md:text-3xl"
-                  autoFocus
-                />
-                <p className="text-xs text-muted-foreground">
-                  Adres i dane nieruchomości pobierzemy automatycznie z KW. Format:{" "}
-                  <span className="font-mono">XX1X/00000000/0</span>
-                </p>
-              </div>
+            <div className="space-y-4">
+              <Input
+                id="linear-kw"
+                value={draft.kwNumber}
+                onChange={(event) => {
+                  update("kwNumber", event.target.value.toUpperCase());
+                  if (draft.kwChoice !== "znam") update("kwChoice", "znam");
+                }}
+                placeholder="LU1I / 00012345 / 6"
+                className="h-16 font-mono text-2xl font-extrabold tracking-wider tabular-nums md:text-3xl"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Adres i dane nieruchomości pobierzemy automatycznie z KW. Format:{" "}
+                <span className="font-mono">XX1X/00000000/0</span>
+              </p>
 
-              {/* PODPOWIEDŹ: mObywatel */}
               <details
                 className="group rounded-xl border border-border bg-muted/30 transition-colors hover:bg-muted/50"
                 onToggle={(e) => {
@@ -660,7 +657,7 @@ export function LinearLoanApplication({
                 <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm">
                   <Smartphone className="h-4 w-4 shrink-0 text-accent" />
                   <span className="flex-1 font-semibold text-foreground">
-                    Nie znasz numeru? Sprawdź go w aplikacji mObywatel
+                    Nie znasz numeru? Sprawdź w mObywatelu
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
                 </summary>
@@ -979,20 +976,16 @@ function RequirementsPhotoStep({
 
   return (
     <div className="space-y-4">
-      <PhotoUploader
-        label="Zdjęcia z zewnątrz"
-        bucket="photos_exterior"
-        photos={photos}
-        addPhotos={addPhotos}
-        removePhoto={removePhoto}
-      />
-      <PhotoUploader
-        label="Zdjęcia wnętrz"
-        bucket="photos_interior"
-        photos={photos}
-        addPhotos={addPhotos}
-        removePhoto={removePhoto}
-      />
+      {(reqs.some((r) => r.kind === "photos_exterior" || r.kind === "photos_interior")) && (
+        <PhotoUploader
+          label="Zdjęcia nieruchomości"
+          bucket="photos_exterior"
+          extraBuckets={["photos_interior"]}
+          photos={photos}
+          addPhotos={addPhotos}
+          removePhoto={removePhoto}
+        />
+      )}
       {extraDocs.map((r) => (
         <PhotoUploader
           key={r.kind}
