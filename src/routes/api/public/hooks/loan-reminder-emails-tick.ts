@@ -2,8 +2,6 @@
 // i wywołuje batch tylko jeśli aktualna minuta pasuje do wyrażenia cron.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { CronExpressionParser } from "cron-parser";
-import { runDailyReminderEmailsBatch } from "@/lib/loan-reminder-emails.server";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -36,6 +34,7 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
         const lastTick = cfg.last_tick_at ? new Date(cfg.last_tick_at) : new Date(Date.now() - 90 * 1000);
         let due = false;
         try {
+          const { CronExpressionParser } = await import("cron-parser");
           const it = CronExpressionParser.parse(cfg.cron_expression, {
             currentDate: lastTick,
             tz,
@@ -50,6 +49,7 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
           return Response.json({ ok: true, skipped: "not_due" });
         }
 
+        const { runDailyReminderEmailsBatch } = await import("@/lib/loan-reminder-emails.server");
         const result = await runDailyReminderEmailsBatch({ force: true });
         await s
           .from("reminder_email_schedule")
