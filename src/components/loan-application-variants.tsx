@@ -292,7 +292,6 @@ function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnTyp
 
 function PhotoUploader({
   label,
-  hint,
   bucket,
   photos,
   addPhotos,
@@ -307,27 +306,32 @@ function PhotoUploader({
   removePhoto: (id: string) => void;
   extraBuckets?: PhotoItem["bucket"][];
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
   const visibleBuckets = [bucket, ...extraBuckets];
   const ownPhotos = photos.filter((photo) => visibleBuckets.includes(photo.bucket));
 
   return (
-    <div className="space-y-3">
-      <div>
-        <Label className="text-base font-bold">{label}</Label>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    <div className="space-y-2">
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/50 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"
+        >
+          <Upload className="h-4 w-4 text-accent" /> Dodaj plik
+        </button>
+        <button
+          type="button"
+          onClick={() => camRef.current?.click()}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-accent bg-accent/10 px-3 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/20 sm:hidden"
+        >
+          <Camera className="h-4 w-4" /> Zrób zdjęcie
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border bg-secondary/50 p-5 text-center transition hover:border-accent hover:bg-accent/10"
-      >
-        <Upload className="h-8 w-8 text-accent" />
-        <span className="font-semibold text-foreground">Dodaj zdjęcia albo PDF</span>
-        <span className="text-xs text-muted-foreground">Możesz zaznaczyć kilka plików naraz</span>
-      </button>
       <input
-        ref={inputRef}
+        ref={fileRef}
         type="file"
         multiple
         accept="image/*,application/pdf"
@@ -337,23 +341,36 @@ function PhotoUploader({
           event.currentTarget.value = "";
         }}
       />
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(event) => {
+          addPhotos(event.target.files, bucket);
+          event.currentTarget.value = "";
+        }}
+      />
       {ownPhotos.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {ownPhotos.map((photo) => (
-            <div key={photo.id} className="overflow-hidden rounded-lg border border-border bg-card">
+            <div key={photo.id} className="relative overflow-hidden rounded-md border border-border bg-card">
               {photo.type.startsWith("image/") ? (
-                <img src={photo.url} alt={photo.name} className="aspect-[4/3] w-full object-cover" />
+                <img src={photo.url} alt={photo.name} className="aspect-square w-full object-cover" />
               ) : (
-                <div className="grid aspect-[4/3] place-items-center bg-secondary">
-                  <FileText className="h-8 w-8 text-muted-foreground" />
+                <div className="grid aspect-square place-items-center bg-secondary">
+                  <FileText className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
-              <div className="space-y-2 p-2">
-                <div className="truncate text-xs font-medium text-foreground">{photo.name}</div>
-                <Button type="button" variant="ghost" size="sm" className="h-8 w-full" onClick={() => removePhoto(photo.id)}>
-                  Usuń
-                </Button>
-              </div>
+              <button
+                type="button"
+                onClick={() => removePhoto(photo.id)}
+                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-xs font-bold text-foreground shadow"
+                aria-label="Usuń"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
