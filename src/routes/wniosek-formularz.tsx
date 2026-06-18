@@ -517,18 +517,6 @@ function KlientWniosek() {
                   </label>
                 </RadioGroup>
               </div>
-                  <label className={`group relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition hover:border-accent/60 hover:bg-accent/5 ${kwStatus === "nie_znam" ? "border-accent bg-accent/10" : "border-border bg-card"}`}>
-                    <RadioGroupItem value="nie_znam" className="mt-0.5" />
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Sparkles className="h-4 w-4 text-accent" />
-                        Nie znam — pomóżcie mi
-                      </div>
-                      <p className="text-xs text-muted-foreground">Sprawdzimy mObywatel albo odczytamy ze zdjęcia dokumentu.</p>
-                    </div>
-                  </label>
-                </RadioGroup>
-              </div>
 
             {kwStatus === "znam" && (
               <div className="space-y-3">
