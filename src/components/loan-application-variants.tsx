@@ -272,7 +272,7 @@ function SummaryMetric({ icon: Icon, label, value }: { icon: LucideIcon; label: 
 function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnType<typeof useLoanDraft>["update"] }) {
   return (
     <div className="space-y-5">
-      <Label htmlFor="linear-amount" className="text-lg font-bold">Jakiej kwoty potrzebujesz?</Label>
+      
       <Input
         id="linear-amount"
         type="number"
