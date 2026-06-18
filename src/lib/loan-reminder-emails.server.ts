@@ -147,6 +147,9 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   const dayKey = warsawDateKey(now);
   const dayStartIso = new Date(`${dayKey}T00:00:00+02:00`).toISOString();
 
+  // Advisory lock w aplikacji (sesja Supabase): zapobiega równoległym batchom w obrębie jednego node'a.
+  // Twardą gwarancją braku duplikatów jest unique constraint (loan_application_id, variant_id).
+
   // Pełna sekwencja 150 maili (P1 = 1..60, dni 1..30 × 2/dzień; P2 = 61..150, co 2 dni o 8:00)
   const { data: variants } = await s
     .from("loan_reminder_email_variants")
@@ -283,6 +286,11 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       .select("id")
       .single();
     if (insErr || !pending) {
+      // 23505 = unique_violation → ten wariant został już wysłany do tego wniosku przez równoległy tick.
+      if ((insErr as any)?.code === "23505") {
+        results.push({ ok: false, skipped: "duplicate_variant_for_loan" });
+        continue;
+      }
       errors++;
       results.push({ ok: false, error: insErr?.message ?? "insert failed" });
       continue;
