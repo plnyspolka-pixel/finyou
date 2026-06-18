@@ -708,22 +708,22 @@ export function LinearLoanApplication({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={step === 0}
               onClick={() => setStep(advance(-1))}
-              className="w-full whitespace-nowrap sm:w-auto"
+              className="whitespace-nowrap"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> Wstecz
             </Button>
             <Button
               type="button"
               variant="cta"
-              size="lg"
               onClick={next}
               disabled={submitting}
-              className="w-full whitespace-nowrap sm:w-auto sm:min-w-[200px]"
+              className="flex-1 whitespace-nowrap sm:flex-none sm:min-w-[180px]"
             >
               {step === lastVisibleStep ? (
-                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij i przejdź do kalkulatora rat")}</>
+                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij")}</>
               ) : (
                 <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
