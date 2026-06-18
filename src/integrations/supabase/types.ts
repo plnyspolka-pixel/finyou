@@ -5283,6 +5283,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      exec_admin_any: { Args: { _sql: string }; Returns: Json }
       exec_admin_select: { Args: { _sql: string }; Returns: Json }
       exec_admin_write: { Args: { _sql: string }; Returns: Json }
       get_public_tracking_settings: {

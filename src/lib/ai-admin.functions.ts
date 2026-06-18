@@ -234,7 +234,7 @@ export const sendAdminChat = createServerFn({ method: "POST" })
     // Agentic loop — max 8 tool rounds
     let totalIn = 0;
     let totalOut = 0;
-    for (let round = 0; round < 8; round++) {
+    for (let round = 0; round < 20; round++) {
       const resp = await callAnthropic({
         model: s.model,
         system: s.system_prompt,

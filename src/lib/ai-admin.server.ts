@@ -8,7 +8,7 @@ const ANTHROPIC_VERSION = "2023-06-01";
 // Project root (works in dev sandbox + Worker bundle that includes src/)
 const PROJECT_ROOT = process.cwd();
 
-const FORBIDDEN_SQL = /\b(drop\s+(table|database|schema|function|trigger|policy|role|user)|truncate|alter\s+role|alter\s+system|grant\s+all|revoke\s+all|create\s+role|create\s+user|drop\s+role)\b/i;
+const FORBIDDEN_SQL = /\b(alter\s+role|alter\s+system|create\s+role|drop\s+role|create\s+user|drop\s+user)\b/i;
 
 function isSelectOnly(sql: string): boolean {
   const trimmed = sql.trim().replace(/^with\s+[^;]+;/i, "").trim();
@@ -100,6 +100,19 @@ export const ANTHROPIC_TOOLS = [
         path: { type: "string", description: "Ścieżka pliku względem roota projektu." },
       },
       required: ["path"],
+    },
+  },
+  {
+    name: "execute_sql",
+    description:
+      "Wykonaj DOWOLNE zapytanie SQL na bazie (SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, CREATE POLICY, GRANT itp.). Pełen dostęp administratora. Nie używaj do zmian ról i ustawień systemu (alter role/system, create/drop role). Zawsze najpierw rozważ skutki.",
+    input_schema: {
+      type: "object",
+      properties: {
+        sql: { type: "string", description: "Dowolne zapytanie SQL." },
+        reason: { type: "string", description: "Krótkie uzasadnienie (audit log)." },
+      },
+      required: ["sql", "reason"],
     },
   },
 ];
@@ -213,6 +226,17 @@ export async function runTool(
       if (!safe) return { ok: false, output: null, error: "Ścieżka niedozwolona." };
       await fs.unlink(safe).catch((e) => { throw new Error(e instanceof Error ? e.message : String(e)); });
       return { ok: true, output: { path: rel, action: "deleted" } };
+    }
+
+
+    if (call.name === "execute_sql") {
+      if (!opts.enableDbRead && !opts.enableDbWrite) return { ok: false, output: null, error: "Dostęp do bazy wyłączony." };
+      const sql = String(call.input.sql ?? "");
+      if (!sql.trim()) return { ok: false, output: null, error: "Puste zapytanie." };
+      if (FORBIDDEN_SQL.test(sql)) return { ok: false, output: null, error: "Zablokowane: operacje na rolach / ustawieniach systemu." };
+      const { data, error } = await supabaseAdmin.rpc("exec_admin_any" as never, { _sql: sql } as never);
+      if (error) return { ok: false, output: null, error: `DB: ${error.message}` };
+      return { ok: true, output: data };
     }
 
 
