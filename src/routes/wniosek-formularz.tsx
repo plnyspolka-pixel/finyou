@@ -613,7 +613,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <Card>
           <CardHeader>
             <CardTitle>Dane kontaktowe</CardTitle>
