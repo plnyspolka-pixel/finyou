@@ -488,20 +488,6 @@ function Landing() {
         </div>
       </footer>
 
-      {/* Sticky mobile CTA */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
-        <Button
-          asChild
-          size="lg"
-          className="w-full bg-gradient-to-r from-accent via-[oklch(0.72_0.18_60)] to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/40 hover:brightness-110 transition"
-        >
-          <a href="#wniosek">
-            <IconCalc className="mr-2 h-4 w-4" />
-            Wylicz ratę
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </a>
-        </Button>
-      </div>
     </div>
   );
 }
