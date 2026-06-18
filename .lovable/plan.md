@@ -1,70 +1,83 @@
+## Problem
+
+W bazie jest 121 rozmów voicebota, z czego 77 wisi w statusie `w_trakcie` i **żadna nie ma zapisanego transkryptu, audio ani czasu trwania**. Webhook ElevenLabs (`/api/public/elevenlabs-webhook`) prawdopodobnie nie jest podpięty po stronie ElevenLabs lub jego ostatnie wywołania zawiodły. Dlatego panel `/admin/voicebot` pokazuje tylko: numer, status, próby, datę — bez treści rozmowy.
+
 ## Cel
 
-Dodać w panelu admina sekcję, w której można:
-- włączyć / wyłączyć autopilota maili przypominających,
-- ustawić własne wyrażenie cron (kiedy i jak często wysyłać),
-- zobaczyć status: ostatni tick, ostatnia wysyłka, ile poszło dzisiaj.
+1. Zacząć faktycznie zaciągać pełne dane każdej rozmowy z API ElevenLabs (transkrypt, audio, czas trwania, analiza, koszt) — niezależnie od webhooka.
+2. Rozbudować `/admin/voicebot` o filtrowanie/wyszukiwarkę oraz podgląd każdej rozmowy: czas trwania, godziny, pełny transkrypt (user/agent w bańkach), odtwarzacz audio, analiza AI (sukces, podsumowanie, sentyment, koszt).
+3. `/admin/klienci` już używa `LeadDetailView`, który renderuje rozmowy voicebota z transkryptem i audio z `lead_communications` — po wzbogaceniu danych zacznie to działać automatycznie, bez zmian w UI klienta.
 
-Bez ręcznego grzebania w `cron.job` w bazie.
+## Backend
 
-## Pomysł architektoniczny
+**Nowa funkcja `enrichVoicebotConversation(conversationId)`** w `src/lib/voicebot-enrich.server.ts`:
+- `GET https://api.elevenlabs.io/v1/convai/conversations/{id}` z nagłówkiem `xi-api-key` (z `ELEVENLABS_API_KEY`).
+- Pobiera: `status`, `metadata.call_duration_secs`, `metadata.start_time_unix_secs`, `metadata.cost`, `metadata.termination_reason`, `transcript` (tablica tur z `role`/`message`), `analysis.call_successful`, `analysis.transcript_summary`, `analysis.evaluation_criteria_results`, `audio_url` (lub osobny endpoint `/audio`).
+- Aktualizuje `call_queue` (`status`, `started_at`, `finished_at`, `transcript` tekst, `result_summary`, `raw_result` JSON).
+- Aktualizuje istniejący wpis w `lead_communications` (po `external_id = conversation_id`) lub dopisuje brakujące pola: `transcript`, `recording_url`, `duration_seconds`, `metadata.call_outcome`, `metadata.analysis`, `metadata.cost_credits`, `status` (Odebrana / Nieodebrana / itd.). Re-używa istniejącej logiki `classifyOutcome` (wyciągniętej z webhooka do osobnego helpera).
 
-Jeden, na stałe zarejestrowany cron w bazie strzela **co minutę** w jeden endpoint (`/api/public/hooks/loan-reminder-emails-tick`). Endpoint czyta nową tabelę `reminder_email_schedule` i sam decyduje, czy wysłać batch — porównując bieżący czas (Europe/Warsaw) z wyrażeniem cron zapisanym w bazie. Dzięki temu zmiana harmonogramu = jeden `UPDATE` z UI, bez `cron.schedule()`.
+**Server function `enrichPendingVoicebotConversations()`** w `src/lib/voicebot.functions.ts`:
+- Zabezpieczone `requireSupabaseAuth` + sprawdzenie roli administratora/operatora.
+- Pobiera z `call_queue` rozmowy z `conversation_id IS NOT NULL` i (`status IN ('w_trakcie','wykonane')` lub `raw_result IS NULL`) z ostatnich 30 dni, max 50 na wywołanie.
+- Dla każdej woła `enrichVoicebotConversation`. Zwraca podsumowanie `{ checked, updated, errors }`.
 
-## Co powstanie
+**Cron** (przez `supabase--insert`, NIE migracja — to dane runtime):
+- `pg_cron` co 2 minuty woła nowy endpoint `/api/public/hooks/voicebot-enrich-tick`, który wywołuje powyższą logikę enrich (z `pg_try_advisory_lock` żeby nie nakładały się równoległe wywołania).
 
-### 1. Tabela `reminder_email_schedule` (1 wiersz konfiguracji)
-- `enabled` — włącznik master
-- `cron_expression` — np. `0 8,20 * * 1-6` (8:00 i 20:00, pn–sob, czas Warszawa)
-- `timezone` — `Europe/Warsaw`
-- `last_tick_at`, `last_sent_at`, `last_result` (jsonb: ile wysłano, ile pominięto)
-- RLS: SELECT/UPDATE tylko dla `administrator`.
+**Server function `getVoicebotConversation(callQueueId)`**: zwraca cały wiersz `call_queue` + powiązany `lead_communications` (po `external_id`). Używana w UI do rozwinięcia szczegółów.
 
-### 2. Endpoint `/api/public/hooks/loan-reminder-emails-tick`
-- Czyta wiersz konfiguracji.
-- Jeśli `enabled = false` → zwraca `skipped: disabled`.
-- Jeśli bieżąca minuta (Warszawa) **nie pasuje** do `cron_expression` → `skipped: not_due`.
-- W przeciwnym razie wywołuje istniejące `runDailyReminderEmailsBatch()` i zapisuje wynik do `last_*`.
-- Zabezpieczony: `pg_try_advisory_lock` po stronie SQL, żeby dwa równoległe ticki nie wystartowały batcha.
+## UI — `/admin/voicebot`
 
-### 3. Jeden stały `pg_cron`
-- Schedule `* * * * *` (co minutę), POST na endpoint powyżej.
-- Po wdrożeniu wyczyść ewentualne stare wpisy cron `loan-reminder-emails` (zrobię SQL `cron.unschedule(...)` z poziomu migracji).
+### Pasek statystyk (na górze nad kolejką)
+4 kafelki dla okresu „dziś" i „7 dni" (toggle):
+- Liczba rozmów
+- % odebranych (`call_outcome = answered`)
+- Średni czas trwania
+- Łączny koszt (suma `metadata.cost_credits`)
 
-### 4. Panel admina (rozszerzenie `/admin/przypomnienia`)
-- Karta "Autopilot maili":
-  - przełącznik **Włącz / Wyłącz**,
-  - pole tekstowe **Wyrażenie cron** + walidacja (parser `cron-parser`),
-  - 3 presety jednym klikiem: `2× dziennie (8 i 20)`, `1× rano (9:00)`, `Co godzinę (test)`,
-  - podgląd: "Następna wysyłka: za 14 min (jutro 08:00)",
-  - statystyki: ostatni tick, ostatnia wysyłka, licznik wysłanych dzisiaj.
-- Server fn `getReminderSchedule` / `updateReminderSchedule` z `requireSupabaseAuth` + `has_role('administrator')`.
+### Pasek filtrów
+- Wyszukiwarka po numerze i fragmencie transkryptu.
+- Select `status` (oczekuje / w_trakcie / wykonane / nieodebrana / blad).
+- Select `źródło` (meta_lead / wniosek_krok2 / manual / test).
+- Range dat (od / do, domyślnie 7 dni).
+- Przycisk „Odśwież z ElevenLabs" → woła `enrichPendingVoicebotConversations` z toastem `Zaktualizowano X / sprawdzono Y`.
 
-## Detale techniczne
+### Lista rozmów
+Każdy wiersz po lewej (jak teraz):
+- Numer, źródło, próby, data utworzenia, ID konwersacji.
 
-- Parser cron: `cron-parser` (npm, pure JS, działa na Workerze).
-- Match minuty: porównujemy `parseExpression(cron, { tz: 'Europe/Warsaw' }).prev()` ≥ `last_tick_at`; jeśli tak — należy się wysyłka. To odporne na to, że cron co minutę nie zawsze trafia idealnie w `:00`.
-- Zachowane: unique constraint `(loan_application_id, variant_id)` z poprzedniego kroku — pełna gwarancja braku duplikatów nawet przy złej konfiguracji cron.
-- Limit 2/dzień, faza 1/2, godzina preferowana użytkownika — działa dalej jak dziś (logika w `runDailyReminderEmailsBatch` bez zmian).
-- Sekret: endpoint pod `/api/public/*` (bez auth na publishedzie), `apikey: <ANON_KEY>` weryfikowany w handlerze.
+Po prawej dodatkowe pola, jeśli dostępne:
+- Czas trwania (`mm:ss`), godzina start (Europe/Warsaw), wynik (badge `success` / `failure`), koszt w kredytach.
+- Powiązany klient/wniosek (link do `/admin/klienci/{id}` lub `/admin/wnioski/{id}`) jeśli mamy `client_id` / `loan_application_id`.
+
+Klik w wiersz → rozwija panel:
+- Krótkie podsumowanie z `analysis.transcript_summary`.
+- Odtwarzacz `<audio controls src={recording_url} />` jeśli jest.
+- Pełny transkrypt jak w `LeadDetailView` — turny user/agent w bańkach (klient po prawej w `primary`, voicebot po lewej), z `whitespace-pre-wrap` i scrollem.
+- Metadane: `disconnection_reason`, `call_successful`, `evaluation_criteria_results` w postaci listy.
+
+### Drobne porządki
+- Stała `STATUS_LABELS` rozszerzona o `nieodebrana`, `poczta_glosowa`, `wykonane`.
+- Kolory badge'a poprawne dla każdego statusu.
 
 ## Pliki
 
-Nowe:
-- `supabase/migrations/<ts>_reminder_email_schedule.sql` — tabela + RLS + GRANT + seed (1 wiersz, `enabled=false`).
-- `src/routes/api/public/hooks/loan-reminder-emails-tick.ts` — nowy endpoint.
-- `src/lib/reminder-schedule.functions.ts` — `getReminderSchedule`, `updateReminderSchedule`.
-- `src/components/admin/ReminderScheduleCard.tsx` — UI panelu.
+**Nowe:**
+- `src/lib/voicebot-enrich.server.ts` — fetch z ElevenLabs + classifyOutcome.
+- `src/routes/api/public/hooks/voicebot-enrich-tick.ts` — endpoint cron.
+- `src/components/admin/VoicebotConversationCard.tsx` — wiersz + rozwijany panel z transkryptem/audio/analizą.
+- `src/components/admin/VoicebotStats.tsx` — pasek statystyk.
 
-Zmienione:
-- `src/routes/admin.przypomnienia.tsx` — wstawienie nowej karty.
-- Pojedyncza wstawka pg_cron przez `supabase--insert` (co minutę → tick endpoint), z `cron.unschedule()` poprzednich wpisów.
+**Zmienione:**
+- `src/lib/voicebot.functions.ts` — dodaje `enrichPendingVoicebotConversations`, `getVoicebotConversation`. Eksportuje też `listVoicebotConversations({ filters })` dla wyszukiwarki/filtrów po stronie serwera (zamiast czystego `supabase` z klienta) — żeby filtr po transkrypcie nie ciągnął wszystkiego do przeglądarki.
+- `src/routes/admin.voicebot.tsx` — nowa lista, filtry, statystyki, przycisk „Odśwież z ElevenLabs".
+- `src/routes/api/public/elevenlabs-webhook.ts` — wyekstrahowanie `classifyOutcome` do `voicebot-enrich.server.ts` (DRY), reszta bez zmian.
 
-Stare:
-- Dotychczasowy endpoint `/api/public/hooks/loan-reminder-emails` zostawiam (przyda się do ręcznego "wyślij teraz" w panelu).
+**Cron (przez `supabase--insert`, po wdrożeniu kodu):**
+- `cron.schedule('voicebot-enrich-tick', '*/2 * * * *', ...)` strzelający do `https://project--5394e6ca-0160-41ed-aa82-1afa633ecc0c.lovable.app/api/public/hooks/voicebot-enrich-tick`.
 
-## Pytanie
+## Czego NIE robię
 
-Potwierdź dwie rzeczy zanim wdrożę:
-1. Czy obecny harmonogram (8:00 i 20:00, pn–sob) ma zostać jako **domyślny** po włączeniu, ale autopilot startuje **wyłączony**? (bezpieczniejsze — sam włączysz w UI gdy będziesz gotowy).
-2. Czy mogę od razu **usunąć z `cron.job` wszystkie stare wpisy** strzelające w `loan-reminder-emails` i zostawić tylko nowy co-minutowy tick?
+- Nie ruszam `/admin/klienci` ani `LeadDetailView` — one już renderują rozmowy voicebota z `lead_communications`. Po wzbogaceniu danych transkrypt/audio pojawią się tam automatycznie.
+- Nie zmieniam istniejącego webhooka po stronie ElevenLabs — enrich pull działa równolegle i jest odporny na brakujący webhook.
+- Nie dodaję na razie osobnej strony szczegółów rozmowy — wystarczy rozwijany panel inline.
