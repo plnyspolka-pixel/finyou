@@ -701,45 +701,46 @@ function KlientWniosek() {
 
       {step === 2 && secType && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Wgraj zdjęcia / dokumenty</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             {secType === "mieszkanie" && (
-              <DocUploader label="Zdjęcia każdego pomieszczenia *" docType="zdjecia_pomieszczen"
-                docs={docsByType("zdjecia_pomieszczen")} uploading={uploading} onUpload={uploadDoc} multiple />
+              <>
+                <DocUploader label="Zdjęcia z wewnątrz" docType="zdjecia_pomieszczen"
+                  docs={docsByType("zdjecia_pomieszczen")} uploading={uploading} onUpload={uploadDoc} multiple />
+                <DocUploader label="Zdjęcia z zewnątrz" docType="zdjecia_bryly"
+                  docs={docsByType("zdjecia_bryly")} uploading={uploading} onUpload={uploadDoc} multiple />
+              </>
             )}
 
             {secType === "dom" && (
               <>
-                <div><Label>Powierzchnia użytkowa domu (m²) *</Label><Input type="number" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} /></div>
-                <DocUploader label="Zdjęcia każdego pomieszczenia *" docType="zdjecia_pomieszczen"
+                <div><Label>Powierzchnia użytkowa (m²)</Label><Input type="number" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} /></div>
+                <DocUploader label="Zdjęcia z wewnątrz" docType="zdjecia_pomieszczen"
                   docs={docsByType("zdjecia_pomieszczen")} uploading={uploading} onUpload={uploadDoc} multiple />
-                <DocUploader label="Zdjęcia bryły budynku z zewnątrz *" docType="zdjecia_bryly"
+                <DocUploader label="Zdjęcia z zewnątrz" docType="zdjecia_bryly"
                   docs={docsByType("zdjecia_bryly")} uploading={uploading} onUpload={uploadDoc} multiple />
               </>
             )}
 
             {secType === "lokal_uslugowy" && (
               <>
-                <div><Label>Powierzchnia użytkowa lokalu (m²) *</Label><Input type="number" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} /></div>
-                <DocUploader label="Zdjęcia lokalu z zewnątrz i wewnątrz *" docType="zdjecia_lokalu"
+                <div><Label>Powierzchnia użytkowa (m²)</Label><Input type="number" value={areaSqm} onChange={(e) => setAreaSqm(e.target.value)} /></div>
+                <DocUploader label="Zdjęcia z wewnątrz i z zewnątrz" docType="zdjecia_lokalu"
                   docs={docsByType("zdjecia_lokalu")} uploading={uploading} onUpload={uploadDoc} multiple />
               </>
             )}
 
             {secType === "dzialka_budowlana" && (
-              <DocUploader label="MPZP lub warunki zabudowy *" docType="mpzp"
+              <DocUploader label="MPZP lub warunki zabudowy" docType="mpzp"
                 docs={docsByType("mpzp")} uploading={uploading} onUpload={uploadDoc} multiple />
             )}
 
             {secType === "grunt_rolny" && (
-              <DocUploader label="Wypis z rejestru gruntów *" docType="wypis_rejestru"
+              <DocUploader label="Wypis z rejestru gruntów" docType="wypis_rejestru"
                 docs={docsByType("wypis_rejestru")} uploading={uploading} onUpload={uploadDoc} multiple />
             )}
 
             {secType === "inna" && (
-              <DocUploader label="Dokumenty lub zdjęcia nieruchomości *" docType="inne"
+              <DocUploader label="Dokumenty lub zdjęcia nieruchomości" docType="inne"
                 docs={docsByType("inne")} uploading={uploading} onUpload={uploadDoc} multiple />
             )}
           </CardContent>
