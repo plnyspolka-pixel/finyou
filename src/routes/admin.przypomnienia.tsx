@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhoneCall, Pause, Play, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ReminderScheduleCard } from "@/components/admin/ReminderScheduleCard";
 
 export const Route = createFileRoute("/admin/przypomnienia")({
   component: PrzypomnieniaPage,
