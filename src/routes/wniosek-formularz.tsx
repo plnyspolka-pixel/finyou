@@ -686,11 +686,10 @@ function KlientWniosek() {
         </div>
       )}
 
-      {step === 3 && secType && (
+      {step === 2 && secType && (
         <Card>
-          <CardHeader>
-            <CardTitle>Dokumenty — {securityTypeLabels[secType]}</CardTitle>
-            <CardDescription>Uzupełnij wymagane informacje i załączniki.</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Wgraj zdjęcia / dokumenty</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {secType === "mieszkanie" && (
