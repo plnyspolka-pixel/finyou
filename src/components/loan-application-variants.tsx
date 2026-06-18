@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Calculator,
+  Camera,
   Check,
   CheckCircle2,
   Clock3,
