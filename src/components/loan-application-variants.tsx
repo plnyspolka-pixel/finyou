@@ -465,7 +465,7 @@ export function LinearLoanApplication({
     if (step === 3) return draft.maxPayment >= 500;
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
-    if (step === 6) return !!draft.kwNumber.trim();
+    if (step === 6) return true; // KW opcjonalny — można uzupełnić później (mObywatel / dokument / rozmowa z doradcą)
     if (step === 7) return !photosRequired || photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
