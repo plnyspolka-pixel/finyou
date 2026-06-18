@@ -134,10 +134,11 @@ function KlientWniosek() {
       if (p.months) setMonths(p.months);
       if (p.maxPayment) setMaxPayment(p.maxPayment);
       if (p.secType) setSecType(p.secType);
-      // przeskocz krok 1 — kalkulator już wypełniony w embedzie / na wniosek-warunki
-      const targetStep = p.startStep && p.startStep >= 1 && p.startStep <= 5 ? p.startStep : 2;
+      // przeskocz do kroku zabezpieczenia (krok 1 w nowym uproszczonym formularzu)
+      const mapped = p.startStep === 3 ? 2 : p.startStep === 5 ? 3 : 1;
+      const targetStep = mapped >= 1 && mapped <= STEPS.length ? mapped : 1;
       setStep(targetStep);
-      // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu do kroku KW
+      // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu
       setEditing(true);
       sessionStorage.removeItem("embed_calc_v1");
     } catch {
