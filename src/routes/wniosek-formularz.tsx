@@ -432,32 +432,6 @@ function KlientWniosek() {
     await persistAll(step + 1);
   };
 
-  // Krok 4 → 5: zapisz kontakt, odpal lead capture, pokaż propozycję dla inwestora (kalkulator-magnes)
-  const advanceToProposal = async () => {
-    const v = canNext();
-    if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
-    setSubmitting(true);
-    try {
-      await persistAll(5);
-      if (loanId && !leadFiredRef.current && phone.trim()) {
-        leadFiredRef.current = true;
-        try {
-          await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
-          const { trackEvent } = await import("@/lib/fb-pixel");
-          await trackEvent(
-            "Lead",
-            { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
-            { phone: phone.trim(), firstName: firstName || undefined },
-          );
-        } catch (e: any) {
-          console.warn("[lead-capture]", e);
-        }
-      }
-      toast.success("Dane zapisane. Dopasuj propozycję dla inwestora.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // Krok 5 (Dane kontaktowe): zapisz kontakt, lead capture, finalnie wyślij wniosek do inwestora
   const saveProposalAndSubmit = async () => {
