@@ -459,14 +459,28 @@ function KlientWniosek() {
     }
   };
 
-  // Krok 5: zapisz propozycję i wyślij wniosek do inwestora
+  // Krok 5 (Dane kontaktowe): zapisz kontakt, lead capture, finalnie wyślij wniosek do inwestora
   const saveProposalAndSubmit = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
       await persistAll(STEPS.length);
-      toast.success("Propozycja zapisana — wniosek trafia do inwestora.");
+      if (loanId && !leadFiredRef.current && phone.trim()) {
+        leadFiredRef.current = true;
+        try {
+          await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
+          const { trackEvent } = await import("@/lib/fb-pixel");
+          await trackEvent(
+            "Lead",
+            { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
+            { phone: phone.trim(), firstName: firstName || undefined },
+          );
+        } catch (e: any) {
+          console.warn("[lead-capture]", e);
+        }
+      }
+      toast.success("Wniosek wysłany do inwestora.");
       void navigate({ to: "/wniosek-opis" });
     } finally {
       setSubmitting(false);
