@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Calculator,
+  Camera,
   Check,
   CheckCircle2,
   Clock3,
@@ -291,7 +292,6 @@ function AmountQuestion({ draft, update }: { draft: LoanDraft; update: ReturnTyp
 
 function PhotoUploader({
   label,
-  hint,
   bucket,
   photos,
   addPhotos,
@@ -306,27 +306,32 @@ function PhotoUploader({
   removePhoto: (id: string) => void;
   extraBuckets?: PhotoItem["bucket"][];
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
   const visibleBuckets = [bucket, ...extraBuckets];
   const ownPhotos = photos.filter((photo) => visibleBuckets.includes(photo.bucket));
 
   return (
-    <div className="space-y-3">
-      <div>
-        <Label className="text-base font-bold">{label}</Label>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    <div className="space-y-2">
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/50 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"
+        >
+          <Upload className="h-4 w-4 text-accent" /> Dodaj plik
+        </button>
+        <button
+          type="button"
+          onClick={() => camRef.current?.click()}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-accent bg-accent/10 px-3 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/20 sm:hidden"
+        >
+          <Camera className="h-4 w-4" /> Zrób zdjęcie
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border bg-secondary/50 p-5 text-center transition hover:border-accent hover:bg-accent/10"
-      >
-        <Upload className="h-8 w-8 text-accent" />
-        <span className="font-semibold text-foreground">Dodaj zdjęcia albo PDF</span>
-        <span className="text-xs text-muted-foreground">Możesz zaznaczyć kilka plików naraz</span>
-      </button>
       <input
-        ref={inputRef}
+        ref={fileRef}
         type="file"
         multiple
         accept="image/*,application/pdf"
@@ -336,23 +341,36 @@ function PhotoUploader({
           event.currentTarget.value = "";
         }}
       />
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(event) => {
+          addPhotos(event.target.files, bucket);
+          event.currentTarget.value = "";
+        }}
+      />
       {ownPhotos.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {ownPhotos.map((photo) => (
-            <div key={photo.id} className="overflow-hidden rounded-lg border border-border bg-card">
+            <div key={photo.id} className="relative overflow-hidden rounded-md border border-border bg-card">
               {photo.type.startsWith("image/") ? (
-                <img src={photo.url} alt={photo.name} className="aspect-[4/3] w-full object-cover" />
+                <img src={photo.url} alt={photo.name} className="aspect-square w-full object-cover" />
               ) : (
-                <div className="grid aspect-[4/3] place-items-center bg-secondary">
-                  <FileText className="h-8 w-8 text-muted-foreground" />
+                <div className="grid aspect-square place-items-center bg-secondary">
+                  <FileText className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
-              <div className="space-y-2 p-2">
-                <div className="truncate text-xs font-medium text-foreground">{photo.name}</div>
-                <Button type="button" variant="ghost" size="sm" className="h-8 w-full" onClick={() => removePhoto(photo.id)}>
-                  Usuń
-                </Button>
-              </div>
+              <button
+                type="button"
+                onClick={() => removePhoto(photo.id)}
+                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-xs font-bold text-foreground shadow"
+                aria-label="Usuń"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -513,7 +531,7 @@ export function LinearLoanApplication({
         ? "mx-auto max-w-3xl px-4 py-6 md:px-6"
         : "mx-auto grid max-w-7xl gap-6 px-4 py-6 md:px-6 lg:grid-cols-[280px_minmax(0,1fr)_320px]"}>
         {!embedded && (
-        <aside className="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6">
+        <aside className="hidden h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6 lg:block">
           <div className="mb-4 flex items-center justify-between">
             <Badge variant="secondary">Krok {step + 1} z {linearSteps.length}</Badge>
             <Badge variant={user ? "default" : "outline"}>{authLoading ? "Sprawdzam" : user ? "Zalogowany" : "Podgląd"}</Badge>
@@ -546,20 +564,20 @@ export function LinearLoanApplication({
         </aside>
         )}
 
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm md:p-8">
-          <div className="mb-8">
-            <div className="text-xs font-bold uppercase text-accent">{linearSteps[step]}</div>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
-              {step === 0 && "Ile pieniędzy chcesz uzyskać?"}
-              {step === 1 && "Na jak długo chcesz rozłożyć spłatę?"}
+        <section className="rounded-lg border border-border bg-card p-4 shadow-sm md:p-6">
+          <div className="mb-4">
+            <div className="text-[10px] font-bold uppercase tracking-wide text-accent">{linearSteps[step]}</div>
+            <h2 className="mt-1 text-xl font-extrabold tracking-tight text-foreground md:text-2xl">
+              {step === 0 && "Ile chcesz pożyczyć?"}
+              {step === 1 && "Na jak długo?"}
               {step === 2 && "Zostaw kontakt"}
-              {step === 3 && "Jaką ratę miesięczną możesz spłacać?"}
-              {step === 4 && "Jakie wynagrodzenie inwestora proponujesz w skali roku?"}
-              {step === 5 && "Co będzie zabezpieczeniem pożyczki?"}
-              {step === 6 && "Wpisz numer księgi wieczystej"}
-              {step === 7 && (user ? "Gotowe — dodaj zdjęcia i dokumenty, a wniosek trafi do inwestora" : "Dodaj zdjęcia lub dokumenty nieruchomości")}
-              {step === 8 && "Jak mamy się z Tobą skontaktować?"}
-              {step === 9 && "Sprawdź całość przed wysłaniem"}
+              {step === 3 && "Maks. rata miesięczna"}
+              {step === 4 && "Wynagrodzenie inwestora (rocznie)"}
+              {step === 5 && "Zabezpieczenie"}
+              {step === 6 && "Numer księgi wieczystej"}
+              {step === 7 && "Dodaj zdjęcia"}
+              {step === 8 && "Dane kontaktowe"}
+              {step === 9 && "Sprawdź i wyślij"}
             </h2>
           </div>
 
@@ -686,26 +704,26 @@ export function LinearLoanApplication({
             </div>
           )}
 
-          <div className="sticky bottom-0 z-20 -mx-5 mt-10 flex flex-col-reverse gap-3 border-t border-border bg-card/95 px-5 py-4 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] backdrop-blur supports-[backdrop-filter]:bg-card/80 sm:static sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:bg-transparent sm:px-0 sm:pt-5 sm:pb-0 sm:shadow-none sm:backdrop-blur-none md:-mx-8 md:px-8">
+          <div className="mt-5 flex items-center justify-between gap-3">
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={step === 0}
               onClick={() => setStep(advance(-1))}
-              className="w-full whitespace-nowrap sm:w-auto"
+              className="whitespace-nowrap"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> Wstecz
             </Button>
             <Button
               type="button"
               variant="cta"
-              size="lg"
               onClick={next}
               disabled={submitting}
-              className="w-full whitespace-nowrap sm:w-auto sm:min-w-[200px]"
+              className="flex-1 whitespace-nowrap sm:flex-none sm:min-w-[180px]"
             >
               {step === lastVisibleStep ? (
-                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij i przejdź do kalkulatora rat")}</>
+                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij")}</>
               ) : (
                 <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
@@ -716,7 +734,7 @@ export function LinearLoanApplication({
         </section>
 
         {!embedded && (
-        <div className="lg:sticky lg:top-6 lg:h-fit">
+        <div className="hidden lg:sticky lg:top-6 lg:block lg:h-fit">
           <SummaryPanel draft={draft} figures={figures} photos={photos} />
         </div>
         )}
@@ -957,78 +975,34 @@ function RequirementsPhotoStep({
 }) {
   const propKey = secType ? SEC_TO_PROP[secType] : "inna";
   const reqs: DocRequirement[] = REQUIREMENTS_BY_TYPE[propKey] ?? REQUIREMENTS_BY_TYPE.inna;
-  // KW number i powierzchnia użytkowa to dane tekstowe — nie sloty plikowe.
-  const fileReqs = reqs.filter((r) => r.kind !== "kw_number" && r.kind !== "usable_area");
-  const typeLabel = PROPERTY_TYPE_LABELS[propKey] ?? "nieruchomość";
-
-  const hints: Partial<Record<DocRequirementKind, string>> = {
-    photos_interior: "Po jednym zdjęciu z każdego pomieszczenia. Dobre światło, cała przestrzeń w kadrze.",
-    photos_exterior: "Elewacja z każdej strony, podjazd, najbliższe otoczenie.",
-    mpzp: "Wydruk z systemu gminy albo zdjęcie decyzji o warunkach zabudowy.",
-    land_registry: "Aktualny wypis z rejestru gruntów (PDF lub zdjęcie).",
-  };
-
-  const hasInterior = fileReqs.some((r) => r.kind === "photos_interior");
-  const hasExterior = fileReqs.some((r) => r.kind === "photos_exterior");
-  const hasPhotos = hasInterior || hasExterior;
-  const otherReqs = fileReqs.filter((r) => r.kind !== "photos_interior" && r.kind !== "photos_exterior");
-  const photosLabel =
-    hasInterior && hasExterior
-      ? "Zdjęcia nieruchomości — z zewnątrz i z wewnątrz"
-      : hasInterior
-        ? "Zdjęcia wnętrz"
-        : "Zdjęcia z zewnątrz";
-  const photosHint =
-    hasInterior && hasExterior
-      ? "Wystarczą zwykłe zdjęcia z telefonu — kilka kadrów elewacji z każdej strony i po jednym ujęciu z każdego pomieszczenia. Nie musi być profesjonalnie, ważne żeby było widać przestrzeń."
-      : hasInterior
-        ? "Wystarczy po jednym zdjęciu z każdego pomieszczenia, zrobionym telefonem. Najlepiej w dziennym świetle, z całą przestrzenią w kadrze."
-        : "Wystarczy kilka kadrów telefonem — elewacja z każdej strony, podjazd, najbliższe otoczenie.";
+  const extraDocs = reqs.filter((r) => r.kind === "mpzp" || r.kind === "land_registry");
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm">
-        <div className="font-bold text-foreground">
-          Dla typu „{typeLabel}" zbierzemy {hasPhotos ? "zdjęcia" : "dokumenty"}{otherReqs.length > 0 ? " i dokumenty" : ""} — pokaż, co masz pod ręką:
-        </div>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-          {hasPhotos && <li>{photosLabel}</li>}
-          {otherReqs.map((r) => (
-            <li key={r.kind}>{r.label}</li>
-          ))}
-        </ul>
-        <p className="mt-3 text-xs text-foreground/70">
-          Nie musisz mieć wszystkiego od razu — dorzucisz brakujące pliki później w panelu klienta.
-        </p>
-      </div>
-
-      {hasPhotos && (
+    <div className="space-y-4">
+      <PhotoUploader
+        label="Zdjęcia z zewnątrz"
+        bucket="photos_exterior"
+        photos={photos}
+        addPhotos={addPhotos}
+        removePhoto={removePhoto}
+      />
+      <PhotoUploader
+        label="Zdjęcia wnętrz"
+        bucket="photos_interior"
+        photos={photos}
+        addPhotos={addPhotos}
+        removePhoto={removePhoto}
+      />
+      {extraDocs.map((r) => (
         <PhotoUploader
-          label={photosLabel}
-          hint={photosHint}
-          bucket={hasExterior ? "photos_exterior" : "photos_interior"}
+          key={r.kind}
+          label={r.label}
+          bucket={r.kind}
           photos={photos}
           addPhotos={addPhotos}
           removePhoto={removePhoto}
-          extraBuckets={hasInterior && hasExterior ? ["photos_interior"] : []}
         />
-      )}
-
-      {otherReqs.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {otherReqs.map((r) => (
-            <PhotoUploader
-              key={r.kind}
-              label={r.label}
-              hint={hints[r.kind]}
-              bucket={r.kind}
-              photos={photos}
-              addPhotos={addPhotos}
-              removePhoto={removePhoto}
-            />
-          ))}
-        </div>
-      )}
+      ))}
     </div>
   );
 }
