@@ -484,9 +484,22 @@ function KlientWniosek() {
   return (
     <div className="min-h-screen bg-background p-3 md:p-8">
       <div className="mx-auto max-w-2xl space-y-3 md:space-y-5">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-base md:text-2xl font-bold leading-tight">Wniosek o pożyczkę</h1>
-        <span className="text-xs text-muted-foreground shrink-0">Krok {step} z {STEPS.length}: <b>{STEPS[step - 1]}</b></span>
+      <div className="space-y-2">
+        <div className="flex items-center justify-end">
+          <span className="text-xs text-muted-foreground shrink-0">Krok {step} z {STEPS.length}</span>
+        </div>
+        <h1 className="text-lg md:text-3xl font-extrabold uppercase tracking-tight leading-tight">
+          {step === 1 && "PODAJ ZABEZPIECZENIE I NUMER KSIĘGI WIECZYSTEJ"}
+          {step === 2 && (
+            secType === "mieszkanie" ? "WGRAJ ZDJĘCIA Z WEWNĄTRZ I Z ZEWNĄTRZ" :
+            secType === "dom" ? "WGRAJ ZDJĘCIA Z WEWNĄTRZ I Z ZEWNĄTRZ" :
+            secType === "lokal_uslugowy" ? "WGRAJ ZDJĘCIA Z WEWNĄTRZ I Z ZEWNĄTRZ" :
+            secType === "dzialka_budowlana" ? "WGRAJ MPZP LUB WARUNKI ZABUDOWY" :
+            secType === "grunt_rolny" ? "WGRAJ WYPIS Z REJESTRU GRUNTÓW" :
+            "WGRAJ DOKUMENTY NIERUCHOMOŚCI"
+          )}
+          {step === 3 && "PODAJ DANE KONTAKTOWE"}
+        </h1>
       </div>
       <Progress value={progress} className="h-1.5" />
 
