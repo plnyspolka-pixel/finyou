@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -15,10 +14,14 @@ import {
   updateVoicebotSettings,
   testOutboundCall,
   testSms,
+  listVoicebotConversations,
+  enrichPendingVoicebotConversations,
 } from "@/lib/voicebot.functions";
 import { syncAndPullMetaLeads } from "@/lib/meta-leads-sync.functions";
 import { toast } from "sonner";
-import { Phone, RefreshCw, PhoneCall, Save, MessageSquare, Megaphone, DownloadCloud } from "lucide-react";
+import { Phone, RefreshCw, PhoneCall, Save, MessageSquare, Megaphone, DownloadCloud, Search, Sparkles } from "lucide-react";
+import { VoicebotConversationCard } from "@/components/admin/VoicebotConversationCard";
+import { VoicebotStats } from "@/components/admin/VoicebotStats";
 
 
 export const Route = createFileRoute("/admin/voicebot")({
