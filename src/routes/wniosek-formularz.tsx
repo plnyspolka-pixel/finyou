@@ -364,15 +364,11 @@ function KlientWniosek() {
 
   const docsByType = (t: string) => docs.filter((d) => d.document_type === t);
 
-  // Walidacja kroków
+  // Walidacja kroków (1=Zabezpieczenie, 2=Zdjęcia, 3=Dane kontaktowe)
   const canNext = (): { ok: boolean; msg?: string } => {
     if (step === 1) {
       if (!secType) return { ok: false, msg: "Wybierz rodzaj zabezpieczenia." };
-      if (!amount || !months || !annualRate) return { ok: false, msg: "Uzupełnij parametry kalkulatora." };
-      return { ok: true };
-    }
-    if (step === 2) {
-      if (!kwStatus) return { ok: false, msg: "Zaznacz jedną z opcji dotyczących numeru księgi wieczystej." };
+      if (!kwStatus) return { ok: false, msg: "Zaznacz, czy znasz numer KW." };
       if (kwStatus === "znam") {
         const valid = kwNumbers.map((s) => s.trim()).filter(Boolean);
         if (valid.length === 0) return { ok: false, msg: "Wpisz numer księgi wieczystej." };
@@ -386,39 +382,29 @@ function KlientWniosek() {
       }
       if (kwStatus === "nie_pewien") {
         const hasDocs = docsByType("dokument_wlasnosci").length > 0;
-        if (!hasDocs) return { ok: false, msg: "Dodaj zdjęcie dokumentu — spróbujemy odczytać numer KW." };
+        if (!hasDocs) return { ok: false, msg: "Dodaj zdjęcie dokumentu." };
       }
       return { ok: true };
     }
-    if (step === 3) {
+    if (step === 2) {
       if (!secType) return { ok: false, msg: "Brak typu zabezpieczenia." };
       if (secType === "mieszkanie" && docsByType("zdjecia_pomieszczen").length === 0)
         return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
       if (secType === "dom") {
-        if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową domu." };
         if (docsByType("zdjecia_pomieszczen").length === 0) return { ok: false, msg: "Wgraj zdjęcia pomieszczeń." };
         if (docsByType("zdjecia_bryly").length === 0) return { ok: false, msg: "Wgraj zdjęcia bryły budynku." };
       }
-      if (secType === "lokal_uslugowy") {
-        if (!areaSqm) return { ok: false, msg: "Podaj powierzchnię użytkową lokalu." };
-        if (docsByType("zdjecia_lokalu").length === 0) return { ok: false, msg: "Wgraj zdjęcia lokalu." };
-      }
+      if (secType === "lokal_uslugowy" && docsByType("zdjecia_lokalu").length === 0)
+        return { ok: false, msg: "Wgraj zdjęcia lokalu." };
       if (secType === "dzialka_budowlana" && docsByType("mpzp").length === 0)
-        return { ok: false, msg: "Wgraj dokument MPZP lub warunki zabudowy." };
+        return { ok: false, msg: "Wgraj MPZP / warunki zabudowy." };
       if (secType === "grunt_rolny" && docsByType("wypis_rejestru").length === 0)
         return { ok: false, msg: "Wgraj wypis z rejestru gruntów." };
-      if (secType === "inna" && docsByType("inne").length === 0) {
-        return { ok: false, msg: "Wgraj dokumenty lub zdjęcia nieruchomości." };
-      }
+      if (secType === "inna" && docsByType("inne").length === 0)
+        return { ok: false, msg: "Wgraj dokumenty lub zdjęcia." };
       return { ok: true };
     }
-    if (step === 4) {
-      if (!amount || amount < 20000) return { ok: false, msg: "Podaj kwotę pożyczki (min. 20 000 zł)." };
-      if (!months || months < 3) return { ok: false, msg: "Podaj okres spłaty (min. 3 mies.)." };
-      if (!annualRate || annualRate < 15) return { ok: false, msg: "Podaj wynagrodzenie inwestora (min. 15% rocznie)." };
-      return { ok: true };
-    }
-    if (step === 5) {
+    if (step === 3) {
       if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
       if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
