@@ -733,116 +733,31 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 4 && (
+      {step === 3 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-accent" /> Twoja propozycja dla inwestora
-            </CardTitle>
-            <CardDescription>
-              Dane są zapisane. Dopasuj jeszcze raz kwotę, okres i wynagrodzenie inwestora — od razu zobaczysz nową ratę i harmonogram spłaty. Kiedy będzie pasować, kliknij „Zapisz propozycję dla inwestora”.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Dane kontaktowe</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prop-amount">Kwota pożyczki</Label>
-                <Input id="prop-amount" type="number" inputMode="numeric" value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
-              </div>
-              <Slider min={20000} max={1_000_000} step={100} value={[amount]} onValueChange={(v) => setAmount(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label>Okres spłaty</Label>
-                <span className="tabular-nums text-sm font-medium">{months} mies.</span>
-              </div>
-              <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prop-rate">Wynagrodzenie inwestora (rocznie)</Label>
-                <div className="flex items-center gap-1">
-                  <Input id="prop-rate" type="number" step="0.5" value={annualRate}
-                    onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24 text-right tabular-nums" />
-                  <span className="text-sm font-semibold">%</span>
-                </div>
-              </div>
-              <Slider min={15} max={60} step={0.5} value={[Math.min(60, Math.max(15, annualRate))]}
-                onValueChange={(v) => setAnnualRate(v[0])} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>60%</span></div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="prop-max">Maksymalna rata miesięczna</Label>
-                <Input id="prop-max" type="number" inputMode="numeric" value={maxPayment}
-                  onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40 text-right tabular-nums" />
-              </div>
-              <Slider min={500} max={50000} step={100} value={[Math.min(50000, maxPayment)]} onValueChange={(v) => setMaxPayment(v[0])} />
-              <p className="text-xs text-muted-foreground">Nadwyżka ponad maks. ratę trafia do raty balonowej na koniec okresu.</p>
-            </div>
-
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span>Rata miesięczna</span><b className="tabular-nums">{formatPLN(rata)}</b></div>
-              {balloon > 0 && (
-                <div className="flex justify-between text-sm"><span>Ostatnia rata (z nadwyżką balonową)</span><b className="tabular-nums">{formatPLN(rata + balloon)}</b></div>
-              )}
-              <div className="flex justify-between text-sm"><span>Łączne wynagrodzenie inwestora</span><b className="tabular-nums">{formatPLN(investorComp)}</b></div>
-              <div className="flex justify-between text-sm"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalPay)}</b></div>
-            </div>
-
-            {schedule.length > 0 && (
-              <div className="rounded-lg border bg-card">
-                <div className="px-4 py-3 border-b">
-                  <h3 className="font-semibold text-sm">Harmonogram spłat</h3>
-                  <p className="text-xs text-muted-foreground">Pierwsza rata płatna za miesiąc od dziś.</p>
-                </div>
-                <div className="max-h-72 overflow-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40 sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2 font-medium">#</th>
-                        <th className="px-3 py-2 font-medium">Data spłaty</th>
-                        <th className="px-3 py-2 font-medium text-right">Rata</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {schedule.map((r) => (
-                        <tr key={r.idx} className="border-t">
-                          <td className="px-3 py-2 tabular-nums">{r.idx}</td>
-                          <td className="px-3 py-2 tabular-nums">{r.date}</td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium">{formatPLN(r.payment)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div><Label className="text-xs">Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+            <div><Label className="text-xs">Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+            <div><Label className="text-xs">E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label className="text-xs">Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
           </CardContent>
         </Card>
       )}
 
-      <div className="flex justify-between">
-        <Button variant="outline" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+      <div className="flex justify-between gap-2">
+        <Button variant="outline" size="sm" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Wstecz
         </Button>
-        {step < 4 ? (
+        {step < STEPS.length ? (
           <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
-            {saving ? <Loader2 className="animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2" /></>}
-          </Button>
-        ) : step === 4 ? (
-          <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
-            {saving ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — dane kontaktowe <ArrowRight className="ml-2" /></>}
+            {saving ? <Loader2 className="animate-spin" /> : <>Dalej <ArrowRight className="ml-2" /></>}
           </Button>
         ) : (
           <Button variant="cta" size="cta" disabled={submitting} onClick={() => void saveProposalAndSubmit()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek do inwestora</>}
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek</>}
           </Button>
         )}
       </div>
