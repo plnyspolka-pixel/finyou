@@ -563,14 +563,6 @@ export function LinearLoanApplication({
             </h2>
           </div>
 
-          {step < lastVisibleStep && (
-            <div className="mb-6 flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm">
-              <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-              <p className="text-foreground/80">
-                <b>Uzupełnij dane i oblicz swoją ratę.</b> Po wypełnieniu wszystkich kroków zobaczysz dokładną wysokość raty oraz harmonogram spłaty.
-              </p>
-            </div>
-          )}
 
           {step === 0 && <AmountQuestion draft={draft} update={update} />}
 
