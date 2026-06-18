@@ -117,6 +117,27 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
         }
 
+        // OCHRONA PRZED PĘTLAMI — sprawdź nagłówki/suppression/rate-limit/pętle
+        const mgHeaders: Record<string, string> = {
+          "auto-submitted": String(form.get("Auto-Submitted") ?? form.get("auto-submitted") ?? ""),
+          "x-auto-response-suppress": String(form.get("X-Auto-Response-Suppress") ?? ""),
+          "x-autoreply": String(form.get("X-Autoreply") ?? ""),
+          "x-autorespond": String(form.get("X-Autorespond") ?? ""),
+          precedence: String(form.get("Precedence") ?? form.get("precedence") ?? ""),
+          "list-unsubscribe": String(form.get("List-Unsubscribe") ?? ""),
+          "list-id": String(form.get("List-Id") ?? ""),
+        };
+        const skip = await shouldSkipAutoReply({
+          leadId,
+          fromEmail,
+          headers: mgHeaders,
+          threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+        });
+        if (skip.skip) {
+          console.warn(`[mailgun-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);
+          return new Response(`skipped:${skip.reason}`, { status: 200 });
+        }
+
         // Agent
         const attachmentsSummary = stored.length
           ? stored.map((a) => `- ${a.name} (${a.mime})`).join("\n")
