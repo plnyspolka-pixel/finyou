@@ -19,8 +19,7 @@ const groups: Group[] = [
   {
     label: "Klienci pożyczkowi",
     items: [
-      { to: "/admin/klienci", label: "Klienci (leady + wnioski)", icon: Users },
-      { to: "/admin/przypomnienia", label: "Przypomnienia leadom", icon: PhoneCall },
+      { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
