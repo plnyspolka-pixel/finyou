@@ -515,7 +515,7 @@ function KlientWniosek() {
       </div>
       <Progress value={progress} />
 
-      {step < 5 && (
+      {step < 4 && (
         <Alert className="border-accent/40 bg-accent/5">
           <Sparkles className="h-4 w-4 text-accent" />
           <AlertTitle>Twoja propozycja dla inwestora — czeka na Ciebie na końcu</AlertTitle>
