@@ -152,11 +152,12 @@ export const EMAIL_TEMPLATES: Record<number, Tpl> = {
 };
 
 export const SMS_TEMPLATES: Record<number, (v: TplVars) => string> = {
-  1: (v) => `Finance You: ${v.firstName ?? "Cześć"}, dokończ wniosek o pożyczkę: ${v.returnLink}`,
-  2: (v) => `Finance You: hej ${v.firstName ?? ""}, masz jeszcze otwarty wniosek — link: ${v.returnLink}`,
-  3: (v) => `Finance You: ${v.firstName ?? "Cześć"}, jeszcze tu jesteśmy. Wniosek: ${v.returnLink}`,
-  4: (v) => `Finance You: ostatnia szansa na pożyczkę z tym wnioskiem: ${v.returnLink} . Stop=STOP`,
+  1: (v) => `Finance You: ${v.firstName ?? "Cześć"}, dokończ wniosek o pożyczkę: https://financeyou.pl`,
+  2: (v) => `Finance You: hej ${v.firstName ?? ""}, masz jeszcze otwarty wniosek — wejdź na https://financeyou.pl`,
+  3: (v) => `Finance You: ${v.firstName ?? "Cześć"}, jeszcze tu jesteśmy. Dokończ wniosek: https://financeyou.pl`,
+  4: (v) => `Finance You: ostatnia szansa — dokończ wniosek na https://financeyou.pl . Stop=STOP`,
 };
+
 
 // === KONWERSJA STREF CZASOWYCH ===
 /** Buduje Date odpowiadający podanej dacie i godzinie w Europe/Warsaw. */
