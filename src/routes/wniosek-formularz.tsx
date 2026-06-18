@@ -30,7 +30,7 @@ export const Route = createFileRoute("/wniosek-formularz")({
   component: KlientWniosek,
 });
 
-const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Dane kontaktowe", "Twoja propozycja dla inwestora"];
+const STEPS = ["Kalkulator", "Zabezpieczenie", "Zdjęcia i dokumenty", "Twoja propozycja dla inwestora", "Dane kontaktowe"];
 
 type BusinessStatus = "prowadzi" | "zamierza" | "";
 type KwStatus = "znam" | "nie_znam" | "nie_pewien" | "";
@@ -170,6 +170,11 @@ function KlientWniosek() {
       if (la.business_status) setBizStatus(la.business_status as BusinessStatus);
       if (la.nip) setNip(la.nip);
       if (la.kw_status) setKwStatus(la.kw_status as KwStatus);
+      // Wznów wniosek w ostatnio zapisanym kroku (jeśli nie nadpisano przez embed)
+      const savedStep = (la as { current_form_step?: number | null }).current_form_step;
+      if (savedStep && savedStep >= 1 && savedStep <= STEPS.length) {
+        setStep((cur) => (cur > 1 ? cur : savedStep));
+      }
 
       const { data: prop } = await supabase.from("properties").select("*")
         .eq("loan_application_id", la.id).maybeSingle();
@@ -407,15 +412,15 @@ function KlientWniosek() {
       return { ok: true };
     }
     if (step === 4) {
-      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
-      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
-      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
-      return { ok: true };
-    }
-    if (step === 5) {
       if (!amount || amount < 20000) return { ok: false, msg: "Podaj kwotę pożyczki (min. 20 000 zł)." };
       if (!months || months < 3) return { ok: false, msg: "Podaj okres spłaty (min. 3 mies.)." };
       if (!annualRate || annualRate < 15) return { ok: false, msg: "Podaj wynagrodzenie inwestora (min. 15% rocznie)." };
+      return { ok: true };
+    }
+    if (step === 5) {
+      if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
+      if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
+      if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
       return { ok: true };
     }
     return { ok: true };
@@ -427,13 +432,14 @@ function KlientWniosek() {
     await persistAll(step + 1);
   };
 
-  // Krok 4 → 5: zapisz kontakt, odpal lead capture, pokaż propozycję dla inwestora (kalkulator-magnes)
-  const advanceToProposal = async () => {
+
+  // Krok 5 (Dane kontaktowe): zapisz kontakt, lead capture, finalnie wyślij wniosek do inwestora
+  const saveProposalAndSubmit = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
-      await persistAll(5);
+      await persistAll(STEPS.length);
       if (loanId && !leadFiredRef.current && phone.trim()) {
         leadFiredRef.current = true;
         try {
@@ -448,20 +454,7 @@ function KlientWniosek() {
           console.warn("[lead-capture]", e);
         }
       }
-      toast.success("Dane zapisane. Dopasuj propozycję dla inwestora.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Krok 5: zapisz propozycję i wyślij wniosek do inwestora
-  const saveProposalAndSubmit = async () => {
-    const v = canNext();
-    if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
-    setSubmitting(true);
-    try {
-      await persistAll(STEPS.length);
-      toast.success("Propozycja zapisana — wniosek trafia do inwestora.");
+      toast.success("Wniosek wysłany do inwestora.");
       void navigate({ to: "/wniosek-opis" });
     } finally {
       setSubmitting(false);
@@ -510,7 +503,7 @@ function KlientWniosek() {
       </div>
       <Progress value={progress} />
 
-      {step < 5 && (
+      {step < 4 && (
         <Alert className="border-accent/40 bg-accent/5">
           <Sparkles className="h-4 w-4 text-accent" />
           <AlertTitle>Twoja propozycja dla inwestora — czeka na Ciebie na końcu</AlertTitle>
@@ -608,7 +601,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <Card>
           <CardHeader>
             <CardTitle>Dane kontaktowe</CardTitle>
@@ -899,7 +892,7 @@ function KlientWniosek() {
         </Card>
       )}
 
-      {step === 5 && (
+      {step === 4 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1003,12 +996,12 @@ function KlientWniosek() {
             {saving ? <Loader2 className="animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2" /></>}
           </Button>
         ) : step === 4 ? (
-          <Button variant="cta" size="cta" disabled={submitting} onClick={() => void advanceToProposal()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — Twoja propozycja dla inwestora <ArrowRight className="ml-2" /></>}
+          <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
+            {saving ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — dane kontaktowe <ArrowRight className="ml-2" /></>}
           </Button>
         ) : (
           <Button variant="cta" size="cta" disabled={submitting} onClick={() => void saveProposalAndSubmit()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Zapisz propozycję dla inwestora</>}
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek do inwestora</>}
           </Button>
         )}
       </div>
