@@ -102,6 +102,19 @@ export const ANTHROPIC_TOOLS = [
       required: ["path"],
     },
   },
+  {
+    name: "execute_sql",
+    description:
+      "Wykonaj DOWOLNE zapytanie SQL na bazie (SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, CREATE POLICY, GRANT itp.). Pełen dostęp administratora. Nie używaj do zmian ról i ustawień systemu (alter role/system, create/drop role). Zawsze najpierw rozważ skutki.",
+    input_schema: {
+      type: "object",
+      properties: {
+        sql: { type: "string", description: "Dowolne zapytanie SQL." },
+        reason: { type: "string", description: "Krótkie uzasadnienie (audit log)." },
+      },
+      required: ["sql", "reason"],
+    },
+  },
 ];
 
 // Blokujemy tylko pliki z sekretami; reszta projektu dostępna do odczytu.
