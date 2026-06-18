@@ -630,30 +630,23 @@ export function LinearLoanApplication({
           {step === 5 && <SecurityTypePicker value={draft.secType} onChange={(value) => update("secType", value)} />}
 
           {step === 6 && (
-            <div className="space-y-6">
-              {/* GŁÓWNE: duże pole na numer KW */}
-              <div className="space-y-3 rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/5 to-transparent p-5 md:p-6">
-                <Label htmlFor="linear-kw" className="text-sm font-bold uppercase tracking-wide text-accent">
-                  Numer księgi wieczystej
-                </Label>
-                <Input
-                  id="linear-kw"
-                  value={draft.kwNumber}
-                  onChange={(event) => {
-                    update("kwNumber", event.target.value.toUpperCase());
-                    if (draft.kwChoice !== "znam") update("kwChoice", "znam");
-                  }}
-                  placeholder="LU1I / 00012345 / 6"
-                  className="h-16 font-mono text-2xl font-extrabold tracking-wider tabular-nums md:text-3xl"
-                  autoFocus
-                />
-                <p className="text-xs text-muted-foreground">
-                  Adres i dane nieruchomości pobierzemy automatycznie z KW. Format:{" "}
-                  <span className="font-mono">XX1X/00000000/0</span>
-                </p>
-              </div>
+            <div className="space-y-4">
+              <Input
+                id="linear-kw"
+                value={draft.kwNumber}
+                onChange={(event) => {
+                  update("kwNumber", event.target.value.toUpperCase());
+                  if (draft.kwChoice !== "znam") update("kwChoice", "znam");
+                }}
+                placeholder="LU1I / 00012345 / 6"
+                className="h-16 font-mono text-2xl font-extrabold tracking-wider tabular-nums md:text-3xl"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Adres i dane nieruchomości pobierzemy automatycznie z KW. Format:{" "}
+                <span className="font-mono">XX1X/00000000/0</span>
+              </p>
 
-              {/* PODPOWIEDŹ: mObywatel */}
               <details
                 className="group rounded-xl border border-border bg-muted/30 transition-colors hover:bg-muted/50"
                 onToggle={(e) => {
@@ -664,7 +657,7 @@ export function LinearLoanApplication({
                 <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm">
                   <Smartphone className="h-4 w-4 shrink-0 text-accent" />
                   <span className="flex-1 font-semibold text-foreground">
-                    Nie znasz numeru? Sprawdź go w aplikacji mObywatel
+                    Nie znasz numeru? Sprawdź w mObywatelu
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
                 </summary>
