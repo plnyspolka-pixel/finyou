@@ -170,6 +170,11 @@ function KlientWniosek() {
       if (la.business_status) setBizStatus(la.business_status as BusinessStatus);
       if (la.nip) setNip(la.nip);
       if (la.kw_status) setKwStatus(la.kw_status as KwStatus);
+      // Wznów wniosek w ostatnio zapisanym kroku (jeśli nie nadpisano przez embed)
+      const savedStep = (la as { current_form_step?: number | null }).current_form_step;
+      if (savedStep && savedStep >= 1 && savedStep <= STEPS.length) {
+        setStep((cur) => (cur > 1 ? cur : savedStep));
+      }
 
       const { data: prop } = await supabase.from("properties").select("*")
         .eq("loan_application_id", la.id).maybeSingle();
