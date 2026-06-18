@@ -715,7 +715,7 @@ export function LinearLoanApplication({
               className="flex-1 whitespace-nowrap sm:flex-none sm:min-w-[180px]"
             >
               {step === lastVisibleStep ? (
-                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : (user ? "Przekaż do inwestora" : "Wyślij")}</>
+                <><Send className="mr-2 h-4 w-4" /> {submitting ? "Wysyłam…" : "Wyślij"}</>
               ) : (
                 <>Dalej <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
