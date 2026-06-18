@@ -68,7 +68,7 @@ export const updateReminderSchedule = createServerFn({ method: "POST" })
       }
     }
 
-    const patch: Record<string, any> = {};
+    const patch: { enabled?: boolean; cron_expression?: string; timezone?: string } = {};
     if (data.enabled !== undefined) patch.enabled = data.enabled;
     if (data.cron_expression !== undefined) patch.cron_expression = data.cron_expression;
     if (data.timezone !== undefined) patch.timezone = data.timezone;
