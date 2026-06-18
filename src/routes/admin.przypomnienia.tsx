@@ -64,6 +64,10 @@ function PrzypomnieniaPage() {
         </p>
       </div>
 
+      <ReminderScheduleCard />
+
+
+
       {q.isLoading && <Card className="p-6 text-muted-foreground">Ładowanie…</Card>}
       {q.error && <Card className="p-6 text-destructive">Błąd: {(q.error as Error).message}</Card>}
 
