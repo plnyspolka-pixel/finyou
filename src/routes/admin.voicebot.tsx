@@ -378,39 +378,74 @@ function VoicebotAdmin() {
         </CardContent>
       </Card>
 
-      {/* KOLEJKA */}
+      {/* STATYSTYKI */}
+      <VoicebotStats rows={rows} />
+
+      {/* KOLEJKA + FILTRY */}
       <Card>
-        <CardHeader><CardTitle>Kolejka rozmów ({rows.length})</CardTitle></CardHeader>
+        <CardHeader className="space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle>Rozmowy ({rows.length})</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />Odśwież listę
+              </Button>
+              <Button size="sm" onClick={handleEnrich} disabled={enriching}>
+                <Sparkles className={`mr-2 h-4 w-4 ${enriching ? "animate-spin" : ""}`} />
+                {enriching ? "Pobieram…" : "Odśwież z ElevenLabs"}
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-2 md:grid-cols-4">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void loadQueue(); }}
+                placeholder="Szukaj: numer, transkrypt…"
+                className="pl-8"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie statusy</SelectItem>
+                <SelectItem value="oczekuje">Oczekuje</SelectItem>
+                <SelectItem value="w_trakcie">W trakcie</SelectItem>
+                <SelectItem value="wykonane">Odebrana</SelectItem>
+                <SelectItem value="nieodebrana">Nieodebrana</SelectItem>
+                <SelectItem value="poczta_glosowa">Poczta głosowa</SelectItem>
+                <SelectItem value="blad">Błąd</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterSource} onValueChange={setFilterSource}>
+              <SelectTrigger><SelectValue placeholder="Źródło" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie źródła</SelectItem>
+                <SelectItem value="meta_lead">Meta Ads</SelectItem>
+                <SelectItem value="wniosek_krok2">Wniosek</SelectItem>
+                <SelectItem value="manual">Ręcznie</SelectItem>
+                <SelectItem value="test">Test</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={days} onValueChange={setDays}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Ostatnie 24h</SelectItem>
+                <SelectItem value="7">Ostatnie 7 dni</SelectItem>
+                <SelectItem value="30">Ostatnie 30 dni</SelectItem>
+                <SelectItem value="all">Wszystkie</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {rows.map((r) => {
-              const fmtPl = (iso: string) => new Date(iso).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", hour12: false });
-              const humanized = r.result_summary
-                ? String(r.result_summary).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})/g, (m: string) => fmtPl(m))
-                : null;
-              return (
-              <div key={r.id} className="flex items-start justify-between border rounded-md p-3 text-sm">
-                <div>
-                  <div className="font-medium">{r.phone_normalized}</div>
-                  <div className="text-muted-foreground text-xs">
-                    Źródło: {SOURCE_LABELS[r.source] ?? r.source ?? "—"} • Próby: {r.attempts} •{" "}
-                    {new Date(r.created_at).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", hour12: false })}
-                  </div>
-                  {r.scheduled_at && (
-                    <div className="text-muted-foreground text-xs">
-                      Zaplanowano na: {fmtPl(r.scheduled_at)} <span className="opacity-60">(Europe/Warsaw)</span>
-                    </div>
-                  )}
-                  {humanized && <div className="mt-1 text-xs">{humanized}</div>}
-                  {r.conversation_id && <div className="mt-1 text-xs text-muted-foreground">conv: {r.conversation_id}</div>}
-                </div>
-                <Badge variant={r.status === "blad" ? "destructive" : r.status === "zakonczona" ? "default" : "secondary"}>
-                  {STATUS_LABELS[r.status] ?? r.status}
-                </Badge>
-              </div>
-              );
-            })}
-            {rows.length === 0 && <div className="text-muted-foreground">Kolejka pusta.</div>}
+            {rows.map((r) => (
+              <VoicebotConversationCard key={r.id} row={r} onChanged={loadQueue} />
+            ))}
+            {rows.length === 0 && !loading && <div className="text-muted-foreground text-sm">Brak rozmów dla wybranych filtrów.</div>}
           </div>
         </CardContent>
       </Card>
