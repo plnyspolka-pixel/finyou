@@ -1,8 +1,15 @@
 // Server functions do zarządzania harmonogramem autopilota maili.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { CronExpressionParser } from "cron-parser";
 import { z } from "zod";
+
+async function parseCronExpression(
+  expression: string,
+  options: { tz?: string; currentDate?: Date } = {},
+) {
+  const { CronExpressionParser } = await import("cron-parser");
+  return CronExpressionParser.parse(expression, options);
+}
 
 async function ensureAdmin(ctx: any) {
   const { data: ok } = await ctx.supabase.rpc("has_role", {
@@ -27,7 +34,7 @@ export const getReminderSchedule = createServerFn({ method: "GET" })
     let nextRuns: string[] = [];
     if (data?.cron_expression) {
       try {
-        const it = CronExpressionParser.parse(data.cron_expression, {
+        const it = await parseCronExpression(data.cron_expression, {
           tz: data.timezone || "Europe/Warsaw",
         });
         for (let i = 0; i < 3; i++) nextRuns.push(it.next().toDate().toISOString());
@@ -60,7 +67,7 @@ export const updateReminderSchedule = createServerFn({ method: "POST" })
 
     if (data.cron_expression) {
       try {
-        CronExpressionParser.parse(data.cron_expression, {
+        await parseCronExpression(data.cron_expression, {
           tz: data.timezone || "Europe/Warsaw",
         });
       } catch (e: any) {
