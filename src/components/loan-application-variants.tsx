@@ -73,6 +73,8 @@ type LoanDraft = {
 
 const STORAGE_KEY = "finance_you_wniosek_compare_v1";
 
+const hasKwNumber = (value: string) => value.replace(/\s/g, "").length > 0;
+
 const emptyDraft: LoanDraft = {
   amount: 200_000,
   months: 24,
@@ -465,7 +467,7 @@ export function LinearLoanApplication({
     if (step === 3) return draft.maxPayment >= 500;
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
-    if (step === 6) return true; // KW opcjonalny — można uzupełnić później (mObywatel / dokument / rozmowa z doradcą)
+    if (step === 6) return hasKwNumber(draft.kwNumber);
     if (step === 7) return !photosRequired || photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
@@ -479,6 +481,10 @@ export function LinearLoanApplication({
 
   const next = async () => {
     if (!canContinue()) {
+      if (step === 6) {
+        toast.error("Wpisz numer księgi wieczystej, zanim przejdziesz dalej");
+        return;
+      }
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
       return;
     }
