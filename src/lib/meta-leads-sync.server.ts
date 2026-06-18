@@ -139,7 +139,7 @@ export async function runMetaLeadsSync(): Promise<{
           if (!clientId) {
             const { data: ins } = await supabaseAdmin.from("clients").insert({
               first_name: first, last_name: last, email, phone, phone_raw: phone, phone_normalized: phoneNorm,
-              source: "meta_lead", consent_marketing: true, consent_phone: true, consent_sms: true,
+              source: "meta_lead", consent_rodo: true, consent_email: true, consent_marketing: true, consent_phone: true, consent_sms: true, consents_accepted_at: new Date().toISOString(),
             }).select("id").single();
             clientId = ins?.id ?? null;
           }
@@ -182,7 +182,7 @@ export async function runMetaLeadsSync(): Promise<{
           }, { onConflict: "meta_lead_id" }).select("id").single();
 
           try {
-            await upsertLeadFromSource({
+            const unifiedLeadId = await upsertLeadFromSource({
               type: "pozyczkowy", source: "meta_ads",
               firstName: first, lastName: last,
               email, phoneRaw: phone, phoneNormalized: phoneNorm,
@@ -192,6 +192,16 @@ export async function runMetaLeadsSync(): Promise<{
               loanApplicationId, clientId,
               applicationData: { meta_field_data: fd, return_link: returnLink },
             });
+            // Meta Lead Forms wymagają zgody w formularzu — mapujemy do kolumn consent_*
+            if (unifiedLeadId) {
+              await supabaseAdmin.from("leads").update({
+                consent_rodo: true,
+                consent_email: true,
+                consent_marketing: true,
+                consent_phone: true,
+                consent_sms: true,
+              }).eq("id", unifiedLeadId);
+            }
           } catch (e: any) { summary.errors.push(`unified ${leadgenId}: ${e?.message}`); }
 
           if (phone && returnLink) {

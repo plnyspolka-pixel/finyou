@@ -27,6 +27,17 @@ export async function sendResendEmail(opts: {
     return { ok: false, error: "Resend env missing (LOVABLE_API_KEY / RESEND_API_KEY)" };
   }
 
+  // Ochrona przed pętlami: nie wysyłaj do adresów na liście suppressed_emails
+  try {
+    const { isSuppressed } = await import("./email-guard.server");
+    if (await isSuppressed(opts.to)) {
+      console.warn(`[resend-send] skip suppressed recipient: ${opts.to}`);
+      return { ok: false, error: "recipient_suppressed" };
+    }
+  } catch (e) {
+    console.error("[resend-send] suppression check failed", e);
+  }
+
   const headers: Record<string, string> = {};
   if (opts.inReplyTo) headers["In-Reply-To"] = opts.inReplyTo;
   if (opts.references) headers["References"] = opts.references;

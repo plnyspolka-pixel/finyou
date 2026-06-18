@@ -10,6 +10,7 @@ import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/le
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
 // signed payload: `${svix-id}.${svix-timestamp}.${body}` with HMAC-SHA256 key = base64-decoded secret after `whsec_`.
@@ -160,6 +161,19 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         });
         if (stored.length && inboundLogId) {
           await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
+        }
+
+        // OCHRONA PRZED PĘTLAMI — sprawdź zanim auto-agent odpowie
+        const inboundHeaders = normalizeHeaders(data.headers ?? data.Headers);
+        const skip = await shouldSkipAutoReply({
+          leadId,
+          fromEmail,
+          headers: inboundHeaders,
+          threadIds: [messageId, inReplyTo, references].filter(Boolean) as string[],
+        });
+        if (skip.skip) {
+          console.warn(`[resend-inbound] skip auto-reply: ${skip.reason} (${fromEmail})`);
+          return new Response(`skipped:${skip.reason}`, { status: 200 });
         }
 
         const attachmentsSummary = stored.length
