@@ -122,7 +122,7 @@ function KlienciPage() {
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold sm:text-2xl">Klienci</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Leady, wnioski, follow-up — wszystko w jednym widoku.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Leady, wnioski, follow-up i przypomnienia voicebota — wszystko w jednym miejscu.</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" size="sm" onClick={() => q.refetch()}><RefreshCw className="h-4 w-4" /></Button>
@@ -130,12 +130,19 @@ function KlienciPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2 text-xs">
-        <Badge variant="outline">Wszystkie: {counts.all}</Badge>
-        <Badge variant="outline">Nieobsłużone: {counts.nieobsluzone}</Badge>
-        <Badge variant="outline">Z wnioskiem: {counts.ma_wniosek}</Badge>
-        <Badge variant="outline">Bez kontaktu: {counts.bez_kontaktu}</Badge>
-      </div>
+      <Tabs defaultValue="lista" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
+          <TabsTrigger value="lista">Lista klientów</TabsTrigger>
+          <TabsTrigger value="reminders">Przypomnienia voicebota</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="lista" className="space-y-4 mt-0">
+          <div className="flex flex-wrap gap-2 text-xs">
+            <Badge variant="outline">Wszystkie: {counts.all}</Badge>
+            <Badge variant="outline">Nieobsłużone: {counts.nieobsluzone}</Badge>
+            <Badge variant="outline">Z wnioskiem: {counts.ma_wniosek}</Badge>
+            <Badge variant="outline">Bez kontaktu: {counts.bez_kontaktu}</Badge>
+          </div>
 
       <Card className="p-3 space-y-2">
         <Input placeholder="Szukaj: imię, e-mail, telefon…" value={search} onChange={(e) => setSearch(e.target.value)} />
