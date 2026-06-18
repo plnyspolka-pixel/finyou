@@ -1008,12 +1008,12 @@ function KlientWniosek() {
             {saving ? <Loader2 className="animate-spin" /> : <>{step === 1 ? "Dalej — sprawdź możliwość finansowania" : "Dalej"} <ArrowRight className="ml-2" /></>}
           </Button>
         ) : step === 4 ? (
-          <Button variant="cta" size="cta" disabled={submitting} onClick={() => void advanceToProposal()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — Twoja propozycja dla inwestora <ArrowRight className="ml-2" /></>}
+          <Button variant="cta" size="cta" disabled={saving} onClick={() => void goNext()}>
+            {saving ? <Loader2 className="animate-spin" /> : <><Calculator className="mr-2" /> Dalej — dane kontaktowe <ArrowRight className="ml-2" /></>}
           </Button>
         ) : (
           <Button variant="cta" size="cta" disabled={submitting} onClick={() => void saveProposalAndSubmit()}>
-            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Zapisz propozycję dla inwestora</>}
+            {submitting ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" /> Wyślij wniosek do inwestora</>}
           </Button>
         )}
       </div>
