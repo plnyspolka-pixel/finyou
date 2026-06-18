@@ -102,6 +102,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
+import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
@@ -592,6 +593,12 @@ const ApiPublicHooksVoicebotInboundRoute =
     path: '/api/public/hooks/voicebot-inbound',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksVoicebotEnrichTickRoute =
+  ApiPublicHooksVoicebotEnrichTickRouteImport.update({
+    id: '/api/public/hooks/voicebot-enrich-tick',
+    path: '/api/public/hooks/voicebot-enrich-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSeedBlogRoute = ApiPublicHooksSeedBlogRouteImport.update({
   id: '/api/public/hooks/seed-blog',
   path: '/api/public/hooks/seed-blog',
@@ -769,6 +776,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -874,6 +882,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -983,6 +992,7 @@ export interface FileRoutesById {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1093,6 +1103,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
@@ -1198,6 +1209,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
@@ -1306,6 +1318,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/webhook'
@@ -1363,6 +1376,7 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
+  ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -2024,6 +2038,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVoicebotInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/voicebot-enrich-tick': {
+      id: '/api/public/hooks/voicebot-enrich-tick'
+      path: '/api/public/hooks/voicebot-enrich-tick'
+      fullPath: '/api/public/hooks/voicebot-enrich-tick'
+      preLoaderRoute: typeof ApiPublicHooksVoicebotEnrichTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/seed-blog': {
       id: '/api/public/hooks/seed-blog'
       path: '/api/public/hooks/seed-blog'
@@ -2322,6 +2343,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
   ApiPublicHooksSeedBlogRoute: ApiPublicHooksSeedBlogRoute,
+  ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
