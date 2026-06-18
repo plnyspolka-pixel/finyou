@@ -142,18 +142,16 @@ function Landing() {
             <Button
               asChild
               size="sm"
-              className="md:size-default bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:brightness-110 transition"
+              className="bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/30 hover:brightness-110 transition"
             >
               <a href={`tel:${PHONE_HREF}`} aria-label={`Zadzwoń ${PHONE_DISPLAY}`}>
                 <Phone className="h-4 w-4 md:mr-2" />
-                <span className="hidden md:inline">Zadzwoń teraz</span>
+                <span className="hidden md:inline">Zadzwoń</span>
               </a>
             </Button>
-            {panelHref && (
-              <Button asChild size="sm" variant="outline" className="hidden md:inline-flex">
-                <Link to={panelHref}>Panel</Link>
-              </Button>
-            )}
+            <Button asChild size="sm" variant="outline">
+              <Link to={panelHref ?? "/auth"}>{panelHref ? "Panel" : "Zaloguj"}</Link>
+            </Button>
           </div>
         </div>
       </header>

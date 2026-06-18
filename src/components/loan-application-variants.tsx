@@ -696,7 +696,7 @@ export function LinearLoanApplication({
             </div>
           )}
 
-          <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="sticky bottom-0 -mx-4 mt-5 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-0">
             <Button
               type="button"
               variant="outline"
