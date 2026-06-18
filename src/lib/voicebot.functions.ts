@@ -520,3 +520,138 @@ export const updateVoicebotSettings = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============================================================================
+// VOICEBOT — szczegóły rozmów (transkrypt, audio, analiza, filtry, statystyki)
+// ============================================================================
+
+async function requireAdminOrOperator(supabase: any, userId: string) {
+  const [a, o] = await Promise.all([
+    supabase.rpc("has_role", { _user_id: userId, _role: "administrator" }),
+    supabase.rpc("has_role", { _user_id: userId, _role: "operator" }),
+  ]);
+  if (!a.data && !o.data) throw new Error("Forbidden");
+}
+
+/** Lista rozmów z filtrami — zwraca również podstawowe pola wzbogacone. */
+export const listVoicebotConversations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        status: z.string().optional(),
+        source: z.string().optional(),
+        search: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        limit: z.number().int().min(1).max(200).default(100),
+      })
+      .parse(input ?? {})
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdminOrOperator(context.supabase, context.userId);
+    const s = admin();
+    let q = s
+      .from("call_queue")
+      .select("id, phone_normalized, status, source, attempts, created_at, started_at, finished_at, scheduled_at, conversation_id, result_summary, client_id, loan_application_id, agent_id")
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (data.status && data.status !== "all") q = q.eq("status", data.status);
+    if (data.source && data.source !== "all") q = q.eq("source", data.source);
+    if (data.dateFrom) q = q.gte("created_at", data.dateFrom);
+    if (data.dateTo) q = q.lte("created_at", data.dateTo);
+    if (data.search) {
+      const search = data.search.trim();
+      if (search) {
+        q = q.or(`phone_normalized.ilike.%${search}%,transcript.ilike.%${search}%,result_summary.ilike.%${search}%,conversation_id.ilike.%${search}%`);
+      }
+    }
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const convIds = (rows ?? []).map((r: any) => r.conversation_id).filter(Boolean);
+    const commsMap = new Map<string, any>();
+    if (convIds.length > 0) {
+      const { data: comms } = await s
+        .from("lead_communications")
+        .select("external_id, lead_id, duration_seconds, status, metadata, recording_url")
+        .in("external_id", convIds);
+      for (const c of comms ?? []) commsMap.set(c.external_id, c);
+    }
+    return (rows ?? []).map((r: any) => {
+      const comm = r.conversation_id ? commsMap.get(r.conversation_id) : null;
+      return {
+        ...r,
+        duration_seconds: comm?.duration_seconds ?? null,
+        call_outcome: comm?.metadata?.call_outcome ?? null,
+        call_outcome_label: comm?.metadata?.call_outcome_label ?? null,
+        call_successful: comm?.metadata?.call_successful ?? null,
+        cost_credits: comm?.metadata?.cost_credits ?? null,
+        has_audio: comm?.metadata?.has_audio ?? false,
+        lead_id: comm?.lead_id ?? null,
+      };
+    });
+  });
+
+/** Szczegóły jednej rozmowy — używane przez rozwijany panel. */
+export const getVoicebotConversation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdminOrOperator(context.supabase, context.userId);
+    const s = admin();
+    const { data: row, error } = await s.from("call_queue").select("*").eq("id", data.id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Not found");
+    let comm: any = null;
+    if (row.conversation_id) {
+      const { data: c } = await s
+        .from("lead_communications")
+        .select("*")
+        .eq("external_id", row.conversation_id)
+        .maybeSingle();
+      comm = c;
+    }
+    return { queue: row, comm };
+  });
+
+/** Ręczne odświeżenie szczegółów rozmów z ElevenLabs (przycisk w panelu). */
+export const enrichPendingVoicebotConversations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireAdminOrOperator(context.supabase, context.userId);
+    const { enrichPendingConversations } = await import("@/lib/voicebot-enrich.server");
+    return await enrichPendingConversations(50);
+  });
+
+/** Wymusza odświeżenie pojedynczej rozmowy. */
+export const enrichOneVoicebotConversation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ conversationId: z.string().min(1) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdminOrOperator(context.supabase, context.userId);
+    const { enrichVoicebotConversation } = await import("@/lib/voicebot-enrich.server");
+    return await enrichVoicebotConversation(data.conversationId);
+  });
+
+/** Pobiera nagranie audio z ElevenLabs i zwraca jako base64 (do odtwarzacza w UI). */
+export const getVoicebotAudio = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ conversationId: z.string().min(1) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await requireAdminOrOperator(context.supabase, context.userId);
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) throw new Error("ELEVENLABS_API_KEY missing");
+    const res = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversations/${encodeURIComponent(data.conversationId)}/audio`,
+      { headers: { "xi-api-key": apiKey } },
+    );
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`ElevenLabs audio HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const base64 = buf.toString("base64");
+    const contentType = res.headers.get("content-type") || "audio/mpeg";
+    return { base64, contentType };
+  });
