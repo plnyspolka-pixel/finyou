@@ -336,6 +336,12 @@ function KlienciPage() {
 
         </div>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="reminders" className="mt-0">
+          <RemindersPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
