@@ -54,6 +54,7 @@ import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
+import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
@@ -351,6 +352,12 @@ const AdminZgodyRoute = AdminZgodyRouteImport.update({
   path: '/zgody',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWnioskiNiekompletneRoute =
+  AdminWnioskiNiekompletneRouteImport.update({
+    id: '/wnioski-niekompletne',
+    path: '/wnioski-niekompletne',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminVoicebotRoute = AdminVoicebotRouteImport.update({
   id: '/voicebot',
   path: '/voicebot',
@@ -768,6 +775,7 @@ export interface FileRoutesByFullPath {
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -880,6 +888,7 @@ export interface FileRoutesByTo {
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -997,6 +1006,7 @@ export interface FileRoutesById {
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
   '/admin/voicebot': typeof AdminVoicebotRoute
+  '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1115,6 +1125,7 @@ export interface FileRouteTypes {
     | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
@@ -1227,6 +1238,7 @@ export interface FileRouteTypes {
     | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
@@ -1343,6 +1355,7 @@ export interface FileRouteTypes {
     | '/admin/text-agent'
     | '/admin/ustawienia'
     | '/admin/voicebot'
+    | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
@@ -1785,6 +1798,13 @@ declare module '@tanstack/react-router' {
       path: '/zgody'
       fullPath: '/admin/zgody'
       preLoaderRoute: typeof AdminZgodyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/wnioski-niekompletne': {
+      id: '/admin/wnioski-niekompletne'
+      path: '/wnioski-niekompletne'
+      fullPath: '/admin/wnioski-niekompletne'
+      preLoaderRoute: typeof AdminWnioskiNiekompletneRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/voicebot': {
@@ -2326,6 +2346,7 @@ interface AdminRouteChildren {
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
   AdminVoicebotRoute: typeof AdminVoicebotRoute
+  AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
@@ -2366,6 +2387,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
   AdminVoicebotRoute: AdminVoicebotRoute,
+  AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
   AdminZgodyRoute: AdminZgodyRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
@@ -2521,13 +2543,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
