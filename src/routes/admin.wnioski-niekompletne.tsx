@@ -57,29 +57,27 @@ type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_perce
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete";
 
-function PhotoThumbs({ paths }: { paths: string[] }) {
+function PhotoThumbs({ paths, onOpen }: { paths: string[]; onOpen: () => void }) {
   const [urls, setUrls] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (paths.length === 0) { setUrls([]); return; }
-      const { data } = await supabase.storage.from("property-photos").createSignedUrls(paths.slice(0, 6), 60 * 60);
+      const { data } = await supabase.storage.from("property-photos").createSignedUrls(paths.slice(0, 4), 60 * 60);
       if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
     })();
     return () => { cancelled = true; };
   }, [paths.join("|")]);
-  if (urls.length === 0) return <Badge variant="outline" className="text-muted-foreground">0</Badge>;
+  if (paths.length === 0) return <Badge variant="outline" className="text-muted-foreground">0</Badge>;
   return (
-    <div className="flex items-center gap-1">
+    <button type="button" onClick={onOpen} className="flex items-center gap-1 group" title="Otwórz podgląd">
       {urls.map((u, i) => (
-        <a key={i} href={u} target="_blank" rel="noreferrer" className="block">
-          <img src={u} alt="" className="h-10 w-10 rounded object-cover border" loading="lazy" />
-        </a>
+        <img key={i} src={u} alt="" className="h-14 w-14 rounded object-cover border group-hover:ring-2 group-hover:ring-primary transition" loading="lazy" />
       ))}
       {paths.length > urls.length && (
         <span className="text-xs text-muted-foreground ml-1">+{paths.length - urls.length}</span>
       )}
-    </div>
+    </button>
   );
 }
 
