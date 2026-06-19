@@ -52,7 +52,7 @@ function IncompleteApplicationsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(land_register_number,photos)")
       .in("status", ["nowy_lead", "w_trakcie_uzupelniania"])
       .order("updated_at", { ascending: false })
       .limit(500);
