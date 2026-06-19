@@ -107,6 +107,8 @@ function IncompleteApplicationsPage() {
                 <TableHead className="text-right">Kwota</TableHead>
                 <TableHead className="text-center">Kompletność</TableHead>
                 <TableHead className="text-center">Krok</TableHead>
+                <TableHead>KW</TableHead>
+                <TableHead className="text-center">Zdjęcia</TableHead>
                 <TableHead>Źródło</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead>Aktualizacja</TableHead>
