@@ -174,7 +174,8 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .eq("reminder_email_unsubscribed", false)
     .lt("reminder_email_count", 150)
-    .limit(500);
+    .order("reminder_email_last_sent_at", { ascending: true, nullsFirst: true })
+    .limit(12);
 
   if (opts?.onlyLoanId) q = q.eq("id", opts.onlyLoanId);
   const { data: loans } = await q;
