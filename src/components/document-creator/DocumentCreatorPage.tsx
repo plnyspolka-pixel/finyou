@@ -922,3 +922,48 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+/**
+ * Renderuje treść wzoru z podświetlonymi placeholderami `[KLUCZ]`.
+ * Gdy `formData` ≠ null — wstawia wartości w miejsce placeholderów (puste = pokaż placeholder).
+ */
+function PreviewRenderer({
+  text,
+  formData,
+}: {
+  text: string;
+  formData: Record<string, string> | null;
+}) {
+  const parts = text.split(/(\[[^\]\n]+\])/g);
+  return (
+    <pre className="whitespace-pre-wrap break-words text-[13px] leading-relaxed font-sans text-foreground">
+      {parts.map((part, i) => {
+        const m = part.match(/^\[([^\]\n]+)\]$/);
+        if (!m) return <span key={i}>{part}</span>;
+        const key = m[1];
+        const val = formData ? (formData[key] ?? "").trim() : "";
+        if (formData && val) {
+          return (
+            <span
+              key={i}
+              className="rounded bg-emerald-100 dark:bg-emerald-900/40 px-1 font-semibold text-emerald-900 dark:text-emerald-100"
+              title={`Wypełnione: ${key}`}
+            >
+              {val}
+            </span>
+          );
+        }
+        return (
+          <span
+            key={i}
+            className="rounded bg-amber-100 dark:bg-amber-900/40 px-1 font-mono text-[12px] text-amber-900 dark:text-amber-100 border border-amber-300/60 dark:border-amber-700/60"
+            title="Placeholder — uzupełnij pole obok"
+          >
+            [{key}]
+          </span>
+        );
+      })}
+    </pre>
+  );
+}
+
