@@ -669,6 +669,12 @@ export function LinearLoanApplication({
                   />
                 </div>
               </details>
+
+              <OwnershipDeedUpload
+                photos={photos}
+                addPhotos={addPhotos}
+                removePhoto={removePhoto}
+              />
             </div>
           )}
 
