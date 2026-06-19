@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createClient } from "@supabase/supabase-js";
-import { loadLoanLeadData, ELIGIBLE_STATUSES_FOR_REMINDERS, computeNextReminder } from "./loan-progress.server";
+import { loadLoanLeadData, ELIGIBLE_STATUSES_FOR_REMINDERS, computeNextReminder, loadHourAnswerScores } from "./loan-progress.server";
 import { placeOutboundCallInternal } from "./voicebot.functions";
 
 function admin() {
