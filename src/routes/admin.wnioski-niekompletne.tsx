@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, RefreshCw } from "lucide-react";
+import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -56,29 +57,27 @@ type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_perce
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete";
 
-function PhotoThumbs({ paths }: { paths: string[] }) {
+function PhotoThumbs({ paths, onOpen }: { paths: string[]; onOpen: () => void }) {
   const [urls, setUrls] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (paths.length === 0) { setUrls([]); return; }
-      const { data } = await supabase.storage.from("property-photos").createSignedUrls(paths.slice(0, 6), 60 * 60);
+      const { data } = await supabase.storage.from("property-photos").createSignedUrls(paths.slice(0, 4), 60 * 60);
       if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
     })();
     return () => { cancelled = true; };
   }, [paths.join("|")]);
-  if (urls.length === 0) return <Badge variant="outline" className="text-muted-foreground">0</Badge>;
+  if (paths.length === 0) return <Badge variant="outline" className="text-muted-foreground">0</Badge>;
   return (
-    <div className="flex items-center gap-1">
+    <button type="button" onClick={onOpen} className="flex items-center gap-1 group" title="Otwórz podgląd">
       {urls.map((u, i) => (
-        <a key={i} href={u} target="_blank" rel="noreferrer" className="block">
-          <img src={u} alt="" className="h-10 w-10 rounded object-cover border" loading="lazy" />
-        </a>
+        <img key={i} src={u} alt="" className="h-14 w-14 rounded object-cover border group-hover:ring-2 group-hover:ring-primary transition" loading="lazy" />
       ))}
       {paths.length > urls.length && (
         <span className="text-xs text-muted-foreground ml-1">+{paths.length - urls.length}</span>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -104,6 +103,7 @@ function ApplicationsPage() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "updated_at", dir: "desc" });
+  const [preview, setPreview] = useState<{ id: string; paths: string[]; name: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -281,13 +281,16 @@ function ApplicationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <PhotoThumbs paths={allPhotos} />
+                      <PhotoThumbs paths={allPhotos} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                     </TableCell>
                     <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.updated_at)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setPreview({ id: r.id, paths: allPhotos, name })} title="Podgląd dokumentów i zdjęć">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         <Button asChild size="sm" variant="ghost">
                           <Link to="/admin/wnioski/$id" params={{ id: r.id }}>Otwórz</Link>
                         </Button>
@@ -307,6 +310,16 @@ function ApplicationsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {preview && (
+        <MediaPreviewDialog
+          open={!!preview}
+          onOpenChange={(v) => !v && setPreview(null)}
+          loanApplicationId={preview.id}
+          photoPaths={preview.paths}
+          title={`Podgląd — ${preview.name}`}
+        />
+      )}
     </div>
   );
 }
