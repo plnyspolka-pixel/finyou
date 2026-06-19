@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Download, ExternalLink, FileText, Image as ImageIcon, Loader2, File as FileIcon } from "lucide-react";
 
 type Doc = {
   id: string;
@@ -14,11 +14,15 @@ type Doc = {
   created_at: string;
 };
 
-type PreviewItem = {
+type Kind = "image" | "pdf" | "other";
+
+type MediaItem = {
   key: string;
   name: string;
   url: string;
-  kind: "image" | "pdf" | "other";
+  kind: Kind;
+  source: "photo" | "document";
+  docType?: string | null;
 };
 
 async function signOne(bucket: string, path: string): Promise<string | null> {
@@ -26,10 +30,10 @@ async function signOne(bucket: string, path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
-function inferKind(name: string): PreviewItem["kind"] {
+function inferKind(name: string): Kind {
   const n = name.toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
-  if (/\.(jpe?g|png|webp|gif|heic|bmp|tiff?)$/i.test(n)) return "image";
+  if (/\.(jpe?g|png|webp|gif|heic|bmp|tiff?|avif)$/i.test(n)) return "image";
   return "other";
 }
 
@@ -47,25 +51,31 @@ export function MediaPreviewDialog({
   title?: string;
 }) {
   const [loading, setLoading] = useState(false);
-  const [photos, setPhotos] = useState<PreviewItem[]>([]);
-  const [docs, setDocs] = useState<PreviewItem[]>([]);
-  const [lightbox, setLightbox] = useState<PreviewItem | null>(null);
+  const [items, setItems] = useState<MediaItem[]>([]);
+  const [active, setActive] = useState<MediaItem | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
+      const all: MediaItem[] = [];
+
       // Photos (property-photos bucket)
-      const photoItems: PreviewItem[] = [];
       if (photoPaths.length > 0) {
         const { data } = await supabase.storage
           .from("property-photos")
           .createSignedUrls(photoPaths, 60 * 60);
         (data ?? []).forEach((d, i) => {
           if (d.signedUrl) {
-            const name = photoPaths[i].split("/").pop() ?? `photo-${i}`;
-            photoItems.push({ key: photoPaths[i], name, url: d.signedUrl, kind: "image" });
+            const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
+            all.push({
+              key: `photo:${photoPaths[i]}`,
+              name,
+              url: d.signedUrl,
+              kind: inferKind(name) === "other" ? "image" : inferKind(name),
+              source: "photo",
+            });
           }
         });
       }
@@ -77,149 +87,141 @@ export function MediaPreviewDialog({
         .eq("loan_application_id", loanApplicationId)
         .order("created_at", { ascending: false });
 
-      const docItems: PreviewItem[] = [];
       for (const d of (docRows ?? []) as Doc[]) {
         let url = d.file_url ?? null;
         if (!url && d.file_path) url = await signOne("documents", d.file_path);
         if (!url) continue;
-        docItems.push({
-          key: d.id,
-          name: d.file_name || d.file_path?.split("/").pop() || "dokument",
+        const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
+        all.push({
+          key: `doc:${d.id}`,
+          name,
           url,
-          kind: inferKind(d.file_name || d.file_path || ""),
+          kind: inferKind(name),
+          source: "document",
+          docType: d.document_type,
         });
       }
 
       if (!cancelled) {
-        setPhotos(photoItems);
-        setDocs(docItems);
+        setItems(all);
+        setActive(all[0] ?? null);
         setLoading(false);
       }
     })();
     return () => { cancelled = true; };
   }, [open, loanApplicationId, photoPaths.join("|")]);
 
+  const photoCount = items.filter((i) => i.source === "photo").length;
+  const docCount = items.filter((i) => i.source === "document").length;
+
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{title ?? "Podgląd dokumentów i zdjęć"}</DialogTitle>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-7xl w-[95vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
+        <DialogHeader className="px-4 py-3 border-b">
+          <DialogTitle className="flex items-center gap-3 text-base">
+            <span>{title ?? "Podgląd dokumentów i zdjęć"}</span>
+            <Badge variant="secondary" className="font-normal">
+              <ImageIcon className="h-3 w-3 mr-1" /> {photoCount}
+            </Badge>
+            <Badge variant="secondary" className="font-normal">
+              <FileText className="h-3 w-3 mr-1" /> {docCount}
+            </Badge>
+          </DialogTitle>
+        </DialogHeader>
 
-          {loading && (
-            <div className="flex items-center gap-2 text-muted-foreground py-6">
-              <Loader2 className="h-4 w-4 animate-spin" /> Ładowanie…
-            </div>
-          )}
-
-          {!loading && (
-            <div className="space-y-6">
-              <section>
-                <div className="flex items-center gap-2 mb-2">
-                  <ImageIcon className="h-4 w-4" />
-                  <h3 className="font-semibold">Zdjęcia nieruchomości</h3>
-                  <Badge variant="secondary">{photos.length}</Badge>
-                </div>
-                {photos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Brak zdjęć.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {photos.map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => setLightbox(p)}
-                        className="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
-                      >
-                        <img
-                          src={p.url}
-                          alt={p.name}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-[10px] text-white truncate">
-                          {p.name}
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground p-6">
+            <Loader2 className="h-4 w-4 animate-spin" /> Ładowanie…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-10 text-center text-sm text-muted-foreground">Brak załączników.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] flex-1 min-h-0">
+            {/* Thumbnails sidebar */}
+            <aside className="border-r overflow-y-auto p-2 bg-muted/30">
+              <div className="grid grid-cols-2 gap-2">
+                {items.map((it) => {
+                  const isActive = active?.key === it.key;
+                  return (
+                    <button
+                      key={it.key}
+                      type="button"
+                      onClick={() => setActive(it)}
+                      className={`group relative aspect-square overflow-hidden rounded border bg-background text-left transition ${
+                        isActive ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                      }`}
+                      title={it.name}
+                    >
+                      {it.kind === "image" ? (
+                        <img src={it.url} alt={it.name} loading="lazy" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex flex-col items-center justify-center gap-1 p-2 bg-muted">
+                          {it.kind === "pdf" ? (
+                            <FileText className="h-8 w-8 text-red-500" />
+                          ) : (
+                            <FileIcon className="h-8 w-8 text-muted-foreground" />
+                          )}
+                          <span className="text-[9px] uppercase text-muted-foreground">{it.kind}</span>
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="h-4 w-4" />
-                  <h3 className="font-semibold">Dokumenty</h3>
-                  <Badge variant="secondary">{docs.length}</Badge>
-                </div>
-                {docs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Brak dokumentów.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {docs.map((d) => (
-                      <div key={d.key} className="rounded-lg border overflow-hidden">
-                        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/50">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <FileText className="h-4 w-4 shrink-0" />
-                            <span className="text-sm font-medium truncate">{d.name}</span>
-                            <Badge variant="outline" className="text-[10px] uppercase">{d.kind}</Badge>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button asChild size="sm" variant="ghost">
-                              <a href={d.url} target="_blank" rel="noreferrer" aria-label="Otwórz w nowej karcie">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
-                            <Button asChild size="sm" variant="ghost">
-                              <a href={d.url} download={d.name} aria-label="Pobierz">
-                                <Download className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
-                          </div>
-                        </div>
-                        {d.kind === "pdf" && (
-                          <iframe
-                            src={d.url}
-                            title={d.name}
-                            className="w-full h-[70vh] bg-white"
-                          />
-                        )}
-                        {d.kind === "image" && (
-                          <button
-                            type="button"
-                            onClick={() => setLightbox(d)}
-                            className="block w-full bg-muted"
-                          >
-                            <img src={d.url} alt={d.name} className="max-h-[60vh] w-full object-contain" loading="lazy" />
-                          </button>
-                        )}
-                        {d.kind === "other" && (
-                          <div className="p-4 text-sm text-muted-foreground">
-                            Format niepodglądowy — otwórz lub pobierz plik.
-                          </div>
-                        )}
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                        <div className="text-[9px] text-white truncate">{it.name}</div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                      <Badge
+                        variant={it.source === "photo" ? "default" : "secondary"}
+                        className="absolute top-1 left-1 text-[8px] px-1 py-0 h-4"
+                      >
+                        {it.source === "photo" ? "foto" : "dok"}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
 
-      {/* Lightbox for images */}
-      <Dialog open={!!lightbox} onOpenChange={(v) => !v && setLightbox(null)}>
-        <DialogContent className="max-w-[95vw] p-2 bg-black/95 border-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{lightbox?.name ?? "Zdjęcie"}</DialogTitle>
-          </DialogHeader>
-          {lightbox && (
-            <img src={lightbox.url} alt={lightbox.name} className="max-h-[88vh] w-auto mx-auto object-contain" />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+            {/* Main viewer */}
+            <main className="flex flex-col min-h-0 overflow-hidden">
+              {active && (
+                <>
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {active.kind === "image" ? <ImageIcon className="h-4 w-4 shrink-0" /> : <FileText className="h-4 w-4 shrink-0" />}
+                      <span className="text-sm font-medium truncate">{active.name}</span>
+                      <Badge variant="outline" className="text-[10px] uppercase">{active.kind}</Badge>
+                      {active.docType && <Badge variant="outline" className="text-[10px]">{active.docType}</Badge>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button asChild size="sm" variant="ghost">
+                        <a href={active.url} target="_blank" rel="noreferrer" aria-label="Otwórz w nowej karcie">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                      <Button asChild size="sm" variant="ghost">
+                        <a href={active.url} download={active.name} aria-label="Pobierz">
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-auto bg-black/5">
+                    {active.kind === "image" && (
+                      <img src={active.url} alt={active.name} className="max-h-full max-w-full w-auto mx-auto object-contain" />
+                    )}
+                    {active.kind === "pdf" && (
+                      <iframe src={active.url} title={active.name} className="w-full h-full min-h-[70vh] bg-white" />
+                    )}
+                    {active.kind === "other" && (
+                      <div className="p-8 text-sm text-muted-foreground text-center">
+                        Format niepodglądowy — otwórz lub pobierz plik.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </main>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
