@@ -54,13 +54,12 @@ function WniosekZabezpieczeniePage() {
     } catch {
       /* noop */
     }
-    const url = new URL("/wniosek-start", window.location.origin);
+    const url = new URL("/wniosek-formularz", window.location.origin);
     if (amount) url.searchParams.set("amount", String(amount));
     if (months) url.searchParams.set("months", String(months));
     url.searchParams.set("secType", secType);
     url.searchParams.set("source", "landing_calculator");
-    url.searchParams.set("next", "/wniosek-warunki");
-    void navigate({ to: "/wniosek-start", search: Object.fromEntries(url.searchParams) as Record<string, string> });
+    void navigate({ to: "/wniosek-formularz", search: Object.fromEntries(url.searchParams) as Record<string, string> });
   };
 
   return (

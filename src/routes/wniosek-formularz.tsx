@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
@@ -43,10 +44,9 @@ function KlientWniosek() {
   const [submitting, setSubmitting] = useState(false);
   const captureLead = useServerFn(captureLeadFromApplication);
   const leadFiredRef = useRef(false);
+  // Nie wymuszamy logowania — konto powstanie na ostatnim kroku.
 
-  useEffect(() => {
-    if (!authLoading && !user) void navigate({ to: "/logowanie" });
-  }, [authLoading, user, navigate]);
+
 
 
   const [clientId, setClientId] = useState<string | null>(null);
@@ -72,6 +72,15 @@ function KlientWniosek() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  // Rejestracja w ostatnim kroku (dla niezalogowanych)
+  const [password, setPassword] = useState("");
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptContact, setAcceptContact] = useState(false);
+  // Pliki dodane przed założeniem konta — wysyłamy je po rejestracji
+  const [pendingFiles, setPendingFiles] = useState<{ id: string; file: File; docType: string }[]>([]);
+  // Flaga: użytkownik kliknął "wyślij", konto powstało, czekamy aż useAuth się zaktualizuje
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+
 
   // Nieruchomość
   const [voivodeship, setVoivodeship] = useState("");
@@ -315,7 +324,11 @@ function KlientWniosek() {
   }, [user, firstName, lastName, email, phone, amount, annualRate, months, maxPayment, bizStatus, nip, kwStatus, secType, step]);
 
   const uploadDoc = async (file: File, docType: string) => {
-    if (!loanId || !user) { toast.error("Najpierw przejdź dalej, aby utworzyć wniosek"); return; }
+    // Niezalogowany / brak wniosku — kolejkujemy plik lokalnie, wgramy po założeniu konta.
+    if (!loanId || !user) {
+      setPendingFiles((arr) => [...arr, { id: crypto.randomUUID(), file, docType }]);
+      return;
+    }
     setUploading(true);
     // Sanityzacja nazwy pliku — Supabase Storage odrzuca polskie znaki, spacje i znaki specjalne.
     const safeName = file.name
@@ -362,7 +375,16 @@ function KlientWniosek() {
     }
   };
 
-  const docsByType = (t: string) => docs.filter((d) => d.document_type === t);
+  const removePendingFile = (id: string) => {
+    setPendingFiles((arr) => arr.filter((p) => p.id !== id));
+  };
+
+  const docsByType = (t: string) => [
+    ...docs.filter((d) => d.document_type === t),
+    ...pendingFiles
+      .filter((p) => p.docType === t)
+      .map((p) => ({ id: p.id, file_name: p.file.name, document_type: p.docType, __pending: true as const })),
+  ];
 
   // Walidacja kroków (1=Zabezpieczenie, 2=Zdjęcia, 3=Dane kontaktowe)
   const canNext = (): { ok: boolean; msg?: string } => {
@@ -408,6 +430,11 @@ function KlientWniosek() {
       if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
       if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
+      if (!user) {
+        if (!password || password.length < 6) return { ok: false, msg: "Ustaw hasło (min. 6 znaków)." };
+        if (!acceptPrivacy) return { ok: false, msg: "Zaakceptuj politykę prywatności i regulamin." };
+        if (!acceptContact) return { ok: false, msg: "Wymagana zgoda na kontakt." };
+      }
       return { ok: true };
     }
     return { ok: true };
@@ -416,35 +443,114 @@ function KlientWniosek() {
   const goNext = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
+    if (!user) {
+      // Bez konta nic nie zapisujemy w bazie — tylko przechodzimy dalej.
+      setStep(step + 1);
+      return;
+    }
     await persistAll(step + 1);
   };
 
 
-  // Krok 5 (Dane kontaktowe): zapisz kontakt, lead capture, finalnie wyślij wniosek do inwestora
+  // Wgraj zakolejkowane pliki po utworzeniu wniosku.
+  const flushPendingFiles = async (uid: string, lid: string) => {
+    if (pendingFiles.length === 0) return;
+    for (const pf of pendingFiles) {
+      const safeName = pf.file.name
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/ł/g, "l").replace(/Ł/g, "L")
+        .replace(/[^a-zA-Z0-9._-]+/g, "_")
+        .replace(/_+/g, "_")
+        .slice(0, 120) || "plik";
+      const path = `${uid}/${lid}/${Date.now()}-${safeName}`;
+      const { error: ue } = await supabase.storage.from("documents").upload(path, pf.file, {
+        contentType: pf.file.type || "application/octet-stream",
+        upsert: false,
+      });
+      if (ue) { console.warn("[pending-upload]", ue.message); continue; }
+      await supabase.from("documents").insert({
+        loan_application_id: lid, file_name: pf.file.name, file_path: path,
+        document_type: pf.docType, uploaded_by: uid,
+      });
+    }
+    setPendingFiles([]);
+  };
+
+  const finalizeSubmission = async () => {
+    const cid = await ensureClient();
+    if (!cid) return;
+    const lid = await ensureLoan(cid);
+    if (!lid) return;
+    await persistAll(STEPS.length);
+    if (user) await flushPendingFiles(user.id, lid);
+    // Status — wniosek wysłany do inwestora.
+    await supabase.from("loan_applications").update({ status: "nowy_lead" }).eq("id", lid);
+    if (!leadFiredRef.current && phone.trim()) {
+      leadFiredRef.current = true;
+      try {
+        await captureLead({ data: { loanApplicationId: lid, phone: phone.trim(), firstName: firstName || null } });
+        const { trackEvent } = await import("@/lib/fb-pixel");
+        await trackEvent(
+          "Lead",
+          { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
+          { phone: phone.trim(), firstName: firstName || undefined },
+        );
+      } catch (e: any) {
+        console.warn("[lead-capture]", e);
+      }
+    }
+    toast.success("Wniosek wysłany do inwestora.");
+    void navigate({ to: "/wniosek-opis" });
+  };
+
+  // Po założeniu konta useAuth zaktualizuje user → odpalamy finalizację.
+  useEffect(() => {
+    if (!pendingSubmit || !user) return;
+    void (async () => {
+      try {
+        await finalizeSubmission();
+      } finally {
+        setPendingSubmit(false);
+        setSubmitting(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSubmit, user]);
+
+  // Krok 3: zapisz / zarejestruj i wyślij wniosek
   const saveProposalAndSubmit = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
-      await persistAll(STEPS.length);
-      if (loanId && !leadFiredRef.current && phone.trim()) {
-        leadFiredRef.current = true;
-        try {
-          await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
-          const { trackEvent } = await import("@/lib/fb-pixel");
-          await trackEvent(
-            "Lead",
-            { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
-            { phone: phone.trim(), firstName: firstName || undefined },
-          );
-        } catch (e: any) {
-          console.warn("[lead-capture]", e);
+      if (!user) {
+        // Rejestracja — auto-confirm jest włączony, więc od razu logujemy.
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { data: { first_name: firstName, last_name: lastName, phone } },
+        });
+        if (error) {
+          toast.error("Rejestracja nie powiodła się", { description: error.message });
+          setSubmitting(false);
+          return;
         }
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess.session) {
+          const { error: sErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+          if (sErr) {
+            toast.error("Konto utworzone, ale logowanie nie powiodło się", { description: sErr.message });
+            setSubmitting(false);
+            return;
+          }
+        }
+        // useAuth zaktualizuje user → useEffect odpala finalizeSubmission.
+        setPendingSubmit(true);
+        return;
       }
-      toast.success("Wniosek wysłany do inwestora.");
-      void navigate({ to: "/wniosek-opis" });
+      await finalizeSubmission();
     } finally {
-      setSubmitting(false);
+      if (user) setSubmitting(false);
     }
   };
 
@@ -750,16 +856,66 @@ function KlientWniosek() {
       {step === 3 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Dane kontaktowe</CardTitle>
+            <CardTitle className="text-base">{user ? "Dane kontaktowe" : "Dane kontaktowe i utworzenie konta"}</CardTitle>
+            {!user && (
+              <CardDescription>
+                Po wysłaniu wniosku otrzymasz dostęp do panelu klienta, w którym śledzisz status i dodajesz dokumenty.
+              </CardDescription>
+            )}
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <div><Label className="text-xs">Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div><Label className="text-xs">Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-            <div><Label className="text-xs">E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label className="text-xs">Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label className="text-xs">Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+              <div><Label className="text-xs">Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+              <div><Label className="text-xs">E-mail *</Label><Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div><Label className="text-xs">Telefon *</Label><Input type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" /></div>
+              {!user && (
+                <div className="sm:col-span-2">
+                  <Label className="text-xs">Hasło do panelu klienta *</Label>
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="min. 6 znaków"
+                  />
+                </div>
+              )}
+            </div>
+            {!user && (
+              <div className="space-y-2 rounded-md border p-3 text-sm">
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={acceptPrivacy}
+                    onCheckedChange={(v) => setAcceptPrivacy(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Akceptuję{" "}
+                    <a href="/polityka-prywatnosci" target="_blank" rel="noreferrer" className="text-accent hover:underline">politykę prywatności</a>
+                    {" "}oraz{" "}
+                    <a href="/regulamin" target="_blank" rel="noreferrer" className="text-accent hover:underline">regulamin serwisu</a>
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={acceptContact}
+                    onCheckedChange={(v) => setAcceptContact(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Wyrażam zgodę na kontakt telefoniczny, e-mailowy oraz SMS-owy, w tym z wykorzystaniem agentów konwersacyjnych AI, w celu obsługi mojego wniosku.
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
 
       <div className="flex justify-between gap-2">
         <Button variant="outline" size="sm" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
