@@ -856,16 +856,66 @@ function KlientWniosek() {
       {step === 3 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Dane kontaktowe</CardTitle>
+            <CardTitle className="text-base">{user ? "Dane kontaktowe" : "Dane kontaktowe i utworzenie konta"}</CardTitle>
+            {!user && (
+              <CardDescription>
+                Po wysłaniu wniosku otrzymasz dostęp do panelu klienta, w którym śledzisz status i dodajesz dokumenty.
+              </CardDescription>
+            )}
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <div><Label className="text-xs">Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div><Label className="text-xs">Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
-            <div><Label className="text-xs">E-mail *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label className="text-xs">Telefon *</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label className="text-xs">Imię *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+              <div><Label className="text-xs">Nazwisko *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+              <div><Label className="text-xs">E-mail *</Label><Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div><Label className="text-xs">Telefon *</Label><Input type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" /></div>
+              {!user && (
+                <div className="sm:col-span-2">
+                  <Label className="text-xs">Hasło do panelu klienta *</Label>
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="min. 6 znaków"
+                  />
+                </div>
+              )}
+            </div>
+            {!user && (
+              <div className="space-y-2 rounded-md border p-3 text-sm">
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={acceptPrivacy}
+                    onCheckedChange={(v) => setAcceptPrivacy(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Akceptuję{" "}
+                    <a href="/polityka-prywatnosci" target="_blank" rel="noreferrer" className="text-accent hover:underline">politykę prywatności</a>
+                    {" "}oraz{" "}
+                    <a href="/regulamin" target="_blank" rel="noreferrer" className="text-accent hover:underline">regulamin serwisu</a>
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={acceptContact}
+                    onCheckedChange={(v) => setAcceptContact(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-snug">
+                    Wyrażam zgodę na kontakt telefoniczny, e-mailowy oraz SMS-owy, w tym z wykorzystaniem agentów konwersacyjnych AI, w celu obsługi mojego wniosku.
+                    <span className="text-destructive"> *</span>
+                  </span>
+                </label>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
 
       <div className="flex justify-between gap-2">
         <Button variant="outline" size="sm" disabled={step === 1 || saving} onClick={() => setStep((s) => s - 1)}>
