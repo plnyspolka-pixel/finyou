@@ -122,6 +122,7 @@ import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
+import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 
@@ -715,6 +716,12 @@ const ApiPublicHooksDailyBlogTickRoute =
     path: '/api/public/hooks/daily-blog-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAniaCallbacksRoute =
+  ApiPublicHooksAniaCallbacksRouteImport.update({
+    id: '/api/public/hooks/ania-callbacks',
+    path: '/api/public/hooks/ania-callbacks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
   id: '/api/public/email/open',
   path: '/api/public/email/open',
@@ -824,6 +831,7 @@ export interface FileRoutesByFullPath {
   '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -937,6 +945,7 @@ export interface FileRoutesByTo {
   '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -1055,6 +1064,7 @@ export interface FileRoutesById {
   '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -1174,6 +1184,7 @@ export interface FileRouteTypes {
     | '/operator/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -1287,6 +1298,7 @@ export interface FileRouteTypes {
     | '/operator/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -1404,6 +1416,7 @@ export interface FileRouteTypes {
     | '/operator/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -1463,6 +1476,7 @@ export interface RootRouteChildren {
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
+  ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2276,6 +2290,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksDailyBlogTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/ania-callbacks': {
+      id: '/api/public/hooks/ania-callbacks'
+      path: '/api/public/hooks/ania-callbacks'
+      fullPath: '/api/public/hooks/ania-callbacks'
+      preLoaderRoute: typeof ApiPublicHooksAniaCallbacksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/open': {
       id: '/api/public/email/open'
       path: '/api/public/email/open'
@@ -2517,6 +2538,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
+  ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:
