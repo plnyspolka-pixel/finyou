@@ -140,7 +140,8 @@ export async function placeReminderCall(
   const now = new Date();
   const attempts = (full.loan.reminder_attempts ?? 0) + 1;
   const firstAt = full.loan.first_reminder_at ? new Date(full.loan.first_reminder_at) : now;
-  const next = computeNextReminder({ attempts, firstReminderAt: firstAt, now });
+  const hourScores = await loadHourAnswerScores().catch(() => ({}));
+  const next = computeNextReminder({ attempts, firstReminderAt: firstAt, now, hourScores });
   await s
     .from("loan_applications")
     .update({
