@@ -24,6 +24,7 @@ type Row = {
   return_link: string | null;
   missing_fields: any;
   client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
+  properties: { land_register_number: string | null; photos: any }[] | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -51,7 +52,7 @@ function IncompleteApplicationsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(land_register_number,photos)")
       .in("status", ["nowy_lead", "w_trakcie_uzupelniania"])
       .order("updated_at", { ascending: false })
       .limit(500);
@@ -106,6 +107,8 @@ function IncompleteApplicationsPage() {
                 <TableHead className="text-right">Kwota</TableHead>
                 <TableHead className="text-center">Kompletność</TableHead>
                 <TableHead className="text-center">Krok</TableHead>
+                <TableHead>KW</TableHead>
+                <TableHead className="text-center">Zdjęcia</TableHead>
                 <TableHead>Źródło</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead>Aktualizacja</TableHead>
@@ -114,14 +117,16 @@ function IncompleteApplicationsPage() {
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Brak niekompletnych wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Brak niekompletnych wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
                 const pct = r.completeness_percent ?? 0;
+                const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
+                const photoCount = (r.properties ?? []).reduce((sum, p) => sum + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
@@ -144,6 +149,22 @@ function IncompleteApplicationsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center text-xs">{r.current_form_step ?? "—"}</TableCell>
+                    <TableCell className="text-xs">
+                      {kwNums.length === 0 ? (
+                        <Badge variant="outline" className="text-muted-foreground">brak</Badge>
+                      ) : (
+                        <div className="space-y-0.5">
+                          {kwNums.map((k, i) => <div key={i} className="font-mono">{k}</div>)}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {photoCount > 0 ? (
+                        <Badge variant="secondary">{photoCount}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">0</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{fmtDate(r.created_at)}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{fmtDate(r.updated_at)}</TableCell>
