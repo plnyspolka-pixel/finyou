@@ -8,7 +8,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
-import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { shouldSkipAutoReply } from "@/lib/email-guard.server";
 
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
