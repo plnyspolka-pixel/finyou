@@ -79,9 +79,7 @@ async function handler() {
         dynamicVariables.completion_percent = String(app.completeness_percent ?? 0);
         const missing = Array.isArray(app.missing_fields) ? app.missing_fields : [];
         dynamicVariables.missing_documents = missing.length > 0 ? missing.join(", ") : "wszystko skompletowane";
-        dynamicVariables.return_link =
-          app.return_link ??
-          (app.return_link_token ? `https://financeyou.pl/wniosek/${app.return_link_token}` : "");
+        dynamicVariables.return_link = "https://financeyou.pl";
       }
     }
 

@@ -118,39 +118,33 @@ async function upsertClientAndApplication(opts: {
     .maybeSingle();
 
   let loanApplicationId = existingApp?.id ?? null;
-  let returnLink = existingApp?.return_link ?? null;
+  let returnLink: string | null = "https://financeyou.pl";
   let returnToken = existingApp?.return_link_token ?? null;
 
-  if (!loanApplicationId) {
-    returnToken = crypto.randomUUID().replace(/-/g, "");
-    returnLink = `${opts.origin}/wniosek/${returnToken}`;
-    const { data: app, error: appErr } = await supabaseAdmin
+  if (!existingApp) {
+    returnToken = returnToken ?? crypto.randomUUID();
+    const { data: newApp, error: appErr } = await supabaseAdmin
       .from("loan_applications")
       .insert({
         client_id: clientId,
-        status: "nowy_lead",
-        source: "meta_lead",
+        status: "w_trakcie_uzupelniania",
+        source: "meta_ads",
+        current_form_step: 1,
         return_link_token: returnToken,
         return_link: returnLink,
-        current_form_step: 1,
       })
       .select("id")
       .single();
-    if (appErr || !app) {
-      await supabaseAdmin.from("automation_events").insert({
-        automation_type: "meta_lead_capture",
-        status: "error",
-        error_message: `loan_app insert: ${appErr?.message ?? "no row"}`,
-      });
+    if (appErr || !newApp) {
+      console.error("[meta-leads-webhook] loan_applications insert error", appErr);
       return { loanApplicationId: null, clientId, returnLink: null, firstName: first };
     }
-    loanApplicationId = app.id;
-  } else if (!returnLink || !returnToken) {
-    returnToken = returnToken || crypto.randomUUID().replace(/-/g, "");
-    returnLink = `${opts.origin}/wniosek/${returnToken}`;
-    await supabaseAdmin.from("loan_applications")
-      .update({ return_link_token: returnToken, return_link: returnLink })
-      .eq("id", loanApplicationId);
+    loanApplicationId = newApp.id;
+  } else {
+    await supabaseAdmin
+      .from("loan_applications")
+      .update({ return_link: returnLink })
+      .eq("id", existingApp.id);
   }
 
   return { loanApplicationId, clientId, returnLink, firstName: first };

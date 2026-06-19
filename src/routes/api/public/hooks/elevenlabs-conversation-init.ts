@@ -265,9 +265,7 @@ async function handler({ request }: { request: Request }) {
         dyn.missing_documents_count = allMissing.length;
         dyn.missing_step = allMissing[0] ?? "";
 
-        dyn.application_link =
-          app.return_link ??
-          (app.return_link_token ? `https://app.financeyou.pl/wniosek/${app.return_link_token}` : "");
+        dyn.application_link = "https://financeyou.pl";
 
         // Status decyzji
         const decision = (app.admin_decision ?? "").toLowerCase();
