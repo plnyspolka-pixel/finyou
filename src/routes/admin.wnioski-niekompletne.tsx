@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
-  component: IncompleteApplicationsPage,
+  component: ApplicationsPage,
 });
 
 type Property = { id: string; land_register_number: string | null; photos: string[] | null };
@@ -28,12 +29,19 @@ type Row = {
   properties: Property[] | null;
 };
 
+const INCOMPLETE_STATUSES = ["nowy_lead", "w_trakcie_uzupelniania"];
+const COMPLETE_STATUSES = ["wniosek_kompletny", "do_analizy", "wyslany_do_inwestorow", "zaakceptowany", "odrzucony", "wyplacony", "zakonczony"];
+
 const STATUS_LABEL: Record<string, string> = {
   nowy_lead: "Nowy lead",
   w_trakcie_uzupelniania: "W trakcie uzupełniania",
   wniosek_kompletny: "Kompletny",
   do_analizy: "Do analizy",
   wyslany_do_inwestorow: "Wysłany do inwestorów",
+  zaakceptowany: "Zaakceptowany",
+  odrzucony: "Odrzucony",
+  wyplacony: "Wypłacony",
+  zakonczony: "Zakończony",
 };
 
 function fmtPLN(n: number | null) {
@@ -46,6 +54,7 @@ function fmtDate(s: string) {
 
 type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "photos" | "kw";
 type SortDir = "asc" | "desc";
+type TabKey = "all" | "incomplete" | "complete";
 
 function PhotoThumbs({ paths }: { paths: string[] }) {
   const [urls, setUrls] = useState<string[]>([]);
@@ -89,10 +98,11 @@ function SortHeader({ label, k, sort, setSort, className }: { label: string; k: 
   );
 }
 
-function IncompleteApplicationsPage() {
+function ApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "updated_at", dir: "desc" });
 
   const load = async () => {
@@ -100,13 +110,13 @@ function IncompleteApplicationsPage() {
     const { data, error } = await supabase
       .from("loan_applications")
       .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos)")
-      .in("status", ["nowy_lead", "w_trakcie_uzupelniania"])
       .order("updated_at", { ascending: false })
-      .limit(500);
+      .limit(1000);
     if (!error && data) {
       const list = data as any as Row[];
-      // Auto-promote: KW + photos => wniosek_kompletny (do_analizy)
+      // Auto-promote: KW + photos => wniosek_kompletny
       const toPromote = list.filter((r) => {
+        if (!INCOMPLETE_STATUSES.includes(r.status)) return false;
         const hasKw = (r.properties ?? []).some((p) => !!p.land_register_number && p.land_register_number.trim().length > 0);
         const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
         return hasKw && hasPhotos;
@@ -116,16 +126,32 @@ function IncompleteApplicationsPage() {
           .from("loan_applications")
           .update({ status: "wniosek_kompletny", completeness_percent: 100, updated_at: new Date().toISOString() })
           .in("id", toPromote.map((r) => r.id));
+        // Update local list
+        for (const p of toPromote) {
+          const r = list.find((x) => x.id === p.id);
+          if (r) { r.status = "wniosek_kompletny"; r.completeness_percent = 100; }
+        }
       }
-      setRows(list.filter((r) => !toPromote.find((p) => p.id === r.id)));
+      setRows(list);
     }
     setLoading(false);
   };
 
   useEffect(() => { void load(); }, []);
 
+  const counts = useMemo(() => ({
+    all: rows.length,
+    incomplete: rows.filter((r) => INCOMPLETE_STATUSES.includes(r.status)).length,
+    complete: rows.filter((r) => COMPLETE_STATUSES.includes(r.status)).length,
+  }), [rows]);
+
   const filtered = useMemo(() => {
-    const out = rows.filter((r) => {
+    const byTab = rows.filter((r) => {
+      if (tab === "incomplete") return INCOMPLETE_STATUSES.includes(r.status);
+      if (tab === "complete") return COMPLETE_STATUSES.includes(r.status);
+      return true;
+    });
+    const out = byTab.filter((r) => {
       if (!q.trim()) return true;
       const s = q.toLowerCase();
       const c = r.client;
@@ -157,15 +183,15 @@ function IncompleteApplicationsPage() {
       return 0;
     });
     return out;
-  }, [rows, q, sort]);
+  }, [rows, q, sort, tab]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">Niekompletne wnioski</h1>
+          <h1 className="text-2xl font-semibold">Wnioski</h1>
           <p className="text-sm text-muted-foreground">
-            Wnioski w trakcie wypełniania. Po dodaniu numeru KW oraz zdjęć wniosek zostaje automatycznie oznaczony jako kompletny i wysłany do analizy.
+            Wszystkie wnioski — kompletne i niekompletne. Po dodaniu numeru KW oraz zdjęć wniosek zostaje automatycznie oznaczony jako kompletny.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -174,8 +200,17 @@ function IncompleteApplicationsPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">{filtered.length} wniosków</CardTitle>
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 space-y-0">
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base">{filtered.length} wniosków</CardTitle>
+            <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+              <TabsList>
+                <TabsTrigger value="all">Wszystkie ({counts.all})</TabsTrigger>
+                <TabsTrigger value="incomplete">Niekompletne ({counts.incomplete})</TabsTrigger>
+                <TabsTrigger value="complete">Kompletne ({counts.complete})</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
           <Input
             placeholder="Szukaj: imię, nazwisko, e-mail, telefon, ID…"
             value={q}
@@ -206,13 +241,14 @@ function IncompleteApplicationsPage() {
                 <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Brak niekompletnych wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
                 const pct = r.completeness_percent ?? 0;
                 const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
                 const allPhotos = (r.properties ?? []).flatMap((p) => Array.isArray(p.photos) ? p.photos : []);
+                const isComplete = COMPLETE_STATUSES.includes(r.status);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
@@ -221,7 +257,7 @@ function IncompleteApplicationsPage() {
                       <div className="text-muted-foreground">{r.client?.phone ?? "—"}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={r.status === "nowy_lead" ? "secondary" : "outline"}>
+                      <Badge variant={isComplete ? "default" : r.status === "nowy_lead" ? "secondary" : "outline"}>
                         {STATUS_LABEL[r.status] ?? r.status}
                       </Badge>
                     </TableCell>
