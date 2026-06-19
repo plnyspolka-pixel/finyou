@@ -158,17 +158,14 @@ export async function runMetaLeadsSync(): Promise<{
             .order("created_at", { ascending: false }).limit(1).maybeSingle();
           if (existingApp?.id) {
             loanApplicationId = existingApp.id;
-            returnLink = existingApp.return_link ?? null;
-            if (!returnLink) {
-              const tok = existingApp.return_link_token || crypto.randomUUID().replace(/-/g, "");
-              returnLink = `${origin}/wniosek/${tok}`;
-              await supabaseAdmin.from("loan_applications")
-                .update({ return_link_token: tok, return_link: returnLink })
-                .eq("id", loanApplicationId);
-            }
+            returnLink = "https://financeyou.pl";
+            const tok = existingApp.return_link_token || crypto.randomUUID().replace(/-/g, "");
+            await supabaseAdmin.from("loan_applications")
+              .update({ return_link_token: tok, return_link: returnLink })
+              .eq("id", loanApplicationId);
           } else {
             const tok = crypto.randomUUID().replace(/-/g, "");
-            returnLink = `${origin}/wniosek/${tok}`;
+            returnLink = "https://financeyou.pl";
             const { data: app } = await supabaseAdmin.from("loan_applications").insert({
               client_id: clientId, status: "nowy_lead", source: "meta_lead",
               return_link_token: tok, return_link: returnLink, current_form_step: 1,
