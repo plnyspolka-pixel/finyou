@@ -147,6 +147,19 @@ function ApplicationsPage() {
           if (r) { r.status = "wniosek_kompletny"; r.completeness_percent = 100; }
         }
       }
+      // Bulk fetch document counts per loan_application
+      const ids = list.map((r) => r.id);
+      if (ids.length > 0) {
+        const { data: docs } = await supabase
+          .from("documents")
+          .select("loan_application_id")
+          .in("loan_application_id", ids);
+        const counts: Record<string, number> = {};
+        for (const d of (docs ?? []) as { loan_application_id: string }[]) {
+          counts[d.loan_application_id] = (counts[d.loan_application_id] ?? 0) + 1;
+        }
+        for (const r of list) r.docCount = counts[r.id] ?? 0;
+      }
       setRows(list);
     }
     setLoading(false);
