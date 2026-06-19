@@ -309,7 +309,7 @@ function ApplicationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <PhotoThumbs paths={allPhotos} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
+                      <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                     </TableCell>
                     <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>
