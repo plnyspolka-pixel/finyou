@@ -17,6 +17,8 @@ import {
   groupFields,
   companyValueForField,
   calculatorValueForField,
+  previewSegments,
+  amountKind,
   type DocField,
   type FieldGroup,
   type CompanyBundle,
@@ -54,6 +56,7 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
@@ -110,9 +113,17 @@ function groupIcon(g: FieldGroup) {
   return <FileText className="h-4 w-4 text-muted-foreground" />;
 }
 
-// Token placeholdera — musi odpowiadać TOKEN_RE z document-fields.ts
-const PREVIEW_SPLIT = /(\[[^[\]\n\t]{1,160}\])/g;
-const PREVIEW_TOKEN = /^\[([^[\]\n\t]{1,160})\]$/;
+/** Czy wybrany wzór to Umowa pożyczki (tylko przy niej pokazujemy kalkulator). */
+function isLoanAgreement(t: DocTemplate | null): boolean {
+  if (!t) return false;
+  const slug = (t.slug ?? "").toLowerCase();
+  const name = (t.name ?? "").toLowerCase();
+  return (
+    slug.includes("umowa-pozyczki") ||
+    name.includes("umowa pożyczki") ||
+    name.includes("umowa pozyczki")
+  );
+}
 
 // ════════════════════════════════════════════════════════════════════
 // Pobieranie danych firmowych (GUS → KRS → rachunek)
@@ -169,36 +180,28 @@ export function DocumentCreatorPage() {
     [previewText],
   );
   const groups = useMemo<FieldGroup[]>(() => groupFields(fields), [fields]);
-  const hasAmounts = useMemo(
-    () => fields.some((f) => f.semantic === "amount" || f.semantic === "amountWords"),
-    [fields],
-  );
+  // Kalkulator pokazujemy WYŁĄCZNIE przy Umowie pożyczki.
+  const showCalculator = useMemo(() => isLoanAgreement(selected), [selected]);
 
   // Mapowanie pól "kwota słownie" → odpowiadające pole kwotowe.
   // W jednych wzorach „SŁOWNIE" jest PO kwocie (wezwania), w innych PRZED nią
   // (umowa: „BRUTTO SŁOWNIE", potem „BRUTTO CYFRAMI"). Dlatego szukamy najbliższego
-  // pola kwotowego (w obie strony), preferując ten sam rodzaj kwoty (netto/brutto/
-  // prowizja/łączna) i pole bezpośrednio sąsiadujące.
+  // pola kwotowego (w obie strony), preferując ten sam rodzaj kwoty (przez wspólną
+  // funkcję amountKind) i pole bezpośrednio sąsiadujące.
   const wordsToAmount = useMemo(() => {
-    const kindOf = (key: string) => {
-      const s = key.toLowerCase();
-      if (/prowizj/.test(s)) return "prowizja";
-      if (/netto/.test(s)) return "netto";
-      if (/brutto/.test(s)) return "brutto";
-      if (/łączn|laczn|razem|suma|całkow|calkow|zobowiąz|zobowiaz/.test(s)) return "total";
-      return "plain";
-    };
     const map: Record<string, string> = {};
     const amounts = fields.filter((f) => f.semantic === "amount");
     for (const w of fields) {
       if (w.semantic !== "amountWords") continue;
-      const wk = kindOf(w.key);
+      const wk = amountKind(w.key);
       let best: DocField | null = null;
       let bestScore = Infinity;
       for (const a of amounts) {
         // odległość dominuje; ten sam rodzaj i kierunek „przed" rozstrzygają remisy
         const score =
-          Math.abs(a.occ - w.occ) + (kindOf(a.key) === wk ? 0 : 0.4) + (a.occ < w.occ ? 0 : 0.1);
+          Math.abs(a.occ - w.occ) +
+          (amountKind(a.key) === wk ? 0 : 0.4) +
+          (a.occ < w.occ ? 0 : 0.1);
         if (score < bestScore) {
           bestScore = score;
           best = a;
@@ -280,7 +283,7 @@ export function DocumentCreatorPage() {
 
   // ─── Kalkulator: harmonogram
   const scheduleData = useMemo(() => {
-    if (!hasAmounts) return null;
+    if (!showCalculator) return null;
     return buildDirectorSchedule({
       netAmountToClient: calc.netAmount,
       creditedCommission: calc.commission || 0,
@@ -291,7 +294,7 @@ export function DocumentCreatorPage() {
       investorMonthlyReturnType: "percent",
       investorMonthlyReturnPercent: calc.investorMonthlyPct,
     } as any);
-  }, [calc, hasAmounts]);
+  }, [calc, showCalculator]);
 
   const applyCalculatorToContract = () => {
     if (!scheduleData) return;
@@ -448,7 +451,7 @@ export function DocumentCreatorPage() {
         data: {
           templateId: selected.id,
           values,
-          commissionAmount: hasAmounts && commission > 0 ? commission : null,
+          commissionAmount: showCalculator && commission > 0 ? commission : null,
           commissionAddedToCosts: false,
         },
       });
@@ -559,18 +562,18 @@ export function DocumentCreatorPage() {
 
           {selected && (
             <>
-              <Card>
-                <CardHeader>
+              <Card className="lg:sticky lg:top-4 z-10 shadow-sm">
+                <CardHeader className="pb-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle>{selected.name}</CardTitle>
+                    <div className="min-w-0">
+                      <CardTitle className="leading-snug">{selected.name}</CardTitle>
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         {selected.category && (
                           <Badge className={CATEGORY_COLORS[selected.category] ?? ""}>
                             {CATEGORY_LABELS[selected.category] ?? selected.category}
                           </Badge>
                         )}
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground tabular-nums">
                           {fillableCount > 0
                             ? `${filledCount} / ${fillableCount} pól uzupełnionych`
                             : "wczytywanie pól…"}
@@ -581,6 +584,7 @@ export function DocumentCreatorPage() {
                       onClick={handleGenerate}
                       disabled={generating || previewLoading}
                       size="lg"
+                      className="shrink-0"
                     >
                       {generating ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -590,11 +594,25 @@ export function DocumentCreatorPage() {
                       Generuj DOCX
                     </Button>
                   </div>
+                  {/* Pasek postępu uzupełnienia */}
+                  {fillableCount > 0 && (
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${Math.round((filledCount / fillableCount) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Pola, których nie uzupełnisz, zostaną w dokumencie jako{" "}
+                    <code className="rounded bg-muted px-1">[NAZWA POLA]</code> — treść wzoru nie
+                    jest zmieniana.
+                  </p>
                 </CardHeader>
               </Card>
 
-              {/* Kalkulator pożyczki — gdy wzór ma pola kwotowe */}
-              {hasAmounts && (
+              {/* Kalkulator pożyczki — tylko przy Umowie pożyczki */}
+              {showCalculator && (
                 <Card className="border-primary/30">
                   <CardHeader className="pb-3">
                     <button
@@ -902,6 +920,10 @@ function GroupCard({
     }
   };
 
+  const fillable = group.fields.filter((f) => f.semantic !== "instruction");
+  const groupFilled = fillable.filter((f) => (values[f.id] ?? "").trim().length > 0).length;
+  const allFilled = fillable.length > 0 && groupFilled === fillable.length;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -910,14 +932,29 @@ function GroupCard({
           onClick={() => setOpen((o) => !o)}
           className="flex w-full items-center justify-between gap-2 text-left"
         >
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
             {groupIcon(group)}
             {group.label}
-            <span className="text-xs font-normal text-muted-foreground">
-              ({group.fields.length})
+            <span className="text-xs font-normal text-muted-foreground tabular-nums">
+              {fillable.length > 0
+                ? `${groupFilled}/${fillable.length}`
+                : `(${group.fields.length})`}
             </span>
+            {allFilled && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+            {showCompanyBox && (
+              <Badge
+                variant="secondary"
+                className="gap-1 text-[10px] font-normal text-primary bg-primary/10"
+              >
+                <Building2 className="h-3 w-3" /> auto z GUS/KRS
+              </Badge>
+            )}
           </CardTitle>
-          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {open ? (
+            <ChevronDown className="h-4 w-4 shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 shrink-0" />
+          )}
         </button>
       </CardHeader>
       {open && (
@@ -1114,8 +1151,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Renderuje treść wzoru. Liczy wystąpienia placeholderów w kolejności dokumentu
- * (tak jak silnik pól), więc powtarzające się klucze mają niezależne wartości.
+ * Renderuje treść wzoru. Korzysta z `previewSegments` — TEGO SAMEGO tokenizera,
+ * co silnik pól — więc indeksy wystąpień (occ) są spójne z wartościami formularza,
+ * a powtarzające się klucze mają niezależne wartości.
  */
 function PreviewRenderer({
   text,
@@ -1124,22 +1162,18 @@ function PreviewRenderer({
   text: string;
   values: Record<string, string> | null;
 }) {
-  const parts = text.split(PREVIEW_SPLIT);
-  let occ = -1;
+  const segments = previewSegments(text);
   return (
     <pre className="whitespace-pre-wrap break-words text-[13px] leading-relaxed font-sans text-foreground">
-      {parts.map((part, i) => {
-        const m = part.match(PREVIEW_TOKEN);
-        if (!m) return <span key={i}>{part}</span>;
-        occ += 1;
-        const key = m[1];
-        const val = values ? (values[String(occ)] ?? "").trim() : "";
+      {segments.map((seg, i) => {
+        if (!seg.isToken) return <span key={i}>{seg.text}</span>;
+        const val = values ? (values[String(seg.occ)] ?? "").trim() : "";
         if (values && val) {
           return (
             <span
               key={i}
               className="rounded bg-emerald-100 dark:bg-emerald-900/40 px-1 font-semibold text-emerald-900 dark:text-emerald-100"
-              title={`Wypełnione: ${key}`}
+              title={`Wypełnione: ${seg.key}`}
             >
               {val}
             </span>
@@ -1151,7 +1185,7 @@ function PreviewRenderer({
             className="rounded bg-amber-100 dark:bg-amber-900/40 px-1 font-mono text-[12px] text-amber-900 dark:text-amber-100 border border-amber-300/60 dark:border-amber-700/60"
             title="Pole do uzupełnienia"
           >
-            [{key}]
+            {seg.text}
           </span>
         );
       })}
