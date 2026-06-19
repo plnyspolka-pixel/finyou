@@ -1,83 +1,81 @@
-## Problem
+# Plan: kreator dokumentów, panel operatora, propozycje inwestora
 
-W bazie jest 121 rozmów voicebota, z czego 77 wisi w statusie `w_trakcie` i **żadna nie ma zapisanego transkryptu, audio ani czasu trwania**. Webhook ElevenLabs (`/api/public/elevenlabs-webhook`) prawdopodobnie nie jest podpięty po stronie ElevenLabs lub jego ostatnie wywołania zawiodły. Dlatego panel `/admin/voicebot` pokazuje tylko: numer, status, próby, datę — bez treści rozmowy.
+Zakres jest bardzo szeroki — robię to w **4 osobnych iteracjach**, każda kończy się czymś działającym i testowalnym. Po Twoim "ok" odpalam iterację 1.
 
-## Cel
+---
 
-1. Zacząć faktycznie zaciągać pełne dane każdej rozmowy z API ElevenLabs (transkrypt, audio, czas trwania, analiza, koszt) — niezależnie od webhooka.
-2. Rozbudować `/admin/voicebot` o filtrowanie/wyszukiwarkę oraz podgląd każdej rozmowy: czas trwania, godziny, pełny transkrypt (user/agent w bańkach), odtwarzacz audio, analiza AI (sukces, podsumowanie, sentyment, koszt).
-3. `/admin/klienci` już używa `LeadDetailView`, który renderuje rozmowy voicebota z transkryptem i audio z `lead_communications` — po wzbogaceniu danych zacznie to działać automatycznie, bez zmian w UI klienta.
+## Iteracja 1 — Fundament: kreator dokumentów (DOCX + PDF)
 
-## Backend
+**Co dostajesz:** w panelach `/admin`, `/inwestor`, `/operator` nowa zakładka **„Kreator dokumentów"** z listą 31 wzorów z pakietu B2B. Wybierasz wzór → formularz z polami → generujesz DOCX i PDF.
 
-**Nowa funkcja `enrichVoicebotConversation(conversationId)`** w `src/lib/voicebot-enrich.server.ts`:
-- `GET https://api.elevenlabs.io/v1/convai/conversations/{id}` z nagłówkiem `xi-api-key` (z `ELEVENLABS_API_KEY`).
-- Pobiera: `status`, `metadata.call_duration_secs`, `metadata.start_time_unix_secs`, `metadata.cost`, `metadata.termination_reason`, `transcript` (tablica tur z `role`/`message`), `analysis.call_successful`, `analysis.transcript_summary`, `analysis.evaluation_criteria_results`, `audio_url` (lub osobny endpoint `/audio`).
-- Aktualizuje `call_queue` (`status`, `started_at`, `finished_at`, `transcript` tekst, `result_summary`, `raw_result` JSON).
-- Aktualizuje istniejący wpis w `lead_communications` (po `external_id = conversation_id`) lub dopisuje brakujące pola: `transcript`, `recording_url`, `duration_seconds`, `metadata.call_outcome`, `metadata.analysis`, `metadata.cost_credits`, `status` (Odebrana / Nieodebrana / itd.). Re-używa istniejącej logiki `classifyOutcome` (wyciągniętej z webhooka do osobnego helpera).
+**Backend:**
+- Upload wszystkich 31 `.docx` do bucketu `documents/templates/` (Storage).
+- Migracja: seed do `document_templates` (nazwa, kategoria: `windykacja` / `umowa` / `zalacznik`, lista placeholderów wyciągniętych z `[NAWIASÓW KWADRATOWYCH]`, ścieżka do pliku w Storage).
+- Nowa tabela `generated_documents` (lead_id?, loan_application_id?, template_id, dane formularza JSONB, ścieżki do docx/pdf w Storage, created_by, created_at). RLS: właściciel + administrator + operator + inwestor (dla swoich).
+- Server fn `generateDocumentFromTemplate({ templateId, data, leadId?, loanId? })`:
+  - pobiera szablon z Storage
+  - **DOCX:** `docxtemplater` — podmiana `[PLACEHOLDER]` na wartości (custom delimiter `[`/`]`)
+  - **PDF:** konwersja przez zewnętrzne API (CloudConvert / Docs2Pdf). LibreOffice nie działa w Cloudflare Worker, więc albo dodaję konektor zewnętrzny, albo na start zwracam tylko DOCX i PDF dorabiam w iteracji 1b. **Wymaga decyzji** — patrz pytanie niżej.
+  - zapisuje oba pliki w Storage, wpis do `generated_documents`.
 
-**Server function `enrichPendingVoicebotConversations()`** w `src/lib/voicebot.functions.ts`:
-- Zabezpieczone `requireSupabaseAuth` + sprawdzenie roli administratora/operatora.
-- Pobiera z `call_queue` rozmowy z `conversation_id IS NOT NULL` i (`status IN ('w_trakcie','wykonane')` lub `raw_result IS NULL`) z ostatnich 30 dni, max 50 na wywołanie.
-- Dla każdej woła `enrichVoicebotConversation`. Zwraca podsumowanie `{ checked, updated, errors }`.
+**UI:**
+- `/admin/dokumenty`, `/inwestor/dokumenty`, `/operator/dokumenty` — wspólny komponent `DocumentCreator`.
+- Lewa kolumna: lista wzorów pogrupowana po kategorii.
+- Prawa: formularz auto-generowany z `placeholders` (pola: data, kwota, tekst, słownie). Wspólne pola (dane wierzyciela, dłużnika, umowy) pre-fill z wybranego leada/wniosku.
+- **Prowizja za pośrednictwo:** osobne pole „Prowizja pośrednika [PLN]" + checkbox „dolicz do kosztów pożyczki" — wartość trafia do `[KWOTA]` / `[KWOTA ŁĄCZNA]` w odpowiednich szablonach (Aneks 01, Umowa pożyczki U01-04, Tabela opłat 23).
+- Historia wygenerowanych dokumentów dla danego leada.
 
-**Cron** (przez `supabase--insert`, NIE migracja — to dane runtime):
-- `pg_cron` co 2 minuty woła nowy endpoint `/api/public/hooks/voicebot-enrich-tick`, który wywołuje powyższą logikę enrich (z `pg_try_advisory_lock` żeby nie nakładały się równoległe wywołania).
+---
 
-**Server function `getVoicebotConversation(callQueueId)`**: zwraca cały wiersz `call_queue` + powiązany `lead_communications` (po `external_id`). Używana w UI do rozwinięcia szczegółów.
+## Iteracja 2 — Panel operatora: leady + komunikacja
 
-## UI — `/admin/voicebot`
+**Co dostajesz:** `/operator` — operator widzi WSZYSTKIE leady (read-only na razie), klika lead → pełny widok 360°.
 
-### Pasek statystyk (na górze nad kolejką)
-4 kafelki dla okresu „dziś" i „7 dni" (toggle):
-- Liczba rozmów
-- % odebranych (`call_outcome = answered`)
-- Średni czas trwania
-- Łączny koszt (suma `metadata.cost_credits`)
+**UI:**
+- `/operator` — dashboard (liczniki: nowe / w pracy / do oddzwonienia).
+- `/operator/leady` — lista wszystkich leadów (filtry: status, źródło, audience, data). Wyszukiwarka po telefonie/emailu/PESEL/NIP.
+- `/operator/leady/$id` — widok leada w **maks. czytelnej formie**:
+  - dane kontaktowe + przyciski **„Zadzwoń"** (`tel:` — działa z mobila) i **„SMS"**, „Email"
+  - timeline `lead_communications` (wszystkie wysłane SMS-y, maile, calle, followupy z statusem dostarczenia/otwarcia/kliknięcia)
+  - transkrypty rozmów voicebota (ElevenLabs — z `lead_communications` gdzie `kind = voice_call`)
+  - powiązane wnioski (`loan_applications`)
+  - dokumenty (wszystko z `documents` + `generated_documents`)
+- **Ocena leada dla Mety (CAPI):** w widoku leada przycisk „Oznacz jakość: lead_quality (good/bad/spam)" → server fn wysyła `lead` event do Meta CAPI z `event_source_url` + `lead_id` + wynikiem oceny. Dodaję kolumnę `quality_rating` do `leads`.
 
-### Pasek filtrów
-- Wyszukiwarka po numerze i fragmencie transkryptu.
-- Select `status` (oczekuje / w_trakcie / wykonane / nieodebrana / blad).
-- Select `źródło` (meta_lead / wniosek_krok2 / manual / test).
-- Range dat (od / do, domyślnie 7 dni).
-- Przycisk „Odśwież z ElevenLabs" → woła `enrichPendingVoicebotConversations` z toastem `Zaktualizowano X / sprawdzono Y`.
+---
 
-### Lista rozmów
-Każdy wiersz po lewej (jak teraz):
-- Numer, źródło, próby, data utworzenia, ID konwersacji.
+## Iteracja 3 — Operator: ręczny wniosek + dedup
 
-Po prawej dodatkowe pola, jeśli dostępne:
-- Czas trwania (`mm:ss`), godzina start (Europe/Warsaw), wynik (badge `success` / `failure`), koszt w kredytach.
-- Powiązany klient/wniosek (link do `/admin/klienci/{id}` lub `/admin/wnioski/{id}`) jeśli mamy `client_id` / `loan_application_id`.
+**Co dostajesz:** operator może z `/operator/leady/$id` (albo z listy) dodać ręcznie wniosek pożyczkowy w imieniu klienta.
 
-Klik w wiersz → rozwija panel:
-- Krótkie podsumowanie z `analysis.transcript_summary`.
-- Odtwarzacz `<audio controls src={recording_url} />` jeśli jest.
-- Pełny transkrypt jak w `LeadDetailView` — turny user/agent w bańkach (klient po prawej w `primary`, voicebot po lewej), z `whitespace-pre-wrap` i scrollem.
-- Metadane: `disconnection_reason`, `call_successful`, `evaluation_criteria_results` w postaci listy.
+**Backend:**
+- Server fn `manualCreateApplication({ leadId?, dane })`:
+  - Krok 1: dedup po `phone` + `email` + `pesel` + `nip` → zwraca propozycje dopasowania (istniejące leady / wnioski).
+  - Krok 2: po potwierdzeniu — jeśli matchujemy istniejący lead, podpinamy; jeśli nie — tworzymy nowy `lead` + `loan_application`.
+  - Auto-przypisanie `operator_id` (kto stworzył).
+- UI: wizard 3-krokowy (dane → potwierdzenie dopasowania → szczegóły wniosku).
 
-### Drobne porządki
-- Stała `STATUS_LABELS` rozszerzona o `nieodebrana`, `poczta_glosowa`, `wykonane`.
-- Kolory badge'a poprawne dla każdego statusu.
+---
 
-## Pliki
+## Iteracja 4 — Propozycje od inwestora + integracja z kreatorem
 
-**Nowe:**
-- `src/lib/voicebot-enrich.server.ts` — fetch z ElevenLabs + classifyOutcome.
-- `src/routes/api/public/hooks/voicebot-enrich-tick.ts` — endpoint cron.
-- `src/components/admin/VoicebotConversationCard.tsx` — wiersz + rozwijany panel z transkryptem/audio/analizą.
-- `src/components/admin/VoicebotStats.tsx` — pasek statystyk.
+**Co dostajesz:** w `/inwestor` osobna sekcja „Propozycje dla klientów" — inwestor wybiera lead/wniosek i ręcznie wystawia ofertę. Operator widzi to w panelu leada.
 
-**Zmienione:**
-- `src/lib/voicebot.functions.ts` — dodaje `enrichPendingVoicebotConversations`, `getVoicebotConversation`. Eksportuje też `listVoicebotConversations({ filters })` dla wyszukiwarki/filtrów po stronie serwera (zamiast czystego `supabase` z klienta) — żeby filtr po transkrypcie nie ciągnął wszystkiego do przeglądarki.
-- `src/routes/admin.voicebot.tsx` — nowa lista, filtry, statystyki, przycisk „Odśwież z ElevenLabs".
-- `src/routes/api/public/elevenlabs-webhook.ts` — wyekstrahowanie `classifyOutcome` do `voicebot-enrich.server.ts` (DRY), reszta bez zmian.
+**Backend:**
+- Rozszerzenie `investor_offers` (jeśli brakuje pól): `loan_application_id`, `commission_amount`, `total_cost_with_commission`, `manual` (bool).
+- Powiązanie kreatora dokumentów z konkretną ofertą — przy generowaniu „Umowy pożyczki" pobieramy parametry z `investor_offers` + prowizję.
 
-**Cron (przez `supabase--insert`, po wdrożeniu kodu):**
-- `cron.schedule('voicebot-enrich-tick', '*/2 * * * *', ...)` strzelający do `https://project--5394e6ca-0160-41ed-aa82-1afa633ecc0c.lovable.app/api/public/hooks/voicebot-enrich-tick`.
+**UI:**
+- `/inwestor/propozycje/nowa` — formularz: wybierz lead → kwota / okres / oprocentowanie / prowizja pośrednika → wystaw.
+- W `/operator/leady/$id` sekcja „Propozycje od inwestorów" z przyciskiem „Generuj komplet dokumentów" (umowa U01-04, oświadczenie 777 U05, klauzula RODO U08, KYC U09 — jednym strzałem).
 
-## Czego NIE robię
+---
 
-- Nie ruszam `/admin/klienci` ani `LeadDetailView` — one już renderują rozmowy voicebota z `lead_communications`. Po wzbogaceniu danych transkrypt/audio pojawią się tam automatycznie.
-- Nie zmieniam istniejącego webhooka po stronie ElevenLabs — enrich pull działa równolegle i jest odporny na brakujący webhook.
-- Nie dodaję na razie osobnej strony szczegółów rozmowy — wystarczy rozwijany panel inline.
+## Pytanie blokujące iterację 1
+
+**PDF — jak generujemy?** Cloudflare Worker nie ma LibreOffice. Opcje:
+1. **CloudConvert API** (płatne ~$0.01/konwersja) — najbardziej niezawodne, dorzucam jako secret.
+2. **Tylko DOCX teraz**, PDF dorobimy gdy podasz preferowane API.
+3. **Browser-side** — render DOCX → PDF w przeglądarce (lib `docx-preview` + `html2pdf`) — gorsza jakość, ale 0 kosztów i bez zewnętrznych API.
+
+Napisz **1 / 2 / 3**, a jak masz preferowane API (CloudConvert / inne) — to też powiedz. Zatwierdzasz plan?

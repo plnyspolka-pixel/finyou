@@ -1737,6 +1737,7 @@ export type Database = {
       }
       document_templates: {
         Row: {
+          audience: string[] | null
           category: string | null
           content_html: string
           created_at: string
@@ -1746,10 +1747,14 @@ export type Database = {
           name: string
           output_format: string
           placeholders: Json
+          slug: string | null
+          sort_order: number | null
+          template_file_path: string | null
           updated_at: string
           use_case: string
         }
         Insert: {
+          audience?: string[] | null
           category?: string | null
           content_html?: string
           created_at?: string
@@ -1759,10 +1764,14 @@ export type Database = {
           name: string
           output_format?: string
           placeholders?: Json
+          slug?: string | null
+          sort_order?: number | null
+          template_file_path?: string | null
           updated_at?: string
           use_case?: string
         }
         Update: {
+          audience?: string[] | null
           category?: string | null
           content_html?: string
           created_at?: string
@@ -1772,6 +1781,9 @@ export type Database = {
           name?: string
           output_format?: string
           placeholders?: Json
+          slug?: string | null
+          sort_order?: number | null
+          template_file_path?: string | null
           updated_at?: string
           use_case?: string
         }
@@ -2432,6 +2444,92 @@ export type Database = {
           water_depth?: number | null
         }
         Relationships: []
+      }
+      generated_documents: {
+        Row: {
+          commission_added_to_costs: boolean | null
+          commission_amount: number | null
+          created_at: string
+          created_by: string | null
+          docx_path: string | null
+          file_size_bytes: number | null
+          form_data: Json
+          id: string
+          investor_offer_id: string | null
+          lead_id: string | null
+          loan_application_id: string | null
+          pdf_path: string | null
+          template_id: string | null
+          template_name: string | null
+          template_slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          commission_added_to_costs?: boolean | null
+          commission_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          docx_path?: string | null
+          file_size_bytes?: number | null
+          form_data?: Json
+          id?: string
+          investor_offer_id?: string | null
+          lead_id?: string | null
+          loan_application_id?: string | null
+          pdf_path?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          template_slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          commission_added_to_costs?: boolean | null
+          commission_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          docx_path?: string | null
+          file_size_bytes?: number | null
+          form_data?: Json
+          id?: string
+          investor_offer_id?: string | null
+          lead_id?: string | null
+          loan_application_id?: string | null
+          pdf_path?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          template_slug?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_documents_investor_offer_id_fkey"
+            columns: ["investor_offer_id"]
+            isOneToOne: false
+            referencedRelation: "investor_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       google_ad_drafts: {
         Row: {
