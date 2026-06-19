@@ -183,3 +183,55 @@ export const getGeneratedDocSignedUrl = createServerFn({ method: "POST" })
     if (error || !signed) throw new Error(error?.message ?? "Brak URL");
     return { url: signed.signedUrl };
   });
+
+/** Podgląd treści wzoru — zwraca plain-text z placeholderami `[KLUCZ]`. */
+export const getDocxTemplatePreview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { templateId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: tpl, error: tplErr } = await context.supabase
+      .from("document_templates")
+      .select("template_file_path, placeholders")
+      .eq("id", data.templateId)
+      .maybeSingle();
+    if (tplErr) throw new Error(tplErr.message);
+    if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
+
+    const { data: file, error: dlErr } = await context.supabase.storage
+      .from("documents")
+      .download(tpl.template_file_path);
+    if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
+
+    const arrayBuf = await file.arrayBuffer();
+    const { default: PizZip } = await import("pizzip");
+    const zip = new PizZip(arrayBuf);
+    let xml = zip.file("word/document.xml")?.asText() ?? "";
+
+    // Zlepiamy rozbite runy placeholderów [KLUCZ]
+    const keys = (Array.isArray(tpl.placeholders) ? (tpl.placeholders as string[]) : []);
+    for (const key of keys) {
+      const esc = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp("\\[" + esc.split("").join("(?:<[^>]+>)*") + "\\]", "g");
+      xml = xml.replace(pattern, `[${key}]`);
+    }
+
+    // Zamiana XML na plain text z zachowaniem struktury
+    const text = xml
+      .replace(/<w:tab[^>]*\/>/g, "\t")
+      .replace(/<w:br[^>]*\/>/g, "\n")
+      .replace(/<\/w:p>/g, "\n")
+      .replace(/<\/w:tr>/g, "\n")
+      .replace(/<\/w:tc>/g, " | ")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    return { text, placeholders: keys };
+  });
