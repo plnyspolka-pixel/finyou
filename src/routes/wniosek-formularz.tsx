@@ -227,7 +227,7 @@ function KlientWniosek() {
     const { data, error } = await supabase.from("loan_applications").insert({
       client_id: cid, status: "w_trakcie_uzupelniania", source: "panel_klienta",
       current_form_step: step, return_link_token: token,
-      return_link: `${window.location.origin}/wniosek/${token}`,
+      return_link: `https://financeyou.pl/wniosek/${token}`,
     }).select("id").single();
     if (error || !data) { toast.error("Błąd zapisu wniosku", { description: error?.message }); return null; }
     setLoanId(data.id);
