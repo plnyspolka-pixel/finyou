@@ -208,8 +208,9 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     // Zlepiamy rozbite runy placeholderów [KLUCZ]
     const keys = (Array.isArray(tpl.placeholders) ? (tpl.placeholders as string[]) : []);
     for (const key of keys) {
-      const esc = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const pattern = new RegExp("\\[" + esc.split("").join("(?:<[^>]+>)*") + "\\]", "g");
+      const escapeRe = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const perChar = Array.from(key).map(escapeRe).join("(?:<[^>]+>)*");
+      const pattern = new RegExp("\\[" + perChar + "\\]", "g");
       xml = xml.replace(pattern, `[${key}]`);
     }
 
