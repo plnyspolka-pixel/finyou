@@ -16,8 +16,9 @@ const TRACKED_PREFIXES = [
 ];
 
 // Ścieżki, z których WOLNO automatycznie przekierować na zapisany etap.
+// UWAGA: NIE dodawaj "/" — strona główna musi być zawsze dostępna bez
+// przekierowania, nawet jeśli ktoś ma w localStorage zapisany etap wniosku.
 const RESUME_FROM = new Set<string>([
-  "/",
   "/wniosek-start",
 ]);
 
