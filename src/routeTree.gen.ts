@@ -36,6 +36,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as OperatorKreatorDokumentowRouteImport } from './routes/operator.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -256,6 +257,12 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperatorKreatorDokumentowRoute =
+  OperatorKreatorDokumentowRouteImport.update({
+    id: '/kreator-dokumentow',
+    path: '/kreator-dokumentow',
+    getParentRoute: () => OperatorRoute,
+  } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -765,6 +772,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -874,6 +882,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
@@ -988,6 +997,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -1103,6 +1113,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
+    | '/operator/kreator-dokumentow'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1212,6 +1223,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
+    | '/operator/kreator-dokumentow'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
@@ -1325,6 +1337,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
+    | '/operator/kreator-dokumentow'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1623,6 +1636,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/kreator-dokumentow': {
+      id: '/operator/kreator-dokumentow'
+      path: '/kreator-dokumentow'
+      fullPath: '/operator/kreator-dokumentow'
+      preLoaderRoute: typeof OperatorKreatorDokumentowRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -2371,10 +2391,12 @@ const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
 interface OperatorRouteChildren {
+  OperatorKreatorDokumentowRoute: typeof OperatorKreatorDokumentowRoute
   OperatorIndexRoute: typeof OperatorIndexRoute
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
+  OperatorKreatorDokumentowRoute: OperatorKreatorDokumentowRoute,
   OperatorIndexRoute: OperatorIndexRoute,
 }
 
