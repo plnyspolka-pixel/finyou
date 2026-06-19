@@ -115,6 +115,9 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
         });
         if (stored.length && inboundLogId) {
           await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
+          try {
+            await attachStoredToClientDocuments({ leadId, stored, sourceLabel: "email" });
+          } catch (e) { console.error("[mailgun-inbound] attach to client docs", e); }
         }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź nagłówki/suppression/rate-limit/pętle
