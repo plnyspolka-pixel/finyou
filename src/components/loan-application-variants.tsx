@@ -643,10 +643,6 @@ export function LinearLoanApplication({
                 className="h-16 font-mono text-2xl font-extrabold tracking-wider tabular-nums md:text-3xl"
                 autoFocus
               />
-              <p className="text-xs text-muted-foreground">
-                Adres i dane nieruchomości pobierzemy automatycznie z KW. Format:{" "}
-                <span className="font-mono">XX1X/00000000/0</span>
-              </p>
 
               <details
                 className="group rounded-xl border border-border bg-muted/30 transition-colors hover:bg-muted/50"
