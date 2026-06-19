@@ -21,6 +21,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
@@ -177,6 +178,11 @@ const RegulaminRoute = RegulaminRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorRoute = OperatorRouteImport.update({
+  id: '/operator',
+  path: '/operator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NoweHasloRoute = NoweHasloRouteImport.update({
@@ -696,6 +702,7 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -804,6 +811,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -916,6 +924,7 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -1029,6 +1038,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1137,6 +1147,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1248,6 +1259,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1360,6 +1372,7 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   NoweHasloRoute: typeof NoweHasloRoute
+  OperatorRoute: typeof OperatorRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
@@ -1494,6 +1507,13 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operator': {
+      id: '/operator'
+      path: '/operator'
+      fullPath: '/operator'
+      preLoaderRoute: typeof OperatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nowe-haslo': {
@@ -2341,6 +2361,7 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   NoweHasloRoute: NoweHasloRoute,
+  OperatorRoute: OperatorRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
