@@ -324,7 +324,11 @@ function KlientWniosek() {
   }, [user, firstName, lastName, email, phone, amount, annualRate, months, maxPayment, bizStatus, nip, kwStatus, secType, step]);
 
   const uploadDoc = async (file: File, docType: string) => {
-    if (!loanId || !user) { toast.error("Najpierw przejdź dalej, aby utworzyć wniosek"); return; }
+    // Niezalogowany / brak wniosku — kolejkujemy plik lokalnie, wgramy po założeniu konta.
+    if (!loanId || !user) {
+      setPendingFiles((arr) => [...arr, { id: crypto.randomUUID(), file, docType }]);
+      return;
+    }
     setUploading(true);
     // Sanityzacja nazwy pliku — Supabase Storage odrzuca polskie znaki, spacje i znaki specjalne.
     const safeName = file.name
@@ -371,7 +375,16 @@ function KlientWniosek() {
     }
   };
 
-  const docsByType = (t: string) => docs.filter((d) => d.document_type === t);
+  const removePendingFile = (id: string) => {
+    setPendingFiles((arr) => arr.filter((p) => p.id !== id));
+  };
+
+  const docsByType = (t: string) => [
+    ...docs.filter((d) => d.document_type === t),
+    ...pendingFiles
+      .filter((p) => p.docType === t)
+      .map((p) => ({ id: p.id, file_name: p.file.name, document_type: p.docType, __pending: true as const })),
+  ];
 
   // Walidacja kroków (1=Zabezpieczenie, 2=Zdjęcia, 3=Dane kontaktowe)
   const canNext = (): { ok: boolean; msg?: string } => {
