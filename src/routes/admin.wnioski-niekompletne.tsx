@@ -24,6 +24,7 @@ type Row = {
   return_link: string | null;
   missing_fields: any;
   client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
+  properties: { land_register_number: string | null; photos: any }[] | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
