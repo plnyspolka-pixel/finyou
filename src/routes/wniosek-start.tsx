@@ -186,7 +186,6 @@ function WniosekStartPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/wniosek-start`,
         data: { first_name: firstName, last_name: lastName, phone },
       },
     });
@@ -293,7 +292,7 @@ function WniosekStartPage() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{mode === "signup" ? "Zobacz harmonogram spłat" : "Zaloguj się"}</CardTitle>
+          <CardTitle>{mode === "signup" ? "Załóż konto i kontynuuj wniosek" : "Zaloguj się"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
 
@@ -351,7 +350,7 @@ function WniosekStartPage() {
                 </label>
               </div>
               <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
-                {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
+                {busy ? "Tworzenie konta…" : "Załóż konto i kontynuuj"}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">
