@@ -103,6 +103,7 @@ function ApplicationsPage() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "updated_at", dir: "desc" });
+  const [preview, setPreview] = useState<{ id: string; paths: string[]; name: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
