@@ -340,6 +340,26 @@ ${bodyInner}
       subject, mg_message_id: res.id ?? null,
     }).eq("id", sendId);
 
+    // Loguj wysyłkę do lead_communications (żeby licznik "maile" na liście klientów się zgadzał)
+    try {
+      const { logLeadCommunication } = await import("@/lib/lead-comms.server");
+      await logLeadCommunication({
+        loanApplicationId: loan.id,
+        clientId: loan.client?.id ?? null,
+        email: loan.client?.email ?? null,
+        phoneNormalized: loan.client?.phone_normalized ?? null,
+        channel: "email",
+        direction: "outbound",
+        status: "sent",
+        subject,
+        content: text,
+        externalId: res.id ?? null,
+        metadata: { source: "loan_reminder_sequence", variant_id: variant.id, send_id: sendId, sequence_index: nextSeq },
+      });
+    } catch (e) {
+      console.error("[loan-reminder-emails] log comm error", e);
+    }
+
     // Inkrementuj statystyki wariantu (atomowo przez SQL — tu prosty UPDATE)
     await s.rpc("increment_email_variant_sent", { p_variant_id: variant.id }).then(
       () => {},
