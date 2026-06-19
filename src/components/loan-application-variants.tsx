@@ -482,7 +482,7 @@ export function LinearLoanApplication({
   const next = async () => {
     if (!canContinue()) {
       if (step === 6) {
-        toast.error("Wpisz numer księgi wieczystej, zanim przejdziesz dalej");
+        toast.error("Wpisz numer księgi wieczystej lub wgraj akt własności nieruchomości");
         return;
       }
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
