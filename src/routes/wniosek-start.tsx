@@ -292,7 +292,7 @@ function WniosekStartPage() {
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{mode === "signup" ? "Zobacz harmonogram spłat" : "Zaloguj się"}</CardTitle>
+          <CardTitle>{mode === "signup" ? "Załóż konto i kontynuuj wniosek" : "Zaloguj się"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
 
