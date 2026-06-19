@@ -30,6 +30,7 @@ import {
   Building2,
   CalendarDays,
   ArrowRight,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
