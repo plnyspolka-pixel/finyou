@@ -419,6 +419,13 @@ export function DocumentCreatorPage() {
     setFormData(defaults);
     setCommission("");
     setAddCommissionToCosts(false);
+    // Załaduj podgląd treści wzoru
+    setPreviewText("");
+    setPreviewLoading(true);
+    _preview({ data: { templateId: selected.id } })
+      .then(r => setPreviewText(r.text))
+      .catch((e: any) => toast.error(`Podgląd wzoru: ${e?.message ?? "błąd"}`))
+      .finally(() => setPreviewLoading(false));
   }, [selected?.id]);
 
   // auto KWOTA SŁOWNIE
