@@ -109,7 +109,7 @@ export const EMAIL_TEMPLATES: Record<number, Tpl> = {
        body: (v) => `${greet(v)}\n\n„Bank odmówił, Finance You dał 150 tys. w 9 dni. Polecam." — pani Anna z Krakowa.\n„Pomogli mi spokojnie ułożyć finanse." — pan Marek z Wrocławia.\n\nTakich historii mamy dużo — chętnie dopiszę kolejną z Twoim happy endem. ${cta(v)}${sig}` },
   10:{ subject: "Tylko 3 rzeczy potrzebujemy do oferty",
        body: (v) => `${greet(v)}\n\nDo przygotowania konkretnej oferty wystarczą:\n• numer księgi wieczystej (lub zdjęcia aktu)\n• 2–3 zdjęcia nieruchomości\n• Twoje dane kontaktowe\n\nReszta — wycena, dokumenty, kontakt z inwestorem — po naszej stronie. ${cta(v)}${sig}` },
-  11:{ subject: "Pomagamy też wtedy, gdy bank powiedział „nie"",
+  11:{ subject: "Pomagamy też wtedy, gdy bank powiedział „nie”",
        body: (v) => `${greet(v)}\n\nU nas zabezpieczeniem jest nieruchomość, nie historia w BIK ani ZUS. Dzięki temu możemy zaproponować ofertę osobom, którym bank odmówił. Sprawdźmy, co możemy zrobić dla Ciebie.\n\n${cta(v)}${sig}` },
   12:{ subject: "Mieszkanie, dom, działka — każdą sytuację rozważamy",
        body: (v) => `${greet(v)}\n\nPracujemy z mieszkaniami, domami, działkami budowlanymi i lokalami komercyjnymi — także z obciążeniami. Każdą sprawę analizujemy indywidualnie i szukamy najlepszego rozwiązania.\n\n${cta(v)}${sig}` },
