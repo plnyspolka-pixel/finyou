@@ -430,6 +430,11 @@ function KlientWniosek() {
       if (!firstName.trim() || !lastName.trim()) return { ok: false, msg: "Podaj imię i nazwisko." };
       if (!email.trim()) return { ok: false, msg: "Podaj e-mail." };
       if (!phone.trim()) return { ok: false, msg: "Podaj numer telefonu." };
+      if (!user) {
+        if (!password || password.length < 6) return { ok: false, msg: "Ustaw hasło (min. 6 znaków)." };
+        if (!acceptPrivacy) return { ok: false, msg: "Zaakceptuj politykę prywatności i regulamin." };
+        if (!acceptContact) return { ok: false, msg: "Wymagana zgoda na kontakt." };
+      }
       return { ok: true };
     }
     return { ok: true };
@@ -438,35 +443,114 @@ function KlientWniosek() {
   const goNext = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
+    if (!user) {
+      // Bez konta nic nie zapisujemy w bazie — tylko przechodzimy dalej.
+      setStep(step + 1);
+      return;
+    }
     await persistAll(step + 1);
   };
 
 
-  // Krok 5 (Dane kontaktowe): zapisz kontakt, lead capture, finalnie wyślij wniosek do inwestora
+  // Wgraj zakolejkowane pliki po utworzeniu wniosku.
+  const flushPendingFiles = async (uid: string, lid: string) => {
+    if (pendingFiles.length === 0) return;
+    for (const pf of pendingFiles) {
+      const safeName = pf.file.name
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/ł/g, "l").replace(/Ł/g, "L")
+        .replace(/[^a-zA-Z0-9._-]+/g, "_")
+        .replace(/_+/g, "_")
+        .slice(0, 120) || "plik";
+      const path = `${uid}/${lid}/${Date.now()}-${safeName}`;
+      const { error: ue } = await supabase.storage.from("documents").upload(path, pf.file, {
+        contentType: pf.file.type || "application/octet-stream",
+        upsert: false,
+      });
+      if (ue) { console.warn("[pending-upload]", ue.message); continue; }
+      await supabase.from("documents").insert({
+        loan_application_id: lid, file_name: pf.file.name, file_path: path,
+        document_type: pf.docType, uploaded_by: uid,
+      });
+    }
+    setPendingFiles([]);
+  };
+
+  const finalizeSubmission = async () => {
+    const cid = await ensureClient();
+    if (!cid) return;
+    const lid = await ensureLoan(cid);
+    if (!lid) return;
+    await persistAll(STEPS.length);
+    if (user) await flushPendingFiles(user.id, lid);
+    // Status — wniosek wysłany do inwestora.
+    await supabase.from("loan_applications").update({ status: "nowy_lead" }).eq("id", lid);
+    if (!leadFiredRef.current && phone.trim()) {
+      leadFiredRef.current = true;
+      try {
+        await captureLead({ data: { loanApplicationId: lid, phone: phone.trim(), firstName: firstName || null } });
+        const { trackEvent } = await import("@/lib/fb-pixel");
+        await trackEvent(
+          "Lead",
+          { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
+          { phone: phone.trim(), firstName: firstName || undefined },
+        );
+      } catch (e: any) {
+        console.warn("[lead-capture]", e);
+      }
+    }
+    toast.success("Wniosek wysłany do inwestora.");
+    void navigate({ to: "/wniosek-opis" });
+  };
+
+  // Po założeniu konta useAuth zaktualizuje user → odpalamy finalizację.
+  useEffect(() => {
+    if (!pendingSubmit || !user) return;
+    void (async () => {
+      try {
+        await finalizeSubmission();
+      } finally {
+        setPendingSubmit(false);
+        setSubmitting(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSubmit, user]);
+
+  // Krok 3: zapisz / zarejestruj i wyślij wniosek
   const saveProposalAndSubmit = async () => {
     const v = canNext();
     if (!v.ok) { toast.error(v.msg ?? "Uzupełnij pola"); return; }
     setSubmitting(true);
     try {
-      await persistAll(STEPS.length);
-      if (loanId && !leadFiredRef.current && phone.trim()) {
-        leadFiredRef.current = true;
-        try {
-          await captureLead({ data: { loanApplicationId: loanId, phone: phone.trim(), firstName: firstName || null } });
-          const { trackEvent } = await import("@/lib/fb-pixel");
-          await trackEvent(
-            "Lead",
-            { content_name: "Wniosek pożyczkowy — kontakt zapisany", value: amount, currency: "PLN" },
-            { phone: phone.trim(), firstName: firstName || undefined },
-          );
-        } catch (e: any) {
-          console.warn("[lead-capture]", e);
+      if (!user) {
+        // Rejestracja — auto-confirm jest włączony, więc od razu logujemy.
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { data: { first_name: firstName, last_name: lastName, phone } },
+        });
+        if (error) {
+          toast.error("Rejestracja nie powiodła się", { description: error.message });
+          setSubmitting(false);
+          return;
         }
+        const { data: sess } = await supabase.auth.getSession();
+        if (!sess.session) {
+          const { error: sErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+          if (sErr) {
+            toast.error("Konto utworzone, ale logowanie nie powiodło się", { description: sErr.message });
+            setSubmitting(false);
+            return;
+          }
+        }
+        // useAuth zaktualizuje user → useEffect odpala finalizeSubmission.
+        setPendingSubmit(true);
+        return;
       }
-      toast.success("Wniosek wysłany do inwestora.");
-      void navigate({ to: "/wniosek-opis" });
+      await finalizeSubmission();
     } finally {
-      setSubmitting(false);
+      if (user) setSubmitting(false);
     }
   };
 
