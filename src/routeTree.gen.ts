@@ -43,6 +43,7 @@ import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadom
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
+import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
@@ -288,6 +289,12 @@ const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorKreatorDokumentowRoute =
+  InwestorKreatorDokumentowRouteImport.update({
+    id: '/kreator-dokumentow',
+    path: '/kreator-dokumentow',
+    getParentRoute: () => InwestorRoute,
+  } as any)
 const InwestorKalkulatorRoute = InwestorKalkulatorRouteImport.update({
   id: '/kalkulator',
   path: '/kalkulator',
@@ -735,6 +742,7 @@ export interface FileRoutesByFullPath {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -842,6 +850,7 @@ export interface FileRoutesByTo {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -953,6 +962,7 @@ export interface FileRoutesById {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -1065,6 +1075,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
+    | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
@@ -1172,6 +1183,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
+    | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
@@ -1282,6 +1294,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
+    | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
@@ -1635,6 +1648,13 @@ declare module '@tanstack/react-router' {
       path: '/oferty'
       fullPath: '/inwestor/oferty'
       preLoaderRoute: typeof InwestorOfertyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/kreator-dokumentow': {
+      id: '/inwestor/kreator-dokumentow'
+      path: '/kreator-dokumentow'
+      fullPath: '/inwestor/kreator-dokumentow'
+      preLoaderRoute: typeof InwestorKreatorDokumentowRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/kalkulator': {
@@ -2267,6 +2287,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
+  InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
@@ -2279,6 +2300,7 @@ interface InwestorRouteChildren {
 const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorAbonamentRoute: InwestorAbonamentRoute,
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
+  InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
