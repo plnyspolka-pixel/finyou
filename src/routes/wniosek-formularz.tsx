@@ -44,10 +44,9 @@ function KlientWniosek() {
   const [submitting, setSubmitting] = useState(false);
   const captureLead = useServerFn(captureLeadFromApplication);
   const leadFiredRef = useRef(false);
+  // Nie wymuszamy logowania — konto powstanie na ostatnim kroku.
 
-  useEffect(() => {
-    if (!authLoading && !user) void navigate({ to: "/logowanie" });
-  }, [authLoading, user, navigate]);
+
 
 
   const [clientId, setClientId] = useState<string | null>(null);
