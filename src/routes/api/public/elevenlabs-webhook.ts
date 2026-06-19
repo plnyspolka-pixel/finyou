@@ -91,6 +91,46 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         }
         const { outcome, label: outcomeLabel } = classifyOutcome();
 
+        // ── Wyciąganie wyników data collection z ElevenLabs ──────────────────
+        // ElevenLabs zwraca: analysis.data_collection_results = { field: { value, rationale, ... } }
+        function extractDataCollection(): Record<string, any> {
+          const raw = body?.analysis?.data_collection_results
+            ?? body?.data_collection_results
+            ?? body?.analysis?.data_collection
+            ?? null;
+          if (!raw || typeof raw !== "object") return {};
+          const out: Record<string, any> = {};
+          for (const [k, v] of Object.entries(raw)) {
+            if (v && typeof v === "object" && "value" in (v as any)) {
+              out[k] = (v as any).value;
+            } else {
+              out[k] = v;
+            }
+          }
+          return out;
+        }
+        const collected = extractDataCollection();
+        // Normalizacja kluczowych pól
+        const parseAmount = (v: any): number | null => {
+          if (v === null || v === undefined || v === "") return null;
+          if (typeof v === "number") return Number.isFinite(v) ? v : null;
+          const s = String(v).replace(/[^\d.,-]/g, "").replace(/\s/g, "").replace(",", ".");
+          const n = parseFloat(s);
+          return Number.isFinite(n) ? n : null;
+        };
+        const parseBool = (v: any): boolean | null => {
+          if (v === null || v === undefined || v === "") return null;
+          if (typeof v === "boolean") return v;
+          const s = String(v).toLowerCase().trim();
+          if (["true", "tak", "yes", "1", "y", "t"].includes(s)) return true;
+          if (["false", "nie", "no", "0", "n", "f"].includes(s)) return false;
+          return null;
+        };
+        const loanAmountRequested = parseAmount(collected.loan_amount_requested ?? collected.loan_amount ?? collected.kwota);
+        const collateralType = collected.collateral_type ?? collected.zabezpieczenie ?? null;
+        const willingOnline = parseBool(collected.customer_willing_to_apply_online);
+        const directedToWebsite = parseBool(collected.application_directed_to_website);
+
         let queueRow: any = null;
         if (callId) {
           const r = await supabase.from("call_queue").select("*").eq("agent_id", callId).maybeSingle();
@@ -125,6 +165,70 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             .eq("id", queueRow.id);
         }
 
+        // ── Zapis danych zebranych przez Anię (data collection) ─────────────
+        const hasCollected =
+          loanAmountRequested !== null ||
+          (collateralType !== null && collateralType !== "") ||
+          willingOnline !== null ||
+          directedToWebsite !== null ||
+          Object.keys(collected).length > 0;
+        if (hasCollected) {
+          try {
+            // 1) loan_applications — uzupełnij loan_amount jeśli puste
+            if (queueRow?.loan_application_id && loanAmountRequested !== null) {
+              const { data: la } = await supabase
+                .from("loan_applications")
+                .select("loan_amount")
+                .eq("id", queueRow.loan_application_id)
+                .maybeSingle();
+              if (la && (la.loan_amount === null || Number(la.loan_amount) === 0)) {
+                await supabase
+                  .from("loan_applications")
+                  .update({ loan_amount: loanAmountRequested })
+                  .eq("id", queueRow.loan_application_id);
+              }
+            }
+            // 2) leads.application_data — merge zebranych danych z voicebota
+            const leadId = queueRow?.lead_id ?? null;
+            const phoneForLead = queueRow?.phone_normalized ?? phone ?? null;
+            let leadRow: any = null;
+            if (leadId) {
+              const r = await supabase.from("leads").select("id, application_data").eq("id", leadId).maybeSingle();
+              leadRow = r.data;
+            } else if (phoneForLead) {
+              const r = await supabase
+                .from("leads")
+                .select("id, application_data")
+                .eq("phone_normalized", phoneForLead)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              leadRow = r.data;
+            }
+            if (leadRow) {
+              const prev = (leadRow.application_data && typeof leadRow.application_data === "object") ? leadRow.application_data : {};
+              const voicebotData = {
+                ...(prev as any).voicebot,
+                last_call_id: callId ?? null,
+                last_call_at: new Date().toISOString(),
+                loan_amount_requested: loanAmountRequested,
+                collateral_type: collateralType,
+                customer_willing_to_apply_online: willingOnline,
+                application_directed_to_website: directedToWebsite,
+                raw: collected,
+              };
+              await supabase
+                .from("leads")
+                .update({ application_data: { ...prev, voicebot: voicebotData } })
+                .eq("id", leadRow.id);
+            }
+          } catch (e) {
+            console.error("[elevenlabs-webhook] persist data_collection failed", e);
+          }
+        }
+
+
+
         // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
         try {
           const { logLeadCommunication } = await import("@/lib/lead-comms.server");
@@ -153,6 +257,13 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               disconnection_reason: disconnectionReason ?? null,
               transcript_full: body?.transcript || body?.transcript_segments || body?.turns || null,
               summary: summary ?? null,
+              data_collection: {
+                loan_amount_requested: loanAmountRequested,
+                collateral_type: collateralType,
+                customer_willing_to_apply_online: willingOnline,
+                application_directed_to_website: directedToWebsite,
+                raw: collected,
+              },
               raw: body,
             },
           });
