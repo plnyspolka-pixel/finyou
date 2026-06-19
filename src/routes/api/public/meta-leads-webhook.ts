@@ -123,7 +123,7 @@ async function upsertClientAndApplication(opts: {
 
   if (!existingApp) {
     returnToken = returnToken ?? crypto.randomUUID();
-    const { data: newApp, error: appErr } = await admin
+    const { data: newApp, error: appErr } = await supabaseAdmin
       .from("loan_applications")
       .insert({
         client_id: clientId,
@@ -141,7 +141,7 @@ async function upsertClientAndApplication(opts: {
     }
     loanApplicationId = newApp.id;
   } else {
-    await admin
+    await supabaseAdmin
       .from("loan_applications")
       .update({ return_link: returnLink })
       .eq("id", existingApp.id);
