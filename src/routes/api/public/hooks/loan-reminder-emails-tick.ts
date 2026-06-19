@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
         }
 
         const { runDailyReminderEmailsBatch } = await import("@/lib/loan-reminder-emails.server");
-        const result = await runDailyReminderEmailsBatch({ force: true });
+        const result = await runDailyReminderEmailsBatch({ force: false });
         await s
           .from("reminder_email_schedule")
           .update({ last_run_at: new Date().toISOString(), last_result: result as any })

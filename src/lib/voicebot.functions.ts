@@ -213,10 +213,12 @@ export async function placeOutboundCallInternal(opts: {
   const phone = normalizePhone(opts.phone);
 
   // GLOBALNY THROTTLE: max 1 telefon na 24 h per numer (z dowolnego źródła).
-  // Niezależnie od tego, ile torów follow-upu próbuje dzwonić, Ania wybiera tylko raz dziennie.
-  // Test (`source === "test"`) z panelu admina pomijamy.
+  // Wyjątek: `ania_callback` — Ania może dzwonić 2× dziennie do tych co nie odebrali,
+  // ale nie częściej niż raz na 5 godzin. Test (`source === "test"`) pomijamy.
   if (opts.source !== "test") {
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const isCallback = opts.source === "ania_callback";
+    const minGapMs = isCallback ? 5 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const since = new Date(Date.now() - minGapMs).toISOString();
     const { data: recent } = await s
       .from("call_queue")
       .select("id, started_at, created_at, source")
@@ -229,7 +231,7 @@ export async function placeOutboundCallInternal(opts: {
     if (recent && recent.length > 0) {
       const last = recent[0];
       const lastAt = new Date((last.started_at as string | null) ?? (last.created_at as string));
-      const nextAllowedRaw = new Date(lastAt.getTime() + 24 * 60 * 60 * 1000);
+      const nextAllowedRaw = new Date(lastAt.getTime() + minGapMs);
       const win = getCallingWindow(nextAllowedRaw);
       const scheduledAt = (win.allowed ? nextAllowedRaw : win.nextAllowedAt).toISOString();
       await s.from("automation_events").insert({
@@ -237,7 +239,8 @@ export async function placeOutboundCallInternal(opts: {
         status: "skipped",
         sent_payload: { phone, source: opts.source },
         response_payload: {
-          throttled_daily: true,
+          throttled: true,
+          min_gap_hours: minGapMs / 3600000,
           last_call_source: last.source,
           last_call_at: lastAt.toISOString(),
           next_allowed_at: scheduledAt,
@@ -245,7 +248,7 @@ export async function placeOutboundCallInternal(opts: {
       });
       return {
         ok: false,
-        error: `Daily throttle — ostatni telefon ${fmtWarsaw(lastAt)} (źródło: ${last.source}). Następny dozwolony: ${fmtWarsaw(scheduledAt)}`,
+        error: `Throttle — ostatni telefon ${fmtWarsaw(lastAt)} (źródło: ${last.source}). Następny dozwolony: ${fmtWarsaw(scheduledAt)}`,
       };
     }
   }
