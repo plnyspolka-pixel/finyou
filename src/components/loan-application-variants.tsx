@@ -467,7 +467,7 @@ export function LinearLoanApplication({
     if (step === 3) return draft.maxPayment >= 500;
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
-    if (step === 6) return hasKwNumber(draft.kwNumber);
+    if (step === 6) return hasKwNumber(draft.kwNumber) || photos.some((p) => p.bucket === "ownership_deed");
     if (step === 7) return !photosRequired || photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
@@ -482,7 +482,7 @@ export function LinearLoanApplication({
   const next = async () => {
     if (!canContinue()) {
       if (step === 6) {
-        toast.error("Wpisz numer księgi wieczystej, zanim przejdziesz dalej");
+        toast.error("Wpisz numer księgi wieczystej lub wgraj akt własności nieruchomości");
         return;
       }
       toast.error("Uzupełnij ten krok, zanim przejdziesz dalej");
@@ -669,6 +669,12 @@ export function LinearLoanApplication({
                   />
                 </div>
               </details>
+
+              <OwnershipDeedUpload
+                photos={photos}
+                addPhotos={addPhotos}
+                removePhoto={removePhoto}
+              />
             </div>
           )}
 
@@ -831,6 +837,85 @@ function MobywatelKwGuide({ kwNumber, onChange }: { kwNumber: string; onChange: 
   );
 }
 
+
+function OwnershipDeedUpload({
+  photos,
+  addPhotos,
+  removePhoto,
+}: {
+  photos: PhotoItem[];
+  addPhotos: (files: FileList | null | undefined, bucket: PhotoItem["bucket"]) => void;
+  removePhoto: (id: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const deedPhotos = photos.filter((p) => p.bucket === "ownership_deed");
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-4">
+      <div className="flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+          <FileText className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-bold text-foreground">
+            Nie masz numeru KW? Wgraj akt własności nieruchomości
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Akt notarialny, postanowienie sądu o nabyciu spadku, umowa darowizny lub inny dokument
+            potwierdzający własność. Numer KW ustalimy w Twoim imieniu — możesz przejść dalej bez wpisywania numeru.
+          </p>
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          addPhotos(e.target.files, "ownership_deed");
+          if (inputRef.current) inputRef.current.value = "";
+        }}
+      />
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+          <Upload className="mr-2 h-4 w-4" />
+          {deedPhotos.length > 0 ? "Dodaj kolejny plik" : "Wgraj akt własności"}
+        </Button>
+        {deedPhotos.length > 0 && (
+          <span className="self-center text-xs text-muted-foreground">
+            Wgrano {deedPhotos.length} {deedPhotos.length === 1 ? "plik" : "plików"}
+          </span>
+        )}
+      </div>
+
+      {deedPhotos.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {deedPhotos.map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              <span className="flex min-w-0 items-center gap-2 truncate">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                <span className="truncate">{p.name}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => removePhoto(p.id)}
+                className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-destructive"
+              >
+                Usuń
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function KwDocumentOcr({
   kwNumber,
