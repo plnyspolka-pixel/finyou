@@ -117,14 +117,16 @@ function IncompleteApplicationsPage() {
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Brak niekompletnych wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Brak niekompletnych wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
                 const pct = r.completeness_percent ?? 0;
+                const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
+                const photoCount = (r.properties ?? []).reduce((sum, p) => sum + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
@@ -147,6 +149,22 @@ function IncompleteApplicationsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center text-xs">{r.current_form_step ?? "—"}</TableCell>
+                    <TableCell className="text-xs">
+                      {kwNums.length === 0 ? (
+                        <Badge variant="outline" className="text-muted-foreground">brak</Badge>
+                      ) : (
+                        <div className="space-y-0.5">
+                          {kwNums.map((k, i) => <div key={i} className="font-mono">{k}</div>)}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {photoCount > 0 ? (
+                        <Badge variant="secondary">{photoCount}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">0</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{fmtDate(r.created_at)}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{fmtDate(r.updated_at)}</TableCell>
