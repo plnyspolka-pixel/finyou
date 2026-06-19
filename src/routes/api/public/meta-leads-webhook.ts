@@ -41,15 +41,11 @@ function normPhone(p: string): string {
   return s.startsWith("+") ? s : `+${d}`;
 }
 
-function getOrigin(request: Request): string {
+function getOrigin(_request: Request): string {
   const envOrigin = process.env.PUBLIC_APP_ORIGIN;
   if (envOrigin) return envOrigin.replace(/\/$/, "");
-  try {
-    const u = new URL(request.url);
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return "https://app.financeyou.pl";
-  }
+  // Linki klienckie (return_link, SMS, maile) zawsze na główną domenę.
+  return "https://financeyou.pl";
 }
 
 /**

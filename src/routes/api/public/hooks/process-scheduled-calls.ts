@@ -81,7 +81,7 @@ async function handler() {
         dynamicVariables.missing_documents = missing.length > 0 ? missing.join(", ") : "wszystko skompletowane";
         dynamicVariables.return_link =
           app.return_link ??
-          (app.return_link_token ? `https://app.financeyou.pl/wniosek/${app.return_link_token}` : "");
+          (app.return_link_token ? `https://financeyou.pl/wniosek/${app.return_link_token}` : "");
       }
     }
 
