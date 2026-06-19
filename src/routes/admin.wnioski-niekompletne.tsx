@@ -28,6 +28,7 @@ type Row = {
   missing_fields: any;
   client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
   properties: Property[] | null;
+  docCount?: number;
 };
 
 const INCOMPLETE_STATUSES = ["nowy_lead", "w_trakcie_uzupelniania"];
