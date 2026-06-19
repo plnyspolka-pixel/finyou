@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizePlaceholders, xmlToPlainText, replaceByOccurrence } from "@/lib/document-fields";
 
 export type DocTemplate = {
   id: string;
@@ -46,7 +47,9 @@ export const listGeneratedDocs = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("generated_documents")
-      .select("id, template_id, template_name, template_slug, lead_id, loan_application_id, docx_path, pdf_path, commission_amount, commission_added_to_costs, created_at, created_by")
+      .select(
+        "id, template_id, template_name, template_slug, lead_id, loan_application_id, docx_path, pdf_path, commission_amount, commission_added_to_costs, created_at, created_by",
+      )
       .order("created_at", { ascending: false })
       .limit(data.limit ?? 50);
     if (data.leadId) q = q.eq("lead_id", data.leadId);
@@ -56,18 +59,29 @@ export const listGeneratedDocs = createServerFn({ method: "POST" })
     return (rows ?? []) as GeneratedDoc[];
   });
 
-/** Generuje DOCX z wybranego szablonu — wypełnia placeholdery `[KLUCZ]`. */
+/**
+ * Generuje DOCX z wybranego szablonu.
+ *
+ * Wartości przekazujemy POZYCYJNIE: `values` mapuje indeks wystąpienia
+ * placeholdera (w kolejności dokumentu, jako string) → wartość. Dzięki temu
+ * powtarzające się klucze (np. `[KWOTA]`, `[ADRES]` dla różnych stron) można
+ * uzupełnić niezależnie. Puste wartości są pomijane — odpowiadające im tokeny
+ * `[KLUCZ]` zostają w dokumencie nietknięte (nie zmieniamy treści wzoru).
+ */
 export const generateDocxFromTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
-    templateId: string;
-    formData: Record<string, string>;
-    leadId?: string | null;
-    loanApplicationId?: string | null;
-    investorOfferId?: string | null;
-    commissionAmount?: number | null;
-    commissionAddedToCosts?: boolean;
-  }) => d)
+  .inputValidator(
+    (d: {
+      templateId: string;
+      /** indeks wystąpienia (string) → wartość */
+      values: Record<string, string>;
+      leadId?: string | null;
+      loanApplicationId?: string | null;
+      investorOfferId?: string | null;
+      commissionAmount?: number | null;
+      commissionAddedToCosts?: boolean;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -87,63 +101,31 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
     const arrayBuf = await file.arrayBuffer();
 
-    // 3. Wypełnij placeholdery [KLUCZ] (case-insensitive po normalizacji)
+    // 3. Podstaw wartości pozycyjnie w word/document.xml
     const { default: PizZip } = await import("pizzip");
-    const Docxtemplater = (await import("docxtemplater")).default;
-
     const zip = new PizZip(arrayBuf);
-
-    // Manual replacement na word/document.xml - bezpieczniejsze niż docxtemplater dla [..] z polskimi znakami
     const docXmlPath = "word/document.xml";
-    let docXml = zip.file(docXmlPath)?.asText() ?? "";
+    const rawXml = zip.file(docXmlPath)?.asText() ?? "";
 
-    // Najpierw spróbujmy zlepić runy żeby placeholdery rozdzielone tagami się odnalazły.
-    // Strategia: usuń wszystkie <w:rPr>...</w:rPr> wewnątrz placeholderów -> trudne.
-    // Praktyczna heurystyka: globalna podmiana w XML — placeholder zwykle jest w jednym run-u, bo jest pogrubiony jednolicie.
-    // Dla niezgodnych przypadków: usuwamy proste wstawki XML między literami klucza.
+    // Najpierw sklejamy placeholdery rozbite przez tagi w ciągłe tokeny `[KLUCZ]`,
+    // następnie podstawiamy po indeksie wystąpienia (ten sam porządek co podgląd).
+    const normalizedXml = normalizePlaceholders(rawXml);
+    const filledXml = replaceByOccurrence(normalizedXml, data.values ?? {});
 
-    const escapeXml = (s: string) =>
-      (s ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-    // Iteruj placeholdery z szablonu + dodatkowo cokolwiek przyszło w formData
-    const allKeys = new Set<string>([
-      ...(Array.isArray(tpl.placeholders) ? (tpl.placeholders as string[]) : []),
-      ...Object.keys(data.formData ?? {}),
-    ]);
-
-    for (const key of allKeys) {
-      const raw = `[${key}]`;
-      const val = escapeXml((data.formData?.[key] ?? "").toString());
-      // 1) prosta zamiana — jednolity run
-      while (docXml.includes(raw)) {
-        docXml = docXml.replace(raw, val);
-      }
-      // 2) zamiana gdy placeholder rozdzielony przez tagi — buduj regex łamiący tagi
-      // Tworzymy wzorzec: dla każdej litery może być pomiędzy </w:t>...<w:t>
-      const escapeRe = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const perChar = Array.from(key).map(escapeRe).join("(?:<[^>]+>)*");
-      const splitPattern = new RegExp("\\[" + perChar + "\\]", "g");
-      docXml = docXml.replace(splitPattern, val);
-    }
-
-    zip.file(docXmlPath, docXml);
+    zip.file(docXmlPath, filledXml);
     const outBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
-
-    // 4. Walidacja (opcjonalna) - docxtemplater nie jest tu używany, ale upewnijmy się że zip jest valid
-    void Docxtemplater; // suppress unused
 
     // 5. Upload do Storage
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     const safeName = tpl.name.replace(/[^\p{L}\p{N}._-]+/gu, "_").slice(0, 60);
     const outPath = `generated/${userId}/${ts}_${safeName}.docx`;
-    const { error: upErr } = await supabase.storage
-      .from("documents")
-      .upload(outPath, new Blob([new Uint8Array(outBuf)], {
+    const { error: upErr } = await supabase.storage.from("documents").upload(
+      outPath,
+      new Blob([new Uint8Array(outBuf)], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      }), { upsert: false });
+      }),
+      { upsert: false },
+    );
     if (upErr) throw new Error(`Upload DOCX: ${upErr.message}`);
 
     // 6. Wpis do bazy
@@ -156,7 +138,7 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
         lead_id: data.leadId ?? null,
         loan_application_id: data.loanApplicationId ?? null,
         investor_offer_id: data.investorOfferId ?? null,
-        form_data: data.formData ?? {},
+        form_data: data.values ?? {},
         commission_amount: data.commissionAmount ?? null,
         commission_added_to_costs: data.commissionAddedToCosts ?? false,
         docx_path: outPath,
@@ -203,34 +185,13 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     const arrayBuf = await file.arrayBuffer();
     const { default: PizZip } = await import("pizzip");
     const zip = new PizZip(arrayBuf);
-    let xml = zip.file("word/document.xml")?.asText() ?? "";
+    const rawXml = zip.file("word/document.xml")?.asText() ?? "";
 
-    // Zlepiamy rozbite runy placeholderów [KLUCZ]
-    const keys = (Array.isArray(tpl.placeholders) ? (tpl.placeholders as string[]) : []);
-    for (const key of keys) {
-      const escapeRe = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const perChar = Array.from(key).map(escapeRe).join("(?:<[^>]+>)*");
-      const pattern = new RegExp("\\[" + perChar + "\\]", "g");
-      xml = xml.replace(pattern, `[${key}]`);
-    }
+    // Sklejamy rozbite runy placeholderów [KLUCZ] (niezależnie od listy z DB),
+    // a następnie zamieniamy na tekst. Kolejność tokenów jest tożsama z tą,
+    // której używa generator przy podstawianiu po indeksie wystąpienia.
+    const text = xmlToPlainText(normalizePlaceholders(rawXml));
 
-    // Zamiana XML na plain text z zachowaniem struktury
-    const text = xml
-      .replace(/<w:tab[^>]*\/>/g, "\t")
-      .replace(/<w:br[^>]*\/>/g, "\n")
-      .replace(/<\/w:p>/g, "\n")
-      .replace(/<\/w:tr>/g, "\n")
-      .replace(/<\/w:tc>/g, " | ")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-
+    const keys = Array.isArray(tpl.placeholders) ? (tpl.placeholders as string[]) : [];
     return { text, placeholders: keys };
   });
