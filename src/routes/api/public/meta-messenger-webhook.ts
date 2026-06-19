@@ -71,11 +71,21 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
         for (const entry of body.entry ?? []) {
           const platform: "messenger" | "instagram" =
             body.object === "instagram" ? "instagram" : "messenger";
+          const pageId: string | undefined = entry.id;
           for (const ev of entry.messaging ?? []) {
             try {
               await handleMessagingEvent(ev, platform);
             } catch (e) {
               console.error("[meta-messenger-webhook] event error", e);
+            }
+          }
+          for (const change of entry.changes ?? []) {
+            try {
+              if (change.field === "feed") {
+                await handleFeedChange(change.value, pageId);
+              }
+            } catch (e) {
+              console.error("[meta-messenger-webhook] feed change error", e);
             }
           }
         }
