@@ -135,6 +135,9 @@ async function handleMessagingEvent(ev: any, platform: "messenger" | "instagram"
   if (stored.length) {
     await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
       .eq("external_id", msg.mid ?? "");
+    try {
+      await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
+    } catch (e) { console.error("[messenger] attach to client docs", e); }
   }
 
   if (!userText && !stored.length) return;
