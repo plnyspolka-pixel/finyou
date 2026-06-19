@@ -257,7 +257,7 @@ function ApplicationsPage() {
                 <SortHeader label="Kompletność" k="completeness_percent" sort={sort} setSort={setSort} className="text-center" />
                 <TableHead className="text-center">Krok</TableHead>
                 <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} />
-                <SortHeader label="Zdjęcia" k="photos" sort={sort} setSort={setSort} />
+                <SortHeader label="Załączniki" k="media" sort={sort} setSort={setSort} />
                 <TableHead>Źródło</TableHead>
                 <SortHeader label="Utworzono" k="created_at" sort={sort} setSort={setSort} />
                 <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} />
