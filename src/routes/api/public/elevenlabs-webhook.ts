@@ -165,6 +165,70 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             .eq("id", queueRow.id);
         }
 
+        // ── Zapis danych zebranych przez Anię (data collection) ─────────────
+        const hasCollected =
+          loanAmountRequested !== null ||
+          (collateralType !== null && collateralType !== "") ||
+          willingOnline !== null ||
+          directedToWebsite !== null ||
+          Object.keys(collected).length > 0;
+        if (hasCollected) {
+          try {
+            // 1) loan_applications — uzupełnij loan_amount jeśli puste
+            if (queueRow?.loan_application_id && loanAmountRequested !== null) {
+              const { data: la } = await supabase
+                .from("loan_applications")
+                .select("loan_amount")
+                .eq("id", queueRow.loan_application_id)
+                .maybeSingle();
+              if (la && (la.loan_amount === null || Number(la.loan_amount) === 0)) {
+                await supabase
+                  .from("loan_applications")
+                  .update({ loan_amount: loanAmountRequested })
+                  .eq("id", queueRow.loan_application_id);
+              }
+            }
+            // 2) leads.application_data — merge zebranych danych z voicebota
+            const leadId = queueRow?.lead_id ?? null;
+            const phoneForLead = queueRow?.phone_normalized ?? phone ?? null;
+            let leadRow: any = null;
+            if (leadId) {
+              const r = await supabase.from("leads").select("id, application_data").eq("id", leadId).maybeSingle();
+              leadRow = r.data;
+            } else if (phoneForLead) {
+              const r = await supabase
+                .from("leads")
+                .select("id, application_data")
+                .eq("phone_normalized", phoneForLead)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              leadRow = r.data;
+            }
+            if (leadRow) {
+              const prev = (leadRow.application_data && typeof leadRow.application_data === "object") ? leadRow.application_data : {};
+              const voicebotData = {
+                ...(prev as any).voicebot,
+                last_call_id: callId ?? null,
+                last_call_at: new Date().toISOString(),
+                loan_amount_requested: loanAmountRequested,
+                collateral_type: collateralType,
+                customer_willing_to_apply_online: willingOnline,
+                application_directed_to_website: directedToWebsite,
+                raw: collected,
+              };
+              await supabase
+                .from("leads")
+                .update({ application_data: { ...prev, voicebot: voicebotData } })
+                .eq("id", leadRow.id);
+            }
+          } catch (e) {
+            console.error("[elevenlabs-webhook] persist data_collection failed", e);
+          }
+        }
+
+
+
         // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
         try {
           const { logLeadCommunication } = await import("@/lib/lead-comms.server");
