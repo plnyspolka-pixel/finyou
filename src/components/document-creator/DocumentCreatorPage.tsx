@@ -5,6 +5,7 @@ import {
   generateDocxFromTemplate,
   listGeneratedDocs,
   getGeneratedDocSignedUrl,
+  getDocxTemplatePreview,
   type DocTemplate,
   type GeneratedDoc,
 } from "@/lib/document-generator.functions";
