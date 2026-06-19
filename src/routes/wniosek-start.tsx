@@ -350,7 +350,7 @@ function WniosekStartPage() {
                 </label>
               </div>
               <Button type="submit" variant="cta" size="cta" className="w-full" disabled={busy}>
-                {busy ? "Tworzenie konta…" : "Zobacz harmonogram spłat"}
+                {busy ? "Tworzenie konta…" : "Załóż konto i kontynuuj"}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">
