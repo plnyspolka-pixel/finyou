@@ -45,7 +45,11 @@ export async function runMetaLeadsSync(): Promise<{
   const { sendResendEmail } = await import("@/lib/resend-send.server");
   const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
 
-  const origin = process.env.PUBLIC_APP_ORIGIN?.replace(/\/$/, "") ?? "https://financeyou.pl";
+  // Wszystkie linki klienckie (SMS / mail / return_link) idą TYLKO na główną domenę.
+  // NIE używaj process.env.PUBLIC_APP_ORIGIN — w przeszłości była ustawiona na
+  // https://app.financeyou.pl i klient dostawał błędny link.
+  const origin = "https://financeyou.pl";
+  void process.env.PUBLIC_APP_ORIGIN; // celowe odcięcie się od env
   const summary = { forms_discovered: 0, leads_fetched: 0, leads_new: 0, calls_queued: 0, errors: [] as string[] };
 
   // 1) Odkryj strony + formularze
