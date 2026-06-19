@@ -246,13 +246,8 @@ async function executeTool(leadId: string, channel: string, name: string, args: 
     return { ok: true, saved: Object.keys(patch) };
   }
   if (name === "send_application_link") {
-    const { data: lead } = await s.from("leads").select("return_link, return_link_token").eq("id", leadId).maybeSingle();
-    let link = lead?.return_link;
-    if (!link) {
-      const token = lead?.return_link_token ?? crypto.randomUUID();
-      link = `https://financeyou.pl/wniosek/${token}`;
-      await s.from("leads").update({ return_link: link, return_link_token: token }).eq("id", leadId);
-    }
+    const link = "https://financeyou.pl";
+    await s.from("leads").update({ return_link: link }).eq("id", leadId);
     return { ok: true, link, instruction: `Wyślij klientowi w odpowiedzi tekst typu: "Twój link do dokończenia wniosku: ${link}"` };
   }
   if (name === "mark_ready_for_human") {
