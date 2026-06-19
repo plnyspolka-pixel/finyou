@@ -88,7 +88,7 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     // 1. Pobierz szablon
     const { data: tpl, error: tplErr } = await supabase
       .from("document_templates")
-      .select("id, slug, name, template_file_path, placeholders")
+      .select("id, slug, name, template_file_path")
       .eq("id", data.templateId)
       .maybeSingle();
     if (tplErr) throw new Error(tplErr.message);
@@ -164,14 +164,20 @@ export const getGeneratedDocSignedUrl = createServerFn({ method: "POST" })
     return { url: signed.signedUrl };
   });
 
-/** Podgląd treści wzoru — zwraca plain-text z placeholderami `[KLUCZ]`. */
+/**
+ * Podgląd treści wzoru — zwraca plain-text z placeholderami `[KLUCZ]`.
+ *
+ * ŹRÓDŁO PRAWDY: wyłącznie plik .docx ze Storage. Kolumna `placeholders` w bazie
+ * nie jest używana (bywała nieaktualna względem pliku) — wszystkie pola wyliczamy
+ * z treści dokumentu, w tej samej kolejności, której używa generator.
+ */
 export const getDocxTemplatePreview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { templateId: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: tpl, error: tplErr } = await context.supabase
       .from("document_templates")
-      .select("template_file_path, placeholders")
+      .select("template_file_path")
       .eq("id", data.templateId)
       .maybeSingle();
     if (tplErr) throw new Error(tplErr.message);
@@ -187,11 +193,7 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     const zip = new PizZip(arrayBuf);
     const rawXml = zip.file("word/document.xml")?.asText() ?? "";
 
-    // Sklejamy rozbite runy placeholderów [KLUCZ] (niezależnie od listy z DB),
-    // a następnie zamieniamy na tekst. Kolejność tokenów jest tożsama z tą,
-    // której używa generator przy podstawianiu po indeksie wystąpienia.
+    // Sklejamy rozbite runy placeholderów [KLUCZ], a następnie zamieniamy na tekst.
     const text = xmlToPlainText(normalizePlaceholders(rawXml));
-
-    const keys = Array.isArray(tpl.placeholders) ? (tpl.placeholders as string[]) : [];
-    return { text, placeholders: keys };
+    return { text };
   });

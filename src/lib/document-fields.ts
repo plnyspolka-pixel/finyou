@@ -80,6 +80,36 @@ export function replaceByOccurrence(normalizedXml: string, values: Record<string
   });
 }
 
+export interface PreviewSegment {
+  text: string;
+  isToken: boolean;
+  /** indeks wystąpienia (jak w polach); -1 dla zwykłego tekstu */
+  occ: number;
+  key?: string;
+}
+
+/**
+ * Dzieli tekst wzoru na segmenty do podglądu. Używa DOKŁADNIE tego samego
+ * tokenizera co `extractOrderedFields`, więc indeks wystąpienia (`occ`) jest
+ * spójny z polami formularza — jedno źródło prawdy dla numeracji placeholderów.
+ */
+export function previewSegments(text: string): PreviewSegment[] {
+  const segs: PreviewSegment[] = [];
+  TOKEN_RE.lastIndex = 0;
+  let last = 0;
+  let occ = -1;
+  let m: RegExpExecArray | null;
+  while ((m = TOKEN_RE.exec(text)) !== null) {
+    if (m.index > last) segs.push({ text: text.slice(last, m.index), isToken: false, occ: -1 });
+    occ += 1;
+    segs.push({ text: m[0], isToken: true, occ, key: m[1].trim() });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) segs.push({ text: text.slice(last), isToken: false, occ: -1 });
+  TOKEN_RE.lastIndex = 0;
+  return segs;
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Typy pól
 // ─────────────────────────────────────────────────────────────────────
@@ -112,6 +142,41 @@ export type FieldInput = "text" | "textarea" | "amount" | "date" | "number" | "c
 
 /** Rodzaj grupy — decyduje m.in. o tym, czy pokazać autouzupełnianie z GUS/KRS. */
 export type PartyKind = "company" | "person-or-company" | "recipient" | "place" | "terms" | "other";
+
+// Jedno źródło prawdy dla klasyfikacji semantyk (używane w grupowaniu i autouzupełnianiu).
+/** Semantyki traktowane jako „dane strony" (trafiają do grupy konkretnej strony). */
+const PARTY_FIELD_SEMANTICS: readonly FieldSemantic[] = [
+  "name",
+  "address",
+  "idLine",
+  "nip",
+  "regon",
+  "krs",
+  "pesel",
+  "bank",
+  "phone",
+  "email",
+  "legalForm",
+  "representative",
+];
+/** Semantyki, które potrafimy uzupełnić z danych firmowych (GUS/KRS/bank). */
+const AUTOFILL_SEMANTICS: readonly FieldSemantic[] = [
+  "name",
+  "address",
+  "idLine",
+  "nip",
+  "regon",
+  "krs",
+  "bank",
+  "phone",
+  "email",
+  "legalForm",
+  "representative",
+];
+
+export function isPartyFieldSemantic(s: FieldSemantic): boolean {
+  return PARTY_FIELD_SEMANTICS.includes(s);
+}
 
 export interface DocField {
   /** Indeks globalny wystąpienia (string) — klucz wartości w formularzu i przy generowaniu. */
@@ -423,39 +488,97 @@ const PRETTY_LABELS: Record<string, string> = {
   "KWOTA SŁOWNIE": "Kwota słownie",
 };
 
-function titleCasePl(s: string): string {
-  const lower = s.toLocaleLowerCase("pl-PL");
-  return lower.charAt(0).toLocaleUpperCase("pl-PL") + lower.slice(1);
+function upperFirstPl(s: string): string {
+  return s.charAt(0).toLocaleUpperCase("pl-PL") + s.slice(1);
 }
 
-function buildLabel(key: string, context: string, cls: KeyClass): string {
+function titleCasePl(s: string): string {
+  return upperFirstPl(s.toLocaleLowerCase("pl-PL"));
+}
+
+/** Czyści fragment kontekstu do roli etykiety (usuwa wcześniejsze pola, separatory). */
+function cleanContext(s: string): string {
+  return s
+    .replace(/\[[^\]]*\]/g, " ") // wcześniejsze placeholdery → spacja
+    .replace(/[[\]]/g, " ") // osierocone nawiasy (z zagnieżdżonych instrukcji)
+    .replace(/[|•]/g, " ")
+    .replace(/[…]+|[._]{2,}|\.{2,}/g, " ") // ciągi kropek/podkreśleń (linie podpisu)
+    .replace(/[–—]/g, " ") // myślniki → spacja (dywiz w „E-mail" zostaje)
+    .replace(/\s-\s/g, " ") // spacjowany dywiz → spacja
+    .replace(/\s+/g, " ")
+    .replace(/^[\s:,()]+|[\s:,().]+$/g, "")
+    .trim();
+}
+
+/** Skraca frazę: ucina dopiski w nawiasie i ogranicza liczbę słów. */
+function shortenPhrase(s: string): string {
+  let p = s;
+  const paren = p.indexOf("(");
+  if (paren >= 3) p = p.slice(0, paren).trim();
+  const words = p.split(/\s+/);
+  if (words.length > 8) p = words.slice(-7).join(" ");
+  return p.trim();
+}
+
+/**
+ * Wyciąga etykietę z układu tabelarycznego („Etykieta: | [POLE]" — bardzo częste
+ * w umowie pożyczki). Zwraca null, gdy fragment nie wygląda na sensowną etykietę
+ * (np. linia podpisu z kropek).
+ */
+function extractTableCell(before: string): string | null {
+  if (!before.includes("|")) return null;
+  const cells = before.split("|");
+  // token jest po ostatnim „|", więc etykieta to przedostatnia komórka
+  const raw = cells.length >= 2 ? cells[cells.length - 2] : cells[0];
+  const cell = shortenPhrase(cleanContext(raw));
+  if (cell.length < 2 || cell.length > 48) return null;
+  if (!/[a-ząćęłńóśźż]/i.test(cell)) return null; // same kropki/podkreślenia
+  if (/podpis|czytelny|parafa/i.test(cell)) return null; // podpis pod polem, nie etykieta
+  return upperFirstPl(cell);
+}
+
+/**
+ * Buduje czytelną etykietę pola. Priorytety:
+ *  1) ręczne ładne nazwy (PRETTY_LABELS),
+ *  2) klucze samoopisowe (np. „KWOTA BRUTTO SŁOWNIE", „DATA WYMAGALNOŚCI") → z klucza,
+ *  3) komórka tabeli tuż przed polem (umowa),
+ *  4) ostatnia fraza zdania przed polem (wezwania, pisma),
+ *  5) sam klucz.
+ */
+function buildLabel(key: string, before: string, cls: KeyClass): string {
   if (PRETTY_LABELS[key]) return PRETTY_LABELS[key];
 
-  // Z kontekstu wyłuskujemy krótki, sensowny opis (np. "Koszty windykacyjne", "rata za").
-  const ctx = context
-    .replace(/\s+/g, " ")
-    .replace(/[•|–-]\s*$/, "")
-    .trim();
-  const tail =
-    ctx
-      .split(/[.;:]\s*/)
-      .pop()
-      ?.trim() ?? "";
+  const tableCell = extractTableCell(before);
 
-  // Dla kwot/dat kontekst jest najważniejszy (rozróżnia powtarzające się pola).
-  if (
-    (cls.semantic === "amount" || cls.semantic === "date") &&
-    tail &&
-    tail.length >= 3 &&
-    tail.length <= 60
-  ) {
-    return titleCasePl(tail);
+  // Klucze, które same niosą pełną informację — kontekst tylko by zaszkodził.
+  const isBareAmount = /^kwota(\s+łączna)?$/i.test(key);
+  const isBareDate = /^(data|dd\.mm\.rrrr)$/i.test(key);
+  if (cls.semantic === "amountWords") return tableCell ?? titleCasePl(key);
+  if (cls.semantic === "amount" && !isBareAmount) return tableCell ?? titleCasePl(key);
+  if (cls.semantic === "date" && !isBareDate) return tableCell ?? titleCasePl(key);
+
+  // Pola stronowe: w tabeli etykieta z komórki, inaczej z klucza (kontekst = nazwa
+  // strony, a tę pokazujemy już w nagłówku sekcji).
+  if (PARTY_FIELD_SEMANTICS.includes(cls.semantic)) {
+    return tableCell ?? titleCasePl(key.replace(/\s*\/\s*/g, " / "));
   }
 
-  // Czytelna wersja samego klucza.
+  if (tableCell) return tableCell;
+
+  // Ogólne kwoty/daty/odsetki/teksty — najlepszy jest kontekst (rozróżnia powtórzenia).
+  const lastSentence = before.split(/(?:[.;]\s)|\n/).pop() ?? before;
+  const phrase = shortenPhrase(cleanContext(lastSentence));
+  if (
+    (cls.semantic === "amount" || cls.semantic === "date" || cls.semantic === "interest") &&
+    phrase.length >= 3 &&
+    phrase.length <= 60
+  ) {
+    return upperFirstPl(phrase);
+  }
+
   const niceKey = titleCasePl(key.replace(/\s*\/\s*/g, " / "));
-  if (tail && tail.length >= 4 && tail.length <= 48 && !/^[\d\s]+$/.test(tail)) {
-    return `${niceKey} — ${tail}`.slice(0, 80);
+  if (phrase.length >= 4 && phrase.length <= 48 && !/^\d+$/.test(phrase)) {
+    return `${niceKey} — ${phrase}`.slice(0, 80);
   }
   return niceKey;
 }
@@ -463,22 +586,6 @@ function buildLabel(key: string, context: string, cls: KeyClass): string {
 // ─────────────────────────────────────────────────────────────────────
 // Ekstrakcja uporządkowanych pól z tekstu wzoru
 // ─────────────────────────────────────────────────────────────────────
-
-// Semantyki traktowane jako „dane strony" (idą do grupy konkretnej strony).
-const PARTY_FIELD_SEMANTICS: FieldSemantic[] = [
-  "name",
-  "address",
-  "idLine",
-  "nip",
-  "regon",
-  "krs",
-  "pesel",
-  "bank",
-  "phone",
-  "email",
-  "legalForm",
-  "representative",
-];
 
 const TERMS_GROUP = { key: "kwoty", label: "Kwoty, warunki i terminy", kind: "terms" as PartyKind };
 
@@ -515,11 +622,14 @@ export function extractOrderedFields(text: string): DocField[] {
 
     const lineStart = text.lastIndexOf("\n", start - 1) + 1;
     const before = text.slice(Math.max(lineStart, start - 90), start);
+    // Szersze okno (przez 1 nową linię) na potrzeby etykiety — łapie układ
+    // tabelaryczny umowy, gdzie etykieta komórki jest w poprzednim wierszu.
+    const labelBefore = text.slice(Math.max(0, start - 140), start);
     const after = text.slice(end, end + 100);
 
     const cls = classifyKey(key);
     const keyLower = key.toLowerCase();
-    const isPartyField = PARTY_FIELD_SEMANTICS.includes(cls.semantic);
+    const isPartyField = isPartyFieldSemantic(cls.semantic);
 
     // Strona pola: klucz → „zwanym dalej X" po polu → bieżąca sekcja.
     const partyFromKey = findPartyInKey(keyLower);
@@ -565,25 +675,13 @@ export function extractOrderedFields(text: string): DocField[] {
 
     const autofill =
       (partyKind === "company" || partyKind === "person-or-company") &&
-      [
-        "name",
-        "address",
-        "idLine",
-        "nip",
-        "regon",
-        "krs",
-        "bank",
-        "phone",
-        "email",
-        "legalForm",
-        "representative",
-      ].includes(cls.semantic);
+      AUTOFILL_SEMANTICS.includes(cls.semantic);
 
     fields.push({
       id: String(occ),
       occ,
       key,
-      label: buildLabel(key, before, cls),
+      label: buildLabel(key, labelBefore, cls),
       context: before.replace(/\s+/g, " ").trim().slice(-80),
       semantic: cls.semantic,
       input: cls.input,
@@ -713,15 +811,35 @@ const PL_NUM = (n: number) =>
     Math.round((n ?? 0) * 100) / 100,
   );
 
-/** Dobiera odpowiednią kwotę dla pola na podstawie jego klucza (netto/brutto/prowizja/łączna). */
-function amountForKey(key: string, c: CalculatorOutputs): number {
+export type AmountKind = "prowizja" | "netto" | "brutto" | "total" | "plain";
+
+/**
+ * Rozpoznaje rodzaj kwoty z klucza placeholdera — JEDNO źródło prawdy używane i
+ * przez mapowanie kalkulatora, i przez parowanie pól „kwota słownie" w UI.
+ */
+export function amountKind(key: string): AmountKind {
   const k = key.toLowerCase();
-  if (/prowizj/.test(k)) return c.commission;
-  if (/netto/.test(k)) return c.net;
-  if (/brutto/.test(k)) return c.nominal;
-  if (/łączn|laczn|razem|suma|całkow|calkow|zobowiąz|zobowiaz/.test(k)) return c.total;
-  // domyślnie kwota nominalna pożyczki
-  return c.nominal;
+  if (/prowizj/.test(k)) return "prowizja";
+  if (/netto/.test(k)) return "netto";
+  if (/brutto/.test(k)) return "brutto";
+  if (/łączn|laczn|razem|suma|całkow|calkow|zobowiąz|zobowiaz/.test(k)) return "total";
+  return "plain";
+}
+
+/** Dobiera odpowiednią kwotę dla pola na podstawie rodzaju kwoty z klucza. */
+function amountForKey(key: string, c: CalculatorOutputs): number {
+  switch (amountKind(key)) {
+    case "prowizja":
+      return c.commission;
+    case "netto":
+      return c.net;
+    case "brutto":
+      return c.nominal;
+    case "total":
+      return c.total;
+    default:
+      return c.nominal; // domyślnie kwota nominalna pożyczki
+  }
 }
 
 /**
