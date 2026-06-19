@@ -851,69 +851,60 @@ function OwnershipDeedUpload({
   const deedPhotos = photos.filter((p) => p.bucket === "ownership_deed");
 
   return (
-    <div className="rounded-xl border border-border bg-muted/30 p-4">
-      <div className="flex items-start gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
-          <FileText className="h-5 w-5" />
-        </div>
-        <div className="flex-1">
-          <div className="text-sm font-bold text-foreground">
-            Nie masz numeru KW? Wgraj akt własności nieruchomości
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Akt notarialny, postanowienie sądu o nabyciu spadku, umowa darowizny lub inny dokument
-            potwierdzający własność. Numer KW ustalimy w Twoim imieniu — możesz przejść dalej bez wpisywania numeru.
-          </p>
-        </div>
-      </div>
+    <details className="group rounded-xl border border-border bg-muted/30 transition-colors hover:bg-muted/50">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm">
+        <FileText className="h-4 w-4 shrink-0 text-accent" />
+        <span className="flex-1 font-semibold text-foreground">
+          Nie masz numeru? Wgraj akt własności
+        </span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+      </summary>
+      <div className="space-y-3 border-t border-border px-4 py-4">
+        <p className="text-xs text-muted-foreground">
+          Akt notarialny, postanowienie sądu lub umowa darowizny. Numer KW ustalimy sami.
+        </p>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,application/pdf"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          addPhotos(e.target.files, "ownership_deed");
-          if (inputRef.current) inputRef.current.value = "";
-        }}
-      />
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            addPhotos(e.target.files, "ownership_deed");
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+        />
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
           <Upload className="mr-2 h-4 w-4" />
-          {deedPhotos.length > 0 ? "Dodaj kolejny plik" : "Wgraj akt własności"}
+          {deedPhotos.length > 0 ? "Dodaj kolejny plik" : "Wybierz plik"}
         </Button>
+
         {deedPhotos.length > 0 && (
-          <span className="self-center text-xs text-muted-foreground">
-            Wgrano {deedPhotos.length} {deedPhotos.length === 1 ? "plik" : "plików"}
-          </span>
+          <ul className="space-y-2">
+            {deedPhotos.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              >
+                <span className="flex min-w-0 items-center gap-2 truncate">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                  <span className="truncate">{p.name}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removePhoto(p.id)}
+                  className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-destructive"
+                >
+                  Usuń
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
-
-      {deedPhotos.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {deedPhotos.map((p) => (
-            <li
-              key={p.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            >
-              <span className="flex min-w-0 items-center gap-2 truncate">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                <span className="truncate">{p.name}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => removePhoto(p.id)}
-                className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-destructive"
-              >
-                Usuń
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    </details>
   );
 }
 
