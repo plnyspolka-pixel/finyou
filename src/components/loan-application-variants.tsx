@@ -467,7 +467,7 @@ export function LinearLoanApplication({
     if (step === 3) return draft.maxPayment >= 500;
     if (step === 4) return draft.annualRate >= 15;
     if (step === 5) return !!draft.secType;
-    if (step === 6) return hasKwNumber(draft.kwNumber);
+    if (step === 6) return hasKwNumber(draft.kwNumber) || photos.some((p) => p.bucket === "ownership_deed");
     if (step === 7) return !photosRequired || photos.length > 0;
     if (step === 8) return !!draft.phone.trim() && !!draft.email.trim();
     return true;
