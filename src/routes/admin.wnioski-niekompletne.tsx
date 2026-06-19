@@ -197,7 +197,7 @@ function ApplicationsPage() {
         case "status": return r.status;
         case "loan_amount": return r.loan_amount ?? -1;
         case "completeness_percent": return r.completeness_percent ?? -1;
-        case "photos": return (r.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
+        case "media": return (r.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0) + (r.docCount ?? 0);
         case "kw": return (r.properties ?? []).filter((p) => !!p.land_register_number).length;
         case "created_at": return new Date(r.created_at).getTime();
         case "updated_at":
