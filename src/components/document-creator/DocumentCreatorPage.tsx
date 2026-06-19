@@ -350,6 +350,7 @@ export function DocumentCreatorPage() {
   const _generate = useServerFn(generateDocxFromTemplate);
   const _history = useServerFn(listGeneratedDocs);
   const _signedUrl = useServerFn(getGeneratedDocSignedUrl);
+  const _preview = useServerFn(getDocxTemplatePreview);
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
@@ -360,6 +361,9 @@ export function DocumentCreatorPage() {
   const [commission, setCommission] = useState<string>("");
   const [addCommissionToCosts, setAddCommissionToCosts] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [previewText, setPreviewText] = useState<string>("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"template" | "filled">("template");
 
   // Stan kalkulatora pożyczki
   const [calc, setCalc] = useState({
