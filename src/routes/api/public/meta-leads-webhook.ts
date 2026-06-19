@@ -42,9 +42,9 @@ function normPhone(p: string): string {
 }
 
 function getOrigin(_request: Request): string {
-  const envOrigin = process.env.PUBLIC_APP_ORIGIN;
-  if (envOrigin) return envOrigin.replace(/\/$/, "");
   // Linki klienckie (return_link, SMS, maile) zawsze na główną domenę.
+  // Ignorujemy PUBLIC_APP_ORIGIN — w przeszłości była ustawiona na app.financeyou.pl.
+  void process.env.PUBLIC_APP_ORIGIN;
   return "https://financeyou.pl";
 }
 

@@ -9,7 +9,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
-import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
@@ -161,6 +161,9 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         });
         if (stored.length && inboundLogId) {
           await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
+          try {
+            await attachStoredToClientDocuments({ leadId, stored, sourceLabel: "email" });
+          } catch (e) { console.error("[resend-inbound] attach to client docs", e); }
         }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź zanim auto-agent odpowie

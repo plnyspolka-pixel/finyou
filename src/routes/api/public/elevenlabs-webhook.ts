@@ -163,6 +163,52 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               raw_result: body,
             })
             .eq("id", queueRow.id);
+
+          // === Zagęszczenie prób — szybki retry dla nieodebranych / błędów / poczty głosowej ===
+          // Cap: max 6 prób retry per wniosek/telefon (oprócz oryginalnej sekwencji follow-up).
+          const isRetryable = outcome === "no_answer" || outcome === "busy" || outcome === "voicemail" || outcome === "failed";
+          if (isRetryable) {
+            try {
+              let cntQ = supabase
+                .from("call_queue")
+                .select("id", { count: "exact", head: true })
+                .eq("source", "auto_retry");
+              if (queueRow.loan_application_id) {
+                cntQ = cntQ.eq("loan_application_id", queueRow.loan_application_id);
+              } else if (queueRow.phone_normalized) {
+                cntQ = cntQ.eq("phone_normalized", queueRow.phone_normalized);
+              } else {
+                throw new Error("no key to count retries");
+              }
+              const retryCountQ = await cntQ;
+              const alreadyRetried = retryCountQ.count ?? 0;
+              const MAX_RETRIES = 6;
+              if (alreadyRetried < MAX_RETRIES) {
+                // Odstęp: no_answer 20 min, busy 25 min, voicemail 45 min, failed 60 min
+                const offsetMin =
+                  outcome === "no_answer" ? 20 :
+                  outcome === "busy" ? 25 :
+                  outcome === "voicemail" ? 45 :
+                  60;
+                const candidate = new Date(Date.now() + offsetMin * 60_000);
+                const { getCallingWindow } = await import("@/lib/voicebot.functions");
+                const win = getCallingWindow(candidate);
+                const scheduledAt = win.allowed ? candidate : win.nextAllowedAt;
+                await supabase.from("call_queue").insert({
+                  client_id: queueRow.client_id ?? null,
+                  loan_application_id: queueRow.loan_application_id ?? null,
+                  meta_lead_id: queueRow.meta_lead_id ?? null,
+                  phone_normalized: queueRow.phone_normalized,
+                  status: "oczekuje",
+                  source: "auto_retry",
+                  scheduled_at: scheduledAt.toISOString(),
+                  attempts: 0,
+                });
+              }
+            } catch (e) {
+              console.error("[elevenlabs-webhook] schedule auto_retry failed", e);
+            }
+          }
         }
 
         // ── Zapis danych zebranych przez Anię (data collection) ─────────────

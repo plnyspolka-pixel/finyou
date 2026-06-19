@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
-import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
 
 function verifySig(body: string, signature: string | null): boolean {
@@ -135,6 +135,9 @@ async function handleMessagingEvent(ev: any, platform: "messenger" | "instagram"
   if (stored.length) {
     await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
       .eq("external_id", msg.mid ?? "");
+    try {
+      await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
+    } catch (e) { console.error("[messenger] attach to client docs", e); }
   }
 
   if (!userText && !stored.length) return;
