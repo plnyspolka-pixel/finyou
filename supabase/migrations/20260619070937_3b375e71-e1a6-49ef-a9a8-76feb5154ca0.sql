@@ -1,0 +1,2 @@
+UPDATE public.loan_applications SET return_link = 'https://financeyou.pl' WHERE return_link IS NOT NULL AND return_link <> 'https://financeyou.pl';
+UPDATE public.leads SET application_data = jsonb_set(application_data, '{return_link}', '"https://financeyou.pl"'::jsonb) WHERE application_data ? 'return_link' AND application_data->>'return_link' <> 'https://financeyou.pl';
