@@ -45,7 +45,7 @@ export async function runMetaLeadsSync(): Promise<{
   const { sendResendEmail } = await import("@/lib/resend-send.server");
   const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
 
-  const origin = process.env.PUBLIC_APP_ORIGIN?.replace(/\/$/, "") ?? "https://app.financeyou.pl";
+  const origin = process.env.PUBLIC_APP_ORIGIN?.replace(/\/$/, "") ?? "https://financeyou.pl";
   const summary = { forms_discovered: 0, leads_fetched: 0, leads_new: 0, calls_queued: 0, errors: [] as string[] };
 
   // 1) Odkryj strony + formularze
@@ -204,15 +204,17 @@ export async function runMetaLeadsSync(): Promise<{
             }
           } catch (e: any) { summary.errors.push(`unified ${leadgenId}: ${e?.message}`); }
 
-          if (phone && returnLink) {
-            const sms = `Cześć ${first}! Dziękujemy za zainteresowanie pożyczką. Dokończ wniosek tutaj: ${returnLink} — Finance You`;
-            await sendSmsInternal({ phone, body: sms, source: "meta_lead_return_link" }).catch(() => {});
-          }
-          if (email && returnLink) {
-            const greet = `Cześć ${first}!`;
-            const text = `${greet}\n\nDziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w Finance You.\n\nDokończ wniosek tutaj: ${returnLink}\n\nZajmie Ci to ok. 3 minut.\n\nZespół Finance You`;
-            const html = `<p>${greet}</p><p>Dziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w <b>Finance You</b>.</p><p><a href="${returnLink}" style="display:inline-block;padding:12px 20px;background:#0f3460;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Dokończ wniosek</a></p><p>Zespół Finance You</p>`;
-            await sendResendEmail({ to: email, subject: "Dokończ wniosek o pożyczkę — Finance You", text, html, fromName: "Ania z Finance You" }).catch(() => {});
+          // Nie wysyłamy już natychmiastowego SMS-a / maila ad-hoc.
+          // Cała sekwencja kontaktu (30 dni, mail/SMS/call) idzie przez follow-up plan,
+          // żeby tempo i godziny były pod kontrolą i logowalne w lead_follow_up_schedule.
+          try {
+            const { scheduleFollowUpsForLead } = await import("@/lib/follow-up-plan.server");
+            // unifiedLeadId zostało stworzone wyżej w bloku upsertLeadFromSource — pobierzmy je
+            const { data: unified } = await supabaseAdmin
+              .from("leads").select("id").eq("meta_lead_id", inserted?.id ?? "").maybeSingle();
+            if (unified?.id) await scheduleFollowUpsForLead(unified.id);
+          } catch (e: any) {
+            summary.errors.push(`schedule follow-ups ${leadgenId}: ${e?.message}`);
           }
 
           if (phone && autoCall && form.voicebot_enabled) {

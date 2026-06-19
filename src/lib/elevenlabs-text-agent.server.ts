@@ -250,7 +250,7 @@ async function executeTool(leadId: string, channel: string, name: string, args: 
     let link = lead?.return_link;
     if (!link) {
       const token = lead?.return_link_token ?? crypto.randomUUID();
-      link = `https://app.financeyou.pl/wniosek/${token}`;
+      link = `https://financeyou.pl/wniosek/${token}`;
       await s.from("leads").update({ return_link: link, return_link_token: token }).eq("id", leadId);
     }
     return { ok: true, link, instruction: `Wyślij klientowi w odpowiedzi tekst typu: "Twój link do dokończenia wniosku: ${link}"` };
