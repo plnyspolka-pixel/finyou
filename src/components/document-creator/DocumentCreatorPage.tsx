@@ -5,6 +5,7 @@ import {
   generateDocxFromTemplate,
   listGeneratedDocs,
   getGeneratedDocSignedUrl,
+  getDocxTemplatePreview,
   type DocTemplate,
   type GeneratedDoc,
 } from "@/lib/document-generator.functions";
@@ -29,6 +30,7 @@ import {
   Building2,
   CalendarDays,
   ArrowRight,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
@@ -348,6 +350,7 @@ export function DocumentCreatorPage() {
   const _generate = useServerFn(generateDocxFromTemplate);
   const _history = useServerFn(listGeneratedDocs);
   const _signedUrl = useServerFn(getGeneratedDocSignedUrl);
+  const _preview = useServerFn(getDocxTemplatePreview);
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
@@ -358,6 +361,9 @@ export function DocumentCreatorPage() {
   const [commission, setCommission] = useState<string>("");
   const [addCommissionToCosts, setAddCommissionToCosts] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [previewText, setPreviewText] = useState<string>("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"template" | "filled">("template");
 
   // Stan kalkulatora pożyczki
   const [calc, setCalc] = useState({
@@ -413,6 +419,13 @@ export function DocumentCreatorPage() {
     setFormData(defaults);
     setCommission("");
     setAddCommissionToCosts(false);
+    // Załaduj podgląd treści wzoru
+    setPreviewText("");
+    setPreviewLoading(true);
+    _preview({ data: { templateId: selected.id } })
+      .then(r => setPreviewText(r.text))
+      .catch((e: any) => toast.error(`Podgląd wzoru: ${e?.message ?? "błąd"}`))
+      .finally(() => setPreviewLoading(false));
   }, [selected?.id]);
 
   // auto KWOTA SŁOWNIE
@@ -597,6 +610,54 @@ export function DocumentCreatorPage() {
                   </div>
                 </CardHeader>
               </Card>
+
+              {/* Podgląd wzoru z placeholderami */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-primary" />
+                      Podgląd wzoru dokumentu
+                    </CardTitle>
+                    <div className="flex items-center gap-1 rounded-md border p-0.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("template")}
+                        className={`px-2.5 py-1 rounded ${previewMode === "template" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      >
+                        Wzór z placeholderami
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("filled")}
+                        className={`px-2.5 py-1 rounded ${previewMode === "filled" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      >
+                        Z wypełnionymi danymi
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {previewLoading ? (
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" /> Ładowanie podglądu…
+                    </div>
+                  ) : previewText ? (
+                    <div className="max-h-[480px] overflow-y-auto rounded-md border bg-muted/30 p-4">
+                      <PreviewRenderer
+                        text={previewText}
+                        formData={previewMode === "filled" ? formData : null}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Brak podglądu dla tego wzoru.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+
 
               {/* Kalkulator pożyczki — tylko dla umowy pożyczki */}
               {schema.hasCalculator && (
@@ -861,3 +922,48 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+/**
+ * Renderuje treść wzoru z podświetlonymi placeholderami `[KLUCZ]`.
+ * Gdy `formData` ≠ null — wstawia wartości w miejsce placeholderów (puste = pokaż placeholder).
+ */
+function PreviewRenderer({
+  text,
+  formData,
+}: {
+  text: string;
+  formData: Record<string, string> | null;
+}) {
+  const parts = text.split(/(\[[^\]\n]+\])/g);
+  return (
+    <pre className="whitespace-pre-wrap break-words text-[13px] leading-relaxed font-sans text-foreground">
+      {parts.map((part, i) => {
+        const m = part.match(/^\[([^\]\n]+)\]$/);
+        if (!m) return <span key={i}>{part}</span>;
+        const key = m[1];
+        const val = formData ? (formData[key] ?? "").trim() : "";
+        if (formData && val) {
+          return (
+            <span
+              key={i}
+              className="rounded bg-emerald-100 dark:bg-emerald-900/40 px-1 font-semibold text-emerald-900 dark:text-emerald-100"
+              title={`Wypełnione: ${key}`}
+            >
+              {val}
+            </span>
+          );
+        }
+        return (
+          <span
+            key={i}
+            className="rounded bg-amber-100 dark:bg-amber-900/40 px-1 font-mono text-[12px] text-amber-900 dark:text-amber-100 border border-amber-300/60 dark:border-amber-700/60"
+            title="Placeholder — uzupełnij pole obok"
+          >
+            [{key}]
+          </span>
+        );
+      })}
+    </pre>
+  );
+}
+
