@@ -611,6 +611,54 @@ export function DocumentCreatorPage() {
                 </CardHeader>
               </Card>
 
+              {/* Podgląd wzoru z placeholderami */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-primary" />
+                      Podgląd wzoru dokumentu
+                    </CardTitle>
+                    <div className="flex items-center gap-1 rounded-md border p-0.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("template")}
+                        className={`px-2.5 py-1 rounded ${previewMode === "template" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      >
+                        Wzór z placeholderami
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewMode("filled")}
+                        className={`px-2.5 py-1 rounded ${previewMode === "filled" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      >
+                        Z wypełnionymi danymi
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {previewLoading ? (
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" /> Ładowanie podglądu…
+                    </div>
+                  ) : previewText ? (
+                    <div className="max-h-[480px] overflow-y-auto rounded-md border bg-muted/30 p-4">
+                      <PreviewRenderer
+                        text={previewText}
+                        formData={previewMode === "filled" ? formData : null}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Brak podglądu dla tego wzoru.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+
+
               {/* Kalkulator pożyczki — tylko dla umowy pożyczki */}
               {schema.hasCalculator && (
                 <Card className="border-primary/30">
