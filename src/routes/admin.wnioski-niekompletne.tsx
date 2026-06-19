@@ -280,13 +280,16 @@ function ApplicationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <PhotoThumbs paths={allPhotos} />
+                      <PhotoThumbs paths={allPhotos} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                     </TableCell>
                     <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.updated_at)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => setPreview({ id: r.id, paths: allPhotos, name })} title="Podgląd dokumentów i zdjęć">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         <Button asChild size="sm" variant="ghost">
                           <Link to="/admin/wnioski/$id" params={{ id: r.id }}>Otwórz</Link>
                         </Button>
