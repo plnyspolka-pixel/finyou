@@ -36,6 +36,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorKreatorDokumentowRouteImport } from './routes/operator.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
@@ -81,6 +82,7 @@ import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growt
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
+import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
@@ -256,6 +258,11 @@ const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
+  id: '/leady',
+  path: '/leady',
+  getParentRoute: () => OperatorRoute,
 } as any)
 const OperatorKreatorDokumentowRoute =
   OperatorKreatorDokumentowRouteImport.update({
@@ -483,6 +490,11 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   id: '/ai-administrator',
   path: '/ai-administrator',
   getParentRoute: () => AdminRoute,
+} as any)
+const OperatorLeadyIdRoute = OperatorLeadyIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => OperatorLeadyRoute,
 } as any)
 const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   id: '/wniosek/$id',
@@ -773,6 +785,7 @@ export interface FileRoutesByFullPath {
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -800,6 +813,7 @@ export interface FileRoutesByFullPath {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
@@ -883,6 +897,7 @@ export interface FileRoutesByTo {
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
@@ -910,6 +925,7 @@ export interface FileRoutesByTo {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
@@ -998,6 +1014,7 @@ export interface FileRoutesById {
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -1025,6 +1042,7 @@ export interface FileRoutesById {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
@@ -1114,6 +1132,7 @@ export interface FileRouteTypes {
     | '/klient/wniosek'
     | '/l/$slug'
     | '/operator/kreator-dokumentow'
+    | '/operator/leady'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1141,6 +1160,7 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/daily-blog-tick'
@@ -1224,6 +1244,7 @@ export interface FileRouteTypes {
     | '/klient/wniosek'
     | '/l/$slug'
     | '/operator/kreator-dokumentow'
+    | '/operator/leady'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
@@ -1251,6 +1272,7 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/daily-blog-tick'
@@ -1338,6 +1360,7 @@ export interface FileRouteTypes {
     | '/klient/wniosek'
     | '/l/$slug'
     | '/operator/kreator-dokumentow'
+    | '/operator/leady'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1365,6 +1388,7 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/daily-blog-tick'
@@ -1636,6 +1660,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/leady': {
+      id: '/operator/leady'
+      path: '/leady'
+      fullPath: '/operator/leady'
+      preLoaderRoute: typeof OperatorLeadyRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/operator/kreator-dokumentow': {
       id: '/operator/kreator-dokumentow'
@@ -1951,6 +1982,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/ai-administrator'
       preLoaderRoute: typeof AdminAiAdministratorRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/operator/leady/$id': {
+      id: '/operator/leady/$id'
+      path: '/$id'
+      fullPath: '/operator/leady/$id'
+      preLoaderRoute: typeof OperatorLeadyIdRouteImport
+      parentRoute: typeof OperatorLeadyRoute
     }
     '/inwestor/wniosek/$id': {
       id: '/inwestor/wniosek/$id'
@@ -2390,13 +2428,27 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
+interface OperatorLeadyRouteChildren {
+  OperatorLeadyIdRoute: typeof OperatorLeadyIdRoute
+}
+
+const OperatorLeadyRouteChildren: OperatorLeadyRouteChildren = {
+  OperatorLeadyIdRoute: OperatorLeadyIdRoute,
+}
+
+const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
+  OperatorLeadyRouteChildren,
+)
+
 interface OperatorRouteChildren {
   OperatorKreatorDokumentowRoute: typeof OperatorKreatorDokumentowRoute
+  OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorIndexRoute: typeof OperatorIndexRoute
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorKreatorDokumentowRoute: OperatorKreatorDokumentowRoute,
+  OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorIndexRoute: OperatorIndexRoute,
 }
 
