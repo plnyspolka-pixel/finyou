@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listDocxTemplates,
@@ -9,14 +9,33 @@ import {
   type DocTemplate,
   type GeneratedDoc,
 } from "@/lib/document-generator.functions";
+import { gusCompanyLookup } from "@/lib/gus-bir.functions";
+import { krsCompanyLookup } from "@/lib/krs.functions";
+import { companyBankAccountLookup } from "@/lib/company-bank-lookup.functions";
+import {
+  extractOrderedFields,
+  groupFields,
+  companyValueForField,
+  calculatorValueForField,
+  type DocField,
+  type FieldGroup,
+  type CompanyBundle,
+  type CalculatorOutputs,
+} from "@/lib/document-fields";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   FileText,
@@ -25,12 +44,16 @@ import {
   Search,
   Wand2,
   Calculator,
-  Wallet,
-  UserRound,
   Building2,
+  UserRound,
+  Wallet,
   CalendarDays,
   ArrowRight,
   Eye,
+  ChevronDown,
+  ChevronRight,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
@@ -63,282 +86,43 @@ const CATEGORY_COLORS: Record<string, string> = {
 // HELPERY
 // ════════════════════════════════════════════════════════════════════
 
-const todayDDMMYYYY = () => {
-  const d = new Date();
-  const p = (n: number) => n.toString().padStart(2, "0");
-  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
-};
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const isoToDDMM = (iso: string) => {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
 };
-const addMonthsISO = (iso: string, months: number) => {
-  const d = new Date(iso);
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + months);
-  if (d.getDate() < day) d.setDate(0);
-  return d.toISOString().slice(0, 10);
-};
 
-type FieldType = "text" | "textarea" | "date" | "amount" | "amount-words" | "number";
-
-interface FieldSchema {
-  key: string;
-  label: string;
-  type?: FieldType;
-  placeholder?: string;
-  helper?: string;
-}
-interface Section {
-  title: string;
-  icon?: "creditor" | "borrower" | "terms" | "place";
-  fields: FieldSchema[];
-}
-interface TplSchema {
-  sections: Section[];
-  hasCommission?: boolean;
-  hasCalculator?: boolean;
-  /** Mapowanie wyników kalkulatora -> placeholdery umowy */
-  calcMap?: {
-    amountKey?: string;          // np. "KWOTA"
-    amountWordsKey?: string;     // "KWOTA SŁOWNIE"
-    interestKey?: string;        // "OPROCENTOWANIE"
-    monthsKey?: string;          // "LICZBA"
-    payoutDateKey?: string;      // "DATA"
-  };
+function parseAmountPL(s: string | undefined | null): number {
+  if (!s) return NaN;
+  // \s w JS obejmuje też spację nierozdzielającą używaną przez Intl.NumberFormat
+  let x = String(s).replace(/\s/g, "");
+  if (x.includes(",")) x = x.replace(/\./g, "").replace(",", ".");
+  return parseFloat(x);
 }
 
-const T = (k: string, label: string, type?: FieldType, helper?: string): FieldSchema => ({
-  key: k, label, type, helper,
-});
-
-// Per-slug schematy. Klucze muszą odpowiadać `placeholders` w DB.
-const TEMPLATE_SCHEMAS: Record<string, TplSchema> = {
-  // ─────── Umowa pożyczki ───────
-  "u01-04-umowa-pozyczki-z-zalacznikami-redline": {
-    hasCommission: true,
-    hasCalculator: true,
-    calcMap: {
-      amountKey: "KWOTA",
-      amountWordsKey: "KWOTA SŁOWNIE",
-      interestKey: "OPROCENTOWANIE",
-      monthsKey: "LICZBA",
-      payoutDateKey: "DATA",
-    },
-    sections: [
-      {
-        title: "Miejsce i data podpisania", icon: "place",
-        fields: [
-          T("MIEJSCOWOŚĆ", "Miejscowość podpisania"),
-          T("DD.MM.RRRR", "Data podpisania umowy", "date"),
-        ],
-      },
-      {
-        title: "POŻYCZKODAWCA (wierzyciel / inwestor)", icon: "creditor",
-        fields: [
-          T("NAZWA / FIRMA POŻYCZKODAWCY", "Nazwa / firma pożyczkodawcy"),
-          T("ADRES", "Adres pożyczkodawcy", "textarea"),
-          T("KRS / NIP / REGON", "KRS / NIP / REGON pożyczkodawcy"),
-        ],
-      },
-      {
-        title: "POŻYCZKOBIORCA", icon: "borrower",
-        fields: [
-          T("IMIĘ I NAZWISKO / FIRMA", "Imię i nazwisko lub firma pożyczkobiorcy"),
-          T("PESEL / NIP", "PESEL lub NIP pożyczkobiorcy"),
-        ],
-      },
-      {
-        title: "Warunki pożyczki", icon: "terms",
-        fields: [
-          T("KWOTA", "Kwota pożyczki (zostanie podstawiona z kalkulatora)", "amount"),
-          T("KWOTA SŁOWNIE", "Kwota słownie (auto)", "amount-words"),
-          T("OPROCENTOWANIE", "Oprocentowanie roczne [%]"),
-          T("LICZBA", "Liczba miesięcy", "number"),
-          T("DATA", "Data wypłaty pożyczki", "date"),
-          T("NUMER RACHUNKU", "Numer rachunku pożyczkobiorcy"),
-        ],
-      },
-    ],
-  },
-
-  // ─────── Oświadczenie 777 ───────
-  "u05-oswiadczenie-777-instrukcja-dla-notariusza": {
-    sections: [
-      { title: "Miejsce i data", icon: "place", fields: [
-        T("MIEJSCOWOŚĆ", "Miejscowość"),
-        T("DD.MM.RRRR", "Data oświadczenia", "date"),
-      ]},
-      { title: "Wierzyciel (pożyczkodawca)", icon: "creditor", fields: [
-        T("NAZWA / FIRMA", "Nazwa / firma wierzyciela"),
-      ]},
-      { title: "Dłużnik (pożyczkobiorca)", icon: "borrower", fields: [
-        T("IMIĘ I NAZWISKO", "Imię i nazwisko dłużnika"),
-      ]},
-      { title: "Zabezpieczenie", icon: "terms", fields: [
-        T("KWOTA", "Kwota egzekucji [PLN]", "amount"),
-        T("KWOTA SŁOWNIE", "Kwota słownie (auto)", "amount-words"),
-        T("DATA", "Termin (do dnia)", "date"),
-      ]},
-    ],
-  },
-
-  // ─────── Hipoteka ───────
-  "u06-hipoteka-oswiadczenie-i-wniosek-o-wpis": {
-    sections: [
-      { title: "Miejsce i data", icon: "place", fields: [
-        T("MIEJSCOWOŚĆ", "Miejscowość"),
-        T("DD.MM.RRRR", "Data", "date"),
-      ]},
-      { title: "Wierzyciel hipoteczny (pożyczkodawca)", icon: "creditor", fields: [
-        T("NAZWA / FIRMA", "Nazwa / firma wierzyciela"),
-      ]},
-      { title: "Właściciel nieruchomości (pożyczkobiorca)", icon: "borrower", fields: [
-        T("IMIĘ I NAZWISKO", "Imię i nazwisko właściciela"),
-        T("NR KW", "Numer księgi wieczystej"),
-      ]},
-      { title: "Zabezpieczenie", icon: "terms", fields: [
-        T("KWOTA", "Suma hipoteki [PLN]", "amount"),
-        T("DATA", "Termin", "date"),
-      ]},
-    ],
-  },
-
-  // ─────── Pokwitowanie wypłaty ───────
-  "u07-pokwitowanie-wyplaty-pozyczki": {
-    sections: [
-      { title: "Miejsce i data", icon: "place", fields: [
-        T("MIEJSCOWOŚĆ", "Miejscowość"),
-        T("DD.MM.RRRR", "Data pokwitowania", "date"),
-      ]},
-      { title: "Pożyczkodawca (wypłacający)", icon: "creditor", fields: [
-        T("NAZWA / FIRMA POŻYCZKODAWCY", "Nazwa / firma pożyczkodawcy"),
-      ]},
-      { title: "Pożyczkobiorca (otrzymujący)", icon: "borrower", fields: [
-        T("IMIĘ I NAZWISKO / FIRMA", "Imię i nazwisko / firma pożyczkobiorcy"),
-        T("NUMER RACHUNKU", "Numer rachunku, na który wypłacono"),
-      ]},
-      { title: "Kwota", icon: "terms", fields: [
-        T("KWOTA", "Wypłacona kwota [PLN]", "amount"),
-        T("KWOTA SŁOWNIE", "Kwota słownie (auto)", "amount-words"),
-        T("DATA", "Data wypłaty", "date"),
-      ]},
-    ],
-  },
-
-  // ─────── Ugoda — rozłożenie na raty ───────
-  "08-ugoda-rozlozenie-na-raty": {
-    sections: [
-      { title: "Miejsce i data", icon: "place", fields: [
-        T("MIEJSCOWOŚĆ", "Miejscowość"),
-        T("DD.MM.RRRR", "Data ugody", "date"),
-      ]},
-      { title: "Pożyczkodawca (wierzyciel)", icon: "creditor", fields: [
-        T("NAZWA / FIRMA POŻYCZKODAWCY", "Nazwa / firma pożyczkodawcy"),
-        T("ADRES", "Adres pożyczkodawcy", "textarea"),
-        T("KRS / NIP", "KRS / NIP pożyczkodawcy"),
-      ]},
-      { title: "Pożyczkobiorca (dłużnik)", icon: "borrower", fields: [
-        T("IMIĘ I NAZWISKO / FIRMA", "Imię i nazwisko / firma pożyczkobiorcy"),
-        T("PESEL / NIP", "PESEL / NIP pożyczkobiorcy"),
-        T("NUMER RACHUNKU", "Numer rachunku do spłat"),
-      ]},
-      { title: "Pierwotna umowa", icon: "terms", fields: [
-        T("DATA UMOWY", "Data pierwotnej umowy pożyczki", "date"),
-      ]},
-      { title: "Warunki ugody", icon: "terms", fields: [
-        T("KWOTA ŁĄCZNA", "Łączna kwota zadłużenia [PLN]", "amount"),
-        T("KWOTA SŁOWNIE", "Kwota słownie (auto)", "amount-words"),
-        T("LICZBA", "Liczba rat", "number"),
-        T("DATA", "Termin pierwszej raty", "date"),
-      ]},
-    ],
-  },
-
-  // ─────── Aneks ───────
-  "01-aneks-przedluzenie-terminu-i-prowizja": {
-    sections: [
-      { title: "Miejsce i data", icon: "place", fields: [
-        T("MIEJSCOWOŚĆ", "Miejscowość"),
-        T("DATA UMOWY DD.MM.RRRR", "Data podpisania aneksu", "date"),
-      ]},
-      { title: "Pożyczkobiorca", icon: "borrower", fields: [
-        T("IMIĘ I NAZWISKO / FIRMA", "Imię i nazwisko / firma pożyczkobiorcy"),
-        T("ADRES", "Adres pożyczkobiorcy", "textarea"),
-        T("CEIDG / NIP / REGON", "CEIDG / NIP / REGON pożyczkobiorcy"),
-      ]},
-      { title: "Pożyczkodawca", icon: "creditor", fields: [
-        T("NAZWA / FIRMA", "Nazwa / firma pożyczkodawcy"),
-        T("KRS / NIP / REGON", "KRS / NIP / REGON pożyczkodawcy"),
-      ]},
-      { title: "Warunki aneksu", icon: "terms", fields: [
-        T("LICZBA", "O ile dni / miesięcy przedłużamy", "number"),
-        T("DATA", "Nowy termin spłaty", "date"),
-        T("KWOTA", "Kwota dodatkowej prowizji [PLN]", "amount"),
-        T("KWOTA SŁOWNIE", "Kwota słownie (auto)", "amount-words"),
-      ]},
-    ],
-  },
-
-  // ─────── Cesja ───────
-  "11-umowa-przelewu-wierzytelnosci-cesja": {
-    sections: [
-      { title: "Miejsce i data", icon: "place", fields: [
-        T("MIEJSCOWOŚĆ", "Miejscowość"),
-        T("DD.MM.RRRR", "Data umowy cesji", "date"),
-      ]},
-      { title: "Cedent — sprzedający wierzytelność (pierwotny pożyczkodawca)", icon: "creditor", fields: [
-        T("NAZWA / FIRMA", "Nazwa / firma cedenta"),
-        T("ADRES", "Adres cedenta", "textarea"),
-        T("KRS / NIP / REGON", "KRS / NIP / REGON cedenta"),
-      ]},
-      { title: "Cesjonariusz — nabywca wierzytelności", icon: "creditor", fields: [
-        T("NAZWA / FIRMA / IMIĘ I NAZWISKO", "Nabywca wierzytelności"),
-        T("NIP / PESEL", "NIP / PESEL nabywcy"),
-      ]},
-      { title: "Dłużnik (pożyczkobiorca)", icon: "borrower", fields: [
-        T("IMIĘ I NAZWISKO DŁUŻNIKA", "Imię i nazwisko dłużnika"),
-        T("NR KW", "Numer KW (jeśli zabezpieczenie)"),
-      ]},
-      { title: "Wierzytelność", icon: "terms", fields: [
-        T("DATA UMOWY", "Data pierwotnej umowy pożyczki", "date"),
-        T("KWOTA", "Wartość wierzytelności [PLN]", "amount"),
-        T("WARUNKI PŁATNOŚCI", "Warunki płatności za cesję", "textarea"),
-      ]},
-    ],
-  },
-};
-
-function guessType(key: string): FieldType {
-  const k = key.toUpperCase();
-  if (k.includes("DD.MM.RRRR") || k.startsWith("DATA")) return "date";
-  if (k.includes("KWOTA SŁOWNIE")) return "amount-words";
-  if (k.startsWith("KWOTA")) return "amount";
-  if (k === "LICZBA" || k.startsWith("NR ") || k.startsWith("NUMER")) return "number";
-  if (k === "OPIS PROPOZYCJI" || k.includes("STANOWISKO") || k.includes("WARUNKI") || k === "TYTUŁ" || k === "ADRES" || k === "ADRES SIEDZIBY" || k === "ADRES KANCELARII") return "textarea";
-  return "text";
+function groupIcon(g: FieldGroup) {
+  if (g.key === "miejsce-data") return <CalendarDays className="h-4 w-4 text-muted-foreground" />;
+  if (g.key === "kwoty") return <Wallet className="h-4 w-4 text-amber-600" />;
+  if (g.partyKind === "company") return <Building2 className="h-4 w-4 text-blue-600" />;
+  if (g.partyKind === "person-or-company")
+    return <UserRound className="h-4 w-4 text-emerald-600" />;
+  return <FileText className="h-4 w-4 text-muted-foreground" />;
 }
 
-function buildFallbackSchema(tpl: DocTemplate): TplSchema {
-  return {
-    sections: [{
-      title: "Pola do uzupełnienia",
-      fields: (tpl.placeholders ?? []).map((k) => ({ key: k, label: k, type: guessType(k) })),
-    }],
-  };
-}
+// Token placeholdera — musi odpowiadać TOKEN_RE z document-fields.ts
+const PREVIEW_SPLIT = /(\[[^[\]\n\t]{1,160}\])/g;
+const PREVIEW_TOKEN = /^\[([^[\]\n\t]{1,160})\]$/;
 
-function sectionIcon(i?: Section["icon"]) {
-  switch (i) {
-    case "creditor": return <Building2 className="h-4 w-4 text-blue-600" />;
-    case "borrower": return <UserRound className="h-4 w-4 text-emerald-600" />;
-    case "terms": return <Wallet className="h-4 w-4 text-amber-600" />;
-    case "place": return <CalendarDays className="h-4 w-4 text-muted-foreground" />;
-    default: return null;
-  }
+// ════════════════════════════════════════════════════════════════════
+// Pobieranie danych firmowych (GUS → KRS → rachunek)
+// ════════════════════════════════════════════════════════════════════
+
+interface BundleResult {
+  bundle: CompanyBundle;
+  sources: string[];
+  warnings: string[];
+  bankNote: string | null;
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -351,15 +135,17 @@ export function DocumentCreatorPage() {
   const _history = useServerFn(listGeneratedDocs);
   const _signedUrl = useServerFn(getGeneratedDocSignedUrl);
   const _preview = useServerFn(getDocxTemplatePreview);
+  const _gus = useServerFn(gusCompanyLookup);
+  const _krs = useServerFn(krsCompanyLookup);
+  const _bank = useServerFn(companyBankAccountLookup);
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<DocTemplate | null>(null);
-  const [formData, setFormData] = useState<Record<string, string>>({});
-  const [commission, setCommission] = useState<string>("");
-  const [addCommissionToCosts, setAddCommissionToCosts] = useState(false);
+
+  const [values, setValues] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   const [previewText, setPreviewText] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -372,13 +158,60 @@ export function DocumentCreatorPage() {
     maxMonthly: 1_200,
     annualInterest: 9.5,
     investorMonthlyPct: 1.5,
+    commission: 0,
     payoutDate: todayISO(),
   });
+  const [showCalc, setShowCalc] = useState(false);
 
-  const schema: TplSchema = useMemo(() => {
-    if (!selected) return { sections: [] };
-    return TEMPLATE_SCHEMAS[selected.slug] ?? buildFallbackSchema(selected);
-  }, [selected]);
+  // Pola wzoru wyliczone z podglądu
+  const fields = useMemo<DocField[]>(
+    () => (previewText ? extractOrderedFields(previewText) : []),
+    [previewText],
+  );
+  const groups = useMemo<FieldGroup[]>(() => groupFields(fields), [fields]);
+  const hasAmounts = useMemo(
+    () => fields.some((f) => f.semantic === "amount" || f.semantic === "amountWords"),
+    [fields],
+  );
+
+  // Mapowanie pól "kwota słownie" → odpowiadające pole kwotowe.
+  // W jednych wzorach „SŁOWNIE" jest PO kwocie (wezwania), w innych PRZED nią
+  // (umowa: „BRUTTO SŁOWNIE", potem „BRUTTO CYFRAMI"). Dlatego szukamy najbliższego
+  // pola kwotowego (w obie strony), preferując ten sam rodzaj kwoty (netto/brutto/
+  // prowizja/łączna) i pole bezpośrednio sąsiadujące.
+  const wordsToAmount = useMemo(() => {
+    const kindOf = (key: string) => {
+      const s = key.toLowerCase();
+      if (/prowizj/.test(s)) return "prowizja";
+      if (/netto/.test(s)) return "netto";
+      if (/brutto/.test(s)) return "brutto";
+      if (/łączn|laczn|razem|suma|całkow|calkow|zobowiąz|zobowiaz/.test(s)) return "total";
+      return "plain";
+    };
+    const map: Record<string, string> = {};
+    const amounts = fields.filter((f) => f.semantic === "amount");
+    for (const w of fields) {
+      if (w.semantic !== "amountWords") continue;
+      const wk = kindOf(w.key);
+      let best: DocField | null = null;
+      let bestScore = Infinity;
+      for (const a of amounts) {
+        // odległość dominuje; ten sam rodzaj i kierunek „przed" rozstrzygają remisy
+        const score =
+          Math.abs(a.occ - w.occ) + (kindOf(a.key) === wk ? 0 : 0.4) + (a.occ < w.occ ? 0 : 0.1);
+        if (score < bestScore) {
+          bestScore = score;
+          best = a;
+        }
+      }
+      if (best) map[w.id] = best.id;
+    }
+    return map;
+  }, [fields]);
+
+  const setValue = useCallback((id: string, val: string) => {
+    setValues((v) => ({ ...v, [id]: val }));
+  }, []);
 
   const refresh = async () => {
     setLoading(true);
@@ -392,12 +225,15 @@ export function DocumentCreatorPage() {
       setLoading(false);
     }
   };
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // grupowanie listy po kategoriach
-  const groups = useMemo(() => {
-    const filtered = templates.filter(t =>
-      !search || t.name.toLowerCase().includes(search.toLowerCase())
+  // Grupowanie listy wzorów po kategoriach
+  const templateGroups = useMemo(() => {
+    const filtered = templates.filter(
+      (t) => !search || t.name.toLowerCase().includes(search.toLowerCase()),
     );
     const map = new Map<string, DocTemplate[]>();
     for (const t of filtered) {
@@ -408,44 +244,46 @@ export function DocumentCreatorPage() {
     return Array.from(map.entries());
   }, [templates, search]);
 
-  // pre-fill po wyborze
+  // Po wyborze wzoru — wczytaj podgląd, wyzeruj formularz
   useEffect(() => {
     if (!selected) return;
-    const defaults: Record<string, string> = {};
-    for (const key of selected.placeholders ?? []) {
-      const t = guessType(key);
-      defaults[key] = t === "date" ? todayDDMMYYYY() : "";
-    }
-    setFormData(defaults);
-    setCommission("");
-    setAddCommissionToCosts(false);
-    // Załaduj podgląd treści wzoru
+    setValues({});
     setPreviewText("");
+    setShowCalc(false);
     setPreviewLoading(true);
     _preview({ data: { templateId: selected.id } })
-      .then(r => setPreviewText(r.text))
+      .then((r) => setPreviewText(r.text))
       .catch((e: any) => toast.error(`Podgląd wzoru: ${e?.message ?? "błąd"}`))
       .finally(() => setPreviewLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
-  // auto KWOTA SŁOWNIE
+  // Auto „kwota słownie" z najbliższej kwoty cyfrowej
   useEffect(() => {
-    if (!selected) return;
-    const wordsKey = selected.placeholders?.find(k => k.toUpperCase().includes("KWOTA SŁOWNIE"));
-    if (!wordsKey) return;
-    const src = formData["KWOTA ŁĄCZNA"] || formData["KWOTA"] || "";
-    const amt = parseFloat(src.replace(/\s/g, "").replace(",", "."));
-    if (isFinite(amt) && amt > 0) {
-      setFormData(d => d[wordsKey] === amountToWordsPLN(amt) ? d : ({ ...d, [wordsKey]: amountToWordsPLN(amt) }));
-    }
-  }, [formData["KWOTA"], formData["KWOTA ŁĄCZNA"], selected?.id]);
+    if (Object.keys(wordsToAmount).length === 0) return;
+    setValues((v) => {
+      let changed = false;
+      const next = { ...v };
+      for (const [wordId, amountId] of Object.entries(wordsToAmount)) {
+        const amt = parseAmountPL(v[amountId]);
+        if (isFinite(amt) && amt > 0) {
+          const w = amountToWordsPLN(amt);
+          if (next[wordId] !== w) {
+            next[wordId] = w;
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : v;
+    });
+  }, [values, wordsToAmount]);
 
-  // ─── kalkulator: harmonogram
+  // ─── Kalkulator: harmonogram
   const scheduleData = useMemo(() => {
-    if (!schema.hasCalculator) return null;
+    if (!hasAmounts) return null;
     return buildDirectorSchedule({
       netAmountToClient: calc.netAmount,
-      creditedCommission: parseFloat(commission.replace(",", ".")) || 0,
+      creditedCommission: calc.commission || 0,
       maxMonthlyPaymentByClient: calc.maxMonthly,
       loanTermMonths: calc.months,
       payoutDate: calc.payoutDate,
@@ -453,48 +291,165 @@ export function DocumentCreatorPage() {
       investorMonthlyReturnType: "percent",
       investorMonthlyReturnPercent: calc.investorMonthlyPct,
     } as any);
-  }, [calc, commission, schema.hasCalculator]);
+  }, [calc, hasAmounts]);
 
   const applyCalculatorToContract = () => {
-    if (!schema.calcMap || !scheduleData) return;
-    const m = schema.calcMap;
-    const next = { ...formData };
-    if (m.amountKey) next[m.amountKey] = scheduleData.nominalLoanAmount.toFixed(2);
-    if (m.amountWordsKey) next[m.amountWordsKey] = amountToWordsPLN(scheduleData.nominalLoanAmount);
-    if (m.interestKey) next[m.interestKey] = `${calc.annualInterest.toFixed(2).replace(".", ",")}%`;
-    if (m.monthsKey) next[m.monthsKey] = String(calc.months);
-    if (m.payoutDateKey) next[m.payoutDateKey] = isoToDDMM(calc.payoutDate);
-    setFormData(next);
-    toast.success("Dane z kalkulatora wpisane do umowy");
+    if (!scheduleData) return;
+    const outputs: CalculatorOutputs = {
+      nominal: scheduleData.nominalLoanAmount,
+      net: calc.netAmount,
+      commission: calc.commission || 0,
+      total: scheduleData.totalClientObligation,
+      annualInterestPercent: calc.annualInterest,
+      months: calc.months,
+      payoutDateDDMM: isoToDDMM(calc.payoutDate),
+    };
+    setValues((v) => {
+      const next = { ...v };
+      let count = 0;
+      for (const f of fields) {
+        const val = calculatorValueForField(f, outputs);
+        if (val != null) {
+          next[f.id] = val;
+          count++;
+        }
+      }
+      if (count === 0)
+        toast.message("Ten wzór nie ma pól finansowych do wypełnienia z kalkulatora.");
+      else toast.success(`Wpisano dane z kalkulatora do ${count} pól.`);
+      return next;
+    });
   };
+
+  // ─── Pobieranie danych firmowych
+  const loadCompanyBundle = useCallback(
+    async (ids: { nip?: string; regon?: string; krs?: string }): Promise<BundleResult> => {
+      const bundle: CompanyBundle = {};
+      const sources: string[] = [];
+      const warnings: string[] = [];
+      let bankNote: string | null = null;
+
+      // 1) GUS REGON BIR — priorytet NIP > REGON > KRS
+      const payload: { nip?: string; regon?: string; krs?: string } = {};
+      if (ids.nip) payload.nip = ids.nip;
+      else if (ids.regon) payload.regon = ids.regon;
+      else if (ids.krs) payload.krs = ids.krs;
+
+      let gus: any = null;
+      try {
+        gus = await _gus({ data: payload });
+      } catch (e: any) {
+        warnings.push(e?.message ?? "Błąd połączenia z GUS.");
+      }
+      if (gus?.success) {
+        const c = gus.company;
+        bundle.name = c.name || bundle.name;
+        bundle.nip = c.nip || bundle.nip;
+        bundle.regon = c.regon || bundle.regon;
+        bundle.krs = c.krs || bundle.krs;
+        bundle.legalForm = c.legalForm || bundle.legalForm;
+        bundle.addressFull = c.address?.fullAddress || bundle.addressFull;
+        bundle.phone = c.contact?.phone || bundle.phone;
+        bundle.email = c.contact?.email || bundle.email;
+        sources.push("GUS REGON BIR");
+      } else if (gus?.message) {
+        warnings.push(`GUS: ${gus.message}`);
+      }
+
+      // 2) KRS — pełny odpis (zarząd, reprezentacja, adres)
+      const krsNum = (bundle.krs || ids.krs || "").replace(/\D/g, "");
+      if (krsNum) {
+        let krs: any = null;
+        try {
+          krs = await _krs({ data: { krs: krsNum } });
+        } catch (e: any) {
+          warnings.push(e?.message ?? "Błąd połączenia z KRS.");
+        }
+        if (krs?.success) {
+          const c = krs.company;
+          bundle.name = bundle.name || c.name;
+          bundle.nip = bundle.nip || c.nip;
+          bundle.regon = bundle.regon || c.regon;
+          bundle.krs = bundle.krs || c.krs;
+          bundle.legalForm = bundle.legalForm || c.legalForm;
+          if (c.address?.fullAddress) bundle.addressFull = c.address.fullAddress;
+          const bm = c.managementBoard?.[0];
+          if (bm) {
+            bundle.representativeName =
+              [bm.firstName, bm.lastName].filter(Boolean).join(" ").trim() ||
+              bundle.representativeName;
+            bundle.representativeRole =
+              bm.role || c.representation?.method || bundle.representativeRole;
+          } else if (c.representation?.method) {
+            bundle.representativeRole = c.representation.method;
+          }
+          sources.push("KRS");
+          const fl = c.flags ?? {};
+          if (fl.liquidation) warnings.push("KRS: podmiot w likwidacji.");
+          if (fl.bankruptcy) warnings.push("KRS: informacja o upadłości.");
+          if (fl.restructuring) warnings.push("KRS: informacja o restrukturyzacji.");
+          if (fl.deleted) warnings.push("KRS: podmiot wykreślony.");
+        } else if (krs?.message) {
+          warnings.push(`KRS: ${krs.message}`);
+        }
+      }
+
+      // 3) Rachunek bankowy z internetu (Perplexity) — wymaga ręcznej weryfikacji
+      if (bundle.nip || bundle.krs || bundle.name) {
+        let bk: any = null;
+        try {
+          bk = await _bank({
+            data: {
+              companyName: bundle.name || "",
+              nip: bundle.nip || "",
+              krs: bundle.krs || "",
+              regon: bundle.regon || "",
+            },
+          });
+        } catch {
+          /* miękko */
+        }
+        if (bk?.success && bk.normalized) {
+          bundle.bankAccount = bk.normalized;
+          bankNote = "Numer rachunku znaleziony w internecie — zweryfikuj ręcznie przed przelewem.";
+          if (Array.isArray(bk.sources)) sources.push(...bk.sources.slice(0, 2));
+        }
+      }
+
+      return { bundle, sources, warnings, bankNote };
+    },
+    [_gus, _krs, _bank],
+  );
+
+  const applyBundleToGroup = useCallback((group: FieldGroup, bundle: CompanyBundle) => {
+    setValues((v) => {
+      const next = { ...v };
+      let count = 0;
+      for (const f of group.fields) {
+        if (!f.autofill) continue;
+        const val = companyValueForField(f, bundle);
+        if (val) {
+          next[f.id] = val;
+          count++;
+        }
+      }
+      if (count === 0) toast.message("Brak pasujących pól do uzupełnienia w tej sekcji.");
+      else toast.success(`Uzupełniono ${count} pól danymi firmy.`);
+      return next;
+    });
+  }, []);
 
   const handleGenerate = async () => {
     if (!selected) return;
     setGenerating(true);
     try {
-      const finalData = { ...formData };
-      const comm = parseFloat(commission.replace(",", "."));
-      // Prowizja DOLICZANA tylko w umowie pożyczki gdy zaznaczone
-      if (schema.hasCommission && addCommissionToCosts && isFinite(comm) && comm > 0) {
-        for (const k of ["KWOTA", "KWOTA ŁĄCZNA"]) {
-          if (k in finalData) {
-            const base = parseFloat((finalData[k] || "0").replace(",", "."));
-            if (isFinite(base)) finalData[k] = (base + comm).toFixed(2);
-          }
-        }
-        const wordsKey = selected.placeholders?.find(k => k.toUpperCase().includes("KWOTA SŁOWNIE"));
-        if (wordsKey) {
-          const amt = parseFloat((finalData["KWOTA ŁĄCZNA"] || finalData["KWOTA"] || "0").replace(",", "."));
-          if (isFinite(amt)) finalData[wordsKey] = amountToWordsPLN(amt);
-        }
-      }
-
+      const commission = calc.commission || 0;
       const res = await _generate({
         data: {
           templateId: selected.id,
-          formData: finalData,
-          commissionAmount: schema.hasCommission && isFinite(comm) ? comm : null,
-          commissionAddedToCosts: schema.hasCommission ? addCommissionToCosts : false,
+          values,
+          commissionAmount: hasAmounts && commission > 0 ? commission : null,
+          commissionAddedToCosts: false,
         },
       });
       toast.success("Dokument wygenerowany");
@@ -517,6 +472,15 @@ export function DocumentCreatorPage() {
     }
   };
 
+  const filledCount = useMemo(
+    () => fields.filter((f) => (values[f.id] ?? "").trim().length > 0).length,
+    [fields, values],
+  );
+  const fillableCount = useMemo(
+    () => fields.filter((f) => f.semantic !== "instruction").length,
+    [fields],
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-1">
@@ -524,7 +488,9 @@ export function DocumentCreatorPage() {
           <Wand2 className="h-6 w-6" /> Kreator dokumentów
         </h1>
         <p className="text-sm text-muted-foreground">
-          Wybierz wzór, uzupełnij pola pogrupowane wg stron umowy (pożyczkodawca / pożyczkobiorca), pobierz DOCX.
+          Wybierz wzór, uzupełnij pola pogrupowane wg stron umowy. Dane firmowe pobierzesz jednym
+          kliknięciem z GUS, KRS i Białej Listy, a kwoty z kalkulatora pożyczki. Treść wzoru nie
+          jest zmieniana.
         </p>
       </div>
 
@@ -539,27 +505,33 @@ export function DocumentCreatorPage() {
                 placeholder="Szukaj…"
                 className="pl-8"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loading && <div className="flex items-center justify-center py-8"><Loader2 className="h-4 w-4 animate-spin" /></div>}
-            {!loading && groups.length === 0 && (
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            )}
+            {!loading && templateGroups.length === 0 && (
               <p className="text-sm text-muted-foreground py-4 text-center">Brak wzorów.</p>
             )}
-            {groups.map(([cat, items]) => (
+            {templateGroups.map(([cat, items]) => (
               <div key={cat}>
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                   {CATEGORY_LABELS[cat] ?? cat}
                 </div>
                 <div className="space-y-1">
-                  {items.map(t => (
+                  {items.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setSelected(t)}
                       className={`w-full text-left rounded-md px-3 py-2 text-sm transition ${
-                        selected?.id === t.id ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted/60"
+                        selected?.id === t.id
+                          ? "bg-primary/10 ring-1 ring-primary/30"
+                          : "hover:bg-muted/60"
                       }`}
                     >
                       <div className="flex items-start gap-2">
@@ -592,32 +564,190 @@ export function DocumentCreatorPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <CardTitle>{selected.name}</CardTitle>
-                      <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
                         {selected.category && (
                           <Badge className={CATEGORY_COLORS[selected.category] ?? ""}>
                             {CATEGORY_LABELS[selected.category] ?? selected.category}
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">
-                          {selected.placeholders?.length ?? 0} pól do uzupełnienia
+                          {fillableCount > 0
+                            ? `${filledCount} / ${fillableCount} pól uzupełnionych`
+                            : "wczytywanie pól…"}
                         </span>
                       </div>
                     </div>
-                    <Button onClick={handleGenerate} disabled={generating} size="lg">
-                      {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={generating || previewLoading}
+                      size="lg"
+                    >
+                      {generating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
                       Generuj DOCX
                     </Button>
                   </div>
                 </CardHeader>
               </Card>
 
-              {/* Podgląd wzoru z placeholderami */}
+              {/* Kalkulator pożyczki — gdy wzór ma pola kwotowe */}
+              {hasAmounts && (
+                <Card className="border-primary/30">
+                  <CardHeader className="pb-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowCalc((s) => !s)}
+                      className="flex w-full items-center justify-between gap-2 text-left"
+                    >
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Calculator className="h-4 w-4 text-primary" />
+                        Kalkulator pożyczki — przelicz i wpisz kwoty do dokumentu
+                      </CardTitle>
+                      {showCalc ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </CardHeader>
+                  {showCalc && (
+                    <CardContent className="space-y-5">
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <SliderField
+                          label="Kwota netto dla klienta"
+                          value={calc.netAmount}
+                          min={5_000}
+                          max={500_000}
+                          step={1_000}
+                          format={(v) => formatPLN(v)}
+                          onChange={(v) => setCalc((c) => ({ ...c, netAmount: v }))}
+                        />
+                        <SliderField
+                          label="Prowizja kredytowana"
+                          value={calc.commission}
+                          min={0}
+                          max={100_000}
+                          step={500}
+                          format={(v) => formatPLN(v)}
+                          onChange={(v) => setCalc((c) => ({ ...c, commission: v }))}
+                        />
+                        <SliderField
+                          label="Okres pożyczki"
+                          value={calc.months}
+                          min={3}
+                          max={60}
+                          step={1}
+                          format={(v) => `${v} mies.`}
+                          onChange={(v) => setCalc((c) => ({ ...c, months: v }))}
+                        />
+                        <SliderField
+                          label="Maks. miesięczna rata klienta"
+                          value={calc.maxMonthly}
+                          min={200}
+                          max={20_000}
+                          step={50}
+                          format={(v) => formatPLN(v)}
+                          onChange={(v) => setCalc((c) => ({ ...c, maxMonthly: v }))}
+                        />
+                        <SliderField
+                          label="Oprocentowanie roczne"
+                          value={calc.annualInterest}
+                          min={0}
+                          max={25}
+                          step={0.25}
+                          format={(v) => `${v.toFixed(2)} %`}
+                          onChange={(v) => setCalc((c) => ({ ...c, annualInterest: v }))}
+                        />
+                        <SliderField
+                          label="Oczekiwany zwrot inwestora / mies."
+                          value={calc.investorMonthlyPct}
+                          min={0.3}
+                          max={3.5}
+                          step={0.05}
+                          format={(v) => `${v.toFixed(2)} %`}
+                          onChange={(v) => setCalc((c) => ({ ...c, investorMonthlyPct: v }))}
+                        />
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Data wypłaty</Label>
+                          <Input
+                            type="date"
+                            value={calc.payoutDate}
+                            onChange={(e) => setCalc((c) => ({ ...c, payoutDate: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      {scheduleData && (
+                        <>
+                          <div className="grid gap-2 sm:grid-cols-4 text-sm">
+                            <Stat
+                              label="Kwota nominalna (brutto)"
+                              value={formatPLN(scheduleData.nominalLoanAmount)}
+                            />
+                            <Stat label="Rata regularna" value={formatPLN(calc.maxMonthly)} />
+                            <Stat
+                              label="Rata balonowa"
+                              value={formatPLN(scheduleData.balloonPayment)}
+                            />
+                            <Stat
+                              label="Suma zobowiązania"
+                              value={formatPLN(scheduleData.totalClientObligation)}
+                            />
+                          </div>
+
+                          {scheduleData.warnings.length > 0 && (
+                            <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 text-xs text-yellow-900 dark:text-yellow-100">
+                              {scheduleData.warnings.map((w, i) => (
+                                <div key={i}>⚠ {w}</div>
+                              ))}
+                            </div>
+                          )}
+
+                          <Button
+                            onClick={applyCalculatorToContract}
+                            variant="default"
+                            className="w-full"
+                          >
+                            <ArrowRight className="mr-2 h-4 w-4" /> Wpisz kwoty z kalkulatora do
+                            dokumentu
+                          </Button>
+                        </>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              )}
+
+              {/* Pola pogrupowane wg sekcji */}
+              {previewLoading ? (
+                <Card>
+                  <CardContent className="flex items-center justify-center py-10 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Analizuję wzór…
+                  </CardContent>
+                </Card>
+              ) : (
+                groups.map((g) => (
+                  <GroupCard
+                    key={g.key}
+                    group={g}
+                    values={values}
+                    setValue={setValue}
+                    onFetchCompany={loadCompanyBundle}
+                    onApplyBundle={applyBundleToGroup}
+                  />
+                ))
+              )}
+
+              {/* Podgląd wzoru */}
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Eye className="h-4 w-4 text-primary" />
-                      Podgląd wzoru dokumentu
+                      Podgląd dokumentu
                     </CardTitle>
                     <div className="flex items-center gap-1 rounded-md border p-0.5 text-xs">
                       <button
@@ -625,7 +755,7 @@ export function DocumentCreatorPage() {
                         onClick={() => setPreviewMode("template")}
                         className={`px-2.5 py-1 rounded ${previewMode === "template" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                       >
-                        Wzór z placeholderami
+                        Wzór z polami
                       </button>
                       <button
                         type="button"
@@ -646,7 +776,7 @@ export function DocumentCreatorPage() {
                     <div className="max-h-[480px] overflow-y-auto rounded-md border bg-muted/30 p-4">
                       <PreviewRenderer
                         text={previewText}
-                        formData={previewMode === "filled" ? formData : null}
+                        values={previewMode === "filled" ? values : null}
                       />
                     </div>
                   ) : (
@@ -656,198 +786,6 @@ export function DocumentCreatorPage() {
                   )}
                 </CardContent>
               </Card>
-
-
-
-              {/* Kalkulator pożyczki — tylko dla umowy pożyczki */}
-              {schema.hasCalculator && (
-                <Card className="border-primary/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Calculator className="h-4 w-4 text-primary" />
-                      Kalkulator pożyczki (suwaki) — generuje harmonogram i wypełnia umowę
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <SliderField
-                        label="Kwota netto dla klienta"
-                        value={calc.netAmount} min={5_000} max={500_000} step={1_000}
-                        format={(v) => formatPLN(v)}
-                        onChange={(v) => setCalc(c => ({ ...c, netAmount: v }))}
-                      />
-                      <SliderField
-                        label="Okres pożyczki"
-                        value={calc.months} min={3} max={60} step={1}
-                        format={(v) => `${v} mies.`}
-                        onChange={(v) => setCalc(c => ({ ...c, months: v }))}
-                      />
-                      <SliderField
-                        label="Maks. miesięczna rata klienta"
-                        value={calc.maxMonthly} min={200} max={20_000} step={50}
-                        format={(v) => formatPLN(v)}
-                        onChange={(v) => setCalc(c => ({ ...c, maxMonthly: v }))}
-                      />
-                      <SliderField
-                        label="Oprocentowanie roczne"
-                        value={calc.annualInterest} min={0} max={25} step={0.25}
-                        format={(v) => `${v.toFixed(2)} %`}
-                        onChange={(v) => setCalc(c => ({ ...c, annualInterest: v }))}
-                      />
-                      <SliderField
-                        label="Oczekiwany zwrot inwestora / mies."
-                        value={calc.investorMonthlyPct} min={0.3} max={3.5} step={0.05}
-                        format={(v) => `${v.toFixed(2)} %`}
-                        onChange={(v) => setCalc(c => ({ ...c, investorMonthlyPct: v }))}
-                      />
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Data wypłaty</Label>
-                        <Input
-                          type="date"
-                          value={calc.payoutDate}
-                          onChange={(e) => setCalc(c => ({ ...c, payoutDate: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    {scheduleData && (
-                      <>
-                        <div className="grid gap-2 sm:grid-cols-4 text-sm">
-                          <Stat label="Kwota nominalna" value={formatPLN(scheduleData.nominalLoanAmount)} />
-                          <Stat label="Rata regularna" value={formatPLN(calc.maxMonthly)} />
-                          <Stat label="Rata balonowa" value={formatPLN(scheduleData.balloonPayment)} />
-                          <Stat label="Suma zobowiązania" value={formatPLN(scheduleData.totalClientObligation)} />
-                        </div>
-
-                        {scheduleData.warnings.length > 0 && (
-                          <div className="rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 text-xs text-yellow-900 dark:text-yellow-100">
-                            {scheduleData.warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}
-                          </div>
-                        )}
-
-                        <div className="rounded-md border overflow-hidden">
-                          <div className="max-h-64 overflow-y-auto">
-                            <table className="w-full text-xs">
-                              <thead className="bg-muted/60 sticky top-0">
-                                <tr>
-                                  <th className="text-left px-2 py-1.5">#</th>
-                                  <th className="text-left px-2 py-1.5">Data</th>
-                                  <th className="text-right px-2 py-1.5">Rata</th>
-                                  <th className="text-right px-2 py-1.5">Odsetki</th>
-                                  <th className="text-right px-2 py-1.5">Ryzyko</th>
-                                  <th className="text-right px-2 py-1.5">Kapitał</th>
-                                  <th className="text-right px-2 py-1.5">Saldo</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {scheduleData.rows.map((r, i) => (
-                                  <tr key={i} className={r.index === "Balon" ? "bg-primary/10 font-semibold" : "border-t"}>
-                                    <td className="px-2 py-1">{r.index}</td>
-                                    <td className="px-2 py-1">{new Date(r.date).toLocaleDateString("pl-PL")}</td>
-                                    <td className="px-2 py-1 text-right">{formatPLN(r.paymentAmount)}</td>
-                                    <td className="px-2 py-1 text-right">{formatPLN(r.interest)}</td>
-                                    <td className="px-2 py-1 text-right">{formatPLN(r.riskFee)}</td>
-                                    <td className="px-2 py-1 text-right">{formatPLN(r.capital)}</td>
-                                    <td className="px-2 py-1 text-right">{formatPLN(r.remainingCapital)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        <Button onClick={applyCalculatorToContract} variant="default" className="w-full">
-                          <ArrowRight className="mr-2 h-4 w-4" /> Wpisz dane z kalkulatora do umowy
-                        </Button>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Pola pogrupowane wg sekcji */}
-              {schema.sections.map((sec, idx) => (
-                <Card key={idx}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {sectionIcon(sec.icon)}
-                      {sec.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {sec.fields.map((f) => {
-                        const t = f.type ?? guessType(f.key);
-                        const isFull = t === "textarea";
-                        const isDateInput = t === "date";
-                        return (
-                          <div key={f.key} className={isFull ? "sm:col-span-2" : ""}>
-                            <Label className="text-xs text-muted-foreground">{f.label}</Label>
-                            {isFull ? (
-                              <Textarea
-                                rows={2}
-                                value={formData[f.key] ?? ""}
-                                onChange={e => setFormData(d => ({ ...d, [f.key]: e.target.value }))}
-                              />
-                            ) : isDateInput ? (
-                              <Input
-                                type="text"
-                                placeholder="DD.MM.RRRR"
-                                value={formData[f.key] ?? ""}
-                                onChange={e => setFormData(d => ({ ...d, [f.key]: e.target.value }))}
-                              />
-                            ) : (
-                              <Input
-                                inputMode={t === "amount" || t === "number" ? "decimal" : undefined}
-                                placeholder={
-                                  t === "amount" ? "np. 50000,00" :
-                                  t === "amount-words" ? "wyliczy się z kwoty…" : ""
-                                }
-                                value={formData[f.key] ?? ""}
-                                onChange={e => setFormData(d => ({ ...d, [f.key]: e.target.value }))}
-                              />
-                            )}
-                            {f.helper && <p className="text-[11px] text-muted-foreground mt-1">{f.helper}</p>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Prowizja — TYLKO przy umowie pożyczki */}
-              {schema.hasCommission && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Prowizja pośrednika</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      Dotyczy wyłącznie umowy pożyczki. Pozostałe dokumenty (pokwitowania, oświadczenia, hipoteka itd.) nie zawierają prowizji.
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Kwota prowizji [PLN]</Label>
-                        <Input
-                          inputMode="decimal"
-                          placeholder="np. 2500,00"
-                          value={commission}
-                          onChange={e => setCommission(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex items-end gap-2 pb-2">
-                        <Checkbox
-                          id="comm-add"
-                          checked={addCommissionToCosts}
-                          onCheckedChange={v => setAddCommissionToCosts(!!v)}
-                        />
-                        <Label htmlFor="comm-add" className="text-sm">Dolicz do kwoty pożyczki</Label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </>
           )}
 
@@ -861,17 +799,26 @@ export function DocumentCreatorPage() {
                 <p className="text-sm text-muted-foreground">Brak dokumentów.</p>
               ) : (
                 <div className="space-y-2">
-                  {history.map(h => (
-                    <div key={h.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                  {history.map((h) => (
+                    <div
+                      key={h.id}
+                      className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                    >
                       <div className="min-w-0">
                         <div className="truncate font-medium">{h.template_name ?? "Dokument"}</div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(h.created_at).toLocaleString("pl-PL")}
-                          {h.commission_amount ? ` · prowizja ${h.commission_amount.toLocaleString("pl-PL")} PLN` : ""}
+                          {h.commission_amount
+                            ? ` · prowizja ${h.commission_amount.toLocaleString("pl-PL")} PLN`
+                            : ""}
                         </div>
                       </div>
                       {h.docx_path && (
-                        <Button size="sm" variant="outline" onClick={() => handleDownload(h.docx_path!)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownload(h.docx_path!)}
+                        >
                           <Download className="mr-1 h-3.5 w-3.5" /> DOCX
                         </Button>
                       )}
@@ -888,14 +835,255 @@ export function DocumentCreatorPage() {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// Karta grupy pól (z autouzupełnianiem firmowym)
+// ════════════════════════════════════════════════════════════════════
+
+function GroupCard({
+  group,
+  values,
+  setValue,
+  onFetchCompany,
+  onApplyBundle,
+}: {
+  group: FieldGroup;
+  values: Record<string, string>;
+  setValue: (id: string, val: string) => void;
+  onFetchCompany: (ids: { nip?: string; regon?: string; krs?: string }) => Promise<BundleResult>;
+  onApplyBundle: (group: FieldGroup, bundle: CompanyBundle) => void;
+}) {
+  const isInstrukcje = group.key === "instrukcje";
+  const canAutofill = group.fields.some((f) => f.autofill);
+  const showCompanyBox =
+    (group.partyKind === "company" || group.partyKind === "person-or-company") && canAutofill;
+
+  const [open, setOpen] = useState(!isInstrukcje);
+  const [nip, setNip] = useState("");
+  const [krs, setKrs] = useState("");
+  const [regon, setRegon] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{
+    sources: string[];
+    warnings: string[];
+    bankNote: string | null;
+  } | null>(null);
+
+  const fetchCompany = async () => {
+    const ids = {
+      nip: nip.replace(/\D/g, ""),
+      krs: krs.replace(/\D/g, ""),
+      regon: regon.replace(/\D/g, ""),
+    };
+    if (!ids.nip && !ids.krs && !ids.regon) {
+      toast.error("Podaj NIP, KRS albo REGON");
+      return;
+    }
+    setBusy(true);
+    const t = toast.loading("Pobieram dane firmy z GUS / KRS…");
+    try {
+      const res = await onFetchCompany(ids);
+      if (res.sources.length === 0 && res.warnings.length === 0) {
+        toast.error("Nie udało się pobrać danych firmy.", { id: t });
+      } else if (res.sources.length === 0) {
+        toast.error(res.warnings[0] ?? "Nie znaleziono firmy.", { id: t });
+      } else {
+        onApplyBundle(group, res.bundle);
+        toast.success(
+          `Dane pobrane z: ${res.sources.filter((s) => !s.startsWith("http")).join(", ") || "rejestrów"}.`,
+          {
+            id: t,
+          },
+        );
+      }
+      setNote({ sources: res.sources, warnings: res.warnings, bankNote: res.bankNote });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd pobierania danych firmy.", { id: t });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <CardTitle className="text-base flex items-center gap-2">
+            {groupIcon(group)}
+            {group.label}
+            <span className="text-xs font-normal text-muted-foreground">
+              ({group.fields.length})
+            </span>
+          </CardTitle>
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+      </CardHeader>
+      {open && (
+        <CardContent className="space-y-4">
+          {/* Pasek autouzupełniania firmowego */}
+          {showCompanyBox && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Building2 className="h-4 w-4 text-primary" />
+                Pobierz dane firmy automatycznie
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Wpisz dowolny identyfikator firmy — zaciągniemy nazwę, adres, NIP/REGON/KRS,
+                reprezentację i rachunek bankowy z GUS, KRS i Białej Listy.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <Input
+                  placeholder="NIP"
+                  inputMode="numeric"
+                  value={nip}
+                  onChange={(e) => setNip(e.target.value)}
+                />
+                <Input
+                  placeholder="KRS"
+                  inputMode="numeric"
+                  value={krs}
+                  onChange={(e) => setKrs(e.target.value)}
+                />
+                <Input
+                  placeholder="REGON"
+                  inputMode="numeric"
+                  value={regon}
+                  onChange={(e) => setRegon(e.target.value)}
+                />
+                <Button type="button" onClick={fetchCompany} disabled={busy} className="shrink-0">
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  <span className="ml-1 hidden sm:inline">Pobierz</span>
+                </Button>
+              </div>
+              {note && (note.sources.length > 0 || note.warnings.length > 0 || note.bankNote) && (
+                <div className="space-y-1 text-[11px]">
+                  {note.sources.filter((s) => !s.startsWith("http")).length > 0 && (
+                    <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-300">
+                      <ShieldCheck className="h-3 w-3" /> Źródła:{" "}
+                      {note.sources.filter((s) => !s.startsWith("http")).join(", ")}
+                    </div>
+                  )}
+                  {note.bankNote && (
+                    <div className="flex items-start gap-1 text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {note.bankNote}
+                    </div>
+                  )}
+                  {note.warnings.map((w, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-1 text-amber-700 dark:text-amber-300"
+                    >
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {w}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isInstrukcje && (
+            <p className="text-[11px] text-muted-foreground">
+              Te pola to opcje i miejsca do ręcznego wyboru we wzorze. Wypełnij tylko jeśli chcesz —
+              puste zostaną w dokumencie bez zmian.
+            </p>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {group.fields.map((f) => (
+              <FieldInputRow
+                key={f.id}
+                field={f}
+                value={values[f.id] ?? ""}
+                onChange={(v) => setValue(f.id, v)}
+              />
+            ))}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function FieldInputRow({
+  field,
+  value,
+  onChange,
+}: {
+  field: DocField;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const isFull = field.input === "textarea";
+  return (
+    <div className={isFull ? "sm:col-span-2" : ""}>
+      <Label className="text-xs text-muted-foreground">{field.label}</Label>
+      {field.input === "textarea" ? (
+        <Textarea rows={2} value={value} onChange={(e) => onChange(e.target.value)} />
+      ) : field.input === "choice" && field.options ? (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Wybierz…" />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options.map((o) => (
+              <SelectItem key={o} value={o}>
+                {o}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : field.input === "date" ? (
+        <Input
+          type="text"
+          placeholder="DD.MM.RRRR"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      ) : (
+        <Input
+          inputMode={field.input === "amount" || field.input === "number" ? "decimal" : undefined}
+          placeholder={
+            field.input === "amount"
+              ? "np. 50 000,00"
+              : field.semantic === "amountWords"
+                ? "wyliczy się z kwoty…"
+                : ""
+          }
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+      {field.key !== field.label && (
+        <p className="text-[11px] text-muted-foreground mt-1 font-mono opacity-70">[{field.key}]</p>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // Sub-komponenty
 // ════════════════════════════════════════════════════════════════════
 
 function SliderField({
-  label, value, min, max, step, format, onChange,
+  label,
+  value,
+  min,
+  max,
+  step,
+  format,
+  onChange,
 }: {
   label: string;
-  value: number; min: number; max: number; step: number;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
   format: (v: number) => string;
   onChange: (v: number) => void;
 }) {
@@ -907,7 +1095,9 @@ function SliderField({
       </div>
       <Slider
         value={[value]}
-        min={min} max={max} step={step}
+        min={min}
+        max={max}
+        step={step}
         onValueChange={(v) => onChange(v[0])}
       />
     </div>
@@ -924,25 +1114,27 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Renderuje treść wzoru z podświetlonymi placeholderami `[KLUCZ]`.
- * Gdy `formData` ≠ null — wstawia wartości w miejsce placeholderów (puste = pokaż placeholder).
+ * Renderuje treść wzoru. Liczy wystąpienia placeholderów w kolejności dokumentu
+ * (tak jak silnik pól), więc powtarzające się klucze mają niezależne wartości.
  */
 function PreviewRenderer({
   text,
-  formData,
+  values,
 }: {
   text: string;
-  formData: Record<string, string> | null;
+  values: Record<string, string> | null;
 }) {
-  const parts = text.split(/(\[[^\]\n]+\])/g);
+  const parts = text.split(PREVIEW_SPLIT);
+  let occ = -1;
   return (
     <pre className="whitespace-pre-wrap break-words text-[13px] leading-relaxed font-sans text-foreground">
       {parts.map((part, i) => {
-        const m = part.match(/^\[([^\]\n]+)\]$/);
+        const m = part.match(PREVIEW_TOKEN);
         if (!m) return <span key={i}>{part}</span>;
+        occ += 1;
         const key = m[1];
-        const val = formData ? (formData[key] ?? "").trim() : "";
-        if (formData && val) {
+        const val = values ? (values[String(occ)] ?? "").trim() : "";
+        if (values && val) {
           return (
             <span
               key={i}
@@ -957,7 +1149,7 @@ function PreviewRenderer({
           <span
             key={i}
             className="rounded bg-amber-100 dark:bg-amber-900/40 px-1 font-mono text-[12px] text-amber-900 dark:text-amber-100 border border-amber-300/60 dark:border-amber-700/60"
-            title="Placeholder — uzupełnij pole obok"
+            title="Pole do uzupełnienia"
           >
             [{key}]
           </span>
@@ -966,4 +1158,3 @@ function PreviewRenderer({
     </pre>
   );
 }
-
