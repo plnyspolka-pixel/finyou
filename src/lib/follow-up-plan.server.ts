@@ -305,7 +305,7 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
     const firstName = lead.first_name ?? "";
     const returnLink = lead.application_data?.return_link
       ?? (lead.loan_application_id ? await fetchReturnLink(lead.loan_application_id) : null)
-      ?? "https://app.financeyou.pl/wniosek-start";
+      ?? "https://financeyou.pl/wniosek-start";
     const vars: TplVars = { firstName, returnLink };
 
     try {
