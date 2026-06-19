@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
-import { downloadAndStore } from "@/lib/inbound-attachments.server";
+import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
 
 function verifySig(body: string, signature: string | null): boolean {
