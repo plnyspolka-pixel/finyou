@@ -416,12 +416,6 @@ export async function recordEmailClick(sendId: string): Promise<string | null> {
       },
     );
   }
-  const { data: loan } = await s
-    .from("loan_applications")
-    .select("return_link_token")
-    .eq("id", row.loan_application_id!)
-    .maybeSingle();
-  const token = loan?.return_link_token;
-  if (!token) return null;
-  return `${publicBaseUrl()}/wniosek/${token}`;
+  // Wszystkie linki w mailingu kierują na stronę główną financeyou.pl
+  return "https://financeyou.pl";
 }
