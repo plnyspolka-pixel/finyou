@@ -72,6 +72,15 @@ function KlientWniosek() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  // Rejestracja w ostatnim kroku (dla niezalogowanych)
+  const [password, setPassword] = useState("");
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [acceptContact, setAcceptContact] = useState(false);
+  // Pliki dodane przed założeniem konta — wysyłamy je po rejestracji
+  const [pendingFiles, setPendingFiles] = useState<{ id: string; file: File; docType: string }[]>([]);
+  // Flaga: użytkownik kliknął "wyślij", konto powstało, czekamy aż useAuth się zaktualizuje
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+
 
   // Nieruchomość
   const [voivodeship, setVoivodeship] = useState("");
