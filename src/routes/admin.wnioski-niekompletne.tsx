@@ -1,17 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: IncompleteApplicationsPage,
 });
 
+type Property = { id: string; land_register_number: string | null; photos: string[] | null };
 type Row = {
   id: string;
   status: string;
@@ -24,7 +25,7 @@ type Row = {
   return_link: string | null;
   missing_fields: any;
   client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
-  properties: { land_register_number: string | null; photos: any }[] | null;
+  properties: Property[] | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -43,44 +44,129 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
 }
 
+type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "photos" | "kw";
+type SortDir = "asc" | "desc";
+
+function PhotoThumbs({ paths }: { paths: string[] }) {
+  const [urls, setUrls] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (paths.length === 0) { setUrls([]); return; }
+      const { data } = await supabase.storage.from("property-photos").createSignedUrls(paths.slice(0, 6), 60 * 60);
+      if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+    })();
+    return () => { cancelled = true; };
+  }, [paths.join("|")]);
+  if (urls.length === 0) return <Badge variant="outline" className="text-muted-foreground">0</Badge>;
+  return (
+    <div className="flex items-center gap-1">
+      {urls.map((u, i) => (
+        <a key={i} href={u} target="_blank" rel="noreferrer" className="block">
+          <img src={u} alt="" className="h-10 w-10 rounded object-cover border" loading="lazy" />
+        </a>
+      ))}
+      {paths.length > urls.length && (
+        <span className="text-xs text-muted-foreground ml-1">+{paths.length - urls.length}</span>
+      )}
+    </div>
+  );
+}
+
+function SortHeader({ label, k, sort, setSort, className }: { label: string; k: SortKey; sort: { key: SortKey; dir: SortDir }; setSort: (s: { key: SortKey; dir: SortDir }) => void; className?: string }) {
+  const active = sort.key === k;
+  const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 hover:text-foreground"
+        onClick={() => setSort({ key: k, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
+      >
+        {label} <Icon className="h-3 w-3" />
+      </button>
+    </TableHead>
+  );
+}
+
 function IncompleteApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "updated_at", dir: "desc" });
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(land_register_number,photos)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos)")
       .in("status", ["nowy_lead", "w_trakcie_uzupelniania"])
       .order("updated_at", { ascending: false })
       .limit(500);
-    if (!error && data) setRows(data as any);
+    if (!error && data) {
+      const list = data as any as Row[];
+      // Auto-promote: KW + photos => wniosek_kompletny (do_analizy)
+      const toPromote = list.filter((r) => {
+        const hasKw = (r.properties ?? []).some((p) => !!p.land_register_number && p.land_register_number.trim().length > 0);
+        const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
+        return hasKw && hasPhotos;
+      });
+      if (toPromote.length > 0) {
+        await supabase
+          .from("loan_applications")
+          .update({ status: "wniosek_kompletny", completeness_percent: 100, updated_at: new Date().toISOString() })
+          .in("id", toPromote.map((r) => r.id));
+      }
+      setRows(list.filter((r) => !toPromote.find((p) => p.id === r.id)));
+    }
     setLoading(false);
   };
 
   useEffect(() => { void load(); }, []);
 
-  const filtered = rows.filter((r) => {
-    if (!q.trim()) return true;
-    const s = q.toLowerCase();
-    const c = r.client;
-    return (
-      (c?.first_name ?? "").toLowerCase().includes(s) ||
-      (c?.last_name ?? "").toLowerCase().includes(s) ||
-      (c?.email ?? "").toLowerCase().includes(s) ||
-      (c?.phone ?? "").toLowerCase().includes(s) ||
-      r.id.toLowerCase().includes(s)
-    );
-  });
+  const filtered = useMemo(() => {
+    const out = rows.filter((r) => {
+      if (!q.trim()) return true;
+      const s = q.toLowerCase();
+      const c = r.client;
+      return (
+        (c?.first_name ?? "").toLowerCase().includes(s) ||
+        (c?.last_name ?? "").toLowerCase().includes(s) ||
+        (c?.email ?? "").toLowerCase().includes(s) ||
+        (c?.phone ?? "").toLowerCase().includes(s) ||
+        r.id.toLowerCase().includes(s)
+      );
+    });
+    const getVal = (r: Row): string | number => {
+      switch (sort.key) {
+        case "name": return [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ").toLowerCase();
+        case "status": return r.status;
+        case "loan_amount": return r.loan_amount ?? -1;
+        case "completeness_percent": return r.completeness_percent ?? -1;
+        case "photos": return (r.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
+        case "kw": return (r.properties ?? []).filter((p) => !!p.land_register_number).length;
+        case "created_at": return new Date(r.created_at).getTime();
+        case "updated_at":
+        default: return new Date(r.updated_at).getTime();
+      }
+    };
+    out.sort((a, b) => {
+      const va = getVal(a); const vb = getVal(b);
+      if (va < vb) return sort.dir === "asc" ? -1 : 1;
+      if (va > vb) return sort.dir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return out;
+  }, [rows, q, sort]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Niekompletne wnioski</h1>
-          <p className="text-sm text-muted-foreground">Wnioski porzucone lub w trakcie wypełniania (status: nowy lead, w trakcie uzupełniania).</p>
+          <p className="text-sm text-muted-foreground">
+            Wnioski w trakcie wypełniania. Po dodaniu numeru KW oraz zdjęć wniosek zostaje automatycznie oznaczony jako kompletny i wysłany do analizy.
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Odśwież
@@ -98,20 +184,20 @@ function IncompleteApplicationsPage() {
           />
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[1400px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_th]:text-xs">
             <TableHeader>
               <TableRow>
-                <TableHead>Klient</TableHead>
+                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} />
                 <TableHead>Kontakt</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Kwota</TableHead>
-                <TableHead className="text-center">Kompletność</TableHead>
+                <SortHeader label="Status" k="status" sort={sort} setSort={setSort} />
+                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right" />
+                <SortHeader label="Kompletność" k="completeness_percent" sort={sort} setSort={setSort} className="text-center" />
                 <TableHead className="text-center">Krok</TableHead>
-                <TableHead>KW</TableHead>
-                <TableHead className="text-center">Zdjęcia</TableHead>
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} />
+                <SortHeader label="Zdjęcia" k="photos" sort={sort} setSort={setSort} />
                 <TableHead>Źródło</TableHead>
-                <TableHead>Utworzono</TableHead>
-                <TableHead>Aktualizacja</TableHead>
+                <SortHeader label="Utworzono" k="created_at" sort={sort} setSort={setSort} />
+                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} />
                 <TableHead className="text-right">Akcje</TableHead>
               </TableRow>
             </TableHeader>
@@ -126,7 +212,7 @@ function IncompleteApplicationsPage() {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
                 const pct = r.completeness_percent ?? 0;
                 const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
-                const photoCount = (r.properties ?? []).reduce((sum, p) => sum + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
+                const allPhotos = (r.properties ?? []).flatMap((p) => Array.isArray(p.photos) ? p.photos : []);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
@@ -139,7 +225,7 @@ function IncompleteApplicationsPage() {
                         {STATUS_LABEL[r.status] ?? r.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{fmtPLN(r.loan_amount as any)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtPLN(r.loan_amount as any)}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center gap-2 justify-center">
                         <div className="h-1.5 w-16 rounded bg-muted overflow-hidden">
@@ -153,21 +239,17 @@ function IncompleteApplicationsPage() {
                       {kwNums.length === 0 ? (
                         <Badge variant="outline" className="text-muted-foreground">brak</Badge>
                       ) : (
-                        <div className="space-y-0.5">
-                          {kwNums.map((k, i) => <div key={i} className="font-mono">{k}</div>)}
+                        <div className="flex flex-col gap-0.5">
+                          {kwNums.map((k, i) => <span key={i} className="font-mono">{k}</span>)}
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
-                      {photoCount > 0 ? (
-                        <Badge variant="secondary">{photoCount}</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">0</Badge>
-                      )}
+                    <TableCell>
+                      <PhotoThumbs paths={allPhotos} />
                     </TableCell>
                     <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">{fmtDate(r.created_at)}</TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">{fmtDate(r.updated_at)}</TableCell>
+                    <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>
+                    <TableCell className="text-xs">{fmtDate(r.updated_at)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button asChild size="sm" variant="ghost">
