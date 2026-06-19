@@ -54,30 +54,44 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
 }
 
-type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "photos" | "kw";
+type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "media" | "kw";
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete";
 
-function PhotoThumbs({ paths, onOpen }: { paths: string[]; onOpen: () => void }) {
+function MediaThumbs({ photoPaths, docCount, onOpen }: { photoPaths: string[]; docCount: number; onOpen: () => void }) {
   const [urls, setUrls] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (paths.length === 0) { setUrls([]); return; }
-      const { data } = await supabase.storage.from("property-photos").createSignedUrls(paths.slice(0, 4), 60 * 60);
+      if (photoPaths.length === 0) { setUrls([]); return; }
+      const { data } = await supabase.storage.from("property-photos").createSignedUrls(photoPaths.slice(0, 3), 60 * 60);
       if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
     })();
     return () => { cancelled = true; };
-  }, [paths.join("|")]);
-  if (paths.length === 0) return <Badge variant="outline" className="text-muted-foreground">0</Badge>;
+  }, [photoPaths.join("|")]);
+  const total = photoPaths.length + docCount;
+  if (total === 0) return (
+    <button type="button" onClick={onOpen} className="text-xs text-muted-foreground hover:text-foreground">
+      <Badge variant="outline">brak</Badge>
+    </button>
+  );
   return (
-    <button type="button" onClick={onOpen} className="flex items-center gap-1 group" title="Otwórz podgląd">
-      {urls.map((u, i) => (
-        <img key={i} src={u} alt="" className="h-14 w-14 rounded object-cover border group-hover:ring-2 group-hover:ring-primary transition" loading="lazy" />
-      ))}
-      {paths.length > urls.length && (
-        <span className="text-xs text-muted-foreground ml-1">+{paths.length - urls.length}</span>
-      )}
+    <button type="button" onClick={onOpen} className="flex items-center gap-1.5 group" title="Otwórz podgląd załączników">
+      <div className="flex items-center gap-1">
+        {urls.map((u, i) => (
+          <img key={i} src={u} alt="" className="h-12 w-12 rounded object-cover border group-hover:ring-2 group-hover:ring-primary transition" loading="lazy" />
+        ))}
+        {docCount > 0 && (
+          <div className="h-12 w-12 rounded border bg-muted flex flex-col items-center justify-center group-hover:ring-2 group-hover:ring-primary transition">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[10px] font-medium">{docCount}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col text-[10px] text-muted-foreground leading-tight">
+        <span><ImageIcon className="h-3 w-3 inline" /> {photoPaths.length}</span>
+        <span><FileText className="h-3 w-3 inline" /> {docCount}</span>
+      </div>
     </button>
   );
 }
