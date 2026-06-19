@@ -257,6 +257,13 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
               disconnection_reason: disconnectionReason ?? null,
               transcript_full: body?.transcript || body?.transcript_segments || body?.turns || null,
               summary: summary ?? null,
+              data_collection: {
+                loan_amount_requested: loanAmountRequested,
+                collateral_type: collateralType,
+                customer_willing_to_apply_online: willingOnline,
+                application_directed_to_website: directedToWebsite,
+                raw: collected,
+              },
               raw: body,
             },
           });
