@@ -169,15 +169,18 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           const isRetryable = outcome === "no_answer" || outcome === "busy" || outcome === "voicemail" || outcome === "failed";
           if (isRetryable) {
             try {
-              const retryCountQ = await supabase
+              let cntQ = supabase
                 .from("call_queue")
                 .select("id", { count: "exact", head: true })
-                .eq("source", "auto_retry")
-                .or(
-                  queueRow.loan_application_id
-                    ? `loan_application_id.eq.${queueRow.loan_application_id}`
-                    : `phone_normalized.eq.${queueRow.phone_normalized ?? ""}`
-                );
+                .eq("source", "auto_retry");
+              if (queueRow.loan_application_id) {
+                cntQ = cntQ.eq("loan_application_id", queueRow.loan_application_id);
+              } else if (queueRow.phone_normalized) {
+                cntQ = cntQ.eq("phone_normalized", queueRow.phone_normalized);
+              } else {
+                throw new Error("no key to count retries");
+              }
+              const retryCountQ = await cntQ;
               const alreadyRetried = retryCountQ.count ?? 0;
               const MAX_RETRIES = 6;
               if (alreadyRetried < MAX_RETRIES) {
