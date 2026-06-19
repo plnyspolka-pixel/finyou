@@ -167,3 +167,89 @@ async function handleMessagingEvent(ev: any, platform: "messenger" | "instagram"
     agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
   });
 }
+
+// Obsługa komentarzy pod postami fanpage'a (event: changes[].field === "feed").
+async function handleFeedChange(value: any, pageId: string | undefined) {
+  if (!value) return;
+  if (value.item !== "comment" || value.verb !== "add") return;
+
+  const commentId: string | undefined = value.comment_id;
+  const fromId: string | undefined = value.from?.id;
+  const fromName: string | undefined = value.from?.name;
+  const text: string = (value.message ?? "").trim();
+  const postId: string | undefined = value.post_id;
+
+  if (!commentId || !fromId) return;
+  // Skip własne komentarze strony, żeby uniknąć pętli
+  if (pageId && fromId === pageId) return;
+
+  // Lead po PSID (komentujący ma page-scoped ID = ten sam co PSID Messenger)
+  const leadId = await findOrCreateLeadByPsid({ senderId: fromId, platform: "messenger" });
+  if (!leadId) return;
+
+  // Uzupełnij imię jeśli brak
+  if (fromName) {
+    const { data: existing } = await supabaseAdmin
+      .from("leads").select("first_name").eq("id", leadId).maybeSingle();
+    if (!existing?.first_name) {
+      const first = fromName.split(/\s+/)[0];
+      await supabaseAdmin.from("leads").update({ first_name: first }).eq("id", leadId);
+    }
+  }
+
+  // Log inbound komentarza
+  await logLeadCommunication({
+    leadId,
+    channel: "messenger",
+    direction: "inbound",
+    content: text || "[pusty komentarz]",
+    externalId: commentId,
+    metadata: { platform: "messenger", kind: "fb_comment", comment_id: commentId, post_id: postId, from_id: fromId, from_name: fromName },
+    status: "received",
+  });
+
+  if (!text) return;
+
+  // Wygeneruj odpowiedź agenta
+  const agent = await runAgentTurn({
+    leadId,
+    channel: "messenger",
+    userMessage: text,
+    attachmentsSummary: null,
+  });
+
+  let fullReply = agent.reply;
+  const linkCall = agent.toolCalls.find((c) => c.name === "send_application_link");
+  if (linkCall?.result?.link && !fullReply.includes(linkCall.result.link)) {
+    fullReply += `\n\nLink do dokończenia wniosku: ${linkCall.result.link}`;
+  }
+
+  // 1) Publiczna krótka odpowiedź pod komentarzem
+  const firstName = fromName?.split(/\s+/)[0];
+  const publicAck = `${firstName ? `Cześć ${firstName}! ` : "Cześć! "}Napisałem do Ciebie w wiadomości prywatnej 👋`;
+  const pub = await replyToCommentPublic({ commentId, text: publicAck });
+  await logLeadCommunication({
+    leadId,
+    channel: "messenger",
+    direction: "outbound",
+    content: publicAck,
+    externalId: pub.id ?? null,
+    metadata: { platform: "messenger", kind: "fb_comment_reply", comment_id: commentId, post_id: postId },
+    status: pub.ok ? "sent" : "error",
+    errorMessage: pub.ok ? null : pub.error,
+  });
+
+  // 2) Pełna odpowiedź w prywatnej wiadomości (Private Reply)
+  const pm = await sendPrivateReplyToComment({ commentId, text: fullReply });
+  await logLeadCommunication({
+    leadId,
+    channel: "messenger",
+    direction: "outbound",
+    content: fullReply,
+    externalId: pm.messageId ?? null,
+    metadata: { platform: "messenger", kind: "fb_comment_private_reply", comment_id: commentId, post_id: postId, tool_calls: agent.toolCalls },
+    status: pm.ok ? "sent" : "error",
+    errorMessage: pm.ok ? null : pm.error,
+    agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
+  });
+}
