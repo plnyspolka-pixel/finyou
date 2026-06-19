@@ -73,7 +73,27 @@ export async function sendResendEmail(opts: {
     body: JSON.stringify(body),
   });
   const json: any = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, error: `${res.status}: ${JSON.stringify(json).slice(0, 300)}` };
+
+  // Loguj każdą wysyłkę do email_send_log (widoczność w dashboardzie / debug)
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const messageId = json?.id ?? `resend-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "resend-direct",
+      recipient_email: opts.to,
+      status: res.ok ? "sent" : "failed",
+      error_message: res.ok ? null : `${res.status}: ${JSON.stringify(json).slice(0, 500)}`,
+      metadata: { subject: opts.subject, from_name: opts.fromName ?? null, reply_to: opts.replyTo ?? null },
+    });
+  } catch (logErr) {
+    console.error("[resend-send] failed to log email_send_log", logErr);
+  }
+
+  if (!res.ok) {
+    console.error(`[resend-send] FAILED to ${opts.to}: ${res.status}`, JSON.stringify(json).slice(0, 300));
+    return { ok: false, error: `${res.status}: ${JSON.stringify(json).slice(0, 300)}` };
+  }
   return { ok: true, id: json?.id };
 }
 
