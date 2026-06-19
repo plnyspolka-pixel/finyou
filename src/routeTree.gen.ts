@@ -21,6 +21,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
@@ -28,12 +29,14 @@ import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OperatorIndexRouteImport } from './routes/operator.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as OperatorKreatorDokumentowRouteImport } from './routes/operator.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientWniosekRouteImport } from './routes/klient.wniosek'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -43,6 +46,7 @@ import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadom
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
+import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
@@ -60,6 +64,7 @@ import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
+import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
@@ -177,6 +182,11 @@ const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   path: '/polityka-prywatnosci',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperatorRoute = OperatorRouteImport.update({
+  id: '/operator',
+  path: '/operator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NoweHasloRoute = NoweHasloRouteImport.update({
   id: '/nowe-haslo',
   path: '/nowe-haslo',
@@ -212,6 +222,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperatorIndexRoute = OperatorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -242,6 +257,12 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperatorKreatorDokumentowRoute =
+  OperatorKreatorDokumentowRouteImport.update({
+    id: '/kreator-dokumentow',
+    path: '/kreator-dokumentow',
+    getParentRoute: () => OperatorRoute,
+  } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -287,6 +308,12 @@ const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
   path: '/oferty',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorKreatorDokumentowRoute =
+  InwestorKreatorDokumentowRouteImport.update({
+    id: '/kreator-dokumentow',
+    path: '/kreator-dokumentow',
+    getParentRoute: () => InwestorRoute,
+  } as any)
 const InwestorKalkulatorRoute = InwestorKalkulatorRouteImport.update({
   id: '/kalkulator',
   path: '/kalkulator',
@@ -370,6 +397,11 @@ const AdminMailingRoute = AdminMailingRouteImport.update({
 const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
   id: '/kreator-pozyczki',
   path: '/kreator-pozyczki',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKreatorDokumentowRoute = AdminKreatorDokumentowRouteImport.update({
+  id: '/kreator-dokumentow',
+  path: '/kreator-dokumentow',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminKlienciRoute = AdminKlienciRouteImport.update({
@@ -683,6 +715,7 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -711,6 +744,7 @@ export interface FileRoutesByFullPath {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
+  '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
@@ -728,6 +762,7 @@ export interface FileRoutesByFullPath {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -737,12 +772,14 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/operator/': typeof OperatorIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -817,6 +854,7 @@ export interface FileRoutesByTo {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
+  '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
@@ -834,6 +872,7 @@ export interface FileRoutesByTo {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -843,12 +882,14 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/operator': typeof OperatorIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -899,6 +940,7 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -927,6 +969,7 @@ export interface FileRoutesById {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
+  '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/meta': typeof AdminMetaRoute
@@ -944,6 +987,7 @@ export interface FileRoutesById {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
+  '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
@@ -953,12 +997,14 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/wniosek': typeof KlientWniosekRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/operator/': typeof OperatorIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -1010,6 +1056,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1038,6 +1085,7 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
+    | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
     | '/admin/mailing'
     | '/admin/meta'
@@ -1055,6 +1103,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
+    | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
@@ -1064,12 +1113,14 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
+    | '/operator/kreator-dokumentow'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/operator/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1144,6 +1195,7 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
+    | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
     | '/admin/mailing'
     | '/admin/meta'
@@ -1161,6 +1213,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
+    | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
@@ -1170,12 +1223,14 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
+    | '/operator/kreator-dokumentow'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
     | '/blog'
     | '/inwestor'
     | '/klient'
+    | '/operator'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1225,6 +1280,7 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1253,6 +1309,7 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
+    | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
     | '/admin/mailing'
     | '/admin/meta'
@@ -1270,6 +1327,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
+    | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
@@ -1279,12 +1337,14 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/wniosek'
     | '/l/$slug'
+    | '/operator/kreator-dokumentow'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/operator/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1335,6 +1395,7 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   NoweHasloRoute: typeof NoweHasloRoute
+  OperatorRoute: typeof OperatorRouteWithChildren
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
@@ -1471,6 +1532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operator': {
+      id: '/operator'
+      path: '/operator'
+      fullPath: '/operator'
+      preLoaderRoute: typeof OperatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nowe-haslo': {
       id: '/nowe-haslo'
       path: '/nowe-haslo'
@@ -1520,6 +1588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operator/': {
+      id: '/operator/'
+      path: '/'
+      fullPath: '/operator/'
+      preLoaderRoute: typeof OperatorIndexRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/klient/': {
       id: '/klient/'
       path: '/'
@@ -1561,6 +1636,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/kreator-dokumentow': {
+      id: '/operator/kreator-dokumentow'
+      path: '/kreator-dokumentow'
+      fullPath: '/operator/kreator-dokumentow'
+      preLoaderRoute: typeof OperatorKreatorDokumentowRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -1623,6 +1705,13 @@ declare module '@tanstack/react-router' {
       path: '/oferty'
       fullPath: '/inwestor/oferty'
       preLoaderRoute: typeof InwestorOfertyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/kreator-dokumentow': {
+      id: '/inwestor/kreator-dokumentow'
+      path: '/kreator-dokumentow'
+      fullPath: '/inwestor/kreator-dokumentow'
+      preLoaderRoute: typeof InwestorKreatorDokumentowRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/kalkulator': {
@@ -1742,6 +1831,13 @@ declare module '@tanstack/react-router' {
       path: '/kreator-pozyczki'
       fullPath: '/admin/kreator-pozyczki'
       preLoaderRoute: typeof AdminKreatorPozyczkiRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/kreator-dokumentow': {
+      id: '/admin/kreator-dokumentow'
+      path: '/kreator-dokumentow'
+      fullPath: '/admin/kreator-dokumentow'
+      preLoaderRoute: typeof AdminKreatorDokumentowRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/klienci': {
@@ -2180,6 +2276,7 @@ interface AdminRouteChildren {
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
+  AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMetaRoute: typeof AdminMetaRoute
@@ -2219,6 +2316,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
+  AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
   AdminMailingRoute: AdminMailingRoute,
   AdminMetaRoute: AdminMetaRoute,
@@ -2246,6 +2344,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
+  InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
@@ -2258,6 +2357,7 @@ interface InwestorRouteChildren {
 const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorAbonamentRoute: InwestorAbonamentRoute,
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
+  InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
@@ -2290,6 +2390,20 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
+interface OperatorRouteChildren {
+  OperatorKreatorDokumentowRoute: typeof OperatorKreatorDokumentowRoute
+  OperatorIndexRoute: typeof OperatorIndexRoute
+}
+
+const OperatorRouteChildren: OperatorRouteChildren = {
+  OperatorKreatorDokumentowRoute: OperatorKreatorDokumentowRoute,
+  OperatorIndexRoute: OperatorIndexRoute,
+}
+
+const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
+  OperatorRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
@@ -2298,6 +2412,7 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   NoweHasloRoute: NoweHasloRoute,
+  OperatorRoute: OperatorRouteWithChildren,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,

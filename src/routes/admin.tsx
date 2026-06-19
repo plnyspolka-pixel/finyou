@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature } from "lucide-react";
 import { AiAdminChat } from "@/components/admin/AiAdminChat";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -22,6 +22,7 @@ const groups: Group[] = [
       { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
+      { to: "/admin/kreator-dokumentow", label: "Kreator dokumentów B2B", icon: FileSignature },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
       { to: "/admin/text-agent", label: "Agent DM (Messenger/IG/email)", icon: Bot },
     ],

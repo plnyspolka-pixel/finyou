@@ -2,24 +2,20 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { ListChecks, Tag, Calculator, CreditCard, User, LogOut, MessageSquare, GraduationCap, FileSignature } from "lucide-react";
+import { LayoutDashboard, Users, FileText, LogOut, Wand2 } from "lucide-react";
 
-export const Route = createFileRoute("/inwestor")({
-  component: InwestorLayout,
+export const Route = createFileRoute("/operator")({
+  component: OperatorLayout,
 });
 
 const items = [
-  { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
-  { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
-  { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileSignature },
-  { to: "/inwestor/wiadomosci", label: "Wiadomości", icon: MessageSquare },
-  { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
-  { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
-  { to: "/inwestor/abonament", label: "Abonament", icon: CreditCard },
-  { to: "/inwestor/profil", label: "Profil", icon: User },
+  { to: "/operator", label: "Pulpit", icon: LayoutDashboard, exact: true },
+  { to: "/operator/leady", label: "Leady (wszystkie)", icon: Users },
+  { to: "/operator/kreator-dokumentow", label: "Kreator dokumentów", icon: Wand2 },
+  { to: "/operator/dokumenty", label: "Moje dokumenty", icon: FileText },
 ];
 
-function InwestorLayout() {
+function OperatorLayout() {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -27,7 +23,7 @@ function InwestorLayout() {
   useEffect(() => {
     if (loading) return;
     if (!user) { void navigate({ to: "/logowanie" }); return; }
-    if (!roles.includes("inwestor") && !roles.includes("administrator")) {
+    if (!roles.includes("operator") && !roles.includes("administrator")) {
       void navigate({ to: "/" });
     }
   }, [loading, user, roles, navigate]);
@@ -37,7 +33,12 @@ function InwestorLayout() {
   return (
     <div className="flex min-h-screen w-full bg-background">
       <aside className="hidden md:flex w-60 flex-col bg-sidebar text-sidebar-foreground">
-        <div className="px-5 py-5 border-b border-sidebar-border font-semibold">Panel inwestora</div>
+        <div className="px-5 py-5 border-b border-sidebar-border font-semibold">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">FY</div>
+            Panel operatora
+          </div>
+        </div>
         <nav className="flex-1 px-2 py-3 space-y-1">
           {items.map((it) => {
             const active = it.exact ? pathname === it.to : pathname.startsWith(it.to);
@@ -55,7 +56,7 @@ function InwestorLayout() {
           </Button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto p-6"><Outlet /></main>
+      <main className="flex-1 overflow-y-auto p-4 md:p-6"><Outlet /></main>
     </div>
   );
 }
