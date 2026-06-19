@@ -91,6 +91,46 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
         }
         const { outcome, label: outcomeLabel } = classifyOutcome();
 
+        // ── Wyciąganie wyników data collection z ElevenLabs ──────────────────
+        // ElevenLabs zwraca: analysis.data_collection_results = { field: { value, rationale, ... } }
+        function extractDataCollection(): Record<string, any> {
+          const raw = body?.analysis?.data_collection_results
+            ?? body?.data_collection_results
+            ?? body?.analysis?.data_collection
+            ?? null;
+          if (!raw || typeof raw !== "object") return {};
+          const out: Record<string, any> = {};
+          for (const [k, v] of Object.entries(raw)) {
+            if (v && typeof v === "object" && "value" in (v as any)) {
+              out[k] = (v as any).value;
+            } else {
+              out[k] = v;
+            }
+          }
+          return out;
+        }
+        const collected = extractDataCollection();
+        // Normalizacja kluczowych pól
+        const parseAmount = (v: any): number | null => {
+          if (v === null || v === undefined || v === "") return null;
+          if (typeof v === "number") return Number.isFinite(v) ? v : null;
+          const s = String(v).replace(/[^\d.,-]/g, "").replace(/\s/g, "").replace(",", ".");
+          const n = parseFloat(s);
+          return Number.isFinite(n) ? n : null;
+        };
+        const parseBool = (v: any): boolean | null => {
+          if (v === null || v === undefined || v === "") return null;
+          if (typeof v === "boolean") return v;
+          const s = String(v).toLowerCase().trim();
+          if (["true", "tak", "yes", "1", "y", "t"].includes(s)) return true;
+          if (["false", "nie", "no", "0", "n", "f"].includes(s)) return false;
+          return null;
+        };
+        const loanAmountRequested = parseAmount(collected.loan_amount_requested ?? collected.loan_amount ?? collected.kwota);
+        const collateralType = collected.collateral_type ?? collected.zabezpieczenie ?? null;
+        const willingOnline = parseBool(collected.customer_willing_to_apply_online);
+        const directedToWebsite = parseBool(collected.application_directed_to_website);
+
         let queueRow: any = null;
         if (callId) {
           const r = await supabase.from("call_queue").select("*").eq("agent_id", callId).maybeSingle();
