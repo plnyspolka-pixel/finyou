@@ -310,6 +310,16 @@ function ApplicationsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {preview && (
+        <MediaPreviewDialog
+          open={!!preview}
+          onOpenChange={(v) => !v && setPreview(null)}
+          loanApplicationId={preview.id}
+          photoPaths={preview.paths}
+          title={`Podgląd — ${preview.name}`}
+        />
+      )}
     </div>
   );
 }
