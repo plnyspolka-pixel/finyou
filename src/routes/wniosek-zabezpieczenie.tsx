@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { ArrowRight } from "lucide-react";
 import type { SecurityType } from "@/lib/loan-math";
+import { readFunnelState, mergeFunnelState, captureFunnelParamsFromUrl } from "@/lib/wniosek-funnel";
 
 export const Route = createFileRoute("/wniosek-zabezpieczenie")({
   component: WniosekZabezpieczeniePage,
@@ -23,43 +24,16 @@ function WniosekZabezpieczeniePage() {
   const [months, setMonths] = useState<number | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem("calc_step1_v1");
-      if (raw) {
-        const p = JSON.parse(raw);
-        if (typeof p.amount === "number") setAmount(p.amount);
-        if (typeof p.months === "number") setMonths(p.months);
-      }
-    } catch {
-      /* noop */
-    }
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      const a = Number(sp.get("amount"));
-      const m = Number(sp.get("months"));
-      if (a) setAmount(a);
-      if (m) setMonths(m);
-    }
+    captureFunnelParamsFromUrl();
+    const s = readFunnelState();
+    if (typeof s.amount === "number") setAmount(s.amount);
+    if (typeof s.months === "number") setMonths(s.months);
   }, []);
 
   const goNext = () => {
     if (!secType) return;
-    try {
-      const raw = sessionStorage.getItem("calc_step1_v1");
-      const prev = raw ? JSON.parse(raw) : {};
-      sessionStorage.setItem(
-        "calc_step1_v1",
-        JSON.stringify({ ...prev, secType, ts: Date.now() }),
-      );
-    } catch {
-      /* noop */
-    }
-    const url = new URL("/wniosek-formularz", window.location.origin);
-    if (amount) url.searchParams.set("amount", String(amount));
-    if (months) url.searchParams.set("months", String(months));
-    url.searchParams.set("secType", secType);
-    url.searchParams.set("source", "landing_calculator");
-    void navigate({ to: "/wniosek-formularz", search: Object.fromEntries(url.searchParams) as Record<string, string> });
+    mergeFunnelState({ secType, amount, months, source: "landing_calculator" });
+    void navigate({ to: "/wniosek-formularz" });
   };
 
   return (

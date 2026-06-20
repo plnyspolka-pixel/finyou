@@ -15,6 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { formatPLN, monthlyPayment, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { mergeFunnelState } from "@/lib/wniosek-funnel";
 import { REQUIREMENTS_BY_TYPE, PROPERTY_TYPE_LABELS, type DocRequirement, type DocRequirementKind } from "@/lib/property-documents";
 import {
   ArrowLeft,
@@ -510,12 +511,10 @@ export function LinearLoanApplication({
       }
     } else if (user) {
       // Embedded na landingu — zalogowany użytkownik: przekieruj do panelu klienta, gdzie zapiszemy wniosek.
-      try {
-        sessionStorage.setItem("embed_calc_v1", JSON.stringify({
-          amount: draft.amount, annualRate: draft.annualRate, months: draft.months,
-          maxPayment: draft.maxPayment, secType: draft.secType, source: "landing_wizard",
-        }));
-      } catch { /* noop */ }
+      mergeFunnelState({
+        amount: draft.amount, annualRate: draft.annualRate, months: draft.months,
+        maxPayment: draft.maxPayment, secType: draft.secType, source: "landing_wizard",
+      });
       void navigate({ to: "/klient/wniosek" });
     } else {
       toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
