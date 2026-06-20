@@ -21,6 +21,7 @@ const groups: Group[] = [
     label: "Klienci pożyczkowi",
     items: [
       { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
+      { to: "/admin/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
