@@ -24,6 +24,34 @@ export function investorTotalCompensation(monthly: number, months: number, amoun
   return Math.max(0, monthly * months - amount);
 }
 
+/** Komplet wyliczeń raty/balonu/kosztu — JEDNO źródło prawdy dla obu formularzy wniosku. */
+export type LoanFigures = {
+  /** Rata nominalna (bez ograniczenia maksymalną ratą). */
+  nominal: number;
+  /** Rata po ograniczeniu pułapem `maxPayment` (jeśli podany). */
+  monthly: number;
+  /** Dopłata balonowa doliczana do ostatniej raty. */
+  balloon: number;
+  /** Łączna spłata (raty + balon). */
+  total: number;
+  /** Koszt finansowania = wynagrodzenie inwestora. */
+  investorCompensation: number;
+};
+
+export function computeLoanFigures(input: {
+  amount: number;
+  annualRatePercent: number;
+  months: number;
+  maxPayment?: number;
+}): LoanFigures {
+  const nominal = monthlyPayment(input.amount, input.annualRatePercent, input.months);
+  const cap = input.maxPayment && input.maxPayment > 0 ? input.maxPayment : nominal;
+  const monthly = Math.min(nominal || 0, cap || 0);
+  const balloon = Math.max(0, (nominal - monthly) * input.months);
+  const total = monthly * input.months + balloon;
+  return { nominal, monthly, balloon, total, investorCompensation: Math.max(0, total - input.amount) };
+}
+
 // Wartości bazowe i skalowanie według rocznego wynagrodzenia.
 // Liniowa interpolacja między 15% (base) a 36% (max).
 const baseAt15: Record<SecurityType, number> = {
