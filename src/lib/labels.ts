@@ -1,22 +1,22 @@
 // Centralne mapowanie wartości technicznych (z bazy) na polskie etykiety dla UI.
 
-export const loanStatusLabels: Record<string, string> = {
-  nowy_lead: "Nowy lead",
-  w_trakcie_uzupelniania: "W trakcie uzupełniania",
-  braki_w_dokumentach: "Braki w dokumentach",
-  do_kontaktu: "Do kontaktu",
-  w_follow_upie: "W follow-upie",
-  wniosek_kompletny: "Wniosek kompletny",
-  do_analizy: "Do analizy",
-  rokuje: "Rokuje",
-  nie_rokuje: "Nie rokuje",
-  wyslany_do_inwestorow: "Wysłany do inwestorów",
-  oferta_od_inwestora: "Oferta od inwestora",
-  oferta_przekazana_klientowi: "Oferta przekazana klientowi",
-  zaakceptowany_przez_klienta: "Zaakceptowany przez klienta",
-  do_umowy: "Do umowy",
+import { LOAN_STATUS_SHORT_LABELS } from "./loan-status";
+
+// Status wniosku pożyczkowego — JEDNO źródło prawdy w `loan-status.ts`
+// (zsynchronizowane z enumem `public.loan_status`). Tu tylko re-eksport dla UI.
+export const loanStatusLabels = LOAN_STATUS_SHORT_LABELS;
+
+// Status leada (pipeline sprzedażowy) — odrębna domena od cyklu życia wniosku.
+export const leadStatusLabels: Record<string, string> = {
+  nowy: "Nowy",
+  w_kontakcie: "W kontakcie",
+  rozmowa: "Po rozmowie",
+  wniosek_wyslany: "Wniosek wysłany",
+  wniosek_zlozony: "Wniosek złożony",
+  zakwalifikowany: "Zakwalifikowany",
+  odrzucony: "Odrzucony",
   zamkniety: "Zamknięty",
-  archiwalny: "Archiwalny",
+  bad_lead: "Zły lead",
 };
 
 export const propertyTypeLabels: Record<string, string> = {
@@ -133,4 +133,26 @@ export function formatDateTime(value: string | Date | null | undefined): string 
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium", timeStyle: "short" }).format(d);
+}
+
+/** Kwota w zł bez symbolu waluty, zaokrąglona do pełnych złotych (np. „12 500 zł"). */
+export function formatPLNCompact(value: number | null | undefined): string {
+  if (value == null) return "—";
+  return new Intl.NumberFormat("pl-PL").format(Math.round(Number(value))) + " zł";
+}
+
+/** Czas względny po polsku (np. „5 min temu", „wczoraj"), z fallbackiem na datę. */
+export function formatRelative(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  const d = typeof value === "string" ? new Date(value) : value;
+  const diff = Date.now() - d.getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "przed chwilą";
+  if (m < 60) return `${m} min temu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h temu`;
+  const days = Math.floor(h / 24);
+  if (days === 1) return "wczoraj";
+  if (days < 7) return `${days} dni temu`;
+  return new Intl.DateTimeFormat("pl-PL", { dateStyle: "short" }).format(d);
 }

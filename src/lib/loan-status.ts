@@ -1,6 +1,70 @@
-// Etykiety i opisy statusu wniosku pożyczkowego — używane przez agenta
-// głosowego (inbound) oraz panel admina.
+// JEDYNE źródło prawdy dla cyklu życia wniosku pożyczkowego.
+// Klucze są zsynchronizowane 1:1 z enumem `public.loan_status` w bazie
+// (migracje 20260518124329 + 20260608082656).
+//
+// Dwie mapy o różnym przeznaczeniu:
+//  - LOAN_STATUS_SHORT_LABELS — krótkie etykiety do badge'ów, list, dropdownów w UI.
+//  - LOAN_STATUS_LABELS        — pełne, opisowe komunikaty dla klienta (voicebot, panel klienta).
 
+/** Kolejność chronologiczna cyklu życia wniosku — używana do dropdownów i sortowania. */
+export const LOAN_STATUS_ORDER = [
+  "nowy_lead",
+  "w_trakcie_uzupelniania",
+  "braki_w_dokumentach",
+  "do_kontaktu",
+  "w_follow_upie",
+  "wniosek_kompletny",
+  "do_analizy",
+  "rokuje",
+  "nie_rokuje",
+  "wyslany_do_inwestorow",
+  "oferta_od_inwestora",
+  "oferta_przekazana_klientowi",
+  "zaakceptowany_przez_klienta",
+  "do_umowy",
+  "oczekuje_podpisania_umowy",
+  "umowa_podpisana",
+  "oczekuje_ustanowienia_zabezpieczen",
+  "zabezpieczenia_ustanowione",
+  "dokumenty_dostarczone_do_inwestora",
+  "oczekuje_wyplaty",
+  "wyplacony",
+  "wniosek_odrzucony",
+  "zamkniety",
+  "archiwalny",
+] as const;
+
+export type LoanStatus = (typeof LOAN_STATUS_ORDER)[number];
+
+/** Krótkie etykiety do UI (badge, lista, dropdown zmiany statusu). */
+export const LOAN_STATUS_SHORT_LABELS: Record<string, string> = {
+  nowy_lead: "Nowy lead",
+  w_trakcie_uzupelniania: "W trakcie uzupełniania",
+  braki_w_dokumentach: "Braki w dokumentach",
+  do_kontaktu: "Do kontaktu",
+  w_follow_upie: "W follow-upie",
+  wniosek_kompletny: "Wniosek kompletny",
+  do_analizy: "Do analizy",
+  rokuje: "Rokuje",
+  nie_rokuje: "Nie rokuje",
+  wyslany_do_inwestorow: "Wysłany do inwestorów",
+  oferta_od_inwestora: "Oferta od inwestora",
+  oferta_przekazana_klientowi: "Oferta przekazana klientowi",
+  zaakceptowany_przez_klienta: "Zaakceptowany przez klienta",
+  do_umowy: "Do umowy",
+  oczekuje_podpisania_umowy: "Oczekuje podpisania umowy",
+  umowa_podpisana: "Umowa podpisana",
+  oczekuje_ustanowienia_zabezpieczen: "Oczekuje ustanowienia zabezpieczeń",
+  zabezpieczenia_ustanowione: "Zabezpieczenia ustanowione",
+  dokumenty_dostarczone_do_inwestora: "Dokumenty dostarczone do inwestora",
+  oczekuje_wyplaty: "Oczekuje wypłaty",
+  wyplacony: "Wypłacony",
+  wniosek_odrzucony: "Wniosek odrzucony",
+  zamkniety: "Zamknięty",
+  archiwalny: "Archiwalny",
+};
+
+/** Pełne, opisowe komunikaty (voicebot / panel klienta). */
 export const LOAN_STATUS_LABELS: Record<string, string> = {
   // przed analizą
   nowy_lead: "Nowy lead",
@@ -74,7 +138,8 @@ export function describeLoanStatusForAgent(status: string): {
         status_label: label,
         status_message:
           "Wniosek został wysłany do inwestorów. W dalszym ciągu oczekujemy na ich decyzję.",
-        client_action: "Czekaj na decyzję inwestora — poinformujemy cię natychmiast, gdy ją dostaniemy.",
+        client_action:
+          "Czekaj na decyzję inwestora — poinformujemy cię natychmiast, gdy ją dostaniemy.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
@@ -97,7 +162,8 @@ export function describeLoanStatusForAgent(status: string): {
         status_label: label,
         status_message:
           "Zaakceptowałeś ofertę inwestora. Umowa jest gotowa lub w przygotowaniu i oczekuje na podpisanie.",
-        client_action: "Podpisz umowę — instrukcję znajdziesz w panelu klienta lub w wiadomości od nas.",
+        client_action:
+          "Podpisz umowę — instrukcję znajdziesz w panelu klienta lub w wiadomości od nas.",
         is_decision_available: true,
         is_completed: false,
         is_rejected: false,
@@ -106,8 +172,7 @@ export function describeLoanStatusForAgent(status: string): {
     case "oczekuje_ustanowienia_zabezpieczen":
       return {
         status_label: label,
-        status_message:
-          "Umowa została podpisana. Oczekujemy teraz na ustanowienie zabezpieczeń.",
+        status_message: "Umowa została podpisana. Oczekujemy teraz na ustanowienie zabezpieczeń.",
         client_action: "Postępuj zgodnie z instrukcją ustanowienia zabezpieczeń.",
         is_decision_available: true,
         is_completed: false,

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil, CalendarDays, Info, Lock, Send, Loader2 } from "lucide-react";
 import { formatPLN, securityTypeLabels, monthlyPayment, type SecurityType } from "@/lib/loan-math";
-import { loanStatusLabels } from "@/lib/labels";
+import { loanStatusLabels, formatPLNCompact } from "@/lib/labels";
 import { LinearLoanApplication, type LoanWizardPrefill } from "@/components/loan-application-variants";
 import { toast } from "sonner";
 
@@ -389,9 +389,4 @@ function Metric({ label, value }: { label: string; value: string }) {
       <div className="text-lg font-semibold mt-0.5">{value}</div>
     </div>
   );
-}
-
-function formatPLNCompact(n: number): string {
-  const v = Math.round(n);
-  return new Intl.NumberFormat("pl-PL").format(v) + " zł";
 }
