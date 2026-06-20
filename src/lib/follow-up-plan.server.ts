@@ -91,8 +91,8 @@ const sig = "\n\nZespół Finance You";
 export const EMAIL_TEMPLATES: Record<number, Tpl> = {
   1: { subject: "Cieszymy się, że jesteś z nami — zostały tylko 2 kroki",
        body: (v) => `${greet(v)}\n\nDziękujemy, że nam zaufałeś. Twój wniosek jest już prawie gotowy — brakuje nam tylko 2 kroków, żeby pokazać Ci konkretną ofertę.\n\n${cta(v)}\n\nZajmie to dosłownie 3 minuty.${sig}` },
-  2: { subject: "Inwestorzy już czekają na Twój wniosek",
-       body: (v) => `${greet(v)}\n\nMam dla Ciebie dobrą wiadomość — w tym tygodniu mamy inwestorów z wolnymi środkami, którzy szukają wniosków takich jak Twój. Wystarczy dokończyć formularz, żeby dopasować Cię do najlepszej oferty.\n\n${cta(v)}${sig}` },
+  2: { subject: "Wybierzemy dla Ciebie najlepszą ofertę z wielu inwestorów",
+       body: (v) => `${greet(v)}\n\nW Finance You nie jesteś przypisany do jednego inwestora — Twój wniosek pokazujemy kilku, a Ty wybierasz tę ofertę, która najbardziej Ci pasuje (kwota, rata, okres spłaty). Dzięki temu warunki są realnie korzystniejsze niż w jednej instytucji.\n\n${cta(v)}${sig}` },
   3: { subject: "Twoje pieniądze są bliżej, niż myślisz",
        body: (v) => `${greet(v)}\n\nWiększość naszych klientów dostaje wypłatę w 7–14 dni od dokończenia wniosku. Ty jesteś już w połowie drogi — zostały ostatnie pola.\n\n${cta(v)}${sig}` },
   4: { subject: "Jak to działa u nas — w 4 prostych krokach",
