@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { captureFunnelParamsFromUrl, readFunnelState } from "@/lib/wniosek-funnel";
 
 type ConsentKind = "privacy" | "marketing" | "terms";
 type ConsentDoc = { id: string; kind: ConsentKind; title: string; content: string; version: number };
@@ -23,27 +24,6 @@ export const Route = createFileRoute("/wniosek-start")({
     ],
   }),
 });
-
-const STORAGE_KEY = "embed_calc_v1";
-
-function captureParamsToStorage() {
-  if (typeof window === "undefined") return;
-  const sp = new URLSearchParams(window.location.search);
-  if (!sp.get("amount") && !sp.get("secType")) return;
-  const payload = {
-    amount: Number(sp.get("amount")) || null,
-    annualRate: Number(sp.get("annualRate")) || null,
-    months: Number(sp.get("months")) || null,
-    maxPayment: Number(sp.get("maxPayment")) || null,
-    secType: sp.get("secType") || null,
-    source: sp.get("source") || "embed",
-  };
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    /* noop */
-  }
-}
 
 function getNextPath(): string {
   if (typeof window === "undefined") return "/wniosek-formularz";
@@ -77,18 +57,13 @@ function WniosekStartPage() {
 
   // Zapamiętaj parametry kalkulatora przed jakimkolwiek redirectem (OAuth wraca tu z powrotem).
   useEffect(() => {
-    captureParamsToStorage();
+    captureFunnelParamsFromUrl();
     // Prefill z linku /wniosek/$token (lead z Meta itp.)
-    try {
-      const raw = sessionStorage.getItem("wniosek_prefill_v1");
-      if (raw) {
-        const p = JSON.parse(raw);
-        if (p.firstName) setFirstName(p.firstName);
-        if (p.lastName && p.lastName !== "—") setLastName(p.lastName);
-        if (p.email) setEmail(p.email);
-        if (p.phone) setPhone(p.phone);
-      }
-    } catch { /* noop */ }
+    const p = readFunnelState();
+    if (p.firstName) setFirstName(p.firstName);
+    if (p.lastName && p.lastName !== "—") setLastName(p.lastName);
+    if (p.email) setEmail(p.email);
+    if (p.phone) setPhone(p.phone);
   }, []);
 
   // Pobierz aktywne treści zgód

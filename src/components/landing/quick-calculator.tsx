@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Calculator, ShieldCheck } from "lucide-react";
+import { mergeFunnelState } from "@/lib/wniosek-funnel";
 
 export function QuickCalculator() {
   const [amount, setAmount] = useState(200_000);
@@ -13,14 +14,7 @@ export function QuickCalculator() {
 
   const goNext = () => {
     if (!canSubmit) return;
-    try {
-      sessionStorage.setItem(
-        "calc_step1_v1",
-        JSON.stringify({ amount, months, source: "landing_calculator", ts: Date.now() }),
-      );
-    } catch {
-      /* noop */
-    }
+    mergeFunnelState({ amount, months, source: "landing_calculator" });
     const url = new URL("/wniosek-zabezpieczenie", window.location.origin);
     url.searchParams.set("amount", String(amount));
     url.searchParams.set("months", String(months));

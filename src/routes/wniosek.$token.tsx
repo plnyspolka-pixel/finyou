@@ -4,12 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { claimLoanApplication } from "@/lib/my-loan.functions";
 import { toast } from "sonner";
+import { mergeFunnelState } from "@/lib/wniosek-funnel";
 
 export const Route = createFileRoute("/wniosek/$token")({
   component: WniosekReturn,
 });
 
-const PREFILL_KEY = "wniosek_prefill_v1";
 const CLAIM_KEY = "pendingClaimToken";
 
 function WniosekReturn() {
@@ -28,15 +28,13 @@ function WniosekReturn() {
 
       if (lead) {
         const client = (lead as any).client ?? null;
-        try {
-          sessionStorage.setItem(PREFILL_KEY, JSON.stringify({
-            loanApplicationId: (lead as any).id,
-            firstName: client?.first_name ?? "",
-            lastName: client?.last_name ?? "",
-            email: client?.email ?? "",
-            phone: client?.phone ?? "",
-          }));
-        } catch { /* noop */ }
+        mergeFunnelState({
+          loanApplicationId: (lead as any).id,
+          firstName: client?.first_name ?? "",
+          lastName: client?.last_name ?? "",
+          email: client?.email ?? "",
+          phone: client?.phone ?? "",
+        });
       }
 
       // 2) Sprawdzamy sesję — jeśli klient już zalogowany, claim odbywa się natychmiast

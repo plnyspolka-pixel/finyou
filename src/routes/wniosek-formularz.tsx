@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { readFunnelState, clearFunnelState } from "@/lib/wniosek-funnel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { detectKwNumbers } from "@/lib/kw-ocr.functions";
@@ -128,31 +129,22 @@ function KlientWniosek() {
     return rows;
   }, [months, rata, balloon]);
 
-  // Pre-fill z embed (wniosek-start zapisuje paramy kalkulatora do sessionStorage)
+  // Pre-fill ze stanu kreatora (kalkulator / landing / zabezpieczenie — jedno źródło prawdy).
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = sessionStorage.getItem("embed_calc_v1");
-      if (!raw) return;
-      const p = JSON.parse(raw) as {
-        amount?: number; annualRate?: number; months?: number; maxPayment?: number;
-        secType?: SecurityType | null; source?: string; startStep?: number;
-      };
-      if (p.amount) setAmount(p.amount);
-      if (p.annualRate) setAnnualRate(p.annualRate);
-      if (p.months) setMonths(p.months);
-      if (p.maxPayment) setMaxPayment(p.maxPayment);
-      if (p.secType) setSecType(p.secType);
-      // przeskocz do kroku zabezpieczenia (krok 1 w nowym uproszczonym formularzu)
-      const mapped = p.startStep === 3 ? 2 : p.startStep === 5 ? 3 : 1;
-      const targetStep = mapped >= 1 && mapped <= STEPS.length ? mapped : 1;
-      setStep(targetStep);
-      // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu
-      setEditing(true);
-      sessionStorage.removeItem("embed_calc_v1");
-    } catch {
-      /* noop */
-    }
+    const p = readFunnelState();
+    if (!p.amount && !p.secType && !p.startStep) return;
+    if (p.amount) setAmount(p.amount);
+    if (p.annualRate) setAnnualRate(p.annualRate);
+    if (p.months) setMonths(p.months);
+    if (p.maxPayment) setMaxPayment(p.maxPayment);
+    if (p.secType) setSecType(p.secType as SecurityType);
+    // przeskocz do kroku zabezpieczenia (krok 1 w nowym uproszczonym formularzu)
+    const mapped = p.startStep === 3 ? 2 : p.startStep === 5 ? 3 : 1;
+    const targetStep = mapped >= 1 && mapped <= STEPS.length ? mapped : 1;
+    setStep(targetStep);
+    // wymuś tryb edycji, żeby SubmittedView nie blokował dostępu
+    setEditing(true);
+    clearFunnelState();
   }, []);
 
 
