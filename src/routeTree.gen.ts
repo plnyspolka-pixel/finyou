@@ -59,6 +59,7 @@ import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
 import { Route as AdminTextAgentRouteImport } from './routes/admin.text-agent'
 import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
+import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
@@ -377,6 +378,11 @@ const AdminTextAgentRoute = AdminTextAgentRouteImport.update({
 const AdminSzkoleniaRoute = AdminSzkoleniaRouteImport.update({
   id: '/szkolenia',
   path: '/szkolenia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSkrzynkaRoute = AdminSkrzynkaRouteImport.update({
+  id: '/skrzynka',
+  path: '/skrzynka',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminRoleRoute = AdminRoleRouteImport.update({
@@ -778,6 +784,7 @@ export interface FileRoutesByFullPath {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/skrzynka': typeof AdminSkrzynkaRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -892,6 +899,7 @@ export interface FileRoutesByTo {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/skrzynka': typeof AdminSkrzynkaRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1011,6 +1019,7 @@ export interface FileRoutesById {
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
+  '/admin/skrzynka': typeof AdminSkrzynkaRoute
   '/admin/szkolenia': typeof AdminSzkoleniaRoute
   '/admin/text-agent': typeof AdminTextAgentRoute
   '/admin/ustawienia': typeof AdminUstawieniaRoute
@@ -1131,6 +1140,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/przypomnienia'
     | '/admin/role'
+    | '/admin/skrzynka'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -1245,6 +1255,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/przypomnienia'
     | '/admin/role'
+    | '/admin/skrzynka'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -1363,6 +1374,7 @@ export interface FileRouteTypes {
     | '/admin/pixele'
     | '/admin/przypomnienia'
     | '/admin/role'
+    | '/admin/skrzynka'
     | '/admin/szkolenia'
     | '/admin/text-agent'
     | '/admin/ustawienia'
@@ -1847,6 +1859,13 @@ declare module '@tanstack/react-router' {
       path: '/szkolenia'
       fullPath: '/admin/szkolenia'
       preLoaderRoute: typeof AdminSzkoleniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/skrzynka': {
+      id: '/admin/skrzynka'
+      path: '/skrzynka'
+      fullPath: '/admin/skrzynka'
+      preLoaderRoute: typeof AdminSkrzynkaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/role': {
@@ -2363,6 +2382,7 @@ interface AdminRouteChildren {
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
+  AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
   AdminSzkoleniaRoute: typeof AdminSzkoleniaRoute
   AdminTextAgentRoute: typeof AdminTextAgentRoute
   AdminUstawieniaRoute: typeof AdminUstawieniaRoute
@@ -2404,6 +2424,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
+  AdminSkrzynkaRoute: AdminSkrzynkaRoute,
   AdminSzkoleniaRoute: AdminSzkoleniaRoute,
   AdminTextAgentRoute: AdminTextAgentRoute,
   AdminUstawieniaRoute: AdminUstawieniaRoute,
