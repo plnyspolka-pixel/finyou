@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadStatusLabels } from "@/lib/labels";
+import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadStatusLabels, formatDateTime } from "@/lib/labels";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
 
@@ -286,7 +286,7 @@ function KlienciPage() {
                         <div className="text-muted-foreground">{formatRelative(r.comms.lastAt)}</div>
                       </td>
                       <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{new Date(r.created_at).toLocaleString("pl-PL")}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(r.created_at)}</td>
                     </tr>
                     {isOpen && (
                       <tr key={`${r.id}-expanded`} className="border-b bg-muted/20">

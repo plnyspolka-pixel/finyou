@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -412,7 +413,7 @@ function DocumentList() {
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="text-xs">{new Date(r.created_at).toLocaleString("pl-PL")}</TableCell>
+                  <TableCell className="text-xs">{formatDateTime(r.created_at)}</TableCell>
                   <TableCell>{r.document_type === "proforma" ? "Proforma" : "Faktura"}</TableCell>
                   <TableCell>{r.buyer_name}</TableCell>
                   <TableCell className="text-right tabular-nums">{Number(r.gross_amount ?? 0).toFixed(2)} {r.currency}</TableCell>

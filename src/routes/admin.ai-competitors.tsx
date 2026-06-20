@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,7 +100,7 @@ function CompetitorList() {
                 <TableCell className="text-xs">{c.domain}</TableCell>
                 <TableCell><Badge variant="secondary">{c.urls?.length ?? 0}</Badge></TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {c.last_checked_at ? new Date(c.last_checked_at).toLocaleString("pl-PL") : "—"}
+                  {c.last_checked_at ? formatDateTime(c.last_checked_at) : "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="inline-flex gap-1">
@@ -163,7 +164,7 @@ function ChangesFeed() {
                 <a href={s.url} target="_blank" rel="noreferrer" className="hover:underline inline-flex items-center gap-1">
                   {s.url} <ExternalLink className="h-3 w-3" />
                 </a>
-                · {new Date(s.checked_at).toLocaleString("pl-PL")}
+                · {formatDateTime(s.checked_at)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -206,7 +207,7 @@ function HistoryDialog({ snapshotId, url }: { snapshotId: string; url: string })
           {rows.map((r) => (
             <div key={r.id} className="border rounded p-2 text-xs">
               <div className="flex justify-between">
-                <span>{new Date(r.checked_at).toLocaleString("pl-PL")}</span>
+                <span>{formatDateTime(r.checked_at)}</span>
                 {r.changed && <Badge variant="default" className="text-[10px]">zmiana</Badge>}
               </div>
               {r.change_summary && <div className="mt-1 text-muted-foreground">{r.change_summary}</div>}

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -345,7 +346,7 @@ function VoicebotAdmin() {
                   <div className="text-muted-foreground text-xs">
                     ID: <code>{f.meta_form_id}</code>
                     {f.page_name && <> • {f.page_name}</>}
-                    {f.last_lead_at && <> • Ostatni lead: {new Date(f.last_lead_at).toLocaleString("pl-PL")}</>}
+                    {f.last_lead_at && <> • Ostatni lead: {formatDateTime(f.last_lead_at)}</>}
                     {typeof f.total_leads_pulled === "number" && <> • Leadów: {f.total_leads_pulled}</>}
                   </div>
                 </div>

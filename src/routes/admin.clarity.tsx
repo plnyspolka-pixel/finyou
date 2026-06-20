@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -197,7 +198,7 @@ function ClarityPage() {
           </Card>
 
           <p className="text-xs text-muted-foreground">
-            Pobrano: {new Date(metrics.fetchedAt).toLocaleString("pl-PL")} ·
+            Pobrano: {formatDateTime(metrics.fetchedAt)} ·
             Zakres: {metrics.numOfDays} dni
           </p>
         </>

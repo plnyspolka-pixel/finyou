@@ -82,11 +82,9 @@ export function interestScore(type: SecurityType, annualRatePercent: number): nu
   return Math.round(Math.min(100, v + bonus));
 }
 
-export function formatPLN(n: number): string {
-  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(
-    Math.round(n || 0),
-  );
-}
+// formatPLN — jedno źródło prawdy w labels.ts; tu tylko re-eksport, by import
+// z "@/lib/loan-math" dalej działał w istniejących miejscach.
+export { formatPLN } from "./labels";
 
 export const securityTypeLabels: Record<SecurityType, string> = {
   mieszkanie: "Mieszkanie",

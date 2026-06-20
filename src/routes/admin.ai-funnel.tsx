@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime, formatDate } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -195,7 +196,7 @@ function FunnelAnalyzerPage() {
             {insights.map((ins) => (
               <div key={ins.id} className="border rounded-lg p-4 space-y-3">
                 <div className="text-xs text-muted-foreground">
-                  {new Date(ins.created_at).toLocaleString("pl-PL")} · {new Date(ins.period_from).toLocaleDateString("pl-PL")} → {new Date(ins.period_to).toLocaleDateString("pl-PL")}
+                  {formatDateTime(ins.created_at)} · {formatDate(ins.period_from)} → {formatDate(ins.period_to)}
                 </div>
                 <p className="text-sm">{ins.summary}</p>
                 {Array.isArray(ins.bottlenecks) && ins.bottlenecks.length > 0 && (

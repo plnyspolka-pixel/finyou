@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/labels";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,7 +109,7 @@ export function KwContentSection({
             <CardDescription>
               Dane z Centralnej Bazy Ksiąg Wieczystych (CMD KW Engine).
               {showKwNumber && kwNumber && <> · KW: <code className="text-foreground">{kwNumber}</code></>}
-              {doc?.fetched_at && <> · Pobrano: {new Date(doc.fetched_at).toLocaleString("pl-PL")}</>}
+              {doc?.fetched_at && <> · Pobrano: {formatDateTime(doc.fetched_at)}</>}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">

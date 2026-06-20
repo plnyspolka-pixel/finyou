@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -506,7 +507,7 @@ function LeadsDialog({ page, onClose }: { page: Page; onClose: () => void }) {
                   {leads.map((l) => (
                     <tr key={l.id} className="border-b">
                       <td className="py-2 text-xs text-muted-foreground">
-                        {new Date(l.created_at).toLocaleString("pl-PL")}
+                        {formatDateTime(l.created_at)}
                       </td>
                       <td>{l.email}</td>
                       <td>{l.name ?? "—"}</td>
