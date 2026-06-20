@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search } from "lucide-react";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
+import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 
 export const Route = createFileRoute("/operator/leady")({
   component: OperatorLeadsList,
@@ -78,6 +79,18 @@ function OperatorLeadsList() {
                     {r.source && <Badge variant="secondary">{r.source}</Badge>}
                     {r.quality_tier && <Badge className="bg-blue-600 text-white">Tier {r.quality_tier}</Badge>}
                   </div>
+                  {r.loan && (
+                    <PropertyKeyFacts
+                      variant="inline"
+                      className="mt-1"
+                      amount={r.loan.loan_amount}
+                      propertyType={r.loan.properties?.[0]?.property_type}
+                      kwNumber={r.loan.properties?.[0]?.land_register_number}
+                      photoCount={r.loan.properties?.[0]?.photos?.length ?? 0}
+                      docCount={r.docCount ?? 0}
+                      periodMonths={r.loan.preferred_period_months}
+                    />
+                  )}
                   <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
                     {phone && <span>📞 {phone}</span>}
                     {r.email && <span>✉️ {r.email}</span>}

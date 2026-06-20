@@ -29,7 +29,7 @@ export const listLeads = createServerFn({ method: "GET" })
         current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
         loan:loan_applications(
           id, status, loan_amount, preferred_period_months, completeness_percent,
-          properties(property_type, city, estimated_value)
+          properties(property_type, city, estimated_value, land_register_number, photos)
         )
       `)
       .order("created_at", { ascending: false })
@@ -84,7 +84,26 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
-    return list.map((l) => ({ ...l, comms: commsByLead[l.id] ?? { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null } }));
+    // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).
+    const loanIds = Array.from(new Set(list.map((l) => l.loan?.id).filter(Boolean))) as string[];
+    const docCountByLoan: Record<string, number> = {};
+    if (loanIds.length) {
+      const { data: docs } = await context.supabase
+        .from("documents")
+        .select("loan_application_id")
+        .in("loan_application_id", loanIds);
+      for (const d of (docs ?? []) as any[]) {
+        if (d.loan_application_id) {
+          docCountByLoan[d.loan_application_id] = (docCountByLoan[d.loan_application_id] ?? 0) + 1;
+        }
+      }
+    }
+
+    return list.map((l) => ({
+      ...l,
+      comms: commsByLead[l.id] ?? { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null },
+      docCount: l.loan?.id ? (docCountByLoan[l.loan.id] ?? 0) : 0,
+    }));
   });
 
 export const getLead = createServerFn({ method: "GET" })
