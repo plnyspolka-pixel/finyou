@@ -6,6 +6,7 @@ import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Sen
 import { AiAdminChat } from "@/components/admin/AiAdminChat";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
+import { PanelShell } from "@/components/layout/panel-shell";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
