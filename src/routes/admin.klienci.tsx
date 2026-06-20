@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { formatPLN, propertyTypeLabels, loanStatusLabels } from "@/lib/labels";
+import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadStatusLabels } from "@/lib/labels";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
 
@@ -19,35 +19,9 @@ export const Route = createFileRoute("/admin/klienci")({
   component: KlienciPage,
 });
 
-const LEAD_STATUS_LABELS: Record<string, string> = {
-  nowy: "Nowy",
-  w_kontakcie: "W kontakcie",
-  rozmowa: "Po rozmowie",
-  wniosek_wyslany: "Wniosek wysłany",
-  wniosek_zlozony: "Wniosek złożony",
-  zakwalifikowany: "Zakwalifikowany",
-  odrzucony: "Odrzucony",
-  zamkniety: "Zamknięty",
-  bad_lead: "Zły lead",
-};
-
 function statusLabel(s: string | null | undefined) {
   if (!s) return "—";
-  return LEAD_STATUS_LABELS[s] ?? loanStatusLabels[s] ?? s;
-}
-
-function formatRelative(iso: string | null): string {
-  if (!iso) return "—";
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "przed chwilą";
-  if (m < 60) return `${m} min temu`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h temu`;
-  const d = Math.floor(h / 24);
-  if (d === 1) return "wczoraj";
-  if (d < 7) return `${d} dni temu`;
-  return new Date(iso).toLocaleDateString("pl-PL");
+  return leadStatusLabels[s] ?? loanStatusLabels[s] ?? s;
 }
 
 type Row = {

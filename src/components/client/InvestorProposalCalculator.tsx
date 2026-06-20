@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
-import { loanStatusLabels } from "@/lib/labels";
+import { loanStatusLabels, formatPLNCompact } from "@/lib/labels";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { assistBusinessDescription } from "@/lib/ai-assist.functions";
@@ -377,9 +377,4 @@ function Metric({ label, value }: { label: string; value: string }) {
       <div className="text-lg font-semibold mt-0.5">{value}</div>
     </div>
   );
-}
-
-function formatPLNCompact(n: number): string {
-  const v = Math.round(n);
-  return new Intl.NumberFormat("pl-PL").format(v) + " zł";
 }

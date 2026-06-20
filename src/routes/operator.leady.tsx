@@ -9,36 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search } from "lucide-react";
+import { leadStatusLabels, formatRelative } from "@/lib/labels";
 
 export const Route = createFileRoute("/operator/leady")({
   component: OperatorLeadsList,
 });
-
-const LEAD_STATUS_LABELS: Record<string, string> = {
-  nowy: "Nowy",
-  w_kontakcie: "W kontakcie",
-  rozmowa: "Po rozmowie",
-  wniosek_wyslany: "Wniosek wysłany",
-  wniosek_zlozony: "Wniosek złożony",
-  zakwalifikowany: "Zakwalifikowany",
-  odrzucony: "Odrzucony",
-  zamkniety: "Zamknięty",
-  bad_lead: "Zły lead",
-};
-
-function formatRelative(iso: string | null): string {
-  if (!iso) return "—";
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "przed chwilą";
-  if (m < 60) return `${m} min temu`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h temu`;
-  const d = Math.floor(h / 24);
-  if (d === 1) return "wczoraj";
-  if (d < 7) return `${d} dni temu`;
-  return new Date(iso).toLocaleDateString("pl-PL");
-}
 
 function OperatorLeadsList() {
   const fn = useServerFn(listLeads);
@@ -73,7 +48,7 @@ function OperatorLeadsList() {
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie statusy</SelectItem>
-              {Object.entries(LEAD_STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+              {Object.entries(leadStatusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={source} onValueChange={setSource}>
@@ -99,7 +74,7 @@ function OperatorLeadsList() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-medium truncate">{name}</div>
-                    <Badge variant="outline">{LEAD_STATUS_LABELS[r.status] ?? r.status}</Badge>
+                    <Badge variant="outline">{leadStatusLabels[r.status] ?? r.status}</Badge>
                     {r.source && <Badge variant="secondary">{r.source}</Badge>}
                     {r.quality_tier && <Badge className="bg-blue-600 text-white">Tier {r.quality_tier}</Badge>}
                   </div>
