@@ -7,6 +7,7 @@
 // dokończenie wniosku, status terminalny, ręczna pauza.
 
 import { createClient } from "@supabase/supabase-js";
+import { LEAD_TERMINAL_STATUSES, LEAD_CONTACT_WINDOW } from "./follow-up-config";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -192,7 +193,7 @@ function isInQuietWindow(now: Date = new Date()): boolean {
   const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
   const wd = parts.find((p) => p.type === "weekday")?.value ?? "";
   const isWeekday = !["Sat", "Sun"].includes(wd);
-  return isWeekday && hour >= 8 && hour < 21;
+  return isWeekday && hour >= LEAD_CONTACT_WINDOW.startHour && hour < LEAD_CONTACT_WINDOW.endHour;
 }
 
 // === PLANOWANIE ===
@@ -233,10 +234,7 @@ export async function cancelFollowUpsForLead(leadId: string, reason: string): Pr
 }
 
 // === PRZETWARZANIE (cron tick) ===
-const TERMINAL = new Set([
-  "zamkniety", "closed", "won", "lost", "odrzucony", "rezygnacja",
-  "wyplacony", "spłacony", "do_not_contact", "blacklist",
-]);
+const TERMINAL = new Set<string>(LEAD_TERMINAL_STATUSES);
 
 interface DueRow {
   id: string;
