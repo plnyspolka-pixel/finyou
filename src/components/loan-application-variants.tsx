@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { formatPLN, monthlyPayment, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { formatPLN, computeLoanFigures, securityTypeLabels, type SecurityType } from "@/lib/loan-math";
 import { mergeFunnelState } from "@/lib/wniosek-funnel";
 import { REQUIREMENTS_BY_TYPE, PROPERTY_TYPE_LABELS, type DocRequirement, type DocRequirementKind } from "@/lib/property-documents";
 import {
@@ -169,18 +169,16 @@ function useLoanDraft() {
     });
   };
 
-  const figures = useMemo(() => {
-    const nominal = monthlyPayment(draft.amount, draft.annualRate, draft.months);
-    const monthly = Math.min(nominal || 0, draft.maxPayment || nominal || 0);
-    const balloon = Math.max(0, (nominal - monthly) * draft.months);
-    const total = monthly * draft.months + balloon;
-    return {
-      monthly,
-      balloon,
-      total,
-      investorCompensation: Math.max(0, total - draft.amount),
-    };
-  }, [draft.amount, draft.annualRate, draft.maxPayment, draft.months]);
+  const figures = useMemo(
+    () =>
+      computeLoanFigures({
+        amount: draft.amount,
+        annualRatePercent: draft.annualRate,
+        months: draft.months,
+        maxPayment: draft.maxPayment,
+      }),
+    [draft.amount, draft.annualRate, draft.maxPayment, draft.months],
+  );
 
   return { draft, update, photos, addPhotos, removePhoto, figures, user, authLoading: loading };
 }

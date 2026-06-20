@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import {
-  monthlyPayment,
+  computeLoanFigures,
   formatPLN,
   securityTypeLabels,
   type SecurityType,
@@ -107,11 +107,10 @@ function KlientWniosek() {
 
   // Wyliczenia
   // Wyliczenia: nadwyżka ponad maks. ratę trafia do raty balonowej na koniec
-  const rataNominal = useMemo(() => monthlyPayment(amount, annualRate, months), [amount, annualRate, months]);
-  const rata = useMemo(() => (maxPayment > 0 ? Math.min(rataNominal, maxPayment) : rataNominal), [rataNominal, maxPayment]);
-  const balloon = useMemo(() => Math.max(0, (rataNominal - rata) * months), [rataNominal, rata, months]);
-  const totalPay = useMemo(() => rata * months + balloon, [rata, months, balloon]);
-  const investorComp = useMemo(() => Math.max(0, totalPay - amount), [totalPay, amount]);
+  const { monthly: rata, balloon, total: totalPay, investorCompensation: investorComp } = useMemo(
+    () => computeLoanFigures({ amount, annualRatePercent: annualRate, months, maxPayment }),
+    [amount, annualRate, months, maxPayment],
+  );
   const exceedsMax = balloon > 0;
 
   const schedule = useMemo(() => {
