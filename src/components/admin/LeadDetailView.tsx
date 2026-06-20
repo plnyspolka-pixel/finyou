@@ -1,4 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
+import { formatDateTime } from "@/lib/labels";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getLead, updateLead, addManualNote } from "@/lib/leads-admin.functions";
@@ -133,7 +134,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
                     {c.metadata?.disconnection_reason && (
                       <span className="text-[10px] text-muted-foreground">• {c.metadata.disconnection_reason}</span>
                     )}
-                    <span className="ml-auto text-xs text-muted-foreground">{new Date(c.created_at).toLocaleString("pl-PL")}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(c.created_at)}</span>
                   </div>
                   {c.subject && <div className="text-sm font-medium">{c.subject}</div>}
                   {c.content && <div className="text-sm whitespace-pre-wrap text-foreground/90">{c.content}</div>}
@@ -196,7 +197,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{d.file_name}</span>
                     <Badge variant="outline" className="text-[10px]">{d.document_type}</Badge>
-                    <span className="ml-auto text-xs text-muted-foreground">{new Date(d.created_at).toLocaleString("pl-PL")}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(d.created_at)}</span>
                   </li>
                 ))}
               </ul>
@@ -254,7 +255,7 @@ function QualitySection({ lead }: { lead: any }) {
           <div className="text-sm font-medium flex items-center gap-2"><TrendingUp className="h-4 w-4" /> Jakość leadu dla algorytmu Mety</div>
           <div className="text-xs text-muted-foreground mt-1">
             {lead.quality_reason ?? "Jeszcze nie sklasyfikowano — kliknij Przelicz"}
-            {lead.meta_capi_last_event && (<> • Ostatni event: <code>{lead.meta_capi_last_event}</code> ({lead.meta_capi_last_sent_at ? new Date(lead.meta_capi_last_sent_at).toLocaleString("pl-PL") : "—"})</>)}
+            {lead.meta_capi_last_event && (<> • Ostatni event: <code>{lead.meta_capi_last_event}</code> ({lead.meta_capi_last_sent_at ? formatDateTime(lead.meta_capi_last_sent_at) : "—"})</>)}
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -303,7 +304,7 @@ function CapiEventsList({ leadId }: { leadId: string }) {
                 <Badge variant={r.status === "sent" ? "default" : "destructive"} className="text-[10px]">{r.status}</Badge>
                 {r.error && <div className="text-[10px] text-destructive mt-1">{r.error}</div>}
               </td>
-              <td className="p-1 text-xs text-muted-foreground">{new Date(r.sent_at).toLocaleString("pl-PL")}</td>
+              <td className="p-1 text-xs text-muted-foreground">{formatDateTime(r.sent_at)}</td>
             </tr>
           ))}
         </tbody>
@@ -376,10 +377,10 @@ function EmailSequenceTab({ data }: { data: any }) {
                 <td className="p-2 text-xs">{s.variant?.sequence_index ?? "—"}</td>
                 <td className="p-2 text-xs">{s.variant ? `D${s.variant.day_index} / ${s.variant.slot === "morning" ? "8:00" : "20:00"}` : "—"}</td>
                 <td className="p-2">{s.subject}</td>
-                <td className="p-2 text-xs whitespace-nowrap">{new Date(s.sent_at).toLocaleString("pl-PL")}</td>
+                <td className="p-2 text-xs whitespace-nowrap">{formatDateTime(s.sent_at)}</td>
                 <td className="p-2 text-center">{s.error_message ? <Badge variant="destructive" className="text-[10px]">błąd</Badge> : <Badge variant="outline" className="text-[10px]">OK</Badge>}</td>
-                <td className="p-2 text-center text-xs">{s.open_count ?? 0}{s.opened_at && <div className="text-[10px] text-muted-foreground">{new Date(s.opened_at).toLocaleString("pl-PL")}</div>}</td>
-                <td className="p-2 text-center text-xs">{s.click_count ?? 0}{s.clicked_at && <div className="text-[10px] text-muted-foreground">{new Date(s.clicked_at).toLocaleString("pl-PL")}</div>}</td>
+                <td className="p-2 text-center text-xs">{s.open_count ?? 0}{s.opened_at && <div className="text-[10px] text-muted-foreground">{formatDateTime(s.opened_at)}</div>}</td>
+                <td className="p-2 text-center text-xs">{s.click_count ?? 0}{s.clicked_at && <div className="text-[10px] text-muted-foreground">{formatDateTime(s.clicked_at)}</div>}</td>
               </tr>
             ))}
           </tbody>

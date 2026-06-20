@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -262,7 +263,7 @@ function KlientProfil() {
               </div>
             )}
             {row?.bank_account_verified_at && (
-              <div className="text-xs text-muted-foreground">Ostatnia weryfikacja: {new Date(row.bank_account_verified_at).toLocaleString("pl-PL")}</div>
+              <div className="text-xs text-muted-foreground">Ostatnia weryfikacja: {formatDateTime(row.bank_account_verified_at)}</div>
             )}
           </div>
         </CardContent>
@@ -284,7 +285,7 @@ function KlientProfil() {
           {row?.phone_verified_at && row?.phone_verified_value ? (
             <div className="text-sm">
               <div className="font-medium">{row.phone_verified_value}</div>
-              <div className="text-xs text-muted-foreground">Zweryfikowano: {new Date(row.phone_verified_at).toLocaleString("pl-PL")}</div>
+              <div className="text-xs text-muted-foreground">Zweryfikowano: {formatDateTime(row.phone_verified_at)}</div>
             </div>
           ) : null}
 
@@ -365,7 +366,7 @@ function KlientProfil() {
         <CardContent className="space-y-3">
           {row?.bik_report_uploaded_at && (
             <div className="text-xs text-muted-foreground">
-              Plik: <span className="font-medium text-foreground">{row.bik_report_name ?? "raport"}</span> · wgrany {new Date(row.bik_report_uploaded_at).toLocaleString("pl-PL")}
+              Plik: <span className="font-medium text-foreground">{row.bik_report_name ?? "raport"}</span> · wgrany {formatDateTime(row.bik_report_uploaded_at)}
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -399,7 +400,7 @@ function SocialAdmin() {
                   {p.scheduled_at && (
                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      {new Date(p.scheduled_at).toLocaleString("pl-PL")}
+                      {formatDateTime(p.scheduled_at)}
                     </span>
                   )}
                 </div>

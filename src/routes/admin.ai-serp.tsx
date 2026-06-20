@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -173,7 +174,7 @@ function KeywordList() {
                     </TableCell>
                     <TableCell><PositionDelta current={last?.position ?? null} previous={last?.previous_position ?? null} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {last?.checked_at ? new Date(last.checked_at).toLocaleString("pl-PL") : "—"}
+                      {last?.checked_at ? formatDateTime(last.checked_at) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex gap-1">
@@ -230,7 +231,7 @@ function HistoryDialog({ keywordId, keyword }: { keywordId: string; keyword: str
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="text-xs">{new Date(r.checked_at).toLocaleString("pl-PL")}</TableCell>
+                  <TableCell className="text-xs">{formatDateTime(r.checked_at)}</TableCell>
                   <TableCell><PositionDelta current={r.position} previous={r.previous_position} /></TableCell>
                   <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">{r.url ?? "—"}</TableCell>
                 </TableRow>

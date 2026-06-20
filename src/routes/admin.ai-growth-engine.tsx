@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -263,7 +264,7 @@ function ActionLog() {
       <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Moduł</TableHead><TableHead>Akcja</TableHead><TableHead>Status</TableHead><TableHead>Opis</TableHead></TableRow></TableHeader>
       <TableBody>{rows.map((r) => (
         <TableRow key={r.id}>
-          <TableCell className="text-xs">{new Date(r.created_at).toLocaleString("pl-PL")}</TableCell>
+          <TableCell className="text-xs">{formatDateTime(r.created_at)}</TableCell>
           <TableCell>{r.module}</TableCell>
           <TableCell className="font-mono text-xs">{r.action}</TableCell>
           <TableCell><Badge variant={r.status === "ok" ? "secondary" : "destructive"}>{r.status}</Badge></TableCell>

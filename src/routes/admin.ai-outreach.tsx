@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -237,7 +238,7 @@ function MessagesDialog({ target, open, onClose }: { target: any; open: boolean;
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="outline">step {m.step}</Badge>
                     <Badge variant={m.status === "sent" ? "default" : m.status === "replied" ? "secondary" : "outline"}>{m.status}</Badge>
-                    {m.sent_at && <span className="text-xs text-muted-foreground">wysłany {new Date(m.sent_at).toLocaleString("pl-PL")}</span>}
+                    {m.sent_at && <span className="text-xs text-muted-foreground">wysłany {formatDateTime(m.sent_at)}</span>}
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="outline" onClick={() => copy(m)}><Copy className="h-3.5 w-3.5" /></Button>

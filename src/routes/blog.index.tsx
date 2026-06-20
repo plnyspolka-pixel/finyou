@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDate } from "@/lib/labels";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -67,7 +68,7 @@ function BlogIndex() {
                 </CardHeader>
                 <CardContent className="text-xs text-muted-foreground">
                   {a.reading_minutes ? `${a.reading_minutes} min czytania` : null}
-                  {a.published_at ? ` • ${new Date(a.published_at).toLocaleDateString("pl-PL")}` : null}
+                  {a.published_at ? ` • ${formatDate(a.published_at)}` : null}
                 </CardContent>
               </Card>
             </Link>

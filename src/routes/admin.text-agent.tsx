@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
@@ -94,7 +95,7 @@ function PromptTab() {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            {updatedAt ? `Ostatnio zapisano: ${new Date(updatedAt).toLocaleString("pl-PL")}` : "Brak zapisanych zmian"}
+            {updatedAt ? `Ostatnio zapisano: ${formatDateTime(updatedAt)}` : "Brak zapisanych zmian"}
           </span>
           <Button onClick={onSave} disabled={saving || loading}>
             {saving ? "Zapisywanie..." : "Zapisz"}
@@ -210,7 +211,7 @@ function KnowledgeTab() {
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{it.content}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(it.updated_at).toLocaleString("pl-PL")}
+                    {formatDateTime(it.updated_at)}
                   </p>
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setEditing(it)}>

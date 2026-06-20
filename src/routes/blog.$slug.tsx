@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { formatDate } from "@/lib/labels";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,7 +122,7 @@ function ArticlePage() {
           <h1 className="text-3xl md:text-4xl font-bold leading-tight">{article.title}</h1>
           <div className="text-xs text-muted-foreground">
             {article.reading_minutes ? `${article.reading_minutes} min czytania` : null}
-            {article.published_at ? ` • ${new Date(article.published_at).toLocaleDateString("pl-PL")}` : null}
+            {article.published_at ? ` • ${formatDate(article.published_at)}` : null}
           </div>
           {article.cover_image_url && (
             <BlogCover src={article.cover_image_url} alt={article.cover_image_alt || article.title} rounded />

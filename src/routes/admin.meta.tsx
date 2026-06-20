@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -125,7 +126,7 @@ function MetaPage() {
                     <Badge variant={l.status === "success" ? "default" : l.status === "error" ? "destructive" : "secondary"} className="mr-2">{l.status}</Badge>
                     {l.sync_type} — {l.items_synced ?? 0} szt.
                   </div>
-                  <div className="text-xs text-muted-foreground">{new Date(l.started_at).toLocaleString("pl-PL")}</div>
+                  <div className="text-xs text-muted-foreground">{formatDateTime(l.started_at)}</div>
                 </div>
               ))}
             </div>

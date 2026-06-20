@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/labels";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -128,7 +129,7 @@ export function MicroOptimizerDialog({
                   </Badge>
                   <span>{r.title}</span>
                 </div>
-                <span className="text-muted-foreground">{new Date(r.created_at).toLocaleString("pl-PL")}</span>
+                <span className="text-muted-foreground">{formatDateTime(r.created_at)}</span>
               </div>
             ))}
           </section>

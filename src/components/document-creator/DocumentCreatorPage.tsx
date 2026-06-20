@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatDateTime } from "@/lib/labels";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listDocxTemplates,
@@ -825,7 +826,7 @@ export function DocumentCreatorPage() {
                       <div className="min-w-0">
                         <div className="truncate font-medium">{h.template_name ?? "Dokument"}</div>
                         <div className="text-xs text-muted-foreground">
-                          {new Date(h.created_at).toLocaleString("pl-PL")}
+                          {formatDateTime(h.created_at)}
                           {h.commission_amount
                             ? ` · prowizja ${h.commission_amount.toLocaleString("pl-PL")} PLN`
                             : ""}

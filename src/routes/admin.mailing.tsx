@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { formatDateTime } from "@/lib/labels";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -91,7 +92,7 @@ function CampaignsTab() {
                   <TableCell className="font-medium">{c.name}<div className="text-xs text-muted-foreground">{c.subject}</div></TableCell>
                   <TableCell><Badge variant="outline">{c.audience_type}</Badge></TableCell>
                   <TableCell><Badge variant={STATUS_COLORS[c.status] ?? "secondary"}>{c.status}</Badge></TableCell>
-                  <TableCell className="text-xs">{c.scheduled_at ? new Date(c.scheduled_at).toLocaleString("pl-PL") : "—"}</TableCell>
+                  <TableCell className="text-xs">{c.scheduled_at ? formatDateTime(c.scheduled_at) : "—"}</TableCell>
                   <TableCell className="text-xs">{c.sent_count} / {c.failed_count} / {c.recipients_total}</TableCell>
                   <TableCell className="text-right space-x-1">
                     <Button size="sm" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>
