@@ -81,6 +81,15 @@ function AvatarFaqPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const setAvatarM = useMutation({
+    mutationFn: (avatar_id: string) => setAvatar({ data: { avatar_id } }),
+    onSuccess: (r) => {
+      toast.success(`Awatar zmieniony dla ${r.updated} FAQ. Wygeneruj wideo ponownie.`);
+      qc.invalidateQueries({ queryKey: ["avatar-faqs-admin"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   // Auto-poll rendering rows every 20s
   useEffect(() => {
     const renderingIds = rows
