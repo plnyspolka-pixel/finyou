@@ -1212,6 +1212,60 @@ export type Database = {
           },
         ]
       }
+      avatar_faqs: {
+        Row: {
+          answer_text: string
+          avatar_id: string
+          created_at: string
+          id: string
+          is_intro: boolean
+          is_published: boolean
+          last_error: string | null
+          question: string
+          sort_order: number
+          thumbnail_url: string | null
+          updated_at: string
+          video_id: string | null
+          video_status: string
+          video_url: string | null
+          voice_id: string
+        }
+        Insert: {
+          answer_text: string
+          avatar_id?: string
+          created_at?: string
+          id?: string
+          is_intro?: boolean
+          is_published?: boolean
+          last_error?: string | null
+          question: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_id?: string | null
+          video_status?: string
+          video_url?: string | null
+          voice_id?: string
+        }
+        Update: {
+          answer_text?: string
+          avatar_id?: string
+          created_at?: string
+          id?: string
+          is_intro?: boolean
+          is_published?: boolean
+          last_error?: string | null
+          question?: string
+          sort_order?: number
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_id?: string | null
+          video_status?: string
+          video_url?: string | null
+          voice_id?: string
+        }
+        Relationships: []
+      }
       call_queue: {
         Row: {
           agent_id: string | null

@@ -34,6 +34,7 @@ import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { Particles } from "@/components/ui/particles";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { BlurFade } from "@/components/ui/blur-fade";
+import { FilipAvatarHero } from "@/components/landing/filip-avatar-hero";
 
 import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
 
@@ -155,6 +156,9 @@ function Landing() {
           </div>
         </div>
       </header>
+
+      {/* Filip — awatar HeyGen z odpowiedziami FAQ (nad formularzem) */}
+      <FilipAvatarHero />
 
       {/* Hero z wbudowanym wnioskiem — wniosek jest GŁÓWNYM elementem */}
       <section id="kalkulator" className="relative overflow-hidden border-b border-border bg-[oklch(0.16_0.09_265)] text-primary-foreground scroll-mt-20">
