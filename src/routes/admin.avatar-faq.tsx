@@ -121,6 +121,58 @@ function AvatarFaqPage() {
         </Button>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Wybór awatara HeyGen</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Kliknij awatara, aby ustawić go dla WSZYSTKICH FAQ. Po zmianie musisz
+            ponownie wygenerować wideo (przycisk „Wygeneruj ponownie" przy każdym FAQ).
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {HEYGEN_AVATARS.map((av) => {
+              const active = rows.length > 0 && rows.every((r) => r.avatar_id === av.id);
+              return (
+                <button
+                  key={av.id}
+                  type="button"
+                  disabled={setAvatarM.isPending}
+                  onClick={() => {
+                    if (confirm(`Ustawić "${av.name}" dla wszystkich FAQ?`)) {
+                      setAvatarM.mutate(av.id);
+                    }
+                  }}
+                  className={`group relative overflow-hidden rounded-lg border-2 text-left transition ${
+                    active
+                      ? "border-primary ring-2 ring-primary/40"
+                      : "border-border hover:border-primary/50"
+                  } ${setAvatarM.isPending ? "opacity-50" : ""}`}
+                >
+                  <img
+                    src={av.previewImage}
+                    alt={av.name}
+                    className="aspect-[3/4] w-full object-cover"
+                    loading="lazy"
+                  />
+                  {active && (
+                    <div className="absolute right-2 top-2 rounded-full bg-primary p-1 text-primary-foreground">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  )}
+                  <div className="p-2">
+                    <p className="text-xs font-semibold">{av.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{av.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+
+
       {isLoading ? (
         <Loader2 className="h-6 w-6 animate-spin" />
       ) : rows.length === 0 ? (
