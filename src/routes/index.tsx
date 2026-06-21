@@ -171,9 +171,9 @@ function Landing() {
         <div aria-hidden className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[oklch(0.78_0.18_85)]/15 blur-3xl" />
         <Particles className="absolute inset-0" quantity={90} staticity={40} ease={60} color="#fde68a" />
 
-        <div className="relative mx-auto grid max-w-7xl items-start gap-8 px-4 pt-4 pb-10 md:px-6 md:py-16 lg:grid-cols-[1fr_minmax(0,640px)]">
+        <div className="relative mx-auto grid max-w-7xl items-start gap-8 px-4 pt-6 pb-6 md:px-6 md:py-16 lg:grid-cols-[1fr_minmax(0,640px)]">
           {/* Lewa kolumna — krótkie wprowadzenie */}
-          <div className="order-2 lg:order-none lg:sticky lg:top-24">
+          <div className="order-1 lg:order-none lg:sticky lg:top-24">
             <BlurFade delay={0.05} inView>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
                 <IconBolt size={16} />
