@@ -171,9 +171,9 @@ function Landing() {
         <div aria-hidden className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[oklch(0.78_0.18_85)]/15 blur-3xl" />
         <Particles className="absolute inset-0" quantity={90} staticity={40} ease={60} color="#fde68a" />
 
-        <div className="relative mx-auto grid max-w-7xl items-start gap-8 px-4 pt-4 pb-10 md:px-6 md:py-16 lg:grid-cols-[1fr_minmax(0,640px)]">
+        <div className="relative mx-auto grid max-w-7xl items-start gap-8 px-4 pt-6 pb-6 md:px-6 md:py-16 lg:grid-cols-[1fr_minmax(0,640px)]">
           {/* Lewa kolumna — krótkie wprowadzenie */}
-          <div className="order-2 lg:order-none lg:sticky lg:top-24">
+          <div className="order-1 lg:order-none lg:sticky lg:top-24">
             <BlurFade delay={0.05} inView>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
                 <IconBolt size={16} />
@@ -233,7 +233,7 @@ function Landing() {
           </div>
 
           {/* Prawa kolumna — WNIOSEK jako główny element */}
-          <div id="wniosek" className="order-1 lg:order-none relative scroll-mt-24">
+          <div id="wniosek" className="order-2 lg:order-none relative scroll-mt-24">
             <div className="absolute -inset-4 -rotate-1 rounded-3xl bg-gradient-to-br from-accent/25 to-[oklch(0.65_0.13_235)]/25 blur-2xl" />
             <div className="relative w-full max-w-full overflow-hidden rounded-3xl border border-white/15 bg-card text-foreground shadow-2xl">
               <BorderBeam size={260} duration={11} colorFrom="#fbbf24" colorTo="#38bdf8" borderWidth={1.5} />
