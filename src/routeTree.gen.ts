@@ -76,6 +76,7 @@ import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
 import { Route as AdminClarityRouteImport } from './routes/admin.clarity'
+import { Route as AdminAvatarFaqRouteImport } from './routes/admin.avatar-faq'
 import { Route as AdminAiSerpRouteImport } from './routes/admin.ai-serp'
 import { Route as AdminAiSeoRouteImport } from './routes/admin.ai-seo'
 import { Route as AdminAiOutreachRouteImport } from './routes/admin.ai-outreach'
@@ -465,6 +466,11 @@ const AdminClarityRoute = AdminClarityRouteImport.update({
   path: '/clarity',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAvatarFaqRoute = AdminAvatarFaqRouteImport.update({
+  id: '/avatar-faq',
+  path: '/avatar-faq',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAiSerpRoute = AdminAiSerpRouteImport.update({
   id: '/ai-serp',
   path: '/ai-serp',
@@ -768,6 +774,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
@@ -883,6 +890,7 @@ export interface FileRoutesByTo {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
@@ -1003,6 +1011,7 @@ export interface FileRoutesById {
   '/admin/ai-outreach': typeof AdminAiOutreachRoute
   '/admin/ai-seo': typeof AdminAiSeoRoute
   '/admin/ai-serp': typeof AdminAiSerpRoute
+  '/admin/avatar-faq': typeof AdminAvatarFaqRoute
   '/admin/clarity': typeof AdminClarityRoute
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
@@ -1124,6 +1133,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
@@ -1239,6 +1249,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
@@ -1358,6 +1369,7 @@ export interface FileRouteTypes {
     | '/admin/ai-outreach'
     | '/admin/ai-seo'
     | '/admin/ai-serp'
+    | '/admin/avatar-faq'
     | '/admin/clarity'
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
@@ -1980,6 +1992,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClarityRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/avatar-faq': {
+      id: '/admin/avatar-faq'
+      path: '/avatar-faq'
+      fullPath: '/admin/avatar-faq'
+      preLoaderRoute: typeof AdminAvatarFaqRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ai-serp': {
       id: '/admin/ai-serp'
       path: '/ai-serp'
@@ -2366,6 +2385,7 @@ interface AdminRouteChildren {
   AdminAiOutreachRoute: typeof AdminAiOutreachRoute
   AdminAiSeoRoute: typeof AdminAiSeoRoute
   AdminAiSerpRoute: typeof AdminAiSerpRoute
+  AdminAvatarFaqRoute: typeof AdminAvatarFaqRoute
   AdminClarityRoute: typeof AdminClarityRoute
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
@@ -2408,6 +2428,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAiOutreachRoute: AdminAiOutreachRoute,
   AdminAiSeoRoute: AdminAiSeoRoute,
   AdminAiSerpRoute: AdminAiSerpRoute,
+  AdminAvatarFaqRoute: AdminAvatarFaqRoute,
   AdminClarityRoute: AdminClarityRoute,
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,

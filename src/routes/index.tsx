@@ -157,6 +157,9 @@ function Landing() {
         </div>
       </header>
 
+      {/* Filip — awatar HeyGen z odpowiedziami FAQ (nad formularzem) */}
+      <FilipAvatarHero />
+
       {/* Hero z wbudowanym wnioskiem — wniosek jest GŁÓWNYM elementem */}
       <section id="kalkulator" className="relative overflow-hidden border-b border-border bg-[oklch(0.16_0.09_265)] text-primary-foreground scroll-mt-20">
         {/* Aurora mesh */}
