@@ -46,20 +46,22 @@ export async function ttsElevenLabs(opts: { text: string; voiceId: string }): Pr
 
 // Uploads bytes to HeyGen and returns an asset_id usable as audio input.
 export async function uploadAudioToHeygen(audio: ArrayBuffer): Promise<string> {
-  const res = await fetch(`https://upload.heygen.com/v1/asset`, {
+  const form = new FormData();
+  form.append("file", new Blob([audio], { type: "audio/mpeg" }), "filip-faq.mp3");
+
+  const res = await fetch(`${HEYGEN_BASE}/v3/assets`, {
     method: "POST",
     headers: {
       "X-Api-Key": HEYGEN_API_KEY(),
-      "Content-Type": "audio/mpeg",
     },
-    body: audio,
+    body: form,
   });
   if (!res.ok) {
     const t = await res.text();
     throw new Error(`HeyGen upload failed: ${res.status} ${t}`);
   }
-  const json = (await res.json()) as { data?: { id?: string; url?: string } };
-  const id = json?.data?.id;
+  const json = (await res.json()) as { data?: { asset_id?: string; id?: string; url?: string } };
+  const id = json?.data?.asset_id ?? json?.data?.id;
   if (!id) throw new Error(`HeyGen upload: no asset id ${JSON.stringify(json)}`);
   return id;
 }
@@ -69,23 +71,14 @@ export async function createHeygenVideoFromAudio(opts: {
   audioAssetId: string;
 }): Promise<string> {
   const payload = {
-    video_inputs: [
-      {
-        character: {
-          type: "avatar",
-          avatar_id: opts.avatarId,
-          avatar_style: "normal",
-        },
-        voice: {
-          type: "audio",
-          audio_asset_id: opts.audioAssetId,
-        },
-        background: { type: "color", value: "#101728" },
-      },
-    ],
-    dimension: { width: 720, height: 1280 },
+    type: "avatar",
+    avatar_id: opts.avatarId,
+    audio_asset_id: opts.audioAssetId,
+    aspect_ratio: "9:16",
+    resolution: "720p",
+    background: { type: "color", value: "#101728" },
   };
-  const res = await fetch(`${HEYGEN_BASE}/v2/video/generate`, {
+  const res = await fetch(`${HEYGEN_BASE}/v3/videos`, {
     method: "POST",
     headers: {
       "X-Api-Key": HEYGEN_API_KEY(),
@@ -109,7 +102,7 @@ export async function getHeygenVideoStatus(videoId: string): Promise<{
   thumbnail_url?: string | null;
   error?: unknown;
 }> {
-  const res = await fetch(`${HEYGEN_BASE}/v1/video_status.get?video_id=${videoId}`, {
+  const res = await fetch(`${HEYGEN_BASE}/v3/videos/${encodeURIComponent(videoId)}`, {
     headers: { "X-Api-Key": HEYGEN_API_KEY() },
   });
   if (!res.ok) {
@@ -121,13 +114,14 @@ export async function getHeygenVideoStatus(videoId: string): Promise<{
       status?: string;
       video_url?: string | null;
       thumbnail_url?: string | null;
-      error?: unknown;
+      failure_code?: string | null;
+      failure_message?: string | null;
     };
   };
   return {
     status: json?.data?.status ?? "unknown",
     video_url: json?.data?.video_url ?? null,
     thumbnail_url: json?.data?.thumbnail_url ?? null,
-    error: json?.data?.error,
+    error: json?.data?.failure_message ?? json?.data?.failure_code,
   };
 }
