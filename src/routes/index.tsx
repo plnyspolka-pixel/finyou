@@ -34,6 +34,7 @@ import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { Particles } from "@/components/ui/particles";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { BlurFade } from "@/components/ui/blur-fade";
+import { FilipAvatarHero } from "@/components/landing/filip-avatar-hero";
 
 import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
 

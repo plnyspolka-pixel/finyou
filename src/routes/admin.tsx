@@ -27,6 +27,7 @@ const groups: Group[] = [
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
       { to: "/admin/kreator-dokumentow", label: "Kreator dokumentów B2B", icon: FileSignature },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },
+      { to: "/admin/avatar-faq", label: "Awatar FAQ (Filip)", icon: Bot },
       { to: "/admin/text-agent", label: "Agent DM (Messenger/IG/email)", icon: Bot },
     ],
   },
