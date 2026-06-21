@@ -125,6 +125,20 @@ export const upsertAvatarFaq = createServerFn({ method: "POST" })
     return { id: ins.id };
   });
 
+export const setAvatarForAllFaqs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { avatar_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error, count } = await supabaseAdmin
+      .from("avatar_faqs")
+      .update({ avatar_id: data.avatar_id }, { count: "exact" })
+      .not("id", "is", null);
+    if (error) throw new Error(error.message);
+    return { ok: true, updated: count ?? 0 };
+  });
+
 export const deleteAvatarFaq = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => d)
