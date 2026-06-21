@@ -212,7 +212,12 @@ export const pollAvatarFaqStatus = createServerFn({ method: "POST" })
     if (!row?.video_id) return { status: "no_video" as const };
 
     const status = await getHeygenVideoStatus(row.video_id);
-    const update: Record<string, unknown> = {};
+    const update: {
+      video_status?: string;
+      video_url?: string | null;
+      thumbnail_url?: string | null;
+      last_error?: string | null;
+    } = {};
     if (status.status === "completed" && status.video_url) {
       update.video_status = "ready";
       update.video_url = status.video_url;
