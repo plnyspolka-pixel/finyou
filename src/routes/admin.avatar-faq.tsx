@@ -8,8 +8,10 @@ import {
   deleteAvatarFaq,
   startAvatarFaqGeneration,
   pollAvatarFaqStatus,
+  setAvatarForAllFaqs,
   type AvatarFaqRow,
 } from "@/lib/avatar-faq.functions";
+import { HEYGEN_AVATARS } from "@/lib/heygen-avatars";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Play, RefreshCw, Trash2, Wand2, Plus, Star } from "lucide-react";
+import { Loader2, Play, RefreshCw, Trash2, Wand2, Plus, Star, Check } from "lucide-react";
 
 export const Route = createFileRoute("/admin/avatar-faq")({
   component: AvatarFaqPage,
