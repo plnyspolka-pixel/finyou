@@ -37,6 +37,7 @@ function AvatarFaqPage() {
   const remove = useServerFn(deleteAvatarFaq);
   const generate = useServerFn(startAvatarFaqGeneration);
   const poll = useServerFn(pollAvatarFaqStatus);
+  const setAvatar = useServerFn(setAvatarForAllFaqs);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["avatar-faqs-admin"],
