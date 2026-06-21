@@ -46,7 +46,7 @@ export async function ttsElevenLabs(opts: { text: string; voiceId: string }): Pr
 
 // Uploads bytes to HeyGen and returns an asset_id usable as audio input.
 export async function uploadAudioToHeygen(audio: ArrayBuffer): Promise<string> {
-  const res = await fetch(`${HEYGEN_BASE}/v1/asset`, {
+  const res = await fetch(`https://upload.heygen.com/v1/asset`, {
     method: "POST",
     headers: {
       "X-Api-Key": HEYGEN_API_KEY(),
