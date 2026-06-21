@@ -93,7 +93,14 @@ export const upsertAvatarFaq = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const row: Record<string, unknown> = {
+    const row: {
+      question: string;
+      answer_text: string;
+      sort_order?: number;
+      is_published?: boolean;
+      is_intro?: boolean;
+      voice_id?: string;
+    } = {
       question: data.question,
       answer_text: data.answer_text,
     };
