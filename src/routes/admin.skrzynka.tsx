@@ -35,6 +35,17 @@ function SkrzynkaPage() {
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"html" | "text">("html");
+  const qc = useQueryClient();
+  const refetchBodyFn = useServerFn(refetchInboundEmailBody);
+  const refetchBody = useMutation({
+    mutationFn: (id: string) => refetchBodyFn({ data: { id } }),
+    onSuccess: (res) => {
+      toast.success(`Pobrano treść (${res.contentLength} znaków${res.hasHtml ? ", HTML" : ""}).`);
+      qc.invalidateQueries({ queryKey: ["admin-inbox"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Nie udało się pobrać treści"),
+  });
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-inbox", tab],
