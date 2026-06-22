@@ -148,16 +148,25 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
 
 
 
+        const plainFromHtml = html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
+        const finalText = text || plainFromHtml.slice(0, 8000);
         const inboundLogId = await logLeadCommunication({
           leadId,
           channel: "email",
           direction: "inbound",
           subject,
-          content: text || (html ? html.replace(/<[^>]+>/g, " ").slice(0, 4000) : ""),
+          content: finalText,
           externalId: messageId || null,
           email: fromEmail,
           status: "received",
-          metadata: { from_name: name, in_reply_to: inReplyTo, references, provider: "resend" },
+          metadata: {
+            from_name: name,
+            in_reply_to: inReplyTo,
+            references,
+            provider: "resend",
+            email_id: emailId || null,
+            html: html ?? null,
+          },
         });
         if (stored.length && inboundLogId) {
           await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);
