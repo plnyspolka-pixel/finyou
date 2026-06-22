@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -7,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send } from "lucide-react";
+import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { refetchInboundEmailBody } from "@/lib/inbox.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/skrzynka")({
   component: SkrzynkaPage,
@@ -32,6 +35,17 @@ function SkrzynkaPage() {
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"html" | "text">("html");
+  const qc = useQueryClient();
+  const refetchBodyFn = useServerFn(refetchInboundEmailBody);
+  const refetchBody = useMutation({
+    mutationFn: (id: string) => refetchBodyFn({ data: { id } }),
+    onSuccess: (res) => {
+      toast.success(`Pobrano treść (${res.contentLength} znaków${res.hasHtml ? ", HTML" : ""}).`);
+      qc.invalidateQueries({ queryKey: ["admin-inbox"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Nie udało się pobrać treści"),
+  });
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-inbox", tab],
@@ -206,9 +220,67 @@ function SkrzynkaPage() {
                 </div>
               )}
 
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap break-words text-sm">
-                {selected.content || <span className="text-muted-foreground">(brak treści)</span>}
-              </div>
+              {(() => {
+                const meta = (selected.metadata ?? {}) as Record<string, any>;
+                const html: string | null = typeof meta.html === "string" ? meta.html : null;
+                const hasContent = !!(selected.content && selected.content.trim().length > 0);
+                const canRefetch = tab === "inbound" && !!meta.email_id;
+                return (
+                  <div className="space-y-3">
+                    {html && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={viewMode === "html" ? "default" : "outline"}
+                          onClick={() => setViewMode("html")}
+                        >
+                          HTML
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={viewMode === "text" ? "default" : "outline"}
+                          onClick={() => setViewMode("text")}
+                        >
+                          Tekst
+                        </Button>
+                      </div>
+                    )}
+                    {html && viewMode === "html" ? (
+                      <iframe
+                        title="email-body"
+                        sandbox=""
+                        srcDoc={html}
+                        className="w-full min-h-[500px] rounded-md border bg-white"
+                      />
+                    ) : hasContent ? (
+                      <div className="prose prose-sm max-w-none whitespace-pre-wrap break-words text-sm">
+                        {selected.content}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-sm text-muted-foreground">
+                          (brak treści — wiadomość zapisana bez body)
+                        </div>
+                        {canRefetch ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => refetchBody.mutate(selected.id)}
+                            disabled={refetchBody.isPending}
+                          >
+                            <Download className={`h-4 w-4 mr-2 ${refetchBody.isPending ? "animate-pulse" : ""}`} />
+                            Pobierz treść z Resend
+                          </Button>
+                        ) : tab === "inbound" ? (
+                          <div className="text-xs text-muted-foreground">
+                            Stara wiadomość bez <code>email_id</code> — nie da się pobrać treści z Resend. Nowe wiadomości będą zapisywane z pełną treścią.
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </Card>
