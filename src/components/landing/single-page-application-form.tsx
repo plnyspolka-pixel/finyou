@@ -17,6 +17,7 @@ import {
 } from "@/lib/loan-math";
 import { REQUIREMENTS_BY_TYPE } from "@/lib/property-documents";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { trackEvent } from "@/lib/fb-pixel";
 
 type PhotoItem = {
   id: string;
@@ -120,8 +121,30 @@ export function SinglePageApplicationForm() {
   const [kwNumber, setKwNumber] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const leadFiredRef = useRef(false);
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
+
+  // Fire Meta "Lead" (Przesłanie zgłoszenia) once contact data is complete
+  useEffect(() => {
+    if (leadFiredRef.current) return;
+    const fn = firstName.trim();
+    const ln = lastName.trim();
+    const ph = phone.trim();
+    const em = email.trim();
+    if (!fn || !ln || ph.length < 9 || !/.+@.+\..+/.test(em)) return;
+    leadFiredRef.current = true;
+    void trackEvent(
+      "Lead",
+      {
+        value: amount,
+        currency: "PLN",
+        content_category: secType,
+        loan_period_months: months,
+      },
+      { email: em, phone: ph, firstName: fn, lastName: ln },
+    );
+  }, [firstName, lastName, phone, email, amount, months, secType]);
 
   const figures = useMemo(
     () => computeLoanFigures({ amount, annualRatePercent: 24, months }),
@@ -192,6 +215,23 @@ export function SinglePageApplicationForm() {
         },
       });
       if (!res?.ok) throw new Error("submit failed");
+      void trackEvent(
+        "CompleteRegistration",
+        {
+          value: amount,
+          currency: "PLN",
+          content_category: secType,
+          loan_period_months: months,
+          has_kw: Boolean(kwNumber.trim()),
+          photos_count: photos.length,
+        },
+        {
+          email: email.trim(),
+          phone: phone.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        },
+      );
       toast.success("Wniosek wysłany! Skontaktujemy się do 24 h.");
       void navigate({ to: "/wniosek-opis" });
     } catch (err) {
