@@ -150,6 +150,7 @@ export function SinglePageApplicationForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [kwNumber, setKwNumber] = useState("");
+  const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
@@ -226,11 +227,21 @@ export function SinglePageApplicationForm() {
   };
   const goBack = () => setStep((s) => (Math.max(1, (s - 1)) as 1 | 2 | 3 | 4));
 
+  const hasOwnershipDeed = useMemo(
+    () => photos.some((p) => p.bucket === "ownership_deed"),
+    [photos],
+  );
+  const allKwNumbers = useMemo(
+    () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
+    [kwNumber, extraKwNumbers],
+  );
+  const step4Valid = allKwNumbers.length > 0 || hasOwnershipDeed;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== 4) { goNext(); return; }
-    if (!kwNumber.trim() && photos.length === 0) {
-      toast.error("Podaj numer KW lub dołącz zdjęcia/dokumenty nieruchomości.");
+    if (!step4Valid) {
+      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
     }
     setSubmitting(true);
@@ -252,7 +263,7 @@ export function SinglePageApplicationForm() {
           loan_amount: amount,
           preferred_period_months: months,
           property_type: secType,
-          land_register_number: kwNumber.trim() || null,
+          land_register_number: allKwNumbers.length > 0 ? allKwNumbers.join(" | ") : null,
           photos: photoPayload,
           source: "landing_single_page",
         },
@@ -266,7 +277,7 @@ export function SinglePageApplicationForm() {
           currency: "PLN",
           content_category: secType,
           loan_period_months: months,
-          has_kw: Boolean(kwNumber.trim()),
+          has_kw: allKwNumbers.length > 0,
           photos_count: photos.length,
         },
         {
@@ -452,11 +463,44 @@ export function SinglePageApplicationForm() {
             </p>
           </div>
 
+
           <div className="space-y-2">
             <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
             <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
               placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
             <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
+
+            {extraKwNumbers.map((val, idx) => (
+              <div key={idx} className="flex gap-2 pt-1">
+                <Input
+                  value={val}
+                  onChange={(e) => {
+                    const v = e.target.value.toUpperCase();
+                    setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                  }}
+                  placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                  className="font-mono text-lg tracking-wider"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                  aria-label="Usuń numer KW"
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}
+              className="mt-1"
+            >
+              + Dodaj kolejny numer KW
+            </Button>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -465,6 +509,12 @@ export function SinglePageApplicationForm() {
                 photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
             ))}
           </div>
+
+          {!step4Valid && (
+            <p className="text-xs text-muted-foreground">
+              Aby wysłać wniosek: podaj <strong>numer KW</strong> lub dołącz <strong>akt własności</strong>.
+            </p>
+          )}
         </section>
       )}
 
@@ -480,7 +530,7 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         ) : (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
+          <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
