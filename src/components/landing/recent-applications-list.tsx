@@ -37,9 +37,6 @@ export function RecentApplicationsList({ initial }: { initial?: RecentLoanApplic
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
             Pożyczki pod zastaw nieruchomości — realne wnioski
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Każdy wniosek trafia do analityka i naszych inwestorów. Decyzja do 24 godzin.
-          </p>
         </div>
 
         <ul className="mt-8 overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
