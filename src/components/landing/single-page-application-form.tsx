@@ -150,6 +150,7 @@ export function SinglePageApplicationForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [kwNumber, setKwNumber] = useState("");
+  const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
