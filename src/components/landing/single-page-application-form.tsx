@@ -463,12 +463,6 @@ export function SinglePageApplicationForm() {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
-            <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-              placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
-            <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
