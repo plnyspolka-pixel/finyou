@@ -213,8 +213,73 @@ function KlientDashboard() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" /> Twoje pliki
+                </span>
+                <Badge variant="secondary" className="font-normal">{totalFiles}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {totalFiles === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Nie wgrałeś jeszcze żadnych zdjęć ani dokumentów.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {thumbUrls.map((u, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => loanRow?.id && setPreviewOpen(true)}
+                        className="aspect-square overflow-hidden rounded border bg-muted hover:ring-2 hover:ring-primary transition"
+                      >
+                        <img src={u} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                    {docCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => loanRow?.id && setPreviewOpen(true)}
+                        className="aspect-square rounded border bg-muted flex flex-col items-center justify-center gap-0.5 hover:ring-2 hover:ring-primary transition"
+                      >
+                        <FileIcon className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-[10px] font-medium">{docCount} dok.</span>
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => loanRow?.id && setPreviewOpen(true)}
+                  >
+                    Otwórz podgląd
+                  </Button>
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <span><ImageIcon className="h-3 w-3 inline" /> {photoPaths.length} zdjęć</span>
+                    <span><FileText className="h-3 w-3 inline" /> {docCount} dokumentów</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
         </div>
       </div>
+
+      {loanRow?.id && (
+        <MediaPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          loanApplicationId={loanRow.id}
+          photoPaths={photoPaths}
+          title="Twoje zdjęcia i dokumenty"
+        />
+      )}
     </div>
   );
 }
