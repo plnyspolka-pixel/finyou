@@ -165,6 +165,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
                     </details>
                   )}
                   {c.error_message && <div className="text-xs text-destructive">Błąd: {c.error_message}</div>}
+                  {c.channel === "email" && <EmailExtras comm={c} qc={qc} leadId={id} />}
                 </Card>
               );
             })}
