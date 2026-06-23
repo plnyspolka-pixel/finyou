@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getMyLoanProgress, claimLoanApplication } from "@/lib/my-loan.functions";
@@ -8,12 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { NextStepCard } from "@/components/client/NextStepCard";
 import { ProgressChecklist } from "@/components/client/ProgressChecklist";
 import { InlineMissingActions } from "@/components/client/InlineMissingActions";
+import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { loanStatusLabels } from "@/lib/labels";
-import { FileText, User } from "lucide-react";
+import { FileText, User, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
