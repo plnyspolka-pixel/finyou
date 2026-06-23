@@ -5,6 +5,7 @@ import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
 import { RecentApplicationsList } from "@/components/landing/recent-applications-list";
+import heroVideo from "@/assets/financeyou-hero.mp4.asset.json";
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
@@ -75,6 +76,15 @@ function Landing() {
       {/* Hero + wniosek */}
       <section className="border-b border-border bg-gradient-to-b from-[oklch(0.98_0.01_265)] to-background dark:from-[oklch(0.18_0.04_265)]">
         <div className="mx-auto max-w-3xl px-4 pt-8 pb-10 md:px-6 md:pt-12 md:pb-14">
+          <div className="mb-6 overflow-hidden rounded-2xl border border-border shadow-lg md:mb-8">
+            <video
+              src={heroVideo.url}
+              controls
+              playsInline
+              preload="metadata"
+              className="aspect-video w-full bg-black"
+            />
+          </div>
           <div className="text-center">
             <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl">
               Weź pożyczkę pod zastaw nieruchomości
