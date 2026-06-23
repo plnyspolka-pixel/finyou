@@ -530,7 +530,7 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         ) : (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
+          <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
