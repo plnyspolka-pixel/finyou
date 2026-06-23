@@ -227,11 +227,21 @@ export function SinglePageApplicationForm() {
   };
   const goBack = () => setStep((s) => (Math.max(1, (s - 1)) as 1 | 2 | 3 | 4));
 
+  const hasOwnershipDeed = useMemo(
+    () => photos.some((p) => p.bucket === "ownership_deed"),
+    [photos],
+  );
+  const allKwNumbers = useMemo(
+    () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
+    [kwNumber, extraKwNumbers],
+  );
+  const step4Valid = allKwNumbers.length > 0 || hasOwnershipDeed;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== 4) { goNext(); return; }
-    if (!kwNumber.trim() && photos.length === 0) {
-      toast.error("Podaj numer KW lub dołącz zdjęcia/dokumenty nieruchomości.");
+    if (!step4Valid) {
+      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
     }
     setSubmitting(true);
@@ -253,7 +263,7 @@ export function SinglePageApplicationForm() {
           loan_amount: amount,
           preferred_period_months: months,
           property_type: secType,
-          land_register_number: kwNumber.trim() || null,
+          land_register_number: allKwNumbers.length > 0 ? allKwNumbers.join(" | ") : null,
           photos: photoPayload,
           source: "landing_single_page",
         },
