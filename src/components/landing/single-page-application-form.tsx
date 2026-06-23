@@ -16,6 +16,7 @@ import {
   type SecurityType,
 } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 
 type PhotoItem = {
@@ -275,8 +276,24 @@ export function SinglePageApplicationForm() {
           lastName: lastName.trim(),
         },
       );
-      toast.success("Wniosek wysłany! Skontaktujemy się do 24 h.");
-      void navigate({ to: "/wniosek-opis" });
+      toast.success("Wniosek wysłany! Logujemy Cię do panelu…");
+      // Auto-login przez magiczny link wygenerowany na backendzie
+      if (res.token_hash) {
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          /* noop */
+        }
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: res.token_hash,
+          type: "magiclink",
+        });
+        if (otpErr) {
+          console.error("[landing] auto-login failed", otpErr);
+          toast.message("Sprawdź e-mail z hasłem i danymi logowania.");
+        }
+      }
+      void navigate({ to: "/klient" });
     } catch (err) {
       console.error(err);
       toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");

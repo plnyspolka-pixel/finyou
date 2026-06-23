@@ -73,6 +73,44 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       .single();
     if (lErr || !loan) throw new Error(lErr?.message ?? "loan insert failed");
 
+    // === Auto-utworzenie konta klienta + magiczny link do auto-loginu ===
+    let tokenHash: string | null = null;
+    let tempPassword: string | null = null;
+    try {
+      // 1) Spróbuj utworzyć usera. Jeżeli już istnieje — pomiń tworzenie.
+      const genPwd = () => {
+        const bytes = new Uint8Array(12);
+        crypto.getRandomValues(bytes);
+        const base = Array.from(bytes, (b) => b.toString(36)).join("").slice(0, 14);
+        return `${base.charAt(0).toUpperCase()}${base.slice(1)}!9`;
+      };
+      tempPassword = genPwd();
+      const { data: created, error: cuErr } = await supabaseAdmin.auth.admin.createUser({
+        email: data.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { first_name: data.first_name, last_name: data.last_name },
+      });
+      let userId: string | null = created?.user?.id ?? null;
+      if (cuErr && !userId) {
+        // user już istnieje — nie nadpisujemy hasła
+        tempPassword = null;
+      }
+      // 2) Wygeneruj magiczny link (zalogowanie jednym kliknięciem)
+      const { data: link } = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: data.email,
+      });
+      tokenHash = link?.properties?.hashed_token ?? null;
+      if (!userId) userId = link?.user?.id ?? null;
+      // 3) Połącz klienta z kontem auth
+      if (userId) {
+        await supabaseAdmin.from("clients").update({ user_id: userId }).eq("id", client.id);
+      }
+    } catch (err) {
+      console.error("[landing-application] auth user create/link failed", err);
+    }
+
     const { data: property } = await supabaseAdmin
       .from("properties")
       .insert({
@@ -135,6 +173,10 @@ Podsumowanie:
 • Okres: ${data.preferred_period_months} mies.
 • Zabezpieczenie: ${propertyLabel}
 
+Twoje konto klienta zostało utworzone. Zaloguj się tutaj: https://app.financeyou.pl/klient
+E-mail: ${data.email}
+${tempPassword ? `Hasło tymczasowe: ${tempPassword} (zmień po pierwszym logowaniu)` : `Konto istniało już wcześniej — użyj swojego hasła lub opcji „Zapomniałem hasła".`}
+
 Co dalej? Nasz zespół analizuje teraz Państwa zgłoszenie i nieruchomość. Skontaktujemy się w ciągu 24 godzin z indywidualną propozycją — pracujemy z wieloma inwestorami, dzięki czemu wybieramy dla Państwa najkorzystniejsze warunki i długi okres spłaty.
 
 W razie pytań prosimy odpisać na ten e-mail lub zadzwonić.
@@ -149,6 +191,13 @@ Zespół Finance You`;
             <li>Kwota: <strong>${fmtPLN(data.loan_amount)}</strong></li>
             <li>Okres: <strong>${data.preferred_period_months} mies.</strong></li>
             <li>Zabezpieczenie: <strong>${propertyLabel}</strong></li>
+          </ul>
+          <p><strong>Twoje konto klienta zostało utworzone.</strong> Możesz zalogować się do panelu, gdzie zobaczysz status wniosku, dokumenty i wiadomości od nas.</p>
+          <p><a href="https://app.financeyou.pl/klient" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Otwórz panel klienta →</a></p>
+          <p><strong>Dane do logowania:</strong></p>
+          <ul>
+            <li>E-mail: <strong>${data.email}</strong></li>
+            ${tempPassword ? `<li>Hasło tymczasowe: <strong>${tempPassword}</strong> (zmień je po pierwszym logowaniu)</li>` : `<li>Konto istniało już wcześniej — użyj swojego hasła lub opcji „Zapomniałem hasła".</li>`}
           </ul>
           <p><strong>Co dalej?</strong> Nasz zespół analizuje teraz Państwa zgłoszenie i nieruchomość. Skontaktujemy się w ciągu 24 godzin z indywidualną propozycją — pracujemy z wieloma inwestorami, dzięki czemu wybieramy dla Państwa najkorzystniejsze warunki i długi okres spłaty.</p>
           <p>W razie pytań prosimy odpisać na ten e-mail lub zadzwonić.</p>
@@ -220,7 +269,7 @@ Podgląd w panelu: ${adminUrl}`;
       }
     })();
 
-    return { ok: true as const, id: loan.id };
+    return { ok: true as const, id: loan.id, token_hash: tokenHash, email: data.email };
   });
 
 export type RecentLoanApplicationItem = {
