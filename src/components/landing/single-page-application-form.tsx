@@ -378,6 +378,47 @@ export function SinglePageApplicationForm() {
             <div className="space-y-2"><Label htmlFor="f-em">E-mail *</Label>
               <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" /></div>
           </div>
+
+          <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+            <label className="flex items-start gap-3 text-xs leading-relaxed text-foreground">
+              <Checkbox
+                checked={consentPrivacy}
+                onCheckedChange={(v) => setConsentPrivacy(v === true)}
+                className="mt-0.5"
+              />
+              <span>
+                Akceptuję{" "}
+                <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline underline-offset-2">
+                  politykę prywatności
+                </a>{" "}
+                Finance You. *
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-xs leading-relaxed text-foreground">
+              <Checkbox
+                checked={consentTerms}
+                onCheckedChange={(v) => setConsentTerms(v === true)}
+                className="mt-0.5"
+              />
+              <span>
+                Akceptuję{" "}
+                <a href="/regulamin" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline underline-offset-2">
+                  regulamin serwisu
+                </a>
+                . *
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-xs leading-relaxed text-foreground">
+              <Checkbox
+                checked={consentMarketing}
+                onCheckedChange={(v) => setConsentMarketing(v === true)}
+                className="mt-0.5"
+              />
+              <span>
+                Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Zgoda dobrowolna, mogę ją wycofać w każdej chwili.
+              </span>
+            </label>
+          </div>
         </section>
       )}
 
