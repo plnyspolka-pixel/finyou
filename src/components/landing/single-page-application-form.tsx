@@ -470,12 +470,57 @@ export function SinglePageApplicationForm() {
             <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
+            <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+              placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
+            <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
+
+            {extraKwNumbers.map((val, idx) => (
+              <div key={idx} className="flex gap-2 pt-1">
+                <Input
+                  value={val}
+                  onChange={(e) => {
+                    const v = e.target.value.toUpperCase();
+                    setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                  }}
+                  placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                  className="font-mono text-lg tracking-wider"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                  aria-label="Usuń numer KW"
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}
+              className="mt-1"
+            >
+              + Dodaj kolejny numer KW
+            </Button>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             {photoBuckets.map((b) => (
               <PhotoBucket key={b.kind} label={b.label} bucket={b.kind}
                 photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
             ))}
           </div>
+
+          {!step4Valid && (
+            <p className="text-xs text-muted-foreground">
+              Aby wysłać wniosek: podaj <strong>numer KW</strong> lub dołącz <strong>akt własności</strong>.
+            </p>
+          )}
         </section>
       )}
 
