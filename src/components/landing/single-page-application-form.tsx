@@ -277,7 +277,7 @@ export function SinglePageApplicationForm() {
           currency: "PLN",
           content_category: secType,
           loan_period_months: months,
-          has_kw: Boolean(kwNumber.trim()),
+          has_kw: allKwNumbers.length > 0,
           photos_count: photos.length,
         },
         {
