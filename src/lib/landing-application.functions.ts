@@ -173,6 +173,10 @@ Podsumowanie:
 • Okres: ${data.preferred_period_months} mies.
 • Zabezpieczenie: ${propertyLabel}
 
+Twoje konto klienta zostało utworzone. Zaloguj się tutaj: https://app.financeyou.pl/klient
+E-mail: ${data.email}
+${tempPassword ? `Hasło tymczasowe: ${tempPassword} (zmień po pierwszym logowaniu)` : `Konto istniało już wcześniej — użyj swojego hasła lub opcji „Zapomniałem hasła".`}
+
 Co dalej? Nasz zespół analizuje teraz Państwa zgłoszenie i nieruchomość. Skontaktujemy się w ciągu 24 godzin z indywidualną propozycją — pracujemy z wieloma inwestorami, dzięki czemu wybieramy dla Państwa najkorzystniejsze warunki i długi okres spłaty.
 
 W razie pytań prosimy odpisać na ten e-mail lub zadzwonić.
