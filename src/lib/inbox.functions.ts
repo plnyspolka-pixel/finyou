@@ -1,6 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** Zwraca tymczasowy podpisany URL do pliku w buckecie `documents`. */
+export const getCommAttachmentUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { path: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "administrator",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("documents")
+      .createSignedUrl(data.path, 3600);
+    if (error) throw error;
+    return { url: signed.signedUrl };
+  });
+
 /**
  * Pobiera treść wiadomości inbound z Resend API i aktualizuje wiersz
  * lead_communications, jeśli `metadata.email_id` jest dostępne.

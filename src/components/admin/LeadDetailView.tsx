@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { getLead, updateLead, addManualNote } from "@/lib/leads-admin.functions";
 import { rescoreLead, markBadLead, unmarkBadLead, markGoodLead, listCapiEvents } from "@/lib/lead-quality.functions";
+import { refetchInboundEmailBody, getCommAttachmentUrl } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp } from "lucide-react";
+import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp, Paperclip, Download, Code2 } from "lucide-react";
 
 const channelLabel: Record<string, string> = {
   voicebot_call: "Rozmowa voicebot",
@@ -164,6 +165,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
                     </details>
                   )}
                   {c.error_message && <div className="text-xs text-destructive">Błąd: {c.error_message}</div>}
+                  {c.channel === "email" && <EmailExtras comm={c} qc={qc} leadId={id} />}
                 </Card>
               );
             })}
@@ -395,6 +397,80 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function EmailExtras({ comm, qc, leadId }: { comm: any; qc: any; leadId: string }) {
+  const meta = (comm.metadata ?? {}) as Record<string, any>;
+  const html: string | null = meta.html ?? null;
+  const attachments: any[] = Array.isArray(comm.attachments) ? comm.attachments : [];
+  const emailId: string | null = meta.email_id ?? null;
+  const canRefetch = comm.direction === "inbound" && !!emailId && (!html && !(comm.content && comm.content.length > 20));
+  const [showHtml, setShowHtml] = useState(false);
+
+  const refetchFn = useServerFn(refetchInboundEmailBody);
+  const urlFn = useServerFn(getCommAttachmentUrl);
+
+  const mRefetch = useMutation({
+    mutationFn: () => refetchFn({ data: { id: comm.id } }),
+    onSuccess: (r: any) => { toast.success(`Pobrano treść (${r.contentLength} znaków${r.hasHtml ? ", z HTML" : ""})`); qc.invalidateQueries({ queryKey: ["lead", leadId] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const openAttachment = async (path: string) => {
+    try {
+      const r = await urlFn({ data: { path } });
+      window.open(r.url, "_blank", "noopener");
+    } catch (e: any) {
+      toast.error(e.message ?? "Błąd pobierania");
+    }
+  };
+
+  return (
+    <div className="space-y-2 pt-1">
+      {html && (
+        <div className="space-y-2">
+          <Button size="sm" variant="outline" onClick={() => setShowHtml(!showHtml)}>
+            <Code2 className="h-4 w-4 mr-1" />{showHtml ? "Ukryj" : "Pokaż"} treść HTML
+          </Button>
+          {showHtml && (
+            <iframe
+              sandbox=""
+              srcDoc={html}
+              className="w-full h-[480px] border rounded bg-white"
+              title={`email-${comm.id}`}
+            />
+          )}
+        </div>
+      )}
+      {canRefetch && (
+        <Button size="sm" variant="outline" onClick={() => mRefetch.mutate()} disabled={mRefetch.isPending}>
+          <RefreshCw className="h-4 w-4 mr-1" />Pobierz treść z Resend
+        </Button>
+      )}
+      {attachments.length > 0 && (
+        <div className="space-y-1 border-t pt-2">
+          <div className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
+            <Paperclip className="h-3 w-3" /> Załączniki ({attachments.length})
+          </div>
+          <ul className="space-y-1">
+            {attachments.map((a: any, i: number) => (
+              <li key={i} className="flex items-center gap-2 text-xs">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="font-medium truncate">{a.name ?? a.path ?? `plik-${i + 1}`}</span>
+                {a.mime && <span className="text-muted-foreground">{a.mime}</span>}
+                {typeof a.size === "number" && <span className="text-muted-foreground">{(a.size / 1024).toFixed(0)} KB</span>}
+                {a.path && (
+                  <Button size="sm" variant="ghost" className="ml-auto h-7 px-2" onClick={() => openAttachment(a.path)}>
+                    <Download className="h-3.5 w-3.5 mr-1" />Pobierz
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
