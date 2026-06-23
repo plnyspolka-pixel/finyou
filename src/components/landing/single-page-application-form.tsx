@@ -150,6 +150,9 @@ export function SinglePageApplicationForm() {
   const [email, setEmail] = useState("");
   const [kwNumber, setKwNumber] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [consentPrivacy, setConsentPrivacy] = useState(false);
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentMarketing, setConsentMarketing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
 
