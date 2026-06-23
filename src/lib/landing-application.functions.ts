@@ -188,6 +188,13 @@ Zespół Finance You`;
             <li>Okres: <strong>${data.preferred_period_months} mies.</strong></li>
             <li>Zabezpieczenie: <strong>${propertyLabel}</strong></li>
           </ul>
+          <p><strong>Twoje konto klienta zostało utworzone.</strong> Możesz zalogować się do panelu, gdzie zobaczysz status wniosku, dokumenty i wiadomości od nas.</p>
+          <p><a href="https://app.financeyou.pl/klient" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Otwórz panel klienta →</a></p>
+          <p><strong>Dane do logowania:</strong></p>
+          <ul>
+            <li>E-mail: <strong>${data.email}</strong></li>
+            ${tempPassword ? `<li>Hasło tymczasowe: <strong>${tempPassword}</strong> (zmień je po pierwszym logowaniu)</li>` : `<li>Konto istniało już wcześniej — użyj swojego hasła lub opcji „Zapomniałem hasła".</li>`}
+          </ul>
           <p><strong>Co dalej?</strong> Nasz zespół analizuje teraz Państwa zgłoszenie i nieruchomość. Skontaktujemy się w ciągu 24 godzin z indywidualną propozycją — pracujemy z wieloma inwestorami, dzięki czemu wybieramy dla Państwa najkorzystniejsze warunki i długi okres spłaty.</p>
           <p>W razie pytań prosimy odpisać na ten e-mail lub zadzwonić.</p>
           <p>Pozdrawiamy,<br/>Zespół Finance You</p>
