@@ -121,8 +121,30 @@ export function SinglePageApplicationForm() {
   const [kwNumber, setKwNumber] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const leadFiredRef = useRef(false);
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
+
+  // Fire Meta "Lead" (Przesłanie zgłoszenia) once contact data is complete
+  useEffect(() => {
+    if (leadFiredRef.current) return;
+    const fn = firstName.trim();
+    const ln = lastName.trim();
+    const ph = phone.trim();
+    const em = email.trim();
+    if (!fn || !ln || ph.length < 9 || !/.+@.+\..+/.test(em)) return;
+    leadFiredRef.current = true;
+    void trackEvent(
+      "Lead",
+      {
+        value: amount,
+        currency: "PLN",
+        content_category: secType,
+        loan_period_months: months,
+      },
+      { email: em, phone: ph, firstName: fn, lastName: ln },
+    );
+  }, [firstName, lastName, phone, email, amount, months, secType]);
 
   const figures = useMemo(
     () => computeLoanFigures({ amount, annualRatePercent: 24, months }),
