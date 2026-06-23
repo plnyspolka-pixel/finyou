@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Send, Upload, Camera, FileText, Loader2 } from "lucide-react";
+import { Send, Upload, Camera, FileText, Loader2, ChevronLeft, ChevronRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,9 @@ import { Slider } from "@/components/ui/slider";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import {
   formatPLN,
-  computeLoanFigures,
   securityTypeLabels,
   type SecurityType,
 } from "@/lib/loan-math";
-import { REQUIREMENTS_BY_TYPE } from "@/lib/property-documents";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { trackEvent } from "@/lib/fb-pixel";
 
@@ -28,14 +26,37 @@ type PhotoItem = {
   file: File;
 };
 
-const SEC_TO_PROP: Record<SecurityType, string> = {
-  mieszkanie: "mieszkanie",
-  dom: "dom",
-  lokal_uslugowy: "lokal_uslugowy",
-  dzialka_budowlana: "dzialka_budowlana",
-  grunt_rolny: "grunt_rolny",
-  inna: "inna",
-};
+type BucketDef = { kind: string; label: string; optional?: boolean };
+
+/** Buckets per typ zabezpieczenia — zgodnie z uzgodnioną logiką landinga. */
+function bucketsFor(sec: SecurityType): BucketDef[] {
+  switch (sec) {
+    case "mieszkanie":
+    case "dom":
+    case "lokal_uslugowy":
+      return [
+        { kind: "property_photos", label: "Dodaj zdjęcia nieruchomości (z wewnątrz i z zewnątrz)" },
+        { kind: "ownership_deed", label: "Akt własności / inne dokumenty (opcjonalnie)", optional: true },
+      ];
+    case "grunt_rolny":
+      return [
+        { kind: "land_registry", label: "Wypis z rejestru gruntów" },
+        { kind: "ownership_deed", label: "Akt własności (opcjonalnie)", optional: true },
+      ];
+    case "dzialka_budowlana":
+      return [
+        { kind: "mpzp", label: "MPZP albo warunki zabudowy" },
+        { kind: "property_photos", label: "Zdjęcia działki (opcjonalnie)", optional: true },
+        { kind: "ownership_deed", label: "Akt własności (opcjonalnie)", optional: true },
+      ];
+    case "inna":
+    default:
+      return [
+        { kind: "property_photos", label: "Zdjęcia nieruchomości (opcjonalnie)", optional: true },
+        { kind: "ownership_deed", label: "Akt własności / inne dokumenty (opcjonalnie)", optional: true },
+      ];
+  }
+}
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -71,14 +92,14 @@ function PhotoBucket({
           onClick={() => fileRef.current?.click()}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/50 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"
         >
-          <Upload className="h-4 w-4 text-accent" /> Dodaj
+          <Upload className="h-4 w-4 text-accent" /> Dodaj plik
         </button>
         <button
           type="button"
           onClick={() => camRef.current?.click()}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-accent bg-accent/10 px-3 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/20 sm:hidden"
         >
-          <Camera className="h-4 w-4" /> Zdjęcie
+          <Camera className="h-4 w-4" /> Zrób zdjęcie
         </button>
       </div>
       <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
@@ -107,10 +128,18 @@ function PhotoBucket({
   );
 }
 
+const STEPS = [
+  { id: 1, label: "Zabezpieczenie" },
+  { id: 2, label: "Parametry" },
+  { id: 3, label: "Kontakt" },
+  { id: 4, label: "Nieruchomość" },
+] as const;
+
 export function SinglePageApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(24);
@@ -125,14 +154,18 @@ export function SinglePageApplicationForm() {
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
 
-  // Fire Meta "Lead" (Przesłanie zgłoszenia) once contact data is complete
-  useEffect(() => {
-    if (leadFiredRef.current) return;
+  const photoBuckets = useMemo(() => bucketsFor(secType), [secType]);
+
+  const contactValid = useMemo(() => {
     const fn = firstName.trim();
     const ln = lastName.trim();
-    const ph = phone.trim();
+    const ph = phone.trim().replace(/\D/g, "");
     const em = email.trim();
-    if (!fn || !ln || ph.length < 9 || !/.+@.+\..+/.test(em)) return;
+    return Boolean(fn && ln && ph.length >= 9 && /.+@.+\..+/.test(em));
+  }, [firstName, lastName, phone, email]);
+
+  const fireLead = () => {
+    if (leadFiredRef.current || !contactValid) return;
     leadFiredRef.current = true;
     void trackEvent(
       "Lead",
@@ -142,24 +175,14 @@ export function SinglePageApplicationForm() {
         content_category: secType,
         loan_period_months: months,
       },
-      { email: em, phone: ph, firstName: fn, lastName: ln },
+      {
+        email: email.trim(),
+        phone: phone.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      },
     );
-  }, [firstName, lastName, phone, email, amount, months, secType]);
-
-  const figures = useMemo(
-    () => computeLoanFigures({ amount, annualRatePercent: 24, months }),
-    [amount, months],
-  );
-
-  const reqs = REQUIREMENTS_BY_TYPE[SEC_TO_PROP[secType]] ?? REQUIREMENTS_BY_TYPE.inna;
-  const photoBuckets = useMemo(() => {
-    const out: { kind: string; label: string }[] = [];
-    for (const r of reqs) {
-      if (r.kind === "kw_number" || r.kind === "usable_area") continue;
-      out.push({ kind: r.kind, label: r.label });
-    }
-    return out;
-  }, [reqs]);
+  };
 
   const addPhotos = (files: FileList | null, bucket: string) => {
     if (!files?.length) return;
@@ -181,13 +204,24 @@ export function SinglePageApplicationForm() {
     });
   };
 
+  const goNext = () => {
+    if (step === 3) {
+      if (!contactValid) {
+        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
+        return;
+      }
+      // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
+      fireLead();
+    }
+    setStep((s) => (Math.min(4, (s + 1)) as 1 | 2 | 3 | 4));
+  };
+  const goBack = () => setStep((s) => (Math.max(1, (s - 1)) as 1 | 2 | 3 | 4));
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) { toast.error("Podaj imię i nazwisko"); return; }
-    if (!phone.trim()) { toast.error("Podaj numer telefonu"); return; }
-    if (!email.trim()) { toast.error("Podaj adres e-mail"); return; }
+    if (step !== 4) { goNext(); return; }
     if (!kwNumber.trim() && photos.length === 0) {
-      toast.error("Podaj numer KW lub dołącz zdjęcia/dokumenty nieruchomości");
+      toast.error("Podaj numer KW lub dołącz zdjęcia/dokumenty nieruchomości.");
       return;
     }
     setSubmitting(true);
@@ -215,6 +249,7 @@ export function SinglePageApplicationForm() {
         },
       });
       if (!res?.ok) throw new Error("submit failed");
+      // Meta: CompleteRegistration = "Ukończenie rejestracji" — po finalnym wysłaniu
       void trackEvent(
         "CompleteRegistration",
         {
@@ -243,106 +278,156 @@ export function SinglePageApplicationForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
-      {/* 1. Typ zabezpieczenia */}
-      <section className="space-y-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">1. Typ zabezpieczenia</p>
-          <h2 className="mt-1 text-lg font-bold text-foreground">Wybierz rodzaj nieruchomości</h2>
-        </div>
-        <SecurityTypePicker value={secType} onChange={(t) => setSecType(t)} />
-      </section>
+    <form onSubmit={onSubmit} className="space-y-6">
+      {/* Stepper kafelki */}
+      <ol className="grid grid-cols-4 gap-2">
+        {STEPS.map((s) => {
+          const active = s.id === step;
+          const done = s.id < step;
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => (s.id < step ? setStep(s.id as 1 | 2 | 3 | 4) : undefined)}
+                disabled={s.id > step}
+                className={[
+                  "flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition",
+                  active
+                    ? "border-accent bg-accent/10 text-foreground shadow-sm"
+                    : done
+                      ? "border-accent/40 bg-card text-foreground hover:bg-accent/5"
+                      : "border-border bg-card text-muted-foreground",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "grid h-7 w-7 place-items-center rounded-full text-xs font-bold",
+                    active ? "bg-accent text-accent-foreground" : done ? "bg-accent/80 text-accent-foreground" : "bg-secondary text-muted-foreground",
+                  ].join(" ")}
+                >
+                  {done ? <Check className="h-4 w-4" /> : s.id}
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wide sm:text-xs">{s.label}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
 
-      {/* 2. Kwota i okres */}
-      <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">2. Parametry pożyczki</p>
-          <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <Label className="text-sm font-semibold">Kwota pożyczki</Label>
-            <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
+      {/* Step 1 — typ zabezpieczenia */}
+      {step === 1 && (
+        <section className="space-y-3 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1 z 4</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Wybierz rodzaj nieruchomości pod zabezpieczenie</h2>
           </div>
-          <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
-            onValueChange={(v) => setAmount(v[0] ?? amount)} />
-          <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <Label className="text-sm font-semibold">Okres spłaty</Label>
-            <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
+          <SecurityTypePicker value={secType} onChange={(t) => setSecType(t)} />
+        </section>
+      )}
+
+      {/* Step 2 — kwota i okres */}
+      {step === 2 && (
+        <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 4</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
           </div>
-          <Slider value={[months]} min={6} max={72} step={1}
-            onValueChange={(v) => setMonths(v[0] ?? months)} />
-          <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
-        </div>
-        <div className="rounded-xl bg-secondary p-4">
-          <div className="text-xs font-bold uppercase text-muted-foreground">Szacowana rata miesięczna</div>
-          <div className="mt-1 text-3xl font-extrabold tabular-nums text-foreground">{formatPLN(figures.monthly)}</div>
-          <div className="mt-1 text-xs text-muted-foreground">Wstępna kalkulacja — ostateczne warunki ustalają inwestorzy po analizie.</div>
-        </div>
-      </section>
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-sm font-semibold">Kwota pożyczki</Label>
+              <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
+            </div>
+            <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
+              onValueChange={(v) => setAmount(v[0] ?? amount)} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-sm font-semibold">Okres spłaty</Label>
+              <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
+            </div>
+            <Slider value={[months]} min={6} max={72} step={1}
+              onValueChange={(v) => setMonths(v[0] ?? months)} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
+          </div>
+        </section>
+      )}
 
-      {/* 3. Kontakt */}
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">3. Dane kontaktowe</p>
-          <h2 className="mt-1 text-lg font-bold text-foreground">Jak się z Tobą skontaktować?</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2"><Label htmlFor="f-fn">Imię *</Label>
-            <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" /></div>
-          <div className="space-y-2"><Label htmlFor="f-ln">Nazwisko *</Label>
-            <Input id="f-ln" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" /></div>
-          <div className="space-y-2"><Label htmlFor="f-ph">Telefon *</Label>
-            <Input id="f-ph" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" /></div>
-          <div className="space-y-2"><Label htmlFor="f-em">E-mail *</Label>
-            <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" /></div>
-        </div>
-      </section>
+      {/* Step 3 — dane kontaktowe */}
+      {step === 3 && (
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 4</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Jak się z Tobą skontaktować?</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2"><Label htmlFor="f-fn">Imię *</Label>
+              <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" /></div>
+            <div className="space-y-2"><Label htmlFor="f-ln">Nazwisko *</Label>
+              <Input id="f-ln" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" /></div>
+            <div className="space-y-2"><Label htmlFor="f-ph">Telefon *</Label>
+              <Input id="f-ph" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" /></div>
+            <div className="space-y-2"><Label htmlFor="f-em">E-mail *</Label>
+              <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" /></div>
+          </div>
+        </section>
+      )}
 
-      {/* 4. KW + dokumenty wg typu */}
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">4. Nieruchomość</p>
-          <h2 className="mt-1 text-lg font-bold text-foreground">
-            Numer KW i dokumenty dla: <span className="text-accent">{securityTypeLabels[secType]}</span>
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Wystarczy numer księgi wieczystej LUB komplet zdjęć/dokumentów.
-          </p>
-        </div>
+      {/* Step 4 — KW + zdjęcia */}
+      {step === 4 && (
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 4 z 4</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">
+              Numer KW i dokumenty dla: <span className="text-accent">{securityTypeLabels[secType]}</span>
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Wystarczy numer księgi wieczystej LUB komplet zdjęć/dokumentów.
+            </p>
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
-          <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-            placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
-          <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
+            <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+              placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
+            <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
+          </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          {photoBuckets.map((b) => (
-            <PhotoBucket key={b.kind} label={b.label} bucket={b.kind}
-              photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
-          ))}
-          <PhotoBucket label="Akt własności / inne dokumenty (opcjonalnie)" bucket="ownership_deed"
-            photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
-        </div>
-      </section>
+          <div className="grid gap-3 md:grid-cols-2">
+            {photoBuckets.map((b) => (
+              <PhotoBucket key={b.kind} label={b.label} bucket={b.kind}
+                photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        <Button type="submit" variant="cta" size="lg" disabled={submitting} className="w-full text-base">
-          {submitting ? (
-            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-          ) : (
-            <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek — bezpłatnie, do 24 h</>
-          )}
-        </Button>
-        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+      {/* Nawigacja */}
+      <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
+        {step > 1 && (
+          <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={submitting}>
+            <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
+          </Button>
+        )}
+        {step < 4 ? (
+          <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
+            Dalej <ChevronRight className="ml-1 h-5 w-5" />
+          </Button>
+        ) : (
+          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
+            {submitting ? (
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+            ) : (
+              <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek</>
+            )}
+          </Button>
+        )}
+      </div>
+      {step === 4 && (
+        <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
-      </div>
+      )}
     </form>
   );
 }
