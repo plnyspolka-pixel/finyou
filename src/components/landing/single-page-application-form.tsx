@@ -215,6 +215,23 @@ export function SinglePageApplicationForm() {
         },
       });
       if (!res?.ok) throw new Error("submit failed");
+      void trackEvent(
+        "CompleteRegistration",
+        {
+          value: amount,
+          currency: "PLN",
+          content_category: secType,
+          loan_period_months: months,
+          has_kw: Boolean(kwNumber.trim()),
+          photos_count: photos.length,
+        },
+        {
+          email: email.trim(),
+          phone: phone.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        },
+      );
       toast.success("Wniosek wysłany! Skontaktujemy się do 24 h.");
       void navigate({ to: "/wniosek-opis" });
     } catch (err) {
