@@ -73,6 +73,44 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       .single();
     if (lErr || !loan) throw new Error(lErr?.message ?? "loan insert failed");
 
+    // === Auto-utworzenie konta klienta + magiczny link do auto-loginu ===
+    let tokenHash: string | null = null;
+    let tempPassword: string | null = null;
+    try {
+      // 1) Spróbuj utworzyć usera. Jeżeli już istnieje — pomiń tworzenie.
+      const genPwd = () => {
+        const bytes = new Uint8Array(12);
+        crypto.getRandomValues(bytes);
+        const base = Array.from(bytes, (b) => b.toString(36)).join("").slice(0, 14);
+        return `${base.charAt(0).toUpperCase()}${base.slice(1)}!9`;
+      };
+      tempPassword = genPwd();
+      const { data: created, error: cuErr } = await supabaseAdmin.auth.admin.createUser({
+        email: data.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { first_name: data.first_name, last_name: data.last_name },
+      });
+      let userId: string | null = created?.user?.id ?? null;
+      if (cuErr && !userId) {
+        // user już istnieje — nie nadpisujemy hasła
+        tempPassword = null;
+      }
+      // 2) Wygeneruj magiczny link (zalogowanie jednym kliknięciem)
+      const { data: link } = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: data.email,
+      });
+      tokenHash = link?.properties?.hashed_token ?? null;
+      if (!userId) userId = link?.user?.id ?? null;
+      // 3) Połącz klienta z kontem auth
+      if (userId) {
+        await supabaseAdmin.from("clients").update({ user_id: userId }).eq("id", client.id);
+      }
+    } catch (err) {
+      console.error("[landing-application] auth user create/link failed", err);
+    }
+
     const { data: property } = await supabaseAdmin
       .from("properties")
       .insert({
