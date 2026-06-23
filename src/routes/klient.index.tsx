@@ -82,10 +82,46 @@ function KlientDashboard() {
     queryKey: ["client-dashboard-property", loanRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("properties")
-        .select("id, property_type, land_register_number, area_sqm, loan_application_id")
+        .select("id, property_type, land_register_number, area_sqm, loan_application_id, photos")
         .eq("loan_application_id", loanRow!.id).maybeSingle();
       return data;
     },
+    enabled: Boolean(loanRow?.id),
+  });
+
+  const { data: documentsList } = useQuery({
+    queryKey: ["client-dashboard-documents", loanRow?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("documents")
+        .select("id, file_name, file_path, file_url, document_type, created_at")
+        .eq("loan_application_id", loanRow!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+    enabled: Boolean(loanRow?.id),
+  });
+
+  const photoPaths: string[] = Array.isArray((propertyRow as any)?.photos)
+    ? ((propertyRow as any).photos as string[])
+    : [];
+  const docCount = documentsList?.length ?? 0;
+  const totalFiles = photoPaths.length + docCount;
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [thumbUrls, setThumbUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (photoPaths.length === 0) { setThumbUrls([]); return; }
+      const { data } = await supabase.storage
+        .from("property-photos")
+        .createSignedUrls(photoPaths.slice(0, 6), 60 * 60);
+      if (!cancelled && data) setThumbUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+    })();
+    return () => { cancelled = true; };
+  }, [photoPaths.join("|")]);
+
     enabled: Boolean(loanRow?.id),
   });
 
