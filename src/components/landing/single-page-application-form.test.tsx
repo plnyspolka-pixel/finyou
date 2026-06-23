@@ -4,12 +4,15 @@ import userEvent from "@testing-library/user-event";
 
 // --- Mocks --------------------------------------------------------------
 
-const trackEventMock = vi.fn();
+const { trackEventMock, submitMock } = vi.hoisted(() => ({
+  trackEventMock: vi.fn(),
+  submitMock: vi.fn(async () => ({ ok: true })),
+}));
+
 vi.mock("@/lib/fb-pixel", () => ({
   trackEvent: (...args: unknown[]) => trackEventMock(...args),
 }));
 
-const submitMock = vi.fn(async () => ({ ok: true }));
 vi.mock("@/lib/landing-application.functions", () => ({
   submitLandingLoanApplication: submitMock,
 }));
