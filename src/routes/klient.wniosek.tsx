@@ -20,16 +20,9 @@ export const Route = createFileRoute("/klient/wniosek")({
   component: KlientWniosek,
 });
 
-// Statusy, w których wniosek jest już "wysłany" i nie powinien być edytowany.
+// Edycja wniosku jest zawsze odblokowana po stronie klienta —
+// klient może aktualizować dane do momentu podpisania umowy.
 const LOCKED_STATUSES = new Set<string>([
-  "wniosek_kompletny",
-  "do_analizy",
-  "rokuje",
-  "nie_rokuje",
-  "wyslany_do_inwestorow",
-  "oferta_od_inwestora",
-  "oferta_przekazana_klientowi",
-  "zaakceptowany_przez_klienta",
   "do_umowy",
   "zamkniety",
   "archiwalny",
