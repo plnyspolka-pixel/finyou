@@ -16,6 +16,7 @@ import {
   type SecurityType,
 } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 
 type PhotoItem = {
