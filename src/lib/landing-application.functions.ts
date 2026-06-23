@@ -113,6 +113,113 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       console.error("[landing-application] collateral analysis failed", err);
     });
 
+    // Powiadomienia mailowe (fire-and-forget)
+    void (async () => {
+      try {
+        const { sendResendEmail } = await import("@/lib/resend-send.server");
+        const { logLeadCommunication } = await import("@/lib/lead-comms.server");
+        const fmtPLN = (n: number) =>
+          new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(n);
+        const fullName = `${data.first_name} ${data.last_name}`.trim();
+        const adminUrl = `https://app.financeyou.pl/admin/wnioski/${loan.id}`;
+        const propertyLabel = data.property_type.replace(/_/g, " ");
+
+        // 1) Potwierdzenie do klienta — ton ciepły, podkreśla przewagi
+        const clientSubject = "Dziękujemy za wniosek — Finance You";
+        const clientText = `Dzień dobry ${data.first_name},
+
+Dziękujemy za przesłanie wniosku o pożyczkę pod zabezpieczenie nieruchomości w Finance You.
+
+Podsumowanie:
+• Kwota: ${fmtPLN(data.loan_amount)}
+• Okres: ${data.preferred_period_months} mies.
+• Zabezpieczenie: ${propertyLabel}
+
+Co dalej? Nasz zespół analizuje teraz Państwa zgłoszenie i nieruchomość. Skontaktujemy się w ciągu 24 godzin z indywidualną propozycją — pracujemy z wieloma inwestorami, dzięki czemu wybieramy dla Państwa najkorzystniejsze warunki i długi okres spłaty.
+
+W razie pytań prosimy odpisać na ten e-mail lub zadzwonić.
+
+Pozdrawiamy,
+Zespół Finance You`;
+        const clientHtml = `
+          <p>Dzień dobry ${data.first_name},</p>
+          <p>Dziękujemy za przesłanie wniosku o pożyczkę pod zabezpieczenie nieruchomości w <strong>Finance You</strong>.</p>
+          <p><strong>Podsumowanie wniosku:</strong></p>
+          <ul>
+            <li>Kwota: <strong>${fmtPLN(data.loan_amount)}</strong></li>
+            <li>Okres: <strong>${data.preferred_period_months} mies.</strong></li>
+            <li>Zabezpieczenie: <strong>${propertyLabel}</strong></li>
+          </ul>
+          <p><strong>Co dalej?</strong> Nasz zespół analizuje teraz Państwa zgłoszenie i nieruchomość. Skontaktujemy się w ciągu 24 godzin z indywidualną propozycją — pracujemy z wieloma inwestorami, dzięki czemu wybieramy dla Państwa najkorzystniejsze warunki i długi okres spłaty.</p>
+          <p>W razie pytań prosimy odpisać na ten e-mail lub zadzwonić.</p>
+          <p>Pozdrawiamy,<br/>Zespół Finance You</p>
+        `;
+        const clientRes = await sendResendEmail({
+          to: data.email,
+          subject: clientSubject,
+          text: clientText,
+          html: clientHtml,
+          replyTo: "kontakt@financeyou.pl",
+          showReplyHint: true,
+        });
+        await logLeadCommunication({
+          loanApplicationId: loan.id,
+          clientId: client.id,
+          email: data.email,
+          phoneNormalized: normalized,
+          channel: "email",
+          direction: "outbound",
+          status: clientRes.ok ? "sent" : "failed",
+          subject: clientSubject,
+          content: clientText,
+          externalId: clientRes.id ?? null,
+          errorMessage: clientRes.error ?? null,
+          metadata: { kind: "landing_application_confirmation" },
+        });
+
+        // 2) Powiadomienie do zespołu z linkiem do panelu
+        const teamTo = process.env.TEAM_NOTIFY_EMAIL ?? "kontakt@financeyou.pl";
+        const teamSubject = `Nowy wniosek: ${fullName} — ${fmtPLN(data.loan_amount)} / ${data.preferred_period_months} mies.`;
+        const teamText = `Nowy wniosek z landing page.
+
+Klient: ${fullName}
+E-mail: ${data.email}
+Telefon: ${data.phone}
+Kwota: ${fmtPLN(data.loan_amount)}
+Okres: ${data.preferred_period_months} mies.
+Zabezpieczenie: ${propertyLabel}
+KW: ${data.land_register_number ?? "—"}
+Załączniki: ${(data.photos ?? []).length}
+
+Podgląd w panelu: ${adminUrl}`;
+        const teamHtml = `
+          <p><strong>Nowy wniosek z landing page.</strong></p>
+          <ul>
+            <li><strong>Klient:</strong> ${fullName}</li>
+            <li><strong>E-mail:</strong> <a href="mailto:${data.email}">${data.email}</a></li>
+            <li><strong>Telefon:</strong> ${data.phone}</li>
+            <li><strong>Kwota:</strong> ${fmtPLN(data.loan_amount)}</li>
+            <li><strong>Okres:</strong> ${data.preferred_period_months} mies.</li>
+            <li><strong>Zabezpieczenie:</strong> ${propertyLabel}</li>
+            <li><strong>KW:</strong> ${data.land_register_number ?? "—"}</li>
+            <li><strong>Załączniki:</strong> ${(data.photos ?? []).length}</li>
+          </ul>
+          <p><a href="${adminUrl}" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Otwórz wniosek w panelu →</a></p>
+          <p style="color:#475569;font-size:12px">${adminUrl}</p>
+        `;
+        await sendResendEmail({
+          to: teamTo,
+          subject: teamSubject,
+          text: teamText,
+          html: teamHtml,
+          replyTo: data.email,
+          noBranding: true,
+        });
+      } catch (err) {
+        console.error("[landing-application] notification emails failed", err);
+      }
+    })();
+
     return { ok: true as const, id: loan.id };
   });
 
