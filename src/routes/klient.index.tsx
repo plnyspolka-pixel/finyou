@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getMyLoanProgress, claimLoanApplication } from "@/lib/my-loan.functions";
@@ -8,12 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { NextStepCard } from "@/components/client/NextStepCard";
 import { ProgressChecklist } from "@/components/client/ProgressChecklist";
 import { InlineMissingActions } from "@/components/client/InlineMissingActions";
+import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { loanStatusLabels } from "@/lib/labels";
-import { FileText, User } from "lucide-react";
+import { FileText, User, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
@@ -81,12 +82,47 @@ function KlientDashboard() {
     queryKey: ["client-dashboard-property", loanRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("properties")
-        .select("id, property_type, land_register_number, area_sqm, loan_application_id")
+        .select("id, property_type, land_register_number, area_sqm, loan_application_id, photos")
         .eq("loan_application_id", loanRow!.id).maybeSingle();
       return data;
     },
     enabled: Boolean(loanRow?.id),
   });
+
+  const { data: documentsList } = useQuery({
+    queryKey: ["client-dashboard-documents", loanRow?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("documents")
+        .select("id, file_name, file_path, file_url, document_type, created_at")
+        .eq("loan_application_id", loanRow!.id)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+    enabled: Boolean(loanRow?.id),
+  });
+
+  const photoPaths: string[] = Array.isArray((propertyRow as any)?.photos)
+    ? ((propertyRow as any).photos as string[])
+    : [];
+  const docCount = documentsList?.length ?? 0;
+  const totalFiles = photoPaths.length + docCount;
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [thumbUrls, setThumbUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (photoPaths.length === 0) { setThumbUrls([]); return; }
+      const { data } = await supabase.storage
+        .from("property-photos")
+        .createSignedUrls(photoPaths.slice(0, 6), 60 * 60);
+      if (!cancelled && data) setThumbUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+    })();
+    return () => { cancelled = true; };
+  }, [photoPaths.join("|")]);
+
+
 
   const refetchAll = () => {
     void refetch();
@@ -177,8 +213,73 @@ function KlientDashboard() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" /> Twoje pliki
+                </span>
+                <Badge variant="secondary" className="font-normal">{totalFiles}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {totalFiles === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Nie wgrałeś jeszcze żadnych zdjęć ani dokumentów.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {thumbUrls.map((u, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => loanRow?.id && setPreviewOpen(true)}
+                        className="aspect-square overflow-hidden rounded border bg-muted hover:ring-2 hover:ring-primary transition"
+                      >
+                        <img src={u} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      </button>
+                    ))}
+                    {docCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => loanRow?.id && setPreviewOpen(true)}
+                        className="aspect-square rounded border bg-muted flex flex-col items-center justify-center gap-0.5 hover:ring-2 hover:ring-primary transition"
+                      >
+                        <FileIcon className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-[10px] font-medium">{docCount} dok.</span>
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => loanRow?.id && setPreviewOpen(true)}
+                  >
+                    Otwórz podgląd
+                  </Button>
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <span><ImageIcon className="h-3 w-3 inline" /> {photoPaths.length} zdjęć</span>
+                    <span><FileText className="h-3 w-3 inline" /> {docCount} dokumentów</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
         </div>
       </div>
+
+      {loanRow?.id && (
+        <MediaPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          loanApplicationId={loanRow.id}
+          photoPaths={photoPaths}
+          title="Twoje zdjęcia i dokumenty"
+        />
+      )}
     </div>
   );
 }
