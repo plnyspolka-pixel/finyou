@@ -122,8 +122,7 @@ function KlientDashboard() {
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);
 
-    enabled: Boolean(loanRow?.id),
-  });
+
 
   const refetchAll = () => {
     void refetch();
