@@ -214,6 +214,10 @@ export function SinglePageApplicationForm() {
         toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
         return;
       }
+      if (!consentPrivacy || !consentTerms) {
+        toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
+        return;
+      }
       // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
     }
