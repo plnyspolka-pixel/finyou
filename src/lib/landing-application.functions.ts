@@ -101,7 +101,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
           document_type: p.bucket,
           file_name: p.fileName,
           file_path: path,
-          visibility_level: "internal",
+          visibility_level: "pelne",
           status: "received",
         });
       } catch (e) {
