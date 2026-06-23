@@ -1,11 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
 // jsdom doesn't implement these; SinglePageApplicationForm uses them for previews.
-if (typeof URL.createObjectURL === "undefined") {
-  // @ts-expect-error – polyfill for jsdom
-  URL.createObjectURL = () => "blob:mock";
-}
-if (typeof URL.revokeObjectURL === "undefined") {
-  // @ts-expect-error – polyfill for jsdom
-  URL.revokeObjectURL = () => {};
-}
+const u = URL as unknown as { createObjectURL?: (b: Blob) => string; revokeObjectURL?: (s: string) => void };
+if (typeof u.createObjectURL === "undefined") u.createObjectURL = () => "blob:mock";
+if (typeof u.revokeObjectURL === "undefined") u.revokeObjectURL = () => {};

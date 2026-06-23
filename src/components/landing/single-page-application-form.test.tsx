@@ -137,7 +137,7 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
 
     // Server fn dostał dane z KW (uppercase) i 1 plikiem.
-    const payload = submitMock.mock.calls[0]![0] as { data: Record<string, unknown> };
+    const payload = (submitMock.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0];
     expect(payload.data).toMatchObject({
       first_name: "Anna",
       last_name: "Kowalska",
