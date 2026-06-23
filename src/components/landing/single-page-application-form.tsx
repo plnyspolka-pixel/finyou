@@ -17,6 +17,7 @@ import {
 } from "@/lib/loan-math";
 import { REQUIREMENTS_BY_TYPE } from "@/lib/property-documents";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { trackEvent } from "@/lib/fb-pixel";
 
 type PhotoItem = {
   id: string;
