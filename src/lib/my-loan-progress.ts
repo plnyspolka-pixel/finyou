@@ -37,7 +37,7 @@ export interface EnrichedProgress extends ProgressResult {
   flags: ProgressFlags;
 }
 
-const DOCS_HREF = "/klient/wniosek";
+const DOCS_HREF = "/klient";
 
 function docCta(label: string): { ctaHref: string; ctaLabel: string } {
   return { ctaHref: DOCS_HREF, ctaLabel: `Wgraj: ${label}` };
@@ -66,7 +66,7 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
     .map((r) => kindToMissingItem(r.kind, r.label));
 
   // Wyznaczamy „next step" — pierwsza rzecz do zrobienia
-  const WNIOSEK_HREF = "/klient/wniosek";
+  const WNIOSEK_HREF = "/klient";
   let next_step: NextStep;
   if (!ctx.hasLoan) {
     next_step = {
@@ -124,7 +124,7 @@ export function enrichLoanProgress(base: ProgressResult, ctx: ProgressFlags): En
       section: "gotowe",
       title: "Wniosek kompletny",
       description: "Twój wniosek jest pełny i czeka na ocenę przez inwestorów. Powiadomimy Cię o postępach.",
-      ctaHref: "/klient/wniosek",
+      ctaHref: "/klient",
       ctaLabel: "Zobacz wniosek",
     };
   }

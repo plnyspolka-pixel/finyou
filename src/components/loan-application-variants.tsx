@@ -513,7 +513,7 @@ export function LinearLoanApplication({
         amount: draft.amount, annualRate: draft.annualRate, months: draft.months,
         maxPayment: draft.maxPayment, secType: draft.secType, source: "landing_wizard",
       });
-      void navigate({ to: "/klient/wniosek" });
+      void navigate({ to: "/klient" });
     } else {
       toast.success("Wniosek gotowy — wyślemy Ci link aktywacyjny");
     }

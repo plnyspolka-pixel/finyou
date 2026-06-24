@@ -39,7 +39,7 @@ export function NextStepCard({ progress }: Props) {
           </Button>
           {!done && (
             <Button asChild variant="ghost" size="lg">
-              <Link to="/klient/wniosek">Zobacz cały wniosek</Link>
+              <Link to="/klient">Zobacz cały wniosek</Link>
             </Button>
           )}
         </div>
