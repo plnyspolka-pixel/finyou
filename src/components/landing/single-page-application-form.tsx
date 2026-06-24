@@ -131,17 +131,18 @@ function PhotoBucket({
 }
 
 const STEPS = [
-  { id: 1, label: "Zabezpieczenie" },
+  { id: 1, label: "Kontakt" },
   { id: 2, label: "Parametry" },
-  { id: 3, label: "Kontakt" },
-  { id: 4, label: "Nieruchomość" },
+  { id: 3, label: "Zabezpieczenie" },
 ] as const;
+
+type StepId = 1 | 2 | 3;
 
 export function SinglePageApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<StepId>(1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(24);
@@ -211,7 +212,7 @@ export function SinglePageApplicationForm() {
   };
 
   const goNext = () => {
-    if (step === 3) {
+    if (step === 1) {
       if (!contactValid) {
         toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
         return;
@@ -223,9 +224,9 @@ export function SinglePageApplicationForm() {
       // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
     }
-    setStep((s) => (Math.min(4, (s + 1)) as 1 | 2 | 3 | 4));
+    setStep((s) => (Math.min(3, s + 1) as StepId));
   };
-  const goBack = () => setStep((s) => (Math.max(1, (s - 1)) as 1 | 2 | 3 | 4));
+  const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
 
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
@@ -239,7 +240,7 @@ export function SinglePageApplicationForm() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== 4) { goNext(); return; }
+    if (step !== 3) { goNext(); return; }
     if (!step4Valid) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
@@ -316,7 +317,7 @@ export function SinglePageApplicationForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Stepper kafelki */}
-      <ol className="grid grid-cols-4 gap-2">
+      <ol className="grid grid-cols-3 gap-2">
         {STEPS.map((s) => {
           const active = s.id === step;
           const done = s.id < step;
@@ -324,7 +325,7 @@ export function SinglePageApplicationForm() {
             <li key={s.id}>
               <button
                 type="button"
-                onClick={() => (s.id < step ? setStep(s.id as 1 | 2 | 3 | 4) : undefined)}
+                onClick={() => (s.id < step ? setStep(s.id as StepId) : undefined)}
                 disabled={s.id > step}
                 className={[
                   "flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition",
@@ -350,50 +351,11 @@ export function SinglePageApplicationForm() {
         })}
       </ol>
 
-      {/* Step 1 — typ zabezpieczenia */}
+      {/* Step 1 — dane kontaktowe */}
       {step === 1 && (
-        <section className="space-y-3 rounded-2xl border border-border bg-card p-5 md:p-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1 z 4</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Wybierz rodzaj nieruchomości pod zabezpieczenie</h2>
-          </div>
-          <SecurityTypePicker value={secType} onChange={(t) => setSecType(t)} />
-        </section>
-      )}
-
-      {/* Step 2 — kwota i okres */}
-      {step === 2 && (
-        <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 4</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <Label className="text-sm font-semibold">Kwota pożyczki</Label>
-              <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
-            </div>
-            <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
-              onValueChange={(v) => setAmount(v[0] ?? amount)} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <Label className="text-sm font-semibold">Okres spłaty</Label>
-              <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
-            </div>
-            <Slider value={[months]} min={6} max={72} step={1}
-              onValueChange={(v) => setMonths(v[0] ?? months)} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
-          </div>
-        </section>
-      )}
-
-      {/* Step 3 — dane kontaktowe */}
-      {step === 3 && (
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 4</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1 z 3</p>
             <h2 className="mt-1 text-lg font-bold text-foreground">Jak się z Tobą skontaktować?</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -450,25 +412,52 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 4 — KW + zdjęcia */}
-      {step === 4 && (
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
+      {/* Step 2 — kwota i okres */}
+      {step === 2 && (
+        <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 4 z 4</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">
-              Numer KW i dokumenty dla: <span className="text-accent">{securityTypeLabels[secType]}</span>
-            </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Wystarczy numer księgi wieczystej LUB komplet zdjęć/dokumentów.
-            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-sm font-semibold">Kwota pożyczki</Label>
+              <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
+            </div>
+            <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
+              onValueChange={(v) => setAmount(v[0] ?? amount)} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-sm font-semibold">Okres spłaty</Label>
+              <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
+            </div>
+            <Slider value={[months]} min={6} max={72} step={1}
+              onValueChange={(v) => setMonths(v[0] ?? months)} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
+          </div>
+        </section>
+      )}
+
+      {/* Step 3 — zabezpieczenie + nieruchomość */}
+      {step === 3 && (
+        <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Zabezpieczenie i nieruchomość</h2>
           </div>
 
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Rodzaj nieruchomości pod zabezpieczenie</Label>
+            <SecurityTypePicker value={secType} onChange={(t) => setSecType(t)} />
+          </div>
 
           <div className="space-y-2">
-            <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
+            <Label htmlFor="f-kw">Numer księgi wieczystej dla: <span className="text-accent">{securityTypeLabels[secType]}</span></Label>
             <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
               placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
-            <p className="text-xs text-muted-foreground">Jeśli nie znasz numeru — sprawdź w aplikacji mObywatel albo dołącz akt własności jako plik poniżej.</p>
+            <p className="text-xs text-muted-foreground">Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.</p>
 
             {extraKwNumbers.map((val, idx) => (
               <div key={idx} className="flex gap-2 pt-1">
@@ -525,7 +514,7 @@ export function SinglePageApplicationForm() {
             <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
           </Button>
         )}
-        {step < 4 ? (
+        {step < 3 ? (
           <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
@@ -539,7 +528,7 @@ export function SinglePageApplicationForm() {
           </Button>
         )}
       </div>
-      {step === 4 && (
+      {step === 3 && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
