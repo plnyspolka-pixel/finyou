@@ -194,6 +194,18 @@ export function SinglePageApplicationForm() {
   const [months, setMonths] = useState(24);
   const [maxPayment, setMaxPayment] = useState(0);
   const [annualRate, setAnnualRate] = useState(30);
+
+  // Max okres spłaty maleje wraz z kwotą:
+  // ≤ 400 000 zł → 72 mies., powyżej liniowo z 36 mies. (>400k) do 12 mies. (1 000 000 zł)
+  const maxMonths = useMemo(() => {
+    if (amount <= 400_000) return 72;
+    const t = Math.min(1, Math.max(0, (amount - 400_000) / (1_000_000 - 400_000)));
+    return Math.round(36 - t * (36 - 12));
+  }, [amount]);
+
+  useEffect(() => {
+    if (months > maxMonths) setMonths(maxMonths);
+  }, [maxMonths, months]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -601,9 +613,9 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowany okres spłaty</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
               </div>
-              <Slider value={[months]} min={6} max={72} step={1}
+              <Slider value={[Math.min(months, maxMonths)]} min={6} max={maxMonths} step={1}
                 onValueChange={(v) => setMonths(v[0] ?? months)} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
+              <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>{maxMonths} mies.</span></div>
             </div>
 
             <div className="space-y-3">
