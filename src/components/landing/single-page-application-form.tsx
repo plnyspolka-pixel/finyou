@@ -451,7 +451,6 @@ export function SinglePageApplicationForm() {
     if (step === 1 && step1Done) {
       fireLead();
       setStep(2);
-      setStep2Sub("type");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing]);
@@ -459,138 +458,8 @@ export function SinglePageApplicationForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      {/* Elegancki, zachęcający button "Twoja oferta" — zablokowany dopóki wniosek niekompletny */}
-      {(() => {
-        const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-        const canOpenOffer = step1Done && step4Valid;
-        const active = step === 3;
-        const handleClick = () => {
-          if (!canOpenOffer) {
-            if (!step1Done) {
-              toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody.");
-              setStep(1);
-              return;
-            }
-            toast.error("Najpierw uzupełnij dokumenty i numer KW.");
-            setStep(2);
-            return;
-          }
-          setStep(3);
-        };
-        return (
-          <button
-            type="button"
-            onClick={handleClick}
-            aria-disabled={!canOpenOffer}
-            title={canOpenOffer ? "Zobacz swoją wstępną ofertę" : "Dostępne po uzupełnieniu wniosku"}
-            className={[
-              "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] transition-transform duration-300",
-              canOpenOffer ? "hover:scale-[1.01] active:scale-[0.99] cursor-pointer" : "cursor-not-allowed",
-            ].join(" ")}
-          >
-            {/* Obrotowy gradient na obwodzie — w kolorystyce marki (granat → indygo → błękit) */}
-            <span
-              aria-hidden
-              className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
-                animation: "fy-offer-spin 6s linear infinite",
-                opacity: canOpenOffer ? 1 : 0.55,
-              }}
-            />
-            {/* Wnętrze buttona — abstrakcyjna grafika z kolorystyki logo */}
-            <span className="relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-[14px] px-5 py-4 text-white">
-              {/* Bazowa warstwa: głęboki granat marki */}
-              <span
-                aria-hidden
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
-                }}
-              />
-              {/* Abstrakcyjne "bloby" w kolorach marki */}
-              <span
-                aria-hidden
-                className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl"
-                style={{
-                  background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)",
-                  animation: "fy-offer-drift-a 9s ease-in-out infinite alternate",
-                }}
-              />
-              <span
-                aria-hidden
-                className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl"
-                style={{
-                  background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)",
-                  animation: "fy-offer-drift-b 11s ease-in-out infinite alternate",
-                }}
-              />
-              <span
-                aria-hidden
-                className="absolute -bottom-10 left-1/3 h-36 w-36 rounded-full blur-2xl"
-                style={{
-                  background: "radial-gradient(circle, oklch(0.50 0.22 285 / 0.6), transparent 70%)",
-                  animation: "fy-offer-drift-c 13s ease-in-out infinite alternate",
-                }}
-              />
-              {/* Subtelna siatka linii — designerski akcent */}
-              <span
-                aria-hidden
-                className="absolute inset-0 opacity-25 mix-blend-overlay"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(115deg, transparent 0 48%, oklch(0.95 0.05 240 / 0.35) 48% 49%, transparent 49% 62%, oklch(0.95 0.05 240 / 0.25) 62% 62.5%, transparent 62.5%)",
-                  backgroundSize: "180% 100%",
-                  animation: "fy-offer-lines 7s linear infinite",
-                }}
-              />
-              {/* Shimmer */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 overflow-hidden"
-              >
-                <span
-                  className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent"
-                  style={{ animation: "fy-offer-shimmer 3.2s linear infinite" }}
-                />
-              </span>
-              {/* Treść */}
-              <span
-                className={[
-                  "relative grid h-9 w-9 place-items-center rounded-full backdrop-blur-sm",
-                  canOpenOffer ? "bg-white/20 ring-1 ring-white/30" : "bg-white/15 ring-1 ring-white/20",
-                ].join(" ")}
-                aria-hidden
-              >
-                {canOpenOffer ? <Check className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
-              </span>
-              <span className="relative flex flex-col items-center leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                <span className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">TWOJA OFERTA</span>
-                {!canOpenOffer && (
-                  <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-white/65">
-                    Uzupełnij dane, aby odblokować
-                  </span>
-                )}
-              </span>
-              {active && (
-                <span className="relative ml-1 hidden rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-white/30 sm:inline">
-                  Otwarte
-                </span>
-              )}
-            </span>
-          </button>
-        );
-      })()}
-      <style>{`
-        @keyframes fy-offer-spin { to { transform: rotate(360deg); } }
-        @keyframes fy-offer-shimmer { 0% { transform: translateX(0); } 100% { transform: translateX(450%); } }
-        @keyframes fy-offer-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
-        @keyframes fy-offer-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
-        @keyframes fy-offer-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
-        @keyframes fy-offer-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
-      `}</style>
+
+
 
 
 
