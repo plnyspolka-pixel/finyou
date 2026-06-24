@@ -204,6 +204,8 @@ export function SinglePageApplicationForm() {
   const [consentMarketing, setConsentMarketing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
+  const deedInputRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
 
