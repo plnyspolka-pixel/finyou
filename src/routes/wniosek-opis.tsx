@@ -252,6 +252,95 @@ function WniosekOpisPage() {
           </div>
         </div>
 
+        {/* Profil działalności */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-violet-500" />
+              Profil działalności
+            </CardTitle>
+            <CardDescription>
+              Powiedz inwestorowi, czy prowadzisz działalność, czy to startup i w jakiej formie.
+              Im więcej konkretów, tym wyższe zaufanie i lepsze warunki.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Czy prowadzisz działalność gospodarczą?</Label>
+                <Select value={bizStatus} onValueChange={(v) => setBizStatus(v)}>
+                  <SelectTrigger><SelectValue placeholder="Wybierz…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="prowadzi">Tak, prowadzę</SelectItem>
+                    <SelectItem value="zamierza">Zamierzam rozpocząć</SelectItem>
+                    <SelectItem value="nie_zamierza">Nie, nie planuję</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(bizStatus === "prowadzi" || bizStatus === "zamierza") && (
+                <div>
+                  <Label>Forma prawna</Label>
+                  <Select value={legalForm} onValueChange={(v) => setLegalForm(v)}>
+                    <SelectTrigger><SelectValue placeholder="Wybierz formę…" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(legalFormLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {(bizStatus === "prowadzi" || bizStatus === "zamierza") && (
+              <div>
+                <Label htmlFor="nip-input">NIP firmy</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="nip-input"
+                    inputMode="numeric"
+                    maxLength={13}
+                    placeholder="np. 5252344078"
+                    value={nip}
+                    onChange={(e) => { setNip(e.target.value); setNipVerifiedAt(null); }}
+                  />
+                  <Button type="button" variant="outline" onClick={() => void verifyNip()} disabled={nipChecking || !nip.trim()}>
+                    {nipChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : nipVerifiedAt ? <><CheckCircle2 className="mr-1 h-4 w-4 text-emerald-600" /> Zweryfikowany</> : "Zweryfikuj w GUS"}
+                  </Button>
+                </div>
+                {nipVerifiedAt && (
+                  <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">NIP zweryfikowany w rejestrze GUS.</p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <Checkbox checked={isStartup} onCheckedChange={(v) => setIsStartup(Boolean(v))} className="mt-0.5" />
+                <span className="text-sm">
+                  <span className="flex items-center gap-1 font-medium"><Rocket className="h-4 w-4 text-violet-500" />To jest startup</span>
+                  <span className="block text-xs text-muted-foreground">Nowy projekt / nowa działalność, jeszcze bez historii finansowej.</span>
+                </span>
+              </label>
+              {isStartup && (
+                <label className="flex items-start gap-2 cursor-pointer pl-6">
+                  <Checkbox checked={startupDep} onCheckedChange={(v) => setStartupDep(Boolean(v))} className="mt-0.5" />
+                  <span className="text-sm">
+                    Rozpoczęcie działalności jest <b>uzależnione</b> od uzyskania finansowania.
+                    <span className="block text-xs text-muted-foreground">Inwestor wie, że bez jego decyzji projekt nie ruszy.</span>
+                  </span>
+                </label>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={() => void saveBusinessProfile()} disabled={bizSaving || !loanId}>
+                {bizSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Zapisz profil</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Opis dla inwestora — kluczowy boost, edytowalny w miejscu */}
         <Card className="border-violet-200 bg-violet-50/30 dark:border-violet-900/50 dark:bg-violet-950/10">
           <CardHeader>
