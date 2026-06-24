@@ -477,7 +477,7 @@ export function SinglePageApplicationForm() {
             aria-disabled={!canOpenOffer}
             title={canOpenOffer ? "Zobacz swoją wstępną ofertę" : "Dostępne po uzupełnieniu wniosku"}
             className={[
-              "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl p-[2px] transition-transform duration-300",
+              "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl p-[2px] shadow-[0_10px_40px_-15px_oklch(0.7_0.18_50/0.55)] transition-transform duration-300",
               canOpenOffer ? "hover:scale-[1.01] active:scale-[0.99] cursor-pointer" : "cursor-not-allowed",
             ].join(" ")}
           >
