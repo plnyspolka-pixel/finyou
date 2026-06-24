@@ -665,7 +665,7 @@ export function SinglePageApplicationForm() {
                 onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>min. {formatPLN(minCap)} <span className="opacity-70">({minPct.toFixed(1).replace(".", ",")}% kwoty)</span></span>
+                <span>min. {formatPLN(minCap)} <span className="opacity-70">(same odsetki)</span></span>
                 <span>bez limitu</span>
               </div>
               <p className="text-xs text-muted-foreground">
