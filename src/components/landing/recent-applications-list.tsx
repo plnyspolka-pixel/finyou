@@ -138,6 +138,15 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
     const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
+    const bizRoll = rand();
+    const business_status: RecentLoanApplicationItem["business_status"] =
+      bizRoll < 0.55 ? "prowadzi" : bizRoll < 0.75 ? "zamierza" : "nie_zamierza";
+    const formRoll = rand();
+    const business_legal_form =
+      business_status === "prowadzi"
+        ? (formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa")
+        : null;
+    const is_startup = business_status !== "prowadzi" && rand() < 0.35;
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
@@ -149,6 +158,14 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       annual_investor_rate: rate,
       wants_extension_option: rand() < 0.55,
       figures,
+      business_status,
+      business_legal_form,
+      is_startup,
+      nip_verified: business_status === "prowadzi" && rand() < 0.8,
+      has_income_docs: rand() < 0.65,
+      has_bik: rand() < 0.7,
+      phone_verified: rand() < 0.9,
+      bank_verified: rand() < 0.55,
     });
   }
   return items;
