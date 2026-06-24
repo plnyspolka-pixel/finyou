@@ -160,15 +160,13 @@ function PhotoBucket({
   onAdd: (files: FileList | null, bucket: string) => void;
   onRemove: (id: string) => void;
 }) {
-  onAdd: (files: FileList | null, bucket: string) => void;
-  onRemove: (id: string) => void;
-}) {
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const own = photos.filter((p) => p.bucket === bucket);
   return (
     <div className="space-y-2 rounded-xl border border-border bg-card p-4">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
       <div className="flex gap-2">
         <button
           type="button"
