@@ -623,12 +623,6 @@ export function SinglePageApplicationForm() {
                 </span>
                 <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Wniosek przyjęty</span>
               </div>
-              <h2 className="mt-2 text-2xl font-extrabold leading-tight text-foreground md:text-3xl">
-                Twoja wstępna oferta jest gotowa 🎉
-              </h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                Na podstawie Twojego wniosku przygotowaliśmy propozycję finansowania. Możesz ją dopasować suwakami poniżej — kwotę, okres, wynagrodzenie inwestora i maksymalną ratę. Ostateczne warunki uzgodnisz indywidualnie z inwestorem.
-              </p>
             </div>
 
             <div className="space-y-3">
