@@ -488,7 +488,7 @@ export function SinglePageApplicationForm() {
                 </span>
               )}
               <span className="text-sm font-bold uppercase tracking-wide sm:text-base">
-                Twoja oferta — harmonogram spłat
+                Twoja oferta
               </span>
             </button>
           );
