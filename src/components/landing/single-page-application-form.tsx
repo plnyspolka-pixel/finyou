@@ -560,16 +560,60 @@ export function SinglePageApplicationForm() {
                 </Button>
               </div>
             ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}
-              className="mt-1"
-            >
-              + Dodaj kolejny numer KW
-            </Button>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}
+              >
+                + Dodaj kolejny numer KW
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => deedInputRef.current?.click()}
+              >
+                + Dodaj akt własności
+              </Button>
+              <input
+                ref={deedInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  addPhotos(e.target.files, "ownership_deed");
+                  e.currentTarget.value = "";
+                }}
+              />
+            </div>
+            {photos.some((p) => p.bucket === "ownership_deed") && (
+              <ul className="flex flex-wrap gap-2 pt-1">
+                {photos
+                  .filter((p) => p.bucket === "ownership_deed")
+                  .map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 px-2 py-1 text-xs text-foreground"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-accent" />
+                      <span className="max-w-[160px] truncate">{p.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(p.id)}
+                        className="grid h-5 w-5 place-items-center rounded-full bg-background text-sm font-bold text-foreground"
+                        aria-label="Usuń akt własności"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
           </div>
+
 
           <div className="grid gap-3 md:grid-cols-2">
             {photoBuckets.map((b) => (
