@@ -139,7 +139,7 @@ function WniosekOpisPage() {
     setNipChecking(true);
     try {
       const res: any = await gusLookup({ data: { nip: clean } });
-      if (res?.found || res?.name || res?.regon) {
+      if (res?.success) {
         const stamp = new Date().toISOString();
         const { error } = await supabase
           .from("loan_applications")
@@ -148,9 +148,9 @@ function WniosekOpisPage() {
         if (error) throw error;
         setNip(clean);
         setNipVerifiedAt(stamp);
-        toast.success(`NIP zweryfikowany${res?.name ? ` — ${res.name}` : ""}`);
+        toast.success(`NIP zweryfikowany${res?.company?.name ? ` — ${res.company.name}` : ""}`);
       } else {
-        toast.error("Nie znaleziono firmy w GUS dla tego NIP");
+        toast.error(res?.message ?? "Nie znaleziono firmy w GUS dla tego NIP");
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd weryfikacji NIP");
