@@ -627,7 +627,7 @@ export function SinglePageApplicationForm() {
                 onValueChange={(v) => setAnnualRate(v[0] ?? annualRate)} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
               <p className="text-xs text-muted-foreground">
-                Im wyższe wynagrodzenie inwestora, tym więcej osób chętnie sfinansuje Twoją pożyczkę.
+                Im wyższe wynagrodzenie inwestora, tym większa szansa na szybkie znalezienie inwestora dla Twojej pożyczki.
               </p>
             </div>
 
