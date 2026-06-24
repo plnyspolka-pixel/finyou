@@ -177,8 +177,8 @@ function PhotoBucket({
 
 const STEPS = [
   { id: 1, label: "Kontakt" },
-  { id: 2, label: "Twoja oferta" },
-  { id: 3, label: "Wniosek" },
+  { id: 2, label: "Wniosek" },
+  { id: 3, label: "Twoja oferta" },
 ] as const;
 
 
