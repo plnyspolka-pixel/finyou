@@ -80,6 +80,14 @@ export type RecentLoanApplicationItem = {
   annual_investor_rate: number;
   wants_extension_option: boolean;
   figures: OfferFigures;
+  business_status: "prowadzi" | "zamierza" | "nie_zamierza";
+  business_legal_form: "jdg" | "sp_zoo" | "sa" | null;
+  is_startup: boolean;
+  nip_verified: boolean;
+  has_income_docs: boolean;
+  has_bik: boolean;
+  phone_verified: boolean;
+  bank_verified: boolean;
 };
 
 
