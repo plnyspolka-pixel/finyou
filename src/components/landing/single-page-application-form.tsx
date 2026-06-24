@@ -339,6 +339,24 @@ export function SinglePageApplicationForm() {
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
   const step4Valid = kwOrDeedOk && missingRequiredBuckets.length === 0;
 
+  // Allow external CTAs (e.g. hero button) to request opening "Twoja oferta" with same gating
+  useEffect(() => {
+    const handler = () => {
+      const step1Done = contactValid && consentPrivacy && consentTerms;
+      if (!step1Done) {
+        toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
+        setStep(1);
+      } else if (!step4Valid) {
+        toast.error("Najpierw uzupełnij dokumenty i numer KW (Krok 2).");
+        setStep(2);
+      } else {
+        setStep(3);
+      }
+    };
+    window.addEventListener("financeyou:open-offer", handler);
+    return () => window.removeEventListener("financeyou:open-offer", handler);
+  }, [contactValid, consentPrivacy, consentTerms, step4Valid]);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }

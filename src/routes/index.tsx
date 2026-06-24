@@ -78,7 +78,50 @@ function Landing() {
         <div className="mx-auto max-w-3xl px-4 pt-8 pb-10 md:px-6 md:pt-12 md:pb-14">
           <HeroVideo />
 
-          <div className="mt-8">
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("financeyou:open-offer"));
+                document.getElementById("wniosek-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="group relative inline-flex w-full max-w-md items-center justify-center overflow-hidden rounded-2xl p-[2px] shadow-[0_10px_40px_-12px_oklch(0.65_0.18_45/0.6)] transition-transform duration-300 hover:scale-[1.02] active:scale-[0.99]"
+              aria-label="Zobacz swoją wstępną ofertę"
+            >
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-2xl bg-[conic-gradient(from_var(--angle),oklch(0.72_0.18_45),oklch(0.78_0.16_85),oklch(0.65_0.20_25),oklch(0.72_0.18_45))] opacity-90"
+                style={{
+                  animation: "fy-spin 4s linear infinite",
+                  // @ts-expect-error CSS custom property
+                  "--angle": "0deg",
+                }}
+              />
+              <span className="relative flex w-full items-center justify-center gap-3 rounded-[14px] bg-[oklch(0.16_0.03_265)] px-6 py-4 text-white">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                  style={{ animation: "fy-shimmer 2.8s linear infinite" }}
+                />
+                <span className="relative text-xs font-bold uppercase tracking-[0.22em] text-white/70">
+                  Krok 3
+                </span>
+                <span className="relative text-base font-bold tracking-wide sm:text-lg">
+                  Twoja oferta
+                </span>
+                <svg className="relative h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </span>
+            </button>
+          </div>
+          <style>{`
+            @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+            @keyframes fy-spin { to { --angle: 360deg; transform: rotate(360deg); } }
+            @keyframes fy-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+          `}</style>
+
+          <div id="wniosek-form" className="mt-8 scroll-mt-24">
             <SinglePageApplicationForm />
           </div>
         </div>
