@@ -372,12 +372,18 @@ export function SinglePageApplicationForm() {
     return () => window.removeEventListener("financeyou:open-offer", handler);
   }, [contactValid, consentPrivacy, consentTerms, consentMarketing, step4Valid]);
 
+  const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }
     if (step === 2 && step2Sub !== "docs") { goNext(); return; }
     if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+      return;
+    }
+    if (!hasPropertyPhotos) {
+      toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
     }
 
