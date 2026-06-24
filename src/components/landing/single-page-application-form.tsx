@@ -641,7 +641,7 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (rocznie)</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
-              <Slider value={[annualRate]} min={15} max={50} step={0.5}
+              <Slider gradient="bad-good" value={[annualRate]} min={15} max={50} step={0.5}
                 onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(v[0] ?? annualRate); }} />
 
               <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
