@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import {
+  computeLoanFigures,
   formatPLN,
   securityTypeLabels,
   type SecurityType,
