@@ -114,7 +114,7 @@ export function PropertyTypesShowcase({
                   aria-pressed={isSelected}
                   className="relative block w-full text-left"
                 >
-                  <div className="relative h-44 w-full overflow-hidden">
+                  <div className={selectMode ? "relative h-24 w-full overflow-hidden sm:h-32" : "relative h-44 w-full overflow-hidden"}>
                     <img
                       src={p.img}
                       alt={p.title}
