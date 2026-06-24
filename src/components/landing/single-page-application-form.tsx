@@ -192,6 +192,8 @@ export function SinglePageApplicationForm() {
   const [step, setStep] = useState<StepId>(1);
   const [step2Sub, setStep2Sub] = useState<"type" | "kw" | "docs">("type");
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
+  const [typeSelected, setTypeSelected] = useState(false);
+
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(36);
   const [canExtend, setCanExtend] = useState(true);
