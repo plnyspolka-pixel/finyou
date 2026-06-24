@@ -134,7 +134,7 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
   }
 }
 
-const BUILDING_TYPES: SecurityType[] = ["mieszkanie", "dom", "lokal_uslugowy"];
+const BUILDING_TYPES: SecurityType[] = ["dom"];
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
