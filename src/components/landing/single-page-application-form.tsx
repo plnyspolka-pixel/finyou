@@ -317,7 +317,7 @@ export function SinglePageApplicationForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Stepper kafelki */}
-      <ol className="grid grid-cols-4 gap-2">
+      <ol className="grid grid-cols-3 gap-2">
         {STEPS.map((s) => {
           const active = s.id === step;
           const done = s.id < step;
