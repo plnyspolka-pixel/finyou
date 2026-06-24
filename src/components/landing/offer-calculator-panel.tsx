@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { computeLoanFigures, formatPLN } from "@/lib/loan-math";
+import { FancyShell } from "@/components/landing/fancy-shell";
 
 /**
  * SHARED OFFER CALCULATOR — used by:
