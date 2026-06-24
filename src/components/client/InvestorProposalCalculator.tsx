@@ -74,7 +74,7 @@ export function InvestorProposalCalculator() {
   const maxMonths = useMemo(() => {
     if (amount <= 400_000) return 72;
     const t = Math.min(1, Math.max(0, (amount - 400_000) / (1_000_000 - 400_000)));
-    return Math.round(72 - t * (72 - 12));
+    return Math.round(36 - t * (36 - 12));
   }, [amount]);
 
   useEffect(() => {
