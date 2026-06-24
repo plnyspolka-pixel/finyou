@@ -536,6 +536,19 @@ export function SinglePageApplicationForm() {
 
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
+                <Label className="text-sm font-semibold">Proponowane oprocentowanie roczne</Label>
+                <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
+              </div>
+              <Slider value={[annualRate]} min={10} max={36} step={0.5}
+                onValueChange={(v) => setAnnualRate(v[0] ?? annualRate)} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>10%</span><span>36%</span></div>
+              <p className="text-xs text-muted-foreground">
+                Im wyższe wynagrodzenie inwestora, tym więcej osób chętnie sfinansuje Twoją pożyczkę.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
                 <Label className="text-sm font-semibold">Maksymalna rata miesięczna</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">
                   {effectiveMax > 0 ? formatPLN(effectiveMax) : "bez limitu"}
