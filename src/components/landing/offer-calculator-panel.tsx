@@ -134,38 +134,45 @@ export function OfferCalculatorPanel({
           <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (miesięcznie)</Label>
           <span className="text-2xl font-extrabold tabular-nums text-foreground">{(annualRate / 12).toFixed(2)}%</span>
         </div>
-        <Slider gradient="bad-good" value={[annualRate / 12]} min={15 / 12} max={50 / 12} step={0.05}
+        <Slider gradient="bad-good" value={[annualRate / 12]} min={minAnnualRate / 12} max={50 / 12} step={0.05}
           onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(((v[0] ?? annualRate / 12) * 12)); }} />
-        <div className="flex justify-between text-xs text-muted-foreground"><span>{(15/12).toFixed(2)}% / mies.</span><span>{(50/12).toFixed(2)}% / mies.</span></div>
+        <div className="flex justify-between text-xs text-muted-foreground"><span>{(minAnnualRate/12).toFixed(2)}% / mies.</span><span>{(50/12).toFixed(2)}% / mies.</span></div>
         <p className="text-xs text-muted-foreground">
-          Im wyższe wynagrodzenie inwestora, tym większa szansa na szybkie znalezienie inwestora dla Twojej pożyczki.
+          {allowBalloon
+            ? `Przy okresie do 36 miesięcy minimalne wynagrodzenie inwestora to ${minAnnualRate}% rocznie (${(minAnnualRate/12).toFixed(2)}% / mies.).`
+            : `Powyżej 36 miesięcy wynagrodzenie może być niższe, ale spłacasz pełną ratę kapitałowo-odsetkową.`}
         </p>
       </div>
 
-
-      <div className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <Label className="text-sm font-semibold">Maksymalna rata miesięczna</Label>
-          <span className="text-2xl font-extrabold tabular-nums text-foreground">
-            {effectiveMax > 0 ? formatPLN(effectiveMax) : "bez limitu"}
-          </span>
+      {allowBalloon ? (
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <Label className="text-sm font-semibold">Maksymalna rata miesięczna</Label>
+            <span className="text-2xl font-extrabold tabular-nums text-foreground">
+              {effectiveMax > 0 ? formatPLN(effectiveMax) : "bez limitu"}
+            </span>
+          </div>
+          <Slider
+            gradient="bad-good"
+            value={[effectiveMax > 0 ? effectiveMax : maxCap]}
+            min={minCap}
+            max={maxCap}
+            step={50}
+            onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>min. {formatPLN(minCap)} <span className="opacity-70">(same odsetki)</span></span>
+            <span>bez limitu</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ustaw niżej, jeśli chcesz mniejszą ratę miesięczną. Różnicę dopłacisz jednorazowo na koniec okresu.
+          </p>
         </div>
-        <Slider
-          gradient="bad-good"
-          value={[effectiveMax > 0 ? effectiveMax : maxCap]}
-          min={minCap}
-          max={maxCap}
-          step={50}
-          onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>min. {formatPLN(minCap)} <span className="opacity-70">(same odsetki)</span></span>
-          <span>bez limitu</span>
+      ) : (
+        <div className="rounded-2xl border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+          Przy okresie powyżej 36 miesięcy spłacasz <span className="font-semibold text-foreground">pełną ratę kapitałowo-odsetkową</span> — bez raty balonowej na końcu.
         </div>
-        <p className="text-xs text-muted-foreground">
-          Ustaw niżej, jeśli chcesz mniejszą ratę miesięczną. Różnicę dopłacisz jednorazowo na koniec okresu.
-        </p>
-      </div>
+      )}
 
       <div className="rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-background p-5 shadow-inner">
         <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Twoja miesięczna rata</p>
