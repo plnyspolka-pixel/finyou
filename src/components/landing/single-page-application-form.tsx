@@ -512,8 +512,9 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 2 — kwota i okres */}
-      {step === 2 && (
+      {/* Step 3 — kwota i okres */}
+      {step === 3 && (
+
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
