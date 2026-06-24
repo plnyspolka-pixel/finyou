@@ -28,37 +28,113 @@ type PhotoItem = {
   file: File;
 };
 
-type BucketDef = { kind: string; label: string; optional?: boolean };
+type BucketDef = { kind: string; label: string; hint?: string; optional?: boolean };
 
 /** Buckets per typ zabezpieczenia — zgodnie z uzgodnioną logiką landinga. */
 function bucketsFor(sec: SecurityType): BucketDef[] {
   switch (sec) {
     case "mieszkanie":
+      return [
+        {
+          kind: "property_photos",
+          label: "Zdjęcia mieszkania",
+          hint: "Wgraj 4–10 zdjęć: każdy pokój, kuchnia, łazienka, widok z okna oraz budynek od zewnątrz (elewacja, klatka schodowa).",
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny, umowa darowizny, postanowienie sądu o spadku — wystarczy zdjęcie albo skan PDF.",
+          optional: true,
+        },
+      ];
     case "dom":
+      return [
+        {
+          kind: "property_photos",
+          label: "Zdjęcia domu i działki",
+          hint: "Wgraj zdjęcia z zewnątrz (4 strony budynku, dach, ogrodzenie) oraz wnętrza (salon, kuchnia, łazienka, sypialnie).",
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub inny dokument potwierdzający własność.",
+          optional: true,
+        },
+      ];
     case "lokal_uslugowy":
       return [
-        { kind: "property_photos", label: "Dodaj zdjęcia nieruchomości (z wewnątrz i z zewnątrz)" },
-        { kind: "ownership_deed", label: "Akt własności / inne dokumenty (opcjonalnie)", optional: true },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia lokalu",
+          hint: "Wgraj zdjęcia wnętrza (sala główna, zaplecze, sanitariaty) oraz lokal od zewnątrz wraz z witryną/wejściem.",
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub umowa potwierdzająca własność lokalu.",
+          optional: true,
+        },
       ];
     case "grunt_rolny":
       return [
-        { kind: "land_registry", label: "Wypis z rejestru gruntów" },
-        { kind: "ownership_deed", label: "Akt własności (opcjonalnie)", optional: true },
+        {
+          kind: "land_registry",
+          label: "Wypis z rejestru gruntów",
+          hint: "Aktualny wypis z ewidencji gruntów i budynków (możesz pobrać w urzędzie gminy lub przez geoportal).",
+        },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia działki (opcjonalnie)",
+          hint: "Zdjęcia z poziomu drogi i z różnych narożników działki — pomocne przy szybszej wycenie.",
+          optional: true,
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub postanowienie sądu o nabyciu nieruchomości.",
+          optional: true,
+        },
       ];
     case "dzialka_budowlana":
       return [
-        { kind: "mpzp", label: "MPZP albo warunki zabudowy" },
-        { kind: "property_photos", label: "Zdjęcia działki (opcjonalnie)", optional: true },
-        { kind: "ownership_deed", label: "Akt własności (opcjonalnie)", optional: true },
+        {
+          kind: "mpzp",
+          label: "MPZP albo warunki zabudowy",
+          hint: "Wypis i wyrys z Miejscowego Planu Zagospodarowania Przestrzennego lub decyzja o warunkach zabudowy (WZ).",
+        },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia działki (opcjonalnie)",
+          hint: "Zdjęcia z poziomu drogi i z różnych narożników działki, ewentualnie sąsiedniej zabudowy.",
+          optional: true,
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub inny dokument potwierdzający własność działki.",
+          optional: true,
+        },
       ];
     case "inna":
     default:
       return [
-        { kind: "property_photos", label: "Zdjęcia nieruchomości (opcjonalnie)", optional: true },
-        { kind: "ownership_deed", label: "Akt własności / inne dokumenty (opcjonalnie)", optional: true },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia nieruchomości (opcjonalnie)",
+          hint: "Wgraj zdjęcia z zewnątrz i wewnątrz — im więcej, tym szybciej przygotujemy ofertę.",
+          optional: true,
+        },
+        {
+          kind: "ownership_deed",
+          label: "Dokumenty (opcjonalnie)",
+          hint: "Akt własności, MPZP, wypis z rejestru gruntów lub inne dokumenty, które pomogą w wycenie.",
+          optional: true,
+        },
       ];
   }
 }
+
+const BUILDING_TYPES: SecurityType[] = ["mieszkanie", "dom", "lokal_uslugowy"];
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -71,12 +147,14 @@ function readAsDataUrl(file: File): Promise<string> {
 
 function PhotoBucket({
   label,
+  hint,
   bucket,
   photos,
   onAdd,
   onRemove,
 }: {
   label: string;
+  hint?: string;
   bucket: string;
   photos: PhotoItem[];
   onAdd: (files: FileList | null, bucket: string) => void;
@@ -88,6 +166,7 @@ function PhotoBucket({
   return (
     <div className="space-y-2 rounded-xl border border-border bg-card p-4">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
       <div className="flex gap-2">
         <button
           type="button"
@@ -152,6 +231,7 @@ export function SinglePageApplicationForm() {
   const [email, setEmail] = useState("");
   const [kwNumber, setKwNumber] = useState("");
   const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
+  const [usableArea, setUsableArea] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
@@ -264,7 +344,12 @@ export function SinglePageApplicationForm() {
           loan_amount: amount,
           preferred_period_months: months,
           property_type: secType,
-          land_register_number: allKwNumbers.length > 0 ? allKwNumbers.join(" | ") : null,
+          land_register_number: (() => {
+            const parts = [...allKwNumbers];
+            const ua = usableArea.trim();
+            if (ua && BUILDING_TYPES.includes(secType)) parts.push(`Pow. użytkowa: ${ua} m²`);
+            return parts.length > 0 ? parts.join(" | ") : null;
+          })(),
           photos: photoPayload,
           source: "landing_single_page",
         },
@@ -494,14 +579,37 @@ export function SinglePageApplicationForm() {
 
           <div className="grid gap-3 md:grid-cols-2">
             {photoBuckets.map((b) => (
-              <PhotoBucket key={b.kind} label={b.label} bucket={b.kind}
+              <PhotoBucket key={b.kind} label={b.label} hint={b.hint} bucket={b.kind}
                 photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
             ))}
           </div>
 
+          {BUILDING_TYPES.includes(secType) && (
+            <div className="space-y-2">
+              <Label htmlFor="f-area">
+                Powierzchnia użytkowa <span className="text-muted-foreground">(opcjonalnie)</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="f-area"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step="0.1"
+                  value={usableArea}
+                  onChange={(e) => setUsableArea(e.target.value)}
+                  placeholder="np. 58"
+                  className="max-w-[180px]"
+                />
+                <span className="text-sm text-muted-foreground">m²</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Pomoże nam szybciej przygotować wstępną wycenę — nie jest wymagana.</p>
+            </div>
+          )}
+
           {!step4Valid && (
             <p className="text-xs text-muted-foreground">
-              Aby wysłać wniosek: podaj <strong>numer KW</strong> lub dołącz <strong>akt własności</strong>.
+              Aby wysłać wniosek: podaj <strong>numer księgi wieczystej</strong> nieruchomości lub dołącz <strong>akt własności</strong> (zdjęcie aktu notarialnego, postanowienia sądu o spadku itp.). Pozostałe dokumenty i zdjęcia są opcjonalne, ale przyspieszają wycenę.
             </p>
           )}
         </section>
