@@ -231,6 +231,7 @@ export function SinglePageApplicationForm() {
   const [email, setEmail] = useState("");
   const [kwNumber, setKwNumber] = useState("");
   const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
+  const [usableArea, setUsableArea] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
