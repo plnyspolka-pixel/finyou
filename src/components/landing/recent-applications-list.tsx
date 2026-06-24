@@ -307,11 +307,28 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       </p>
                     </details>
 
-                    <Button asChild size="sm" className="mt-4 w-full">
-                      <Link to="/auth" search={{ next: "/inwestor" } as never}>
-                        Inwestuję <ArrowRight className="ml-1 h-4 w-4" />
-                      </Link>
-                    </Button>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <Button asChild size="sm">
+                        <Link to="/auth" search={{ next: "/inwestor" } as never}>
+                          Inwestuję <ArrowRight className="ml-1 h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          to="/negocjuj"
+                          search={{
+                            app: it.id,
+                            client: it.first_name,
+                            amount: it.loan_amount,
+                            months: it.preferred_period_months,
+                            rate: it.annual_investor_rate,
+                          } as never}
+                        >
+                          Negocjuję
+                        </Link>
+                      </Button>
+                    </div>
+
                   </div>
                 </li>
               );
