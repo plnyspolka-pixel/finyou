@@ -4075,6 +4075,7 @@ export type Database = {
           nominal_rata: number
           note: string | null
           schedule: Json
+          source_application_id: string | null
           status: string
           total_cost: number
           total_interest: number
@@ -4100,6 +4101,7 @@ export type Database = {
           nominal_rata?: number
           note?: string | null
           schedule?: Json
+          source_application_id?: string | null
           status?: string
           total_cost?: number
           total_interest?: number
@@ -4125,13 +4127,22 @@ export type Database = {
           nominal_rata?: number
           note?: string | null
           schedule?: Json
+          source_application_id?: string | null
           status?: string
           total_cost?: number
           total_interest?: number
           total_to_repay?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "loan_proposals_source_application_id_fkey"
+            columns: ["source_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loan_reminder_email_sends: {
         Row: {
