@@ -21,6 +21,10 @@ import {
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
+import { FancyShell } from "@/components/landing/fancy-shell";
+
+const FANCY_INPUT_CLASS =
+  "h-12 rounded-xl border-2 border-white/30 bg-white/10 text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40";
 
 type PhotoItem = {
   id: string;
