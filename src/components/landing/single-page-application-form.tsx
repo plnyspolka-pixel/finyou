@@ -514,7 +514,7 @@ export function SinglePageApplicationForm() {
             <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
           </Button>
         )}
-        {step < 4 ? (
+        {step < 3 ? (
           <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
