@@ -354,7 +354,7 @@ export function SinglePageApplicationForm() {
         toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
         setStep(1);
       } else {
-        setStep(2);
+        setStep(3);
       }
     };
     window.addEventListener("financeyou:open-offer", handler);
@@ -366,6 +366,8 @@ export function SinglePageApplicationForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }
+    if (step === 2) { goNext(); return; }
+
     if (!typeSelected) {
       toast.error("Wybierz typ nieruchomości.");
       return;
