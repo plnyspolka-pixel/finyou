@@ -579,14 +579,37 @@ export function SinglePageApplicationForm() {
 
           <div className="grid gap-3 md:grid-cols-2">
             {photoBuckets.map((b) => (
-              <PhotoBucket key={b.kind} label={b.label} bucket={b.kind}
+              <PhotoBucket key={b.kind} label={b.label} hint={b.hint} bucket={b.kind}
                 photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
             ))}
           </div>
 
+          {BUILDING_TYPES.includes(secType) && (
+            <div className="space-y-2">
+              <Label htmlFor="f-area">
+                Powierzchnia użytkowa <span className="text-muted-foreground">(opcjonalnie)</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="f-area"
+                  type="number"
+                  inputMode="decimal"
+                  min={1}
+                  step="0.1"
+                  value={usableArea}
+                  onChange={(e) => setUsableArea(e.target.value)}
+                  placeholder="np. 58"
+                  className="max-w-[180px]"
+                />
+                <span className="text-sm text-muted-foreground">m²</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Pomoże nam szybciej przygotować wstępną wycenę — nie jest wymagana.</p>
+            </div>
+          )}
+
           {!step4Valid && (
             <p className="text-xs text-muted-foreground">
-              Aby wysłać wniosek: podaj <strong>numer KW</strong> lub dołącz <strong>akt własności</strong>.
+              Aby wysłać wniosek: podaj <strong>numer księgi wieczystej</strong> nieruchomości lub dołącz <strong>akt własności</strong> (zdjęcie aktu notarialnego, postanowienia sądu o spadku itp.). Pozostałe dokumenty i zdjęcia są opcjonalne, ale przyspieszają wycenę.
             </p>
           )}
         </section>
