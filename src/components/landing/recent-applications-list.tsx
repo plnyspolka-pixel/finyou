@@ -1,23 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight, ChevronRight } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, ChevronRight, Home, Building2, Trees, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
-import offer01 from "@/assets/landing-offers/offer_01.jpg.asset.json";
-import offer02 from "@/assets/landing-offers/offer_02.jpg.asset.json";
-import offer03 from "@/assets/landing-offers/offer_03.jpg.asset.json";
-import offer04 from "@/assets/landing-offers/offer_04.jpg.asset.json";
-import offer05 from "@/assets/landing-offers/offer_05.jpg.asset.json";
-import offer06 from "@/assets/landing-offers/offer_06.jpg.asset.json";
-import offer07 from "@/assets/landing-offers/offer_07.jpg.asset.json";
-import offer08 from "@/assets/landing-offers/offer_08.jpg.asset.json";
-import offer09 from "@/assets/landing-offers/offer_09.jpg.asset.json";
-import offer10 from "@/assets/landing-offers/offer_10.jpg.asset.json";
-import offer11 from "@/assets/landing-offers/offer_11.jpg.asset.json";
+// Bez zdjęć — na landingu nie pokazujemy żadnych materiałów klientów (KW, dokumenty, fotki nieruchomości).
+const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> = {
+  apartment: { Icon: Building2, gradient: "from-sky-500/15 via-sky-500/5 to-transparent" },
+  house: { Icon: Home, gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent" },
+  plot_building: { Icon: Trees, gradient: "from-amber-500/15 via-amber-500/5 to-transparent" },
+  commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
+};
 
-const OFFER_PHOTOS = [offer01, offer02, offer03, offer04, offer05, offer06, offer07, offer08, offer09, offer10, offer11].map((a) => a.url);
 
 // ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
 type ScheduleRow = { n: number | "balon"; payment: number; interest: number; principal: number; balance: number };
@@ -83,9 +78,9 @@ export type RecentLoanApplicationItem = {
   loan_amount: number;
   preferred_period_months: number;
   annual_investor_rate: number;
-  photo_url: string;
   figures: OfferFigures;
 };
+
 
 const FIRST_NAMES = [
   "Filip", "Andrzej", "Małgorzata", "Katarzyna", "Piotr", "Tomasz", "Anna",
@@ -123,7 +118,6 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
-  const usedPhotos = new Set<number>();
   for (let i = 0; i < count; i++) {
     // Mniejsze kwoty: 30k – 250k, krok 5k
     const amount = Math.round((30_000 + rand() * 220_000) / 5_000) * 5_000;
@@ -135,12 +129,6 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       : Math.round((18 + rand() * 8) * 2) / 2;  // 18% – 26% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
     const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
-    let photoIdx = Math.floor(rand() * OFFER_PHOTOS.length);
-    let guard = 0;
-    while (usedPhotos.has(photoIdx) && guard++ < OFFER_PHOTOS.length) {
-      photoIdx = (photoIdx + 1) % OFFER_PHOTOS.length;
-    }
-    usedPhotos.add(photoIdx);
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
@@ -150,12 +138,12 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       loan_amount: amount,
       preferred_period_months: period,
       annual_investor_rate: rate,
-      photo_url: OFFER_PHOTOS[photoIdx],
       figures,
     });
   }
   return items;
 }
+
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -198,17 +186,21 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                   key={it.id}
                   className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                 >
-                  <div className="relative h-40 w-full overflow-hidden bg-secondary">
-                    <img
-                      src={it.photo_url}
-                      alt={`${PROPERTY_TYPE_LABELS[it.property_type]} — ${it.city}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-                      <MapPin className="h-3 w-3" /> {it.city}
-                    </div>
-                  </div>
+                  {(() => {
+                    const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
+                    const Icon = v.Icon;
+                    return (
+                      <div className={`relative flex h-24 w-full items-center justify-between overflow-hidden bg-gradient-to-br ${v.gradient} px-4`}>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Icon className="h-5 w-5 text-accent" />
+                          {PROPERTY_TYPE_LABELS[it.property_type]}
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                          <MapPin className="h-3 w-3" /> {it.city}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex flex-1 flex-col p-4">
                     <div className="flex items-center justify-between gap-2">
@@ -219,8 +211,9 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       <span className="text-xs text-muted-foreground">{timeAgo(it.created_at)}</span>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {PROPERTY_TYPE_LABELS[it.property_type]}
+                      Wniosek złożony po przejściu kalkulatora
                     </div>
+
 
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div>
