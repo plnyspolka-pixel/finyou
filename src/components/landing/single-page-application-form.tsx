@@ -190,6 +190,7 @@ export function SinglePageApplicationForm() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState<StepId>(1);
+  const [step2Sub, setStep2Sub] = useState<"type" | "kw" | "docs">("type");
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(36);
