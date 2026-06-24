@@ -405,8 +405,7 @@ export function SinglePageApplicationForm() {
             <li key={s.id}>
               <button
                 type="button"
-                onClick={() => (s.id < step ? setStep(s.id as StepId) : undefined)}
-                disabled={s.id > step}
+                onClick={() => setStep(s.id as StepId)}
                 className={[
                   "flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition",
                   active
