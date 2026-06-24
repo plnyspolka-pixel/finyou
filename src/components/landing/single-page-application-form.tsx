@@ -193,7 +193,7 @@ export function SinglePageApplicationForm() {
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(24);
   const [maxPayment, setMaxPayment] = useState(0);
-  const [annualRate, setAnnualRate] = useState(18);
+  const [annualRate, setAnnualRate] = useState(30);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
