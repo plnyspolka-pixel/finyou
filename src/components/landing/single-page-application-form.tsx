@@ -203,11 +203,11 @@ export function SinglePageApplicationForm() {
   const rateTouchedRef = useRef(false);
 
   // Max okres spłaty maleje wraz z kwotą:
-  // ≤ 200 000 zł → 72 mies., powyżej liniowo z 36 mies. (>200k) do 12 mies. (1 000 000 zł)
+  // ≤ 400 000 zł → 72 mies., powyżej liniowo z 72 mies. (>400k) do 12 mies. (1 000 000 zł)
   const maxMonths = useMemo(() => {
-    if (amount <= 200_000) return 72;
-    const t = Math.min(1, Math.max(0, (amount - 200_000) / (1_000_000 - 200_000)));
-    return Math.round(36 - t * (36 - 12));
+    if (amount <= 400_000) return 72;
+    const t = Math.min(1, Math.max(0, (amount - 400_000) / (1_000_000 - 400_000)));
+    return Math.round(72 - t * (72 - 12));
   }, [amount]);
 
   useEffect(() => {
