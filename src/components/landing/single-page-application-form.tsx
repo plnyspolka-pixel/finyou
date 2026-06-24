@@ -620,60 +620,61 @@ export function SinglePageApplicationForm() {
 
       {/* Step 1 — dane kontaktowe */}
       {step === 1 && (
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2"><Label htmlFor="f-fn">Imię *</Label>
-              <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" /></div>
-            <div className="space-y-2"><Label htmlFor="f-ln">Nazwisko *</Label>
-              <Input id="f-ln" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" /></div>
-            <div className="space-y-2"><Label htmlFor="f-ph">Telefon *</Label>
-              <Input id="f-ph" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" /></div>
-            <div className="space-y-2"><Label htmlFor="f-em">E-mail *</Label>
-              <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" /></div>
-          </div>
+        <FancyShell>
+          <div className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label htmlFor="f-fn" className="text-white">Imię *</Label>
+                <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={FANCY_INPUT_CLASS} /></div>
+              <div className="space-y-2"><Label htmlFor="f-ln" className="text-white">Nazwisko *</Label>
+                <Input id="f-ln" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" className={FANCY_INPUT_CLASS} /></div>
+              <div className="space-y-2"><Label htmlFor="f-ph" className="text-white">Telefon *</Label>
+                <Input id="f-ph" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" className={FANCY_INPUT_CLASS} /></div>
+              <div className="space-y-2"><Label htmlFor="f-em" className="text-white">E-mail *</Label>
+                <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" className={FANCY_INPUT_CLASS} /></div>
+            </div>
 
-          <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
-            <label className="flex items-start gap-3 text-xs leading-relaxed text-foreground">
-              <Checkbox
-                checked={consentPrivacy}
-                onCheckedChange={(v) => setConsentPrivacy(v === true)}
-                className="mt-0.5 h-6 w-6 [&_svg]:size-5"
-              />
-              <span>
-                Akceptuję{" "}
-                <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline underline-offset-2">
-                  politykę prywatności
-                </a>{" "}
-                Finance You. *
-              </span>
-            </label>
-            <label className="flex items-start gap-3 text-xs leading-relaxed text-foreground">
-              <Checkbox
-                checked={consentTerms}
-                onCheckedChange={(v) => setConsentTerms(v === true)}
-                className="mt-0.5 h-6 w-6 [&_svg]:size-5"
-              />
-              <span>
-                Akceptuję{" "}
-                <a href="/regulamin" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline underline-offset-2">
-                  regulamin serwisu
-                </a>
-                . *
-              </span>
-            </label>
-            <label className="flex items-start gap-3 text-xs leading-relaxed text-foreground">
-              <Checkbox
-                checked={consentMarketing}
-                onCheckedChange={(v) => setConsentMarketing(v === true)}
-                className="mt-0.5 h-6 w-6 [&_svg]:size-5"
-              />
-              <span>
-                Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Mogę ją wycofać w każdej chwili. *
-              </span>
-
-            </label>
+            <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                <Checkbox
+                  checked={consentPrivacy}
+                  onCheckedChange={(v) => setConsentPrivacy(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Akceptuję{" "}
+                  <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">
+                    politykę prywatności
+                  </a>{" "}
+                  Finance You. *
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                <Checkbox
+                  checked={consentTerms}
+                  onCheckedChange={(v) => setConsentTerms(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Akceptuję{" "}
+                  <a href="/regulamin" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">
+                    regulamin serwisu
+                  </a>
+                  . *
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                <Checkbox
+                  checked={consentMarketing}
+                  onCheckedChange={(v) => setConsentMarketing(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Mogę ją wycofać w każdej chwili. *
+                </span>
+              </label>
+            </div>
           </div>
-        </section>
+        </FancyShell>
       )}
 
       {/* Step 3 — Twoja oferta (kalkulator) — wspólny komponent z /klient */}
