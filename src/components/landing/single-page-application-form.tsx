@@ -574,6 +574,10 @@ export function SinglePageApplicationForm() {
       <style>{`
         @keyframes fy-offer-spin { to { transform: rotate(360deg); } }
         @keyframes fy-offer-shimmer { 0% { transform: translateX(0); } 100% { transform: translateX(450%); } }
+        @keyframes fy-offer-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
+        @keyframes fy-offer-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
+        @keyframes fy-offer-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
+        @keyframes fy-offer-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
       `}</style>
 
 
