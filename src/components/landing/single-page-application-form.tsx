@@ -971,13 +971,15 @@ export function SinglePageApplicationForm() {
                 {(() => {
                   const hint = PROPERTY_DOCS_BY_SECURITY[secType];
                   if (!hint) return null;
+                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw/i.test(d));
+                  if (remaining.length === 0) return null;
                   return (
                     <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
                       <p className="text-xs font-bold uppercase tracking-wider text-accent">
-                        Co przygotować — {hint.title}
+                        Co jeszcze przygotować — {hint.title}
                       </p>
                       <ul className="mt-2 space-y-1.5">
-                        {hint.docs.map((d) => (
+                        {remaining.map((d) => (
                           <li key={d} className="flex items-start gap-2 text-sm text-foreground">
                             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                             <span>{d}</span>
