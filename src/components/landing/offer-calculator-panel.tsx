@@ -44,16 +44,28 @@ export function OfferCalculatorPanel({
   const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
   const grossPrincipal = amount + financeYouFee;
 
+  // Reguły kosztu:
+  // - okres ≤ 36 mies. → min. wynagrodzenie inwestora 24% rocznie, ale klient może płacić tylko odsetki (rata balonowa dopuszczalna)
+  // - okres > 36 mies. → wynagrodzenie inwestora może być niższe (od 15%), ale klient musi płacić pełną ratę kapitałowo-odsetkową
+  const minAnnualRate = months <= 36 ? 24 : 15;
+  const allowBalloon = months <= 36;
+
+  useEffect(() => {
+    if (annualRate < minAnnualRate) setAnnualRate(minAnnualRate);
+  }, [minAnnualRate, annualRate, setAnnualRate]);
+
   const r = annualRate / 100 / 12;
   const nominalFig = computeLoanFigures({ amount: grossPrincipal, annualRatePercent: annualRate, months });
   const monthlyInterestOnlyExact = grossPrincipal * r;
-  const minCap = Math.max(1, Math.round(monthlyInterestOnlyExact));
+  const minCap = allowBalloon ? Math.max(1, Math.round(monthlyInterestOnlyExact)) : Math.round(nominalFig.nominal);
   const maxCap = Math.max(minCap, Math.round(nominalFig.nominal));
   const sliderTouched = maxPayment > 0;
-  const chosenPayment = sliderTouched
-    ? Math.min(Math.max(maxPayment, minCap), maxCap)
-    : minCap;
-  const paymentExact = sliderTouched ? chosenPayment : monthlyInterestOnlyExact;
+  const chosenPayment = allowBalloon
+    ? (sliderTouched ? Math.min(Math.max(maxPayment, minCap), maxCap) : minCap)
+    : maxCap;
+  const paymentExact = allowBalloon
+    ? (sliderTouched ? chosenPayment : monthlyInterestOnlyExact)
+    : nominalFig.nominal;
   const effectiveMax = chosenPayment;
 
   const schedule: Array<{ n: number | "balon"; payment: number; interest: number; principal: number; balance: number }> = [];
