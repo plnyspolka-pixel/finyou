@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+import { useEffect, type MutableRefObject } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
