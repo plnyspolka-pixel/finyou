@@ -541,9 +541,14 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 3 — zabezpieczenie + nieruchomość */}
-      {step === 3 && (
+      {/* Step 2 — wniosek (zabezpieczenie + nieruchomość) */}
+      {step === 2 && (
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Wniosek — zabezpieczenie i nieruchomość</h2>
+          </div>
+
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
             <h2 className="mt-1 text-lg font-bold text-foreground">Zabezpieczenie i nieruchomość</h2>
