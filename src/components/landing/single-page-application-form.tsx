@@ -631,9 +631,14 @@ export function SinglePageApplicationForm() {
 
           {!step4Valid && (
             <p className="text-xs text-muted-foreground">
-              Aby wysłać wniosek: podaj <strong>numer księgi wieczystej</strong> nieruchomości lub dołącz <strong>akt własności</strong> (zdjęcie aktu notarialnego, postanowienia sądu o spadku itp.). Pozostałe dokumenty i zdjęcia są opcjonalne, ale przyspieszają wycenę.
+              Aby wysłać wniosek: podaj <strong>numer księgi wieczystej</strong> lub dołącz <strong>akt własności</strong>
+              {requiredBuckets.length > 0 && (
+                <> oraz wgraj wymagane dokumenty oznaczone gwiazdką (<strong>{requiredBuckets.map((b) => b.label).join(", ")}</strong>)</>
+              )}
+              . Pozostałe dokumenty i zdjęcia są opcjonalne, ale przyspieszają wycenę.
             </p>
           )}
+
         </section>
       )}
 
