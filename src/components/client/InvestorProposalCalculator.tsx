@@ -95,52 +95,6 @@ export function InvestorProposalCalculator() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [amount, months, annualRate, maxPayment, loan?.id, locked]);
 
-  // Prowizja Finance You — skalowana od 10% do 4% liniowo (20k → 1M), kredytowana.
-  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-  const FINANCEYOU_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
-  const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
-  const grossPrincipal = amount + financeYouFee;
-
-  const r = annualRate / 100 / 12;
-  const nominalFig = computeLoanFigures({ amount: grossPrincipal, annualRatePercent: annualRate, months });
-  const monthlyInterestOnlyExact = grossPrincipal * r;
-  const minCap = Math.max(1, Math.round(monthlyInterestOnlyExact));
-  const maxCap = Math.max(minCap, Math.round(nominalFig.nominal));
-  const sliderTouched = maxPayment > 0;
-  const chosenPayment = sliderTouched
-    ? Math.min(Math.max(maxPayment, minCap), maxCap)
-    : minCap;
-  const paymentExact = sliderTouched ? chosenPayment : monthlyInterestOnlyExact;
-  const effectiveMax = chosenPayment;
-
-  const schedule = useMemo(() => {
-    const rows: Array<{ n: number | "balon"; payment: number; interest: number; principal: number; balance: number }> = [];
-    let totalPaid = 0;
-    let totalInterest = 0;
-    let balance = grossPrincipal;
-    for (let n = 1; n <= months; n++) {
-      const interest = balance * r;
-      const principalPart = Math.max(0, Math.min(paymentExact - interest, balance));
-      const payment = interest + principalPart;
-      balance = Math.max(0, balance - principalPart);
-      totalPaid += payment;
-      totalInterest += interest;
-      rows.push({ n, payment, interest, principal: principalPart, balance });
-    }
-    if (balance > 0.5) {
-      totalPaid += balance;
-      rows.push({ n: "balon", payment: balance, interest: 0, principal: balance, balance: 0 });
-    }
-    const balloonAmount = rows[rows.length - 1]?.n === "balon" ? rows[rows.length - 1].principal : 0;
-    return { rows, totalPaid, totalInterest, balloonAmount };
-  }, [grossPrincipal, months, r, paymentExact]);
-
-  const fig = {
-    monthly: chosenPayment,
-    balloon: schedule.balloonAmount,
-    total: schedule.totalPaid,
-    investorCompensation: schedule.totalInterest,
-  };
 
   const hasDesc = investorDesc.trim().length >= 20;
 
