@@ -353,7 +353,7 @@ export function SinglePageApplicationForm() {
     [requiredBuckets, photos],
   );
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
-  const step4Valid = kwOrDeedOk && missingRequiredBuckets.length === 0;
+  const step4Valid = kwOrDeedOk;
 
   // Allow external CTAs (e.g. hero button) to request opening "Twoja oferta" with same gating
   useEffect(() => {
