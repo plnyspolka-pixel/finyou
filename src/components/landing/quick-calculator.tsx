@@ -96,21 +96,19 @@ export function QuickCalculator() {
         </div>
 
         <div className="relative mt-8">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -inset-1 rounded-2xl bg-primary opacity-50 blur-lg animate-pulse"
-          />
           <Button
             type="button"
-            size="lg"
+            variant="cta"
+            size="cta"
             disabled={!canSubmit}
             onClick={goNext}
-            className="relative h-16 w-full rounded-xl bg-primary text-base font-extrabold uppercase tracking-wide text-primary-foreground shadow-2xl shadow-primary/40 ring-2 ring-primary/40 ring-offset-2 ring-offset-card hover:bg-primary/90 hover:scale-[1.02] transition-all disabled:opacity-50 md:text-lg"
+            className="w-full"
           >
             Dalej
-            <ArrowRight className="ml-2 h-6 w-6 animate-[bounce_1.2s_infinite]" />
+            <ArrowRight className="ml-2 h-6 w-6" />
           </Button>
         </div>
+
 
         <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-accent" />
