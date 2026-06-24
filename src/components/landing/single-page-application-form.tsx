@@ -822,11 +822,12 @@ export function SinglePageApplicationForm() {
             <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
           </Button>
         )}
-        {step < 3 ? (
+        {step === 1 && (
           <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
-        ) : (
+        )}
+        {step === 2 && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
@@ -835,8 +836,17 @@ export function SinglePageApplicationForm() {
             )}
           </Button>
         )}
+        {step === 3 && (
+          <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
+            {submitting ? (
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+            ) : (
+              <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek z ofertą</>
+            )}
+          </Button>
+        )}
       </div>
-      {step === 3 && (
+      {(step === 2 || step === 3) && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
