@@ -591,10 +591,6 @@ export function SinglePageApplicationForm() {
       {/* Step 1 — dane kontaktowe */}
       {step === 1 && (
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5 md:p-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 1 z 3</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Jak się z Tobą skontaktować?</h2>
-          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2"><Label htmlFor="f-fn">Imię *</Label>
               <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" /></div>
