@@ -147,14 +147,19 @@ function readAsDataUrl(file: File): Promise<string> {
 
 function PhotoBucket({
   label,
+  hint,
   bucket,
   photos,
   onAdd,
   onRemove,
 }: {
   label: string;
+  hint?: string;
   bucket: string;
   photos: PhotoItem[];
+  onAdd: (files: FileList | null, bucket: string) => void;
+  onRemove: (id: string) => void;
+}) {
   onAdd: (files: FileList | null, bucket: string) => void;
   onRemove: (id: string) => void;
 }) {
