@@ -43,7 +43,7 @@ function OperatorIndex() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Pulpit operatora</h1>
+        <h1 className="text-2xl font-bold">Pulpit pośrednika</h1>
         <p className="text-sm text-muted-foreground">Szybki podgląd leadów, kontaktów i generowanie dokumentów.</p>
       </div>
 
