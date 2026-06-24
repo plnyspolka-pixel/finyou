@@ -593,10 +593,18 @@ export function SinglePageApplicationForm() {
 
           <div className="grid gap-3 md:grid-cols-2">
             {photoBuckets.map((b) => (
-              <PhotoBucket key={b.kind} label={b.label} hint={b.hint} bucket={b.kind}
-                photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
+              <PhotoBucket
+                key={b.kind}
+                label={b.optional ? b.label : `${b.label} *`}
+                hint={b.hint}
+                bucket={b.kind}
+                photos={photos}
+                onAdd={addPhotos}
+                onRemove={removePhoto}
+              />
             ))}
           </div>
+
 
           {BUILDING_TYPES.includes(secType) && (
             <div className="space-y-2">
