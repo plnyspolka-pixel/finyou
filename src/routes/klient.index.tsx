@@ -77,9 +77,11 @@ function KlientDashboard() {
   const [thumbUrls, setThumbUrls] = useState<string[]>([]);
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
+  const [kwTouched, setKwTouched] = useState(false);
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
+    setKwTouched(false);
   }, [propertyRow?.id]);
 
   useEffect(() => {
@@ -94,18 +96,65 @@ function KlientDashboard() {
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);
 
+  // Walidacja numeru KW: 4 znaki kodu sądu / 8 cyfr / 1 cyfra kontrolna
+  // np. WA1M/00123456/7
+  const validateKw = (raw: string): { ok: boolean; error: string | null; hint: string | null } => {
+    const value = raw.trim().toUpperCase();
+    if (!value) return { ok: false, error: "Wpisz numer księgi wieczystej.", hint: null };
+
+    const parts = value.split("/");
+    if (parts.length !== 3) {
+      return {
+        ok: false,
+        error: "Numer KW musi mieć trzy części oddzielone ukośnikami „/”.",
+        hint: "Przykład: WA1M/00123456/7",
+      };
+    }
+    const [court, digits, control] = parts;
+
+    if (court.length !== 4) {
+      return { ok: false, error: `Kod sądu musi mieć dokładnie 4 znaki (wpisano ${court.length}).`, hint: "np. WA1M" };
+    }
+    if (!/^[A-Z0-9]{4}$/.test(court)) {
+      return { ok: false, error: "Kod sądu może zawierać tylko litery i cyfry (bez polskich znaków).", hint: "np. WA1M, GD1G, KR2K" };
+    }
+    if (digits.length !== 8) {
+      return { ok: false, error: `Numer księgi musi mieć dokładnie 8 cyfr (wpisano ${digits.length}).`, hint: "Uzupełnij zerami z przodu, np. 00123456" };
+    }
+    if (!/^\d{8}$/.test(digits)) {
+      return { ok: false, error: "Numer księgi może zawierać tylko cyfry (0–9).", hint: null };
+    }
+    if (control.length !== 1) {
+      return { ok: false, error: "Cyfra kontrolna musi być dokładnie jedna.", hint: "Ostatnia cyfra z odpisu KW (0–9)." };
+    }
+    if (!/^\d$/.test(control)) {
+      return { ok: false, error: "Cyfra kontrolna musi być cyfrą (0–9).", hint: null };
+    }
+    return { ok: true, error: null, hint: null };
+  };
+
+  const kwValidation = validateKw(kw);
+  const showKwError = kwTouched && !kwValidation.ok && kw.trim().length > 0;
+
   const saveKw = async () => {
     if (!propertyRow?.id) return;
+    setKwTouched(true);
+    if (!kwValidation.ok) {
+      toast.error(kwValidation.error ?? "Nieprawidłowy numer KW");
+      return;
+    }
     setSavingKw(true);
     try {
+      const normalized = kw.trim().toUpperCase();
       const { error } = await supabase.from("properties")
-        .update({ land_register_number: kw.trim() || null })
+        .update({ land_register_number: normalized })
         .eq("id", propertyRow.id);
       if (error) throw error;
-      toast.success("Numer KW zapisany");
+      setKw(normalized);
+      toast.success("Numer KW zapisany poprawnie");
       void refetchProperty();
     } catch (e: any) {
-      toast.error(e?.message ?? "Nie udało się zapisać");
+      toast.error(e?.message ?? "Nie udało się zapisać numeru KW");
     } finally {
       setSavingKw(false);
     }
@@ -211,25 +260,50 @@ function KlientDashboard() {
                 <Input
                   id="kw"
                   value={kw}
-                  onChange={(e) => setKw(e.target.value)}
+                  onChange={(e) => setKw(e.target.value.toUpperCase())}
+                  onBlur={() => setKwTouched(true)}
                   placeholder="np. WA1M/00123456/7"
-                  className="h-14 rounded-2xl border-2 border-accent/30 bg-background/80 pl-12 pr-4 text-lg font-bold tracking-wider tabular-nums shadow-inner focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                  aria-invalid={showKwError || undefined}
+                  aria-describedby="kw-help"
+                  className={`h-14 rounded-2xl border-2 bg-background/80 pl-12 pr-12 text-lg font-bold tracking-wider tabular-nums shadow-inner focus-visible:ring-2 ${
+                    showKwError
+                      ? "border-destructive/60 focus-visible:border-destructive focus-visible:ring-destructive/40"
+                      : "border-accent/30 focus-visible:border-accent focus-visible:ring-accent/40"
+                  }`}
                 />
-                <BookText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-accent" />
-                {kw.trim().length >= 14 && (
+                <BookText className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${showKwError ? "text-destructive" : "text-accent"}`} />
+                {kwValidation.ok && (
                   <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-accent text-accent-foreground shadow">
                     <Check className="h-4 w-4" strokeWidth={3} />
                   </span>
                 )}
+                {showKwError && (
+                  <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-destructive text-destructive-foreground shadow">
+                    <span className="text-sm font-black leading-none">!</span>
+                  </span>
+                )}
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold">WA1M/00123456/7</span>).
-              </p>
+
+              {showKwError ? (
+                <div
+                  id="kw-help"
+                  role="alert"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                >
+                  <p className="font-semibold">{kwValidation.error}</p>
+                  {kwValidation.hint && <p className="mt-0.5 text-destructive/80">{kwValidation.hint}</p>}
+                </div>
+              ) : (
+                <p id="kw-help" className="text-[11px] text-muted-foreground">
+                  Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold">WA1M/00123456/7</span>).
+                </p>
+              )}
+
               <Button
                 size="lg"
                 onClick={() => void saveKw()}
-                disabled={savingKw || !propertyRow?.id}
-                className="w-full rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-base font-bold text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.6)] hover:from-accent hover:to-accent hover:shadow-[0_14px_40px_-10px_hsl(var(--accent)/0.7)]"
+                disabled={savingKw || !propertyRow?.id || !kwValidation.ok}
+                className="w-full rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-base font-bold text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.6)] hover:from-accent hover:to-accent hover:shadow-[0_14px_40px_-10px_hsl(var(--accent)/0.7)] disabled:opacity-60"
               >
                 <Save className="mr-2 h-5 w-5" />
                 {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
