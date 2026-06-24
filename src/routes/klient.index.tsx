@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
