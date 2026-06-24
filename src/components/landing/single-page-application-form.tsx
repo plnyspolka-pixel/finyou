@@ -716,13 +716,55 @@ export function SinglePageApplicationForm() {
             {/* Sub-step B: numer KW / akt własności */}
             {step2Sub === "kw" && (
               <div className="space-y-4">
+                <div className="relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)]">
+                  <span
+                    aria-hidden
+                    className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
+                    style={{
+                      background:
+                        "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
+                      animation: "fy-kw-spin 6s linear infinite",
+                    }}
+                  />
+                  <div className="relative overflow-hidden rounded-[22px] p-5 text-white md:p-6">
+                    <span aria-hidden className="absolute inset-0" style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }} />
+                    <span aria-hidden className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)", animation: "fy-kw-drift-a 9s ease-in-out infinite alternate" }} />
+                    <span aria-hidden className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)", animation: "fy-kw-drift-b 11s ease-in-out infinite alternate" }} />
+                    <span aria-hidden className="absolute -bottom-10 left-1/3 h-36 w-36 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, oklch(0.50 0.22 285 / 0.6), transparent 70%)", animation: "fy-kw-drift-c 13s ease-in-out infinite alternate" }} />
+                    <span aria-hidden className="absolute inset-0 opacity-25 mix-blend-overlay" style={{ backgroundImage: "linear-gradient(115deg, transparent 0 48%, oklch(0.95 0.05 240 / 0.35) 48% 49%, transparent 49% 62%, oklch(0.95 0.05 240 / 0.25) 62% 62.5%, transparent 62.5%)", backgroundSize: "180% 100%", animation: "fy-kw-lines 7s linear infinite" }} />
 
+                    <div className="relative space-y-3">
+                      <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                        <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                          <FileText className="h-5 w-5" strokeWidth={2.5} />
+                        </span>
+                        <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
+                          Numer księgi wieczystej
+                        </Label>
+                      </div>
+                      <Input
+                        id="f-kw"
+                        value={kwNumber}
+                        onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                        placeholder="np. WA1M/00123456/7"
+                        className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                      />
+                      <p className="text-xs text-white/75">
+                        Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
+                      </p>
+                    </div>
+                  </div>
+                  <style>{`
+                    @keyframes fy-kw-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+                    @keyframes fy-kw-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
+                    @keyframes fy-kw-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
+                    @keyframes fy-kw-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
+                    @keyframes fy-kw-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
+                  `}</style>
+                </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
-                  <Input id="f-kw" value={kwNumber} onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-                    placeholder="np. WA1M/00123456/7" className="font-mono text-lg tracking-wider" />
-                  <p className="text-xs text-muted-foreground">Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.</p>
+
 
                   {extraKwNumbers.map((val, idx) => (
                     <div key={idx} className="flex gap-2 pt-1">
