@@ -260,25 +260,50 @@ function KlientDashboard() {
                 <Input
                   id="kw"
                   value={kw}
-                  onChange={(e) => setKw(e.target.value)}
+                  onChange={(e) => setKw(e.target.value.toUpperCase())}
+                  onBlur={() => setKwTouched(true)}
                   placeholder="np. WA1M/00123456/7"
-                  className="h-14 rounded-2xl border-2 border-accent/30 bg-background/80 pl-12 pr-4 text-lg font-bold tracking-wider tabular-nums shadow-inner focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                  aria-invalid={showKwError || undefined}
+                  aria-describedby="kw-help"
+                  className={`h-14 rounded-2xl border-2 bg-background/80 pl-12 pr-12 text-lg font-bold tracking-wider tabular-nums shadow-inner focus-visible:ring-2 ${
+                    showKwError
+                      ? "border-destructive/60 focus-visible:border-destructive focus-visible:ring-destructive/40"
+                      : "border-accent/30 focus-visible:border-accent focus-visible:ring-accent/40"
+                  }`}
                 />
-                <BookText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-accent" />
-                {kw.trim().length >= 14 && (
+                <BookText className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${showKwError ? "text-destructive" : "text-accent"}`} />
+                {kwValidation.ok && (
                   <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-accent text-accent-foreground shadow">
                     <Check className="h-4 w-4" strokeWidth={3} />
                   </span>
                 )}
+                {showKwError && (
+                  <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-destructive text-destructive-foreground shadow">
+                    <span className="text-sm font-black leading-none">!</span>
+                  </span>
+                )}
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold">WA1M/00123456/7</span>).
-              </p>
+
+              {showKwError ? (
+                <div
+                  id="kw-help"
+                  role="alert"
+                  className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                >
+                  <p className="font-semibold">{kwValidation.error}</p>
+                  {kwValidation.hint && <p className="mt-0.5 text-destructive/80">{kwValidation.hint}</p>}
+                </div>
+              ) : (
+                <p id="kw-help" className="text-[11px] text-muted-foreground">
+                  Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold">WA1M/00123456/7</span>).
+                </p>
+              )}
+
               <Button
                 size="lg"
                 onClick={() => void saveKw()}
-                disabled={savingKw || !propertyRow?.id}
-                className="w-full rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-base font-bold text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.6)] hover:from-accent hover:to-accent hover:shadow-[0_14px_40px_-10px_hsl(var(--accent)/0.7)]"
+                disabled={savingKw || !propertyRow?.id || !kwValidation.ok}
+                className="w-full rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-base font-bold text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.6)] hover:from-accent hover:to-accent hover:shadow-[0_14px_40px_-10px_hsl(var(--accent)/0.7)] disabled:opacity-60"
               >
                 <Save className="mr-2 h-5 w-5" />
                 {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
