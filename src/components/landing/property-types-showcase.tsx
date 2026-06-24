@@ -67,24 +67,33 @@ const TYPES: PropType[] = [
   },
 ];
 
-export function PropertyTypesShowcase() {
+export function PropertyTypesShowcase({
+  onSelect,
+  selectedKey,
+}: {
+  onSelect?: (key: string) => void;
+  selectedKey?: string | null;
+} = {}) {
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const selectMode = typeof onSelect === "function";
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {TYPES.map((p, i) => {
-        const isOpen = openKey === p.key;
+        const isOpen = !selectMode && openKey === p.key;
+        const isSelected = selectMode && selectedKey === p.key;
+        const highlight = isOpen || isSelected;
         return (
           <BlurFade key={p.key} delay={0.06 + i * 0.05} inView>
             <div
               className={[
                 "group relative overflow-hidden rounded-2xl p-[1.5px] transition-all duration-300",
-                isOpen
+                highlight
                   ? "shadow-[0_18px_55px_-15px_oklch(0.40_0.25_268/0.55)]"
                   : "shadow-[0_10px_30px_-15px_oklch(0.20_0.08_265/0.45)] hover:-translate-y-0.5 hover:shadow-[0_18px_55px_-15px_oklch(0.40_0.25_268/0.55)]",
               ].join(" ")}
               style={{
-                background: isOpen
+                background: highlight
                   ? "conic-gradient(from 140deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))"
                   : "linear-gradient(135deg, oklch(0.40 0.25 268 / 0.55), oklch(0.65 0.18 240 / 0.35), oklch(0.30 0.15 265 / 0.55))",
               }}
@@ -92,8 +101,15 @@ export function PropertyTypesShowcase() {
               <div className="relative overflow-hidden rounded-[14px] bg-card">
                 <button
                   type="button"
-                  onClick={() => setOpenKey(isOpen ? null : p.key)}
+                  onClick={() => {
+                    if (selectMode) {
+                      onSelect!(p.key);
+                    } else {
+                      setOpenKey(isOpen ? null : p.key);
+                    }
+                  }}
                   aria-expanded={isOpen}
+                  aria-pressed={isSelected}
                   className="relative block w-full text-left"
                 >
                   <div className="relative h-44 w-full overflow-hidden">
@@ -105,7 +121,6 @@ export function PropertyTypesShowcase() {
                       height={800}
                       className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110"
                     />
-                    {/* Brandowy gradient: granat → indygo → błękit */}
                     <div
                       aria-hidden
                       className="absolute inset-0"
@@ -114,7 +129,6 @@ export function PropertyTypesShowcase() {
                           "linear-gradient(180deg, oklch(0.13 0.04 265 / 0.15) 0%, oklch(0.18 0.06 265 / 0.55) 55%, oklch(0.13 0.04 265 / 0.95) 100%)",
                       }}
                     />
-                    {/* Akcent — bloby w kolorach logo */}
                     <div
                       aria-hidden
                       className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-2xl opacity-70 transition group-hover:opacity-90"
@@ -139,55 +153,59 @@ export function PropertyTypesShowcase() {
                       <span
                         className={[
                           "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-1 backdrop-blur transition",
-                          isOpen
+                          highlight
                             ? "bg-white/25 ring-white/40"
                             : "bg-white/12 ring-white/25 group-hover:bg-white/20",
                         ].join(" ")}
                       >
-                        Dokumenty
-                        <ChevronDown
-                          className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`}
-                        />
+                        {selectMode ? (isSelected ? "Wybrane" : "Wybierz") : "Dokumenty"}
+                        {!selectMode && (
+                          <ChevronDown
+                            className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`}
+                          />
+                        )}
                       </span>
                     </div>
                   </div>
                 </button>
 
-                <div
-                  className={`grid transition-all duration-300 ease-out ${
-                    isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <div
-                      className="relative border-t border-white/10 p-5 text-white"
-                      style={{
-                        background:
-                          "linear-gradient(160deg, oklch(0.20 0.08 265) 0%, oklch(0.15 0.05 265) 100%)",
-                      }}
-                    >
-                      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Co przygotować
-                      </p>
-                      <ul className="mt-3 space-y-2">
-                        {p.docs.map((d) => (
-                          <li
-                            key={d}
-                            className="flex items-start gap-2 text-sm text-white/90"
-                          >
-                            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[oklch(0.78_0.14_235)]" />
-                            <span>{d}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="mt-3 text-xs text-white/55">
-                        Każdą sprawę analizujemy indywidualnie — listę dopasujemy do
-                        Twojej nieruchomości.
-                      </p>
+                {!selectMode && (
+                  <div
+                    className={`grid transition-all duration-300 ease-out ${
+                      isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div
+                        className="relative border-t border-white/10 p-5 text-white"
+                        style={{
+                          background:
+                            "linear-gradient(160deg, oklch(0.20 0.08 265) 0%, oklch(0.15 0.05 265) 100%)",
+                        }}
+                      >
+                        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Co przygotować
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {p.docs.map((d) => (
+                            <li
+                              key={d}
+                              className="flex items-start gap-2 text-sm text-white/90"
+                            >
+                              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[oklch(0.78_0.14_235)]" />
+                              <span>{d}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-3 text-xs text-white/55">
+                          Każdą sprawę analizujemy indywidualnie — listę dopasujemy do
+                          Twojej nieruchomości.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </BlurFade>
@@ -196,3 +214,12 @@ export function PropertyTypesShowcase() {
     </div>
   );
 }
+
+export const PROPERTY_SHOWCASE_KEY_TO_SECURITY: Record<string, string> = {
+  mieszkanie: "mieszkanie",
+  dom: "dom",
+  lokal: "lokal_uslugowy",
+  rolna: "grunt_rolny",
+  budowlana: "dzialka_budowlana",
+};
+
