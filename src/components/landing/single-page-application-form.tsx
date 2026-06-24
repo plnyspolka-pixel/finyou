@@ -1012,7 +1012,7 @@ export function SinglePageApplicationForm() {
               {submitting ? (
                 <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
               ) : (
-                <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
+                <><Send className="mr-2 h-5 w-5" /> Przejdź do oferty</>
               )}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setStep(3)} disabled={submitting || !step4Valid} title={!step4Valid ? "Uzupełnij dokumenty i numer KW" : undefined} className="hidden md:inline-flex">
