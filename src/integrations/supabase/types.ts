@@ -4055,6 +4055,84 @@ export type Database = {
           },
         ]
       }
+      loan_proposals: {
+        Row: {
+          amount: number
+          annual_rate: number
+          balloon: number
+          capped_rata: number
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          commission_pct: number
+          commission_pln: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_public: boolean
+          max_payment: number
+          months: number
+          nominal_rata: number
+          note: string | null
+          schedule: Json
+          status: string
+          total_cost: number
+          total_interest: number
+          total_to_repay: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          annual_rate: number
+          balloon?: number
+          capped_rata?: number
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          commission_pct?: number
+          commission_pln?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_public?: boolean
+          max_payment?: number
+          months: number
+          nominal_rata?: number
+          note?: string | null
+          schedule?: Json
+          status?: string
+          total_cost?: number
+          total_interest?: number
+          total_to_repay?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          annual_rate?: number
+          balloon?: number
+          capped_rata?: number
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          commission_pct?: number
+          commission_pln?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_public?: boolean
+          max_payment?: number
+          months?: number
+          nominal_rata?: number
+          note?: string | null
+          schedule?: Json
+          status?: string
+          total_cost?: number
+          total_interest?: number
+          total_to_repay?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       loan_reminder_email_sends: {
         Row: {
           click_count: number
