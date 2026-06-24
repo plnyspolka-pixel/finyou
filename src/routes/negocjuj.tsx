@@ -79,7 +79,9 @@ function NegocjujPage() {
         schedule: calc.schedule,
         is_public: isPublic,
         status: "open",
+        source_application_id: search.app ?? null,
       };
+
       const { data, error } = await supabase
         .from("loan_proposals")
         .insert(payload)
