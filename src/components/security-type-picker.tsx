@@ -27,15 +27,15 @@ export function SecurityTypePicker({
           <button
             key={type}
             type="button"
-            onPointerDown={() => onChange(type)}
-            onClick={(e) => { e.preventDefault(); onChange(type); }}
+            onClick={() => onChange(type)}
             className={cn(
-              "flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center touch-manipulation select-none active:scale-[0.98]",
+              "flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center touch-manipulation select-none",
               active
                 ? "border-primary bg-primary/10 ring-2 ring-primary/30"
                 : "border-border hover:border-primary/60",
             )}
           >
+
             <Icon className={cn("h-8 w-8", active ? "text-primary" : "text-muted-foreground")} />
             <span className="text-sm font-medium">{securityTypeLabels[type]}</span>
           </button>
