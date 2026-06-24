@@ -142,7 +142,7 @@ export function SinglePageApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<StepId>(1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(24);
