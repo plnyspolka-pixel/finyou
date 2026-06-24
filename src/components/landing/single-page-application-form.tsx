@@ -177,8 +177,8 @@ function PhotoBucket({
 
 const STEPS = [
   { id: 1, label: "Kontakt" },
-  { id: 2, label: "Twoja oferta" },
-  { id: 3, label: "Wniosek" },
+  { id: 2, label: "Wniosek" },
+  { id: 3, label: "Twoja oferta" },
 ] as const;
 
 
@@ -275,7 +275,16 @@ export function SinglePageApplicationForm() {
       // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
     }
-    // step 2 (Twoja oferta) → step 3 (Wniosek): brak walidacji, kalkulator zawsze ma wartości
+    if (step === 2) {
+      if (!kwOrDeedOk) {
+        toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+        return;
+      }
+      if (missingRequiredBuckets.length > 0) {
+        toast.error(`Dołącz wymagane dokumenty: ${missingRequiredBuckets.map((b) => b.label).join(", ")}.`);
+        return;
+      }
+    }
 
     setStep((s) => (Math.min(3, s + 1) as StepId));
 
@@ -303,7 +312,8 @@ export function SinglePageApplicationForm() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== 3) { goNext(); return; }
+    if (step === 1) { goNext(); return; }
+    // step 2 i 3 → wysyłka wniosku (kalkulator opcjonalny)
     if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
@@ -484,8 +494,8 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 2 — Twoja oferta (kalkulator) */}
-      {step === 2 && (() => {
+      {/* Step 3 — Twoja oferta (kalkulator) */}
+      {step === 3 && (() => {
         // Prowizja Finance You (zgodnie z regulaminem) — kredytowana do kapitału.
         const FINANCEYOU_FEE_PCT = 4;
         const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
@@ -524,7 +534,7 @@ export function SinglePageApplicationForm() {
         return (
           <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
               <h2 className="mt-1 text-lg font-bold text-foreground">Twoja oferta</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Ustaw kwotę, okres i — jeśli chcesz — maksymalną ratę miesięczną. Resztę dopłacisz na końcu (rata balonowa).
@@ -657,11 +667,11 @@ export function SinglePageApplicationForm() {
         );
       })()}
 
-      {/* Step 3 — wniosek (zabezpieczenie + nieruchomość) */}
-      {step === 3 && (
+      {/* Step 2 — wniosek (zabezpieczenie + nieruchomość) */}
+      {step === 2 && (
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
             <h2 className="mt-1 text-lg font-bold text-foreground">Wniosek — zabezpieczenie i nieruchomość</h2>
           </div>
 
@@ -813,21 +823,36 @@ export function SinglePageApplicationForm() {
             <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
           </Button>
         )}
-        {step < 3 ? (
+        {step === 1 && (
           <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
-        ) : (
+        )}
+        {step === 2 && (
+          <>
+            <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
+              {submitting ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+              ) : (
+                <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek</>
+              )}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setStep(3)} disabled={submitting} className="hidden md:inline-flex">
+              Zobacz ofertę (opcjonalnie) <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </>
+        )}
+        {step === 3 && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
-              <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek</>
+              <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek z ofertą</>
             )}
           </Button>
         )}
       </div>
-      {step === 3 && (
+      {(step === 2 || step === 3) && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
