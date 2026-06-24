@@ -1,34 +1,108 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatPLN, computeLoanFigures } from "@/lib/loan-math";
+import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
-// Loose type kept for backwards compat with the route loader prop
+import offer01 from "@/assets/landing-offers/offer_01.jpg.asset.json";
+import offer02 from "@/assets/landing-offers/offer_02.jpg.asset.json";
+import offer03 from "@/assets/landing-offers/offer_03.jpg.asset.json";
+import offer04 from "@/assets/landing-offers/offer_04.jpg.asset.json";
+import offer05 from "@/assets/landing-offers/offer_05.jpg.asset.json";
+import offer06 from "@/assets/landing-offers/offer_06.jpg.asset.json";
+import offer07 from "@/assets/landing-offers/offer_07.jpg.asset.json";
+import offer08 from "@/assets/landing-offers/offer_08.jpg.asset.json";
+import offer09 from "@/assets/landing-offers/offer_09.jpg.asset.json";
+import offer10 from "@/assets/landing-offers/offer_10.jpg.asset.json";
+import offer11 from "@/assets/landing-offers/offer_11.jpg.asset.json";
+
+const OFFER_PHOTOS = [offer01, offer02, offer03, offer04, offer05, offer06, offer07, offer08, offer09, offer10, offer11].map((a) => a.url);
+
+// ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
+type ScheduleRow = { n: number | "balon"; payment: number; interest: number; principal: number; balance: number };
+type OfferFigures = {
+  feePct: number;
+  fee: number;
+  grossPrincipal: number;
+  monthly: number;
+  balloon: number;
+  total: number;
+  investorCompensation: number;
+  schedule: ScheduleRow[];
+};
+
+function computeOfferFigures(amount: number, months: number, annualRatePercent: number): OfferFigures {
+  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
+  const FY_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
+  const fee = Math.round((amount * FY_FEE_PCT) / 100);
+  const grossPrincipal = amount + fee;
+  const r = annualRatePercent / 100 / 12;
+  const allowBalloon = months <= 36;
+  const nominal = monthlyPayment(grossPrincipal, annualRatePercent, months);
+  const paymentExact = allowBalloon ? grossPrincipal * r : nominal;
+
+  const schedule: ScheduleRow[] = [];
+  let balance = grossPrincipal;
+  let totalPaid = 0;
+  let totalInterest = 0;
+  for (let n = 1; n <= months; n++) {
+    const interest = balance * r;
+    const principalPart = Math.max(0, Math.min(paymentExact - interest, balance));
+    const payment = interest + principalPart;
+    balance = Math.max(0, balance - principalPart);
+    totalPaid += payment;
+    totalInterest += interest;
+    schedule.push({ n, payment, interest, principal: principalPart, balance });
+  }
+  let balloon = 0;
+  if (balance > 0.5) {
+    balloon = balance;
+    totalPaid += balance;
+    schedule.push({ n: "balon", payment: balance, interest: 0, principal: balance, balance: 0 });
+  }
+  return {
+    feePct: FY_FEE_PCT,
+    fee,
+    grossPrincipal,
+    monthly: paymentExact,
+    balloon,
+    total: totalPaid,
+    investorCompensation: totalInterest,
+    schedule,
+  };
+}
+
+// ---- Generator config -----------------------------------------------------
 export type RecentLoanApplicationItem = {
   id: string;
   first_name: string;
   created_at: string;
-  property_type: keyof typeof PROPERTY_TYPE_LABELS | null;
-  city: string | null;
+  property_type: keyof typeof PROPERTY_TYPE_LABELS;
+  city: string;
   loan_amount: number;
   preferred_period_months: number;
   annual_investor_rate: number;
-  investor_profit: number;
-  monthly_payment: number;
+  photo_url: string;
+  figures: OfferFigures;
 };
 
 const FIRST_NAMES = [
   "Filip", "Andrzej", "Małgorzata", "Katarzyna", "Piotr", "Tomasz", "Anna",
   "Marek", "Joanna", "Krzysztof", "Magdalena", "Łukasz", "Ewa", "Paweł",
-  "Agnieszka", "Michał", "Dorota", "Robert", "Beata", "Adam",
+  "Agnieszka", "Michał", "Dorota", "Robert", "Beata", "Adam", "Wojciech",
+  "Iwona", "Sławomir", "Halina", "Janusz",
 ];
 
+// Mniejsze miejscowości — powiatowe i mniejsze
 const CITIES = [
-  "Warszawa", "Kraków", "Wrocław", "Poznań", "Gdańsk", "Łódź", "Szczecin",
-  "Katowice", "Lublin", "Bydgoszcz", "Białystok", "Rzeszów", "Olsztyn",
-  "Toruń", "Kielce", "Częstochowa", "Radom", "Sopot", "Gdynia", "Opole",
+  "Mińsk Mazowiecki", "Sochaczew", "Otwock", "Płońsk", "Kutno", "Konin",
+  "Piła", "Inowrocław", "Słupsk", "Tczew", "Malbork", "Ełk", "Suwałki",
+  "Zamość", "Chełm", "Mielec", "Stalowa Wola", "Nysa", "Brzeg", "Bolesławiec",
+  "Świdnica", "Sanok", "Krosno", "Jasło", "Ciechanów", "Skierniewice",
+  "Łowicz", "Sieradz", "Wieluń", "Bełchatów", "Tomaszów Mazowiecki",
+  "Pabianice", "Grudziądz", "Lębork", "Kościerzyna", "Starogard Gdański",
+  "Ostrów Wielkopolski", "Jarosław", "Przemyśl", "Zgorzelec",
 ];
 
 const PROPERTY_TYPES: (keyof typeof PROPERTY_TYPE_LABELS)[] = [
@@ -46,19 +120,27 @@ function mulberry32(seed: number) {
 
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
-  const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
+  const usedPhotos = new Set<number>();
   for (let i = 0; i < count; i++) {
-    const amount = Math.round((100_000 + rand() * 900_000) / 10_000) * 10_000;
-    const period = [24, 36, 48, 60, 72][Math.floor(rand() * 5)];
-    const rate = Math.round((14 + rand() * 12) * 10) / 10; // 14–26%
-    const figs = computeLoanFigures({
-      amount,
-      annualRatePercent: rate,
-      months: period,
-    });
-    const minutesAgo = Math.floor(rand() * 60 * 22) + 3; // 3 min – 22 h ago
+    // Mniejsze kwoty: 30k – 250k, krok 5k
+    const amount = Math.round((30_000 + rand() * 220_000) / 5_000) * 5_000;
+    // Krótsze okresy → balon i wyższe stopy
+    const period = pick([24, 24, 36, 36, 36, 48, 60]);
+    // Wyższe wynagrodzenie inwestora — zgodnie z regułami kalkulatora
+    const rate = period <= 36
+      ? Math.round((24 + rand() * 8) * 2) / 2   // 24% – 32% step 0.5
+      : Math.round((18 + rand() * 8) * 2) / 2;  // 18% – 26% step 0.5
+    const figures = computeOfferFigures(amount, period, rate);
+    const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
+    let photoIdx = Math.floor(rand() * OFFER_PHOTOS.length);
+    let guard = 0;
+    while (usedPhotos.has(photoIdx) && guard++ < OFFER_PHOTOS.length) {
+      photoIdx = (photoIdx + 1) % OFFER_PHOTOS.length;
+    }
+    usedPhotos.add(photoIdx);
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
@@ -68,8 +150,8 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       loan_amount: amount,
       preferred_period_months: period,
       annual_investor_rate: rate,
-      investor_profit: figs.investorCompensation,
-      monthly_payment: figs.monthly,
+      photo_url: OFFER_PHOTOS[photoIdx],
+      figures,
     });
   }
   return items;
@@ -87,7 +169,6 @@ function timeAgo(iso: string): string {
 }
 
 export function RecentApplicationsList(_props: { initial?: RecentLoanApplicationItem[] } = {}) {
-  // Seed once per page-load on the client to avoid SSR/CSR hydration mismatch.
   const [seed, setSeed] = useState<number | null>(null);
   useEffect(() => {
     setSeed(Math.floor(Math.random() * 1e9));
@@ -109,93 +190,120 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
         </div>
 
         {items.length > 0 && (
-          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-            {items.map((it) => (
-              <li
-                key={it.id}
-                className="flex flex-col rounded-2xl border border-border bg-card p-4 shadow-sm"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 font-semibold text-foreground">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    {it.first_name}
-                  </div>
-                  <span className="text-xs text-muted-foreground">{timeAgo(it.created_at)}</span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>
-                    {it.property_type ? PROPERTY_TYPE_LABELS[it.property_type] ?? "Nieruchomość" : "Nieruchomość"}
-                  </span>
-                  {it.city && (
-                    <span className="inline-flex items-center gap-1">
+          <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+            {items.map((it) => {
+              const f = it.figures;
+              return (
+                <li
+                  key={it.id}
+                  className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+                >
+                  <div className="relative h-40 w-full overflow-hidden bg-secondary">
+                    <img
+                      src={it.photo_url}
+                      alt={`${PROPERTY_TYPE_LABELS[it.property_type]} — ${it.city}`}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
                       <MapPin className="h-3 w-3" /> {it.city}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Kwota</div>
-                    <div className="tabular-nums font-bold text-foreground">{formatPLN(it.loan_amount)}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Okres</div>
-                    <div className="tabular-nums font-bold text-foreground">{it.preferred_period_months} mies.</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Rata miesięczna</div>
-                    <div className="tabular-nums font-bold text-foreground">{formatPLN(it.monthly_payment)}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Roczna stopa zwrotu</div>
-                    <div className="tabular-nums font-bold text-emerald-600">
-                      {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
                     </div>
                   </div>
-                  <div className="col-span-2">
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Zysk inwestora (całość)</div>
-                    <div className="tabular-nums font-bold text-foreground">{formatPLN(it.investor_profit)}</div>
-                  </div>
-                </div>
 
-                <details className="mt-3">
-                  <summary className="cursor-pointer list-none text-xs font-semibold text-accent hover:underline">
-                    Pokaż harmonogram spłat ({it.preferred_period_months} rat)
-                  </summary>
-                  <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border bg-secondary/40">
-                    <table className="w-full text-xs tabular-nums">
-                      <thead className="sticky top-0 bg-secondary/80 text-muted-foreground">
-                        <tr>
-                          <th className="px-2 py-1 text-left font-medium">Rata</th>
-                          <th className="px-2 py-1 text-right font-medium">Termin</th>
-                          <th className="px-2 py-1 text-right font-medium">Kwota</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Array.from({ length: it.preferred_period_months }).map((_, idx) => {
-                          const d = new Date();
-                          d.setMonth(d.getMonth() + idx + 1);
-                          const label = d.toLocaleDateString("pl-PL", { month: "2-digit", year: "numeric" });
-                          return (
-                            <tr key={idx} className="border-t border-border/60">
-                              <td className="px-2 py-1 text-left">{idx + 1}</td>
-                              <td className="px-2 py-1 text-right text-muted-foreground">{label}</td>
-                              <td className="px-2 py-1 text-right font-semibold">{formatPLN(it.monthly_payment)}</td>
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 font-semibold text-foreground">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                        {it.first_name}
+                      </div>
+                      <span className="text-xs text-muted-foreground">{timeAgo(it.created_at)}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {PROPERTY_TYPE_LABELS[it.property_type]}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Kwota</div>
+                        <div className="tabular-nums font-bold text-foreground">{formatPLN(it.loan_amount)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Okres</div>
+                        <div className="tabular-nums font-bold text-foreground">{it.preferred_period_months} mies.</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Rata miesięczna</div>
+                        <div className="tabular-nums font-bold text-foreground">{formatPLN(f.monthly)}</div>
+                        {f.balloon > 0 && (
+                          <div className="mt-0.5 text-[10px] text-muted-foreground">
+                            + balon {formatPLN(f.balloon)}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Roczna stopa zwrotu</div>
+                        <div className="tabular-nums font-bold text-emerald-600">
+                          {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
+                        </div>
+                      </div>
+                      <div className="col-span-2 rounded-xl bg-secondary/60 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                          Zysk inwestora (całość)
+                        </div>
+                        <div className="tabular-nums text-lg font-extrabold text-foreground">
+                          {formatPLN(f.investorCompensation)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <details className="group mt-3 rounded-xl border border-border bg-secondary/40">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary/70">
+                        <span>Harmonogram spłat ({it.preferred_period_months} rat{f.balloon > 0 ? " + balon" : ""})</span>
+                        <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
+                      </summary>
+                      <div className="max-h-72 overflow-auto border-t border-border">
+                        <table className="w-full text-right text-[11px] tabular-nums">
+                          <thead className="sticky top-0 bg-secondary text-[10px] uppercase tracking-wider text-muted-foreground">
+                            <tr>
+                              <th className="px-2 py-1.5 text-left font-semibold">#</th>
+                              <th className="px-2 py-1.5 font-semibold">Rata</th>
+                              <th className="px-2 py-1.5 font-semibold">Odsetki</th>
+                              <th className="px-2 py-1.5 font-semibold">Kapitał</th>
+                              <th className="px-2 py-1.5 font-semibold">Saldo</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </details>
+                          </thead>
+                          <tbody>
+                            {f.schedule.map((row, idx) => (
+                              <tr
+                                key={idx}
+                                className={`border-t border-border/60 ${row.n === "balon" ? "bg-accent/10 font-semibold" : ""}`}
+                              >
+                                <td className="px-2 py-1 text-left text-foreground">
+                                  {row.n === "balon" ? "Balon" : row.n}
+                                </td>
+                                <td className="px-2 py-1 font-semibold text-foreground">{formatPLN(row.payment)}</td>
+                                <td className="px-2 py-1 text-muted-foreground">{formatPLN(row.interest)}</td>
+                                <td className="px-2 py-1 text-muted-foreground">{formatPLN(row.principal)}</td>
+                                <td className="px-2 py-1 text-foreground">{formatPLN(row.balance)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="px-3 py-2 text-[10px] text-muted-foreground">
+                        Kapitał startowy: {formatPLN(f.grossPrincipal)} = kwota pożyczki {formatPLN(it.loan_amount)} + prowizja Finance You {formatPLN(f.fee)} ({f.feePct}%).
+                      </p>
+                    </details>
 
-                <Button asChild size="sm" className="mt-4 w-full">
-                  <Link to="/auth" search={{ next: "/inwestor" } as never}>
-                    Inwestuję <ArrowRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
-              </li>
-            ))}
+                    <Button asChild size="sm" className="mt-4 w-full">
+                      <Link to="/auth" search={{ next: "/inwestor" } as never}>
+                        Inwestuję <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
