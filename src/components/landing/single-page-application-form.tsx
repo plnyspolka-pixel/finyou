@@ -197,7 +197,6 @@ export function SinglePageApplicationForm() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState<StepId>(1);
-  const [step2Sub, setStep2Sub] = useState<"type" | "kw" | "docs">("type");
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
 
