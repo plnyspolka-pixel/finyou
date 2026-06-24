@@ -317,14 +317,23 @@ export function SinglePageApplicationForm() {
       setStep(2);
       return;
     }
+    if (step === 2) {
+      setStep(3);
+      return;
+    }
   };
   const goBack = () => {
+    if (step === 3) {
+      setStep(2);
+      return;
+    }
     if (step === 2) {
       setStep(1);
       return;
     }
     setStep((s) => (Math.max(1, s - 1) as StepId));
   };
+
 
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
