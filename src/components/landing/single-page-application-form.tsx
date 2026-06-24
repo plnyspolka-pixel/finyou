@@ -971,7 +971,7 @@ export function SinglePageApplicationForm() {
                 {(() => {
                   const hint = PROPERTY_DOCS_BY_SECURITY[secType];
                   if (!hint) return null;
-                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw/i.test(d));
+                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
                   if (remaining.length === 0) return null;
                   return (
                     <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
