@@ -194,6 +194,7 @@ export function SinglePageApplicationForm() {
   const [months, setMonths] = useState(24);
   const [maxPayment, setMaxPayment] = useState(0);
   const [annualRate, setAnnualRate] = useState(30);
+  const rateTouchedRef = useRef(false);
 
   // Max okres spłaty maleje wraz z kwotą:
   // ≤ 200 000 zł → 72 mies., powyżej liniowo z 36 mies. (>200k) do 12 mies. (1 000 000 zł)
@@ -206,6 +207,21 @@ export function SinglePageApplicationForm() {
   useEffect(() => {
     if (months > maxMonths) setMonths(maxMonths);
   }, [maxMonths, months]);
+
+  // Sugerowane wynagrodzenie inwestora: rośnie z kwotą, maleje z okresem.
+  // Zakres ~15–45%. Aktualizuje się automatycznie dopóki użytkownik nie ruszy suwaka.
+  const suggestedRate = useMemo(() => {
+    const amountT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
+    const monthsT = Math.min(1, Math.max(0, (months - 6) / (72 - 6)));
+    const raw = 22 + amountT * 18 - monthsT * 8;
+    const clamped = Math.min(45, Math.max(15, raw));
+    return Math.round(clamped * 2) / 2;
+  }, [amount, months]);
+
+  useEffect(() => {
+    if (!rateTouchedRef.current) setAnnualRate(suggestedRate);
+  }, [suggestedRate]);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -626,7 +642,8 @@ export function SinglePageApplicationForm() {
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
               <Slider value={[annualRate]} min={15} max={50} step={0.5}
-                onValueChange={(v) => setAnnualRate(v[0] ?? annualRate)} />
+                onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(v[0] ?? annualRate); }} />
+
               <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
               <p className="text-xs text-muted-foreground">
                 Im wyższe wynagrodzenie inwestora, tym większa szansa na szybkie znalezienie inwestora dla Twojej pożyczki.
