@@ -23,6 +23,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
+import { Route as NegocjujRouteImport } from './routes/negocjuj'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
@@ -194,6 +195,11 @@ const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
 const NoweHasloRoute = NoweHasloRouteImport.update({
   id: '/nowe-haslo',
   path: '/nowe-haslo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NegocjujRoute = NegocjujRouteImport.update({
+  id: '/negocjuj',
+  path: '/negocjuj',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogowanieRoute = LogowanieRouteImport.update({
@@ -740,6 +746,7 @@ export interface FileRoutesByFullPath {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -855,6 +862,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
+  '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
@@ -973,6 +981,7 @@ export interface FileRoutesById {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -1093,6 +1102,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/negocjuj'
     | '/nowe-haslo'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -1208,6 +1218,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/logowanie'
+    | '/negocjuj'
     | '/nowe-haslo'
     | '/polityka-prywatnosci'
     | '/regulamin'
@@ -1325,6 +1336,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/negocjuj'
     | '/nowe-haslo'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -1444,6 +1456,7 @@ export interface RootRouteChildren {
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
+  NegocjujRoute: typeof NegocjujRoute
   NoweHasloRoute: typeof NoweHasloRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
@@ -1595,6 +1608,13 @@ declare module '@tanstack/react-router' {
       path: '/nowe-haslo'
       fullPath: '/nowe-haslo'
       preLoaderRoute: typeof NoweHasloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/negocjuj': {
+      id: '/negocjuj'
+      path: '/negocjuj'
+      fullPath: '/negocjuj'
+      preLoaderRoute: typeof NegocjujRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logowanie': {
@@ -2506,6 +2526,7 @@ const rootRouteChildren: RootRouteChildren = {
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
+  NegocjujRoute: NegocjujRoute,
   NoweHasloRoute: NoweHasloRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
