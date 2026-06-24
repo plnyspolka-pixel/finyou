@@ -448,7 +448,7 @@ export function SinglePageApplicationForm() {
   useEffect(() => {
     const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
     if (step === 1 && step1Done) setStep(2);
-  }, [step, contactValid, consentPrivacy, consentTerms]);
+  }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
