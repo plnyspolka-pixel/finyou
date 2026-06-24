@@ -1,23 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight, ChevronRight } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, ChevronRight, Home, Building2, Trees, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
-import offer01 from "@/assets/landing-offers/offer_01.jpg.asset.json";
-import offer02 from "@/assets/landing-offers/offer_02.jpg.asset.json";
-import offer03 from "@/assets/landing-offers/offer_03.jpg.asset.json";
-import offer04 from "@/assets/landing-offers/offer_04.jpg.asset.json";
-import offer05 from "@/assets/landing-offers/offer_05.jpg.asset.json";
-import offer06 from "@/assets/landing-offers/offer_06.jpg.asset.json";
-import offer07 from "@/assets/landing-offers/offer_07.jpg.asset.json";
-import offer08 from "@/assets/landing-offers/offer_08.jpg.asset.json";
-import offer09 from "@/assets/landing-offers/offer_09.jpg.asset.json";
-import offer10 from "@/assets/landing-offers/offer_10.jpg.asset.json";
-import offer11 from "@/assets/landing-offers/offer_11.jpg.asset.json";
+// Bez zdjęć — na landingu nie pokazujemy żadnych materiałów klientów (KW, dokumenty, fotki nieruchomości).
+const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> = {
+  apartment: { Icon: Building2, gradient: "from-sky-500/15 via-sky-500/5 to-transparent" },
+  house: { Icon: Home, gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent" },
+  plot_building: { Icon: Trees, gradient: "from-amber-500/15 via-amber-500/5 to-transparent" },
+  commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
+};
 
-const OFFER_PHOTOS = [offer01, offer02, offer03, offer04, offer05, offer06, offer07, offer08, offer09, offer10, offer11].map((a) => a.url);
 
 // ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
 type ScheduleRow = { n: number | "balon"; payment: number; interest: number; principal: number; balance: number };
