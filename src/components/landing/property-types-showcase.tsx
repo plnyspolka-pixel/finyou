@@ -229,3 +229,12 @@ export const PROPERTY_SHOWCASE_KEY_TO_SECURITY: Record<string, string> = {
   budowlana: "dzialka_budowlana",
 };
 
+export const PROPERTY_DOCS_BY_SECURITY: Record<string, { title: string; docs: string[] }> = {
+  mieszkanie: { title: TYPES[0].title, docs: TYPES[0].docs },
+  dom: { title: TYPES[1].title, docs: TYPES[1].docs },
+  lokal_uslugowy: { title: TYPES[2].title, docs: TYPES[2].docs },
+  grunt_rolny: { title: TYPES[3].title, docs: TYPES[3].docs },
+  dzialka_budowlana: { title: TYPES[4].title, docs: TYPES[4].docs },
+};
+
+
