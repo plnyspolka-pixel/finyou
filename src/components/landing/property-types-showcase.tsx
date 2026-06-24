@@ -114,7 +114,7 @@ export function PropertyTypesShowcase({
                   aria-pressed={isSelected}
                   className="relative block w-full text-left"
                 >
-                  <div className={selectMode ? "relative h-24 w-full overflow-hidden sm:aspect-square sm:h-32" : "relative h-44 w-full overflow-hidden"}>
+                  <div className={selectMode ? "relative h-24 w-full overflow-hidden @container sm:aspect-square sm:h-32" : "relative h-44 w-full overflow-hidden"}>
                     <img
                       src={p.img}
                       alt={p.title}
@@ -148,8 +148,11 @@ export function PropertyTypesShowcase({
                       }}
                     />
 
-                    <div className={selectMode ? "absolute inset-0 flex flex-col items-center justify-end gap-1 p-3 text-center sm:p-2.5" : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"}>
-                      <h3 className={selectMode ? "w-full break-words text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.04em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] sm:tracking-normal" : "text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base"}>
+                    <div className={selectMode ? "absolute inset-0 flex flex-col items-center justify-end gap-1 p-1.5 text-center sm:p-2 md:p-2.5 lg:p-3" : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"}>
+                      <h3
+                        className={selectMode ? "w-full break-words text-center font-extrabold uppercase leading-tight tracking-[0.02em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] sm:tracking-[0.03em] md:tracking-[0.05em]" : "text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base"}
+                        style={selectMode ? { fontSize: "clamp(9px, 2.2cqw + 6px, 14px)" } : undefined}
+                      >
                         {p.title}
                       </h3>
                       {!selectMode && (
