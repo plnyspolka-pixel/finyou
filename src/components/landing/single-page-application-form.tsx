@@ -458,8 +458,14 @@ export function SinglePageApplicationForm() {
   // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2)
   useEffect(() => {
     const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-    if (step === 1 && step1Done) { setStep(2); setStep2Sub("type"); }
+    if (step === 1 && step1Done) {
+      fireLead();
+      setStep(2);
+      setStep2Sub("type");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing]);
+
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
