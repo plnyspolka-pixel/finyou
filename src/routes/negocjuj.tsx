@@ -11,13 +11,28 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { Handshake, ArrowLeft, ListChecks } from "lucide-react";
 
+type NegocjujSearch = {
+  app?: string;
+  client?: string;
+  amount?: number;
+  months?: number;
+  rate?: number;
+};
+
 export const Route = createFileRoute("/negocjuj")({
+  validateSearch: (s: Record<string, unknown>): NegocjujSearch => ({
+    app: typeof s.app === "string" ? s.app : undefined,
+    client: typeof s.client === "string" ? s.client : undefined,
+    amount: s.amount != null ? Number(s.amount) || undefined : undefined,
+    months: s.months != null ? Number(s.months) || undefined : undefined,
+    rate: s.rate != null ? Number(s.rate) || undefined : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Negocjuj propozycję pożyczki — Finance You" },
-      { name: "description", content: "Kalkulator inwestora z limitami ustawowymi. Wygeneruj harmonogram spłat i zapisz propozycję dla klienta." },
+      { name: "description", content: "Kalkulator inwestora z limitami ustawowymi. Wygeneruj harmonogram spłat i zapisz kontrofertę dla klienta." },
       { property: "og:title", content: "Negocjuj propozycję pożyczki — Finance You" },
-      { property: "og:description", content: "Wygeneruj harmonogram i zapisz propozycję dla klienta." },
+      { property: "og:description", content: "Wygeneruj harmonogram i zapisz kontrofertę dla klienta." },
     ],
   }),
   component: NegocjujPage,
@@ -25,9 +40,11 @@ export const Route = createFileRoute("/negocjuj")({
 
 function NegocjujPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
-  const [clientName, setClientName] = useState("");
+  const [clientName, setClientName] = useState(search.client ?? "");
   const [clientEmail, setClientEmail] = useState("");
+
   const [clientPhone, setClientPhone] = useState("");
   const [note, setNote] = useState("");
   const [isPublic, setIsPublic] = useState(true);
