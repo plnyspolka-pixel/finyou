@@ -549,10 +549,7 @@ export function SinglePageApplicationForm() {
             <h2 className="mt-1 text-lg font-bold text-foreground">Wniosek — zabezpieczenie i nieruchomość</h2>
           </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Zabezpieczenie i nieruchomość</h2>
-          </div>
+
 
           <div className="space-y-3">
             <Label className="text-sm font-semibold">Rodzaj nieruchomości pod zabezpieczenie</Label>
