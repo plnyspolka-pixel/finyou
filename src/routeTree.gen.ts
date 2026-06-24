@@ -23,12 +23,14 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
+import { Route as NegocjujRouteImport } from './routes/negocjuj'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
@@ -36,6 +38,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednikKreatorDokumentowRouteImport } from './routes/posrednik.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
@@ -196,6 +199,11 @@ const NoweHasloRoute = NoweHasloRouteImport.update({
   path: '/nowe-haslo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NegocjujRoute = NegocjujRouteImport.update({
+  id: '/negocjuj',
+  path: '/negocjuj',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogowanieRoute = LogowanieRouteImport.update({
   id: '/logowanie',
   path: '/logowanie',
@@ -224,6 +232,11 @@ const AdminRoute = AdminRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropozycjeIndexRoute = PropozycjeIndexRouteImport.update({
+  id: '/propozycje/',
+  path: '/propozycje/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikIndexRoute = PosrednikIndexRouteImport.update({
@@ -259,6 +272,11 @@ const WniosekTokenRoute = WniosekTokenRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
+  id: '/propozycje/$id',
+  path: '/propozycje/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
@@ -740,6 +758,7 @@ export interface FileRoutesByFullPath {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -801,6 +820,7 @@ export interface FileRoutesByFullPath {
   '/l/$slug': typeof LSlugRoute
   '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -808,6 +828,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
+  '/propozycje/': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -855,6 +876,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/logowanie': typeof LogowanieRoute
+  '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
@@ -915,6 +937,7 @@ export interface FileRoutesByTo {
   '/l/$slug': typeof LSlugRoute
   '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
@@ -922,6 +945,7 @@ export interface FileRoutesByTo {
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
+  '/propozycje': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -973,6 +997,7 @@ export interface FileRoutesById {
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
+  '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -1034,6 +1059,7 @@ export interface FileRoutesById {
   '/l/$slug': typeof LSlugRoute
   '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -1041,6 +1067,7 @@ export interface FileRoutesById {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
+  '/propozycje/': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -1093,6 +1120,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/negocjuj'
     | '/nowe-haslo'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -1154,6 +1182,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1161,6 +1190,7 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/posrednik/'
+    | '/propozycje/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1208,6 +1238,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/logowanie'
+    | '/negocjuj'
     | '/nowe-haslo'
     | '/polityka-prywatnosci'
     | '/regulamin'
@@ -1268,6 +1299,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
@@ -1275,6 +1307,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/posrednik'
+    | '/propozycje'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1325,6 +1358,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/logowanie'
+    | '/negocjuj'
     | '/nowe-haslo'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -1386,6 +1420,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1393,6 +1428,7 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/posrednik/'
+    | '/propozycje/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1444,6 +1480,7 @@ export interface RootRouteChildren {
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
+  NegocjujRoute: typeof NegocjujRoute
   NoweHasloRoute: typeof NoweHasloRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
@@ -1462,9 +1499,11 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
+  PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
@@ -1597,6 +1636,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NoweHasloRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/negocjuj': {
+      id: '/negocjuj'
+      path: '/negocjuj'
+      fullPath: '/negocjuj'
+      preLoaderRoute: typeof NegocjujRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/logowanie': {
       id: '/logowanie'
       path: '/logowanie'
@@ -1637,6 +1683,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/propozycje/': {
+      id: '/propozycje/'
+      path: '/propozycje'
+      fullPath: '/propozycje/'
+      preLoaderRoute: typeof PropozycjeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik/': {
@@ -1686,6 +1739,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/propozycje/$id': {
+      id: '/propozycje/$id'
+      path: '/propozycje/$id'
+      fullPath: '/propozycje/$id'
+      preLoaderRoute: typeof PropozycjeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik/leady': {
@@ -2506,6 +2566,7 @@ const rootRouteChildren: RootRouteChildren = {
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
+  NegocjujRoute: NegocjujRoute,
   NoweHasloRoute: NoweHasloRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
@@ -2524,9 +2585,11 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
+  PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
+  PropozycjeIndexRoute: PropozycjeIndexRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
@@ -2565,13 +2628,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
