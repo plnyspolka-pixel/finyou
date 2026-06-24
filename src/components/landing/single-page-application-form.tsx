@@ -567,10 +567,10 @@ export function SinglePageApplicationForm() {
         const grossPrincipal = amount + financeYouFee;
 
         const nominalFig = computeLoanFigures({ amount: grossPrincipal, annualRatePercent: annualRate, months });
-        // Min. rata: od 3% (małe kwoty) do 1,5% (duże kwoty), liniowo między 20k a 1M, nie mniej niż 500 zł
-        const minPctT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-        const minPct = 3 - minPctT * 1.5; // 3% → 1.5%
-        const minCap = Math.max(500, Math.round((amount * minPct) / 100));
+        // Min. rata na suwaku = prognozowana rata odsetkowa (sama spłata odsetek, bez kapitału).
+        // Dzięki temu suwak zawsze pozwala obniżyć ratę do najniższego sensownego poziomu.
+        const monthlyInterestOnly = Math.max(1, Math.round((grossPrincipal * (annualRate / 100)) / 12));
+        const minCap = monthlyInterestOnly;
         const maxCap = Math.max(minCap, Math.round(nominalFig.nominal));
         const effectiveMax = maxPayment > 0 ? Math.min(Math.max(maxPayment, minCap), maxCap) : 0;
         const fig = computeLoanFigures({
@@ -665,7 +665,7 @@ export function SinglePageApplicationForm() {
                 onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>min. {formatPLN(minCap)} <span className="opacity-70">({minPct.toFixed(1).replace(".", ",")}% kwoty)</span></span>
+                <span>min. {formatPLN(minCap)} <span className="opacity-70">(same odsetki)</span></span>
                 <span>bez limitu</span>
               </div>
               <p className="text-xs text-muted-foreground">
