@@ -78,9 +78,9 @@ export type RecentLoanApplicationItem = {
   loan_amount: number;
   preferred_period_months: number;
   annual_investor_rate: number;
-  photo_url: string;
   figures: OfferFigures;
 };
+
 
 const FIRST_NAMES = [
   "Filip", "Andrzej", "Małgorzata", "Katarzyna", "Piotr", "Tomasz", "Anna",
@@ -118,7 +118,6 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
-  const usedPhotos = new Set<number>();
   for (let i = 0; i < count; i++) {
     // Mniejsze kwoty: 30k – 250k, krok 5k
     const amount = Math.round((30_000 + rand() * 220_000) / 5_000) * 5_000;
@@ -130,12 +129,6 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       : Math.round((18 + rand() * 8) * 2) / 2;  // 18% – 26% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
     const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
-    let photoIdx = Math.floor(rand() * OFFER_PHOTOS.length);
-    let guard = 0;
-    while (usedPhotos.has(photoIdx) && guard++ < OFFER_PHOTOS.length) {
-      photoIdx = (photoIdx + 1) % OFFER_PHOTOS.length;
-    }
-    usedPhotos.add(photoIdx);
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
@@ -145,12 +138,12 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       loan_amount: amount,
       preferred_period_months: period,
       annual_investor_rate: rate,
-      photo_url: OFFER_PHOTOS[photoIdx],
       figures,
     });
   }
   return items;
 }
+
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
