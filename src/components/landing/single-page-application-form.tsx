@@ -613,9 +613,9 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowany okres spłaty</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
               </div>
-              <Slider value={[months]} min={6} max={72} step={1}
+              <Slider value={[Math.min(months, maxMonths)]} min={6} max={maxMonths} step={1}
                 onValueChange={(v) => setMonths(v[0] ?? months)} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
+              <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>{maxMonths} mies.</span></div>
             </div>
 
             <div className="space-y-3">
