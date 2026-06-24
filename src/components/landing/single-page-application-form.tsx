@@ -136,21 +136,23 @@ function PhotoBucket({
   const camRef = useRef<HTMLInputElement>(null);
   const own = photos.filter((p) => p.bucket === bucket);
   return (
-    <div className="space-y-2 rounded-xl border border-border bg-card p-4">
-      <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+    <div className="space-y-3">
+      <Label className="text-base font-bold uppercase tracking-[0.14em] text-white drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+        {label}
+      </Label>
+      {hint && <p className="text-xs leading-relaxed text-white/75">{hint}</p>}
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-secondary/50 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/40 bg-white/10 px-3 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20"
         >
-          <Upload className="h-4 w-4 text-accent" /> Dodaj plik
+          <Upload className="h-4 w-4" /> Dodaj plik
         </button>
         <button
           type="button"
           onClick={() => camRef.current?.click()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 border-accent bg-accent/10 px-3 py-2.5 text-sm font-semibold text-accent transition hover:bg-accent/20 sm:hidden"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/60 bg-white/20 px-3 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/30 sm:hidden"
         >
           <Camera className="h-4 w-4" /> Zrób zdjęcie
         </button>
@@ -162,16 +164,16 @@ function PhotoBucket({
       {own.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {own.map((p) => (
-            <div key={p.id} className="relative overflow-hidden rounded-md border border-border bg-card">
+            <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
               {p.type.startsWith("image/") ? (
                 <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
               ) : (
-                <div className="grid aspect-square place-items-center bg-secondary">
-                  <FileText className="h-6 w-6 text-muted-foreground" />
+                <div className="grid aspect-square place-items-center bg-white/10">
+                  <FileText className="h-6 w-6 text-white/80" />
                 </div>
               )}
               <button type="button" onClick={() => onRemove(p.id)}
-                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-xs font-bold text-foreground shadow"
+                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-xs font-bold text-foreground shadow"
                 aria-label="Usuń">×</button>
             </div>
           ))}
