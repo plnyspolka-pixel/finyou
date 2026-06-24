@@ -992,7 +992,7 @@ export function SinglePageApplicationForm() {
 
                 <PhotoBucket
                   label="Zdjęcia i dokumenty nieruchomości"
-                  hint="Dodaj zdjęcia z zewnątrz i wewnątrz, dokumenty (np. wypis z rejestru gruntów, MPZP, warunki zabudowy). Akceptujemy JPG, PNG, PDF — wiele plików naraz."
+                  
                   bucket="property_photos"
                   photos={photos}
                   onAdd={addPhotos}
