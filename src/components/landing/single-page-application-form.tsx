@@ -316,15 +316,29 @@ export function SinglePageApplicationForm() {
     () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
     [kwNumber, extraKwNumbers],
   );
-  const step4Valid = allKwNumbers.length > 0 || hasOwnershipDeed;
+  const requiredBuckets = useMemo(
+    () => photoBuckets.filter((b) => !b.optional),
+    [photoBuckets],
+  );
+  const missingRequiredBuckets = useMemo(
+    () => requiredBuckets.filter((b) => !photos.some((p) => p.bucket === b.kind)),
+    [requiredBuckets, photos],
+  );
+  const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
+  const step4Valid = kwOrDeedOk && missingRequiredBuckets.length === 0;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== 3) { goNext(); return; }
-    if (!step4Valid) {
+    if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
     }
+    if (missingRequiredBuckets.length > 0) {
+      toast.error(`Dołącz wymagane dokumenty: ${missingRequiredBuckets.map((b) => b.label).join(", ")}.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const photoPayload = await Promise.all(
