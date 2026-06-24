@@ -77,9 +77,11 @@ function KlientDashboard() {
   const [thumbUrls, setThumbUrls] = useState<string[]>([]);
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
+  const [kwTouched, setKwTouched] = useState(false);
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
+    setKwTouched(false);
   }, [propertyRow?.id]);
 
   useEffect(() => {
@@ -94,18 +96,65 @@ function KlientDashboard() {
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);
 
+  // Walidacja numeru KW: 4 znaki kodu sądu / 8 cyfr / 1 cyfra kontrolna
+  // np. WA1M/00123456/7
+  const validateKw = (raw: string): { ok: boolean; error: string | null; hint: string | null } => {
+    const value = raw.trim().toUpperCase();
+    if (!value) return { ok: false, error: "Wpisz numer księgi wieczystej.", hint: null };
+
+    const parts = value.split("/");
+    if (parts.length !== 3) {
+      return {
+        ok: false,
+        error: "Numer KW musi mieć trzy części oddzielone ukośnikami „/”.",
+        hint: "Przykład: WA1M/00123456/7",
+      };
+    }
+    const [court, digits, control] = parts;
+
+    if (court.length !== 4) {
+      return { ok: false, error: `Kod sądu musi mieć dokładnie 4 znaki (wpisano ${court.length}).`, hint: "np. WA1M" };
+    }
+    if (!/^[A-Z0-9]{4}$/.test(court)) {
+      return { ok: false, error: "Kod sądu może zawierać tylko litery i cyfry (bez polskich znaków).", hint: "np. WA1M, GD1G, KR2K" };
+    }
+    if (digits.length !== 8) {
+      return { ok: false, error: `Numer księgi musi mieć dokładnie 8 cyfr (wpisano ${digits.length}).`, hint: "Uzupełnij zerami z przodu, np. 00123456" };
+    }
+    if (!/^\d{8}$/.test(digits)) {
+      return { ok: false, error: "Numer księgi może zawierać tylko cyfry (0–9).", hint: null };
+    }
+    if (control.length !== 1) {
+      return { ok: false, error: "Cyfra kontrolna musi być dokładnie jedna.", hint: "Ostatnia cyfra z odpisu KW (0–9)." };
+    }
+    if (!/^\d$/.test(control)) {
+      return { ok: false, error: "Cyfra kontrolna musi być cyfrą (0–9).", hint: null };
+    }
+    return { ok: true, error: null, hint: null };
+  };
+
+  const kwValidation = validateKw(kw);
+  const showKwError = kwTouched && !kwValidation.ok && kw.trim().length > 0;
+
   const saveKw = async () => {
     if (!propertyRow?.id) return;
+    setKwTouched(true);
+    if (!kwValidation.ok) {
+      toast.error(kwValidation.error ?? "Nieprawidłowy numer KW");
+      return;
+    }
     setSavingKw(true);
     try {
+      const normalized = kw.trim().toUpperCase();
       const { error } = await supabase.from("properties")
-        .update({ land_register_number: kw.trim() || null })
+        .update({ land_register_number: normalized })
         .eq("id", propertyRow.id);
       if (error) throw error;
-      toast.success("Numer KW zapisany");
+      setKw(normalized);
+      toast.success("Numer KW zapisany poprawnie");
       void refetchProperty();
     } catch (e: any) {
-      toast.error(e?.message ?? "Nie udało się zapisać");
+      toast.error(e?.message ?? "Nie udało się zapisać numeru KW");
     } finally {
       setSavingKw(false);
     }
