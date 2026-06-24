@@ -282,7 +282,7 @@ function WniosekOpisPage() {
 
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-between">
           <Button variant="ghost" asChild>
-            <Link to="/klient/wniosek">Wróć do wniosku</Link>
+            <Link to="/klient">Wróć do wniosku</Link>
           </Button>
           <Button asChild variant="cta" size="cta">
             <Link to="/klient">Przejdź do panelu</Link>

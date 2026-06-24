@@ -77,13 +77,13 @@ export function ProgressChecklist({
         {
           done: hasPropertyType,
           label: "Typ zabezpieczenia",
-          ctaHref: "/klient/wniosek",
+          ctaHref: "/klient",
           ctaLabel: hasPropertyType ? "Zmień" : "Wybierz",
         },
         {
           done: hasLoanTerms,
           label: "Warunki pożyczki (kwota, okres, rata)",
-          ctaHref: "/klient/wniosek",
+          ctaHref: "/klient",
           ctaLabel: hasLoanTerms ? "Zmień" : "Ustal",
         },
       ],
@@ -101,7 +101,7 @@ export function ProgressChecklist({
         return {
           done,
           label: r.label,
-          ctaHref: m?.ctaHref ?? "/klient/wniosek",
+          ctaHref: m?.ctaHref ?? "/klient",
           ctaLabel: done ? "Zarządzaj" : m?.ctaLabel ?? "Dodaj",
         };
       }),
@@ -117,7 +117,7 @@ export function ProgressChecklist({
     {
       done: hasInvestorDescription,
       label: "Opis dla inwestora",
-      ctaHref: "/klient/wniosek",
+      ctaHref: "/klient",
       ctaLabel: hasInvestorDescription ? "Edytuj" : "Dodaj",
       hint: "Krótka historia, dlaczego potrzebujesz finansowania — buduje zaufanie inwestorów.",
     },

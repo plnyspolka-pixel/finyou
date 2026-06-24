@@ -80,7 +80,7 @@ export function InlineMissingActions({ progress, userId, client, loan, property,
             Najpierw wypełnij krótki wniosek — kwota, okres, zabezpieczenie. Potem reszta uzupełnisz tu na pulpicie.
           </p>
           <Button asChild variant="cta">
-            <Link to="/klient/wniosek">Rozpocznij wniosek <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            <Link to="/klient">Rozpocznij wniosek <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
         </CardContent>
       </Card>
