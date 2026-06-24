@@ -28,37 +28,113 @@ type PhotoItem = {
   file: File;
 };
 
-type BucketDef = { kind: string; label: string; optional?: boolean };
+type BucketDef = { kind: string; label: string; hint?: string; optional?: boolean };
 
 /** Buckets per typ zabezpieczenia — zgodnie z uzgodnioną logiką landinga. */
 function bucketsFor(sec: SecurityType): BucketDef[] {
   switch (sec) {
     case "mieszkanie":
+      return [
+        {
+          kind: "property_photos",
+          label: "Zdjęcia mieszkania",
+          hint: "Wgraj 4–10 zdjęć: każdy pokój, kuchnia, łazienka, widok z okna oraz budynek od zewnątrz (elewacja, klatka schodowa).",
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny, umowa darowizny, postanowienie sądu o spadku — wystarczy zdjęcie albo skan PDF.",
+          optional: true,
+        },
+      ];
     case "dom":
+      return [
+        {
+          kind: "property_photos",
+          label: "Zdjęcia domu i działki",
+          hint: "Wgraj zdjęcia z zewnątrz (4 strony budynku, dach, ogrodzenie) oraz wnętrza (salon, kuchnia, łazienka, sypialnie).",
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub inny dokument potwierdzający własność.",
+          optional: true,
+        },
+      ];
     case "lokal_uslugowy":
       return [
-        { kind: "property_photos", label: "Dodaj zdjęcia nieruchomości (z wewnątrz i z zewnątrz)" },
-        { kind: "ownership_deed", label: "Akt własności / inne dokumenty (opcjonalnie)", optional: true },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia lokalu",
+          hint: "Wgraj zdjęcia wnętrza (sala główna, zaplecze, sanitariaty) oraz lokal od zewnątrz wraz z witryną/wejściem.",
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub umowa potwierdzająca własność lokalu.",
+          optional: true,
+        },
       ];
     case "grunt_rolny":
       return [
-        { kind: "land_registry", label: "Wypis z rejestru gruntów" },
-        { kind: "ownership_deed", label: "Akt własności (opcjonalnie)", optional: true },
+        {
+          kind: "land_registry",
+          label: "Wypis z rejestru gruntów",
+          hint: "Aktualny wypis z ewidencji gruntów i budynków (możesz pobrać w urzędzie gminy lub przez geoportal).",
+        },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia działki (opcjonalnie)",
+          hint: "Zdjęcia z poziomu drogi i z różnych narożników działki — pomocne przy szybszej wycenie.",
+          optional: true,
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub postanowienie sądu o nabyciu nieruchomości.",
+          optional: true,
+        },
       ];
     case "dzialka_budowlana":
       return [
-        { kind: "mpzp", label: "MPZP albo warunki zabudowy" },
-        { kind: "property_photos", label: "Zdjęcia działki (opcjonalnie)", optional: true },
-        { kind: "ownership_deed", label: "Akt własności (opcjonalnie)", optional: true },
+        {
+          kind: "mpzp",
+          label: "MPZP albo warunki zabudowy",
+          hint: "Wypis i wyrys z Miejscowego Planu Zagospodarowania Przestrzennego lub decyzja o warunkach zabudowy (WZ).",
+        },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia działki (opcjonalnie)",
+          hint: "Zdjęcia z poziomu drogi i z różnych narożników działki, ewentualnie sąsiedniej zabudowy.",
+          optional: true,
+        },
+        {
+          kind: "ownership_deed",
+          label: "Akt własności (opcjonalnie)",
+          hint: "Akt notarialny lub inny dokument potwierdzający własność działki.",
+          optional: true,
+        },
       ];
     case "inna":
     default:
       return [
-        { kind: "property_photos", label: "Zdjęcia nieruchomości (opcjonalnie)", optional: true },
-        { kind: "ownership_deed", label: "Akt własności / inne dokumenty (opcjonalnie)", optional: true },
+        {
+          kind: "property_photos",
+          label: "Zdjęcia nieruchomości (opcjonalnie)",
+          hint: "Wgraj zdjęcia z zewnątrz i wewnątrz — im więcej, tym szybciej przygotujemy ofertę.",
+          optional: true,
+        },
+        {
+          kind: "ownership_deed",
+          label: "Dokumenty (opcjonalnie)",
+          hint: "Akt własności, MPZP, wypis z rejestru gruntów lub inne dokumenty, które pomogą w wycenie.",
+          optional: true,
+        },
       ];
   }
 }
+
+const BUILDING_TYPES: SecurityType[] = ["mieszkanie", "dom", "lokal_uslugowy"];
 
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
