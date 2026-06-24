@@ -344,14 +344,6 @@ export function SinglePageApplicationForm() {
     () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
     [kwNumber, extraKwNumbers],
   );
-  const requiredBuckets = useMemo(
-    () => photoBuckets.filter((b) => !b.optional),
-    [photoBuckets],
-  );
-  const missingRequiredBuckets = useMemo(
-    () => requiredBuckets.filter((b) => !photos.some((p) => p.bucket === b.kind)),
-    [requiredBuckets, photos],
-  );
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
   const step4Valid = kwOrDeedOk;
 
