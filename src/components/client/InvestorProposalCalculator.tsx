@@ -3,17 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronRight, Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
-import { formatPLN, computeLoanFigures } from "@/lib/loan-math";
+import { Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { assistBusinessDescription } from "@/lib/ai-assist.functions";
+import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 
 // Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
 // pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
