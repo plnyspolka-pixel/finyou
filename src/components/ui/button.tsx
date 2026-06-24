@@ -19,7 +19,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        cta: "bg-accent text-accent-foreground font-extrabold uppercase tracking-wide shadow-[0_10px_30px_-10px_oklch(0.78_0.18_85_/_0.7)] hover:bg-accent/90 hover:shadow-[0_14px_40px_-10px_oklch(0.78_0.18_85_/_0.85)] hover:-translate-y-0.5 transition-all ring-2 ring-accent/40 hover:ring-accent/60",
+        cta: "relative overflow-hidden text-white font-extrabold uppercase tracking-[0.18em] bg-[radial-gradient(120%_140%_at_0%_0%,oklch(0.32_0.16_265)_0%,oklch(0.18_0.06_265)_55%,oklch(0.13_0.04_265)_100%)] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] ring-1 ring-white/15 hover:ring-white/25 hover:-translate-y-0.5 hover:shadow-[0_18px_55px_-15px_oklch(0.40_0.25_268/0.75)] active:translate-y-0 transition-all",
       },
       size: {
         default: "h-9 px-4 py-2",
