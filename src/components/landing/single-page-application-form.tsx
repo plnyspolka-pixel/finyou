@@ -543,8 +543,10 @@ export function SinglePageApplicationForm() {
 
       {/* Step 3 — Twoja oferta (kalkulator) */}
       {step === 3 && (() => {
-        // Prowizja Finance You (zgodnie z regulaminem) — kredytowana do kapitału.
-        const FINANCEYOU_FEE_PCT = 4;
+        // Prowizja Finance You — skalowana w dół od 10% (małe kwoty) do 4% (duże kwoty),
+        // liniowo między 20 000 zł a 1 000 000 zł. Kredytowana do kapitału.
+        const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
+        const FINANCEYOU_FEE_PCT = 10 - feeT * 6; // 10% → 4%
         const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
         const grossPrincipal = amount + financeYouFee;
 
