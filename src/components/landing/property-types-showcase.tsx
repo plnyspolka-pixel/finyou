@@ -77,8 +77,8 @@ export function PropertyTypesShowcase({
   const [openKey, setOpenKey] = useState<string | null>(null);
   const selectMode = typeof onSelect === "function";
 
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className={selectMode ? "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
+
       {TYPES.map((p, i) => {
         const isOpen = !selectMode && openKey === p.key;
         const isSelected = selectMode && selectedKey === p.key;
