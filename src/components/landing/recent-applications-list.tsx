@@ -139,6 +139,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       loan_amount: amount,
       preferred_period_months: period,
       annual_investor_rate: rate,
+      wants_extension_option: rand() < 0.55,
       figures,
     });
   }
