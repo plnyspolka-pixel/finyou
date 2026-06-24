@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createHash } from "crypto";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
 
 const Schema = z.object({
   event: z.string().min(1).max(64),
@@ -28,7 +28,12 @@ export const sendFbCapiEvent = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Schema.parse(input))
   .handler(async ({ data }) => {
     const token = process.env.FB_PIXEL_ACCESS_TOKEN;
-    if (!token) return { ok: false, error: "missing_token" as const };
+    if (!token) {
+      console.warn("[fb-capi] FB_PIXEL_ACCESS_TOKEN is not set");
+      return { ok: false, error: "missing_token" as const };
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
 
     const { data: settings } = await supabaseAdmin
       .from("tracking_settings")
