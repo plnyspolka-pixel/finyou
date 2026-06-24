@@ -56,8 +56,8 @@ function InwestorOferty() {
       <Card><CardContent className="pt-6"><div className="overflow-x-auto"><Table>
         <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Kwota</TableHead><TableHead>Okres</TableHead><TableHead>Zysk</TableHead><TableHead>Rata</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
         <TableBody>{offers.map((o) => (
-          <>
-            <TableRow key={o.id}>
+          <Fragment key={o.id}>
+            <TableRow>
               <TableCell>{formatDate(o.created_at)}</TableCell>
               <TableCell>{formatPLN(o.proposed_amount)}</TableCell>
               <TableCell>{o.period_months} mies.</TableCell>
@@ -73,7 +73,7 @@ function InwestorOferty() {
               </TableCell>
             </TableRow>
             {o.loan_application && (
-              <TableRow key={`${o.id}-info`} className="hover:bg-transparent">
+              <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={7} className="pt-0 pb-3">
                   <ApplicationInfoBadges
                     app={o.loan_application}
@@ -84,7 +84,7 @@ function InwestorOferty() {
                 </TableCell>
               </TableRow>
             )}
-          </>
+          </Fragment>
         ))}</TableBody>
       </Table></div></CardContent></Card>
     </div>
