@@ -638,8 +638,9 @@ export function SinglePageApplicationForm() {
                 className="mt-0.5 h-6 w-6 [&_svg]:size-5"
               />
               <span>
-                Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Zgoda dobrowolna, mogę ją wycofać w każdej chwili.
+                Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Mogę ją wycofać w każdej chwili. *
               </span>
+
             </label>
           </div>
         </section>
