@@ -621,7 +621,7 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Kwota pożyczki</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
               </div>
-              <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
+              <Slider gradient="good-bad" value={[amount]} min={20_000} max={1_000_000} step={5_000}
                 onValueChange={(v) => setAmount(v[0] ?? amount)} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             </div>
