@@ -38,6 +38,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednikKreatorDokumentowRouteImport } from './routes/posrednik.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
@@ -271,6 +272,11 @@ const WniosekTokenRoute = WniosekTokenRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
+  id: '/propozycje/$id',
+  path: '/propozycje/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
@@ -814,6 +820,7 @@ export interface FileRoutesByFullPath {
   '/l/$slug': typeof LSlugRoute
   '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -930,6 +937,7 @@ export interface FileRoutesByTo {
   '/l/$slug': typeof LSlugRoute
   '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
@@ -1051,6 +1059,7 @@ export interface FileRoutesById {
   '/l/$slug': typeof LSlugRoute
   '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -1173,6 +1182,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1289,6 +1299,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
@@ -1409,6 +1420,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -1487,6 +1499,7 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
+  PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -1726,6 +1739,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/propozycje/$id': {
+      id: '/propozycje/$id'
+      path: '/propozycje/$id'
+      fullPath: '/propozycje/$id'
+      preLoaderRoute: typeof PropozycjeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik/leady': {
@@ -2565,6 +2585,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
+  PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
