@@ -42,22 +42,48 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
     const { normalized, valid } = normalizePolishPhone(data.phone);
     const source = data.source ?? "landing_single_page";
 
-    const { data: client, error: cErr } = await supabaseAdmin
+    // Re-użyj istniejącego klienta po e-mailu zamiast tworzyć duplikat
+    const { data: existingClient } = await supabaseAdmin
       .from("clients")
-      .insert({
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email,
-        phone: normalized ?? data.phone,
-        phone_raw: data.phone,
-        phone_normalized: normalized,
-        phone_valid: valid,
-        consent_rodo: true,
-        source,
-      })
-      .select("id")
-      .single();
-    if (cErr || !client) throw new Error(cErr?.message ?? "client insert failed");
+      .select("id, user_id")
+      .eq("email", data.email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let client: { id: string };
+    if (existingClient) {
+      await supabaseAdmin
+        .from("clients")
+        .update({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          phone: normalized ?? data.phone,
+          phone_raw: data.phone,
+          phone_normalized: normalized,
+          phone_valid: valid,
+        })
+        .eq("id", existingClient.id);
+      client = { id: existingClient.id };
+    } else {
+      const { data: created, error: cErr } = await supabaseAdmin
+        .from("clients")
+        .insert({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: normalized ?? data.phone,
+          phone_raw: data.phone,
+          phone_normalized: normalized,
+          phone_valid: valid,
+          consent_rodo: true,
+          source,
+        })
+        .select("id")
+        .single();
+      if (cErr || !created) throw new Error(cErr?.message ?? "client insert failed");
+      client = { id: created.id };
+    }
 
     const { data: loan, error: lErr } = await supabaseAdmin
       .from("loan_applications")

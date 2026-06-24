@@ -40,7 +40,7 @@ function KlientWniosek() {
   useEffect(() => { void (async () => {
     if (!user) return;
     setLoading(true);
-    const { data: c } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
+    const { data: c } = await supabase.from("clients").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     setClient(c);
     if (c) {
       const { data: la } = await supabase.from("loan_applications").select("*")
