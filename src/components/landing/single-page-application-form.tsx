@@ -484,12 +484,12 @@ export function SinglePageApplicationForm() {
             {/* Obrotowy gradient na obwodzie (zawsze widoczny — eleganckie obietnica) */}
             <span
               aria-hidden
-              className="absolute inset-0 rounded-2xl"
+              className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
               style={{
                 background:
-                  "conic-gradient(from 0deg, oklch(0.75 0.16 50), oklch(0.82 0.14 85), oklch(0.68 0.18 35), oklch(0.75 0.16 50))",
+                  "conic-gradient(from 0deg, oklch(0.75 0.16 50), oklch(0.82 0.14 85), oklch(0.68 0.18 35), oklch(0.78 0.15 60), oklch(0.75 0.16 50))",
                 animation: "fy-offer-spin 5s linear infinite",
-                opacity: canOpenOffer ? 1 : 0.55,
+                opacity: canOpenOffer ? 1 : 0.6,
               }}
             />
             {/* Wnętrze buttona */}
