@@ -734,9 +734,9 @@ export function SinglePageApplicationForm() {
                     </tr>
                   </thead>
                   <tbody>
-                    {schedule.map((row) => (
-                      <tr key={row.n} className="border-t border-border/50">
-                        <td className="px-3 py-1.5 text-left text-foreground">{row.n}</td>
+                    {schedule.map((row, idx) => (
+                      <tr key={idx} className={`border-t border-border/50 ${row.n === "balon" ? "bg-accent/5 font-semibold" : ""}`}>
+                        <td className="px-3 py-1.5 text-left text-foreground">{row.n === "balon" ? "Balon" : row.n}</td>
                         <td className="px-3 py-1.5 font-semibold text-foreground">{formatPLN(row.payment)}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{formatPLN(row.interest)}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{formatPLN(row.principal)}</td>
