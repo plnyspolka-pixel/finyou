@@ -305,7 +305,18 @@ export function SinglePageApplicationForm() {
       // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
     }
+    if (step === 2) {
+      if (!kwOrDeedOk) {
+        toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+        return;
+      }
+      if (missingRequiredBuckets.length > 0) {
+        toast.error(`Dołącz wymagane dokumenty: ${missingRequiredBuckets.map((b) => b.label).join(", ")}.`);
+        return;
+      }
+    }
     setStep((s) => (Math.min(3, s + 1) as StepId));
+
   };
   const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
 
