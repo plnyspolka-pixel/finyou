@@ -883,17 +883,7 @@ export function SinglePageApplicationForm() {
             {/* Sub-step B: numer KW / akt własności */}
             {step2Sub === "kw" && (
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[oklch(0.55_0.20_255)]">
-                    Krok 2 z 3 — Tytuł własności
-                  </p>
-                  <h2 className="text-lg font-extrabold text-foreground md:text-xl">
-                    Podaj numer KW lub dołącz akt własności
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Wybrana nieruchomość: <span className="font-semibold text-foreground">{securityTypeLabels[secType]}</span>
-                  </p>
-                </div>
+
 
                 <div className="space-y-2">
                   <Label htmlFor="f-kw">Numer księgi wieczystej</Label>
