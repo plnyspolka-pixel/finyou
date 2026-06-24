@@ -96,6 +96,8 @@ function WniosekDetail() {
         </div>
       </div>
 
+      <ApplicationInfoBadges app={app} client={c} loanApplicationId={id} />
+
       <Tabs defaultValue="dane">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
