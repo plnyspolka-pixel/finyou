@@ -212,7 +212,7 @@ export function SinglePageApplicationForm() {
   };
 
   const goNext = () => {
-    if (step === 3) {
+    if (step === 1) {
       if (!contactValid) {
         toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
         return;
@@ -224,9 +224,9 @@ export function SinglePageApplicationForm() {
       // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
     }
-    setStep((s) => (Math.min(4, (s + 1)) as 1 | 2 | 3 | 4));
+    setStep((s) => (Math.min(3, s + 1) as StepId));
   };
-  const goBack = () => setStep((s) => (Math.max(1, (s - 1)) as 1 | 2 | 3 | 4));
+  const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
 
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
