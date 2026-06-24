@@ -148,9 +148,8 @@ export function PropertyTypesShowcase({
                       }}
                     />
 
-                    <div className={selectMode ? "absolute inset-x-0 bottom-0 flex flex-col items-start gap-1 p-3 sm:p-2.5" : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"}>
-                      <h3 className={selectMode ? "text-sm font-extrabold uppercase leading-tight tracking-[0.1em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)]" : "text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base"}>
-
+                    <div className={selectMode ? "absolute inset-0 flex flex-col items-center justify-end gap-1 p-3 text-center sm:p-2.5" : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"}>
+                      <h3 className={selectMode ? "w-full text-center text-sm font-extrabold uppercase leading-tight tracking-[0.1em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)]" : "text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base"}>
                         {p.title}
                       </h3>
                       {!selectMode && (
