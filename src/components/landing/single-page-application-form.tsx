@@ -316,15 +316,29 @@ export function SinglePageApplicationForm() {
     () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
     [kwNumber, extraKwNumbers],
   );
-  const step4Valid = allKwNumbers.length > 0 || hasOwnershipDeed;
+  const requiredBuckets = useMemo(
+    () => photoBuckets.filter((b) => !b.optional),
+    [photoBuckets],
+  );
+  const missingRequiredBuckets = useMemo(
+    () => requiredBuckets.filter((b) => !photos.some((p) => p.bucket === b.kind)),
+    [requiredBuckets, photos],
+  );
+  const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
+  const step4Valid = kwOrDeedOk && missingRequiredBuckets.length === 0;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step !== 3) { goNext(); return; }
-    if (!step4Valid) {
+    if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
     }
+    if (missingRequiredBuckets.length > 0) {
+      toast.error(`Dołącz wymagane dokumenty: ${missingRequiredBuckets.map((b) => b.label).join(", ")}.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const photoPayload = await Promise.all(
@@ -579,10 +593,18 @@ export function SinglePageApplicationForm() {
 
           <div className="grid gap-3 md:grid-cols-2">
             {photoBuckets.map((b) => (
-              <PhotoBucket key={b.kind} label={b.label} hint={b.hint} bucket={b.kind}
-                photos={photos} onAdd={addPhotos} onRemove={removePhoto} />
+              <PhotoBucket
+                key={b.kind}
+                label={b.optional ? b.label : `${b.label} *`}
+                hint={b.hint}
+                bucket={b.kind}
+                photos={photos}
+                onAdd={addPhotos}
+                onRemove={removePhoto}
+              />
             ))}
           </div>
+
 
           {BUILDING_TYPES.includes(secType) && (
             <div className="space-y-2">
@@ -609,9 +631,14 @@ export function SinglePageApplicationForm() {
 
           {!step4Valid && (
             <p className="text-xs text-muted-foreground">
-              Aby wysłać wniosek: podaj <strong>numer księgi wieczystej</strong> nieruchomości lub dołącz <strong>akt własności</strong> (zdjęcie aktu notarialnego, postanowienia sądu o spadku itp.). Pozostałe dokumenty i zdjęcia są opcjonalne, ale przyspieszają wycenę.
+              Aby wysłać wniosek: podaj <strong>numer księgi wieczystej</strong> lub dołącz <strong>akt własności</strong>
+              {requiredBuckets.length > 0 && (
+                <> oraz wgraj wymagane dokumenty oznaczone gwiazdką (<strong>{requiredBuckets.map((b) => b.label).join(", ")}</strong>)</>
+              )}
+              . Pozostałe dokumenty i zdjęcia są opcjonalne, ale przyspieszają wycenę.
             </p>
           )}
+
         </section>
       )}
 
