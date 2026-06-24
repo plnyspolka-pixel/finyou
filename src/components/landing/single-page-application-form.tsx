@@ -239,6 +239,7 @@ export function SinglePageApplicationForm() {
   const [kwNumber, setKwNumber] = useState("");
   const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
   const [usableArea, setUsableArea] = useState("");
+  const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
@@ -390,6 +391,9 @@ export function SinglePageApplicationForm() {
           loan_amount: amount,
           preferred_period_months: months,
           property_type: secType,
+          city: city.trim() || null,
+          annual_investor_rate: annualRate,
+          max_monthly_payment: maxPayment > 0 ? maxPayment : null,
           land_register_number: (() => {
             const parts = [...allKwNumbers];
             const ua = usableArea.trim();
@@ -547,6 +551,21 @@ export function SinglePageApplicationForm() {
                   setTypeSelected(true);
                 }}
               />
+              <div className="mt-6 space-y-2">
+                <Label htmlFor="f-city" className="text-base font-bold uppercase tracking-[0.14em] text-white">
+                  Miejscowość nieruchomości
+                </Label>
+                <Input
+                  id="f-city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="np. Warszawa"
+                  className={FANCY_INPUT_CLASS}
+                />
+                <p className="text-xs text-white/75">
+                  Miasto / wieś, w której znajduje się nieruchomość — pomaga inwestorom ocenić lokalizację.
+                </p>
+              </div>
             </FancyShell>
 
             {/* B: numer KW / akt własności */}
