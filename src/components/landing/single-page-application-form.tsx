@@ -372,12 +372,18 @@ export function SinglePageApplicationForm() {
     return () => window.removeEventListener("financeyou:open-offer", handler);
   }, [contactValid, consentPrivacy, consentTerms, consentMarketing, step4Valid]);
 
+  const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }
     if (step === 2 && step2Sub !== "docs") { goNext(); return; }
     if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+      return;
+    }
+    if (!hasPropertyPhotos) {
+      toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
     }
 
@@ -1034,7 +1040,7 @@ export function SinglePageApplicationForm() {
         )}
 
         {step === 2 && step2Sub === "docs" && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
+          <Button type="submit" variant="cta" size="lg" disabled={submitting} aria-disabled={!hasPropertyPhotos} className={`ml-auto flex-1 text-base md:flex-none ${!hasPropertyPhotos ? "opacity-60" : ""}`}>
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
