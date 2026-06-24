@@ -596,7 +596,7 @@ export function SinglePageApplicationForm() {
             </div>
 
             <p className="text-[11px] text-muted-foreground">
-              Wyliczenia poglądowe przy oprocentowaniu {ANNUAL_RATE}% rocznie. Ostateczne warunki ustalisz indywidualnie z inwestorem.
+              Wyliczenia poglądowe przy oprocentowaniu {annualRate}% rocznie. Ostateczne warunki ustalisz indywidualnie z inwestorem.
             </p>
           </section>
         );
