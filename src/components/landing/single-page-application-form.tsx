@@ -612,7 +612,7 @@ export function SinglePageApplicationForm() {
                 Twoja wstępna oferta jest gotowa 🎉
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                Na podstawie Twojego wniosku przygotowaliśmy propozycję finansowania. Możesz ją dopasować suwakami poniżej — kwotę, okres, oprocentowanie i maksymalną ratę. Ostateczne warunki uzgodnisz indywidualnie z inwestorem.
+                Na podstawie Twojego wniosku przygotowaliśmy propozycję finansowania. Możesz ją dopasować suwakami poniżej — kwotę, okres, wynagrodzenie inwestora i maksymalną ratę. Ostateczne warunki uzgodnisz indywidualnie z inwestorem.
               </p>
             </div>
 
