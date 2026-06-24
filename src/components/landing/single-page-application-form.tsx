@@ -570,7 +570,7 @@ export function SinglePageApplicationForm() {
 
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <Label className="text-sm font-semibold">Proponowane oprocentowanie roczne</Label>
+                <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (rocznie)</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
               <Slider value={[annualRate]} min={15} max={50} step={0.5}
