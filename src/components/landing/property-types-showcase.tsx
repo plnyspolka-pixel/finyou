@@ -78,7 +78,7 @@ export function PropertyTypesShowcase({
   const selectMode = typeof onSelect === "function";
 
   return (
-    <div className={selectMode ? "grid grid-cols-5 gap-1.5 sm:gap-3" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
+    <div className={selectMode ? "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5 sm:gap-3" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
 
 
       {TYPES.map((p, i) => {
