@@ -7,7 +7,7 @@ import { formatPLN } from "@/lib/labels";
 import { ArrowLeft, Handshake, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/propozycje")({
+export const Route = createFileRoute("/propozycje/")({
   head: () => ({
     meta: [
       { title: "Publiczne propozycje pożyczek — Finance You" },

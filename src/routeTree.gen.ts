@@ -30,6 +30,7 @@ import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
@@ -230,6 +231,11 @@ const AdminRoute = AdminRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropozycjeIndexRoute = PropozycjeIndexRouteImport.update({
+  id: '/propozycje/',
+  path: '/propozycje/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PosrednikIndexRoute = PosrednikIndexRouteImport.update({
@@ -815,6 +821,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
+  '/propozycje/': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -930,6 +937,7 @@ export interface FileRoutesByTo {
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
+  '/propozycje': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -1050,6 +1058,7 @@ export interface FileRoutesById {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
+  '/propozycje/': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -1171,6 +1180,7 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/posrednik/'
+    | '/propozycje/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1286,6 +1296,7 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/posrednik'
+    | '/propozycje'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1405,6 +1416,7 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/posrednik/'
+    | '/propozycje/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1478,6 +1490,7 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
@@ -1657,6 +1670,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/propozycje/': {
+      id: '/propozycje/'
+      path: '/propozycje'
+      fullPath: '/propozycje/'
+      preLoaderRoute: typeof PropozycjeIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posrednik/': {
@@ -2548,6 +2568,7 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
+  PropozycjeIndexRoute: PropozycjeIndexRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
