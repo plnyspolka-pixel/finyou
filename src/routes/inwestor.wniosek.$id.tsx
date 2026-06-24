@@ -18,6 +18,7 @@ import { formatPLN } from "@/lib/loan-math";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { openOrCreateThread } from "@/lib/chat.functions";
+import { ApplicationInfoBadges } from "@/components/application-info-badges";
 
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
