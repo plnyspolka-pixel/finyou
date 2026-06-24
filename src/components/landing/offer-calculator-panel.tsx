@@ -119,16 +119,17 @@ export function OfferCalculatorPanel({
 
       <div className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (rocznie)</Label>
-          <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
+          <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (miesięcznie)</Label>
+          <span className="text-2xl font-extrabold tabular-nums text-foreground">{(annualRate / 12).toFixed(2)}%</span>
         </div>
-        <Slider gradient="bad-good" value={[annualRate]} min={15} max={50} step={0.5}
-          onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(v[0] ?? annualRate); }} />
-        <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
+        <Slider gradient="bad-good" value={[annualRate / 12]} min={15 / 12} max={50 / 12} step={0.05}
+          onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(((v[0] ?? annualRate / 12) * 12)); }} />
+        <div className="flex justify-between text-xs text-muted-foreground"><span>{(15/12).toFixed(2)}% / mies.</span><span>{(50/12).toFixed(2)}% / mies.</span></div>
         <p className="text-xs text-muted-foreground">
           Im wyższe wynagrodzenie inwestora, tym większa szansa na szybkie znalezienie inwestora dla Twojej pożyczki.
         </p>
       </div>
+
 
       <div className="space-y-3">
         <div className="flex items-baseline justify-between">
@@ -169,9 +170,10 @@ export function OfferCalculatorPanel({
             <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{months} mies.</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Średnie miesięczne wynagrodzenie inwestora</p>
-            <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(fig.investorCompensation / Math.max(1, months))}<span className="text-xs font-normal text-muted-foreground"> / mies.</span></p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Roczne wynagrodzenie inwestora (za całość)</p>
+            <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(fig.investorCompensation * 12 / Math.max(1, months))}<span className="text-xs font-normal text-muted-foreground"> / rok</span></p>
           </div>
+
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
             <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(financeYouFee)}</p>
