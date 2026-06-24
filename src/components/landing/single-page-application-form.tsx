@@ -400,38 +400,76 @@ export function SinglePageApplicationForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Stepper kafelki */}
-      <ol className="grid grid-cols-3 gap-2">
-        {STEPS.map((s) => {
+      <div className="space-y-2">
+        <ol className="grid grid-cols-2 gap-2">
+          {STEPS.slice(0, 2).map((s) => {
+            const active = s.id === step;
+            const done = s.id < step;
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => setStep(s.id as StepId)}
+                  className={[
+                    "flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition",
+                    active
+                      ? "border-accent bg-accent/10 text-foreground shadow-sm"
+                      : done
+                        ? "border-accent/40 bg-card text-foreground hover:bg-accent/5"
+                        : "border-border bg-card text-muted-foreground",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "grid h-7 w-7 place-items-center rounded-full text-xs font-bold",
+                      active ? "bg-accent text-accent-foreground" : done ? "bg-accent/80 text-accent-foreground" : "bg-secondary text-muted-foreground",
+                    ].join(" ")}
+                  >
+                    {done ? <Check className="h-4 w-4" /> : s.id}
+                  </span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide sm:text-xs">{s.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {(() => {
+          const s = STEPS[2];
           const active = s.id === step;
           const done = s.id < step;
           return (
-            <li key={s.id}>
-              <button
-                type="button"
-                onClick={() => setStep(s.id as StepId)}
+            <button
+              type="button"
+              onClick={() => setStep(s.id as StepId)}
+              className={[
+                "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 px-4 py-4 text-center transition-all",
+                active
+                  ? "border-accent bg-gradient-to-r from-accent/20 via-accent/10 to-accent/20 text-foreground shadow-[0_0_30px_-5px_var(--accent)]"
+                  : "border-accent/60 bg-gradient-to-r from-accent/10 via-accent/5 to-accent/10 text-foreground hover:border-accent hover:shadow-[0_0_25px_-5px_var(--accent)]",
+              ].join(" ")}
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2.5s_infinite]"
+                style={{ animation: "shimmer 2.5s linear infinite" }}
+              />
+              <span
                 className={[
-                  "flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition",
-                  active
-                    ? "border-accent bg-accent/10 text-foreground shadow-sm"
-                    : done
-                      ? "border-accent/40 bg-card text-foreground hover:bg-accent/5"
-                      : "border-border bg-card text-muted-foreground",
+                  "grid h-9 w-9 place-items-center rounded-full text-sm font-bold",
+                  active || done ? "bg-accent text-accent-foreground" : "bg-accent/80 text-accent-foreground",
                 ].join(" ")}
               >
-                <span
-                  className={[
-                    "grid h-7 w-7 place-items-center rounded-full text-xs font-bold",
-                    active ? "bg-accent text-accent-foreground" : done ? "bg-accent/80 text-accent-foreground" : "bg-secondary text-muted-foreground",
-                  ].join(" ")}
-                >
-                  {done ? <Check className="h-4 w-4" /> : s.id}
-                </span>
-                <span className="text-[11px] font-semibold uppercase tracking-wide sm:text-xs">{s.label}</span>
-              </button>
-            </li>
+                {done ? <Check className="h-5 w-5" /> : "🎁"}
+              </span>
+              <span className="text-sm font-bold uppercase tracking-wide sm:text-base">
+                {s.label}
+              </span>
+            </button>
           );
-        })}
-      </ol>
+        })()}
+      </div>
+      <style>{`@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`}</style>
+
 
       {/* Step 1 — dane kontaktowe */}
       {step === 1 && (
