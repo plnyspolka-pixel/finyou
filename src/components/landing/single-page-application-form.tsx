@@ -559,10 +559,10 @@ export function SinglePageApplicationForm() {
               >
                 {canOpenOffer ? <Check className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
               </span>
-              <span className="relative flex flex-col items-start leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                <span className="text-base font-bold tracking-wide sm:text-lg">Twoja oferta</span>
+              <span className="relative flex flex-col items-center leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                <span className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">TWOJA OFERTA</span>
                 {!canOpenOffer && (
-                  <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70">
+                  <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-white/65">
                     Uzupełnij dane, aby odblokować
                   </span>
                 )}
