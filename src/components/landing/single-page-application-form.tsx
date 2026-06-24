@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import {
+  computeLoanFigures,
   formatPLN,
   securityTypeLabels,
   type SecurityType,
@@ -177,7 +178,7 @@ function PhotoBucket({
 const STEPS = [
   { id: 1, label: "Kontakt" },
   { id: 2, label: "Wniosek" },
-  { id: 3, label: "Parametry" },
+  { id: 3, label: "Twoja oferta" },
 ] as const;
 
 
@@ -191,6 +192,7 @@ export function SinglePageApplicationForm() {
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(24);
+  const [maxPayment, setMaxPayment] = useState(0);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -490,34 +492,103 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 3 — kwota i okres */}
-      {step === 3 && (
+      {/* Step 3 — Twoja oferta (kalkulator) */}
+      {step === 3 && (() => {
+        const ANNUAL_RATE = 24;
+        const nominalFig = computeLoanFigures({ amount, annualRatePercent: ANNUAL_RATE, months });
+        const minCap = Math.round(nominalFig.nominal * 0.4);
+        const maxCap = Math.round(nominalFig.nominal);
+        const effectiveMax = maxPayment > 0 ? Math.min(Math.max(maxPayment, minCap), maxCap) : 0;
+        const fig = computeLoanFigures({
+          amount,
+          annualRatePercent: ANNUAL_RATE,
+          months,
+          maxPayment: effectiveMax || undefined,
+        });
+        return (
+          <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
+              <h2 className="mt-1 text-lg font-bold text-foreground">Twoja oferta</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ustaw kwotę, okres i — jeśli chcesz — maksymalną ratę miesięczną. Resztę dopłacisz na końcu (rata balonowa).
+              </p>
+            </div>
 
-        <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <Label className="text-sm font-semibold">Kwota pożyczki</Label>
-              <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <Label className="text-sm font-semibold">Kwota pożyczki</Label>
+                <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
+              </div>
+              <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
+                onValueChange={(v) => setAmount(v[0] ?? amount)} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             </div>
-            <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
-              onValueChange={(v) => setAmount(v[0] ?? amount)} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <Label className="text-sm font-semibold">Okres spłaty</Label>
-              <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
+
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <Label className="text-sm font-semibold">Proponowany okres spłaty</Label>
+                <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
+              </div>
+              <Slider value={[months]} min={6} max={72} step={1}
+                onValueChange={(v) => setMonths(v[0] ?? months)} />
+              <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
             </div>
-            <Slider value={[months]} min={6} max={72} step={1}
-              onValueChange={(v) => setMonths(v[0] ?? months)} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>72 mies.</span></div>
-          </div>
-        </section>
-      )}
+
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <Label className="text-sm font-semibold">Maksymalna rata miesięczna</Label>
+                <span className="text-2xl font-extrabold tabular-nums text-foreground">
+                  {effectiveMax > 0 ? formatPLN(effectiveMax) : "bez limitu"}
+                </span>
+              </div>
+              <Slider
+                value={[effectiveMax > 0 ? effectiveMax : maxCap]}
+                min={minCap}
+                max={maxCap}
+                step={50}
+                onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{formatPLN(minCap)}</span>
+                <span>bez limitu</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ustaw niżej, jeśli chcesz mniejszą ratę miesięczną. Różnicę dopłacisz jednorazowo na koniec okresu.
+              </p>
+            </div>
+
+            <div className="grid gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4 sm:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rata miesięczna</p>
+                <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.monthly)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Okres</p>
+                <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</p>
+              </div>
+              {fig.balloon > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rata balonowa (ostatnia)</p>
+                  <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.balloon)}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Koszt dla inwestora</p>
+                <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.investorCompensation)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Łączna spłata</p>
+                <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.total)}</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Wyliczenia poglądowe przy oprocentowaniu {ANNUAL_RATE}% rocznie. Ostateczne warunki ustalisz indywidualnie z inwestorem.
+            </p>
+          </section>
+        );
+      })()}
 
       {/* Step 2 — wniosek (zabezpieczenie + nieruchomość) */}
       {step === 2 && (
