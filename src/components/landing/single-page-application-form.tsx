@@ -310,10 +310,14 @@ export function SinglePageApplicationForm() {
     }
     if (step === 2) {
       if (step2Sub === "type") {
-        // wybór kafelka sam przesuwa do "kw"
-        toast.error("Wybierz typ nieruchomości.");
+        if (!selectedShowcaseKey) {
+          toast.error("Wybierz typ nieruchomości.");
+          return;
+        }
+        setStep2Sub("kw");
         return;
       }
+
       if (step2Sub === "kw") {
         if (!kwOrDeedOk) {
           toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
