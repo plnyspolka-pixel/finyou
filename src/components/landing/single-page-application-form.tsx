@@ -643,12 +643,14 @@ export function SinglePageApplicationForm() {
               <Slider gradient="good-bad" value={[Math.min(Math.max(months, 12), maxMonths)]} min={12} max={maxMonths} step={1}
                 onValueChange={(v) => setMonths(v[0] ?? months)} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>12 mies.</span><span>{maxMonths} mies.</span></div>
-              <label className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 cursor-pointer">
-                <Checkbox checked={canExtend} onCheckedChange={(v) => setCanExtend(v === true)} className="mt-0.5" />
-                <span className="text-xs text-foreground">
-                  <span className="font-semibold">Możliwość przedłużenia pożyczki</span> — chcę mieć opcję wydłużenia okresu spłaty na zakończenie umowy.
-                </span>
-              </label>
+              {months <= 36 && (
+                <label className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 cursor-pointer">
+                  <Checkbox checked={canExtend} onCheckedChange={(v) => setCanExtend(v === true)} className="mt-0.5" />
+                  <span className="text-xs text-foreground">
+                    <span className="font-semibold">Możliwość przedłużenia pożyczki</span> — chcę mieć opcję wydłużenia okresu spłaty na zakończenie umowy.
+                  </span>
+                </label>
+              )}
             </div>
 
             <div className="space-y-3">
