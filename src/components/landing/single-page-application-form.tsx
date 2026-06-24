@@ -658,6 +658,7 @@ export function SinglePageApplicationForm() {
                 </span>
               </div>
               <Slider
+                gradient="bad-good"
                 value={[effectiveMax > 0 ? effectiveMax : maxCap]}
                 min={minCap}
                 max={maxCap}
