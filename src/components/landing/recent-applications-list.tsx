@@ -241,6 +241,36 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       Wniosek złożony po przejściu kalkulatora
                     </div>
 
+                    <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                      {it.is_startup && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
+                      )}
+                      {it.business_status === "prowadzi" && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 font-semibold text-foreground">
+                          🏢 {it.business_legal_form === "jdg" ? "JDG" : it.business_legal_form === "sp_zoo" ? "Sp. z o.o." : "Sp. akcyjna"}
+                          {it.nip_verified && <span className="text-emerald-600">✓ NIP</span>}
+                        </span>
+                      )}
+                      {it.business_status === "zamierza" && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 font-semibold text-foreground">🆕 Zamierza otworzyć dz. gosp.</span>
+                      )}
+                      {it.business_status === "nie_zamierza" && !it.is_startup && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-muted-foreground">👤 Bez działalności</span>
+                      )}
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_income_docs ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "border border-border bg-secondary/60 text-muted-foreground"}`}>
+                        📄 Dochód {it.has_income_docs ? "✓" : "—"}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_bik ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "border border-border bg-secondary/60 text-muted-foreground"}`}>
+                        🛡 BIK {it.has_bik ? "✓" : "—"}
+                      </span>
+                      {it.phone_verified && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">📞 Telefon ✓</span>
+                      )}
+                      {it.bank_verified && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">🏦 Rachunek ✓</span>
+                      )}
+                    </div>
+
 
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div>
