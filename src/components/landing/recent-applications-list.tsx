@@ -53,9 +53,9 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
     const period = [24, 36, 48, 60, 72][Math.floor(rand() * 5)];
     const rate = Math.round((14 + rand() * 12) * 10) / 10; // 14–26%
     const figs = computeLoanFigures({
-      loanAmount: amount,
-      periodMonths: period,
-      annualInvestorRate: rate,
+      amount,
+      annualRatePercent: rate,
+      months: period,
     });
     const minutesAgo = Math.floor(rand() * 60 * 22) + 3; // 3 min – 22 h ago
     items.push({
@@ -67,7 +67,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       loan_amount: amount,
       preferred_period_months: period,
       annual_investor_rate: rate,
-      investor_profit: figs.investorAnnualRevenue * (period / 12),
+      investor_profit: figs.investorCompensation,
     });
   }
   return items;
