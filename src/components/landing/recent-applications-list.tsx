@@ -247,8 +247,25 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                         </div>
                         <div className="tabular-nums text-lg font-extrabold text-foreground">
                           {formatPLN(f.investorCompensation)}
-                        </div>
                       </div>
+                    </div>
+
+                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2 text-[11px]">
+                      <span
+                        className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                          it.wants_extension_option
+                            ? "bg-emerald-500/15 text-emerald-600"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {it.wants_extension_option ? "✓" : "—"}
+                      </span>
+                      <span className="text-foreground">
+                        {it.wants_extension_option
+                          ? "Klient wnioskuje o możliwość przedłużenia okresu pożyczki"
+                          : "Klient nie wnioskuje o opcję przedłużenia"}
+                      </span>
+                    </div>
                     </div>
 
                     <details className="group mt-3 rounded-xl border border-border bg-secondary/40">
