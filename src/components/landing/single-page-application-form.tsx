@@ -566,38 +566,49 @@ export function SinglePageApplicationForm() {
         const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
         const grossPrincipal = amount + financeYouFee;
 
+        // Model bullet/odsetkowy: odsetki naliczane od bieżącego salda.
+        // Minimalna rata = same odsetki od pełnego kapitału (saldo nie maleje → max zysk inwestora).
+        // Maksymalna rata = annuita (pełna amortyzacja → najszybsza spłata, najmniejszy zysk inwestora).
+        const r = annualRate / 100 / 12;
         const nominalFig = computeLoanFigures({ amount: grossPrincipal, annualRatePercent: annualRate, months });
-        // Min. rata na suwaku = prognozowana rata odsetkowa (sama spłata odsetek, bez kapitału).
-        // Dzięki temu suwak zawsze pozwala obniżyć ratę do najniższego sensownego poziomu.
-        const monthlyInterestOnly = Math.max(1, Math.round((grossPrincipal * (annualRate / 100)) / 12));
+        const monthlyInterestOnly = Math.max(1, Math.round(grossPrincipal * r));
         const minCap = monthlyInterestOnly;
         const maxCap = Math.max(minCap, Math.round(nominalFig.nominal));
-        const effectiveMax = maxPayment > 0 ? Math.min(Math.max(maxPayment, minCap), maxCap) : 0;
-        const fig = computeLoanFigures({
-          amount: grossPrincipal,
-          annualRatePercent: annualRate,
-          months,
-          maxPayment: effectiveMax || undefined,
-        });
+        // Domyślnie (gdy suwak nieruszony) ustawiamy ratę odsetkową — wtedy zysk inwestora = pełne X% rocznie od kapitału.
+        const chosenPayment = maxPayment > 0 ? Math.min(Math.max(maxPayment, minCap), maxCap) : minCap;
+        const effectiveMax = chosenPayment;
 
-        // Harmonogram spłat (amortyzacja na kapitale brutto, balon w ostatniej racie).
+        // Harmonogram spłat: odsetki na bieżącym saldzie, ostatnia rata = balon (resztę kapitału).
         const schedule: Array<{ n: number; payment: number; interest: number; principal: number; balance: number }> = [];
+        let totalPaid = 0;
+        let totalInterest = 0;
+        let balloonAmount = 0;
         {
           let balance = grossPrincipal;
-          const r = annualRate / 100 / 12;
           for (let n = 1; n <= months; n++) {
             const interest = balance * r;
-            let payment = fig.monthly;
-            let principalPart = payment - interest;
+            let payment = chosenPayment;
+            let principalPart = Math.max(0, Math.min(payment - interest, balance));
             if (n === months) {
-              // Ostatnia rata: doliczamy balon i resztę salda
+              // Ostatnia rata: doliczamy całe pozostałe saldo jako balon.
+              const regularPrincipal = Math.max(0, Math.min(payment - interest, balance));
+              const remainingAfter = balance - regularPrincipal;
+              balloonAmount = remainingAfter;
               principalPart = balance;
-              payment = principalPart + interest + fig.balloon;
+              payment = interest + principalPart;
             }
             balance = Math.max(0, balance - principalPart);
+            totalPaid += payment;
+            totalInterest += interest;
             schedule.push({ n, payment, interest, principal: principalPart, balance });
           }
         }
+        const fig = {
+          monthly: chosenPayment,
+          balloon: balloonAmount,
+          total: totalPaid,
+          investorCompensation: totalInterest,
+        };
 
         return (
           <section className="space-y-6 overflow-hidden rounded-3xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 via-background to-background p-5 shadow-[0_20px_60px_-20px_hsl(var(--accent)/0.35)] md:p-7">
