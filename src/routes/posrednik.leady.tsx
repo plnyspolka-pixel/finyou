@@ -12,7 +12,7 @@ import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search } from "luc
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 
-export const Route = createFileRoute("/operator/leady")({
+export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
 });
 
@@ -109,7 +109,7 @@ function OperatorLeadsList() {
                       <Phone className="h-4 w-4" />
                     </a>
                   )}
-                  <Link to="/operator/leady/$id" params={{ id: r.id }}>
+                  <Link to="/posrednik/leady/$id" params={{ id: r.id }}>
                     <Button size="sm" variant="default">Otwórz <ChevronRight className="ml-1 h-4 w-4" /></Button>
                   </Link>
                 </div>

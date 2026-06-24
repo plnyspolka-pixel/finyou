@@ -20,8 +20,8 @@ import { Route as Wniosek1RouteImport } from './routes/wniosek-1'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
+import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
-import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
@@ -29,15 +29,15 @@ import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as OperatorIndexRouteImport } from './routes/operator.index'
+import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
-import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
-import { Route as OperatorKreatorDokumentowRouteImport } from './routes/operator.kreator-dokumentow'
+import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
+import { Route as PosrednikKreatorDokumentowRouteImport } from './routes/posrednik.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -83,7 +83,7 @@ import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growt
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
-import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id'
+import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
@@ -181,14 +181,14 @@ const RegulaminRoute = RegulaminRouteImport.update({
   path: '/regulamin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PosrednikRoute = PosrednikRouteImport.update({
+  id: '/posrednik',
+  path: '/posrednik',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OperatorRoute = OperatorRouteImport.update({
-  id: '/operator',
-  path: '/operator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NoweHasloRoute = NoweHasloRouteImport.update({
@@ -226,10 +226,10 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OperatorIndexRoute = OperatorIndexRouteImport.update({
+const PosrednikIndexRoute = PosrednikIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => OperatorRoute,
+  getParentRoute: () => PosrednikRoute,
 } as any)
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
@@ -261,16 +261,16 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
+const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
-  getParentRoute: () => OperatorRoute,
+  getParentRoute: () => PosrednikRoute,
 } as any)
-const OperatorKreatorDokumentowRoute =
-  OperatorKreatorDokumentowRouteImport.update({
+const PosrednikKreatorDokumentowRoute =
+  PosrednikKreatorDokumentowRouteImport.update({
     id: '/kreator-dokumentow',
     path: '/kreator-dokumentow',
-    getParentRoute: () => OperatorRoute,
+    getParentRoute: () => PosrednikRoute,
   } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
@@ -499,10 +499,10 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   path: '/ai-administrator',
   getParentRoute: () => AdminRoute,
 } as any)
-const OperatorLeadyIdRoute = OperatorLeadyIdRouteImport.update({
+const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => OperatorLeadyRoute,
+  getParentRoute: () => PosrednikLeadyRoute,
 } as any)
 const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   id: '/wniosek/$id',
@@ -741,8 +741,8 @@ export interface FileRoutesByFullPath {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
-  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -799,15 +799,15 @@ export interface FileRoutesByFullPath {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
-  '/operator/leady': typeof OperatorLeadyRouteWithChildren
+  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
+  '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
-  '/operator/': typeof OperatorIndexRoute
+  '/posrednik/': typeof PosrednikIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -828,7 +828,7 @@ export interface FileRoutesByFullPath {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
-  '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
@@ -913,15 +913,15 @@ export interface FileRoutesByTo {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
-  '/operator/leady': typeof OperatorLeadyRouteWithChildren
+  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
+  '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
-  '/operator': typeof OperatorIndexRoute
+  '/posrednik': typeof PosrednikIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -942,7 +942,7 @@ export interface FileRoutesByTo {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
-  '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
@@ -974,8 +974,8 @@ export interface FileRoutesById {
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
   '/nowe-haslo': typeof NoweHasloRoute
-  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
+  '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1032,15 +1032,15 @@ export interface FileRoutesById {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/kreator-dokumentow': typeof OperatorKreatorDokumentowRoute
-  '/operator/leady': typeof OperatorLeadyRouteWithChildren
+  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
+  '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
-  '/operator/': typeof OperatorIndexRoute
+  '/posrednik/': typeof PosrednikIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
@@ -1061,7 +1061,7 @@ export interface FileRoutesById {
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
-  '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
@@ -1094,8 +1094,8 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
-    | '/operator'
     | '/polityka-prywatnosci'
+    | '/posrednik'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -1152,15 +1152,15 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/operator/kreator-dokumentow'
-    | '/operator/leady'
+    | '/posrednik/kreator-dokumentow'
+    | '/posrednik/leady'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
-    | '/operator/'
+    | '/posrednik/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1181,7 +1181,7 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
-    | '/operator/leady/$id'
+    | '/posrednik/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/ania-callbacks'
@@ -1266,15 +1266,15 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/operator/kreator-dokumentow'
-    | '/operator/leady'
+    | '/posrednik/kreator-dokumentow'
+    | '/posrednik/leady'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin'
     | '/blog'
     | '/inwestor'
     | '/klient'
-    | '/operator'
+    | '/posrednik'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1295,7 +1295,7 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
-    | '/operator/leady/$id'
+    | '/posrednik/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/ania-callbacks'
@@ -1326,8 +1326,8 @@ export interface FileRouteTypes {
     | '/klient'
     | '/logowanie'
     | '/nowe-haslo'
-    | '/operator'
     | '/polityka-prywatnosci'
+    | '/posrednik'
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
@@ -1384,15 +1384,15 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/operator/kreator-dokumentow'
-    | '/operator/leady'
+    | '/posrednik/kreator-dokumentow'
+    | '/posrednik/leady'
     | '/r/$code'
     | '/wniosek/$token'
     | '/admin/'
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
-    | '/operator/'
+    | '/posrednik/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
@@ -1413,7 +1413,7 @@ export interface FileRouteTypes {
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
-    | '/operator/leady/$id'
+    | '/posrednik/leady/$id'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/ania-callbacks'
@@ -1445,8 +1445,8 @@ export interface RootRouteChildren {
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
   NoweHasloRoute: typeof NoweHasloRoute
-  OperatorRoute: typeof OperatorRouteWithChildren
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
+  PosrednikRoute: typeof PosrednikRouteWithChildren
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1576,18 +1576,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegulaminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/posrednik': {
+      id: '/posrednik'
+      path: '/posrednik'
+      fullPath: '/posrednik'
+      preLoaderRoute: typeof PosrednikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/polityka-prywatnosci': {
       id: '/polityka-prywatnosci'
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/operator': {
-      id: '/operator'
-      path: '/operator'
-      fullPath: '/operator'
-      preLoaderRoute: typeof OperatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nowe-haslo': {
@@ -1639,12 +1639,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/operator/': {
-      id: '/operator/'
+    '/posrednik/': {
+      id: '/posrednik/'
       path: '/'
-      fullPath: '/operator/'
-      preLoaderRoute: typeof OperatorIndexRouteImport
-      parentRoute: typeof OperatorRoute
+      fullPath: '/posrednik/'
+      preLoaderRoute: typeof PosrednikIndexRouteImport
+      parentRoute: typeof PosrednikRoute
     }
     '/klient/': {
       id: '/klient/'
@@ -1688,19 +1688,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/operator/leady': {
-      id: '/operator/leady'
+    '/posrednik/leady': {
+      id: '/posrednik/leady'
       path: '/leady'
-      fullPath: '/operator/leady'
-      preLoaderRoute: typeof OperatorLeadyRouteImport
-      parentRoute: typeof OperatorRoute
+      fullPath: '/posrednik/leady'
+      preLoaderRoute: typeof PosrednikLeadyRouteImport
+      parentRoute: typeof PosrednikRoute
     }
-    '/operator/kreator-dokumentow': {
-      id: '/operator/kreator-dokumentow'
+    '/posrednik/kreator-dokumentow': {
+      id: '/posrednik/kreator-dokumentow'
       path: '/kreator-dokumentow'
-      fullPath: '/operator/kreator-dokumentow'
-      preLoaderRoute: typeof OperatorKreatorDokumentowRouteImport
-      parentRoute: typeof OperatorRoute
+      fullPath: '/posrednik/kreator-dokumentow'
+      preLoaderRoute: typeof PosrednikKreatorDokumentowRouteImport
+      parentRoute: typeof PosrednikRoute
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -2017,12 +2017,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiAdministratorRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/operator/leady/$id': {
-      id: '/operator/leady/$id'
+    '/posrednik/leady/$id': {
+      id: '/posrednik/leady/$id'
       path: '/$id'
-      fullPath: '/operator/leady/$id'
-      preLoaderRoute: typeof OperatorLeadyIdRouteImport
-      parentRoute: typeof OperatorLeadyRoute
+      fullPath: '/posrednik/leady/$id'
+      preLoaderRoute: typeof PosrednikLeadyIdRouteImport
+      parentRoute: typeof PosrednikLeadyRoute
     }
     '/inwestor/wniosek/$id': {
       id: '/inwestor/wniosek/$id'
@@ -2471,32 +2471,32 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
-interface OperatorLeadyRouteChildren {
-  OperatorLeadyIdRoute: typeof OperatorLeadyIdRoute
+interface PosrednikLeadyRouteChildren {
+  PosrednikLeadyIdRoute: typeof PosrednikLeadyIdRoute
 }
 
-const OperatorLeadyRouteChildren: OperatorLeadyRouteChildren = {
-  OperatorLeadyIdRoute: OperatorLeadyIdRoute,
+const PosrednikLeadyRouteChildren: PosrednikLeadyRouteChildren = {
+  PosrednikLeadyIdRoute: PosrednikLeadyIdRoute,
 }
 
-const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
-  OperatorLeadyRouteChildren,
+const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
+  PosrednikLeadyRouteChildren,
 )
 
-interface OperatorRouteChildren {
-  OperatorKreatorDokumentowRoute: typeof OperatorKreatorDokumentowRoute
-  OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
-  OperatorIndexRoute: typeof OperatorIndexRoute
+interface PosrednikRouteChildren {
+  PosrednikKreatorDokumentowRoute: typeof PosrednikKreatorDokumentowRoute
+  PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
+  PosrednikIndexRoute: typeof PosrednikIndexRoute
 }
 
-const OperatorRouteChildren: OperatorRouteChildren = {
-  OperatorKreatorDokumentowRoute: OperatorKreatorDokumentowRoute,
-  OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
-  OperatorIndexRoute: OperatorIndexRoute,
+const PosrednikRouteChildren: PosrednikRouteChildren = {
+  PosrednikKreatorDokumentowRoute: PosrednikKreatorDokumentowRoute,
+  PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
+  PosrednikIndexRoute: PosrednikIndexRoute,
 }
 
-const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
-  OperatorRouteChildren,
+const PosrednikRouteWithChildren = PosrednikRoute._addFileChildren(
+  PosrednikRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -2507,8 +2507,8 @@ const rootRouteChildren: RootRouteChildren = {
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
   NoweHasloRoute: NoweHasloRoute,
-  OperatorRoute: OperatorRouteWithChildren,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
+  PosrednikRoute: PosrednikRouteWithChildren,
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

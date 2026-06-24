@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wand2, Users, FileText, Phone, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/operator/")({
+export const Route = createFileRoute("/posrednik/")({
   component: OperatorIndex,
 });
 
@@ -43,7 +43,7 @@ function OperatorIndex() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Pulpit operatora</h1>
+        <h1 className="text-2xl font-bold">Pulpit pośrednika</h1>
         <p className="text-sm text-muted-foreground">Szybki podgląd leadów, kontaktów i generowanie dokumentów.</p>
       </div>
 
@@ -62,13 +62,13 @@ function OperatorIndex() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link to="/operator/leady">
+        <Link to="/posrednik/leady">
           <Card className="hover:bg-accent/40 transition h-full">
             <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Leady (wszystkie)</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground">Pełna lista leadów z transkryptami voicebota, historią followupów, oceną jakości CAPI i przyciskiem „Zadzwoń" z mobila.</CardContent>
           </Card>
         </Link>
-        <Link to="/operator/kreator-dokumentow">
+        <Link to="/posrednik/kreator-dokumentow">
           <Card className="hover:bg-accent/40 transition h-full">
             <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Wand2 className="h-4 w-4" /> Kreator dokumentów</CardTitle></CardHeader>
             <CardContent className="text-sm text-muted-foreground">31 wzorów B2B: umowy, windykacja, oświadczenia, pisma sądowe. Generuj DOCX, doliczaj prowizję pośrednika.</CardContent>

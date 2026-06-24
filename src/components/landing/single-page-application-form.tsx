@@ -185,11 +185,13 @@ function PhotoBucket({
 
 const STEPS = [
   { id: 1, label: "Kontakt" },
-  { id: 2, label: "Wniosek i oferta" },
+  { id: 2, label: "Ścieżka" },
+  { id: 3, label: "Wniosek i oferta" },
 ] as const;
 
 
-type StepId = 1 | 2;
+type StepId = 1 | 2 | 3;
+
 
 export function SinglePageApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
@@ -315,14 +317,23 @@ export function SinglePageApplicationForm() {
       setStep(2);
       return;
     }
+    if (step === 2) {
+      setStep(3);
+      return;
+    }
   };
   const goBack = () => {
+    if (step === 3) {
+      setStep(2);
+      return;
+    }
     if (step === 2) {
       setStep(1);
       return;
     }
     setStep((s) => (Math.max(1, s - 1) as StepId));
   };
+
 
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
@@ -343,7 +354,7 @@ export function SinglePageApplicationForm() {
         toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
         setStep(1);
       } else {
-        setStep(2);
+        setStep(3);
       }
     };
     window.addEventListener("financeyou:open-offer", handler);
@@ -355,6 +366,8 @@ export function SinglePageApplicationForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }
+    if (step === 2) { goNext(); return; }
+
     if (!typeSelected) {
       toast.error("Wybierz typ nieruchomości.");
       return;
@@ -527,8 +540,47 @@ export function SinglePageApplicationForm() {
         </FancyShell>
       )}
 
-      {/* Step 2 — wszystko w jednym: typ → KW → dokumenty → kalkulator */}
-      {step === 2 && (() => {
+      {/* Step 2 — wybór ścieżki */}
+      {step === 2 && (
+        <FancyShell>
+          <div className="space-y-5">
+            <div className="space-y-2 text-center">
+              <h2 className="text-xl font-bold text-white drop-shadow">Co Cię do nas sprowadza?</h2>
+              <p className="text-sm text-white/80">Wybierz ścieżkę, abyśmy mogli przygotować dla Ciebie odpowiednie kroki.</p>
+            </div>
+            <div className="grid gap-3">
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
+              >
+                <div className="text-lg font-bold">Pożyczam</div>
+                <div className="text-sm text-white/80">Potrzebuję finansowania pod zabezpieczenie nieruchomości.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { void navigate({ to: "/inwestor" }); }}
+                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
+              >
+                <div className="text-lg font-bold">Inwestuję</div>
+                <div className="text-sm text-white/80">Chcę lokować kapitał w pożyczki zabezpieczone hipoteką.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { void navigate({ to: "/posrednik" }); }}
+                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
+              >
+                <div className="text-lg font-bold">Pośredniczę</div>
+                <div className="text-sm text-white/80">Polecam klientów / inwestorów i prowadzę leady jako pośrednik.</div>
+              </button>
+            </div>
+          </div>
+        </FancyShell>
+      )}
+
+      {/* Step 3 — wszystko w jednym: typ → KW → dokumenty → kalkulator */}
+      {step === 3 && (() => {
+
         const secToShowcase: Record<string, string> = {
           mieszkanie: "mieszkanie",
           dom: "dom",
@@ -720,7 +772,7 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
-        {step === 2 && (
+        {step === 3 && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting}
             aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
             className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
@@ -732,11 +784,12 @@ export function SinglePageApplicationForm() {
           </Button>
         )}
       </div>
-      {step === 2 && (
+      {step === 3 && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
       )}
+
     </form>
   );
 }
