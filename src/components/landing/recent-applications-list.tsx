@@ -78,6 +78,7 @@ export type RecentLoanApplicationItem = {
   loan_amount: number;
   preferred_period_months: number;
   annual_investor_rate: number;
+  wants_extension_option: boolean;
   figures: OfferFigures;
 };
 
