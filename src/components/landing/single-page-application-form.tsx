@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 
-import { PropertyTypesShowcase, PROPERTY_SHOWCASE_KEY_TO_SECURITY } from "@/components/landing/property-types-showcase";
+import { PropertyTypesShowcase, PROPERTY_SHOWCASE_KEY_TO_SECURITY, PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
 import {
   computeLoanFigures,
   formatPLN,
@@ -968,7 +968,25 @@ export function SinglePageApplicationForm() {
             {/* Sub-step C: zdjęcia / dokumenty */}
             {step2Sub === "docs" && (
               <div className="space-y-4">
-
+                {(() => {
+                  const hint = PROPERTY_DOCS_BY_SECURITY[secType];
+                  if (!hint) return null;
+                  return (
+                    <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-accent">
+                        Co przygotować — {hint.title}
+                      </p>
+                      <ul className="mt-2 space-y-1.5">
+                        {hint.docs.map((d) => (
+                          <li key={d} className="flex items-start gap-2 text-sm text-foreground">
+                            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                            <span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
 
                 <PhotoBucket
                   label="Zdjęcia i dokumenty nieruchomości"
