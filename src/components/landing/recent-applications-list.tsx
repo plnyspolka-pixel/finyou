@@ -125,8 +125,8 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
     const period = pick([24, 24, 36, 36, 36, 48, 60]);
     // Wyższe wynagrodzenie inwestora — zgodnie z regułami kalkulatora
     const rate = period <= 36
-      ? Math.round((24 + rand() * 8) * 2) / 2   // 24% – 32% step 0.5
-      : Math.round((18 + rand() * 8) * 2) / 2;  // 18% – 26% step 0.5
+      ? Math.round((28 + rand() * 8) * 2) / 2   // 28% – 36% step 0.5
+      : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
     const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
     items.push({
