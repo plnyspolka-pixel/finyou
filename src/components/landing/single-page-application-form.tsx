@@ -466,29 +466,55 @@ export function SinglePageApplicationForm() {
           const s = STEPS[2];
           const active = s.id === step;
           const done = s.id < step;
+          const step1Done = contactValid && consentPrivacy && consentTerms;
+          const canOpenOffer = step1Done && step4Valid;
+          const handleClick = () => {
+            if (!canOpenOffer) {
+              if (!step1Done) {
+                toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
+                setStep(1);
+                return;
+              }
+              toast.error("Najpierw uzupełnij dokumenty i numer KW (Krok 2).");
+              setStep(2);
+              return;
+            }
+            setStep(s.id as StepId);
+          };
           return (
             <button
               type="button"
-              onClick={() => setStep(s.id as StepId)}
+              onClick={handleClick}
+              aria-disabled={!canOpenOffer}
+              title={canOpenOffer ? undefined : "Dostępne po uzupełnieniu Kroku 1 i 2"}
               className={[
                 "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 px-4 py-4 text-center transition-all",
-                active
-                  ? "border-accent bg-gradient-to-r from-accent/20 via-accent/10 to-accent/20 text-foreground shadow-[0_0_30px_-5px_var(--accent)]"
-                  : "border-accent/60 bg-gradient-to-r from-accent/10 via-accent/5 to-accent/10 text-foreground hover:border-accent hover:shadow-[0_0_25px_-5px_var(--accent)]",
+                !canOpenOffer
+                  ? "border-border bg-muted/40 text-muted-foreground cursor-not-allowed"
+                  : active
+                    ? "border-accent bg-gradient-to-r from-accent/20 via-accent/10 to-accent/20 text-foreground shadow-[0_0_30px_-5px_var(--accent)]"
+                    : "border-accent/60 bg-gradient-to-r from-accent/10 via-accent/5 to-accent/10 text-foreground hover:border-accent hover:shadow-[0_0_25px_-5px_var(--accent)]",
               ].join(" ")}
             >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2.5s_infinite]"
-                style={{ animation: "shimmer 2.5s linear infinite" }}
-              />
-              {done && (
+              {canOpenOffer && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2.5s_infinite]"
+                  style={{ animation: "shimmer 2.5s linear infinite" }}
+                />
+              )}
+              {done && canOpenOffer && (
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-accent-foreground">
                   <Check className="h-5 w-5" />
                 </span>
               )}
+              {!canOpenOffer && (
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-muted-foreground" aria-hidden>
+                  <Lock className="h-4 w-4" />
+                </span>
+              )}
               <span className="text-sm font-bold uppercase tracking-wide sm:text-base">
-                Twoja oferta
+                {canOpenOffer ? "Twoja oferta" : "Twoja oferta — uzupełnij wniosek"}
               </span>
             </button>
           );
