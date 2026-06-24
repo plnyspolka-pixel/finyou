@@ -772,7 +772,7 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
-        {step === 2 && (
+        {step === 3 && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting}
             aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
             className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
@@ -784,11 +784,12 @@ export function SinglePageApplicationForm() {
           </Button>
         )}
       </div>
-      {step === 2 && (
+      {step === 3 && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
       )}
+
     </form>
   );
 }
