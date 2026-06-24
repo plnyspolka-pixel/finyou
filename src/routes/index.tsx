@@ -77,14 +77,6 @@ function Landing() {
       <section className="border-b border-border bg-gradient-to-b from-[oklch(0.98_0.01_265)] to-background dark:from-[oklch(0.18_0.04_265)]">
         <div className="mx-auto max-w-3xl px-4 pt-8 pb-10 md:px-6 md:pt-12 md:pb-14">
           <HeroVideo />
-          <div className="text-center">
-            <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl">
-              Weź pożyczkę pod zastaw nieruchomości
-            </h1>
-            <p className="mt-3 text-base text-muted-foreground md:text-lg">
-              Do 1 000 000 zł, decyzja w 24 h. Bez zbędnych procedur bankowych. Liczy się wartość zabezpieczenia.
-            </p>
-          </div>
 
           <div className="mt-8">
             <SinglePageApplicationForm />
