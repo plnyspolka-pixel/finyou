@@ -869,28 +869,16 @@ export function SinglePageApplicationForm() {
           <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
             {/* Sub-step A: kafelki typu nieruchomości */}
             {step2Sub === "type" && (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[oklch(0.55_0.20_255)]">
-                    Krok 1 z 3 — Typ nieruchomości
-                  </p>
-                  <h2 className="text-lg font-extrabold text-foreground md:text-xl">
-                    Co bierzemy pod zabezpieczenie?
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Wybierz kafelek z typem nieruchomości — automatycznie przejdziemy dalej.
-                  </p>
-                </div>
-                <PropertyTypesShowcase
-                  selectedKey={selectedShowcaseKey}
-                  onSelect={(key) => {
-                    const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
-                    if (mapped) setSecType(mapped);
-                    setStep2Sub("kw");
-                  }}
-                />
-              </div>
+              <PropertyTypesShowcase
+                selectedKey={selectedShowcaseKey}
+                onSelect={(key) => {
+                  const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
+                  if (mapped) setSecType(mapped);
+                  setStep2Sub("kw");
+                }}
+              />
             )}
+
 
             {/* Sub-step B: numer KW / akt własności */}
             {step2Sub === "kw" && (
