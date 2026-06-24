@@ -829,13 +829,18 @@ export function SinglePageApplicationForm() {
           </Button>
         )}
         {step === 2 && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
-            {submitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-            ) : (
-              <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek</>
-            )}
-          </Button>
+          <>
+            <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
+              {submitting ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+              ) : (
+                <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek</>
+              )}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setStep(3)} disabled={submitting} className="hidden md:inline-flex">
+              Zobacz ofertę (opcjonalnie) <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </>
         )}
         {step === 3 && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting || !step4Valid} className="ml-auto flex-1 text-base md:flex-none">
