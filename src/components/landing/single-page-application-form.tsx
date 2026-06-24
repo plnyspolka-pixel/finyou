@@ -705,176 +705,152 @@ export function SinglePageApplicationForm() {
         const docPhotos = photos.filter((p) => p.bucket === "property_photos");
 
         return (
-          <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
+          <div className="space-y-6">
             {/* Sub-step A: kafelki typu nieruchomości */}
             {step2Sub === "type" && (
-              <PropertyTypesShowcase
-                selectedKey={selectedShowcaseKey}
-                onSelect={(key) => {
-                  const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
-                  if (mapped) setSecType(mapped);
-                  setTypeSelected(true);
-                }}
-              />
+              <FancyShell>
+                <PropertyTypesShowcase
+                  selectedKey={selectedShowcaseKey}
+                  onSelect={(key) => {
+                    const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
+                    if (mapped) setSecType(mapped);
+                    setTypeSelected(true);
+                  }}
+                />
+              </FancyShell>
             )}
-
-
 
             {/* Sub-step B: numer KW / akt własności */}
             {step2Sub === "kw" && (
               <div className="space-y-4">
-                <div className="relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)]">
-                  <span
-                    aria-hidden
-                    className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
-                    style={{
-                      background:
-                        "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
-                      animation: "fy-kw-spin 6s linear infinite",
-                    }}
-                  />
-                  <div className="relative overflow-hidden rounded-[22px] p-5 text-white md:p-6">
-                    <span aria-hidden className="absolute inset-0" style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }} />
-                    <span aria-hidden className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)", animation: "fy-kw-drift-a 9s ease-in-out infinite alternate" }} />
-                    <span aria-hidden className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)", animation: "fy-kw-drift-b 11s ease-in-out infinite alternate" }} />
-                    <span aria-hidden className="absolute -bottom-10 left-1/3 h-36 w-36 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, oklch(0.50 0.22 285 / 0.6), transparent 70%)", animation: "fy-kw-drift-c 13s ease-in-out infinite alternate" }} />
-                    <span aria-hidden className="absolute inset-0 opacity-25 mix-blend-overlay" style={{ backgroundImage: "linear-gradient(115deg, transparent 0 48%, oklch(0.95 0.05 240 / 0.35) 48% 49%, transparent 49% 62%, oklch(0.95 0.05 240 / 0.25) 62% 62.5%, transparent 62.5%)", backgroundSize: "180% 100%", animation: "fy-kw-lines 7s linear infinite" }} />
+                <FancyShell>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                      <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                        <FileText className="h-5 w-5" strokeWidth={2.5} />
+                      </span>
+                      <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
+                        Numer księgi wieczystej
+                      </Label>
+                    </div>
+                    <Input
+                      id="f-kw"
+                      value={kwNumber}
+                      onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                      placeholder="np. WA1M/00123456/7"
+                      className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                    />
+                    <p className="text-xs text-white/75">
+                      Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
+                    </p>
 
-                    <div className="relative space-y-3">
-                      <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                        <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                          <FileText className="h-5 w-5" strokeWidth={2.5} />
-                        </span>
-                        <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
-                          Numer księgi wieczystej
-                        </Label>
+                    {extraKwNumbers.map((val, idx) => (
+                      <div key={idx} className="flex gap-2 pt-1">
+                        <Input
+                          value={val}
+                          onChange={(e) => {
+                            const v = e.target.value.toUpperCase();
+                            setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                          }}
+                          placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                          className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
+                        />
+                        <Button type="button" variant="outline" size="lg"
+                          onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                          className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                          aria-label="Usuń numer KW">×</Button>
                       </div>
-                      <Input
-                        id="f-kw"
-                        value={kwNumber}
-                        onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-                        placeholder="np. WA1M/00123456/7"
-                        className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
-                      />
-                      <p className="text-xs text-white/75">
-                        Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
-                      </p>
+                    ))}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button type="button" variant="outline" size="sm"
+                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                        onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
+                        + Dodaj kolejny numer KW
+                      </Button>
+                      <Button type="button" variant="outline" size="sm"
+                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                        onClick={() => deedInputRef.current?.click()}>
+                        + Dodaj akt własności
+                      </Button>
+                      <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
+                        className="hidden"
+                        onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
                     </div>
+                    {photos.some((p) => p.bucket === "ownership_deed") && (
+                      <ul className="flex flex-wrap gap-2 pt-1">
+                        {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
+                          <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
+                            <FileText className="h-3.5 w-3.5" />
+                            <span className="max-w-[160px] truncate">{p.name}</span>
+                            <button type="button" onClick={() => removePhoto(p.id)}
+                              className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
+                              aria-label="Usuń akt własności">×</button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {BUILDING_TYPES.includes(secType) && (
+                      <div className="space-y-2 pt-2">
+                        <Label htmlFor="f-area" className="text-white">
+                          Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
+                            value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
+                            placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
+                          <span className="text-sm text-white/75">m²</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <style>{`
-                    @keyframes fy-kw-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-                    @keyframes fy-kw-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
-                    @keyframes fy-kw-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
-                    @keyframes fy-kw-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
-                    @keyframes fy-kw-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
-                  `}</style>
-                </div>
-
-                <div className="space-y-2">
-
-
-                  {extraKwNumbers.map((val, idx) => (
-                    <div key={idx} className="flex gap-2 pt-1">
-                      <Input
-                        value={val}
-                        onChange={(e) => {
-                          const v = e.target.value.toUpperCase();
-                          setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
-                        }}
-                        placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                        className="font-mono text-lg tracking-wider"
-                      />
-                      <Button type="button" variant="outline" size="lg"
-                        onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                        aria-label="Usuń numer KW">×</Button>
-                    </div>
-                  ))}
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button type="button" variant="outline" size="sm"
-                      onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
-                      + Dodaj kolejny numer KW
-                    </Button>
-                    <Button type="button" variant="outline" size="sm"
-                      onClick={() => deedInputRef.current?.click()}>
-                      + Dodaj akt własności
-                    </Button>
-                    <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
-                      className="hidden"
-                      onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
-                  </div>
-                  {photos.some((p) => p.bucket === "ownership_deed") && (
-                    <ul className="flex flex-wrap gap-2 pt-1">
-                      {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
-                        <li key={p.id} className="flex items-center gap-2 rounded-md border border-border bg-secondary/50 px-2 py-1 text-xs text-foreground">
-                          <FileText className="h-3.5 w-3.5 text-accent" />
-                          <span className="max-w-[160px] truncate">{p.name}</span>
-                          <button type="button" onClick={() => removePhoto(p.id)}
-                            className="grid h-5 w-5 place-items-center rounded-full bg-background text-sm font-bold text-foreground"
-                            aria-label="Usuń akt własności">×</button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {BUILDING_TYPES.includes(secType) && (
-                  <div className="space-y-2">
-                    <Label htmlFor="f-area">
-                      Powierzchnia użytkowa <span className="text-muted-foreground">(opcjonalnie)</span>
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
-                        value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
-                        placeholder="np. 58" className="max-w-[180px]" />
-                      <span className="text-sm text-muted-foreground">m²</span>
-                    </div>
-                  </div>
-                )}
+                </FancyShell>
               </div>
             )}
 
             {/* Sub-step C: zdjęcia / dokumenty */}
             {step2Sub === "docs" && (
-              <div className="space-y-4">
-                {(() => {
-                  const hint = PROPERTY_DOCS_BY_SECURITY[secType];
-                  if (!hint) return null;
-                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
-                  if (remaining.length === 0) return null;
-                  return (
-                    <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
-                      <p className="text-xs font-bold uppercase tracking-wider text-accent">
-                        Co jeszcze przygotować — {hint.title}
-                      </p>
-                      <ul className="mt-2 space-y-1.5">
-                        {remaining.map((d) => (
-                          <li key={d} className="flex items-start gap-2 text-sm text-foreground">
-                            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                            <span>{d}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })()}
+              <FancyShell>
+                <div className="space-y-4">
+                  {(() => {
+                    const hint = PROPERTY_DOCS_BY_SECURITY[secType];
+                    if (!hint) return null;
+                    const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
+                    if (remaining.length === 0) return null;
+                    return (
+                      <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
+                        <p className="text-xs font-bold uppercase tracking-wider text-white">
+                          Co jeszcze przygotować — {hint.title}
+                        </p>
+                        <ul className="mt-2 space-y-1.5">
+                          {remaining.map((d) => (
+                            <li key={d} className="flex items-start gap-2 text-sm text-white/90">
+                              <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+                              <span>{d}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
 
-                <PhotoBucket
-                  label="Zdjęcia i dokumenty nieruchomości"
-                  
-                  bucket="property_photos"
-                  photos={photos}
-                  onAdd={addPhotos}
-                  onRemove={removePhoto}
-                />
+                  <PhotoBucket
+                    label="Zdjęcia i dokumenty nieruchomości"
+                    bucket="property_photos"
+                    photos={photos}
+                    onAdd={addPhotos}
+                    onRemove={removePhoto}
+                  />
 
-                {docPhotos.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
-                  </p>
-                )}
-              </div>
+                  {docPhotos.length > 0 && (
+                    <p className="text-xs text-white/75">
+                      Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
+                    </p>
+                  )}
+                </div>
+              </FancyShell>
             )}
-          </section>
+          </div>
         );
       })()}
 
