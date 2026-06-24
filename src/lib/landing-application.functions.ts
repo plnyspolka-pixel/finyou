@@ -26,6 +26,9 @@ const SubmitSchema = z.object({
   preferred_period_months: z.number().int().min(3).max(72),
   property_type: PropertyTypeEnum,
   land_register_number: z.string().trim().max(60).optional().nullable(),
+  city: z.string().trim().max(120).optional().nullable(),
+  annual_investor_rate: z.number().min(0).max(100).optional().nullable(),
+  max_monthly_payment: z.number().min(0).max(1_000_000).optional().nullable(),
   photos: z.array(PhotoSchema).max(40).optional().default([]),
   source: z.string().max(120).optional().nullable(),
 });
@@ -93,6 +96,8 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         loan_amount: data.loan_amount,
         preferred_period_months: data.preferred_period_months,
         kw_status: data.land_register_number ? "znam" : "nie_znam",
+        annual_investor_rate: data.annual_investor_rate ?? null,
+        max_monthly_payment: data.max_monthly_payment ?? null,
         source,
       })
       .select("id")
@@ -143,6 +148,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         loan_application_id: loan.id,
         property_type: data.property_type,
         land_register_number: data.land_register_number ?? null,
+        city: data.city ?? null,
       })
       .select("id")
       .single();
@@ -304,35 +310,53 @@ export type RecentLoanApplicationItem = {
   property_type: string | null;
   loan_amount: number;
   preferred_period_months: number;
+  annual_investor_rate: number;
+  investor_profit: number;
+  city: string | null;
   created_at: string;
 };
 
 export const getRecentLoanApplications = createServerFn({ method: "GET" }).handler(
   async (): Promise<RecentLoanApplicationItem[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { computeLoanFigures } = await import("@/lib/loan-math");
     const { data } = await supabaseAdmin
       .from("loan_applications")
       .select(
-        "id,loan_amount,preferred_period_months,created_at,clients!inner(first_name),properties(property_type)",
+        "id,loan_amount,preferred_period_months,created_at,annual_investor_rate,max_monthly_payment,clients!inner(first_name),properties(property_type,city)",
       )
       .gte("loan_amount", 20_000)
+      .not("annual_investor_rate", "is", null)
       .order("created_at", { ascending: false })
-      .limit(40);
+      .limit(60);
     const rows = (data ?? []) as any[];
     const out: RecentLoanApplicationItem[] = [];
     const seen = new Set<string>();
     for (const r of rows) {
       const fn: string = (r.clients?.first_name ?? "").toString().trim();
       if (!fn) continue;
+      const rate = Number(r.annual_investor_rate);
+      if (!rate || !Number.isFinite(rate)) continue;
       const key = `${fn.toLowerCase()}-${r.loan_amount}`;
       if (seen.has(key)) continue;
       seen.add(key);
+      const amount = Number(r.loan_amount);
+      const months = Number(r.preferred_period_months);
+      const figures = computeLoanFigures({
+        amount,
+        annualRatePercent: rate,
+        months,
+        maxPayment: r.max_monthly_payment ? Number(r.max_monthly_payment) : undefined,
+      });
       out.push({
         id: r.id,
         first_name: fn,
         property_type: r.properties?.[0]?.property_type ?? null,
-        loan_amount: Number(r.loan_amount),
-        preferred_period_months: r.preferred_period_months,
+        loan_amount: amount,
+        preferred_period_months: months,
+        annual_investor_rate: rate,
+        investor_profit: Math.round(figures.investorCompensation),
+        city: r.properties?.[0]?.city ?? null,
         created_at: r.created_at,
       });
       if (out.length >= 12) break;

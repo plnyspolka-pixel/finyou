@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, MapPin } from "lucide-react";
 import { getRecentLoanApplications, type RecentLoanApplicationItem } from "@/lib/landing-application.functions";
 import { formatPLN } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
@@ -37,21 +37,55 @@ export function RecentApplicationsList({ initial }: { initial?: RecentLoanApplic
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
             Pożyczki pod zastaw nieruchomości — realne wnioski
           </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
+            Klienci po przejściu kalkulatora oferty — wybrane warunki czekają na inwestora.
+          </p>
         </div>
 
-        <ul className="mt-8 overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
+        <ul className="mt-8 grid gap-3 sm:grid-cols-2">
           {items.map((it) => (
-            <li key={it.id} className="grid grid-cols-2 items-center gap-3 px-4 py-3 text-sm md:grid-cols-[1fr_1.2fr_1fr_0.8fr_auto] md:px-6">
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                {it.first_name}
+            <li
+              key={it.id}
+              className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-semibold text-foreground">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                  {it.first_name}
+                </div>
+                <span className="text-xs text-muted-foreground">{timeAgo(it.created_at)}</span>
               </div>
-              <div className="text-muted-foreground">
-                {it.property_type ? PROPERTY_TYPE_LABELS[it.property_type] ?? "Nieruchomość" : "Nieruchomość"}
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>
+                  {it.property_type ? PROPERTY_TYPE_LABELS[it.property_type] ?? "Nieruchomość" : "Nieruchomość"}
+                </span>
+                {it.city && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {it.city}
+                  </span>
+                )}
               </div>
-              <div className="tabular-nums font-bold text-foreground">{formatPLN(it.loan_amount)}</div>
-              <div className="tabular-nums text-muted-foreground">{it.preferred_period_months} mies.</div>
-              <div className="col-span-2 text-xs text-muted-foreground md:col-span-1 md:text-right">{timeAgo(it.created_at)}</div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Kwota</div>
+                  <div className="tabular-nums font-bold text-foreground">{formatPLN(it.loan_amount)}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Okres</div>
+                  <div className="tabular-nums font-bold text-foreground">{it.preferred_period_months} mies.</div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Roczna stopa zwrotu</div>
+                  <div className="tabular-nums font-bold text-emerald-600">
+                    {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Zysk inwestora</div>
+                  <div className="tabular-nums font-bold text-foreground">{formatPLN(it.investor_profit)}</div>
+                </div>
+              </div>
             </li>
           ))}
         </ul>
