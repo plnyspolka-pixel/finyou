@@ -452,7 +452,7 @@ export function SinglePageApplicationForm() {
               <Checkbox
                 checked={consentPrivacy}
                 onCheckedChange={(v) => setConsentPrivacy(v === true)}
-                className="mt-0.5 h-6 w-6 [className="mt-0.5"_svg]:size-5"
+                className="mt-0.5 h-6 w-6 [&_svg]:size-5"
               />
               <span>
                 Akceptuję{" "}
@@ -466,7 +466,7 @@ export function SinglePageApplicationForm() {
               <Checkbox
                 checked={consentTerms}
                 onCheckedChange={(v) => setConsentTerms(v === true)}
-                className="mt-0.5 h-6 w-6 [className="mt-0.5"_svg]:size-5"
+                className="mt-0.5 h-6 w-6 [&_svg]:size-5"
               />
               <span>
                 Akceptuję{" "}
@@ -480,7 +480,7 @@ export function SinglePageApplicationForm() {
               <Checkbox
                 checked={consentMarketing}
                 onCheckedChange={(v) => setConsentMarketing(v === true)}
-                className="mt-0.5 h-6 w-6 [className="mt-0.5"_svg]:size-5"
+                className="mt-0.5 h-6 w-6 [&_svg]:size-5"
               />
               <span>
                 Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Zgoda dobrowolna, mogę ją wycofać w każdej chwili.
