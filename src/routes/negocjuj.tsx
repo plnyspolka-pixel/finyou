@@ -120,7 +120,13 @@ function NegocjujPage() {
           </p>
         </div>
 
-        <LoanCalculator onChange={setCalc} />
+        <LoanCalculator
+          onChange={setCalc}
+          initialAmount={search.amount}
+          initialMonths={search.months}
+          initialAnnualRate={search.rate}
+        />
+
 
         <Card>
           <CardHeader>
