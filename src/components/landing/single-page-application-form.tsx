@@ -957,7 +957,7 @@ export function SinglePageApplicationForm() {
                 <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
               )}
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setStep(3)} disabled={submitting} className="hidden md:inline-flex">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setStep(3)} disabled={submitting || !step4Valid} title={!step4Valid ? "Uzupełnij dokumenty i numer KW" : undefined} className="hidden md:inline-flex">
               Zobacz ofertę (opcjonalnie) <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           </>
