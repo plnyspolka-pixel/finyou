@@ -881,10 +881,11 @@ export function SinglePageApplicationForm() {
                 onSelect={(key) => {
                   const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
                   if (mapped) setSecType(mapped);
-                  setStep2Sub("kw");
+                  setTypeSelected(true);
                 }}
               />
             )}
+
 
 
             {/* Sub-step B: numer KW / akt własności */}
