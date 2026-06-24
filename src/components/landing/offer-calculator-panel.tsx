@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { computeLoanFigures, formatPLN } from "@/lib/loan-math";
+import { FancyShell } from "@/components/landing/fancy-shell";
 
 /**
  * SHARED OFFER CALCULATOR — used by:
@@ -91,156 +92,156 @@ export function OfferCalculatorPanel({
   const fig = { monthly: chosenPayment, balloon: balloonAmount, total: totalPaid, investorCompensation: totalInterest };
 
   return (
-    <section className="space-y-6 overflow-hidden rounded-3xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 via-background to-background p-5 shadow-[0_20px_60px_-20px_hsl(var(--accent)/0.35)] md:p-7">
-      <div className="-mx-5 -mt-5 border-b border-accent/20 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-5 py-4 md:-mx-7 md:-mt-7 md:px-7 md:py-5">
+    <FancyShell>
+      <div className="space-y-6">
         <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-accent-foreground shadow-md">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
             <Check className="h-4 w-4" strokeWidth={3} />
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-accent">{headerLabel}</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white">{headerLabel}</span>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <Label className="text-sm font-semibold">Kwota pożyczki</Label>
-          <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
-        </div>
-        <Slider gradient="good-bad" value={[amount]} min={20_000} max={1_000_000} step={5_000}
-          onValueChange={(v) => setAmount(v[0] ?? amount)} />
-        <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <Label className="text-sm font-semibold">Proponowany okres spłaty</Label>
-          <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
-        </div>
-        <Slider gradient="good-bad" value={[Math.min(Math.max(months, 12), maxMonths)]} min={12} max={maxMonths} step={1}
-          onValueChange={(v) => setMonths(v[0] ?? months)} />
-        <div className="flex justify-between text-xs text-muted-foreground"><span>12 mies.</span><span>{maxMonths} mies.</span></div>
-        {months <= 36 && (
-          <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
-            <Checkbox checked={canExtend} onCheckedChange={(v) => setCanExtend(v === true)} className="mt-0.5" />
-            <span className="text-xs text-foreground">
-              <span className="font-semibold">Możliwość przedłużenia pożyczki</span> — chcę mieć opcję wydłużenia okresu spłaty na zakończenie umowy.
-            </span>
-          </label>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (miesięcznie)</Label>
-          <span className="text-2xl font-extrabold tabular-nums text-foreground">{(annualRate / 12).toFixed(2)}%</span>
-        </div>
-        <Slider gradient="bad-good" value={[annualRate / 12]} min={minAnnualRate / 12} max={50 / 12} step={0.05}
-          onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(((v[0] ?? annualRate / 12) * 12)); }} />
-        <div className="flex justify-between text-xs text-muted-foreground"><span>{(minAnnualRate/12).toFixed(2)}% / mies.</span><span>{(50/12).toFixed(2)}% / mies.</span></div>
-        <p className="text-xs text-muted-foreground">
-          {allowBalloon
-            ? `Przy okresie do 36 miesięcy minimalne wynagrodzenie inwestora to ${minAnnualRate}% rocznie (${(minAnnualRate/12).toFixed(2)}% / mies.).`
-            : `Powyżej 36 miesięcy wynagrodzenie może być niższe, ale spłacasz pełną ratę kapitałowo-odsetkową.`}
-        </p>
-      </div>
-
-      {allowBalloon ? (
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <Label className="text-sm font-semibold">Maksymalna rata miesięczna</Label>
-            <span className="text-2xl font-extrabold tabular-nums text-foreground">
-              {effectiveMax > 0 ? formatPLN(effectiveMax) : "bez limitu"}
-            </span>
+            <Label className="text-sm font-semibold text-white">Kwota pożyczki</Label>
+            <span className="text-2xl font-extrabold tabular-nums text-white">{formatPLN(amount)}</span>
           </div>
-          <Slider
-            gradient="bad-good"
-            value={[effectiveMax > 0 ? effectiveMax : maxCap]}
-            min={minCap}
-            max={maxCap}
-            step={50}
-            onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>min. {formatPLN(minCap)} <span className="opacity-70">(same odsetki)</span></span>
-            <span>bez limitu</span>
+          <Slider gradient="good-bad" value={[amount]} min={20_000} max={1_000_000} step={5_000}
+            onValueChange={(v) => setAmount(v[0] ?? amount)} />
+          <div className="flex justify-between text-xs text-white/70"><span>20 000 zł</span><span>1 000 000 zł</span></div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <Label className="text-sm font-semibold text-white">Proponowany okres spłaty</Label>
+            <span className="text-2xl font-extrabold tabular-nums text-white">{months} mies.</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Ustaw niżej, jeśli chcesz mniejszą ratę miesięczną. Różnicę dopłacisz jednorazowo na koniec okresu.
+          <Slider gradient="good-bad" value={[Math.min(Math.max(months, 12), maxMonths)]} min={12} max={maxMonths} step={1}
+            onValueChange={(v) => setMonths(v[0] ?? months)} />
+          <div className="flex justify-between text-xs text-white/70"><span>12 mies.</span><span>{maxMonths} mies.</span></div>
+          {months <= 36 && (
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
+              <Checkbox checked={canExtend} onCheckedChange={(v) => setCanExtend(v === true)} className="mt-0.5 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground" />
+              <span className="text-xs text-white">
+                <span className="font-semibold">Możliwość przedłużenia pożyczki</span> — chcę mieć opcję wydłużenia okresu spłaty na zakończenie umowy.
+              </span>
+            </label>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <Label className="text-sm font-semibold text-white">Proponowane wynagrodzenie inwestora (miesięcznie)</Label>
+            <span className="text-2xl font-extrabold tabular-nums text-white">{(annualRate / 12).toFixed(2)}%</span>
+          </div>
+          <Slider gradient="bad-good" value={[annualRate / 12]} min={minAnnualRate / 12} max={50 / 12} step={0.05}
+            onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(((v[0] ?? annualRate / 12) * 12)); }} />
+          <div className="flex justify-between text-xs text-white/70"><span>{(minAnnualRate/12).toFixed(2)}% / mies.</span><span>{(50/12).toFixed(2)}% / mies.</span></div>
+          <p className="text-xs text-white/75">
+            {allowBalloon
+              ? `Przy okresie do 36 miesięcy minimalne wynagrodzenie inwestora to ${minAnnualRate}% rocznie (${(minAnnualRate/12).toFixed(2)}% / mies.).`
+              : `Powyżej 36 miesięcy wynagrodzenie może być niższe, ale spłacasz pełną ratę kapitałowo-odsetkową.`}
           </p>
         </div>
-      ) : (
-        <div className="rounded-2xl border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
-          Przy okresie powyżej 36 miesięcy spłacasz <span className="font-semibold text-foreground">pełną ratę kapitałowo-odsetkową</span> — bez raty balonowej na końcu.
+
+        {allowBalloon ? (
+          <div className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-sm font-semibold text-white">Maksymalna rata miesięczna</Label>
+              <span className="text-2xl font-extrabold tabular-nums text-white">
+                {effectiveMax > 0 ? formatPLN(effectiveMax) : "bez limitu"}
+              </span>
+            </div>
+            <Slider
+              gradient="bad-good"
+              value={[effectiveMax > 0 ? effectiveMax : maxCap]}
+              min={minCap}
+              max={maxCap}
+              step={50}
+              onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
+            />
+            <div className="flex justify-between text-xs text-white/70">
+              <span>min. {formatPLN(minCap)} <span className="opacity-70">(same odsetki)</span></span>
+              <span>bez limitu</span>
+            </div>
+            <p className="text-xs text-white/75">
+              Ustaw niżej, jeśli chcesz mniejszą ratę miesięczną. Różnicę dopłacisz jednorazowo na koniec okresu.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-white/25 bg-white/10 p-4 text-xs text-white/85 backdrop-blur-sm">
+            Przy okresie powyżej 36 miesięcy spłacasz <span className="font-semibold text-white">pełną ratę kapitałowo-odsetkową</span> — bez raty balonowej na końcu.
+          </div>
+        )}
+
+        <div className="rounded-2xl border-2 border-white/30 bg-white/10 p-5 shadow-inner backdrop-blur-sm">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/85">Twoja miesięczna rata</p>
+          <p className="mt-1 text-4xl font-black tabular-nums text-white md:text-5xl">{formatPLN(fig.monthly)}</p>
+          <p className="mt-1 text-xs text-white/75">przez {months} miesięcy{fig.balloon > 0 ? ` + rata balonowa ${formatPLN(fig.balloon)} na końcu` : ""}</p>
+
+          <div className="mt-4 grid gap-3 border-t border-white/20 pt-4 sm:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Kwota pożyczki</p>
+              <p className="mt-0.5 text-lg font-extrabold tabular-nums text-white">{formatPLN(amount)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Okres</p>
+              <p className="mt-0.5 text-lg font-extrabold tabular-nums text-white">{months} mies.</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Roczne wynagrodzenie inwestora (za całość)</p>
+              <p className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(fig.investorCompensation * 12 / Math.max(1, months))}<span className="text-xs font-normal text-white/70"> / rok</span></p>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
+              <p className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(financeYouFee)}</p>
+            </div>
+            <div className="rounded-xl bg-white/10 p-3 sm:col-span-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Łączna spłata (z prowizją FY)</p>
+              <p className="mt-0.5 text-xl font-extrabold tabular-nums text-white">{formatPLN(fig.total)}</p>
+            </div>
+          </div>
         </div>
-      )}
 
-      <div className="rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-background p-5 shadow-inner">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Twoja miesięczna rata</p>
-        <p className="mt-1 text-4xl font-black tabular-nums text-foreground md:text-5xl">{formatPLN(fig.monthly)}</p>
-        <p className="mt-1 text-xs text-muted-foreground">przez {months} miesięcy{fig.balloon > 0 ? ` + rata balonowa ${formatPLN(fig.balloon)} na końcu` : ""}</p>
-
-        <div className="mt-4 grid gap-3 border-t border-accent/20 pt-4 sm:grid-cols-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kwota pożyczki</p>
-            <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Okres</p>
-            <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{months} mies.</p>
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Roczne wynagrodzenie inwestora (za całość)</p>
-            <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(fig.investorCompensation * 12 / Math.max(1, months))}<span className="text-xs font-normal text-muted-foreground"> / rok</span></p>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
-            <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(financeYouFee)}</p>
-          </div>
-          <div className="rounded-xl bg-background/60 p-3 sm:col-span-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Łączna spłata (z prowizją FY)</p>
-            <p className="mt-0.5 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.total)}</p>
-          </div>
-        </div>
-      </div>
-
-      <details className="group rounded-2xl border border-border bg-card">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-foreground hover:bg-secondary/50">
-          <span>Harmonogram spłat ({months} rat)</span>
-          <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
-        </summary>
-        <div className="max-h-80 overflow-auto border-t border-border">
-          <table className="w-full text-right text-xs tabular-nums">
-            <thead className="sticky top-0 bg-secondary/80 text-[11px] uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left font-semibold">#</th>
-                <th className="px-3 py-2 font-semibold">Rata</th>
-                <th className="px-3 py-2 font-semibold">Odsetki</th>
-                <th className="px-3 py-2 font-semibold">Kapitał</th>
-                <th className="px-3 py-2 font-semibold">Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedule.map((row, idx) => (
-                <tr key={idx} className={`border-t border-border/50 ${row.n === "balon" ? "bg-accent/5 font-semibold" : ""}`}>
-                  <td className="px-3 py-1.5 text-left text-foreground">{row.n === "balon" ? "Balon" : row.n}</td>
-                  <td className="px-3 py-1.5 font-semibold text-foreground">{formatPLN(row.payment)}</td>
-                  <td className="px-3 py-1.5 text-muted-foreground">{formatPLN(row.interest)}</td>
-                  <td className="px-3 py-1.5 text-muted-foreground">{formatPLN(row.principal)}</td>
-                  <td className="px-3 py-1.5 text-foreground">{formatPLN(row.balance)}</td>
+        <details className="group rounded-2xl border border-white/25 bg-white/10 backdrop-blur-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white hover:bg-white/15">
+            <span>Harmonogram spłat ({months} rat)</span>
+            <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+          </summary>
+          <div className="max-h-80 overflow-auto border-t border-white/20">
+            <table className="w-full text-right text-xs tabular-nums">
+              <thead className="sticky top-0 bg-white/15 text-[11px] uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold">#</th>
+                  <th className="px-3 py-2 font-semibold">Rata</th>
+                  <th className="px-3 py-2 font-semibold">Odsetki</th>
+                  <th className="px-3 py-2 font-semibold">Kapitał</th>
+                  <th className="px-3 py-2 font-semibold">Saldo</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="px-4 py-3 text-[11px] text-muted-foreground">
-          Kapitał startowy: {formatPLN(grossPrincipal)} = kwota pożyczki {formatPLN(amount)} + prowizja Finance You {formatPLN(financeYouFee)} ({FINANCEYOU_FEE_PCT}%, kredytowana zgodnie z regulaminem).
-        </p>
-      </details>
+              </thead>
+              <tbody>
+                {schedule.map((row, idx) => (
+                  <tr key={idx} className={`border-t border-white/10 ${row.n === "balon" ? "bg-white/10 font-semibold" : ""}`}>
+                    <td className="px-3 py-1.5 text-left text-white">{row.n === "balon" ? "Balon" : row.n}</td>
+                    <td className="px-3 py-1.5 font-semibold text-white">{formatPLN(row.payment)}</td>
+                    <td className="px-3 py-1.5 text-white/75">{formatPLN(row.interest)}</td>
+                    <td className="px-3 py-1.5 text-white/75">{formatPLN(row.principal)}</td>
+                    <td className="px-3 py-1.5 text-white">{formatPLN(row.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-4 py-3 text-[11px] text-white/70">
+            Kapitał startowy: {formatPLN(grossPrincipal)} = kwota pożyczki {formatPLN(amount)} + prowizja Finance You {formatPLN(financeYouFee)} ({FINANCEYOU_FEE_PCT}%, kredytowana zgodnie z regulaminem).
+          </p>
+        </details>
 
-      <p className="text-[11px] text-muted-foreground">
-        Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
-      </p>
-    </section>
+        <p className="text-[11px] text-white/70">
+          Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
+        </p>
+      </div>
+    </FancyShell>
   );
 }

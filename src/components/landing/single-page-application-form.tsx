@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Send, Upload, Camera, FileText, Loader2, ChevronLeft, ChevronRight, Check, Lock } from "lucide-react";
+import { Send, Upload, Camera, FileText, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -185,19 +185,17 @@ function PhotoBucket({
 
 const STEPS = [
   { id: 1, label: "Kontakt" },
-  { id: 2, label: "Wniosek" },
-  { id: 3, label: "Twoja oferta" },
+  { id: 2, label: "Wniosek i oferta" },
 ] as const;
 
 
-type StepId = 1 | 2 | 3;
+type StepId = 1 | 2;
 
 export function SinglePageApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
   const [step, setStep] = useState<StepId>(1);
-  const [step2Sub, setStep2Sub] = useState<"type" | "kw" | "docs">("type");
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
 
@@ -314,36 +312,11 @@ export function SinglePageApplicationForm() {
       }
       fireLead();
       setStep(2);
-      setStep2Sub("type");
       return;
     }
-    if (step === 2) {
-      if (step2Sub === "type") {
-        if (!typeSelected) {
-          toast.error("Wybierz typ nieruchomości.");
-          return;
-        }
-        setStep2Sub("kw");
-        return;
-      }
-
-
-      if (step2Sub === "kw") {
-        if (!kwOrDeedOk) {
-          toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
-          return;
-        }
-        setStep2Sub("docs");
-        return;
-      }
-      // docs → przejście do oferty obsługuje submit
-    }
-    setStep((s) => (Math.min(3, s + 1) as StepId));
   };
   const goBack = () => {
     if (step === 2) {
-      if (step2Sub === "docs") { setStep2Sub("kw"); return; }
-      if (step2Sub === "kw") { setStep2Sub("type"); return; }
       setStep(1);
       return;
     }
@@ -361,30 +334,34 @@ export function SinglePageApplicationForm() {
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
   const step4Valid = kwOrDeedOk;
 
-  // Allow external CTAs (e.g. hero button) to request opening "Twoja oferta" with same gating
+  // Allow external CTAs (e.g. hero button) to scroll/open the application
   useEffect(() => {
     const handler = () => {
       const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
       if (!step1Done) {
         toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
         setStep(1);
-      } else if (!step4Valid) {
-        toast.error("Najpierw uzupełnij dokumenty i numer KW (Krok 2).");
-        setStep(2);
       } else {
-        setStep(3);
+        setStep(2);
       }
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
-  }, [contactValid, consentPrivacy, consentTerms, consentMarketing, step4Valid]);
+  }, [contactValid, consentPrivacy, consentTerms, consentMarketing]);
 
   const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }
-    if (step === 2 && step2Sub !== "docs") { goNext(); return; }
+    if (!typeSelected) {
+      toast.error("Wybierz typ nieruchomości.");
+      return;
+    }
+    if (!kwOrDeedOk) {
+      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+      return;
+    }
     if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
@@ -474,7 +451,6 @@ export function SinglePageApplicationForm() {
     if (step === 1 && step1Done) {
       fireLead();
       setStep(2);
-      setStep2Sub("type");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing]);
@@ -482,138 +458,8 @@ export function SinglePageApplicationForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      {/* Elegancki, zachęcający button "Twoja oferta" — zablokowany dopóki wniosek niekompletny */}
-      {(() => {
-        const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-        const canOpenOffer = step1Done && step4Valid;
-        const active = step === 3;
-        const handleClick = () => {
-          if (!canOpenOffer) {
-            if (!step1Done) {
-              toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody.");
-              setStep(1);
-              return;
-            }
-            toast.error("Najpierw uzupełnij dokumenty i numer KW.");
-            setStep(2);
-            return;
-          }
-          setStep(3);
-        };
-        return (
-          <button
-            type="button"
-            onClick={handleClick}
-            aria-disabled={!canOpenOffer}
-            title={canOpenOffer ? "Zobacz swoją wstępną ofertę" : "Dostępne po uzupełnieniu wniosku"}
-            className={[
-              "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] transition-transform duration-300",
-              canOpenOffer ? "hover:scale-[1.01] active:scale-[0.99] cursor-pointer" : "cursor-not-allowed",
-            ].join(" ")}
-          >
-            {/* Obrotowy gradient na obwodzie — w kolorystyce marki (granat → indygo → błękit) */}
-            <span
-              aria-hidden
-              className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
-                animation: "fy-offer-spin 6s linear infinite",
-                opacity: canOpenOffer ? 1 : 0.55,
-              }}
-            />
-            {/* Wnętrze buttona — abstrakcyjna grafika z kolorystyki logo */}
-            <span className="relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-[14px] px-5 py-4 text-white">
-              {/* Bazowa warstwa: głęboki granat marki */}
-              <span
-                aria-hidden
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
-                }}
-              />
-              {/* Abstrakcyjne "bloby" w kolorach marki */}
-              <span
-                aria-hidden
-                className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl"
-                style={{
-                  background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)",
-                  animation: "fy-offer-drift-a 9s ease-in-out infinite alternate",
-                }}
-              />
-              <span
-                aria-hidden
-                className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl"
-                style={{
-                  background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)",
-                  animation: "fy-offer-drift-b 11s ease-in-out infinite alternate",
-                }}
-              />
-              <span
-                aria-hidden
-                className="absolute -bottom-10 left-1/3 h-36 w-36 rounded-full blur-2xl"
-                style={{
-                  background: "radial-gradient(circle, oklch(0.50 0.22 285 / 0.6), transparent 70%)",
-                  animation: "fy-offer-drift-c 13s ease-in-out infinite alternate",
-                }}
-              />
-              {/* Subtelna siatka linii — designerski akcent */}
-              <span
-                aria-hidden
-                className="absolute inset-0 opacity-25 mix-blend-overlay"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(115deg, transparent 0 48%, oklch(0.95 0.05 240 / 0.35) 48% 49%, transparent 49% 62%, oklch(0.95 0.05 240 / 0.25) 62% 62.5%, transparent 62.5%)",
-                  backgroundSize: "180% 100%",
-                  animation: "fy-offer-lines 7s linear infinite",
-                }}
-              />
-              {/* Shimmer */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 overflow-hidden"
-              >
-                <span
-                  className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent"
-                  style={{ animation: "fy-offer-shimmer 3.2s linear infinite" }}
-                />
-              </span>
-              {/* Treść */}
-              <span
-                className={[
-                  "relative grid h-9 w-9 place-items-center rounded-full backdrop-blur-sm",
-                  canOpenOffer ? "bg-white/20 ring-1 ring-white/30" : "bg-white/15 ring-1 ring-white/20",
-                ].join(" ")}
-                aria-hidden
-              >
-                {canOpenOffer ? <Check className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
-              </span>
-              <span className="relative flex flex-col items-center leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                <span className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">TWOJA OFERTA</span>
-                {!canOpenOffer && (
-                  <span className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-white/65">
-                    Uzupełnij dane, aby odblokować
-                  </span>
-                )}
-              </span>
-              {active && (
-                <span className="relative ml-1 hidden rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-white/30 sm:inline">
-                  Otwarte
-                </span>
-              )}
-            </span>
-          </button>
-        );
-      })()}
-      <style>{`
-        @keyframes fy-offer-spin { to { transform: rotate(360deg); } }
-        @keyframes fy-offer-shimmer { 0% { transform: translateX(0); } 100% { transform: translateX(450%); } }
-        @keyframes fy-offer-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
-        @keyframes fy-offer-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
-        @keyframes fy-offer-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
-        @keyframes fy-offer-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
-      `}</style>
+
+
 
 
 
@@ -677,22 +523,7 @@ export function SinglePageApplicationForm() {
         </FancyShell>
       )}
 
-      {/* Step 3 — Twoja oferta (kalkulator) — wspólny komponent z /klient */}
-      {step === 3 && (
-        <OfferCalculatorPanel
-          amount={amount} setAmount={setAmount}
-          months={months} setMonths={setMonths}
-          maxMonths={maxMonths}
-          canExtend={canExtend} setCanExtend={setCanExtend}
-          annualRate={annualRate} setAnnualRate={setAnnualRate}
-          rateTouchedRef={rateTouchedRef}
-          maxPayment={maxPayment} setMaxPayment={setMaxPayment}
-          headerLabel="Wniosek przyjęty"
-        />
-      )}
-
-
-      {/* Step 2 — wniosek (kafelki → KW → dokumenty) */}
+      {/* Step 2 — wszystko w jednym: typ → KW → dokumenty → kalkulator */}
       {step === 2 && (() => {
         const secToShowcase: Record<string, string> = {
           mieszkanie: "mieszkanie",
@@ -706,157 +537,161 @@ export function SinglePageApplicationForm() {
 
         return (
           <div className="space-y-6">
-            {/* Sub-step A: kafelki typu nieruchomości */}
-            {step2Sub === "type" && (
-              <FancyShell>
-                <PropertyTypesShowcase
-                  selectedKey={selectedShowcaseKey}
-                  onSelect={(key) => {
-                    const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
-                    if (mapped) setSecType(mapped);
-                    setTypeSelected(true);
-                  }}
+            {/* A: typ nieruchomości */}
+            <FancyShell>
+              <PropertyTypesShowcase
+                selectedKey={selectedShowcaseKey}
+                onSelect={(key) => {
+                  const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
+                  if (mapped) setSecType(mapped);
+                  setTypeSelected(true);
+                }}
+              />
+            </FancyShell>
+
+            {/* B: numer KW / akt własności */}
+            <FancyShell>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                    <FileText className="h-5 w-5" strokeWidth={2.5} />
+                  </span>
+                  <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
+                    Numer księgi wieczystej
+                  </Label>
+                </div>
+                <Input
+                  id="f-kw"
+                  value={kwNumber}
+                  onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                  placeholder="np. WA1M/00123456/7"
+                  className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
                 />
-              </FancyShell>
-            )}
+                <p className="text-xs text-white/75">
+                  Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
+                </p>
 
-            {/* Sub-step B: numer KW / akt własności */}
-            {step2Sub === "kw" && (
-              <div className="space-y-4">
-                <FancyShell>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                      <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                        <FileText className="h-5 w-5" strokeWidth={2.5} />
-                      </span>
-                      <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
-                        Numer księgi wieczystej
-                      </Label>
-                    </div>
+                {extraKwNumbers.map((val, idx) => (
+                  <div key={idx} className="flex gap-2 pt-1">
                     <Input
-                      id="f-kw"
-                      value={kwNumber}
-                      onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-                      placeholder="np. WA1M/00123456/7"
-                      className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                      value={val}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase();
+                        setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                      }}
+                      placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                      className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
                     />
-                    <p className="text-xs text-white/75">
-                      Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
-                    </p>
-
-                    {extraKwNumbers.map((val, idx) => (
-                      <div key={idx} className="flex gap-2 pt-1">
-                        <Input
-                          value={val}
-                          onChange={(e) => {
-                            const v = e.target.value.toUpperCase();
-                            setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
-                          }}
-                          placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                          className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
-                        />
-                        <Button type="button" variant="outline" size="lg"
-                          onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                          className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                          aria-label="Usuń numer KW">×</Button>
-                      </div>
+                    <Button type="button" variant="outline" size="lg"
+                      onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                      className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                      aria-label="Usuń numer KW">×</Button>
+                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button type="button" variant="outline" size="sm"
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
+                    + Dodaj kolejny numer KW
+                  </Button>
+                  <Button type="button" variant="outline" size="sm"
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    onClick={() => deedInputRef.current?.click()}>
+                    + Dodaj akt własności
+                  </Button>
+                  <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
+                </div>
+                {photos.some((p) => p.bucket === "ownership_deed") && (
+                  <ul className="flex flex-wrap gap-2 pt-1">
+                    {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
+                      <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="max-w-[160px] truncate">{p.name}</span>
+                        <button type="button" onClick={() => removePhoto(p.id)}
+                          className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
+                          aria-label="Usuń akt własności">×</button>
+                      </li>
                     ))}
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <Button type="button" variant="outline" size="sm"
-                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                        onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
-                        + Dodaj kolejny numer KW
-                      </Button>
-                      <Button type="button" variant="outline" size="sm"
-                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                        onClick={() => deedInputRef.current?.click()}>
-                        + Dodaj akt własności
-                      </Button>
-                      <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
-                        className="hidden"
-                        onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
+                  </ul>
+                )}
+
+                {BUILDING_TYPES.includes(secType) && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="f-area" className="text-white">
+                      Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
+                        value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
+                        placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
+                      <span className="text-sm text-white/75">m²</span>
                     </div>
-                    {photos.some((p) => p.bucket === "ownership_deed") && (
-                      <ul className="flex flex-wrap gap-2 pt-1">
-                        {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
-                          <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
-                            <FileText className="h-3.5 w-3.5" />
-                            <span className="max-w-[160px] truncate">{p.name}</span>
-                            <button type="button" onClick={() => removePhoto(p.id)}
-                              className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
-                              aria-label="Usuń akt własności">×</button>
+                  </div>
+                )}
+              </div>
+            </FancyShell>
+
+            {/* C: zdjęcia / dokumenty */}
+            <FancyShell>
+              <div className="space-y-4">
+                {(() => {
+                  const hint = PROPERTY_DOCS_BY_SECURITY[secType];
+                  if (!hint) return null;
+                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
+                  if (remaining.length === 0) return null;
+                  return (
+                    <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white">
+                        Co jeszcze przygotować — {hint.title}
+                      </p>
+                      <ul className="mt-2 space-y-1.5">
+                        {remaining.map((d) => (
+                          <li key={d} className="flex items-start gap-2 text-sm text-white/90">
+                            <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{d}</span>
                           </li>
                         ))}
                       </ul>
-                    )}
+                    </div>
+                  );
+                })()}
 
-                    {BUILDING_TYPES.includes(secType) && (
-                      <div className="space-y-2 pt-2">
-                        <Label htmlFor="f-area" className="text-white">
-                          Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
-                            value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
-                            placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
-                          <span className="text-sm text-white/75">m²</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </FancyShell>
+                <PhotoBucket
+                  label="Zdjęcia i dokumenty nieruchomości"
+                  bucket="property_photos"
+                  photos={photos}
+                  onAdd={addPhotos}
+                  onRemove={removePhoto}
+                />
+
+                {docPhotos.length > 0 && (
+                  <p className="text-xs text-white/75">
+                    Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
+                  </p>
+                )}
               </div>
-            )}
+            </FancyShell>
 
-            {/* Sub-step C: zdjęcia / dokumenty */}
-            {step2Sub === "docs" && (
-              <FancyShell>
-                <div className="space-y-4">
-                  {(() => {
-                    const hint = PROPERTY_DOCS_BY_SECURITY[secType];
-                    if (!hint) return null;
-                    const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
-                    if (remaining.length === 0) return null;
-                    return (
-                      <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
-                        <p className="text-xs font-bold uppercase tracking-wider text-white">
-                          Co jeszcze przygotować — {hint.title}
-                        </p>
-                        <ul className="mt-2 space-y-1.5">
-                          {remaining.map((d) => (
-                            <li key={d} className="flex items-start gap-2 text-sm text-white/90">
-                              <FileText className="mt-0.5 h-4 w-4 shrink-0" />
-                              <span>{d}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })()}
-
-                  <PhotoBucket
-                    label="Zdjęcia i dokumenty nieruchomości"
-                    bucket="property_photos"
-                    photos={photos}
-                    onAdd={addPhotos}
-                    onRemove={removePhoto}
-                  />
-
-                  {docPhotos.length > 0 && (
-                    <p className="text-xs text-white/75">
-                      Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
-                    </p>
-                  )}
-                </div>
-              </FancyShell>
-            )}
+            {/* D: kalkulator oferty */}
+            <OfferCalculatorPanel
+              amount={amount} setAmount={setAmount}
+              months={months} setMonths={setMonths}
+              maxMonths={maxMonths}
+              canExtend={canExtend} setCanExtend={setCanExtend}
+              annualRate={annualRate} setAnnualRate={setAnnualRate}
+              rateTouchedRef={rateTouchedRef}
+              maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+              headerLabel="Twoja wstępna oferta"
+            />
           </div>
         );
       })()}
 
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        {(step > 1 || (step === 2 && step2Sub !== "type")) && (
+        {step > 1 && (
           <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={submitting}>
             <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
           </Button>
@@ -866,37 +701,19 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
-        {step === 2 && step2Sub === "type" && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} aria-disabled={!typeSelected} className={`ml-auto flex-1 text-base md:flex-none ${!typeSelected ? "opacity-60" : ""}`}>
-            Dalej <ChevronRight className="ml-1 h-5 w-5" />
-          </Button>
-        )}
-        {step === 2 && step2Sub === "kw" && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} aria-disabled={!kwOrDeedOk} className={`ml-auto flex-1 text-base md:flex-none ${!kwOrDeedOk ? "opacity-60" : ""}`}>
-            Dalej <ChevronRight className="ml-1 h-5 w-5" />
-          </Button>
-        )}
-
-        {step === 2 && step2Sub === "docs" && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} aria-disabled={!hasPropertyPhotos} className={`ml-auto flex-1 text-base md:flex-none ${!hasPropertyPhotos ? "opacity-60" : ""}`}>
+        {step === 2 && (
+          <Button type="submit" variant="cta" size="lg" disabled={submitting}
+            aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
+            className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
-              <><Send className="mr-2 h-5 w-5" /> Przejdź do oferty</>
-            )}
-          </Button>
-        )}
-        {step === 3 && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
-            {submitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-            ) : (
-              <><Send className="mr-2 h-5 w-5" /> Złóż ofertę</>
+              <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
             )}
           </Button>
         )}
       </div>
-      {(step === 2 || step === 3) && (
+      {step === 2 && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
