@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 
 import { PropertyTypesShowcase, PROPERTY_SHOWCASE_KEY_TO_SECURITY, PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
+import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import {
   computeLoanFigures,
   formatPLN,
