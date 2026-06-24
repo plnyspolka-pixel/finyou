@@ -243,7 +243,7 @@ export function SinglePageApplicationForm() {
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
 
-  const photoBuckets = useMemo(() => bucketsFor(secType), [secType]);
+  
 
   const contactValid = useMemo(() => {
     const fn = firstName.trim();
