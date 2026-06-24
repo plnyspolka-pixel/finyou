@@ -186,17 +186,21 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                   key={it.id}
                   className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
                 >
-                  <div className="relative h-40 w-full overflow-hidden bg-secondary">
-                    <img
-                      src={it.photo_url}
-                      alt={`${PROPERTY_TYPE_LABELS[it.property_type]} — ${it.city}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-                      <MapPin className="h-3 w-3" /> {it.city}
-                    </div>
-                  </div>
+                  {(() => {
+                    const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
+                    const Icon = v.Icon;
+                    return (
+                      <div className={`relative flex h-24 w-full items-center justify-between overflow-hidden bg-gradient-to-br ${v.gradient} px-4`}>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Icon className="h-5 w-5 text-accent" />
+                          {PROPERTY_TYPE_LABELS[it.property_type]}
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                          <MapPin className="h-3 w-3" /> {it.city}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex flex-1 flex-col p-4">
                     <div className="flex items-center justify-between gap-2">
