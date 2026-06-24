@@ -528,7 +528,7 @@ export function SinglePageApplicationForm() {
           </Button>
         )}
       </div>
-      {step === 4 && (
+      {step === 3 && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
