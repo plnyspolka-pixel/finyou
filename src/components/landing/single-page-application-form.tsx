@@ -494,14 +494,13 @@ export function SinglePageApplicationForm() {
 
       {/* Step 3 — Twoja oferta (kalkulator) */}
       {step === 3 && (() => {
-        const ANNUAL_RATE = 24;
-        const nominalFig = computeLoanFigures({ amount, annualRatePercent: ANNUAL_RATE, months });
+        const nominalFig = computeLoanFigures({ amount, annualRatePercent: annualRate, months });
         const minCap = Math.round(nominalFig.nominal * 0.4);
         const maxCap = Math.round(nominalFig.nominal);
         const effectiveMax = maxPayment > 0 ? Math.min(Math.max(maxPayment, minCap), maxCap) : 0;
         const fig = computeLoanFigures({
           amount,
-          annualRatePercent: ANNUAL_RATE,
+          annualRatePercent: annualRate,
           months,
           maxPayment: effectiveMax || undefined,
         });
