@@ -1003,12 +1003,12 @@ export function SinglePageApplicationForm() {
           </Button>
         )}
         {step === 2 && step2Sub === "type" && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} disabled={!typeSelected} className="ml-auto flex-1 text-base md:flex-none">
+          <Button type="button" variant="cta" size="lg" onClick={goNext} aria-disabled={!typeSelected} className={`ml-auto flex-1 text-base md:flex-none ${!typeSelected ? "opacity-60" : ""}`}>
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
         {step === 2 && step2Sub === "kw" && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} disabled={!kwOrDeedOk} className="ml-auto flex-1 text-base md:flex-none">
+          <Button type="button" variant="cta" size="lg" onClick={goNext} aria-disabled={!kwOrDeedOk} className={`ml-auto flex-1 text-base md:flex-none ${!kwOrDeedOk ? "opacity-60" : ""}`}>
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
