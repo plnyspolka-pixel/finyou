@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { SecurityTypePicker } from "@/components/security-type-picker";
+import { PropertyTypesShowcase } from "@/components/landing/property-types-showcase";
 import {
   computeLoanFigures,
   formatPLN,
@@ -852,14 +853,26 @@ export function SinglePageApplicationForm() {
       {/* Step 2 — wniosek (zabezpieczenie + nieruchomość) */}
       {step === 2 && (
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
-
-
-
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[oklch(0.55_0.20_255)]">
+                Typ nieruchomości
+              </p>
+              <h2 className="text-lg font-extrabold text-foreground md:text-xl">
+                Co bierzemy pod zabezpieczenie?
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Wybierz kafelek, aby zobaczyć listę dokumentów, które warto przygotować.
+              </p>
+            </div>
+            <PropertyTypesShowcase />
+          </div>
 
           <div className="space-y-3">
             <Label className="text-sm font-semibold">Rodzaj nieruchomości pod zabezpieczenie</Label>
             <SecurityTypePicker value={secType} onChange={(t) => setSecType(t)} />
           </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="f-kw">Numer księgi wieczystej dla: <span className="text-accent">{securityTypeLabels[secType]}</span></Label>
