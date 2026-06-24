@@ -185,11 +185,13 @@ function PhotoBucket({
 
 const STEPS = [
   { id: 1, label: "Kontakt" },
-  { id: 2, label: "Wniosek i oferta" },
+  { id: 2, label: "Ścieżka" },
+  { id: 3, label: "Wniosek i oferta" },
 ] as const;
 
 
-type StepId = 1 | 2;
+type StepId = 1 | 2 | 3;
+
 
 export function SinglePageApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
