@@ -148,26 +148,27 @@ export function PropertyTypesShowcase({
                       }}
                     />
 
-                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
-                      <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base">
+                    <div className={selectMode ? "absolute inset-x-0 bottom-0 flex flex-col items-start gap-1 p-2.5" : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"}>
+                      <h3 className={selectMode ? "text-[11px] font-extrabold uppercase tracking-[0.1em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] sm:text-xs" : "text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base"}>
                         {p.title}
                       </h3>
-                      <span
-                        className={[
-                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-1 backdrop-blur transition",
-                          highlight
-                            ? "bg-white/25 ring-white/40"
-                            : "bg-white/12 ring-white/25 group-hover:bg-white/20",
-                        ].join(" ")}
-                      >
-                        {selectMode ? (isSelected ? "Wybrane" : "Wybierz") : "Dokumenty"}
-                        {!selectMode && (
+                      {!selectMode && (
+                        <span
+                          className={[
+                            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-1 backdrop-blur transition",
+                            highlight
+                              ? "bg-white/25 ring-white/40"
+                              : "bg-white/12 ring-white/25 group-hover:bg-white/20",
+                          ].join(" ")}
+                        >
+                          Dokumenty
                           <ChevronDown
                             className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`}
                           />
-                        )}
-                      </span>
+                        </span>
+                      )}
                     </div>
+
                   </div>
                 </button>
 
