@@ -297,7 +297,7 @@ export function SinglePageApplicationForm() {
         toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
         return;
       }
-      if (!consentPrivacy || !consentTerms) {
+      if (!consentPrivacy || !consentTerms || !consentMarketing) {
         toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
         return;
       }
@@ -342,7 +342,7 @@ export function SinglePageApplicationForm() {
   // Allow external CTAs (e.g. hero button) to request opening "Twoja oferta" with same gating
   useEffect(() => {
     const handler = () => {
-      const step1Done = contactValid && consentPrivacy && consentTerms;
+      const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
       if (!step1Done) {
         toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
         setStep(1);
@@ -355,7 +355,7 @@ export function SinglePageApplicationForm() {
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
-  }, [contactValid, consentPrivacy, consentTerms, step4Valid]);
+  }, [contactValid, consentPrivacy, consentTerms, consentMarketing, step4Valid]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -446,15 +446,15 @@ export function SinglePageApplicationForm() {
 
   // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2)
   useEffect(() => {
-    const step1Done = contactValid && consentPrivacy && consentTerms;
+    const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
     if (step === 1 && step1Done) setStep(2);
-  }, [step, contactValid, consentPrivacy, consentTerms]);
+  }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing]);
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Elegancki, zachęcający button "Twoja oferta" — zablokowany dopóki wniosek niekompletny */}
       {(() => {
-        const step1Done = contactValid && consentPrivacy && consentTerms;
+        const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
         const canOpenOffer = step1Done && step4Valid;
         const active = step === 3;
         const handleClick = () => {
@@ -638,8 +638,9 @@ export function SinglePageApplicationForm() {
                 className="mt-0.5 h-6 w-6 [&_svg]:size-5"
               />
               <span>
-                Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Zgoda dobrowolna, mogę ją wycofać w każdej chwili.
+                Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Mogę ją wycofać w każdej chwili. *
               </span>
+
             </label>
           </div>
         </section>
