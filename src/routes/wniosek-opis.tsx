@@ -40,6 +40,7 @@ function WniosekOpisPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const assist = useServerFn(assistBusinessDescription);
+  const gusLookup = useServerFn(gusCompanyLookup);
 
   const [loanId, setLoanId] = useState<string | null>(null);
   const [purpose, setPurpose] = useState("");
@@ -50,6 +51,16 @@ function WniosekOpisPage() {
   const [hasCompanyData, setHasCompanyData] = useState(false);
   const [hasIncomeDocs, setHasIncomeDocs] = useState(false);
   const [hasBikReport, setHasBikReport] = useState(false);
+
+  // Profil działalności
+  const [bizStatus, setBizStatus] = useState<string>("");
+  const [legalForm, setLegalForm] = useState<string>("");
+  const [nip, setNip] = useState<string>("");
+  const [nipVerifiedAt, setNipVerifiedAt] = useState<string | null>(null);
+  const [isStartup, setIsStartup] = useState(false);
+  const [startupDep, setStartupDep] = useState(false);
+  const [bizSaving, setBizSaving] = useState(false);
+  const [nipChecking, setNipChecking] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) void navigate({ to: "/logowanie" });
@@ -69,15 +80,22 @@ function WniosekOpisPage() {
 
       const { data: la } = await supabase
         .from("loan_applications")
-        .select("id, investor_description, investor_purpose")
+        .select("id, investor_description, investor_purpose, business_status, business_legal_form, nip, business_nip_verified_at, is_startup, startup_funding_dependency")
         .eq("client_id", c.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (la) {
         setLoanId(la.id);
-        setDescription((la as any).investor_description ?? "");
-        setPurpose((la as any).investor_purpose ?? "");
+        const r = la as any;
+        setDescription(r.investor_description ?? "");
+        setPurpose(r.investor_purpose ?? "");
+        setBizStatus(r.business_status ?? "");
+        setLegalForm(r.business_legal_form ?? "");
+        setNip(r.nip ?? (c as any).nip ?? "");
+        setNipVerifiedAt(r.business_nip_verified_at ?? null);
+        setIsStartup(Boolean(r.is_startup));
+        setStartupDep(Boolean(r.startup_funding_dependency));
 
         const { data: ds } = await supabase
           .from("documents")
@@ -90,6 +108,56 @@ function WniosekOpisPage() {
       setLoading(false);
     })();
   }, [user]);
+
+  const saveBusinessProfile = async () => {
+    if (!loanId) return;
+    setBizSaving(true);
+    try {
+      const { error } = await supabase
+        .from("loan_applications")
+        .update({
+          business_status: (bizStatus || null) as any,
+          business_legal_form: legalForm || null,
+          nip: nip.trim() || null,
+          is_startup: isStartup,
+          startup_funding_dependency: isStartup ? startupDep : null,
+        } as any)
+        .eq("id", loanId);
+      if (error) throw error;
+      toast.success("Zapisano profil działalności");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd zapisu");
+    } finally {
+      setBizSaving(false);
+    }
+  };
+
+  const verifyNip = async () => {
+    const clean = nip.replace(/\D/g, "");
+    if (clean.length !== 10) { toast.error("NIP musi mieć 10 cyfr"); return; }
+    if (!loanId) return;
+    setNipChecking(true);
+    try {
+      const res: any = await gusLookup({ data: { nip: clean } });
+      if (res?.found || res?.name || res?.regon) {
+        const stamp = new Date().toISOString();
+        const { error } = await supabase
+          .from("loan_applications")
+          .update({ nip: clean, business_nip_verified_at: stamp } as any)
+          .eq("id", loanId);
+        if (error) throw error;
+        setNip(clean);
+        setNipVerifiedAt(stamp);
+        toast.success(`NIP zweryfikowany${res?.name ? ` — ${res.name}` : ""}`);
+      } else {
+        toast.error("Nie znaleziono firmy w GUS dla tego NIP");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd weryfikacji NIP");
+    } finally {
+      setNipChecking(false);
+    }
+  };
 
   const generate = async (mode: "draft" | "improve" | "expand") => {
     if (!loanId) { toast.error("Brak wniosku"); return; }
