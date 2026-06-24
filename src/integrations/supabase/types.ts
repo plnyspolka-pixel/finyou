@@ -3832,6 +3832,8 @@ export type Database = {
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors: boolean
+          business_legal_form: string | null
+          business_nip_verified_at: string | null
           business_status: string | null
           client_id: string
           completeness_percent: number
@@ -3853,6 +3855,7 @@ export type Database = {
           investor_description: string | null
           investor_interest_count: number
           investor_purpose: string | null
+          is_startup: boolean
           kw_status: string | null
           last_automation_error: string | null
           last_contact_at: string | null
@@ -3887,6 +3890,7 @@ export type Database = {
           risk_level: string | null
           situation_description: string | null
           source: string | null
+          startup_funding_dependency: boolean | null
           status: Database["public"]["Enums"]["loan_status"]
           updated_at: string
           view_count: number
@@ -3902,6 +3906,8 @@ export type Database = {
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors?: boolean
+          business_legal_form?: string | null
+          business_nip_verified_at?: string | null
           business_status?: string | null
           client_id: string
           completeness_percent?: number
@@ -3923,6 +3929,7 @@ export type Database = {
           investor_description?: string | null
           investor_interest_count?: number
           investor_purpose?: string | null
+          is_startup?: boolean
           kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
@@ -3957,6 +3964,7 @@ export type Database = {
           risk_level?: string | null
           situation_description?: string | null
           source?: string | null
+          startup_funding_dependency?: boolean | null
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string
           view_count?: number
@@ -3972,6 +3980,8 @@ export type Database = {
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors?: boolean
+          business_legal_form?: string | null
+          business_nip_verified_at?: string | null
           business_status?: string | null
           client_id?: string
           completeness_percent?: number
@@ -3993,6 +4003,7 @@ export type Database = {
           investor_description?: string | null
           investor_interest_count?: number
           investor_purpose?: string | null
+          is_startup?: boolean
           kw_status?: string | null
           last_automation_error?: string | null
           last_contact_at?: string | null
@@ -4027,6 +4038,7 @@ export type Database = {
           risk_level?: string | null
           situation_description?: string | null
           source?: string | null
+          startup_funding_dependency?: boolean | null
           status?: Database["public"]["Enums"]["loan_status"]
           updated_at?: string
           view_count?: number
