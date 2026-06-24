@@ -532,12 +532,19 @@ export function SinglePageApplicationForm() {
         }
 
         return (
-          <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
-              <h2 className="mt-1 text-lg font-bold text-foreground">Twoja oferta</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Ustaw kwotę, okres i — jeśli chcesz — maksymalną ratę miesięczną. Resztę dopłacisz na końcu (rata balonowa).
+          <section className="space-y-6 overflow-hidden rounded-3xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 via-background to-background p-5 shadow-[0_20px_60px_-20px_hsl(var(--accent)/0.35)] md:p-7">
+            <div className="-mx-5 -mt-5 border-b border-accent/20 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-5 py-4 md:-mx-7 md:-mt-7 md:px-7 md:py-5">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-accent-foreground shadow-md">
+                  <Check className="h-4 w-4" strokeWidth={3} />
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Wniosek przyjęty</span>
+              </div>
+              <h2 className="mt-2 text-2xl font-extrabold leading-tight text-foreground md:text-3xl">
+                Twoja wstępna oferta jest gotowa 🎉
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Na podstawie Twojego wniosku przygotowaliśmy propozycję finansowania. Możesz ją dopasować suwakami poniżej — kwotę, okres, oprocentowanie i maksymalną ratę. Ostateczne warunki uzgodnisz indywidualnie z inwestorem.
               </p>
             </div>
 
