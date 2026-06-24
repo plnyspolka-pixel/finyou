@@ -211,8 +211,9 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       <span className="text-xs text-muted-foreground">{timeAgo(it.created_at)}</span>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {PROPERTY_TYPE_LABELS[it.property_type]}
+                      Wniosek złożony po przejściu kalkulatora
                     </div>
+
 
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div>
