@@ -40,12 +40,6 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
           label: "Zdjęcia mieszkania",
           hint: "Wgraj 4–10 zdjęć: każdy pokój, kuchnia, łazienka, widok z okna oraz budynek od zewnątrz (elewacja, klatka schodowa).",
         },
-        {
-          kind: "ownership_deed",
-          label: "Akt własności (opcjonalnie)",
-          hint: "Akt notarialny, umowa darowizny, postanowienie sądu o spadku — wystarczy zdjęcie albo skan PDF.",
-          optional: true,
-        },
       ];
     case "dom":
       return [
@@ -54,12 +48,6 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
           label: "Zdjęcia domu i działki",
           hint: "Wgraj zdjęcia z zewnątrz (4 strony budynku, dach, ogrodzenie) oraz wnętrza (salon, kuchnia, łazienka, sypialnie).",
         },
-        {
-          kind: "ownership_deed",
-          label: "Akt własności (opcjonalnie)",
-          hint: "Akt notarialny lub inny dokument potwierdzający własność.",
-          optional: true,
-        },
       ];
     case "lokal_uslugowy":
       return [
@@ -67,12 +55,6 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
           kind: "property_photos",
           label: "Zdjęcia lokalu",
           hint: "Wgraj zdjęcia wnętrza (sala główna, zaplecze, sanitariaty) oraz lokal od zewnątrz wraz z witryną/wejściem.",
-        },
-        {
-          kind: "ownership_deed",
-          label: "Akt własności (opcjonalnie)",
-          hint: "Akt notarialny lub umowa potwierdzająca własność lokalu.",
-          optional: true,
         },
       ];
     case "grunt_rolny":
@@ -86,12 +68,6 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
           kind: "property_photos",
           label: "Zdjęcia działki (opcjonalnie)",
           hint: "Zdjęcia z poziomu drogi i z różnych narożników działki — pomocne przy szybszej wycenie.",
-          optional: true,
-        },
-        {
-          kind: "ownership_deed",
-          label: "Akt własności (opcjonalnie)",
-          hint: "Akt notarialny lub postanowienie sądu o nabyciu nieruchomości.",
           optional: true,
         },
       ];
@@ -108,12 +84,6 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
           hint: "Zdjęcia z poziomu drogi i z różnych narożników działki, ewentualnie sąsiedniej zabudowy.",
           optional: true,
         },
-        {
-          kind: "ownership_deed",
-          label: "Akt własności (opcjonalnie)",
-          hint: "Akt notarialny lub inny dokument potwierdzający własność działki.",
-          optional: true,
-        },
       ];
     case "inna":
     default:
@@ -124,15 +94,10 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
           hint: "Wgraj zdjęcia z zewnątrz i wewnątrz — im więcej, tym szybciej przygotujemy ofertę.",
           optional: true,
         },
-        {
-          kind: "ownership_deed",
-          label: "Dokumenty (opcjonalnie)",
-          hint: "Akt własności, MPZP, wypis z rejestru gruntów lub inne dokumenty, które pomogą w wycenie.",
-          optional: true,
-        },
       ];
   }
 }
+
 
 const BUILDING_TYPES: SecurityType[] = ["dom"];
 
