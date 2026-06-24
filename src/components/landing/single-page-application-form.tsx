@@ -303,24 +303,38 @@ export function SinglePageApplicationForm() {
         toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
         return;
       }
-      // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
+      setStep(2);
+      setStep2Sub("type");
+      return;
     }
     if (step === 2) {
-      if (!kwOrDeedOk) {
-        toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+      if (step2Sub === "type") {
+        // wybór kafelka sam przesuwa do "kw"
+        toast.error("Wybierz typ nieruchomości.");
         return;
       }
-      if (missingRequiredBuckets.length > 0) {
-        toast.error(`Dołącz wymagane dokumenty: ${missingRequiredBuckets.map((b) => b.label).join(", ")}.`);
+      if (step2Sub === "kw") {
+        if (!kwOrDeedOk) {
+          toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+          return;
+        }
+        setStep2Sub("docs");
         return;
       }
+      // docs → przejście do oferty obsługuje submit
     }
-
     setStep((s) => (Math.min(3, s + 1) as StepId));
-
   };
-  const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
+  const goBack = () => {
+    if (step === 2) {
+      if (step2Sub === "docs") { setStep2Sub("kw"); return; }
+      if (step2Sub === "kw") { setStep2Sub("type"); return; }
+      setStep(1);
+      return;
+    }
+    setStep((s) => (Math.max(1, s - 1) as StepId));
+  };
 
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
