@@ -344,7 +344,12 @@ export function SinglePageApplicationForm() {
           loan_amount: amount,
           preferred_period_months: months,
           property_type: secType,
-          land_register_number: allKwNumbers.length > 0 ? allKwNumbers.join(" | ") : null,
+          land_register_number: (() => {
+            const parts = [...allKwNumbers];
+            const ua = usableArea.trim();
+            if (ua && BUILDING_TYPES.includes(secType)) parts.push(`Pow. użytkowa: ${ua} m²`);
+            return parts.length > 0 ? parts.join(" | ") : null;
+          })(),
           photos: photoPayload,
           source: "landing_single_page",
         },
