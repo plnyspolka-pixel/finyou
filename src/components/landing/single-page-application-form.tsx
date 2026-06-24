@@ -312,13 +312,14 @@ export function SinglePageApplicationForm() {
     }
     if (step === 2) {
       if (step2Sub === "type") {
-        if (!selectedShowcaseKey) {
+        if (!typeSelected) {
           toast.error("Wybierz typ nieruchomości.");
           return;
         }
         setStep2Sub("kw");
         return;
       }
+
 
       if (step2Sub === "kw") {
         if (!kwOrDeedOk) {
