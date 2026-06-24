@@ -453,16 +453,13 @@ export function SinglePageApplicationForm() {
                 className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2.5s_infinite]"
                 style={{ animation: "shimmer 2.5s linear infinite" }}
               />
-              <span
-                className={[
-                  "grid h-9 w-9 place-items-center rounded-full text-sm font-bold",
-                  active || done ? "bg-accent text-accent-foreground" : "bg-accent/80 text-accent-foreground",
-                ].join(" ")}
-              >
-                {done ? <Check className="h-5 w-5" /> : "🎁"}
-              </span>
+              {done && (
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-accent-foreground">
+                  <Check className="h-5 w-5" />
+                </span>
+              )}
               <span className="text-sm font-bold uppercase tracking-wide sm:text-base">
-                {s.label}
+                Twoja oferta — harmonogram spłat
               </span>
             </button>
           );
