@@ -188,15 +188,6 @@ export function OfferCalculatorPanel({
               <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Okres</p>
               <p className="mt-0.5 text-lg font-extrabold tabular-nums text-white">{months} mies.</p>
             </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Roczne wynagrodzenie inwestora (za całość)</p>
-              <p className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(fig.investorCompensation * 12 / Math.max(1, months))}<span className="text-xs font-normal text-white/70"> / rok</span></p>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
-              <p className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(financeYouFee)}</p>
-            </div>
             <div className="rounded-xl bg-white/10 p-3 sm:col-span-2">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Łączna spłata (z prowizją FY)</p>
               <p className="mt-0.5 text-xl font-extrabold tabular-nums text-white">{formatPLN(fig.total)}</p>
