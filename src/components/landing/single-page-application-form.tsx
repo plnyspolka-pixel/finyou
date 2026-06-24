@@ -621,7 +621,7 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Kwota pożyczki</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</span>
               </div>
-              <Slider value={[amount]} min={20_000} max={1_000_000} step={5_000}
+              <Slider gradient="good-bad" value={[amount]} min={20_000} max={1_000_000} step={5_000}
                 onValueChange={(v) => setAmount(v[0] ?? amount)} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             </div>
@@ -631,7 +631,7 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowany okres spłaty</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</span>
               </div>
-              <Slider value={[Math.min(months, maxMonths)]} min={6} max={maxMonths} step={1}
+              <Slider gradient="good-bad" value={[Math.min(months, maxMonths)]} min={6} max={maxMonths} step={1}
                 onValueChange={(v) => setMonths(v[0] ?? months)} />
               <div className="flex justify-between text-xs text-muted-foreground"><span>6 mies.</span><span>{maxMonths} mies.</span></div>
             </div>
@@ -641,7 +641,7 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowane wynagrodzenie inwestora (rocznie)</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
-              <Slider value={[annualRate]} min={15} max={50} step={0.5}
+              <Slider gradient="bad-good" value={[annualRate]} min={15} max={50} step={0.5}
                 onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(v[0] ?? annualRate); }} />
 
               <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
@@ -658,6 +658,7 @@ export function SinglePageApplicationForm() {
                 </span>
               </div>
               <Slider
+                gradient="bad-good"
                 value={[effectiveMax > 0 ? effectiveMax : maxCap]}
                 min={minCap}
                 max={maxCap}
