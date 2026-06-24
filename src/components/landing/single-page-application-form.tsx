@@ -523,22 +523,7 @@ export function SinglePageApplicationForm() {
         </FancyShell>
       )}
 
-      {/* Step 3 — Twoja oferta (kalkulator) — wspólny komponent z /klient */}
-      {step === 3 && (
-        <OfferCalculatorPanel
-          amount={amount} setAmount={setAmount}
-          months={months} setMonths={setMonths}
-          maxMonths={maxMonths}
-          canExtend={canExtend} setCanExtend={setCanExtend}
-          annualRate={annualRate} setAnnualRate={setAnnualRate}
-          rateTouchedRef={rateTouchedRef}
-          maxPayment={maxPayment} setMaxPayment={setMaxPayment}
-          headerLabel="Wniosek przyjęty"
-        />
-      )}
-
-
-      {/* Step 2 — wniosek (kafelki → KW → dokumenty) */}
+      {/* Step 2 — wszystko w jednym: typ → KW → dokumenty → kalkulator */}
       {step === 2 && (() => {
         const secToShowcase: Record<string, string> = {
           mieszkanie: "mieszkanie",
@@ -552,157 +537,161 @@ export function SinglePageApplicationForm() {
 
         return (
           <div className="space-y-6">
-            {/* Sub-step A: kafelki typu nieruchomości */}
-            {step2Sub === "type" && (
-              <FancyShell>
-                <PropertyTypesShowcase
-                  selectedKey={selectedShowcaseKey}
-                  onSelect={(key) => {
-                    const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
-                    if (mapped) setSecType(mapped);
-                    setTypeSelected(true);
-                  }}
+            {/* A: typ nieruchomości */}
+            <FancyShell>
+              <PropertyTypesShowcase
+                selectedKey={selectedShowcaseKey}
+                onSelect={(key) => {
+                  const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
+                  if (mapped) setSecType(mapped);
+                  setTypeSelected(true);
+                }}
+              />
+            </FancyShell>
+
+            {/* B: numer KW / akt własności */}
+            <FancyShell>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                    <FileText className="h-5 w-5" strokeWidth={2.5} />
+                  </span>
+                  <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
+                    Numer księgi wieczystej
+                  </Label>
+                </div>
+                <Input
+                  id="f-kw"
+                  value={kwNumber}
+                  onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                  placeholder="np. WA1M/00123456/7"
+                  className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
                 />
-              </FancyShell>
-            )}
+                <p className="text-xs text-white/75">
+                  Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
+                </p>
 
-            {/* Sub-step B: numer KW / akt własności */}
-            {step2Sub === "kw" && (
-              <div className="space-y-4">
-                <FancyShell>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2.5 drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                      <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                        <FileText className="h-5 w-5" strokeWidth={2.5} />
-                      </span>
-                      <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
-                        Numer księgi wieczystej
-                      </Label>
-                    </div>
+                {extraKwNumbers.map((val, idx) => (
+                  <div key={idx} className="flex gap-2 pt-1">
                     <Input
-                      id="f-kw"
-                      value={kwNumber}
-                      onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-                      placeholder="np. WA1M/00123456/7"
-                      className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                      value={val}
+                      onChange={(e) => {
+                        const v = e.target.value.toUpperCase();
+                        setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                      }}
+                      placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                      className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
                     />
-                    <p className="text-xs text-white/75">
-                      Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
-                    </p>
-
-                    {extraKwNumbers.map((val, idx) => (
-                      <div key={idx} className="flex gap-2 pt-1">
-                        <Input
-                          value={val}
-                          onChange={(e) => {
-                            const v = e.target.value.toUpperCase();
-                            setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
-                          }}
-                          placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                          className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
-                        />
-                        <Button type="button" variant="outline" size="lg"
-                          onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                          className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                          aria-label="Usuń numer KW">×</Button>
-                      </div>
+                    <Button type="button" variant="outline" size="lg"
+                      onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                      className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                      aria-label="Usuń numer KW">×</Button>
+                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button type="button" variant="outline" size="sm"
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
+                    + Dodaj kolejny numer KW
+                  </Button>
+                  <Button type="button" variant="outline" size="sm"
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    onClick={() => deedInputRef.current?.click()}>
+                    + Dodaj akt własności
+                  </Button>
+                  <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
+                </div>
+                {photos.some((p) => p.bucket === "ownership_deed") && (
+                  <ul className="flex flex-wrap gap-2 pt-1">
+                    {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
+                      <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="max-w-[160px] truncate">{p.name}</span>
+                        <button type="button" onClick={() => removePhoto(p.id)}
+                          className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
+                          aria-label="Usuń akt własności">×</button>
+                      </li>
                     ))}
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <Button type="button" variant="outline" size="sm"
-                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                        onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
-                        + Dodaj kolejny numer KW
-                      </Button>
-                      <Button type="button" variant="outline" size="sm"
-                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                        onClick={() => deedInputRef.current?.click()}>
-                        + Dodaj akt własności
-                      </Button>
-                      <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
-                        className="hidden"
-                        onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
+                  </ul>
+                )}
+
+                {BUILDING_TYPES.includes(secType) && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="f-area" className="text-white">
+                      Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
+                        value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
+                        placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
+                      <span className="text-sm text-white/75">m²</span>
                     </div>
-                    {photos.some((p) => p.bucket === "ownership_deed") && (
-                      <ul className="flex flex-wrap gap-2 pt-1">
-                        {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
-                          <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
-                            <FileText className="h-3.5 w-3.5" />
-                            <span className="max-w-[160px] truncate">{p.name}</span>
-                            <button type="button" onClick={() => removePhoto(p.id)}
-                              className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
-                              aria-label="Usuń akt własności">×</button>
+                  </div>
+                )}
+              </div>
+            </FancyShell>
+
+            {/* C: zdjęcia / dokumenty */}
+            <FancyShell>
+              <div className="space-y-4">
+                {(() => {
+                  const hint = PROPERTY_DOCS_BY_SECURITY[secType];
+                  if (!hint) return null;
+                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
+                  if (remaining.length === 0) return null;
+                  return (
+                    <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
+                      <p className="text-xs font-bold uppercase tracking-wider text-white">
+                        Co jeszcze przygotować — {hint.title}
+                      </p>
+                      <ul className="mt-2 space-y-1.5">
+                        {remaining.map((d) => (
+                          <li key={d} className="flex items-start gap-2 text-sm text-white/90">
+                            <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{d}</span>
                           </li>
                         ))}
                       </ul>
-                    )}
+                    </div>
+                  );
+                })()}
 
-                    {BUILDING_TYPES.includes(secType) && (
-                      <div className="space-y-2 pt-2">
-                        <Label htmlFor="f-area" className="text-white">
-                          Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
-                        </Label>
-                        <div className="flex items-center gap-2">
-                          <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
-                            value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
-                            placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
-                          <span className="text-sm text-white/75">m²</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </FancyShell>
+                <PhotoBucket
+                  label="Zdjęcia i dokumenty nieruchomości"
+                  bucket="property_photos"
+                  photos={photos}
+                  onAdd={addPhotos}
+                  onRemove={removePhoto}
+                />
+
+                {docPhotos.length > 0 && (
+                  <p className="text-xs text-white/75">
+                    Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
+                  </p>
+                )}
               </div>
-            )}
+            </FancyShell>
 
-            {/* Sub-step C: zdjęcia / dokumenty */}
-            {step2Sub === "docs" && (
-              <FancyShell>
-                <div className="space-y-4">
-                  {(() => {
-                    const hint = PROPERTY_DOCS_BY_SECURITY[secType];
-                    if (!hint) return null;
-                    const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
-                    if (remaining.length === 0) return null;
-                    return (
-                      <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
-                        <p className="text-xs font-bold uppercase tracking-wider text-white">
-                          Co jeszcze przygotować — {hint.title}
-                        </p>
-                        <ul className="mt-2 space-y-1.5">
-                          {remaining.map((d) => (
-                            <li key={d} className="flex items-start gap-2 text-sm text-white/90">
-                              <FileText className="mt-0.5 h-4 w-4 shrink-0" />
-                              <span>{d}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })()}
-
-                  <PhotoBucket
-                    label="Zdjęcia i dokumenty nieruchomości"
-                    bucket="property_photos"
-                    photos={photos}
-                    onAdd={addPhotos}
-                    onRemove={removePhoto}
-                  />
-
-                  {docPhotos.length > 0 && (
-                    <p className="text-xs text-white/75">
-                      Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
-                    </p>
-                  )}
-                </div>
-              </FancyShell>
-            )}
+            {/* D: kalkulator oferty */}
+            <OfferCalculatorPanel
+              amount={amount} setAmount={setAmount}
+              months={months} setMonths={setMonths}
+              maxMonths={maxMonths}
+              canExtend={canExtend} setCanExtend={setCanExtend}
+              annualRate={annualRate} setAnnualRate={setAnnualRate}
+              rateTouchedRef={rateTouchedRef}
+              maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+              headerLabel="Twoja wstępna oferta"
+            />
           </div>
         );
       })()}
 
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        {(step > 1 || (step === 2 && step2Sub !== "type")) && (
+        {step > 1 && (
           <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={submitting}>
             <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
           </Button>
@@ -712,37 +701,19 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
-        {step === 2 && step2Sub === "type" && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} aria-disabled={!typeSelected} className={`ml-auto flex-1 text-base md:flex-none ${!typeSelected ? "opacity-60" : ""}`}>
-            Dalej <ChevronRight className="ml-1 h-5 w-5" />
-          </Button>
-        )}
-        {step === 2 && step2Sub === "kw" && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} aria-disabled={!kwOrDeedOk} className={`ml-auto flex-1 text-base md:flex-none ${!kwOrDeedOk ? "opacity-60" : ""}`}>
-            Dalej <ChevronRight className="ml-1 h-5 w-5" />
-          </Button>
-        )}
-
-        {step === 2 && step2Sub === "docs" && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} aria-disabled={!hasPropertyPhotos} className={`ml-auto flex-1 text-base md:flex-none ${!hasPropertyPhotos ? "opacity-60" : ""}`}>
+        {step === 2 && (
+          <Button type="submit" variant="cta" size="lg" disabled={submitting}
+            aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
+            className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
-              <><Send className="mr-2 h-5 w-5" /> Przejdź do oferty</>
-            )}
-          </Button>
-        )}
-        {step === 3 && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
-            {submitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-            ) : (
-              <><Send className="mr-2 h-5 w-5" /> Złóż ofertę</>
+              <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
             )}
           </Button>
         )}
       </div>
-      {(step === 2 || step === 3) && (
+      {step === 2 && (
         <p className="text-center text-[11px] text-muted-foreground">
           Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
         </p>
