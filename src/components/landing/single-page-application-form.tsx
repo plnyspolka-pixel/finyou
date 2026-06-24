@@ -192,6 +192,8 @@ export function SinglePageApplicationForm() {
   const [step, setStep] = useState<StepId>(1);
   const [step2Sub, setStep2Sub] = useState<"type" | "kw" | "docs">("type");
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
+  const [typeSelected, setTypeSelected] = useState(false);
+
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(36);
   const [canExtend, setCanExtend] = useState(true);
@@ -310,10 +312,15 @@ export function SinglePageApplicationForm() {
     }
     if (step === 2) {
       if (step2Sub === "type") {
-        // wybór kafelka sam przesuwa do "kw"
-        toast.error("Wybierz typ nieruchomości.");
+        if (!typeSelected) {
+          toast.error("Wybierz typ nieruchomości.");
+          return;
+        }
+        setStep2Sub("kw");
         return;
       }
+
+
       if (step2Sub === "kw") {
         if (!kwOrDeedOk) {
           toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
@@ -874,10 +881,11 @@ export function SinglePageApplicationForm() {
                 onSelect={(key) => {
                   const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
                   if (mapped) setSecType(mapped);
-                  setStep2Sub("kw");
+                  setTypeSelected(true);
                 }}
               />
             )}
+
 
 
             {/* Sub-step B: numer KW / akt własności */}
@@ -988,11 +996,17 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
+        {step === 2 && step2Sub === "type" && (
+          <Button type="button" variant="cta" size="lg" onClick={goNext} disabled={!typeSelected} className="ml-auto flex-1 text-base md:flex-none">
+            Dalej <ChevronRight className="ml-1 h-5 w-5" />
+          </Button>
+        )}
         {step === 2 && step2Sub === "kw" && (
           <Button type="button" variant="cta" size="lg" onClick={goNext} disabled={!kwOrDeedOk} className="ml-auto flex-1 text-base md:flex-none">
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
+
         {step === 2 && step2Sub === "docs" && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
             {submitting ? (
