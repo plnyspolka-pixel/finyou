@@ -211,9 +211,10 @@ function PhotoBucket({
 
 const STEPS = [
   { id: 1, label: "Kontakt" },
-  { id: 2, label: "Parametry" },
-  { id: 3, label: "Zabezpieczenie" },
+  { id: 2, label: "Wniosek" },
+  { id: 3, label: "Parametry" },
 ] as const;
+
 
 type StepId = 1 | 2 | 3;
 
@@ -304,7 +305,18 @@ export function SinglePageApplicationForm() {
       // Meta: Lead = "Przesłanie zgłoszenia" — po podaniu danych kontaktowych
       fireLead();
     }
+    if (step === 2) {
+      if (!kwOrDeedOk) {
+        toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+        return;
+      }
+      if (missingRequiredBuckets.length > 0) {
+        toast.error(`Dołącz wymagane dokumenty: ${missingRequiredBuckets.map((b) => b.label).join(", ")}.`);
+        return;
+      }
+    }
     setStep((s) => (Math.min(3, s + 1) as StepId));
+
   };
   const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
 
@@ -511,11 +523,12 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 2 — kwota i okres */}
-      {step === 2 && (
+      {/* Step 3 — kwota i okres */}
+      {step === 3 && (
+
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
             <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
           </div>
           <div className="space-y-3">
@@ -539,13 +552,15 @@ export function SinglePageApplicationForm() {
         </section>
       )}
 
-      {/* Step 3 — zabezpieczenie + nieruchomość */}
-      {step === 3 && (
+      {/* Step 2 — wniosek (zabezpieczenie + nieruchomość) */}
+      {step === 2 && (
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">Zabezpieczenie i nieruchomość</h2>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Wniosek — zabezpieczenie i nieruchomość</h2>
           </div>
+
+
 
           <div className="space-y-3">
             <Label className="text-sm font-semibold">Rodzaj nieruchomości pod zabezpieczenie</Label>
