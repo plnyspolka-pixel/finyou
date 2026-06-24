@@ -703,8 +703,8 @@ export function SinglePageApplicationForm() {
                   <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{months} mies.</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Koszt dla inwestora</p>
-                  <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(fig.investorCompensation)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Średnie miesięczne wynagrodzenie inwestora</p>
+                  <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(fig.investorCompensation / Math.max(1, months))}<span className="text-xs font-normal text-muted-foreground"> / mies.</span></p>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
