@@ -996,11 +996,17 @@ export function SinglePageApplicationForm() {
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
+        {step === 2 && step2Sub === "type" && (
+          <Button type="button" variant="cta" size="lg" onClick={goNext} disabled={!typeSelected} className="ml-auto flex-1 text-base md:flex-none">
+            Dalej <ChevronRight className="ml-1 h-5 w-5" />
+          </Button>
+        )}
         {step === 2 && step2Sub === "kw" && (
           <Button type="button" variant="cta" size="lg" onClick={goNext} disabled={!kwOrDeedOk} className="ml-auto flex-1 text-base md:flex-none">
             Dalej <ChevronRight className="ml-1 h-5 w-5" />
           </Button>
         )}
+
         {step === 2 && step2Sub === "docs" && (
           <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
             {submitting ? (
