@@ -355,7 +355,7 @@ export function SinglePageApplicationForm() {
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
-  }, [contactValid, consentPrivacy, consentTerms, step4Valid]);
+  }, [contactValid, consentPrivacy, consentTerms, consentMarketing, step4Valid]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
