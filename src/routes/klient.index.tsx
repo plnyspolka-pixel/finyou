@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
@@ -195,33 +195,47 @@ function KlientDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Numer księgi wieczystej</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="kw" className="text-xs">Numer KW</Label>
+          <section className="relative overflow-hidden rounded-3xl border-2 border-accent/40 bg-gradient-to-br from-accent/10 via-background to-background p-5 shadow-[0_20px_60px_-20px_hsl(var(--accent)/0.35)] md:p-7">
+            <div className="-mx-5 -mt-5 mb-5 border-b border-accent/20 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-5 py-4 md:-mx-7 md:-mt-7 md:px-7 md:py-5">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-accent-foreground shadow-md">
+                  <BookText className="h-4 w-4" strokeWidth={2.5} />
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Numer księgi wieczystej</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="kw" className="text-sm font-semibold">Wpisz numer KW nieruchomości</Label>
+              <div className="relative">
                 <Input
                   id="kw"
                   value={kw}
                   onChange={(e) => setKw(e.target.value)}
                   placeholder="np. WA1M/00123456/7"
+                  className="h-14 rounded-2xl border-2 border-accent/30 bg-background/80 pl-12 pr-4 text-lg font-bold tracking-wider tabular-nums shadow-inner focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna.
-                </p>
+                <BookText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-accent" />
+                {kw.trim().length >= 14 && (
+                  <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-accent text-accent-foreground shadow">
+                    <Check className="h-4 w-4" strokeWidth={3} />
+                  </span>
+                )}
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold">WA1M/00123456/7</span>).
+              </p>
               <Button
-                size="sm"
+                size="lg"
                 onClick={() => void saveKw()}
                 disabled={savingKw || !propertyRow?.id}
+                className="w-full rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-base font-bold text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.6)] hover:from-accent hover:to-accent hover:shadow-[0_14px_40px_-10px_hsl(var(--accent)/0.7)]"
               >
-                <Save className="mr-2 h-4 w-4" />
-                Zapisz numer KW
+                <Save className="mr-2 h-5 w-5" />
+                {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         </div>
       )}
 
