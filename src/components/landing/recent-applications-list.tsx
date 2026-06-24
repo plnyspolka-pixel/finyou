@@ -80,6 +80,14 @@ export type RecentLoanApplicationItem = {
   annual_investor_rate: number;
   wants_extension_option: boolean;
   figures: OfferFigures;
+  business_status: "prowadzi" | "zamierza" | "nie_zamierza";
+  business_legal_form: "jdg" | "sp_zoo" | "sa" | null;
+  is_startup: boolean;
+  nip_verified: boolean;
+  has_income_docs: boolean;
+  has_bik: boolean;
+  phone_verified: boolean;
+  bank_verified: boolean;
 };
 
 
@@ -130,6 +138,15 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
     const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
+    const bizRoll = rand();
+    const business_status: RecentLoanApplicationItem["business_status"] =
+      bizRoll < 0.55 ? "prowadzi" : bizRoll < 0.75 ? "zamierza" : "nie_zamierza";
+    const formRoll = rand();
+    const business_legal_form =
+      business_status === "prowadzi"
+        ? (formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa")
+        : null;
+    const is_startup = business_status !== "prowadzi" && rand() < 0.35;
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
@@ -141,6 +158,14 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       annual_investor_rate: rate,
       wants_extension_option: rand() < 0.55,
       figures,
+      business_status,
+      business_legal_form,
+      is_startup,
+      nip_verified: business_status === "prowadzi" && rand() < 0.8,
+      has_income_docs: rand() < 0.65,
+      has_bik: rand() < 0.7,
+      phone_verified: rand() < 0.9,
+      bank_verified: rand() < 0.55,
     });
   }
   return items;
@@ -214,6 +239,36 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       Wniosek złożony po przejściu kalkulatora
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                      {it.is_startup && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
+                      )}
+                      {it.business_status === "prowadzi" && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 font-semibold text-foreground">
+                          🏢 {it.business_legal_form === "jdg" ? "JDG" : it.business_legal_form === "sp_zoo" ? "Sp. z o.o." : "Sp. akcyjna"}
+                          {it.nip_verified && <span className="text-emerald-600">✓ NIP</span>}
+                        </span>
+                      )}
+                      {it.business_status === "zamierza" && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 font-semibold text-foreground">🆕 Zamierza otworzyć dz. gosp.</span>
+                      )}
+                      {it.business_status === "nie_zamierza" && !it.is_startup && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-muted-foreground">👤 Bez działalności</span>
+                      )}
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_income_docs ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "border border-border bg-secondary/60 text-muted-foreground"}`}>
+                        📄 Dochód {it.has_income_docs ? "✓" : "—"}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_bik ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "border border-border bg-secondary/60 text-muted-foreground"}`}>
+                        🛡 BIK {it.has_bik ? "✓" : "—"}
+                      </span>
+                      {it.phone_verified && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">📞 Telefon ✓</span>
+                      )}
+                      {it.bank_verified && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">🏦 Rachunek ✓</span>
+                      )}
                     </div>
 
 
