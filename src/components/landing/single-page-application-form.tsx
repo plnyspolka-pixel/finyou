@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { SecurityTypePicker } from "@/components/security-type-picker";
-import { PropertyTypesShowcase } from "@/components/landing/property-types-showcase";
+import { PropertyTypesShowcase, PROPERTY_SHOWCASE_KEY_TO_SECURITY } from "@/components/landing/property-types-showcase";
 import {
   computeLoanFigures,
   formatPLN,
