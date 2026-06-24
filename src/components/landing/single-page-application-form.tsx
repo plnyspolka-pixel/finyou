@@ -604,32 +604,32 @@ export function SinglePageApplicationForm() {
               </p>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4 sm:grid-cols-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rata miesięczna</p>
-                <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.monthly)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Okres</p>
-                <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{months} mies.</p>
-              </div>
-              {fig.balloon > 0 && (
-                <div className="sm:col-span-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rata balonowa (ostatnia)</p>
-                  <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.balloon)}</p>
+            <div className="rounded-2xl border-2 border-accent/40 bg-gradient-to-br from-accent/15 via-accent/5 to-background p-5 shadow-inner">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Twoja miesięczna rata</p>
+              <p className="mt-1 text-4xl font-black tabular-nums text-foreground md:text-5xl">{formatPLN(fig.monthly)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">przez {months} miesięcy{fig.balloon > 0 ? ` + rata balonowa ${formatPLN(fig.balloon)} na końcu` : ""}</p>
+
+              <div className="mt-4 grid gap-3 border-t border-accent/20 pt-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kwota pożyczki</p>
+                  <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{formatPLN(amount)}</p>
                 </div>
-              )}
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Koszt dla inwestora</p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.investorCompensation)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(financeYouFee)}</p>
-              </div>
-              <div className="sm:col-span-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Łączna spłata (z prowizją FY)</p>
-                <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.total)}</p>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Okres</p>
+                  <p className="mt-0.5 text-lg font-extrabold tabular-nums text-foreground">{months} mies.</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Koszt dla inwestora</p>
+                  <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(fig.investorCompensation)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
+                  <p className="mt-0.5 text-base font-bold tabular-nums text-foreground">{formatPLN(financeYouFee)}</p>
+                </div>
+                <div className="sm:col-span-2 rounded-xl bg-background/60 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Łączna spłata (z prowizją FY)</p>
+                  <p className="mt-0.5 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.total)}</p>
+                </div>
               </div>
             </div>
 
