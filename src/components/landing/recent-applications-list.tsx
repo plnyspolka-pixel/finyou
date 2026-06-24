@@ -16,6 +16,7 @@ export type RecentLoanApplicationItem = {
   preferred_period_months: number;
   annual_investor_rate: number;
   investor_profit: number;
+  monthly_payment: number;
 };
 
 const FIRST_NAMES = [
@@ -68,6 +69,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       preferred_period_months: period,
       annual_investor_rate: rate,
       investor_profit: figs.investorCompensation,
+      monthly_payment: figs.monthly,
     });
   }
   return items;
@@ -141,16 +143,51 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     <div className="tabular-nums font-bold text-foreground">{it.preferred_period_months} mies.</div>
                   </div>
                   <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Rata miesięczna</div>
+                    <div className="tabular-nums font-bold text-foreground">{formatPLN(it.monthly_payment)}</div>
+                  </div>
+                  <div>
                     <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Roczna stopa zwrotu</div>
                     <div className="tabular-nums font-bold text-emerald-600">
                       {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
                     </div>
                   </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Zysk inwestora</div>
+                  <div className="col-span-2">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Zysk inwestora (całość)</div>
                     <div className="tabular-nums font-bold text-foreground">{formatPLN(it.investor_profit)}</div>
                   </div>
                 </div>
+
+                <details className="mt-3">
+                  <summary className="cursor-pointer list-none text-xs font-semibold text-accent hover:underline">
+                    Pokaż harmonogram spłat ({it.preferred_period_months} rat)
+                  </summary>
+                  <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border bg-secondary/40">
+                    <table className="w-full text-xs tabular-nums">
+                      <thead className="sticky top-0 bg-secondary/80 text-muted-foreground">
+                        <tr>
+                          <th className="px-2 py-1 text-left font-medium">Rata</th>
+                          <th className="px-2 py-1 text-right font-medium">Termin</th>
+                          <th className="px-2 py-1 text-right font-medium">Kwota</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: it.preferred_period_months }).map((_, idx) => {
+                          const d = new Date();
+                          d.setMonth(d.getMonth() + idx + 1);
+                          const label = d.toLocaleDateString("pl-PL", { month: "2-digit", year: "numeric" });
+                          return (
+                            <tr key={idx} className="border-t border-border/60">
+                              <td className="px-2 py-1 text-left">{idx + 1}</td>
+                              <td className="px-2 py-1 text-right text-muted-foreground">{label}</td>
+                              <td className="px-2 py-1 text-right font-semibold">{formatPLN(it.monthly_payment)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
 
                 <Button asChild size="sm" className="mt-4 w-full">
                   <Link to="/auth" search={{ next: "/inwestor" } as never}>
