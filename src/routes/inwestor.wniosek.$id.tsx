@@ -149,6 +149,10 @@ function InwestorWniosek() {
         <Badge variant="secondary"><Eye className="mr-1 h-3 w-3" />{app.view_count ?? 0} odsłon</Badge>
       </div>
 
+      <ApplicationInfoBadges app={app} loanApplicationId={id} />
+
+
+
       {app.situation_description && (
         <Card><CardHeader><CardTitle className="text-base">Opis sytuacji klienta</CardTitle></CardHeader>
           <CardContent className="text-sm whitespace-pre-wrap">{app.situation_description}</CardContent>
