@@ -193,7 +193,7 @@ export function SinglePageApplicationForm() {
   const [amount, setAmount] = useState(200_000);
   const [months, setMonths] = useState(24);
   const [maxPayment, setMaxPayment] = useState(0);
-  const [annualRate, setAnnualRate] = useState(18);
+  const [annualRate, setAnnualRate] = useState(30);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -539,9 +539,9 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowane oprocentowanie roczne</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
-              <Slider value={[annualRate]} min={10} max={36} step={0.5}
+              <Slider value={[annualRate]} min={20} max={50} step={0.5}
                 onValueChange={(v) => setAnnualRate(v[0] ?? annualRate)} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>10%</span><span>36%</span></div>
+              <div className="flex justify-between text-xs text-muted-foreground"><span>20%</span><span>50%</span></div>
               <p className="text-xs text-muted-foreground">
                 Im wyższe wynagrodzenie inwestora, tym więcej osób chętnie sfinansuje Twoją pożyczkę.
               </p>
