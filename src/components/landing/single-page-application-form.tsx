@@ -642,7 +642,8 @@ export function SinglePageApplicationForm() {
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
               <Slider value={[annualRate]} min={15} max={50} step={0.5}
-                onValueChange={(v) => setAnnualRate(v[0] ?? annualRate)} />
+                onValueChange={(v) => { rateTouchedRef.current = true; setAnnualRate(v[0] ?? annualRate); }} />
+
               <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
               <p className="text-xs text-muted-foreground">
                 Im wyższe wynagrodzenie inwestora, tym większa szansa na szybkie znalezienie inwestora dla Twojej pożyczki.
