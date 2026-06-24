@@ -524,7 +524,7 @@ export function SinglePageApplicationForm() {
         return (
           <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
               <h2 className="mt-1 text-lg font-bold text-foreground">Twoja oferta</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Ustaw kwotę, okres i — jeśli chcesz — maksymalną ratę miesięczną. Resztę dopłacisz na końcu (rata balonowa).
