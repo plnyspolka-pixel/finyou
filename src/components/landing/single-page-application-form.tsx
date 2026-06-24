@@ -334,30 +334,34 @@ export function SinglePageApplicationForm() {
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
   const step4Valid = kwOrDeedOk;
 
-  // Allow external CTAs (e.g. hero button) to request opening "Twoja oferta" with same gating
+  // Allow external CTAs (e.g. hero button) to scroll/open the application
   useEffect(() => {
     const handler = () => {
       const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
       if (!step1Done) {
         toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
         setStep(1);
-      } else if (!step4Valid) {
-        toast.error("Najpierw uzupełnij dokumenty i numer KW (Krok 2).");
-        setStep(2);
       } else {
-        setStep(3);
+        setStep(2);
       }
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
-  }, [contactValid, consentPrivacy, consentTerms, consentMarketing, step4Valid]);
+  }, [contactValid, consentPrivacy, consentTerms, consentMarketing]);
 
   const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { goNext(); return; }
-    if (step === 2 && step2Sub !== "docs") { goNext(); return; }
+    if (!typeSelected) {
+      toast.error("Wybierz typ nieruchomości.");
+      return;
+    }
+    if (!kwOrDeedOk) {
+      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+      return;
+    }
     if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
