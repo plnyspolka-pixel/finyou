@@ -517,7 +517,7 @@ export function SinglePageApplicationForm() {
 
         <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 2 z 3</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Krok 3 z 3</p>
             <h2 className="mt-1 text-lg font-bold text-foreground">Ile i na jak długo?</h2>
           </div>
           <div className="space-y-3">
