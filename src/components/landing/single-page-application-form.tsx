@@ -847,7 +847,7 @@ export function SinglePageApplicationForm() {
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
-              <><Send className="mr-2 h-5 w-5" /> Wyślij wniosek z ofertą</>
+              <><Send className="mr-2 h-5 w-5" /> Złóż ofertę</>
             )}
           </Button>
         )}
