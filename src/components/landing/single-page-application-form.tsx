@@ -494,16 +494,41 @@ export function SinglePageApplicationForm() {
 
       {/* Step 3 — Twoja oferta (kalkulator) */}
       {step === 3 && (() => {
-        const nominalFig = computeLoanFigures({ amount, annualRatePercent: annualRate, months });
-        const minCap = Math.round(nominalFig.nominal * 0.4);
-        const maxCap = Math.round(nominalFig.nominal);
+        // Prowizja Finance You (zgodnie z regulaminem) — kredytowana do kapitału.
+        const FINANCEYOU_FEE_PCT = 4;
+        const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
+        const grossPrincipal = amount + financeYouFee;
+
+        const nominalFig = computeLoanFigures({ amount: grossPrincipal, annualRatePercent: annualRate, months });
+        const minCap = Math.max(1, Math.round(amount * 0.01)); // min. rata = 1% kwoty pożyczki
+        const maxCap = Math.max(minCap, Math.round(nominalFig.nominal));
         const effectiveMax = maxPayment > 0 ? Math.min(Math.max(maxPayment, minCap), maxCap) : 0;
         const fig = computeLoanFigures({
-          amount,
+          amount: grossPrincipal,
           annualRatePercent: annualRate,
           months,
           maxPayment: effectiveMax || undefined,
         });
+
+        // Harmonogram spłat (amortyzacja na kapitale brutto, balon w ostatniej racie).
+        const schedule: Array<{ n: number; payment: number; interest: number; principal: number; balance: number }> = [];
+        {
+          let balance = grossPrincipal;
+          const r = annualRate / 100 / 12;
+          for (let n = 1; n <= months; n++) {
+            const interest = balance * r;
+            let payment = fig.monthly;
+            let principalPart = payment - interest;
+            if (n === months) {
+              // Ostatnia rata: doliczamy balon i resztę salda
+              principalPart = balance;
+              payment = principalPart + interest + fig.balloon;
+            }
+            balance = Math.max(0, balance - principalPart);
+            schedule.push({ n, payment, interest, principal: principalPart, balance });
+          }
+        }
+
         return (
           <section className="space-y-6 rounded-2xl border border-border bg-card p-5 md:p-6">
             <div>
@@ -539,9 +564,9 @@ export function SinglePageApplicationForm() {
                 <Label className="text-sm font-semibold">Proponowane oprocentowanie roczne</Label>
                 <span className="text-2xl font-extrabold tabular-nums text-foreground">{annualRate}%</span>
               </div>
-              <Slider value={[annualRate]} min={20} max={50} step={0.5}
+              <Slider value={[annualRate]} min={15} max={50} step={0.5}
                 onValueChange={(v) => setAnnualRate(v[0] ?? annualRate)} />
-              <div className="flex justify-between text-xs text-muted-foreground"><span>20%</span><span>50%</span></div>
+              <div className="flex justify-between text-xs text-muted-foreground"><span>15%</span><span>50%</span></div>
               <p className="text-xs text-muted-foreground">
                 Im wyższe wynagrodzenie inwestora, tym więcej osób chętnie sfinansuje Twoją pożyczkę.
               </p>
@@ -562,7 +587,7 @@ export function SinglePageApplicationForm() {
                 onValueChange={(v) => setMaxPayment(v[0] ?? 0)}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{formatPLN(minCap)}</span>
+                <span>min. {formatPLN(minCap)} <span className="opacity-70">(1% kwoty)</span></span>
                 <span>bez limitu</span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -590,13 +615,51 @@ export function SinglePageApplicationForm() {
                 <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.investorCompensation)}</p>
               </div>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Łączna spłata</p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.total)}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prowizja Finance You ({FINANCEYOU_FEE_PCT}%)</p>
+                <p className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPLN(financeYouFee)}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Łączna spłata (z prowizją FY)</p>
+                <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">{formatPLN(fig.total)}</p>
               </div>
             </div>
 
+            <details className="group rounded-2xl border border-border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-foreground hover:bg-secondary/50">
+                <span>Harmonogram spłat ({months} rat)</span>
+                <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="max-h-80 overflow-auto border-t border-border">
+                <table className="w-full text-right text-xs tabular-nums">
+                  <thead className="sticky top-0 bg-secondary/80 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold">#</th>
+                      <th className="px-3 py-2 font-semibold">Rata</th>
+                      <th className="px-3 py-2 font-semibold">Odsetki</th>
+                      <th className="px-3 py-2 font-semibold">Kapitał</th>
+                      <th className="px-3 py-2 font-semibold">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schedule.map((row) => (
+                      <tr key={row.n} className="border-t border-border/50">
+                        <td className="px-3 py-1.5 text-left text-foreground">{row.n}</td>
+                        <td className="px-3 py-1.5 font-semibold text-foreground">{formatPLN(row.payment)}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{formatPLN(row.interest)}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{formatPLN(row.principal)}</td>
+                        <td className="px-3 py-1.5 text-foreground">{formatPLN(row.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="px-4 py-3 text-[11px] text-muted-foreground">
+                Kapitał startowy: {formatPLN(grossPrincipal)} = kwota pożyczki {formatPLN(amount)} + prowizja Finance You {formatPLN(financeYouFee)} ({FINANCEYOU_FEE_PCT}%, kredytowana zgodnie z regulaminem).
+              </p>
+            </details>
+
             <p className="text-[11px] text-muted-foreground">
-              Wyliczenia poglądowe przy oprocentowaniu {annualRate}% rocznie. Ostateczne warunki ustalisz indywidualnie z inwestorem.
+              Wyliczenia poglądowe przy oprocentowaniu {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
             </p>
           </section>
         );
