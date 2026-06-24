@@ -567,12 +567,21 @@ export function SinglePageApplicationForm() {
               </button>
               <button
                 type="button"
+                onClick={() => { void navigate({ to: "/negocjuj" }); }}
+                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
+              >
+                <div className="text-lg font-bold">Negocjuję</div>
+                <div className="text-sm text-white/80">Otwórz kalkulator inwestora z limitami ustawowymi, wygeneruj harmonogram i zapisz propozycję dla klienta.</div>
+              </button>
+              <button
+                type="button"
                 onClick={() => { void navigate({ to: "/posrednik" }); }}
                 className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
               >
                 <div className="text-lg font-bold">Pośredniczę</div>
                 <div className="text-sm text-white/80">Polecam klientów / inwestorów i prowadzę leady jako pośrednik.</div>
               </button>
+
             </div>
           </div>
         </FancyShell>
