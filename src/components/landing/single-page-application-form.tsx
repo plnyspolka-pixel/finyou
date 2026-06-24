@@ -444,101 +444,105 @@ export function SinglePageApplicationForm() {
     }
   };
 
+  // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2)
+  useEffect(() => {
+    const step1Done = contactValid && consentPrivacy && consentTerms;
+    if (step === 1 && step1Done) setStep(2);
+  }, [step, contactValid, consentPrivacy, consentTerms]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      {/* Stepper kafelki */}
-      <div className="space-y-2">
-        <ol className="grid grid-cols-2 gap-2">
-          {STEPS.slice(0, 2).map((s) => {
-            const active = s.id === step;
-            const done = s.id < step;
-            return (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => setStep(s.id as StepId)}
-                  className={[
-                    "flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition",
-                    active
-                      ? "border-accent bg-accent/10 text-foreground shadow-sm"
-                      : done
-                        ? "border-accent/40 bg-card text-foreground hover:bg-accent/5"
-                        : "border-border bg-card text-muted-foreground",
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "grid h-7 w-7 place-items-center rounded-full text-xs font-bold",
-                      active ? "bg-accent text-accent-foreground" : done ? "bg-accent/80 text-accent-foreground" : "bg-secondary text-muted-foreground",
-                    ].join(" ")}
-                  >
-                    {done ? <Check className="h-4 w-4" /> : s.id}
-                  </span>
-                  <span className="text-[11px] font-semibold uppercase tracking-wide sm:text-xs">{s.label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-        {(() => {
-          const s = STEPS[2];
-          const active = s.id === step;
-          const done = s.id < step;
-          const step1Done = contactValid && consentPrivacy && consentTerms;
-          const canOpenOffer = step1Done && step4Valid;
-          const handleClick = () => {
-            if (!canOpenOffer) {
-              if (!step1Done) {
-                toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
-                setStep(1);
-                return;
-              }
-              toast.error("Najpierw uzupełnij dokumenty i numer KW (Krok 2).");
-              setStep(2);
+      {/* Elegancki, zachęcający button "Twoja oferta" — zablokowany dopóki wniosek niekompletny */}
+      {(() => {
+        const step1Done = contactValid && consentPrivacy && consentTerms;
+        const canOpenOffer = step1Done && step4Valid;
+        const active = step === 3;
+        const handleClick = () => {
+          if (!canOpenOffer) {
+            if (!step1Done) {
+              toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody.");
+              setStep(1);
               return;
             }
-            setStep(s.id as StepId);
-          };
-          return (
-            <button
-              type="button"
-              onClick={handleClick}
-              aria-disabled={!canOpenOffer}
-              title={canOpenOffer ? undefined : "Dostępne po uzupełnieniu Kroku 1 i 2"}
+            toast.error("Najpierw uzupełnij dokumenty i numer KW.");
+            setStep(2);
+            return;
+          }
+          setStep(3);
+        };
+        return (
+          <button
+            type="button"
+            onClick={handleClick}
+            aria-disabled={!canOpenOffer}
+            title={canOpenOffer ? "Zobacz swoją wstępną ofertę" : "Dostępne po uzupełnieniu wniosku"}
+            className={[
+              "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl p-[2px] shadow-[0_10px_40px_-15px_oklch(0.7_0.18_50/0.55)] transition-transform duration-300",
+              canOpenOffer ? "hover:scale-[1.01] active:scale-[0.99] cursor-pointer" : "cursor-not-allowed",
+            ].join(" ")}
+          >
+            {/* Obrotowy gradient na obwodzie (zawsze widoczny — eleganckie obietnica) */}
+            <span
+              aria-hidden
+              className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, oklch(0.75 0.16 50), oklch(0.82 0.14 85), oklch(0.68 0.18 35), oklch(0.78 0.15 60), oklch(0.75 0.16 50))",
+                animation: "fy-offer-spin 5s linear infinite",
+                opacity: canOpenOffer ? 1 : 0.6,
+              }}
+            />
+            {/* Wnętrze buttona */}
+            <span
               className={[
-                "group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 px-4 py-4 text-center transition-all",
-                !canOpenOffer
-                  ? "border-border bg-muted/40 text-muted-foreground cursor-not-allowed"
-                  : active
-                    ? "border-accent bg-gradient-to-r from-accent/20 via-accent/10 to-accent/20 text-foreground shadow-[0_0_30px_-5px_var(--accent)]"
-                    : "border-accent/60 bg-gradient-to-r from-accent/10 via-accent/5 to-accent/10 text-foreground hover:border-accent hover:shadow-[0_0_25px_-5px_var(--accent)]",
+                "relative flex w-full items-center justify-center gap-3 rounded-[14px] px-5 py-4",
+                canOpenOffer
+                  ? "bg-[oklch(0.16_0.03_265)] text-white"
+                  : "bg-[oklch(0.18_0.02_265)] text-white/85",
               ].join(" ")}
             >
-              {canOpenOffer && (
+              {/* Shimmer */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 overflow-hidden rounded-[14px]"
+              >
                 <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2.5s_infinite]"
-                  style={{ animation: "shimmer 2.5s linear infinite" }}
+                  className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  style={{ animation: "fy-offer-shimmer 3s linear infinite" }}
                 />
-              )}
-              {done && canOpenOffer && (
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-accent-foreground">
-                  <Check className="h-5 w-5" />
-                </span>
-              )}
-              {!canOpenOffer && (
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-muted-foreground" aria-hidden>
-                  <Lock className="h-4 w-4" />
-                </span>
-              )}
-              <span className="text-sm font-bold uppercase tracking-wide sm:text-base">
-                {canOpenOffer ? "Twoja oferta" : "Twoja oferta — uzupełnij wniosek"}
               </span>
-            </button>
-          );
-        })()}
-      </div>
-      <style>{`@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`}</style>
+              <span
+                className={[
+                  "relative grid h-9 w-9 place-items-center rounded-full",
+                  canOpenOffer ? "bg-white/15" : "bg-white/10",
+                ].join(" ")}
+                aria-hidden
+              >
+                {canOpenOffer ? <Check className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
+              </span>
+              <span className="relative flex flex-col items-start leading-tight">
+                <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/60">
+                  Krok 3
+                </span>
+                <span className="text-base font-bold tracking-wide sm:text-lg">
+                  {canOpenOffer ? "Twoja oferta" : "Twoja oferta — uzupełnij wniosek"}
+                </span>
+              </span>
+              {active && (
+                <span className="relative ml-1 hidden rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:inline">
+                  Otwarte
+                </span>
+              )}
+            </span>
+          </button>
+        );
+      })()}
+      <style>{`
+        @keyframes fy-offer-spin { to { transform: rotate(360deg); } }
+        @keyframes fy-offer-shimmer { 0% { transform: translateX(0); } 100% { transform: translateX(450%); } }
+      `}</style>
+
+
 
 
       {/* Step 1 — dane kontaktowe */}
