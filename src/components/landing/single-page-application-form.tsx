@@ -312,7 +312,8 @@ export function SinglePageApplicationForm() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step !== 3) { goNext(); return; }
+    if (step === 1) { goNext(); return; }
+    // step 2 i 3 → wysyłka wniosku (kalkulator opcjonalny)
     if (!kwOrDeedOk) {
       toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
