@@ -737,7 +737,7 @@ export function SinglePageApplicationForm() {
             </details>
 
             <p className="text-[11px] text-muted-foreground">
-              Wyliczenia poglądowe przy oprocentowaniu {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
+              Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
             </p>
           </section>
         );
