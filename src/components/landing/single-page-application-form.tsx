@@ -1040,7 +1040,7 @@ export function SinglePageApplicationForm() {
         )}
 
         {step === 2 && step2Sub === "docs" && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting} className="ml-auto flex-1 text-base md:flex-none">
+          <Button type="submit" variant="cta" size="lg" disabled={submitting} aria-disabled={!hasPropertyPhotos} className={`ml-auto flex-1 text-base md:flex-none ${!hasPropertyPhotos ? "opacity-60" : ""}`}>
             {submitting ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
             ) : (
