@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Send, ArrowRight, Building2, FileText, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Sparkles, Send, ArrowRight, Building2, FileText, ShieldCheck, CheckCircle2, Rocket, Briefcase, Save } from "lucide-react";
 import { toast } from "sonner";
 import { assistBusinessDescription } from "@/lib/ai-assist.functions";
+import { gusCompanyLookup } from "@/lib/gus-bir.functions";
+import { legalFormLabels } from "@/components/application-info-badges";
 
 export const Route = createFileRoute("/wniosek-opis")({
   component: WniosekOpisPage,
@@ -36,6 +40,7 @@ function WniosekOpisPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const assist = useServerFn(assistBusinessDescription);
+  const gusLookup = useServerFn(gusCompanyLookup);
 
   const [loanId, setLoanId] = useState<string | null>(null);
   const [purpose, setPurpose] = useState("");
@@ -46,6 +51,16 @@ function WniosekOpisPage() {
   const [hasCompanyData, setHasCompanyData] = useState(false);
   const [hasIncomeDocs, setHasIncomeDocs] = useState(false);
   const [hasBikReport, setHasBikReport] = useState(false);
+
+  // Profil działalności
+  const [bizStatus, setBizStatus] = useState<string>("");
+  const [legalForm, setLegalForm] = useState<string>("");
+  const [nip, setNip] = useState<string>("");
+  const [nipVerifiedAt, setNipVerifiedAt] = useState<string | null>(null);
+  const [isStartup, setIsStartup] = useState(false);
+  const [startupDep, setStartupDep] = useState(false);
+  const [bizSaving, setBizSaving] = useState(false);
+  const [nipChecking, setNipChecking] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) void navigate({ to: "/logowanie" });
@@ -65,15 +80,22 @@ function WniosekOpisPage() {
 
       const { data: la } = await supabase
         .from("loan_applications")
-        .select("id, investor_description, investor_purpose")
+        .select("id, investor_description, investor_purpose, business_status, business_legal_form, nip, business_nip_verified_at, is_startup, startup_funding_dependency")
         .eq("client_id", c.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (la) {
         setLoanId(la.id);
-        setDescription((la as any).investor_description ?? "");
-        setPurpose((la as any).investor_purpose ?? "");
+        const r = la as any;
+        setDescription(r.investor_description ?? "");
+        setPurpose(r.investor_purpose ?? "");
+        setBizStatus(r.business_status ?? "");
+        setLegalForm(r.business_legal_form ?? "");
+        setNip(r.nip ?? (c as any).nip ?? "");
+        setNipVerifiedAt(r.business_nip_verified_at ?? null);
+        setIsStartup(Boolean(r.is_startup));
+        setStartupDep(Boolean(r.startup_funding_dependency));
 
         const { data: ds } = await supabase
           .from("documents")
@@ -86,6 +108,56 @@ function WniosekOpisPage() {
       setLoading(false);
     })();
   }, [user]);
+
+  const saveBusinessProfile = async () => {
+    if (!loanId) return;
+    setBizSaving(true);
+    try {
+      const { error } = await supabase
+        .from("loan_applications")
+        .update({
+          business_status: (bizStatus || null) as any,
+          business_legal_form: legalForm || null,
+          nip: nip.trim() || null,
+          is_startup: isStartup,
+          startup_funding_dependency: isStartup ? startupDep : null,
+        } as any)
+        .eq("id", loanId);
+      if (error) throw error;
+      toast.success("Zapisano profil działalności");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd zapisu");
+    } finally {
+      setBizSaving(false);
+    }
+  };
+
+  const verifyNip = async () => {
+    const clean = nip.replace(/\D/g, "");
+    if (clean.length !== 10) { toast.error("NIP musi mieć 10 cyfr"); return; }
+    if (!loanId) return;
+    setNipChecking(true);
+    try {
+      const res: any = await gusLookup({ data: { nip: clean } });
+      if (res?.success) {
+        const stamp = new Date().toISOString();
+        const { error } = await supabase
+          .from("loan_applications")
+          .update({ nip: clean, business_nip_verified_at: stamp } as any)
+          .eq("id", loanId);
+        if (error) throw error;
+        setNip(clean);
+        setNipVerifiedAt(stamp);
+        toast.success(`NIP zweryfikowany${res?.company?.name ? ` — ${res.company.name}` : ""}`);
+      } else {
+        toast.error(res?.message ?? "Nie znaleziono firmy w GUS dla tego NIP");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd weryfikacji NIP");
+    } finally {
+      setNipChecking(false);
+    }
+  };
 
   const generate = async (mode: "draft" | "improve" | "expand") => {
     if (!loanId) { toast.error("Brak wniosku"); return; }
@@ -179,6 +251,95 @@ function WniosekOpisPage() {
             Postęp: {boostDone} / {boostTotal}
           </div>
         </div>
+
+        {/* Profil działalności */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-violet-500" />
+              Profil działalności
+            </CardTitle>
+            <CardDescription>
+              Powiedz inwestorowi, czy prowadzisz działalność, czy to startup i w jakiej formie.
+              Im więcej konkretów, tym wyższe zaufanie i lepsze warunki.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label>Czy prowadzisz działalność gospodarczą?</Label>
+                <Select value={bizStatus} onValueChange={(v) => setBizStatus(v)}>
+                  <SelectTrigger><SelectValue placeholder="Wybierz…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="prowadzi">Tak, prowadzę</SelectItem>
+                    <SelectItem value="zamierza">Zamierzam rozpocząć</SelectItem>
+                    <SelectItem value="nie_zamierza">Nie, nie planuję</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(bizStatus === "prowadzi" || bizStatus === "zamierza") && (
+                <div>
+                  <Label>Forma prawna</Label>
+                  <Select value={legalForm} onValueChange={(v) => setLegalForm(v)}>
+                    <SelectTrigger><SelectValue placeholder="Wybierz formę…" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(legalFormLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {(bizStatus === "prowadzi" || bizStatus === "zamierza") && (
+              <div>
+                <Label htmlFor="nip-input">NIP firmy</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="nip-input"
+                    inputMode="numeric"
+                    maxLength={13}
+                    placeholder="np. 5252344078"
+                    value={nip}
+                    onChange={(e) => { setNip(e.target.value); setNipVerifiedAt(null); }}
+                  />
+                  <Button type="button" variant="outline" onClick={() => void verifyNip()} disabled={nipChecking || !nip.trim()}>
+                    {nipChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : nipVerifiedAt ? <><CheckCircle2 className="mr-1 h-4 w-4 text-emerald-600" /> Zweryfikowany</> : "Zweryfikuj w GUS"}
+                  </Button>
+                </div>
+                {nipVerifiedAt && (
+                  <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">NIP zweryfikowany w rejestrze GUS.</p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <Checkbox checked={isStartup} onCheckedChange={(v) => setIsStartup(Boolean(v))} className="mt-0.5" />
+                <span className="text-sm">
+                  <span className="flex items-center gap-1 font-medium"><Rocket className="h-4 w-4 text-violet-500" />To jest startup</span>
+                  <span className="block text-xs text-muted-foreground">Nowy projekt / nowa działalność, jeszcze bez historii finansowej.</span>
+                </span>
+              </label>
+              {isStartup && (
+                <label className="flex items-start gap-2 cursor-pointer pl-6">
+                  <Checkbox checked={startupDep} onCheckedChange={(v) => setStartupDep(Boolean(v))} className="mt-0.5" />
+                  <span className="text-sm">
+                    Rozpoczęcie działalności jest <b>uzależnione</b> od uzyskania finansowania.
+                    <span className="block text-xs text-muted-foreground">Inwestor wie, że bez jego decyzji projekt nie ruszy.</span>
+                  </span>
+                </label>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={() => void saveBusinessProfile()} disabled={bizSaving || !loanId}>
+                {bizSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Zapisz profil</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Opis dla inwestora — kluczowy boost, edytowalny w miejscu */}
         <Card className="border-violet-200 bg-violet-50/30 dark:border-violet-900/50 dark:bg-violet-950/10">

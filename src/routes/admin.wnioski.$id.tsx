@@ -15,6 +15,7 @@ import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLa
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { KwContentSection } from "@/components/kw-content-section";
+import { ApplicationInfoBadges } from "@/components/application-info-badges";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -94,6 +95,8 @@ function WniosekDetail() {
           </Select>
         </div>
       </div>
+
+      <ApplicationInfoBadges app={app} client={c} loanApplicationId={id} />
 
       <Tabs defaultValue="dane">
         <TabsList className="flex-wrap h-auto">
