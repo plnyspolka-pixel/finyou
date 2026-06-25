@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { Handshake, ArrowLeft, ListChecks } from "lucide-react";
+import { FancyShell } from "@/components/landing/fancy-shell";
 
 type NegocjujSearch = {
   app?: string;
@@ -110,15 +111,16 @@ function NegocjujPage() {
           </Link>
         </div>
 
-        <div className="space-y-1">
+        <FancyShell>
           <div className="flex items-center gap-2">
-            <Handshake className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Negocjuj propozycję pożyczki</h1>
+            <Handshake className="h-6 w-6 text-white" />
+            <p className="text-xs font-bold uppercase tracking-widest text-white/80">Inwestor — kontroferta</p>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white md:text-3xl">Negocjuj propozycję pożyczki</h1>
+          <p className="mt-1 max-w-2xl text-sm text-white/85">
             Ustaw parametry w kalkulatorze (z limitami ustawowymi), uzupełnij dane klienta i zapisz propozycję — wygenerowany harmonogram zostanie zachowany razem z ofertą.
           </p>
-        </div>
+        </FancyShell>
 
         <LoanCalculator
           onChange={setCalc}
