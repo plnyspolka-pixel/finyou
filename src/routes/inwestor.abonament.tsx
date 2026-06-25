@@ -9,6 +9,7 @@ import { subscriptionPlanLabels, subscriptionStatusLabels, formatDate } from "@/
 import { StripeEmbeddedCheckoutForm } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { CheckCircle2 } from "lucide-react";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/abonament")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -77,12 +78,11 @@ function InwestorAbonament() {
     <div className="space-y-6">
       <PaymentTestModeBanner />
 
-      <div>
-        <h1 className="text-2xl font-bold">Dostęp inwestora</h1>
-        <p className="text-sm text-muted-foreground">
-          Wybierz okres, na jaki chcesz mieć dostęp do bazy zaakceptowanych wniosków o pożyczkę.
-        </p>
-      </div>
+      <FancyPageHeader
+        eyebrow="Subskrypcja"
+        title="Dostęp inwestora"
+        subtitle="Wybierz okres, na jaki chcesz mieć dostęp do bazy zaakceptowanych wniosków o pożyczkę."
+      />
 
       {session_id && (
         <Card className="border-emerald-300 bg-emerald-50">

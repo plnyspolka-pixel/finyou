@@ -22,6 +22,7 @@ import {
   extractFunctionPart,
 } from "@/lib/krs-format";
 import { detectPolishBankAccount, maskAccount, logSafeAccount, type BankDetectResult } from "@/lib/polish-bank";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 
 
@@ -293,7 +294,11 @@ export function InwestorProfil() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">Profil inwestora</h1>
+      <FancyPageHeader
+        eyebrow="Twoje konto"
+        title="Profil inwestora"
+        subtitle="Dane wykorzystywane do przygotowania umów pożyczki."
+      />
 
       <Card>
         <CardHeader><CardTitle>Status prawny</CardTitle></CardHeader>

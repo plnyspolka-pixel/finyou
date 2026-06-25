@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/inwestor/szkolenia")({
@@ -43,7 +44,11 @@ function SzkoleniaInwestor() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Akademia inwestora</h1>
+      <FancyPageHeader
+        eyebrow="Wiedza inwestora"
+        title="Akademia inwestora"
+        subtitle="Szkolenia wideo — wszystko, co musisz wiedzieć o inwestowaniu w pożyczki zabezpieczone."
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {videos.map((v) => {
           const url = videoUrl(v);

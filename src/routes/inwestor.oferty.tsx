@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FileSignature } from "lucide-react";
 import { formatPLN, offerStatusLabels, formatDate } from "@/lib/labels";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/oferty")({
   component: InwestorOferty,
@@ -31,11 +32,11 @@ function InwestorOferty() {
   const accepted = offers.filter((o) => o.offer_status === "zaakceptowana_przez_klienta");
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-accent/5 to-transparent p-5 md:p-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-accent">Twoje portfolio</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">Moje oferty ({offers.length})</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Oferty wysłane do klientów — śledź statusy i podpisuj umowy.</p>
-      </div>
+      <FancyPageHeader
+        eyebrow="Twoje portfolio"
+        title={`Moje oferty (${offers.length})`}
+        subtitle="Oferty wysłane do klientów — śledź statusy i podpisuj umowy."
+      />
       {accepted.length > 0 && (
         <Card className="border-emerald-500/40 bg-emerald-500/5">
           <CardContent className="pt-6 text-sm space-y-3">

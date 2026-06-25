@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from "lucide-react";
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorList,
@@ -70,10 +71,11 @@ function InwestorList() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dostępne wnioski</h1>
-        <p className="text-sm text-muted-foreground">Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję.</p>
-      </div>
+      <FancyPageHeader
+        eyebrow="Marketplace inwestora"
+        title={`Dostępne wnioski (${apps.length})`}
+        subtitle="Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję."
+      />
 
       <Card>
         <CardContent className="pt-6 space-y-4">
