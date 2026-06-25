@@ -48,11 +48,21 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
   }
 
   const brand = (
-    <div className="flex items-center gap-2 font-semibold">
-      <div className="grid h-8 w-8 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm">
-        FY
-      </div>
-      {title}
+    <div className="flex items-center gap-2.5 font-semibold">
+      <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl text-sm font-extrabold text-white shadow-[0_8px_24px_-8px_oklch(0.40_0.25_268/0.7)]">
+        <span
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }}
+        />
+        <span
+          aria-hidden
+          className="absolute -left-3 -top-3 h-10 w-10 rounded-full blur-md"
+          style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)" }}
+        />
+        <span className="relative">FY</span>
+      </span>
+      <span className="tracking-tight">{title}</span>
     </div>
   );
 
@@ -102,8 +112,8 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground">
+    <div className="flex min-h-screen w-full bg-gradient-to-br from-background via-background to-secondary/30">
+      <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
         <div className="px-5 py-5 border-b border-sidebar-border">{brand}</div>
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">{nav()}</nav>
         <div className="border-t border-sidebar-border p-3">{signOutButton()}</div>
@@ -132,9 +142,14 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2 font-semibold text-sm">
-            <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground text-xs">
-              FY
-            </div>
+            <span className="relative grid h-7 w-7 place-items-center overflow-hidden rounded-lg text-[10px] font-extrabold text-white">
+              <span
+                aria-hidden
+                className="absolute inset-0"
+                style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }}
+              />
+              <span className="relative">FY</span>
+            </span>
             {title}
           </div>
         </header>

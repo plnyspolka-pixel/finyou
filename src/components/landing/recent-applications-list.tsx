@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight, ChevronRight, Home, Building2, Trees, Store } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, ChevronRight, Home, Building2, Trees, Store, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
@@ -182,7 +183,28 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
     setSeed(Math.floor(Math.random() * 1e9));
   }, []);
 
-  const items = useMemo(() => (seed == null ? [] : generateOffers(seed, 6)), [seed]);
+  const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 12)), [seed]);
+
+  // ---- Wyszukiwarka / filtry --------------------------------------------
+  const [q, setQ] = useState("");
+  const [propType, setPropType] = useState<keyof typeof PROPERTY_TYPE_LABELS | "all">("all");
+  const [amountMax, setAmountMax] = useState<number>(250_000);
+  const [periodMax, setPeriodMax] = useState<number>(60);
+  const [minRate, setMinRate] = useState<number>(22);
+
+  const items = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return allItems.filter((it) =>
+      (needle === "" || it.city.toLowerCase().includes(needle) || it.first_name.toLowerCase().includes(needle)) &&
+      (propType === "all" || it.property_type === propType) &&
+      it.loan_amount <= amountMax &&
+      it.preferred_period_months <= periodMax &&
+      it.annual_investor_rate >= minRate,
+    );
+  }, [allItems, q, propType, amountMax, periodMax, minRate]);
+
+  const filtersActive = q !== "" || propType !== "all" || amountMax !== 250_000 || periodMax !== 60 || minRate !== 22;
+  const resetFilters = () => { setQ(""); setPropType("all"); setAmountMax(250_000); setPeriodMax(60); setMinRate(22); };
 
   return (
     <section id="ostatnie-oferty" className="border-t border-border bg-secondary/30 scroll-mt-20">
@@ -196,6 +218,74 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
             Wnioski klientów po przejściu kalkulatora — wybrane warunki czekają na inwestora.
           </p>
         </div>
+
+        {/* Wyszukiwarka */}
+        <div className="mt-6 rounded-2xl border border-border bg-card/80 p-4 shadow-sm backdrop-blur">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Szukaj po mieście lub imieniu klienta…"
+                className="pl-9"
+              />
+            </div>
+            {filtersActive && (
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="self-end md:self-auto">
+                <X className="mr-1 h-3.5 w-3.5" /> Wyczyść
+              </Button>
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setPropType("all")}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${propType === "all" ? "border-primary bg-primary text-primary-foreground" : "border-border bg-secondary/60 text-foreground hover:bg-secondary"}`}
+            >
+              Wszystkie typy
+            </button>
+            {PROPERTY_TYPES.map((pt) => {
+              const v = PROPERTY_VISUAL[pt] ?? PROPERTY_VISUAL.house;
+              const Icon = v.Icon;
+              const active = propType === pt;
+              return (
+                <button
+                  key={pt}
+                  onClick={() => setPropType(pt)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-secondary/60 text-foreground hover:bg-secondary"}`}
+                >
+                  <Icon className="h-3 w-3" /> {PROPERTY_TYPE_LABELS[pt]}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="text-muted-foreground">Maks. kwota: <b className="text-foreground tabular-nums">{formatPLN(amountMax)}</b></span>
+              <input type="range" min={30_000} max={250_000} step={5_000} value={amountMax} onChange={(e) => setAmountMax(Number(e.target.value))} className="accent-primary" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="text-muted-foreground">Maks. okres: <b className="text-foreground tabular-nums">{periodMax} mies.</b></span>
+              <input type="range" min={12} max={60} step={6} value={periodMax} onChange={(e) => setPeriodMax(Number(e.target.value))} className="accent-primary" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="text-muted-foreground">Min. stopa zwrotu: <b className="text-emerald-600 tabular-nums">{minRate}%</b></span>
+              <input type="range" min={15} max={36} step={0.5} value={minRate} onChange={(e) => setMinRate(Number(e.target.value))} className="accent-primary" />
+            </label>
+          </div>
+
+          <div className="mt-3 text-xs text-muted-foreground">
+            Znaleziono <b className="text-foreground tabular-nums">{items.length}</b> z {allItems.length} ofert
+          </div>
+        </div>
+
+        {items.length === 0 && allItems.length > 0 && (
+          <div className="mt-8 rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+            Żadna oferta nie spełnia filtrów. Rozluźnij kryteria lub <button onClick={resetFilters} className="font-semibold text-primary underline-offset-2 hover:underline">wyczyść filtry</button>.
+          </div>
+        )}
 
         {items.length > 0 && (
           <ul className="mt-8 grid gap-4 sm:grid-cols-2">
