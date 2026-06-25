@@ -300,11 +300,11 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs">
               <span className="text-muted-foreground">Maks. kwota: <b className="text-foreground tabular-nums">{formatPLN(amountMax)}</b></span>
-              <input type="range" min={30_000} max={250_000} step={5_000} value={amountMax} onChange={(e) => setAmountMax(Number(e.target.value))} className="accent-primary" />
+              <input type="range" min={40_000} max={900_000} step={10_000} value={amountMax} onChange={(e) => setAmountMax(Number(e.target.value))} className="accent-primary" />
             </label>
             <label className="flex flex-col gap-1 text-xs">
               <span className="text-muted-foreground">Maks. okres: <b className="text-foreground tabular-nums">{periodMax} mies.</b></span>
-              <input type="range" min={12} max={60} step={6} value={periodMax} onChange={(e) => setPeriodMax(Number(e.target.value))} className="accent-primary" />
+              <input type="range" min={12} max={72} step={6} value={periodMax} onChange={(e) => setPeriodMax(Number(e.target.value))} className="accent-primary" />
             </label>
             <label className="flex flex-col gap-1 text-xs">
               <span className="text-muted-foreground">Min. stopa zwrotu: <b className="text-emerald-600 tabular-nums">{minRate}%</b></span>
