@@ -339,7 +339,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       Wniosek złożony po przejściu kalkulatora
                     </div>
 
-                    <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                    <div className="mt-2 flex min-h-[3.25rem] flex-wrap content-start gap-1 text-[10px]">
                       {it.is_startup && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
                       )}
