@@ -261,6 +261,29 @@ function KlientDashboard() {
     }
   };
 
+  const saveArea = async () => {
+    if (!propertyRow?.id) return;
+    const normalized = area.replace(",", ".").trim();
+    const value = normalized === "" ? null : Number(normalized);
+    if (value !== null && (!Number.isFinite(value) || value <= 0 || value > 100000)) {
+      toast.error("Podaj poprawną powierzchnię w m² (np. 78,5)");
+      return;
+    }
+    setSavingArea(true);
+    try {
+      const { error } = await supabase.from("properties")
+        .update({ area_sqm: value })
+        .eq("id", propertyRow.id);
+      if (error) throw error;
+      toast.success(value == null ? "Powierzchnia wyczyszczona" : "Powierzchnia zapisana");
+      void refetchProperty();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zapisać powierzchni");
+    } finally {
+      setSavingArea(false);
+    }
+  };
+
   if (authLoading || clientLoading) {
     return (
       <div className="space-y-6 max-w-5xl">
