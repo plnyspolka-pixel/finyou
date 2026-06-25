@@ -128,6 +128,8 @@ function mulberry32(seed: number) {
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
+  // Shuffle photos so each render uses unique ones (with cycling if count > photos)
+  const shuffledPhotos = [...LANDING_OFFER_PHOTOS].sort(() => rand() - 0.5);
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
   for (let i = 0; i < count; i++) {
