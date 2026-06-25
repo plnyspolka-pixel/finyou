@@ -227,10 +227,9 @@ export function InvestorProposalCalculator({
 
   return (
     <div className="max-w-4xl space-y-4">
-      {(locked || statusLabel) && (
+      {locked && (
         <div className="flex flex-wrap items-center gap-2">
-          {locked && <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany do edycji</Badge>}
-          {statusLabel && <Badge variant="secondary">{statusLabel}</Badge>}
+          <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany do edycji</Badge>
         </div>
       )}
 
@@ -354,12 +353,7 @@ export function InvestorProposalCalculator({
           </FancyShell>
 
           <div className="space-y-3">
-            {missingForInvestors.length > 0 && (
-              <div className="flex items-start gap-2 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>Aby wysłać wniosek, uzupełnij jeszcze: <strong>{missingForInvestors.join(", ")}</strong>.</span>
-              </div>
-            )}
+            {missingForInvestors.length > 0 && null}
             <Button
               onClick={() => void sendToInvestors()}
               disabled={sendingToInvestors}
