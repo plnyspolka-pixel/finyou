@@ -16,9 +16,6 @@ const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> =
   commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
 };
 
-function photoForType(_propertyType: string, idx: number): string {
-  return LANDING_OFFER_PHOTOS[idx % LANDING_OFFER_PHOTOS.length]!;
-}
 
 
 
@@ -133,21 +130,37 @@ function mulberry32(seed: number) {
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
-  // Liczniki per typ — żeby tasować zdjęcia w obrębie właściwej puli
-  const typeIdx: Record<string, number> = { apartment: 0, house: 0, plot_building: 0, commercial: 0 };
+  // Zdjęcia: tasujemy pulę i bierzemy po jednym — nigdy dwa razy to samo zdjęcie.
+  const photoPool = [...LANDING_OFFER_PHOTOS];
+  for (let i = photoPool.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [photoPool[i], photoPool[j]] = [photoPool[j]!, photoPool[i]!];
+  }
+  const maxCount = Math.min(count, photoPool.length);
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
-  for (let i = 0; i < count; i++) {
-    // Mniejsze kwoty: 30k – 250k, krok 5k
-    const amount = Math.round((30_000 + rand() * 220_000) / 5_000) * 5_000;
-    // Krótsze okresy → balon i wyższe stopy
-    const period = pick([24, 24, 36, 36, 36, 48, 60]);
-    // Wyższe wynagrodzenie inwestora — zgodnie z regułami kalkulatora
+  for (let i = 0; i < maxCount; i++) {
+    // Kwoty: większość ≤ 200k, sporadycznie ~500k, 1–2 sztuki ~800–900k.
+    // Sloty: index 0 → 800–900k, index 1 → 500k (czasem też 800–900k), reszta ≤ 200k.
+    let amount: number;
+    if (i === 0) {
+      amount = Math.round((800_000 + rand() * 100_000) / 10_000) * 10_000; // 800–900k
+    } else if (i === 1 && rand() < 0.5) {
+      amount = Math.round((800_000 + rand() * 100_000) / 10_000) * 10_000; // czasem druga duża
+    } else if (i < 4) {
+      amount = Math.round((450_000 + rand() * 100_000) / 10_000) * 10_000; // 450–550k
+    } else {
+      amount = Math.round((40_000 + rand() * 160_000) / 5_000) * 5_000; // 40–200k
+    }
+    // Dłuższe okresy bardziej prawdopodobne → niższe raty (bliżej minimum)
+    const period = amount > 400_000
+      ? pick([24, 30, 36])               // powyżej 400k max 36 mies.
+      : pick([36, 48, 60, 60, 72, 72]);  // do 400k preferujemy długie okresy
+    // Stopa zwrotu w okolicy minimum z kalkulatora
     const rate = period <= 36
-      ? Math.round((28 + rand() * 8) * 2) / 2   // 28% – 36% step 0.5
-      : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
+      ? Math.round((24 + rand() * 2) * 2) / 2     // 24% – 26%
+      : Math.round((15 + rand() * 3) * 2) / 2;    // 15% – 18%
     const figures = computeOfferFigures(amount, period, rate);
-    // Pierwsze 3 oferty są „świeże dziś" (3–180 min temu), reszta rozciągnięta na 7 dni
     const minutesAgo = i < 3
       ? Math.floor(rand() * 180) + 3
       : Math.floor(rand() * 60 * 24 * 7) + 60;
@@ -156,7 +169,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa";
     const is_startup = rand() < 0.35;
     const property_type = pick(PROPERTY_TYPES);
-    const photo_url = photoForType(property_type, typeIdx[property_type]!++);
+    const photo_url = photoPool[i]!;
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
@@ -211,9 +224,9 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
   const [propType, setPropType] = useState<keyof typeof PROPERTY_TYPE_LABELS | "all">("all");
-  const [amountMax, setAmountMax] = useState<number>(250_000);
-  const [periodMax, setPeriodMax] = useState<number>(60);
-  const [minRate, setMinRate] = useState<number>(22);
+  const [amountMax, setAmountMax] = useState<number>(900_000);
+  const [periodMax, setPeriodMax] = useState<number>(72);
+  const [minRate, setMinRate] = useState<number>(15);
 
   const items = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -226,8 +239,8 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
     );
   }, [allItems, q, propType, amountMax, periodMax, minRate]);
 
-  const filtersActive = q !== "" || propType !== "all" || amountMax !== 250_000 || periodMax !== 60 || minRate !== 22;
-  const resetFilters = () => { setQ(""); setPropType("all"); setAmountMax(250_000); setPeriodMax(60); setMinRate(22); };
+  const filtersActive = q !== "" || propType !== "all" || amountMax !== 900_000 || periodMax !== 72 || minRate !== 15;
+  const resetFilters = () => { setQ(""); setPropType("all"); setAmountMax(900_000); setPeriodMax(72); setMinRate(15); };
 
   return (
     <section id="ostatnie-oferty" className="border-t border-border bg-secondary/30 scroll-mt-20">
@@ -287,11 +300,11 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs">
               <span className="text-muted-foreground">Maks. kwota: <b className="text-foreground tabular-nums">{formatPLN(amountMax)}</b></span>
-              <input type="range" min={30_000} max={250_000} step={5_000} value={amountMax} onChange={(e) => setAmountMax(Number(e.target.value))} className="accent-primary" />
+              <input type="range" min={40_000} max={900_000} step={10_000} value={amountMax} onChange={(e) => setAmountMax(Number(e.target.value))} className="accent-primary" />
             </label>
             <label className="flex flex-col gap-1 text-xs">
               <span className="text-muted-foreground">Maks. okres: <b className="text-foreground tabular-nums">{periodMax} mies.</b></span>
-              <input type="range" min={12} max={60} step={6} value={periodMax} onChange={(e) => setPeriodMax(Number(e.target.value))} className="accent-primary" />
+              <input type="range" min={12} max={72} step={6} value={periodMax} onChange={(e) => setPeriodMax(Number(e.target.value))} className="accent-primary" />
             </label>
             <label className="flex flex-col gap-1 text-xs">
               <span className="text-muted-foreground">Min. stopa zwrotu: <b className="text-emerald-600 tabular-nums">{minRate}%</b></span>
