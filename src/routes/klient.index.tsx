@@ -101,7 +101,31 @@ function KlientDashboard() {
   const [area, setArea] = useState<string>("");
   const [savingArea, setSavingArea] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [forceUnlock, setForceUnlock] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
   const qc = useQueryClient();
+
+  const markApplicationComplete = async () => {
+    if (!loanRow?.id) { toast.error("Najpierw rozpocznij wniosek"); return; }
+    setMarkingComplete(true);
+    try {
+      const { error } = await supabase.from("loan_applications")
+        .update({ status: "wniosek_kompletny", available_to_investors: true })
+        .eq("id", loanRow.id);
+      if (error) throw error;
+      setForceUnlock(true);
+      toast.success("Wniosek oznaczony jako kompletny — kalkulator odblokowany");
+      void qc.invalidateQueries({ queryKey: ["client-loan", clientRow?.id] });
+      // płynne przewinięcie do kalkulatora
+      setTimeout(() => {
+        document.getElementById("calc-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zaktualizować statusu");
+    } finally {
+      setMarkingComplete(false);
+    }
+  };
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -375,15 +399,16 @@ function KlientDashboard() {
         };
         const hint = propertyType ? HINTS[propertyType] : null;
 
-        const lockReason =
-          !loanRow?.id
+        const lockReason = forceUnlock
+          ? null
+          : !loanRow?.id
             ? null
             : (totalFiles === 0 && !kwValidation.ok)
-              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej)."
+              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej) lub kliknij „Przejdź do kalkulatora”."
               : totalFiles === 0
-                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej)."
+                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
                 : !kwValidation.ok
-                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej)."
+                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
                   : null;
 
         const filesSlot = loanRow?.id ? (
@@ -633,7 +658,37 @@ function KlientDashboard() {
         ) : null;
 
         return (
-          <InvestorProposalCalculator lockReason={lockReason} filesSlot={filesSlot} />
+          <>
+            {/* Skrót: oznacz wniosek jako kompletny i odblokuj kalkulator */}
+            <FancyShell variant="navy" motion={false} innerClassName="!p-4 sm:!p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-500/20 ring-1 ring-emerald-300/40">
+                    <Check className="h-5 w-5 text-emerald-200" strokeWidth={3} />
+                  </span>
+                  <div className="leading-tight">
+                    <div className="text-base font-black uppercase tracking-[0.16em] text-white sm:text-lg">
+                      Wszystko gotowe? Przejdź do kalkulatora
+                    </div>
+                    <div className="mt-1 text-xs text-white/75 sm:text-sm">
+                      Oznacza wniosek jako kompletny i od razu odblokowuje kalkulator — pominiesz dodawanie plików i KW.
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  onClick={() => void markApplicationComplete()}
+                  disabled={markingComplete || !loanRow?.id}
+                  className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
+                >
+                  {markingComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
+                  {markingComplete ? "Zapisuję…" : "Przejdź do kalkulatora →"}
+                </Button>
+              </div>
+            </FancyShell>
+            <div id="calc-anchor" />
+            <InvestorProposalCalculator lockReason={lockReason} filesSlot={filesSlot} />
+          </>
         );
       })()}
 
