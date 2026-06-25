@@ -295,121 +295,119 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
               return (
                 <li
                   key={it.id}
-                  className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+                  className="relative flex flex-col overflow-hidden rounded-2xl text-white shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] ring-1 ring-white/10"
+                  style={{
+                    background:
+                      "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
+                  }}
                 >
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -left-10 top-24 h-40 w-40 rounded-full blur-3xl"
+                    style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.55), transparent 70%)" }}
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -right-12 bottom-10 h-44 w-44 rounded-full blur-3xl"
+                    style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.45), transparent 70%)" }}
+                  />
                   {(() => {
                     const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
                     const Icon = v.Icon;
                     return (
-                      <div
-                        className="relative flex h-24 w-full items-center justify-between overflow-hidden px-4 text-white"
-                        style={{
-                          background:
-                            "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
-                        }}
-                      >
-                        <span
-                          aria-hidden
-                          className="absolute -left-8 -top-8 h-32 w-32 rounded-full blur-2xl"
-                          style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)" }}
-                        />
-                        <span
-                          aria-hidden
-                          className="absolute -right-10 top-1 h-32 w-32 rounded-full blur-2xl"
-                          style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)" }}
-                        />
-                        <div className="relative flex items-center gap-2 text-sm font-semibold text-white">
-                          <Icon className="h-5 w-5 text-white" />
+                      <div className={`relative flex h-24 w-full items-center justify-between overflow-hidden bg-gradient-to-br ${v.gradient} px-4`}>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Icon className="h-5 w-5 text-accent" />
                           {PROPERTY_TYPE_LABELS[it.property_type]}
                         </div>
-                        <div className="relative inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm ring-1 ring-white/20">
+                        <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
                           <MapPin className="h-3 w-3" /> {it.city}
                         </div>
                       </div>
                     );
                   })()}
 
-                  <div className="flex flex-1 flex-col p-4">
+                  <div className="relative flex flex-1 flex-col p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 font-semibold text-foreground">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <div className="flex items-center gap-2 font-semibold text-white">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
                         {it.first_name}
                       </div>
-                      <span className="text-xs text-muted-foreground">{timeAgo(it.created_at)}</span>
+                      <span className="text-xs text-white/70">{timeAgo(it.created_at)}</span>
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
+                    <div className="mt-1 text-xs text-white/70">
                       Wniosek złożony po przejściu kalkulatora
                     </div>
 
                     <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
                       {it.is_startup && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
                       )}
                       {it.business_legal_form && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 font-semibold text-foreground">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 font-semibold text-white ring-1 ring-white/15">
                           🏢 {it.business_legal_form === "jdg" ? "JDG" : it.business_legal_form === "sp_zoo" ? "Sp. z o.o." : "Sp. akcyjna"}
-                          {it.nip_verified && <span className="text-emerald-600">✓ NIP</span>}
+                          {it.nip_verified && <span className="text-emerald-300">✓ NIP</span>}
                         </span>
                       )}
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_income_docs ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "border border-border bg-secondary/60 text-muted-foreground"}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_income_docs ? "bg-emerald-400/20 text-emerald-200" : "bg-white/10 text-white/70 ring-1 ring-white/15"}`}>
                         📄 Dochód {it.has_income_docs ? "✓" : "—"}
                       </span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_bik ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "border border-border bg-secondary/60 text-muted-foreground"}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_bik ? "bg-emerald-400/20 text-emerald-200" : "bg-white/10 text-white/70 ring-1 ring-white/15"}`}>
                         🛡 BIK {it.has_bik ? "✓" : "—"}
                       </span>
                       {it.phone_verified && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">📞 Telefon ✓</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2 py-0.5 font-semibold text-emerald-200">📞 Telefon ✓</span>
                       )}
                       {it.bank_verified && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-700 dark:text-emerald-400">🏦 Rachunek ✓</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2 py-0.5 font-semibold text-emerald-200">🏦 Rachunek ✓</span>
                       )}
                     </div>
 
 
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Kwota</div>
-                        <div className="tabular-nums font-bold text-foreground">{formatPLN(it.loan_amount)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">Kwota</div>
+                        <div className="tabular-nums font-bold text-white">{formatPLN(it.loan_amount)}</div>
                       </div>
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Okres</div>
-                        <div className="tabular-nums font-bold text-foreground">{it.preferred_period_months} mies.</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">Okres</div>
+                        <div className="tabular-nums font-bold text-white">{it.preferred_period_months} mies.</div>
                       </div>
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Rata miesięczna</div>
-                        <div className="tabular-nums font-bold text-foreground">{formatPLN(f.monthly)}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">Rata miesięczna</div>
+                        <div className="tabular-nums font-bold text-white">{formatPLN(f.monthly)}</div>
                         {f.balloon > 0 && (
-                          <div className="mt-0.5 text-[10px] text-muted-foreground">
+                          <div className="mt-0.5 text-[10px] text-white/60">
                             + balon {formatPLN(f.balloon)}
                           </div>
                         )}
                       </div>
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Roczna stopa zwrotu</div>
-                        <div className="tabular-nums font-bold text-emerald-600">
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">Roczna stopa zwrotu</div>
+                        <div className="tabular-nums font-bold text-emerald-300">
                           {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
                         </div>
                       </div>
-                      <div className="col-span-2 rounded-xl bg-secondary/60 p-3">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <div className="col-span-2 rounded-xl bg-white/10 p-3 ring-1 ring-white/15">
+                        <div className="text-[11px] uppercase tracking-wide text-white/70">
                           Zysk inwestora (całość)
                         </div>
-                        <div className="tabular-nums text-lg font-extrabold text-foreground">
+                        <div className="tabular-nums text-lg font-extrabold text-white">
                           {formatPLN(f.investorCompensation)}
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2 text-[11px]">
+                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-white/5 px-3 py-2 text-[11px] ring-1 ring-white/10">
                       <span
                         className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                           it.wants_extension_option
-                            ? "bg-emerald-500/15 text-emerald-600"
-                            : "bg-muted text-muted-foreground"
+                            ? "bg-emerald-400/25 text-emerald-200"
+                            : "bg-white/10 text-white/60"
                         }`}
                       >
                         {it.wants_extension_option ? "✓" : "—"}
                       </span>
-                      <span className="text-foreground">
+                      <span className="text-white/85">
                         {it.wants_extension_option
                           ? "Klient wnioskuje o możliwość przedłużenia okresu pożyczki"
                           : "Klient nie wnioskuje o opcję przedłużenia"}
@@ -417,14 +415,14 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     </div>
                     </div>
 
-                    <details className="group mt-3 rounded-xl border border-border bg-secondary/40">
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-foreground hover:bg-secondary/70">
+                    <details className="group mt-3 rounded-xl bg-white/5 ring-1 ring-white/10">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10">
                         <span>Harmonogram spłat ({it.preferred_period_months} rat{f.balloon > 0 ? " + balon" : ""})</span>
                         <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
                       </summary>
-                      <div className="max-h-72 overflow-auto border-t border-border">
+                      <div className="max-h-72 overflow-auto border-t border-white/10">
                         <table className="w-full text-right text-[11px] tabular-nums">
-                          <thead className="sticky top-0 bg-secondary text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <thead className="sticky top-0 bg-white/10 text-[10px] uppercase tracking-wider text-white/70 backdrop-blur">
                             <tr>
                               <th className="px-2 py-1.5 text-left font-semibold">#</th>
                               <th className="px-2 py-1.5 font-semibold">Rata</th>
@@ -437,32 +435,32 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                             {f.schedule.map((row, idx) => (
                               <tr
                                 key={idx}
-                                className={`border-t border-border/60 ${row.n === "balon" ? "bg-accent/10 font-semibold" : ""}`}
+                                className={`border-t border-white/10 ${row.n === "balon" ? "bg-white/10 font-semibold" : ""}`}
                               >
-                                <td className="px-2 py-1 text-left text-foreground">
+                                <td className="px-2 py-1 text-left text-white">
                                   {row.n === "balon" ? "Balon" : row.n}
                                 </td>
-                                <td className="px-2 py-1 font-semibold text-foreground">{formatPLN(row.payment)}</td>
-                                <td className="px-2 py-1 text-muted-foreground">{formatPLN(row.interest)}</td>
-                                <td className="px-2 py-1 text-muted-foreground">{formatPLN(row.principal)}</td>
-                                <td className="px-2 py-1 text-foreground">{formatPLN(row.balance)}</td>
+                                <td className="px-2 py-1 font-semibold text-white">{formatPLN(row.payment)}</td>
+                                <td className="px-2 py-1 text-white/70">{formatPLN(row.interest)}</td>
+                                <td className="px-2 py-1 text-white/70">{formatPLN(row.principal)}</td>
+                                <td className="px-2 py-1 text-white">{formatPLN(row.balance)}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      <p className="px-3 py-2 text-[10px] text-muted-foreground">
+                      <p className="px-3 py-2 text-[10px] text-white/60">
                         Kapitał startowy: {formatPLN(f.grossPrincipal)} = kwota pożyczki {formatPLN(it.loan_amount)} + prowizja Finance You {formatPLN(f.fee)} ({f.feePct}%).
                       </p>
                     </details>
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                      <Button asChild size="sm">
+                      <Button asChild size="sm" className="bg-white text-primary hover:bg-white/90">
                         <Link to="/auth" search={{ next: "/inwestor" } as never}>
                           Inwestuję <ArrowRight className="ml-1 h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button asChild size="sm" variant="outline">
+                      <Button asChild size="sm" variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white">
                         <Link
                           to="/negocjuj"
                           search={{
