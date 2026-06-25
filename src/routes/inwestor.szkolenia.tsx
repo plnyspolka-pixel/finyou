@@ -44,7 +44,11 @@ function SzkoleniaInwestor() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Akademia inwestora</h1>
+      <FancyPageHeader
+        eyebrow="Wiedza inwestora"
+        title="Akademia inwestora"
+        subtitle="Szkolenia wideo — wszystko, co musisz wiedzieć o inwestowaniu w pożyczki zabezpieczone."
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {videos.map((v) => {
           const url = videoUrl(v);
