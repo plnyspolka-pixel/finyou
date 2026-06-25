@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { LANDING_OFFER_PHOTOS } from "@/assets/landing-offer-photos";
 
 // Bez zdjęć — na landingu nie pokazujemy żadnych materiałów klientów (KW, dokumenty, fotki nieruchomości).
 const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> = {
@@ -89,6 +90,7 @@ export type RecentLoanApplicationItem = {
   has_bik: boolean;
   phone_verified: boolean;
   bank_verified: boolean;
+  photo_url: string;
 };
 
 
@@ -126,6 +128,8 @@ function mulberry32(seed: number) {
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
+  // Shuffle photos so each render uses unique ones (with cycling if count > photos)
+  const shuffledPhotos = [...LANDING_OFFER_PHOTOS].sort(() => rand() - 0.5);
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
   for (let i = 0; i < count; i++) {
@@ -161,6 +165,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       has_bik: rand() < 0.7,
       phone_verified: rand() < 0.9,
       bank_verified: rand() < 0.55,
+      photo_url: shuffledPhotos[i % shuffledPhotos.length]!,
     });
   }
   return items;
@@ -184,7 +189,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
     setSeed(Math.floor(Math.random() * 1e9));
   }, []);
 
-  const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 12)), [seed]);
+  const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 28)), [seed]);
 
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
@@ -315,13 +320,25 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
                     const Icon = v.Icon;
                     return (
-                      <div className={`relative flex h-24 w-full items-center justify-between overflow-hidden bg-gradient-to-br ${v.gradient} px-4`}>
-                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                          <Icon className="h-5 w-5 text-accent" />
-                          {PROPERTY_TYPE_LABELS[it.property_type]}
-                        </div>
-                        <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
-                          <MapPin className="h-3 w-3" /> {it.city}
+                      <div className="relative h-40 w-full overflow-hidden">
+                        <img
+                          src={it.photo_url}
+                          alt={`${PROPERTY_TYPE_LABELS[it.property_type]} — ${it.city}`}
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <div
+                          aria-hidden
+                          className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/30"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 pb-3 pt-6">
+                          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                            <Icon className="h-3.5 w-3.5 text-accent" />
+                            {PROPERTY_TYPE_LABELS[it.property_type]}
+                          </div>
+                          <div className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
+                            <MapPin className="h-3 w-3" /> {it.city}
+                          </div>
                         </div>
                       </div>
                     );
