@@ -85,9 +85,6 @@ export function InvestorProposalCalculator({
     setAnnualRate(Number(loan.annual_investor_rate ?? 30));
     setMaxPayment(Number(loan.max_monthly_payment ?? 0));
     rateTouchedRef.current = true;
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-  void 0;
-    rateTouchedRef.current = true;
   }, [loan?.id]);
 
   useEffect(() => {
