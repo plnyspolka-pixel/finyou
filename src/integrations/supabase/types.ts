@@ -4617,6 +4617,7 @@ export type Database = {
       }
       meta_lead_forms: {
         Row: {
+          assigned_role: Database["public"]["Enums"]["app_role"]
           assigned_user_id: string | null
           created_at: string
           form_name: string | null
@@ -4633,6 +4634,7 @@ export type Database = {
           voicebot_enabled: boolean
         }
         Insert: {
+          assigned_role?: Database["public"]["Enums"]["app_role"]
           assigned_user_id?: string | null
           created_at?: string
           form_name?: string | null
@@ -4649,6 +4651,7 @@ export type Database = {
           voicebot_enabled?: boolean
         }
         Update: {
+          assigned_role?: Database["public"]["Enums"]["app_role"]
           assigned_user_id?: string | null
           created_at?: string
           form_name?: string | null
