@@ -113,6 +113,9 @@ async function upsertClientAndApplication(opts: {
       phone: opts.phone ?? undefined,
       phone_normalized: phoneNorm ?? undefined,
     }).eq("id", clientId);
+    if (assignedUserId) {
+      await supabaseAdmin.from("clients").update({ assigned_user_id: assignedUserId }).eq("id", clientId).is("assigned_user_id", null);
+    }
   }
 
   // 1b) Auto-create auth user + magic link (rola: klient) – tylko jeśli mamy email
