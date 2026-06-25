@@ -435,6 +435,40 @@ function KlientDashboard() {
                   </div>
                 )}
 
+                {(propertyType === "dom" || propertyType === "lokal_uslugowy") && (
+                  <div className="rounded-2xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
+                    <label htmlFor="area_sqm" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/85">
+                      Powierzchnia użytkowa (m²)
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="area_sqm"
+                          inputMode="decimal"
+                          value={area}
+                          onChange={(e) => setArea(e.target.value.replace(/[^0-9.,]/g, ""))}
+                          placeholder="np. 78,5"
+                          className="h-11 rounded-xl border-2 border-white/30 bg-white/10 pr-12 text-base font-semibold tabular-nums text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-white/70">m²</span>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => void saveArea()}
+                        disabled={savingArea || !propertyRow?.id}
+                        className="h-11 rounded-xl bg-white/15 px-4 text-xs font-bold uppercase tracking-[0.12em] text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/25 disabled:opacity-50"
+                      >
+                        {savingArea ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-1.5 h-4 w-4" />Zapisz</>}
+                      </Button>
+                    </div>
+                    {propertyType === "lokal_uslugowy" && (
+                      <p className="mt-1.5 text-[10px] text-white/65">Wymagana, jeżeli lokal nie znajduje się w bloku.</p>
+                    )}
+                  </div>
+                )}
+
+
+
                 <label className="block">
                   <input
                     type="file"
