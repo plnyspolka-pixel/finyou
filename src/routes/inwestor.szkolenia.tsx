@@ -11,12 +11,6 @@ export const Route = createFileRoute("/inwestor/szkolenia")({
 
 type TrainingVideo = Database["public"]["Tables"]["training_videos"]["Row"];
 
-function videoUrl(v: TrainingVideo): string | null {
-  if (v.external_url) return v.external_url;
-  if (v.file_path) return supabase.storage.from("training-videos").getPublicUrl(v.file_path).data.publicUrl;
-  return null;
-}
-
 function isExternal(url: string) {
   return /youtube\.com|youtu\.be|vimeo\.com/.test(url);
 }
@@ -29,17 +23,53 @@ function embedUrl(url: string): string {
   return url;
 }
 
+function extractTrainingPath(url: string | null): string | null {
+  if (!url) return null;
+  const m = url.match(/\/training-videos\/(.+)$/);
+  return m ? m[1] : null;
+}
+
 function SzkoleniaInwestor() {
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [posters, setPosters] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    void supabase
-      .from("training_videos")
-      .select("*")
-      .eq("is_published", true)
-      .order("sort_order")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setVideos(data ?? []));
+    void (async () => {
+      const { data } = await supabase
+        .from("training_videos")
+        .select("*")
+        .eq("is_published", true)
+        .order("sort_order")
+        .order("created_at", { ascending: false });
+      const list = data ?? [];
+      setVideos(list);
+      const urlEntries: Array<[string, string]> = [];
+      const posterEntries: Array<[string, string]> = [];
+      await Promise.all(
+        list.map(async (v) => {
+          if (v.external_url) {
+            urlEntries.push([v.id, v.external_url]);
+          } else if (v.file_path) {
+            const { data: signed } = await supabase.storage
+              .from("training-videos")
+              .createSignedUrl(v.file_path, 60 * 60 * 4);
+            if (signed?.signedUrl) urlEntries.push([v.id, signed.signedUrl]);
+          }
+          const posterPath = extractTrainingPath(v.thumbnail_url);
+          if (posterPath) {
+            const { data: signed } = await supabase.storage
+              .from("training-videos")
+              .createSignedUrl(posterPath, 60 * 60 * 4);
+            if (signed?.signedUrl) posterEntries.push([v.id, signed.signedUrl]);
+          } else if (v.thumbnail_url) {
+            posterEntries.push([v.id, v.thumbnail_url]);
+          }
+        }),
+      );
+      setUrls(Object.fromEntries(urlEntries));
+      setPosters(Object.fromEntries(posterEntries));
+    })();
   }, []);
 
   return (
@@ -51,7 +81,7 @@ function SzkoleniaInwestor() {
       />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {videos.map((v) => {
-          const url = videoUrl(v);
+          const url = urls[v.id] ?? null;
           const external = url ? isExternal(url) : false;
           return (
             <Card key={v.id} className="overflow-hidden">
@@ -71,16 +101,16 @@ function SzkoleniaInwestor() {
                   ) : (
                     <video
                       src={url}
-                      poster={v.thumbnail_url ?? undefined}
+                      poster={posters[v.id] ?? undefined}
                       controls
                       preload="metadata"
                       playsInline
                       className="aspect-video w-full rounded-md bg-black object-contain"
                     />
                   )
-                ) : v.thumbnail_url ? (
+                ) : posters[v.id] ? (
                   <img
-                    src={v.thumbnail_url}
+                    src={posters[v.id]}
                     alt=""
                     className="aspect-video w-full rounded-md object-cover"
                     loading="lazy"
