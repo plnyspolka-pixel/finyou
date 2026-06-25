@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { NumberTicker } from "@/components/ui/number-ticker";
