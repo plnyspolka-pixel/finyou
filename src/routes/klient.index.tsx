@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2 } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -95,7 +95,52 @@ function KlientDashboard() {
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const qc = useQueryClient();
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!user?.id || !loanRow?.id) { toast.error("Najpierw wypełnij wniosek"); return; }
+    setUploading(true);
+    const t = toast.loading(`Wysyłam ${files.length} plik(ów)…`);
+    try {
+      const newPhotoPaths: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: za duży (max 20 MB)`); continue; }
+        const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const isImage = (file.type || "").startsWith("image/");
+        if (isImage) {
+          const path = `klient/${user.id}/${loanRow.id}/${Date.now()}-${safe}`;
+          const up = await supabase.storage.from("property-photos").upload(path, file, { upsert: false, contentType: file.type });
+          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
+          newPhotoPaths.push(path);
+        } else {
+          const path = `klient/${user.id}/${loanRow.id}/doc-${Date.now()}-${safe}`;
+          const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
+          await supabase.from("documents").insert({
+            loan_application_id: loanRow.id, document_type: "property_doc", file_name: file.name, file_path: path, uploaded_by: user.id,
+          });
+        }
+      }
+      if (newPhotoPaths.length > 0) {
+        if (propertyRow?.id) {
+          const next = [...photoPaths, ...newPhotoPaths];
+          await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
+        } else {
+          await supabase.from("properties").insert({ loan_application_id: loanRow.id, photos: newPhotoPaths, property_type: "inna" });
+        }
+      }
+      toast.success("Wgrano", { id: t });
+      void refetchProperty();
+      void qc.invalidateQueries({ queryKey: ["client-documents", loanRow.id] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd", { id: t });
+    } finally {
+      setUploading(false);
+    }
+  };
+
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
@@ -393,12 +438,35 @@ function KlientDashboard() {
                   </div>
                 )}
 
+                <label className="block">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => { const fs = e.target.files; e.target.value = ""; void uploadFiles(fs); }}
+                  />
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/40 bg-white/10 px-4 py-4 text-sm font-bold uppercase tracking-[0.14em] text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20"
+                  >
+                    {uploading
+                      ? <><Loader2 className="h-5 w-5 animate-spin" /> Wysyłam…</>
+                      : <><Upload className="h-5 w-5" /> Dograj zdjęcia / dokumenty</>}
+                  </span>
+                </label>
+
                 {totalFiles === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 px-4 py-6 text-center text-sm text-white/80">
-                    Nie wgrałeś jeszcze żadnych zdjęć ani dokumentów. Dodaj je w sekcji „Zdjęcia nieruchomości" i „Dokumenty dochodowe" poniżej.
+                  <div className="rounded-2xl border border-dashed border-white/25 bg-white/5 px-4 py-4 text-center text-xs text-white/75">
+                    Wybierz typ nieruchomości powyżej — podpowiemy, co dograć.
                   </div>
                 ) : (
+                  <></>
+                )}
+                {totalFiles > 0 && (
                   <>
+
                     {docCount > 0 && (
                       <ul className="space-y-1.5">
                         {documentsList!.map((d) => (
@@ -519,36 +587,37 @@ function KlientDashboard() {
         ) : null;
 
         return (
-          <>
-            {filesSlot}
-            <InvestorProposalCalculator lockReason={lockReason} />
-          </>
+          <InvestorProposalCalculator lockReason={lockReason} filesSlot={filesSlot} />
         );
       })()}
 
 
       {/* === Info: weryfikuj, by obniżyć koszty === */}
-      <FancyShell>
+      <FancyShell variant="silver">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-              <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-900/10 ring-1 ring-slate-900/15">
+              <ShieldCheck className="h-5 w-5 text-slate-700" strokeWidth={2.5} />
             </span>
             <div className="leading-tight">
-              <div className="text-base font-bold uppercase tracking-[0.14em] sm:text-lg">
+              <div className="text-base font-bold uppercase tracking-[0.14em] text-slate-800 sm:text-lg">
                 Zweryfikuj dane, aby wnioskować o niższe koszty
               </div>
-              <div className="mt-1 text-xs text-white/75 sm:text-sm">
+              <div className="mt-1 text-xs text-slate-600 sm:text-sm">
                 Im więcej zielonych odznak (telefon, konto, BIK, dane firmy), tym lepsze warunki możesz dostać od inwestorów.
               </div>
             </div>
           </div>
-          <Sparkles className="hidden h-8 w-8 text-white/60 sm:block" />
+          <Sparkles className="hidden h-8 w-8 text-slate-400 sm:block" />
         </div>
       </FancyShell>
 
-      {/* === Pełny profil — dane, weryfikacje, dokumenty === */}
-      <ClientProfileSections showPasswordCard={false} includePersonal={false} />
+      {/* === Pełny profil — dane, weryfikacje, dokumenty (srebrny styl) === */}
+      <FancyShell variant="silver" innerClassName="!p-4 md:!p-5">
+        <ClientProfileSections showPasswordCard={false} includePersonal={false} />
+      </FancyShell>
+
+
 
 
 
