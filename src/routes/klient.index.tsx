@@ -291,53 +291,42 @@ function KlientDashboard() {
           mieszkanie: {
             title: "Co przygotować przy mieszkaniu",
             items: [
-              "Zdjęcia każdego pomieszczenia + 1–2 z zewnątrz budynku",
-              "Numer KW mieszkania",
-              "Rzut mieszkania (jeśli masz)",
-              "Akt notarialny / dokument własności",
+              "Zdjęcia każdego pomieszczenia",
+              "Zdjęcia budynku z zewnątrz",
             ],
           },
           dom: {
             title: "Co przygotować przy domu",
             items: [
-              "Zdjęcia domu z 4 stron + wnętrza + działki",
-              "Numer KW",
-              "Mapka działki / wypis z rejestru gruntów",
-              "Akt notarialny / dokument własności",
+              "Zdjęcia całego budynku z zewnątrz",
+              "Zdjęcia każdego pomieszczenia (bez piwnicy i strychu)",
+              "Powierzchnia użytkowa",
             ],
           },
           grunt_rolny: {
             title: "Co przygotować przy gruncie rolnym",
             items: [
-              "Zdjęcia działki (najlepiej z drona lub z kilku stron)",
-              "Numer KW",
-              "Wypis i wyrys z rejestru gruntów",
-              "Informacja o klasie gruntu i przeznaczeniu",
+              "Wypis z rejestru gruntów",
             ],
           },
           dzialka_budowlana: {
             title: "Co przygotować przy działce budowlanej",
             items: [
-              "Zdjęcia działki i okolicy (dojazd, media)",
-              "Numer KW",
-              "Wypis i wyrys, MPZP lub decyzja o warunkach zabudowy",
-              "Informacja o mediach (prąd, woda, kanalizacja)",
+              "MPZP albo warunki zabudowy",
             ],
           },
           lokal_uslugowy: {
-            title: "Co przygotować przy lokalu usługowym",
+            title: "Co przygotować przy lokalu użytkowym / usługowym",
             items: [
-              "Zdjęcia wnętrza, wejścia i witryny",
-              "Numer KW",
-              "Rzut lokalu / metraż",
-              "Umowa najmu (jeśli wynajmowany)",
+              "Zdjęcia każdego pomieszczenia",
+              "Zdjęcia z zewnątrz",
+              "Powierzchnia użytkowa (jeżeli lokal nie jest w bloku)",
             ],
           },
           inna: {
             title: "Co przygotować",
             items: [
               "Zdjęcia nieruchomości z różnych ujęć",
-              "Numer KW (jeśli jest)",
               "Dokumenty potwierdzające własność",
               "Wszystko, co pomoże inwestorowi ocenić wartość",
             ],
