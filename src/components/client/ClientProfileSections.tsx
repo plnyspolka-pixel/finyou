@@ -277,7 +277,9 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {has("phone") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
