@@ -91,10 +91,11 @@ function KlientDashboard() {
   const totalFiles = photoPaths.length + docCount;
 
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [thumbUrls, setThumbUrls] = useState<string[]>([]);
+  const [thumbs, setThumbs] = useState<{ url: string; path: string }[]>([]);
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
+  const qc = useQueryClient();
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
@@ -104,14 +105,47 @@ function KlientDashboard() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (photoPaths.length === 0) { setThumbUrls([]); return; }
+      if (photoPaths.length === 0) { setThumbs([]); return; }
+      const slice = photoPaths.slice(0, 6);
       const { data } = await supabase.storage
         .from("property-photos")
-        .createSignedUrls(photoPaths.slice(0, 6), 60 * 60);
-      if (!cancelled && data) setThumbUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+        .createSignedUrls(slice, 60 * 60);
+      if (!cancelled && data) {
+        setThumbs(data.map((d, i) => ({ url: d.signedUrl ?? "", path: slice[i] })).filter(t => t.url));
+      }
     })();
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);
+
+  const deletePhoto = async (path: string) => {
+    if (!propertyRow?.id) return;
+    if (!confirm("Usunąć to zdjęcie? Tej operacji nie można cofnąć.")) return;
+    try {
+      await supabase.storage.from("property-photos").remove([path]);
+      const next = photoPaths.filter((p) => p !== path);
+      const { error } = await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
+      if (error) throw error;
+      toast.success("Zdjęcie usunięte");
+      void refetchProperty();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się usunąć zdjęcia");
+    }
+  };
+
+  const deleteDocument = async (doc: { id: string; file_path?: string | null; file_name?: string | null }) => {
+    if (!confirm(`Usunąć dokument „${doc.file_name ?? ""}"? Tej operacji nie można cofnąć.`)) return;
+    try {
+      if (doc.file_path) {
+        await supabase.storage.from("documents").remove([doc.file_path]);
+      }
+      const { error } = await supabase.from("documents").delete().eq("id", doc.id);
+      if (error) throw error;
+      toast.success("Dokument usunięty");
+      void qc.invalidateQueries({ queryKey: ["client-documents", loanRow?.id] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się usunąć dokumentu");
+    }
+  };
 
   // Walidacja numeru KW: 4 znaki kodu sądu / 8 cyfr / 1 cyfra kontrolna
   // np. WA1M/00123456/7
