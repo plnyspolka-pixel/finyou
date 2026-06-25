@@ -90,6 +90,7 @@ export type RecentLoanApplicationItem = {
   has_bik: boolean;
   phone_verified: boolean;
   bank_verified: boolean;
+  photo_url: string;
 };
 
 
