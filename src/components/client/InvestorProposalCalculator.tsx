@@ -227,10 +227,9 @@ export function InvestorProposalCalculator({
 
   return (
     <div className="max-w-4xl space-y-4">
-      {(locked || statusLabel) && (
+      {locked && (
         <div className="flex flex-wrap items-center gap-2">
-          {locked && <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany do edycji</Badge>}
-          {statusLabel && <Badge variant="secondary">{statusLabel}</Badge>}
+          <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany do edycji</Badge>
         </div>
       )}
 
