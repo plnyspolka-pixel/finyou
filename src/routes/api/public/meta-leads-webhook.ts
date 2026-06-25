@@ -180,6 +180,7 @@ async function upsertClientAndApplication(opts: {
         current_form_step: 1,
         return_link_token: returnToken,
         return_link: returnLink,
+        assigned_operator: assignedUserId,
       })
       .select("id")
       .single();
