@@ -57,9 +57,10 @@ function SzkoleniaInwestor() {
               {v.thumbnail_url && (
                 <img
                   src={v.thumbnail_url}
-                  alt={v.title}
+                  alt=""
                   className="aspect-video w-full object-cover"
                   loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
               )}
               <CardHeader>
