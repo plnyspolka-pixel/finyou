@@ -27,8 +27,12 @@ function InvestorMessages() {
   }, [user]);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Wiadomości</h1>
+    <div className="space-y-6">
+      <FancyPageHeader
+        eyebrow="Komunikacja"
+        title="Wiadomości"
+        subtitle="Twoje rozmowy z klientami w jednym miejscu."
+      />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="md:col-span-1"><CardContent className="p-2 space-y-1">
           {threads.map(t => (
