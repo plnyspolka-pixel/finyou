@@ -22,6 +22,7 @@ import {
   extractFunctionPart,
 } from "@/lib/krs-format";
 import { detectPolishBankAccount, maskAccount, logSafeAccount, type BankDetectResult } from "@/lib/polish-bank";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 
 
