@@ -112,8 +112,8 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground">
+    <div className="flex min-h-screen w-full bg-gradient-to-br from-background via-background to-secondary/30">
+      <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
         <div className="px-5 py-5 border-b border-sidebar-border">{brand}</div>
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">{nav()}</nav>
         <div className="border-t border-sidebar-border p-3">{signOutButton()}</div>
