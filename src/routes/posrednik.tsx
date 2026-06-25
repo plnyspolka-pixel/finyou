@@ -11,7 +11,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/posrednik", label: "Pulpit", icon: LayoutDashboard, exact: true },
       { to: "/posrednik/leady", label: "Leady (wszystkie)", icon: Users },
-      { to: "/posrednik/nowy-wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
+      { to: "/klient", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
     ],
   },
