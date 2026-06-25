@@ -313,7 +313,14 @@ function KlientDashboard() {
     <div className="space-y-6 max-w-5xl">
 
       {!loanRow?.id && (
-        <SinglePageApplicationForm />
+        <SinglePageApplicationForm
+          prefilledContact={{
+            firstName: (clientRow as any)?.first_name ?? (user?.user_metadata as any)?.first_name ?? "",
+            lastName: (clientRow as any)?.last_name ?? (user?.user_metadata as any)?.last_name ?? "",
+            phone: (clientRow as any)?.phone ?? "",
+            email: (clientRow as any)?.email ?? user?.email ?? "",
+          }}
+        />
       )}
 
       {loanRow?.id && (() => {
