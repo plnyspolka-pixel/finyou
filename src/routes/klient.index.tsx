@@ -624,30 +624,9 @@ function KlientDashboard() {
       })()}
 
 
-      {/* === Info: weryfikuj, by obniżyć koszty === */}
-      <FancyShell variant="silver">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-900/10 ring-1 ring-slate-900/15">
-              <ShieldCheck className="h-5 w-5 text-slate-700" strokeWidth={2.5} />
-            </span>
-            <div className="leading-tight">
-              <div className="text-base font-bold uppercase tracking-[0.14em] text-slate-800 sm:text-lg">
-                Zweryfikuj dane, aby wnioskować o niższe koszty
-              </div>
-              <div className="mt-1 text-xs text-slate-600 sm:text-sm">
-                Im więcej zielonych odznak (telefon, konto, BIK, dane firmy), tym lepsze warunki możesz dostać od inwestorów.
-              </div>
-            </div>
-          </div>
-          <Sparkles className="hidden h-8 w-8 text-slate-400 sm:block" />
-        </div>
-      </FancyShell>
+      {/* === Weryfikacje — tafelki rozwijane === */}
+      <VerificationTilesSection clientRow={clientRow as any} loanId={loanRow?.id ?? null} />
 
-      {/* === Pełny profil — dane, weryfikacje, dokumenty (srebrny styl) === */}
-      <FancyShell variant="silver" innerClassName="!p-4 md:!p-5">
-        <ClientProfileSections showPasswordCard={false} includePersonal={false} />
-      </FancyShell>
 
 
 
