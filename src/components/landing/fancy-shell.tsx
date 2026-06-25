@@ -93,9 +93,10 @@ export function FancyShell({
         style={{
           background:
             "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
-          animation: "fy-kw-spin 6s linear infinite",
+          animation: motion ? "fy-kw-spin 6s linear infinite" : undefined,
         }}
       />
+
       <div className={`relative overflow-hidden rounded-[22px] p-5 text-white md:p-6 ${innerClassName}`}>
         <span
           aria-hidden
