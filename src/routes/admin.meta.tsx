@@ -56,6 +56,13 @@ function MetaPage() {
     onSuccess: () => { toast.success("Zapisano przypisanie"); qc.invalidateQueries({ queryKey: ["meta-lead-forms"] }); },
     onError: (e: any) => toast.error(e.message),
   });
+  const setRoleFn = useServerFn(setMetaLeadFormRole);
+  const setRole = useMutation({
+    mutationFn: (vars: { formId: string; role: "klient" | "operator" | "inwestor" }) => setRoleFn({ data: vars }),
+    onSuccess: () => { toast.success("Zapisano kategorię konta"); qc.invalidateQueries({ queryKey: ["meta-lead-forms"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
 
   const backfillFn = useServerFn(backfillMetaLeadAccounts);
   const backfill = useMutation({
