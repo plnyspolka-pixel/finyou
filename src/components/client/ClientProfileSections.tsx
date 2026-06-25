@@ -14,7 +14,11 @@ import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export function ClientProfileSections({ showPasswordCard = true, includePersonal = true, onlyPersonal = false }: { showPasswordCard?: boolean; includePersonal?: boolean; onlyPersonal?: boolean }) {
+export type ClientProfileSectionKey = "company" | "bank" | "phone" | "bik" | "photos" | "income";
+
+export function ClientProfileSections({ showPasswordCard = true, includePersonal = true, onlyPersonal = false, sections, hideChrome = false }: { showPasswordCard?: boolean; includePersonal?: boolean; onlyPersonal?: boolean; sections?: ClientProfileSectionKey[]; hideChrome?: boolean }) {
+  const has = (k: ClientProfileSectionKey) => !sections || sections.includes(k);
+  const filtered = Array.isArray(sections);
   const { user } = useAuth();
   const [row, setRow] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
@@ -166,6 +170,7 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
       <>
 
 
+      {has("company") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -184,7 +189,9 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           <div className="md:col-span-2"><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
         </CardContent>
       </Card>
+      )}
 
+      {has("bank") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
@@ -270,7 +277,9 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {has("phone") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
@@ -352,7 +361,9 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           )}
         </CardContent>
       </Card>
+      )}
 
+      {has("bik") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
@@ -440,18 +451,25 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {has("photos") && (
       <PropertyDocsCard userId={user?.id ?? null} kind="photos_all"
         title="Zdjęcia nieruchomości (wnętrza i z zewnątrz)"
         icon={<ImageIcon className="h-4 w-4" />}
         description="Wrzuć tutaj wszystkie zdjęcia w jednym miejscu — z zewnątrz i każdego pomieszczenia. Możesz wybrać wiele plików na raz." />
+      )}
 
+      {has("income") && (
       <PropertyDocsCard userId={user?.id ?? null} kind="income_docs"
         title="Dokumenty dochodowe"
         icon={<Wallet className="h-4 w-4" />}
         description="PIT, zaświadczenia o dochodach, wyciągi — wszystko, co pokazuje inwestorowi Twoją zdolność spłaty. Niewymagane, ale mocno zwiększa szanse." />
+      )}
 
-      <Button onClick={save}>Zapisz</Button>
+      {(!filtered || has("company") || has("bank") || has("phone")) && (
+        <Button onClick={save}>Zapisz</Button>
+      )}
 
       {showPasswordCard && (
         <>
