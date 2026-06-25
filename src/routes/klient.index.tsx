@@ -646,12 +646,10 @@ function KlientDashboard() {
   );
 }
 
-type TileKey = "company" | "bank" | "phone" | "bik" | "income" | "description";
-type StepKey = 1 | 2 | 3;
+type TileKey = "description" | "phone" | "company" | "bank" | "bik" | "income";
 
 function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
-  const [step, setStep] = useState<StepKey>(1);
-  const [openExtra, setOpenExtra] = useState<Exclude<TileKey, "description" | "phone"> | null>(null);
+  const [step, setStep] = useState<number>(1);
 
   const { data: loanDesc } = useQuery({
     queryKey: ["client-loan-desc", loanId],
@@ -683,29 +681,25 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
   const bikDone = Boolean(clientRow?.bik_report_uploaded_at);
   const descDone = String(loanDesc ?? "").trim().length >= 20;
 
-  const extraTiles: Array<{ key: Exclude<TileKey, "description" | "phone">; title: string; subtitle: string; done: boolean; icon: React.ReactNode }> = [
-    { key: "company", title: "Dane firmy", subtitle: "NIP, REGON, KRS z GUS", done: companyDone, icon: <FileText className="h-5 w-5" /> },
-    { key: "bank", title: "Konto bankowe", subtitle: "Weryfikacja dokumentem", done: bankDone, icon: <ShieldCheck className="h-5 w-5" /> },
-    { key: "bik", title: "Raport BIK", subtitle: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
-    { key: "income", title: "Dokumenty dochodowe", subtitle: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
+  const steps: Array<{ id: number; key: TileKey; label: string; sub: string; done: boolean; icon: React.ReactNode }> = [
+    { id: 1, key: "description", label: "Opis dla inwestora", sub: "2–5 zdań — wzbudza zaufanie", done: descDone, icon: <BookText className="h-5 w-5" /> },
+    { id: 2, key: "phone", label: "Numer telefonu", sub: "Potwierdzenie kodem SMS", done: phoneDone, icon: <ShieldCheck className="h-5 w-5" /> },
+    { id: 3, key: "company", label: "Dane firmy", sub: "NIP, REGON, KRS z GUS", done: companyDone, icon: <FileText className="h-5 w-5" /> },
+    { id: 4, key: "bank", label: "Konto bankowe", sub: "Weryfikacja dokumentem", done: bankDone, icon: <ShieldCheck className="h-5 w-5" /> },
+    { id: 5, key: "bik", label: "Raport BIK", sub: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
+    { id: 6, key: "income", label: "Dokumenty dochodowe", sub: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
   ];
 
-  const allTiles = [descDone, phoneDone, companyDone, bankDone, bikDone, incomeDone];
-  const doneCount = allTiles.filter(Boolean).length;
+  const doneCount = steps.filter((s) => s.done).length;
   const discount = doneCount * 0.5;
-  const totalSteps = 3;
-
-  const steps: Array<{ id: StepKey; label: string; sub: string; done: boolean }> = [
-    { id: 1, label: "Opis dla inwestora", sub: "2–5 zdań — wzbudza zaufanie", done: descDone },
-    { id: 2, label: "Numer telefonu", sub: "Potwierdzenie kodem SMS", done: phoneDone },
-    { id: 3, label: "Pozostałe weryfikacje", sub: "Firma · Konto · BIK · Dochody", done: companyDone && bankDone && bikDone && incomeDone },
-  ];
-
-  const goNext = () => setStep((s) => (s < totalSteps ? ((s + 1) as StepKey) : s));
+  const totalSteps = steps.length;
+  const goNext = () => setStep((s) => Math.min(totalSteps, s + 1));
+  const goBack = () => setStep((s) => Math.max(1, s - 1));
+  const current = steps.find((s) => s.id === step)!;
 
   return (
     <section className="space-y-4">
-      {/* Fancy navy header z progressem */}
+      {/* Fancy navy header + 6-step stepper */}
       <FancyShell variant="navy" motion={false}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -726,12 +720,20 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
               <div className="text-4xl font-black tabular-nums text-emerald-300 drop-shadow-[0_2px_8px_rgba(16,185,129,0.45)]">
                 −{discount.toFixed(1).replace(".", ",")}%
               </div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">rocznie · {doneCount}/6</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">rocznie · {doneCount}/{totalSteps}</div>
             </div>
           </div>
 
-          {/* Stepper */}
-          <div className="grid gap-2 sm:grid-cols-3">
+          {/* Progress bar */}
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)] transition-all duration-500"
+              style={{ width: `${(doneCount / totalSteps) * 100}%` }}
+            />
+          </div>
+
+          {/* Stepper — 6 steps in a row */}
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             {steps.map((s) => {
               const active = step === s.id;
               return (
@@ -742,13 +744,15 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
                   className={`group relative overflow-hidden rounded-2xl border p-3 text-left transition-all ${
                     active
                       ? "border-white/50 bg-white/15 shadow-[0_10px_30px_-12px_rgba(255,255,255,0.45)] ring-2 ring-white/40"
-                      : "border-white/15 bg-white/[0.04] hover:border-white/30 hover:bg-white/[0.08]"
+                      : s.done
+                        ? "border-emerald-400/40 bg-emerald-500/10 hover:bg-emerald-500/15"
+                        : "border-white/15 bg-white/[0.04] hover:border-white/30 hover:bg-white/[0.08]"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ring-1 ${
                       s.done
-                        ? "bg-emerald-500/25 text-emerald-200 ring-emerald-300/40"
+                        ? "bg-emerald-500/30 text-emerald-200 ring-emerald-300/40"
                         : active
                           ? "bg-white text-slate-900 ring-white/60"
                           : "bg-white/10 text-white/80 ring-white/20"
@@ -756,8 +760,8 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
                       {s.done ? <Check className="h-4 w-4" strokeWidth={3} /> : s.id}
                     </span>
                     <div className="min-w-0 leading-tight">
-                      <div className="truncate text-[12px] font-black uppercase tracking-wider text-white">{s.label}</div>
-                      <div className="truncate text-[11px] text-white/65">{s.sub}</div>
+                      <div className="truncate text-[11px] font-black uppercase tracking-wider text-white">{s.label}</div>
+                      <div className="truncate text-[10px] text-white/65">{s.sub}</div>
                     </div>
                   </div>
                 </button>
@@ -767,108 +771,73 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
         </div>
       </FancyShell>
 
-      {/* Krok 1 — Opis dla inwestora */}
-      {step === 1 && (
-        <div className="animate-fade-in">
-          <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
-            <InvestorDescriptionCard loanId={loanId} initialText={String(loanDesc ?? "")} />
-            <div className="mt-4 flex justify-end">
-              <Button
-                size="lg"
-                onClick={goNext}
-                className="rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500"
-              >
-                Dalej — telefon →
-              </Button>
+      {/* Aktualny krok — fancy navy panel z gradientem na nagłówku */}
+      <div key={step} className="animate-fade-in">
+        <FancyShell variant="navy" motion={false} innerClassName="!p-0">
+          {/* Fancy header paska kroku */}
+          <div className="relative overflow-hidden rounded-t-[1.4rem] border-b border-white/10 bg-gradient-to-r from-white/[0.08] via-white/[0.04] to-transparent px-5 py-4">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_60%)]" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ring-1 ${
+                  current.done
+                    ? "bg-emerald-500/25 text-emerald-200 ring-emerald-300/40"
+                    : "bg-white/10 text-white ring-white/25"
+                }`}>
+                  {current.done ? <Check className="h-5 w-5" strokeWidth={3} /> : current.icon}
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">Krok {current.id} z {totalSteps}</div>
+                  <div className="truncate text-base font-black uppercase tracking-wider text-white sm:text-lg">{current.label}</div>
+                </div>
+              </div>
+              {current.done ? (
+                <Badge className="shrink-0 border-emerald-400/40 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/25">
+                  <Check className="mr-1 h-3 w-3" /> Zweryfikowane
+                </Badge>
+              ) : (
+                <Badge className="shrink-0 border-amber-400/40 bg-amber-500/20 font-bold text-amber-200 hover:bg-amber-500/25">
+                  −0,5%/rok
+                </Badge>
+              )}
             </div>
-          </FancyShell>
-        </div>
-      )}
+          </div>
 
-      {/* Krok 2 — Telefon */}
-      {step === 2 && (
-        <div className="animate-fade-in">
-          <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
-            <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={["phone"]} />
-            <div className="mt-4 flex justify-between gap-3">
-              <Button variant="ghost" size="lg" onClick={() => setStep(1)} className="rounded-2xl font-bold uppercase tracking-wider">
+          {/* Content kroku — białe wnętrze na ciemnym shellu */}
+          <div className="p-3 sm:p-4">
+            <div className="rounded-2xl bg-white/95 p-4 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.5)] backdrop-blur-sm sm:p-5">
+              {current.key === "description" ? (
+                <InvestorDescriptionCard loanId={loanId} initialText={String(loanDesc ?? "")} />
+              ) : (
+                <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[current.key]} />
+              )}
+            </div>
+
+            {/* Nawigacja */}
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={goBack}
+                disabled={step === 1}
+                className="rounded-2xl font-bold uppercase tracking-wider text-white/85 hover:bg-white/10 hover:text-white disabled:opacity-40"
+              >
                 ← Wstecz
               </Button>
               <Button
                 size="lg"
                 onClick={goNext}
-                className="rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500"
+                disabled={step === totalSteps}
+                className="rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
               >
-                Dalej — weryfikacje →
+                {step === totalSteps ? "Gotowe ✓" : "Dalej →"}
               </Button>
             </div>
-          </FancyShell>
-        </div>
-      )}
-
-      {/* Krok 3 — pozostałe 4 widoczne na raz */}
-      {step === 3 && (
-        <div className="animate-fade-in space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {extraTiles.map((t) => {
-              const isOpen = openExtra === t.key;
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setOpenExtra(isOpen ? null : t.key)}
-                  className={`group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all ${
-                    t.done
-                      ? "border-emerald-400/60 bg-gradient-to-br from-emerald-50 to-white shadow-[0_8px_24px_-12px_rgba(16,185,129,0.45)]"
-                      : "border-slate-300/70 bg-gradient-to-br from-slate-50 to-white hover:border-slate-400 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.25)]"
-                  } ${isOpen ? "ring-2 ring-primary/50" : ""}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ${
-                      t.done ? "bg-emerald-500/15 text-emerald-700 ring-emerald-500/30" : "bg-slate-900/5 text-slate-700 ring-slate-900/10"
-                    }`}>
-                      {t.done ? <Check className="h-5 w-5" strokeWidth={3} /> : t.icon}
-                    </span>
-                    <div className="flex-1 leading-tight">
-                      <div className="text-sm font-bold uppercase tracking-wider text-slate-800">{t.title}</div>
-                      <div className="mt-0.5 text-xs text-slate-600">{t.subtitle}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    {t.done ? (
-                      <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20">
-                        <Check className="mr-1 h-3 w-3" /> Zweryfikowane
-                      </Badge>
-                    ) : (
-                      <Badge className="border-amber-500/30 bg-amber-500/15 font-bold text-amber-700 hover:bg-amber-500/20">
-                        Odblokuj −0,5%/rok
-                      </Badge>
-                    )}
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700">
-                      {isOpen ? "Zwiń ▲" : "Rozwiń ▼"}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
           </div>
-
-          {openExtra && (
-            <div className="animate-fade-in">
-              <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
-                <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[openExtra]} />
-              </FancyShell>
-            </div>
-          )}
-
-          <div className="flex justify-start">
-            <Button variant="ghost" size="lg" onClick={() => setStep(2)} className="rounded-2xl font-bold uppercase tracking-wider">
-              ← Wstecz
-            </Button>
-          </div>
-        </div>
-      )}
+        </FancyShell>
+      </div>
     </section>
   );
 }
+
 
