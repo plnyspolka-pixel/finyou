@@ -52,28 +52,45 @@ function SzkoleniaInwestor() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {videos.map((v) => {
           const url = videoUrl(v);
+          const external = url ? isExternal(url) : false;
           return (
             <Card key={v.id} className="overflow-hidden">
-              {v.thumbnail_url && (
-                <img
-                  src={v.thumbnail_url}
-                  alt=""
-                  className="aspect-video w-full object-cover"
-                  loading="lazy"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                />
-              )}
               <CardHeader>
                 <CardTitle className="text-lg">{v.title}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
                 {v.description && <p className="text-sm text-muted-foreground">{v.description}</p>}
-                {url &&
-                  (isExternal(url) ? (
-                    <iframe src={embedUrl(url)} className="aspect-video w-full rounded-md" allowFullScreen />
+                {url ? (
+                  external ? (
+                    <iframe
+                      src={embedUrl(url)}
+                      className="aspect-video w-full rounded-md border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
                   ) : (
-                    <video src={url} controls className="aspect-video w-full rounded-md bg-black" />
-                  ))}
+                    <video
+                      src={url}
+                      poster={v.thumbnail_url ?? undefined}
+                      controls
+                      preload="metadata"
+                      playsInline
+                      className="aspect-video w-full rounded-md bg-black object-contain"
+                    />
+                  )
+                ) : v.thumbnail_url ? (
+                  <img
+                    src={v.thumbnail_url}
+                    alt=""
+                    className="aspect-video w-full rounded-md object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <div className="aspect-video w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                    Materiał wkrótce
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
