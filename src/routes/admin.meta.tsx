@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { syncMetaAdAccounts, syncMetaCampaigns, listMetaOverview } from "@/lib/meta-ads.functions";
-import { listMetaLeadForms, setMetaLeadFormAssignee } from "@/lib/meta-lead-forms.functions";
+import { listMetaLeadForms, setMetaLeadFormAssignee, backfillMetaLeadAccounts } from "@/lib/meta-lead-forms.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,15 @@ function MetaPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const backfillFn = useServerFn(backfillMetaLeadAccounts);
+  const backfill = useMutation({
+    mutationFn: () => backfillFn(),
+    onSuccess: (r: any) => {
+      toast.success(`Konta klientów: utworzono ${r.created}, podpięto istniejących ${r.linked_existing}, błędy ${r.failed} (z ${r.processed})`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -64,10 +73,16 @@ function MetaPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Facebook className="h-6 w-6" /> Meta Ads</h1>
           <p className="text-sm text-muted-foreground">Konta reklamowe Facebook/Instagram, kampanie i leady.</p>
         </div>
-        <Button onClick={() => syncAccounts.mutate()} disabled={syncAccounts.isPending}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncAccounts.isPending ? "animate-spin" : ""}`} />
-          Pobierz konta
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => backfill.mutate()} disabled={backfill.isPending}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${backfill.isPending ? "animate-spin" : ""}`} />
+            Załóż konta klientów (backfill)
+          </Button>
+          <Button onClick={() => syncAccounts.mutate()} disabled={syncAccounts.isPending}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncAccounts.isPending ? "animate-spin" : ""}`} />
+            Pobierz konta
+          </Button>
+        </div>
       </div>
 
       <Card>
