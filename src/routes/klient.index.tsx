@@ -312,7 +312,12 @@ function KlientDashboard() {
   return (
     <div className="space-y-6 max-w-5xl">
 
-      {(() => {
+      {!loanRow?.id && (
+        <SinglePageApplicationForm />
+      )}
+
+      {loanRow?.id && (() => {
+        const _noop = null;
         const propertyType = String((propertyRow as any)?.property_type ?? "") as
           | "mieszkanie" | "dom" | "grunt_rolny" | "dzialka_budowlana" | "lokal_uslugowy" | "inna" | "";
 
