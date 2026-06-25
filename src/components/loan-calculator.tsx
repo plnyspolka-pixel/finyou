@@ -274,11 +274,13 @@ export function LoanCalculator({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
           <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
+          <div className="flex justify-between"><span>Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+          <div className="flex justify-between"><span>Kapitał startowy (od którego liczone odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
           <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem (od kwoty nominalnej)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
-          <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
+          <div className="flex justify-between"><span>Odsetki razem (od kapitału startowego)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+          <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
-          <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
+          <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
       </Card>
 
