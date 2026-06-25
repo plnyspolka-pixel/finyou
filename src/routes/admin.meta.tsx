@@ -73,10 +73,16 @@ function MetaPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Facebook className="h-6 w-6" /> Meta Ads</h1>
           <p className="text-sm text-muted-foreground">Konta reklamowe Facebook/Instagram, kampanie i leady.</p>
         </div>
-        <Button onClick={() => syncAccounts.mutate()} disabled={syncAccounts.isPending}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncAccounts.isPending ? "animate-spin" : ""}`} />
-          Pobierz konta
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => backfill.mutate()} disabled={backfill.isPending}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${backfill.isPending ? "animate-spin" : ""}`} />
+            Załóż konta klientów (backfill)
+          </Button>
+          <Button onClick={() => syncAccounts.mutate()} disabled={syncAccounts.isPending}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncAccounts.isPending ? "animate-spin" : ""}`} />
+            Pobierz konta
+          </Button>
+        </div>
       </div>
 
       <Card>
