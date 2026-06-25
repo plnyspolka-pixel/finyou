@@ -706,7 +706,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
   return (
     <section className="space-y-4">
       {/* Fancy navy header z progressem */}
-      <FancyShell variant="default" motion={false}>
+      <FancyShell variant="navy" motion={false}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
