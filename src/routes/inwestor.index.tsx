@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from "lucide-react";
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorList,
