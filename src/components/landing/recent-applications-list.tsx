@@ -209,15 +209,15 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
   return (
     <section id="ostatnie-oferty" className="border-t border-border bg-secondary/30 scroll-mt-20">
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-accent/5 to-transparent p-5 md:p-7">
-          <p className="text-xs font-bold uppercase tracking-widest text-accent">Ostatnie oferty</p>
-          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
+        <FancyShell>
+          <p className="text-xs font-bold uppercase tracking-widest text-white/80">Ostatnie oferty</p>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-white md:text-3xl">
             Oferty pożyczek pod zastaw nieruchomości
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          <p className="mt-1 max-w-2xl text-sm text-white/85">
             Wnioski klientów po przejściu kalkulatora — wybrane warunki czekają na inwestora.
           </p>
-        </div>
+        </FancyShell>
 
         {/* Wyszukiwarka */}
         <div className="mt-6 rounded-2xl border border-border bg-card/80 p-4 shadow-sm backdrop-blur">
