@@ -24,11 +24,7 @@ import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { lovable } from "@/integrations/lovable";
 
-async function handleSocialLogin(provider: "google" | "apple" | "facebook") {
-  if (provider === "facebook") {
-    toast.info("Logowanie przez Facebook będzie wkrótce dostępne.");
-    return;
-  }
+async function handleSocialLogin(provider: "google" | "apple") {
   try {
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
