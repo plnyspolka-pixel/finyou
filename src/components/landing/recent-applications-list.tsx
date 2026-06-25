@@ -8,13 +8,41 @@ import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { LANDING_OFFER_PHOTOS } from "@/assets/landing-offer-photos";
 
-// Bez zdjęć — na landingu nie pokazujemy żadnych materiałów klientów (KW, dokumenty, fotki nieruchomości).
+// Zdjęcia z Unsplash — licencja darmowa, dozwolone użycie komercyjne (https://unsplash.com/license).
+// Używamy DEDYKOWANYCH zdjęć dla działek i nieruchomości komercyjnych — nigdy zdjęć mieszkań.
+const UNSPLASH = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`;
+
+const PLOT_PHOTOS = [
+  UNSPLASH("1500382017468-9049fed747ef"), // pole/łąka
+  UNSPLASH("1444858291040-58f756a3bdd6"), // działka z drzewami
+  UNSPLASH("1470071459604-3b5ec3a7fe05"), // łąka z lasem
+  UNSPLASH("1501785888041-af3ef285b470"), // teren zielony
+  UNSPLASH("1464822759023-fed622ff2c3b"), // pole pod zabudowę
+  UNSPLASH("1500530855697-b586d89ba3ee"), // ścieżka przez działkę
+];
+const COMMERCIAL_PHOTOS = [
+  UNSPLASH("1497366216548-37526070297c"), // biuro
+  UNSPLASH("1497366811353-6870744d04b2"), // open space
+  UNSPLASH("1545324418-cc1a3fa10c00"),    // lokal usługowy
+  UNSPLASH("1604328698692-f76ea9498e76"), // magazyn
+  UNSPLASH("1556761175-5973dc0f32e7"),    // sklep/witryna
+  UNSPLASH("1556909114-f6e7ad7d3136"),    // biurowiec
+];
+// Zdjęcia mieszkań/domów (od klientów) — używamy TYLKO dla apartment / house
+const APARTMENT_HOUSE_PHOTOS = LANDING_OFFER_PHOTOS;
+
 const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> = {
   apartment: { Icon: Building2, gradient: "from-sky-500/15 via-sky-500/5 to-transparent" },
   house: { Icon: Home, gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent" },
   plot_building: { Icon: Trees, gradient: "from-amber-500/15 via-amber-500/5 to-transparent" },
   commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
 };
+
+function photoForType(propertyType: string, idx: number): string {
+  if (propertyType === "plot_building") return PLOT_PHOTOS[idx % PLOT_PHOTOS.length]!;
+  if (propertyType === "commercial") return COMMERCIAL_PHOTOS[idx % COMMERCIAL_PHOTOS.length]!;
+  return APARTMENT_HOUSE_PHOTOS[idx % APARTMENT_HOUSE_PHOTOS.length]!;
+}
 
 
 // ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
@@ -128,8 +156,8 @@ function mulberry32(seed: number) {
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
-  // Shuffle photos so each render uses unique ones (with cycling if count > photos)
-  const shuffledPhotos = [...LANDING_OFFER_PHOTOS].sort(() => rand() - 0.5);
+  // Liczniki per typ — żeby tasować zdjęcia w obrębie właściwej puli
+  const typeIdx: Record<string, number> = { apartment: 0, house: 0, plot_building: 0, commercial: 0 };
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
   for (let i = 0; i < count; i++) {
@@ -142,16 +170,21 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       ? Math.round((28 + rand() * 8) * 2) / 2   // 28% – 36% step 0.5
       : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
-    const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
+    // Pierwsze 3 oferty są „świeże dziś" (3–180 min temu), reszta rozciągnięta na 7 dni
+    const minutesAgo = i < 3
+      ? Math.floor(rand() * 180) + 3
+      : Math.floor(rand() * 60 * 24 * 7) + 60;
     const formRoll = rand();
     const business_legal_form: "jdg" | "sp_zoo" | "sa" =
       formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa";
     const is_startup = rand() < 0.35;
+    const property_type = pick(PROPERTY_TYPES);
+    const photo_url = photoForType(property_type, typeIdx[property_type]!++);
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
       created_at: new Date(now - minutesAgo * 60_000).toISOString(),
-      property_type: pick(PROPERTY_TYPES),
+      property_type,
       city: pick(CITIES),
       loan_amount: amount,
       preferred_period_months: period,
@@ -165,7 +198,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       has_bik: rand() < 0.7,
       phone_verified: rand() < 0.9,
       bank_verified: rand() < 0.55,
-      photo_url: shuffledPhotos[i % shuffledPhotos.length]!,
+      photo_url,
     });
   }
   return items;
@@ -183,13 +216,20 @@ function timeAgo(iso: string): string {
   return `${days} dni temu`;
 }
 
+// Deterministyczny seed dzienny — codziennie inna pula ofert (≥3 świeże każdego dnia).
+function dailySeed(): number {
+  const d = new Date();
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+}
+
 export function RecentApplicationsList(_props: { initial?: RecentLoanApplicationItem[] } = {}) {
   const [seed, setSeed] = useState<number | null>(null);
   useEffect(() => {
-    setSeed(Math.floor(Math.random() * 1e9));
+    setSeed(dailySeed());
   }, []);
 
   const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 28)), [seed]);
+
 
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
