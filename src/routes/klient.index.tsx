@@ -65,11 +65,12 @@ function KlientDashboard() {
     queryKey: ["client-property", loanRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("properties")
-        .select("id, land_register_number, photos, loan_application_id")
+        .select("id, land_register_number, photos, loan_application_id, property_type")
         .eq("loan_application_id", loanRow!.id).maybeSingle();
       return data;
     },
     enabled: Boolean(loanRow?.id),
+    placeholderData: keepPreviousData,
   });
 
   const { data: documentsList } = useQuery({
