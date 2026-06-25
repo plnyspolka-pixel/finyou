@@ -26,6 +26,9 @@ export type LoanCalculatorState = {
   annualRate: number;
   commissionPct: number;
   commissionPln: number;
+  financeYouFeePct: number;
+  financeYouFeePln: number;
+  grossPrincipal: number;
   maxPayment: number;
   nominalRata: number;
   cappedRata: number;
