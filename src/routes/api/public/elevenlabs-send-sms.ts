@@ -17,7 +17,7 @@ const BodySchema = z.object({
   next: z.string().max(200).optional(),
 });
 
-const DEFAULT_URL = "https://financeyou.pl/wniosek-warunki";
+const DEFAULT_URL = "https://financeyou.pl/klient";
 const SITE_URL = "https://financeyou.pl";
 
 function json(data: unknown, status = 200) {
@@ -103,7 +103,7 @@ async function generateAutoLoginLink(input: {
 
   // Zbuduj URL docelowy
   const nextPath =
-    input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/wniosek-start";
+    input.next && /^\/[a-z0-9/_-]+$/i.test(input.next) ? input.next : "/klient";
   const ret = new URL(nextPath, SITE_URL);
   if (input.amount) ret.searchParams.set("amount", String(input.amount));
   if (input.months) ret.searchParams.set("months", String(input.months));

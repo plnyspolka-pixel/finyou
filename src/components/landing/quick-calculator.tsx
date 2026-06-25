@@ -15,7 +15,7 @@ export function QuickCalculator() {
   const goNext = () => {
     if (!canSubmit) return;
     mergeFunnelState({ amount, months, source: "landing_calculator" });
-    const url = new URL("/wniosek-zabezpieczenie", window.location.origin);
+    const url = new URL("/klient", window.location.origin);
     url.searchParams.set("amount", String(amount));
     url.searchParams.set("months", String(months));
     url.searchParams.set("source", "landing_calculator");
