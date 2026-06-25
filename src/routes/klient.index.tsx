@@ -101,7 +101,31 @@ function KlientDashboard() {
   const [area, setArea] = useState<string>("");
   const [savingArea, setSavingArea] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [forceUnlock, setForceUnlock] = useState(false);
+  const [markingComplete, setMarkingComplete] = useState(false);
   const qc = useQueryClient();
+
+  const markApplicationComplete = async () => {
+    if (!loanRow?.id) { toast.error("Najpierw rozpocznij wniosek"); return; }
+    setMarkingComplete(true);
+    try {
+      const { error } = await supabase.from("loan_applications")
+        .update({ status: "wniosek_kompletny", available_to_investors: true })
+        .eq("id", loanRow.id);
+      if (error) throw error;
+      setForceUnlock(true);
+      toast.success("Wniosek oznaczony jako kompletny — kalkulator odblokowany");
+      void qc.invalidateQueries({ queryKey: ["client-loan", clientRow?.id] });
+      // płynne przewinięcie do kalkulatora
+      setTimeout(() => {
+        document.getElementById("calc-anchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zaktualizować statusu");
+    } finally {
+      setMarkingComplete(false);
+    }
+  };
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
