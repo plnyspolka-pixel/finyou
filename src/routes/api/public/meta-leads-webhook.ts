@@ -107,6 +107,43 @@ async function upsertClientAndApplication(opts: {
     }).eq("id", clientId);
   }
 
+  // 1b) Auto-create auth user + magic link (rola: klient) – tylko jeśli mamy email
+  let magicLink: string | null = null;
+  if (opts.email && clientId) {
+    try {
+      let authUserId: string | null = null;
+      const { data: createRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: opts.email,
+        email_confirm: true,
+        user_metadata: { first_name: first, last_name: last, source: "meta_lead" },
+      });
+      if (createErr && !String(createErr.message ?? "").toLowerCase().includes("registered")) {
+        console.error("[meta-leads-webhook] createUser error", createErr);
+      }
+      authUserId = createRes?.user?.id ?? null;
+      if (!authUserId) {
+        const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+        const found = list?.users?.find((u) => (u.email ?? "").toLowerCase() === opts.email!.toLowerCase());
+        authUserId = found?.id ?? null;
+      }
+      if (authUserId) {
+        await supabaseAdmin.from("clients").update({ user_id: authUserId }).eq("id", clientId);
+        await supabaseAdmin.from("user_roles").upsert(
+          { user_id: authUserId, role: "klient" as any },
+          { onConflict: "user_id,role" },
+        );
+        const { data: linkRes } = await supabaseAdmin.auth.admin.generateLink({
+          type: "magiclink",
+          email: opts.email,
+          options: { redirectTo: `${opts.origin}/klient` },
+        });
+        magicLink = (linkRes?.properties as any)?.action_link ?? null;
+      }
+    } catch (e) {
+      console.error("[meta-leads-webhook] auth-bootstrap error", e);
+    }
+  }
+
   // 2) Wniosek — szukaj istniejącego "nowy_lead" tego klienta, inaczej utwórz
   const { data: existingApp } = await supabaseAdmin
     .from("loan_applications")
@@ -118,7 +155,7 @@ async function upsertClientAndApplication(opts: {
     .maybeSingle();
 
   let loanApplicationId = existingApp?.id ?? null;
-  let returnLink: string | null = "https://financeyou.pl";
+  let returnLink: string | null = magicLink ?? `${opts.origin}/klient`;
   let returnToken = existingApp?.return_link_token ?? null;
 
   if (!existingApp) {

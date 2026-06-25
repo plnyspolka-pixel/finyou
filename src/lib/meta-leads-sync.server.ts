@@ -148,6 +148,45 @@ export async function runMetaLeadsSync(): Promise<{
           }
           if (!clientId) continue;
 
+          // Auto-create auth user + magic link (rola: klient) – tylko jeśli mamy email
+          let magicLink: string | null = null;
+          if (email) {
+            try {
+              let authUserId: string | null = null;
+              const { data: createRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+                email,
+                email_confirm: true,
+                user_metadata: { first_name: first, last_name: last, source: "meta_lead" },
+              });
+              if (createErr && !String(createErr.message ?? "").toLowerCase().includes("registered")) {
+                summary.errors.push(`createUser ${email}: ${createErr.message}`);
+              }
+              authUserId = createRes?.user?.id ?? null;
+              if (!authUserId) {
+                // user już istnieje – znajdź go
+                const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+                const found = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase());
+                authUserId = found?.id ?? null;
+              }
+              if (authUserId) {
+                await supabaseAdmin.from("clients").update({ user_id: authUserId }).eq("id", clientId);
+                await supabaseAdmin.from("user_roles").upsert(
+                  { user_id: authUserId, role: "klient" as any },
+                  { onConflict: "user_id,role" },
+                );
+                const { data: linkRes, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+                  type: "magiclink",
+                  email,
+                  options: { redirectTo: "https://financeyou.pl/klient" },
+                });
+                if (linkErr) summary.errors.push(`magiclink ${email}: ${linkErr.message}`);
+                magicLink = (linkRes?.properties as any)?.action_link ?? null;
+              }
+            } catch (e: any) {
+              summary.errors.push(`auth-bootstrap ${email}: ${e?.message ?? e}`);
+            }
+          }
+
           // wniosek + return link
           let loanApplicationId: string | null = null;
           let returnLink: string | null = null;
@@ -157,14 +196,14 @@ export async function runMetaLeadsSync(): Promise<{
             .order("created_at", { ascending: false }).limit(1).maybeSingle();
           if (existingApp?.id) {
             loanApplicationId = existingApp.id;
-            returnLink = "https://financeyou.pl";
+            returnLink = magicLink ?? "https://financeyou.pl/klient";
             const tok = existingApp.return_link_token || crypto.randomUUID().replace(/-/g, "");
             await supabaseAdmin.from("loan_applications")
               .update({ return_link_token: tok, return_link: returnLink })
               .eq("id", loanApplicationId);
           } else {
             const tok = crypto.randomUUID().replace(/-/g, "");
-            returnLink = "https://financeyou.pl";
+            returnLink = magicLink ?? "https://financeyou.pl/klient";
             const { data: app } = await supabaseAdmin.from("loan_applications").insert({
               client_id: clientId, status: "nowy_lead", source: "meta_lead",
               return_link_token: tok, return_link: returnLink, current_form_step: 1,
