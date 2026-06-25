@@ -16,9 +16,6 @@ const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> =
   commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
 };
 
-function photoForType(_propertyType: string, idx: number): string {
-  return LANDING_OFFER_PHOTOS[idx % LANDING_OFFER_PHOTOS.length]!;
-}
 
 
 
