@@ -21,6 +21,7 @@ const PROPERTY_TYPES = Object.keys(propertyTypeLabels);
 function InwestorList() {
   const { user } = useAuth();
   const [apps, setApps] = useState<any[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const [q, setQ] = useState("");
@@ -38,7 +39,23 @@ function InwestorList() {
       .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street)")
       .eq("available_to_investors", true)
       .order("created_at", { ascending: false });
-    setApps(data ?? []); setLoading(false);
+    const list = data ?? [];
+    setApps(list); setLoading(false);
+
+    // Resolve first photo per app to a viewable URL (storage paths → signed URLs)
+    const tasks: Array<Promise<void>> = [];
+    const next: Record<string, string> = {};
+    for (const a of list) {
+      const first = a.properties?.[0]?.photos?.[0];
+      if (!first) continue;
+      if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
+      tasks.push((async () => {
+        const { data: u } = await supabase.storage.from("property-photos").createSignedUrl(first, 3600);
+        if (u?.signedUrl) next[a.id] = u.signedUrl;
+      })());
+    }
+    await Promise.all(tasks);
+    setPhotoUrls(next);
   })(); }, [user]);
 
   const voivodeships = useMemo(() => {
