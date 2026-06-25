@@ -78,7 +78,6 @@ function InwestorAbonament() {
     <div className="space-y-6">
       <PaymentTestModeBanner />
 
-      <div>
       <FancyPageHeader
         eyebrow="Subskrypcja"
         title="Dostęp inwestora"
