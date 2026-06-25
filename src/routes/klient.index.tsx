@@ -687,6 +687,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
     { key: "bik", title: "Raport BIK", subtitle: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
     { key: "photos", title: "Zdjęcia nieruchomości", subtitle: "Wnętrza i z zewnątrz", done: photosDone, icon: <ImageIcon className="h-5 w-5" /> },
     { key: "income", title: "Dokumenty dochodowe", subtitle: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
+    { key: "description", title: "Opis dla inwestora", subtitle: "2–5 zdań po co i jak spłacisz", done: descDone, icon: <BookText className="h-5 w-5" /> },
   ];
 
   const doneCount = tiles.filter((t) => t.done).length;
