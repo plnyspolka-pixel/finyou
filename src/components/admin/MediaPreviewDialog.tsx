@@ -30,6 +30,12 @@ async function signOne(bucket: string, path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
+// Dokumenty z landingu trafiają do bucketu "property-photos" (zdjęcia + skany dokumentów),
+// a te z dashboardu klienta — do "documents". Próbujemy oba, żeby podgląd zawsze działał.
+async function signDocument(path: string): Promise<string | null> {
+  return (await signOne("documents", path)) ?? (await signOne("property-photos", path));
+}
+
 function inferKind(name: string): Kind {
   const n = name.toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
