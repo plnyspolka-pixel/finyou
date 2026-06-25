@@ -687,7 +687,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
     { key: "bank", title: "Konto bankowe", subtitle: "Weryfikacja dokumentem", done: bankDone, icon: <ShieldCheck className="h-5 w-5" /> },
     { key: "phone", title: "Telefon", subtitle: "Potwierdzenie kodem SMS", done: phoneDone, icon: <ShieldCheck className="h-5 w-5" /> },
     { key: "bik", title: "Raport BIK", subtitle: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
-    { key: "photos", title: "Zdjęcia nieruchomości", subtitle: "Wnętrza i z zewnątrz", done: photosDone, icon: <ImageIcon className="h-5 w-5" /> },
+    
     { key: "income", title: "Dokumenty dochodowe", subtitle: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
     { key: "description", title: "Opis dla inwestora", subtitle: "2–5 zdań po co i jak spłacisz", done: descDone, icon: <BookText className="h-5 w-5" /> },
   ];
