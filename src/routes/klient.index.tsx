@@ -679,6 +679,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
   const bankDone = Boolean(clientRow?.bank_account_verified_at);
   const phoneDone = Boolean(clientRow?.phone_verified_at);
   const bikDone = Boolean(clientRow?.bik_report_uploaded_at);
+  const descDone = String(loanDesc ?? "").trim().length >= 20;
 
   const tiles: Array<{ key: TileKey; title: string; subtitle: string; done: boolean; icon: React.ReactNode }> = [
     { key: "company", title: "Dane firmy", subtitle: "NIP, REGON, KRS z GUS", done: companyDone, icon: <FileText className="h-5 w-5" /> },
