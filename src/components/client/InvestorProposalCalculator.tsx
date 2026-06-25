@@ -296,74 +296,17 @@ export function InvestorProposalCalculator({
       </fieldset>
 
       {!locked && (
-        <div className="space-y-4">
-          <FancyShell>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                    <Sparkles className="h-5 w-5" strokeWidth={2.5} />
-                  </span>
-                  <div className="leading-tight">
-                    <div className="text-base font-bold uppercase tracking-[0.16em]">Krótki opis dla inwestora</div>
-                    <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/70">2–5 zdań — po co i jak spłacisz</div>
-                  </div>
-                </div>
-                {hasDesc && <span className="rounded-full bg-emerald-400/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-100 ring-1 ring-emerald-300/50">✓ uzupełniony</span>}
-              </div>
-              <Textarea
-                rows={5}
-                value={investorDesc}
-                onChange={(e) => setInvestorDesc(e.target.value)}
-                placeholder="Np. Potrzebuję 200 000 zł na uruchomienie kolejnego sklepu, mam już 2 lokalizacje. Spłatę pokryję z bieżących przychodów…"
-                disabled={aiBusy}
-                className="rounded-2xl border-2 border-white/25 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-white/40"
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => void generateDesc(investorDesc.trim() ? "improve" : "draft")}
-                  disabled={aiBusy}
-                  className="rounded-xl bg-white/20 font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/30"
-                >
-                  {aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  {investorDesc.trim() ? "Popraw opis (AI)" : "Wygeneruj opis (AI)"}
-                </Button>
-                {investorDesc.trim() && (
-                  <Button
-                    size="sm"
-                    onClick={() => void generateDesc("expand")}
-                    disabled={aiBusy}
-                    className="rounded-xl bg-transparent font-semibold text-white/90 ring-1 ring-white/30 hover:bg-white/10"
-                  >
-                    Rozwiń (AI)
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={() => void saveInvestorDesc()}
-                  disabled={savingDesc || aiBusy}
-                  className="rounded-xl bg-white text-slate-900 font-semibold hover:bg-white/90"
-                >
-                  {savingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Zapisz opis
-                </Button>
-              </div>
-            </div>
-          </FancyShell>
-
-          <div className="space-y-3">
-            {missingForInvestors.length > 0 && null}
-            <Button
-              onClick={() => void sendToInvestors()}
-              disabled={sendingToInvestors}
-              className="h-16 w-full rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-lg font-black uppercase tracking-[0.18em] text-white shadow-[0_18px_45px_-12px_oklch(0.55_0.18_150/0.7)] ring-1 ring-emerald-300/50 transition hover:from-emerald-400 hover:via-emerald-500 hover:to-emerald-600 hover:shadow-[0_20px_55px_-12px_oklch(0.55_0.18_150/0.85)] disabled:opacity-60"
-            >
-              {sendingToInvestors
-                ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
-                : <><Send className="mr-3 h-6 w-6" />Wyślij wniosek</>}
-            </Button>
-          </div>
+        <div className="space-y-3">
+          {missingForInvestors.length > 0 && null}
+          <Button
+            onClick={() => void sendToInvestors()}
+            disabled={sendingToInvestors}
+            className="h-16 w-full rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-lg font-black uppercase tracking-[0.18em] text-white shadow-[0_18px_45px_-12px_oklch(0.55_0.18_150/0.7)] ring-1 ring-emerald-300/50 transition hover:from-emerald-400 hover:via-emerald-500 hover:to-emerald-600 hover:shadow-[0_20px_55px_-12px_oklch(0.55_0.18_150/0.85)] disabled:opacity-60"
+          >
+            {sendingToInvestors
+              ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
+              : <><Send className="mr-3 h-6 w-6" />Wyślij wniosek</>}
+          </Button>
         </div>
       )}
     </div>
