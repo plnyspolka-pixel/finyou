@@ -45,6 +45,18 @@ function MetaPage() {
     finally { setBusyAcc(null); }
   };
 
+  const fetchForms = useServerFn(listMetaLeadForms);
+  const setAssigneeFn = useServerFn(setMetaLeadFormAssignee);
+  const { data: formsData } = useQuery({
+    queryKey: ["meta-lead-forms"],
+    queryFn: () => fetchForms(),
+  });
+  const setAssignee = useMutation({
+    mutationFn: (vars: { formId: string; userId: string | null }) => setAssigneeFn({ data: vars }),
+    onSuccess: () => { toast.success("Zapisano przypisanie"); qc.invalidateQueries({ queryKey: ["meta-lead-forms"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
