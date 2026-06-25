@@ -644,3 +644,117 @@ function KlientDashboard() {
     </div>
   );
 }
+
+type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income";
+
+function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
+  const [open, setOpen] = useState<TileKey | null>(null);
+
+  const { data: docCounts } = useQuery({
+    queryKey: ["client-doc-counts", loanId],
+    queryFn: async () => {
+      const { data } = await supabase.from("documents")
+        .select("document_type")
+        .eq("loan_application_id", loanId!);
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((d: any) => { counts[d.document_type] = (counts[d.document_type] ?? 0) + 1; });
+      return counts;
+    },
+    enabled: Boolean(loanId),
+  });
+
+  const photosDone = (docCounts?.photos_all ?? 0) > 0;
+  const incomeDone = (docCounts?.income_docs ?? 0) > 0;
+  const companyDone = Boolean(clientRow?.nip && clientRow?.company_name);
+  const bankDone = Boolean(clientRow?.bank_account_verified_at);
+  const phoneDone = Boolean(clientRow?.phone_verified_at);
+  const bikDone = Boolean(clientRow?.bik_report_uploaded_at);
+
+  const tiles: Array<{ key: TileKey; title: string; subtitle: string; done: boolean; icon: React.ReactNode }> = [
+    { key: "company", title: "Dane firmy", subtitle: "NIP, REGON, KRS z GUS", done: companyDone, icon: <FileText className="h-5 w-5" /> },
+    { key: "bank", title: "Konto bankowe", subtitle: "Weryfikacja dokumentem", done: bankDone, icon: <ShieldCheck className="h-5 w-5" /> },
+    { key: "phone", title: "Telefon", subtitle: "Potwierdzenie kodem SMS", done: phoneDone, icon: <ShieldCheck className="h-5 w-5" /> },
+    { key: "bik", title: "Raport BIK", subtitle: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
+    { key: "photos", title: "Zdjęcia nieruchomości", subtitle: "Wnętrza i z zewnątrz", done: photosDone, icon: <ImageIcon className="h-5 w-5" /> },
+    { key: "income", title: "Dokumenty dochodowe", subtitle: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
+  ];
+
+  const doneCount = tiles.filter((t) => t.done).length;
+  const discount = doneCount * 0.5;
+
+  return (
+    <section className="space-y-4">
+      <FancyShell variant="silver" motion={false}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-900/10 ring-1 ring-slate-900/15">
+              <Sparkles className="h-5 w-5 text-slate-700" strokeWidth={2.5} />
+            </span>
+            <div className="leading-tight">
+              <div className="text-base font-bold uppercase tracking-[0.14em] text-slate-800 sm:text-lg">
+                Każda weryfikacja = −0,5% rocznie taniej
+              </div>
+              <div className="mt-1 text-xs text-slate-600 sm:text-sm">
+                Uzupełnij poniższe sekcje. Im więcej zielonych odznak, tym niższe koszty możesz wpisać w kalkulatorze.
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-black tabular-nums text-emerald-600">−{discount.toFixed(1).replace(".", ",")}%</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">rocznie · {doneCount}/{tiles.length}</div>
+          </div>
+        </div>
+      </FancyShell>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {tiles.map((t) => {
+          const isOpen = open === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setOpen(isOpen ? null : t.key)}
+              className={`group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all ${
+                t.done
+                  ? "border-emerald-400/60 bg-gradient-to-br from-emerald-50 to-white shadow-[0_8px_24px_-12px_rgba(16,185,129,0.45)] hover:shadow-[0_12px_32px_-12px_rgba(16,185,129,0.55)]"
+                  : "border-slate-300/70 bg-gradient-to-br from-slate-50 to-white hover:border-slate-400 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.25)]"
+              } ${isOpen ? "ring-2 ring-primary/50" : ""}`}
+            >
+              <div className="flex items-start gap-3">
+                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ${
+                  t.done ? "bg-emerald-500/15 text-emerald-700 ring-emerald-500/30" : "bg-slate-900/5 text-slate-700 ring-slate-900/10"
+                }`}>
+                  {t.done ? <Check className="h-5 w-5" strokeWidth={3} /> : t.icon}
+                </span>
+                <div className="flex-1 leading-tight">
+                  <div className="text-sm font-bold uppercase tracking-wider text-slate-800">{t.title}</div>
+                  <div className="mt-0.5 text-xs text-slate-600">{t.subtitle}</div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                {t.done ? (
+                  <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20">
+                    <Check className="mr-1 h-3 w-3" /> Zweryfikowane
+                  </Badge>
+                ) : (
+                  <Badge className="border-amber-500/30 bg-amber-500/15 font-bold text-amber-700 hover:bg-amber-500/20">
+                    Odblokuj −0,5%/rok
+                  </Badge>
+                )}
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700">
+                  {isOpen ? "Zwiń ▲" : "Rozwiń ▼"}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {open && (
+        <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
+          <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[open]} />
+        </FancyShell>
+      )}
+    </section>
+  );
+}
