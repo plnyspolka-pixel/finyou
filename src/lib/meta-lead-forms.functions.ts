@@ -53,3 +53,41 @@ export const setMetaLeadFormAssignee = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Backfill: dla wszystkich klientów ze źródła meta_lead (lub starych meta_leads) —
+// załóż konto auth (rola: klient) jeśli jeszcze go nie ma. Magic linki generowane są
+// dopiero przy wysyłce follow-upów (świeży link = nie wygasa).
+export const backfillMetaLeadAccounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
+
+    const { data: clients, error } = await supabaseAdmin
+      .from("clients")
+      .select("id, email, first_name, last_name, user_id")
+      .eq("source", "meta_lead")
+      .is("user_id", null)
+      .not("email", "is", null)
+      .limit(2000);
+    if (error) throw new Error(error.message);
+
+    let created = 0, linked = 0, failed = 0;
+    const errors: string[] = [];
+    for (const c of clients ?? []) {
+      const email = (c.email ?? "").trim();
+      if (!email) continue;
+      const r = await ensureKlientAccountAndMagicLink(email, {
+        firstName: c.first_name, lastName: c.last_name, source: "meta_lead_backfill",
+      });
+      if (r.userId) {
+        await supabaseAdmin.from("clients").update({ user_id: r.userId }).eq("id", c.id);
+        if (r.created) created++; else linked++;
+      } else {
+        failed++;
+        if (r.error) errors.push(`${email}: ${r.error}`);
+      }
+    }
+    return { processed: clients?.length ?? 0, created, linked_existing: linked, failed, errors: errors.slice(0, 20) };
+  });
