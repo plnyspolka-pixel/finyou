@@ -399,15 +399,16 @@ function KlientDashboard() {
         };
         const hint = propertyType ? HINTS[propertyType] : null;
 
-        const lockReason =
-          !loanRow?.id
+        const lockReason = forceUnlock
+          ? null
+          : !loanRow?.id
             ? null
             : (totalFiles === 0 && !kwValidation.ok)
-              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej)."
+              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej) lub kliknij „Przejdź do kalkulatora”."
               : totalFiles === 0
-                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej)."
+                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
                 : !kwValidation.ok
-                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej)."
+                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
                   : null;
 
         const filesSlot = loanRow?.id ? (
