@@ -3827,6 +3827,12 @@ export type Database = {
       }
       loan_applications: {
         Row: {
+          accepted_annual_rate: number | null
+          accepted_loan_amount: number | null
+          accepted_max_monthly_payment: number | null
+          accepted_period_months: number | null
+          accepted_terms: Json | null
+          accepted_terms_at: string | null
           admin_decision: string | null
           annual_investor_rate: number | null
           assigned_operator: string | null
@@ -3901,6 +3907,12 @@ export type Database = {
           webhook_status: string | null
         }
         Insert: {
+          accepted_annual_rate?: number | null
+          accepted_loan_amount?: number | null
+          accepted_max_monthly_payment?: number | null
+          accepted_period_months?: number | null
+          accepted_terms?: Json | null
+          accepted_terms_at?: string | null
           admin_decision?: string | null
           annual_investor_rate?: number | null
           assigned_operator?: string | null
@@ -3975,6 +3987,12 @@ export type Database = {
           webhook_status?: string | null
         }
         Update: {
+          accepted_annual_rate?: number | null
+          accepted_loan_amount?: number | null
+          accepted_max_monthly_payment?: number | null
+          accepted_period_months?: number | null
+          accepted_terms?: Json | null
+          accepted_terms_at?: string | null
           admin_decision?: string | null
           annual_investor_rate?: number | null
           assigned_operator?: string | null
