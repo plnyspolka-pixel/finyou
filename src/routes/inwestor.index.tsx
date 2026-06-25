@@ -64,6 +64,23 @@ function InwestorList() {
     return true;
   }), [apps, q, ptype, voivodeship, amountMin, amountMax, yieldMin, ltvMax, periodMax]);
 
+  // Każde wyświetlenie wniosku w wyszukiwarce inwestora liczymy jako wyświetlenie (1x na sesję na wniosek).
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    const toCount = filtered.filter((a) => {
+      const key = `viewed:search:${a.id}`;
+      if (sessionStorage.getItem(key)) return false;
+      sessionStorage.setItem(key, "1");
+      return true;
+    });
+    if (toCount.length === 0) return;
+    void (async () => {
+      for (const a of toCount) {
+        try { await supabase.rpc("increment_loan_view", { _loan_id: a.id }); } catch { /* ignore */ }
+      }
+    })();
+  }, [filtered]);
+
   const reset = () => { setQ(""); setPtype("all"); setVoivodeship("all"); setAmountMin(""); setAmountMax(""); setYieldMin(""); setLtvMax(""); setPeriodMax(""); };
   const hasFilters = q || ptype !== "all" || voivodeship !== "all" || amountMin || amountMax || yieldMin || ltvMax || periodMax;
 
