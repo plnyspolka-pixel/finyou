@@ -95,7 +95,52 @@ function KlientDashboard() {
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const qc = useQueryClient();
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!user?.id || !loanRow?.id) { toast.error("Najpierw wypełnij wniosek"); return; }
+    setUploading(true);
+    const t = toast.loading(`Wysyłam ${files.length} plik(ów)…`);
+    try {
+      const newPhotoPaths: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: za duży (max 20 MB)`); continue; }
+        const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const isImage = (file.type || "").startsWith("image/");
+        if (isImage) {
+          const path = `klient/${user.id}/${loanRow.id}/${Date.now()}-${safe}`;
+          const up = await supabase.storage.from("property-photos").upload(path, file, { upsert: false, contentType: file.type });
+          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
+          newPhotoPaths.push(path);
+        } else {
+          const path = `klient/${user.id}/${loanRow.id}/doc-${Date.now()}-${safe}`;
+          const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
+          await supabase.from("documents").insert({
+            loan_application_id: loanRow.id, document_type: "property_doc", file_name: file.name, file_path: path, uploaded_by: user.id,
+          });
+        }
+      }
+      if (newPhotoPaths.length > 0) {
+        if (propertyRow?.id) {
+          const next = [...photoPaths, ...newPhotoPaths];
+          await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
+        } else {
+          await supabase.from("properties").insert({ loan_application_id: loanRow.id, photos: newPhotoPaths });
+        }
+      }
+      toast.success("Wgrano", { id: t });
+      void refetchProperty();
+      void qc.invalidateQueries({ queryKey: ["client-documents", loanRow.id] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd", { id: t });
+    } finally {
+      setUploading(false);
+    }
+  };
+
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
