@@ -701,7 +701,7 @@ function KlientDashboard() {
       ) : loanRow?.id ? (
         <FancyShell variant="navy" motion={false} innerClassName="!p-5 text-center">
           <div className="flex items-center justify-center gap-3 text-white">
-            <Lock className="h-5 w-5 text-amber-200" />
+            <LockIcon className="h-5 w-5 text-amber-200" />
             <span className="text-sm font-bold uppercase tracking-[0.14em]">
               Dodaj zdjęcia/dokumenty i wpisz numer KW, aby odblokować pozostałe sekcje
             </span>
