@@ -221,6 +221,41 @@ export function InvestorProposalCalculator() {
       )}
 
       <fieldset disabled={locked} className="contents">
+        <FancyShell>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
+                <Check className="h-4 w-4" strokeWidth={3} />
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-white">
+                Typ nieruchomości {savingPropertyType && <Loader2 className="ml-1 inline h-3 w-3 animate-spin" />}
+              </span>
+            </div>
+            <p className="text-xs text-white/75">Wybierz, co stanowi zabezpieczenie — to wpływa na zainteresowanie inwestorów.</p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {PROPERTY_TILES.map(({ type, icon: Icon }) => {
+                const active = propertyType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => void savePropertyType(type)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center backdrop-blur-sm transition touch-manipulation select-none",
+                      active
+                        ? "border-white bg-white/20 ring-2 ring-white/40"
+                        : "border-white/25 bg-white/5 hover:border-white/60 hover:bg-white/10",
+                    )}
+                  >
+                    <Icon className={cn("h-7 w-7", active ? "text-white" : "text-white/70")} />
+                    <span className="text-xs font-semibold text-white">{securityTypeLabels[type]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </FancyShell>
+
         <OfferCalculatorPanel
           amount={amount} setAmount={setAmount}
           months={months} setMonths={setMonths}
