@@ -614,10 +614,9 @@ function KlientDashboard() {
 
       {/* === Pełny profil — dane, weryfikacje, dokumenty (srebrny styl) === */}
       <FancyShell variant="silver" innerClassName="!p-4 md:!p-5">
-        <div className="[&_*]:!text-inherit">
-          <ClientProfileSections showPasswordCard={false} includePersonal={false} />
-        </div>
+        <ClientProfileSections showPasswordCard={false} includePersonal={false} />
       </FancyShell>
+
 
 
 
