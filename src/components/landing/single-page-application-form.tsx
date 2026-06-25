@@ -24,11 +24,7 @@ import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { lovable } from "@/integrations/lovable";
 
-async function handleSocialLogin(provider: "google" | "apple" | "facebook") {
-  if (provider === "facebook") {
-    toast.info("Logowanie przez Facebook będzie wkrótce dostępne.");
-    return;
-  }
+async function handleSocialLogin(provider: "google" | "apple") {
   try {
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
@@ -49,7 +45,7 @@ function SocialLoginButtons() {
         <span>Zaloguj się jednym kliknięciem</span>
         <div className="h-px flex-1 bg-white/20" />
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => handleSocialLogin("google")}
@@ -62,7 +58,7 @@ function SocialLoginButtons() {
             <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.4l-6.5-5.5c-2 1.4-4.6 2.3-7.5 2.3-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
             <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.5 5.5C41.3 36 44 30.5 44 24c0-1.3-.1-2.4-.4-3.5z"/>
           </svg>
-          <span className="hidden sm:inline">Google</span>
+          <span>Google</span>
         </button>
         <button
           type="button"
@@ -73,18 +69,7 @@ function SocialLoginButtons() {
           <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" aria-hidden="true">
             <path d="M17.05 12.04c-.03-2.79 2.28-4.13 2.38-4.2-1.3-1.9-3.32-2.16-4.04-2.19-1.72-.17-3.36 1.01-4.23 1.01-.87 0-2.22-.99-3.65-.96-1.88.03-3.61 1.09-4.58 2.77-1.95 3.38-.5 8.39 1.41 11.13.93 1.34 2.04 2.85 3.49 2.79 1.4-.06 1.93-.91 3.62-.91s2.17.91 3.65.88c1.51-.03 2.46-1.37 3.39-2.71 1.07-1.56 1.51-3.07 1.54-3.15-.03-.01-2.96-1.14-2.98-4.46zM14.27 4.04c.77-.94 1.29-2.24 1.15-3.54-1.11.05-2.46.74-3.26 1.67-.71.83-1.34 2.16-1.18 3.43 1.24.1 2.5-.63 3.29-1.56z"/>
           </svg>
-          <span className="hidden sm:inline">Apple</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleSocialLogin("facebook")}
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/30 bg-white/10 px-3 py-3 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
-          aria-label="Zaloguj przez Facebook"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#1877F2]" aria-hidden="true">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-          </svg>
-          <span className="hidden sm:inline">Facebook</span>
+          <span>Apple</span>
         </button>
       </div>
     </div>
