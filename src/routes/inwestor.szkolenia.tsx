@@ -63,7 +63,7 @@ function SzkoleniaInwestor() {
       />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {videos.map((v) => {
-          const url = videoUrl(v);
+          const url = urls[v.id] ?? null;
           const external = url ? isExternal(url) : false;
           return (
             <Card key={v.id} className="overflow-hidden">
