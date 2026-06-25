@@ -9,6 +9,7 @@ import { subscriptionPlanLabels, subscriptionStatusLabels, formatDate } from "@/
 import { StripeEmbeddedCheckoutForm } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { CheckCircle2 } from "lucide-react";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/abonament")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
