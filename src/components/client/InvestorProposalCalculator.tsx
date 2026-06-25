@@ -74,13 +74,9 @@ export function InvestorProposalCalculator({
   const [canExtend, setCanExtend] = useState<boolean>(false);
   const [propertyType, setPropertyType] = useState<SecurityType | null>(null);
   const [savingPropertyType, setSavingPropertyType] = useState(false);
-  const [investorDesc, setInvestorDesc] = useState<string>("");
-  const [savingDesc, setSavingDesc] = useState(false);
-  const [aiBusy, setAiBusy] = useState(false);
   const [sendingToInvestors, setSendingToInvestors] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rateTouchedRef = useRef(false);
-  const assistDesc = useServerFn(assistBusinessDescription);
 
   useEffect(() => {
     if (!loan) return;
