@@ -121,42 +121,24 @@ async function upsertClientAndApplication(opts: {
     }
   }
 
-  // 1b) Auto-create auth user + magic link (rola: klient) – tylko jeśli mamy email
+  // 1b) Auto-create auth user + magic link – w roli przypisanej do formularza
   let magicLink: string | null = null;
   if (opts.email && clientId) {
     try {
-      let authUserId: string | null = null;
-      const { data: createRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-        email: opts.email,
-        email_confirm: true,
-        user_metadata: { first_name: first, last_name: last, source: "meta_lead" },
+      const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
+      const r = await ensureKlientAccountAndMagicLink(opts.email, {
+        firstName: first, lastName: last, source: "meta_lead", role: assignedRole,
       });
-      if (createErr && !String(createErr.message ?? "").toLowerCase().includes("registered")) {
-        console.error("[meta-leads-webhook] createUser error", createErr);
+      if (r.userId) {
+        await supabaseAdmin.from("clients").update({ user_id: r.userId }).eq("id", clientId);
       }
-      authUserId = createRes?.user?.id ?? null;
-      if (!authUserId) {
-        const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-        const found = list?.users?.find((u) => (u.email ?? "").toLowerCase() === opts.email!.toLowerCase());
-        authUserId = found?.id ?? null;
-      }
-      if (authUserId) {
-        await supabaseAdmin.from("clients").update({ user_id: authUserId }).eq("id", clientId);
-        await supabaseAdmin.from("user_roles").upsert(
-          { user_id: authUserId, role: "klient" as any },
-          { onConflict: "user_id,role" },
-        );
-        const { data: linkRes } = await supabaseAdmin.auth.admin.generateLink({
-          type: "magiclink",
-          email: opts.email,
-          options: { redirectTo: `${opts.origin}/klient` },
-        });
-        magicLink = (linkRes?.properties as any)?.action_link ?? null;
-      }
+      magicLink = r.magicLink;
     } catch (e) {
       console.error("[meta-leads-webhook] auth-bootstrap error", e);
     }
   }
+
+
 
   // 2) Wniosek — szukaj istniejącego "nowy_lead" tego klienta, inaczej utwórz
   const { data: existingApp } = await supabaseAdmin
