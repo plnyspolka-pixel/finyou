@@ -96,6 +96,8 @@ function KlientDashboard() {
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
+  const [area, setArea] = useState<string>("");
+  const [savingArea, setSavingArea] = useState(false);
   const [uploading, setUploading] = useState(false);
   const qc = useQueryClient();
 
