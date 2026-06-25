@@ -95,7 +95,7 @@ export function MediaPreviewDialog({
 
       for (const d of (docRows ?? []) as Doc[]) {
         let url = d.file_url ?? null;
-        if (!url && d.file_path) url = await signOne("documents", d.file_path);
+        if (!url && d.file_path) url = await signDocument(d.file_path);
         if (!url) continue;
         const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
         all.push({
