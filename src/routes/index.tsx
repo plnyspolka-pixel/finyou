@@ -49,8 +49,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-  const { user, roles } = useAuth();
+  const { user, roles, loading } = useAuth();
   const panelHref = user ? defaultPathForRoles(roles) : null;
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user && panelHref) {
+      navigate({ to: panelHref, replace: true });
+    }
+  }, [loading, user, panelHref, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
