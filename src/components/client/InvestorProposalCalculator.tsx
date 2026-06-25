@@ -6,12 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
+import { Info, Lock, Send, Loader2, Sparkles, Building2, Home, Trees, Map as MapIcon, Store, FileQuestion, Check } from "lucide-react";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { assistBusinessDescription } from "@/lib/ai-assist.functions";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
+import { FancyShell } from "@/components/landing/fancy-shell";
+import { securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { cn } from "@/lib/utils";
+
+const PROPERTY_TILES: { type: SecurityType; icon: typeof Building2 }[] = [
+  { type: "mieszkanie", icon: Building2 },
+  { type: "dom", icon: Home },
+  { type: "grunt_rolny", icon: Trees },
+  { type: "dzialka_budowlana", icon: MapIcon },
+  { type: "lokal_uslugowy", icon: Store },
+  { type: "inna", icon: FileQuestion },
+];
 
 // Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
 // pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
@@ -52,6 +64,8 @@ export function InvestorProposalCalculator() {
   const [annualRate, setAnnualRate] = useState<number>(30);
   const [maxPayment, setMaxPayment] = useState<number>(0);
   const [canExtend, setCanExtend] = useState<boolean>(false);
+  const [propertyType, setPropertyType] = useState<SecurityType | null>(null);
+  const [savingPropertyType, setSavingPropertyType] = useState(false);
   const [investorDesc, setInvestorDesc] = useState<string>("");
   const [savingDesc, setSavingDesc] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
@@ -69,6 +83,28 @@ export function InvestorProposalCalculator() {
     setInvestorDesc(String(loan.investor_description ?? ""));
     rateTouchedRef.current = true;
   }, [loan?.id]);
+
+  useEffect(() => {
+    if (prop?.property_type) setPropertyType(prop.property_type as SecurityType);
+  }, [prop?.id, prop?.property_type]);
+
+  const savePropertyType = async (t: SecurityType) => {
+    setPropertyType(t);
+    if (!loan?.id || locked) return;
+    setSavingPropertyType(true);
+    try {
+      if (prop?.id) {
+        await supabase.from("properties").update({ property_type: t }).eq("id", prop.id);
+      } else {
+        await supabase.from("properties").insert({ loan_application_id: loan.id, property_type: t });
+      }
+      setRefreshTick((x) => x + 1);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zapisać typu nieruchomości");
+    } finally {
+      setSavingPropertyType(false);
+    }
+  };
 
   // Max okres spłaty maleje wraz z kwotą (jak na landingu).
   const maxMonths = useMemo(() => {
@@ -185,6 +221,41 @@ export function InvestorProposalCalculator() {
       )}
 
       <fieldset disabled={locked} className="contents">
+        <FancyShell>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
+                <Check className="h-4 w-4" strokeWidth={3} />
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-white">
+                Typ nieruchomości {savingPropertyType && <Loader2 className="ml-1 inline h-3 w-3 animate-spin" />}
+              </span>
+            </div>
+            <p className="text-xs text-white/75">Wybierz, co stanowi zabezpieczenie — to wpływa na zainteresowanie inwestorów.</p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {PROPERTY_TILES.map(({ type, icon: Icon }) => {
+                const active = propertyType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => void savePropertyType(type)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center backdrop-blur-sm transition touch-manipulation select-none",
+                      active
+                        ? "border-white bg-white/20 ring-2 ring-white/40"
+                        : "border-white/25 bg-white/5 hover:border-white/60 hover:bg-white/10",
+                    )}
+                  >
+                    <Icon className={cn("h-7 w-7", active ? "text-white" : "text-white/70")} />
+                    <span className="text-xs font-semibold text-white">{securityTypeLabels[type]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </FancyShell>
+
         <OfferCalculatorPanel
           amount={amount} setAmount={setAmount}
           months={months} setMonths={setMonths}
