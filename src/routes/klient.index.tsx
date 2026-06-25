@@ -128,7 +128,7 @@ function KlientDashboard() {
           const next = [...photoPaths, ...newPhotoPaths];
           await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
         } else {
-          await supabase.from("properties").insert({ loan_application_id: loanRow.id, photos: newPhotoPaths });
+          await supabase.from("properties").insert({ loan_application_id: loanRow.id, photos: newPhotoPaths, property_type: "inna" });
         }
       }
       toast.success("Wgrano", { id: t });
