@@ -55,7 +55,7 @@ function KlientDashboard() {
     sessionStorage.setItem(key, "1");
     void (async () => {
       try {
-        await supabase.rpc("increment_loan_view", { p_loan_id: loanRow.id });
+        await supabase.rpc("increment_loan_view", { _loan_id: loanRow.id });
         void refetchLoan();
       } catch { /* ignore */ }
     })();
