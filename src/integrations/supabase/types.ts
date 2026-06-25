@@ -1528,6 +1528,7 @@ export type Database = {
       clients: {
         Row: {
           address: string | null
+          assigned_user_id: string | null
           bank_account: string | null
           bank_account_document_path: string | null
           bank_account_holder_ocr: string | null
@@ -1583,6 +1584,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_user_id?: string | null
           bank_account?: string | null
           bank_account_document_path?: string | null
           bank_account_holder_ocr?: string | null
@@ -1638,6 +1640,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_user_id?: string | null
           bank_account?: string | null
           bank_account_document_path?: string | null
           bank_account_holder_ocr?: string | null
@@ -4596,6 +4599,7 @@ export type Database = {
       }
       meta_lead_forms: {
         Row: {
+          assigned_user_id: string | null
           created_at: string
           form_name: string | null
           id: string
@@ -4611,6 +4615,7 @@ export type Database = {
           voicebot_enabled: boolean
         }
         Insert: {
+          assigned_user_id?: string | null
           created_at?: string
           form_name?: string | null
           id?: string
@@ -4626,6 +4631,7 @@ export type Database = {
           voicebot_enabled?: boolean
         }
         Update: {
+          assigned_user_id?: string | null
           created_at?: string
           form_name?: string | null
           id?: string

@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { syncMetaAdAccounts, syncMetaCampaigns, listMetaOverview } from "@/lib/meta-ads.functions";
+import { listMetaLeadForms, setMetaLeadFormAssignee } from "@/lib/meta-lead-forms.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { RefreshCw, Facebook } from "lucide-react";
 
@@ -42,6 +44,18 @@ function MetaPage() {
     } catch (e: any) { toast.error(e.message); }
     finally { setBusyAcc(null); }
   };
+
+  const fetchForms = useServerFn(listMetaLeadForms);
+  const setAssigneeFn = useServerFn(setMetaLeadFormAssignee);
+  const { data: formsData } = useQuery({
+    queryKey: ["meta-lead-forms"],
+    queryFn: () => fetchForms(),
+  });
+  const setAssignee = useMutation({
+    mutationFn: (vars: { formId: string; userId: string | null }) => setAssigneeFn({ data: vars }),
+    onSuccess: () => { toast.success("Zapisano przypisanie"); qc.invalidateQueries({ queryKey: ["meta-lead-forms"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-6">
@@ -114,6 +128,52 @@ function MetaPage() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Formularze leadowe — przypisanie</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Każdy lead z danego formularza trafia jako "swój" do wybranej osoby (panel /posrednik).</p>
+        </CardHeader>
+        <CardContent>
+          {!formsData?.forms.length ? (
+            <div className="text-sm text-muted-foreground">Brak formularzy. Pojawią się po pierwszym leadzie lub po synchronizacji.</div>
+          ) : (
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Formularz</TableHead><TableHead>Strona</TableHead>
+                <TableHead className="text-right">Leady</TableHead><TableHead>Ostatni lead</TableHead>
+                <TableHead className="w-72">Właściciel leadów</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {formsData.forms.map((f: any) => (
+                  <TableRow key={f.id}>
+                    <TableCell className="font-medium">{f.form_name ?? f.meta_form_id}<div className="text-xs text-muted-foreground">{f.meta_form_id}</div></TableCell>
+                    <TableCell className="text-sm">{f.page_name ?? "—"}</TableCell>
+                    <TableCell className="text-right">{f.total_leads_pulled ?? 0}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{f.last_lead_at ? formatDateTime(f.last_lead_at) : "—"}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={f.assigned_user_id ?? "__none__"}
+                        onValueChange={(v) => setAssignee.mutate({ formId: f.id, userId: v === "__none__" ? null : v })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Nieprzypisany" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Nieprzypisany (wspólny lejek) —</SelectItem>
+                          {(formsData.assignable ?? []).map((u: any) => (
+                            <SelectItem key={u.user_id} value={u.user_id}>{u.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+
 
       <Card>
         <CardHeader><CardTitle>Historia synchronizacji</CardTitle></CardHeader>

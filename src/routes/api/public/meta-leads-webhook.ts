@@ -57,7 +57,14 @@ async function upsertClientAndApplication(opts: {
   phone: string | null;
   fullName: string | null;
   origin: string;
+  formId?: string | null;
 }): Promise<{ loanApplicationId: string | null; clientId: string | null; returnLink: string | null; firstName: string | null }> {
+  let assignedUserId: string | null = null;
+  if (opts.formId) {
+    const { data: form } = await supabaseAdmin
+      .from("meta_lead_forms").select("assigned_user_id").eq("meta_form_id", String(opts.formId)).maybeSingle();
+    assignedUserId = (form as any)?.assigned_user_id ?? null;
+  }
   const phoneNorm = opts.phone ? normPhone(opts.phone) : null;
   const { first, last } = splitName(opts.fullName);
 
@@ -85,6 +92,7 @@ async function upsertClientAndApplication(opts: {
         consent_marketing: true,
         consent_phone: true,
         consent_sms: true,
+        assigned_user_id: assignedUserId,
       })
       .select("id")
       .single();
@@ -105,6 +113,9 @@ async function upsertClientAndApplication(opts: {
       phone: opts.phone ?? undefined,
       phone_normalized: phoneNorm ?? undefined,
     }).eq("id", clientId);
+    if (assignedUserId) {
+      await supabaseAdmin.from("clients").update({ assigned_user_id: assignedUserId }).eq("id", clientId).is("assigned_user_id", null);
+    }
   }
 
   // 1b) Auto-create auth user + magic link (rola: klient) – tylko jeśli mamy email
@@ -169,6 +180,7 @@ async function upsertClientAndApplication(opts: {
         current_form_step: 1,
         return_link_token: returnToken,
         return_link: returnLink,
+        assigned_operator: assignedUserId,
       })
       .select("id")
       .single();
@@ -227,6 +239,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 phone,
                 fullName: name,
                 origin,
+                formId: v.form_id ?? details.form_id ?? null,
               });
 
               // 2) Upsert meta_leads (z podpięciem do wniosku)
