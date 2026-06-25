@@ -12,12 +12,15 @@ export function FancyShell({
   className = "",
   innerClassName = "",
   variant = "navy",
+  motion = true,
 }: {
   children: ReactNode;
   className?: string;
   innerClassName?: string;
   variant?: Variant;
+  motion?: boolean;
 }) {
+
   if (variant === "silver") {
     return (
       <div
