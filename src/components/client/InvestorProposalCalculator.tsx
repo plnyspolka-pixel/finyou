@@ -6,12 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Info, Lock, Send, Loader2, Sparkles } from "lucide-react";
+import { Info, Lock, Send, Loader2, Sparkles, Building2, Home, Trees, Map as MapIcon, Store, FileQuestion, Check } from "lucide-react";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { assistBusinessDescription } from "@/lib/ai-assist.functions";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
+import { FancyShell } from "@/components/landing/fancy-shell";
+import { securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { cn } from "@/lib/utils";
+
+const PROPERTY_TILES: { type: SecurityType; icon: typeof Building2 }[] = [
+  { type: "mieszkanie", icon: Building2 },
+  { type: "dom", icon: Home },
+  { type: "grunt_rolny", icon: Trees },
+  { type: "dzialka_budowlana", icon: MapIcon },
+  { type: "lokal_uslugowy", icon: Store },
+  { type: "inna", icon: FileQuestion },
+];
 
 // Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
 // pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
