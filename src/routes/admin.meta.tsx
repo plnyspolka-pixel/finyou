@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { syncMetaAdAccounts, syncMetaCampaigns, listMetaOverview } from "@/lib/meta-ads.functions";
-import { listMetaLeadForms, setMetaLeadFormAssignee, backfillMetaLeadAccounts } from "@/lib/meta-lead-forms.functions";
+import { listMetaLeadForms, setMetaLeadFormAssignee, setMetaLeadFormRole, backfillMetaLeadAccounts } from "@/lib/meta-lead-forms.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
