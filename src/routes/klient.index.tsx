@@ -645,7 +645,7 @@ function KlientDashboard() {
   );
 }
 
-type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income";
+type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income" | "description";
 
 function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
   const [open, setOpen] = useState<TileKey | null>(null);
