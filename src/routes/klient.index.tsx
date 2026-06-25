@@ -357,7 +357,7 @@ function KlientDashboard() {
                   : null;
 
         const filesSlot = loanRow?.id ? (
-          <div className="grid items-stretch gap-6 lg:grid-cols-2">
+          <div className="grid items-stretch gap-0 lg:grid-cols-2 lg:gap-0">
             {/* === Twoje pliki === */}
             <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
 
