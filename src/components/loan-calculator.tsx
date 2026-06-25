@@ -73,19 +73,26 @@ export function LoanCalculator({
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
 
+  // Prowizja Finance You — skalowana wg kwoty (10% → 4%), kredytowana do kapitału (gross principal).
+  // Identyczna logika jak w kalkulatorze na landingu.
+  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
+  const financeYouFeePct = Math.round((10 - feeT * 6) * 10) / 10;
+  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
+  const grossPrincipal = amount + financeYouFeePln;
+
   const schedule = useMemo(() => {
-    if (!amount || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
+    if (!grossPrincipal || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
     const monthlyRate = annualRate / 100 / 12;
     const rows: any[] = [];
     const start = new Date();
 
     const nominalRata = monthlyRate > 0
-      ? (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
-      : amount / months;
+      ? (grossPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
+      : grossPrincipal / months;
     const cappedRata = maxPayment > 0 ? Math.min(nominalRata, maxPayment) : nominalRata;
     const balloon = Math.max(0, (nominalRata - cappedRata) * months);
 
-    let saldo = amount;
+    let saldo = grossPrincipal;
     for (let i = 1; i <= months; i++) {
       const ods = saldo * monthlyRate;
       const last = i === months;
@@ -104,13 +111,13 @@ export function LoanCalculator({
       nominalRata,
       cappedRata,
     };
-  }, [amount, months, annualRate, maxPayment]);
+  }, [grossPrincipal, months, annualRate, maxPayment]);
 
   const commissionPln = (amount * commissionPct) / 100;
-  const nonInterestTotal = commissionPln;
+  const nonInterestTotal = commissionPln + financeYouFeePln;
   const maxNonInterest = maxNonInterestCosts(amount, months);
   const totalCost = schedule.totalOds + nonInterestTotal;
-  const totalToRepay = schedule.totalRata + nonInterestTotal;
+  const totalToRepay = schedule.totalRata + commissionPln; // FY już w racie (kredytowana), prowizja inwestora płatna z góry
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest;
@@ -118,13 +125,15 @@ export function LoanCalculator({
 
   useEffect(() => {
     onChange?.({
-      amount, months, annualRate, commissionPct, commissionPln, maxPayment,
+      amount, months, annualRate, commissionPct, commissionPln,
+      financeYouFeePct, financeYouFeePln, grossPrincipal,
+      maxPayment,
       nominalRata: schedule.nominalRata, cappedRata: schedule.cappedRata, balloon: schedule.balloon,
       totalRata: schedule.totalRata, totalOds: schedule.totalOds, totalKap: schedule.totalKap,
       totalCost, totalToRepay, schedule: schedule.rows,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount, months, annualRate, commissionPct, maxPayment, schedule.balloon, schedule.totalRata, schedule.totalOds]);
+  }, [amount, months, annualRate, commissionPct, financeYouFeePct, financeYouFeePln, grossPrincipal, maxPayment, schedule.balloon, schedule.totalRata, schedule.totalOds]);
 
   return (
     <div className="space-y-6">
