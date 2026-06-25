@@ -23,9 +23,16 @@ function embedUrl(url: string): string {
   return url;
 }
 
+function extractTrainingPath(url: string | null): string | null {
+  if (!url) return null;
+  const m = url.match(/\/training-videos\/(.+)$/);
+  return m ? m[1] : null;
+}
+
 function SzkoleniaInwestor() {
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [posters, setPosters] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void (async () => {
@@ -37,20 +44,31 @@ function SzkoleniaInwestor() {
         .order("created_at", { ascending: false });
       const list = data ?? [];
       setVideos(list);
-      const entries: Array<[string, string]> = [];
+      const urlEntries: Array<[string, string]> = [];
+      const posterEntries: Array<[string, string]> = [];
       await Promise.all(
         list.map(async (v) => {
           if (v.external_url) {
-            entries.push([v.id, v.external_url]);
+            urlEntries.push([v.id, v.external_url]);
           } else if (v.file_path) {
             const { data: signed } = await supabase.storage
               .from("training-videos")
               .createSignedUrl(v.file_path, 60 * 60 * 4);
-            if (signed?.signedUrl) entries.push([v.id, signed.signedUrl]);
+            if (signed?.signedUrl) urlEntries.push([v.id, signed.signedUrl]);
+          }
+          const posterPath = extractTrainingPath(v.thumbnail_url);
+          if (posterPath) {
+            const { data: signed } = await supabase.storage
+              .from("training-videos")
+              .createSignedUrl(posterPath, 60 * 60 * 4);
+            if (signed?.signedUrl) posterEntries.push([v.id, signed.signedUrl]);
+          } else if (v.thumbnail_url) {
+            posterEntries.push([v.id, v.thumbnail_url]);
           }
         }),
       );
-      setUrls(Object.fromEntries(entries));
+      setUrls(Object.fromEntries(urlEntries));
+      setPosters(Object.fromEntries(posterEntries));
     })();
   }, []);
 
