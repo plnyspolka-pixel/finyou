@@ -105,12 +105,14 @@ export function InvestorProposalCalculator({
     try {
       if (prop?.id) {
         await supabase.from("properties").update({ property_type: t }).eq("id", prop.id);
+        setProp((prev: any) => prev ? { ...prev, property_type: t } : prev);
       } else {
-        await supabase.from("properties").insert({ loan_application_id: loan.id, property_type: t });
+        const { data: inserted } = await supabase.from("properties")
+          .insert({ loan_application_id: loan.id, property_type: t })
+          .select("*").maybeSingle();
+        if (inserted) setProp(inserted);
       }
-      setRefreshTick((x) => x + 1);
       void qc.invalidateQueries({ queryKey: ["client-property", loan.id] });
-
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się zapisać typu nieruchomości");
     } finally {
