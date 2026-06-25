@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/inwestor/szkolenia")({
