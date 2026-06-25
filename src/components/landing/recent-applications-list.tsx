@@ -320,13 +320,25 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
                     const Icon = v.Icon;
                     return (
-                      <div className={`relative flex h-24 w-full items-center justify-between overflow-hidden bg-gradient-to-br ${v.gradient} px-4`}>
-                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                          <Icon className="h-5 w-5 text-accent" />
-                          {PROPERTY_TYPE_LABELS[it.property_type]}
-                        </div>
-                        <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
-                          <MapPin className="h-3 w-3" /> {it.city}
+                      <div className="relative h-40 w-full overflow-hidden">
+                        <img
+                          src={it.photo_url}
+                          alt={`${PROPERTY_TYPE_LABELS[it.property_type]} — ${it.city}`}
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <div
+                          aria-hidden
+                          className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/30"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 pb-3 pt-6">
+                          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                            <Icon className="h-3.5 w-3.5 text-accent" />
+                            {PROPERTY_TYPE_LABELS[it.property_type]}
+                          </div>
+                          <div className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
+                            <MapPin className="h-3 w-3" /> {it.city}
+                          </div>
                         </div>
                       </div>
                     );
