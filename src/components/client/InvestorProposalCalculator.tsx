@@ -84,6 +84,28 @@ export function InvestorProposalCalculator() {
     rateTouchedRef.current = true;
   }, [loan?.id]);
 
+  useEffect(() => {
+    if (prop?.property_type) setPropertyType(prop.property_type as SecurityType);
+  }, [prop?.id, prop?.property_type]);
+
+  const savePropertyType = async (t: SecurityType) => {
+    setPropertyType(t);
+    if (!loan?.id || locked) return;
+    setSavingPropertyType(true);
+    try {
+      if (prop?.id) {
+        await supabase.from("properties").update({ property_type: t }).eq("id", prop.id);
+      } else {
+        await supabase.from("properties").insert({ loan_application_id: loan.id, property_type: t });
+      }
+      setRefreshTick((x) => x + 1);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zapisać typu nieruchomości");
+    } finally {
+      setSavingPropertyType(false);
+    }
+  };
+
   // Max okres spłaty maleje wraz z kwotą (jak na landingu).
   const maxMonths = useMemo(() => {
     if (amount <= 400_000) return 72;
