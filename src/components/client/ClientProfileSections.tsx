@@ -361,7 +361,9 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           )}
         </CardContent>
       </Card>
+      )}
 
+      {has("bik") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
@@ -449,18 +451,25 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {has("photos") && (
       <PropertyDocsCard userId={user?.id ?? null} kind="photos_all"
         title="Zdjęcia nieruchomości (wnętrza i z zewnątrz)"
         icon={<ImageIcon className="h-4 w-4" />}
         description="Wrzuć tutaj wszystkie zdjęcia w jednym miejscu — z zewnątrz i każdego pomieszczenia. Możesz wybrać wiele plików na raz." />
+      )}
 
+      {has("income") && (
       <PropertyDocsCard userId={user?.id ?? null} kind="income_docs"
         title="Dokumenty dochodowe"
         icon={<Wallet className="h-4 w-4" />}
         description="PIT, zaświadczenia o dochodach, wyciągi — wszystko, co pokazuje inwestorowi Twoją zdolność spłaty. Niewymagane, ale mocno zwiększa szanse." />
+      )}
 
-      <Button onClick={save}>Zapisz</Button>
+      {(!filtered || has("company") || has("bank") || has("phone")) && (
+        <Button onClick={save}>Zapisz</Button>
+      )}
 
       {showPasswordCard && (
         <>
