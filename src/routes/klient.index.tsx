@@ -650,6 +650,16 @@ type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income" | "des
 function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
   const [open, setOpen] = useState<TileKey | null>(null);
 
+  const { data: loanDesc } = useQuery({
+    queryKey: ["client-loan-desc", loanId],
+    queryFn: async () => {
+      const { data } = await supabase.from("loan_applications")
+        .select("investor_description").eq("id", loanId!).maybeSingle();
+      return data?.investor_description ?? "";
+    },
+    enabled: Boolean(loanId),
+  });
+
   const { data: docCounts } = useQuery({
     queryKey: ["client-doc-counts", loanId],
     queryFn: async () => {
