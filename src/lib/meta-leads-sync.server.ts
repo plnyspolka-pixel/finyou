@@ -143,8 +143,11 @@ export async function runMetaLeadsSync(): Promise<{
             const { data: ins } = await supabaseAdmin.from("clients").insert({
               first_name: first, last_name: last, email, phone, phone_raw: phone, phone_normalized: phoneNorm,
               source: "meta_lead", consent_rodo: true, consent_email: true, consent_marketing: true, consent_phone: true, consent_sms: true, consents_accepted_at: new Date().toISOString(),
+              assigned_user_id: (form as any).assigned_user_id ?? null,
             }).select("id").single();
             clientId = ins?.id ?? null;
+          } else if ((form as any).assigned_user_id) {
+            await supabaseAdmin.from("clients").update({ assigned_user_id: (form as any).assigned_user_id }).eq("id", clientId).is("assigned_user_id", null);
           }
           if (!clientId) continue;
 
