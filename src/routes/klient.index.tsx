@@ -518,7 +518,12 @@ function KlientDashboard() {
           </div>
         ) : null;
 
-        return <InvestorProposalCalculator filesSlot={filesSlot} lockReason={lockReason} />;
+        return (
+          <>
+            {filesSlot}
+            <InvestorProposalCalculator lockReason={lockReason} />
+          </>
+        );
       })()}
 
 
