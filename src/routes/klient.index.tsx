@@ -31,7 +31,7 @@ function KlientDashboard() {
     queryKey: ["client-row", user?.id],
     queryFn: async () => {
       const { data } = await supabase.from("clients")
-        .select("id, user_id, nip, company_name, bank_account_verified_at, phone_verified_at, bik_report_uploaded_at")
+        .select("id, user_id, nip, company_name, first_name, last_name, email, phone, bank_account_verified_at, phone_verified_at, bik_report_uploaded_at")
         .eq("user_id", user!.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data;
     },
@@ -313,7 +313,14 @@ function KlientDashboard() {
     <div className="space-y-6 max-w-5xl">
 
       {!loanRow?.id && (
-        <SinglePageApplicationForm />
+        <SinglePageApplicationForm
+          prefilledContact={{
+            firstName: (clientRow as any)?.first_name ?? (user?.user_metadata as any)?.first_name ?? "",
+            lastName: (clientRow as any)?.last_name ?? (user?.user_metadata as any)?.last_name ?? "",
+            phone: (clientRow as any)?.phone ?? "",
+            email: (clientRow as any)?.email ?? user?.email ?? "",
+          }}
+        />
       )}
 
       {loanRow?.id && (() => {

@@ -246,11 +246,19 @@ const STEPS = [
 type StepId = 1 | 2 | 3;
 
 
-export function SinglePageApplicationForm() {
+export type PrefilledContact = {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+};
+
+export function SinglePageApplicationForm({ prefilledContact }: { prefilledContact?: PrefilledContact } = {}) {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<StepId>(1);
+  const skipContact = Boolean(prefilledContact?.email);
+  const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
 
@@ -287,18 +295,18 @@ export function SinglePageApplicationForm() {
     if (!rateTouchedRef.current) setAnnualRate(suggestedRate);
   }, [suggestedRate]);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState(prefilledContact?.firstName ?? "");
+  const [lastName, setLastName] = useState(prefilledContact?.lastName ?? "");
+  const [phone, setPhone] = useState(prefilledContact?.phone ?? "");
+  const [email, setEmail] = useState(prefilledContact?.email ?? "");
   const [kwNumber, setKwNumber] = useState("");
   const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
   const [usableArea, setUsableArea] = useState("");
   const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [consentPrivacy, setConsentPrivacy] = useState(false);
-  const [consentTerms, setConsentTerms] = useState(false);
-  const [consentMarketing, setConsentMarketing] = useState(false);
+  const [consentPrivacy, setConsentPrivacy] = useState(skipContact);
+  const [consentTerms, setConsentTerms] = useState(skipContact);
+  const [consentMarketing, setConsentMarketing] = useState(skipContact);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
