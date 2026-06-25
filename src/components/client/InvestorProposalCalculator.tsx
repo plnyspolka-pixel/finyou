@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,6 +42,8 @@ export function InvestorProposalCalculator({
   lockReason?: string | null;
 } = {}) {
   const { user } = useAuth();
+  const qc = useQueryClient();
+
   const [loading, setLoading] = useState(true);
   const [loan, setLoan] = useState<any | null>(null);
   const [prop, setProp] = useState<any | null>(null);
@@ -105,6 +109,8 @@ export function InvestorProposalCalculator({
         await supabase.from("properties").insert({ loan_application_id: loan.id, property_type: t });
       }
       setRefreshTick((x) => x + 1);
+      void qc.invalidateQueries({ queryKey: ["client-property", loan.id] });
+
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się zapisać typu nieruchomości");
     } finally {

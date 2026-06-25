@@ -348,17 +348,18 @@ function KlientDashboard() {
           !loanRow?.id
             ? null
             : (totalFiles === 0 && !kwValidation.ok)
-              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje poniżej)."
+              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej)."
               : totalFiles === 0
-                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja poniżej)."
+                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej)."
                 : !kwValidation.ok
-                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja poniżej)."
+                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej)."
                   : null;
 
         const filesSlot = loanRow?.id ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* === Twoje pliki (fancy) === */}
-            <FancyShell>
+          <div className="grid items-stretch gap-6 lg:grid-cols-2">
+            {/* === Twoje pliki === */}
+            <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
+
               <div className="space-y-4">
                 <div className="flex items-center gap-2.5">
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
@@ -493,8 +494,9 @@ function KlientDashboard() {
               </div>
             </FancyShell>
 
-            {/* === Numer KW (fancy) === */}
-            <FancyShell>
+            {/* === Numer KW === */}
+            <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
+
               <div className="space-y-4">
                 <div className="flex items-center gap-2.5">
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
