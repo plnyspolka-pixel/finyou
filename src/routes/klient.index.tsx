@@ -281,27 +281,6 @@ function KlientDashboard() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      {/* === Licznik wyświetleń (fancy) === */}
-      <FancyShell>
-        <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-          <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-              <EyeIcon className="h-6 w-6" strokeWidth={2.5} />
-            </span>
-            <div className="leading-tight">
-              <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">Twoja oferta zyskuje uwagę</div>
-              <div className="text-base font-bold uppercase tracking-[0.14em] sm:text-lg">Inwestorzy już zobaczyli Twoją ofertę</div>
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <NumberTicker
-              value={Number((loanRow as any)?.view_count ?? 0)}
-              className="text-5xl font-black tabular-nums text-white drop-shadow-[0_2px_18px_oklch(0.15_0.05_265/0.9)] sm:text-6xl"
-            />
-            <span className="text-sm font-semibold uppercase tracking-[0.16em] text-white/75">wyświetleń</span>
-          </div>
-        </div>
-      </FancyShell>
 
       {(() => {
         const propertyType = String((propertyRow as any)?.property_type ?? "") as
