@@ -14,7 +14,7 @@ import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export function ClientProfileSections({ showPasswordCard = true }: { showPasswordCard?: boolean }) {
+export function ClientProfileSections({ showPasswordCard = true, includePersonal = true }: { showPasswordCard?: boolean; includePersonal?: boolean }) {
   const { user } = useAuth();
   const [row, setRow] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
@@ -137,23 +137,27 @@ export function ClientProfileSections({ showPasswordCard = true }: { showPasswor
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle>Dane osobowe</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          <div><Label>Imię</Label><Input maxLength={100} value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></div>
-          <div><Label>Nazwisko</Label><Input maxLength={100} value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></div>
-          <div className="md:col-span-2"><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value.replace(/\D/g, "") })} /></div>
-        </CardContent>
-      </Card>
+      {includePersonal && (
+        <>
+          <Card>
+            <CardHeader><CardTitle>Dane osobowe</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              <div><Label>Imię</Label><Input maxLength={100} value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></div>
+              <div><Label>Nazwisko</Label><Input maxLength={100} value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></div>
+              <div className="md:col-span-2"><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value.replace(/\D/g, "") })} /></div>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          <div><Label>E-mail</Label><Input type="email" maxLength={255} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
-          <div><Label>Telefon</Label><Input maxLength={32} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-          <div className="md:col-span-2"><Label>Adres</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="ul., nr, kod pocztowy, miasto" /></div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader><CardTitle>Dane kontaktowe</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              <div><Label>E-mail</Label><Input type="email" maxLength={255} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+              <div><Label>Telefon</Label><Input maxLength={32} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
+              <div className="md:col-span-2"><Label>Adres</Label><Input maxLength={255} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="ul., nr, kod pocztowy, miasto" /></div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <Card>
         <CardHeader>
