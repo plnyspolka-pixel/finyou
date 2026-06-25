@@ -14,7 +14,11 @@ import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export function ClientProfileSections({ showPasswordCard = true, includePersonal = true, onlyPersonal = false }: { showPasswordCard?: boolean; includePersonal?: boolean; onlyPersonal?: boolean }) {
+export type ClientProfileSectionKey = "company" | "bank" | "phone" | "bik" | "photos" | "income";
+
+export function ClientProfileSections({ showPasswordCard = true, includePersonal = true, onlyPersonal = false, sections, hideChrome = false }: { showPasswordCard?: boolean; includePersonal?: boolean; onlyPersonal?: boolean; sections?: ClientProfileSectionKey[]; hideChrome?: boolean }) {
+  const has = (k: ClientProfileSectionKey) => !sections || sections.includes(k);
+  const filtered = Array.isArray(sections);
   const { user } = useAuth();
   const [row, setRow] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
