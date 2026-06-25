@@ -156,8 +156,8 @@ function mulberry32(seed: number) {
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
-  // Shuffle photos so each render uses unique ones (with cycling if count > photos)
-  const shuffledPhotos = [...LANDING_OFFER_PHOTOS].sort(() => rand() - 0.5);
+  // Liczniki per typ — żeby tasować zdjęcia w obrębie właściwej puli
+  const typeIdx: Record<string, number> = { apartment: 0, house: 0, plot_building: 0, commercial: 0 };
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
   for (let i = 0; i < count; i++) {
@@ -170,16 +170,21 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       ? Math.round((28 + rand() * 8) * 2) / 2   // 28% – 36% step 0.5
       : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
     const figures = computeOfferFigures(amount, period, rate);
-    const minutesAgo = Math.floor(rand() * 60 * 22) + 3;
+    // Pierwsze 3 oferty są „świeże dziś" (3–180 min temu), reszta rozciągnięta na 7 dni
+    const minutesAgo = i < 3
+      ? Math.floor(rand() * 180) + 3
+      : Math.floor(rand() * 60 * 24 * 7) + 60;
     const formRoll = rand();
     const business_legal_form: "jdg" | "sp_zoo" | "sa" =
       formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa";
     const is_startup = rand() < 0.35;
+    const property_type = pick(PROPERTY_TYPES);
+    const photo_url = photoForType(property_type, typeIdx[property_type]!++);
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
       created_at: new Date(now - minutesAgo * 60_000).toISOString(),
-      property_type: pick(PROPERTY_TYPES),
+      property_type,
       city: pick(CITIES),
       loan_amount: amount,
       preferred_period_months: period,
@@ -193,7 +198,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       has_bik: rand() < 0.7,
       phone_verified: rand() < 0.9,
       bank_verified: rand() < 0.55,
-      photo_url: shuffledPhotos[i % shuffledPhotos.length]!,
+      photo_url,
     });
   }
   return items;
@@ -211,13 +216,20 @@ function timeAgo(iso: string): string {
   return `${days} dni temu`;
 }
 
+// Deterministyczny seed dzienny — codziennie inna pula ofert (≥3 świeże każdego dnia).
+function dailySeed(): number {
+  const d = new Date();
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+}
+
 export function RecentApplicationsList(_props: { initial?: RecentLoanApplicationItem[] } = {}) {
   const [seed, setSeed] = useState<number | null>(null);
   useEffect(() => {
-    setSeed(Math.floor(Math.random() * 1e9));
+    setSeed(dailySeed());
   }, []);
 
   const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 28)), [seed]);
+
 
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
