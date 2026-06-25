@@ -8,13 +8,41 @@ import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { LANDING_OFFER_PHOTOS } from "@/assets/landing-offer-photos";
 
-// Bez zdjęć — na landingu nie pokazujemy żadnych materiałów klientów (KW, dokumenty, fotki nieruchomości).
+// Zdjęcia z Unsplash — licencja darmowa, dozwolone użycie komercyjne (https://unsplash.com/license).
+// Używamy DEDYKOWANYCH zdjęć dla działek i nieruchomości komercyjnych — nigdy zdjęć mieszkań.
+const UNSPLASH = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`;
+
+const PLOT_PHOTOS = [
+  UNSPLASH("1500382017468-9049fed747ef"), // pole/łąka
+  UNSPLASH("1444858291040-58f756a3bdd6"), // działka z drzewami
+  UNSPLASH("1470071459604-3b5ec3a7fe05"), // łąka z lasem
+  UNSPLASH("1501785888041-af3ef285b470"), // teren zielony
+  UNSPLASH("1464822759023-fed622ff2c3b"), // pole pod zabudowę
+  UNSPLASH("1500530855697-b586d89ba3ee"), // ścieżka przez działkę
+];
+const COMMERCIAL_PHOTOS = [
+  UNSPLASH("1497366216548-37526070297c"), // biuro
+  UNSPLASH("1497366811353-6870744d04b2"), // open space
+  UNSPLASH("1545324418-cc1a3fa10c00"),    // lokal usługowy
+  UNSPLASH("1604328698692-f76ea9498e76"), // magazyn
+  UNSPLASH("1556761175-5973dc0f32e7"),    // sklep/witryna
+  UNSPLASH("1556909114-f6e7ad7d3136"),    // biurowiec
+];
+// Zdjęcia mieszkań/domów (od klientów) — używamy TYLKO dla apartment / house
+const APARTMENT_HOUSE_PHOTOS = LANDING_OFFER_PHOTOS;
+
 const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> = {
   apartment: { Icon: Building2, gradient: "from-sky-500/15 via-sky-500/5 to-transparent" },
   house: { Icon: Home, gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent" },
   plot_building: { Icon: Trees, gradient: "from-amber-500/15 via-amber-500/5 to-transparent" },
   commercial: { Icon: Store, gradient: "from-violet-500/15 via-violet-500/5 to-transparent" },
 };
+
+function photoForType(propertyType: string, idx: number): string {
+  if (propertyType === "plot_building") return PLOT_PHOTOS[idx % PLOT_PHOTOS.length]!;
+  if (propertyType === "commercial") return COMMERCIAL_PHOTOS[idx % COMMERCIAL_PHOTOS.length]!;
+  return APARTMENT_HOUSE_PHOTOS[idx % APARTMENT_HOUSE_PHOTOS.length]!;
+}
 
 
 // ---- Calculator-equivalent math (mirrors offer-calculator-panel.tsx) -------
