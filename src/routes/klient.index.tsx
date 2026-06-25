@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -91,10 +91,11 @@ function KlientDashboard() {
   const totalFiles = photoPaths.length + docCount;
 
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [thumbUrls, setThumbUrls] = useState<string[]>([]);
+  const [thumbs, setThumbs] = useState<{ url: string; path: string }[]>([]);
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
+  const qc = useQueryClient();
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
@@ -104,14 +105,47 @@ function KlientDashboard() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (photoPaths.length === 0) { setThumbUrls([]); return; }
+      if (photoPaths.length === 0) { setThumbs([]); return; }
+      const slice = photoPaths.slice(0, 6);
       const { data } = await supabase.storage
         .from("property-photos")
-        .createSignedUrls(photoPaths.slice(0, 6), 60 * 60);
-      if (!cancelled && data) setThumbUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+        .createSignedUrls(slice, 60 * 60);
+      if (!cancelled && data) {
+        setThumbs(data.map((d, i) => ({ url: d.signedUrl ?? "", path: slice[i] })).filter(t => t.url));
+      }
     })();
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);
+
+  const deletePhoto = async (path: string) => {
+    if (!propertyRow?.id) return;
+    if (!confirm("Usunąć to zdjęcie? Tej operacji nie można cofnąć.")) return;
+    try {
+      await supabase.storage.from("property-photos").remove([path]);
+      const next = photoPaths.filter((p) => p !== path);
+      const { error } = await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
+      if (error) throw error;
+      toast.success("Zdjęcie usunięte");
+      void refetchProperty();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się usunąć zdjęcia");
+    }
+  };
+
+  const deleteDocument = async (doc: { id: string; file_path?: string | null; file_name?: string | null }) => {
+    if (!confirm(`Usunąć dokument „${doc.file_name ?? ""}"? Tej operacji nie można cofnąć.`)) return;
+    try {
+      if (doc.file_path) {
+        await supabase.storage.from("documents").remove([doc.file_path]);
+      }
+      const { error } = await supabase.from("documents").delete().eq("id", doc.id);
+      if (error) throw error;
+      toast.success("Dokument usunięty");
+      void qc.invalidateQueries({ queryKey: ["client-documents", loanRow?.id] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się usunąć dokumentu");
+    }
+  };
 
   // Walidacja numeru KW: 4 znaki kodu sądu / 8 cyfr / 1 cyfra kontrolna
   // np. WA1M/00123456/7
@@ -317,18 +351,28 @@ function KlientDashboard() {
                   </Badge>
                 </div>
 
-                {thumbUrls.length > 0 && (
+                {thumbs.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
-                    {thumbUrls.map((u, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setPreviewOpen(true)}
-                        className="group relative aspect-square overflow-hidden rounded-xl border border-white/25 bg-white/10 ring-1 ring-white/10 transition hover:ring-2 hover:ring-white/60"
-                      >
-                        <img src={u} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
-                        <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-                      </button>
+                    {thumbs.map((t, i) => (
+                      <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-white/25 bg-white/10 ring-1 ring-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewOpen(true)}
+                          className="absolute inset-0 transition hover:ring-2 hover:ring-white/60"
+                          aria-label="Podgląd zdjęcia"
+                        >
+                          <img src={t.url} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); void deletePhoto(t.path); }}
+                          aria-label="Usuń zdjęcie"
+                          className="absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full bg-rose-500/90 text-white opacity-0 ring-1 ring-white/50 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 group-hover:opacity-100 focus:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -371,6 +415,14 @@ function KlientDashboard() {
                                 {d.document_type}
                               </Badge>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => void deleteDocument(d)}
+                              aria-label="Usuń dokument"
+                              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-rose-500/80 text-white ring-1 ring-white/30 transition hover:bg-rose-600"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </li>
                         ))}
                       </ul>
@@ -466,7 +518,12 @@ function KlientDashboard() {
           </div>
         ) : null;
 
-        return <InvestorProposalCalculator filesSlot={filesSlot} lockReason={lockReason} />;
+        return (
+          <>
+            {filesSlot}
+            <InvestorProposalCalculator lockReason={lockReason} />
+          </>
+        );
       })()}
 
 
