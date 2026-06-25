@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
@@ -65,11 +65,12 @@ function KlientDashboard() {
     queryKey: ["client-property", loanRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("properties")
-        .select("id, land_register_number, photos, loan_application_id")
+        .select("id, land_register_number, photos, loan_application_id, property_type")
         .eq("loan_application_id", loanRow!.id).maybeSingle();
       return data;
     },
     enabled: Boolean(loanRow?.id),
+    placeholderData: keepPreviousData,
   });
 
   const { data: documentsList } = useQuery({
@@ -356,7 +357,7 @@ function KlientDashboard() {
                   : null;
 
         const filesSlot = loanRow?.id ? (
-          <div className="grid items-stretch gap-6 lg:grid-cols-2">
+          <div className="grid items-stretch gap-0 lg:grid-cols-2 lg:gap-0">
             {/* === Twoje pliki === */}
             <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
 
