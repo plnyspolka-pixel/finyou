@@ -170,6 +170,7 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
       <>
 
 
+      {has("company") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
