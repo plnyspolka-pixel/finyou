@@ -272,7 +272,7 @@ export function InvestorProposalCalculator({
           >
             {sendingToInvestors
               ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
-              : <><Send className="mr-3 h-6 w-6" />Wyślij wniosek</>}
+              : <><Send className="mr-3 h-6 w-6" />Zaakceptuj warunki</>}
           </Button>
         </div>
       )}
