@@ -42,6 +42,8 @@ export function InvestorProposalCalculator({
   lockReason?: string | null;
 } = {}) {
   const { user } = useAuth();
+  const qc = useQueryClient();
+
   const [loading, setLoading] = useState(true);
   const [loan, setLoan] = useState<any | null>(null);
   const [prop, setProp] = useState<any | null>(null);
