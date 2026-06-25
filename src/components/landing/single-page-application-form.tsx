@@ -246,11 +246,19 @@ const STEPS = [
 type StepId = 1 | 2 | 3;
 
 
-export function SinglePageApplicationForm() {
+export type PrefilledContact = {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+};
+
+export function SinglePageApplicationForm({ prefilledContact }: { prefilledContact?: PrefilledContact } = {}) {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<StepId>(1);
+  const skipContact = Boolean(prefilledContact?.email);
+  const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
 
