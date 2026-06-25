@@ -19,7 +19,7 @@ export const listMetaLeadForms = createServerFn({ method: "GET" })
         .from("meta_lead_forms")
         .select("id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, last_lead_at, total_leads_pulled")
         .order("form_name", { ascending: true }),
-      supabaseAdmin.from("user_roles").select("user_id, role").in("role", ["posrednik", "administrator", "operator"]),
+      supabaseAdmin.from("user_roles").select("user_id, role").in("role", ["administrator", "operator"]),
       supabaseAdmin.from("profiles").select("user_id, first_name, last_name, email"),
     ]);
     const profMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
