@@ -339,7 +339,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       Wniosek złożony po przejściu kalkulatora
                     </div>
 
-                    <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                    <div className="mt-2 flex min-h-[3.25rem] flex-wrap content-start gap-1 text-[10px]">
                       {it.is_startup && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
                       )}
@@ -376,17 +376,16 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-white/60">Rata miesięczna</div>
                         <div className="tabular-nums font-bold text-white">{formatPLN(f.monthly)}</div>
-                        {f.balloon > 0 && (
-                          <div className="mt-0.5 text-[10px] text-white/60">
-                            + balon {formatPLN(f.balloon)}
-                          </div>
-                        )}
+                        <div className="mt-0.5 min-h-[14px] text-[10px] text-white/60">
+                          {f.balloon > 0 ? <>+ balon {formatPLN(f.balloon)}</> : null}
+                        </div>
                       </div>
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-white/60">Roczna stopa zwrotu</div>
                         <div className="tabular-nums font-bold text-emerald-300">
                           {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
                         </div>
+                        <div className="mt-0.5 min-h-[14px]" aria-hidden />
                       </div>
                       <div className="col-span-2 rounded-xl bg-white/10 p-3 ring-1 ring-white/15">
                         <div className="text-[11px] uppercase tracking-wide text-white/70">
@@ -415,7 +414,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     </div>
                     </div>
 
-                    <details className="group mt-3 rounded-xl bg-white/5 ring-1 ring-white/10">
+                    <details className="group mt-auto rounded-xl bg-white/5 ring-1 ring-white/10">
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10">
                         <span>Harmonogram spłat ({it.preferred_period_months} rat{f.balloon > 0 ? " + balon" : ""})</span>
                         <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
