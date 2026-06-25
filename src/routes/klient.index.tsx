@@ -224,160 +224,251 @@ function KlientDashboard() {
         </div>
       </FancyShell>
 
-      <InvestorProposalCalculator />
+      {(() => {
+        const propertyType = String((propertyRow as any)?.property_type ?? "") as
+          | "mieszkanie" | "dom" | "grunt_rolny" | "dzialka_budowlana" | "lokal_uslugowy" | "inna" | "";
 
-      {loanRow?.id && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* === Twoje pliki (fancy) === */}
-          <FancyShell>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                  <FolderOpen className="h-5 w-5" strokeWidth={2.5} />
-                </span>
-                <div className="flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                  <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Twoje pliki</div>
-                  <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
-                    Zdjęcia nieruchomości i dokumenty
-                  </div>
-                </div>
-                <Badge className="border-white/30 bg-white/15 font-bold text-white backdrop-blur-sm">
-                  {totalFiles}
-                </Badge>
-              </div>
+        const HINTS: Record<string, { title: string; items: string[] }> = {
+          mieszkanie: {
+            title: "Co przygotować przy mieszkaniu",
+            items: [
+              "Zdjęcia każdego pomieszczenia + 1–2 z zewnątrz budynku",
+              "Numer KW mieszkania",
+              "Rzut mieszkania (jeśli masz)",
+              "Akt notarialny / dokument własności",
+            ],
+          },
+          dom: {
+            title: "Co przygotować przy domu",
+            items: [
+              "Zdjęcia domu z 4 stron + wnętrza + działki",
+              "Numer KW",
+              "Mapka działki / wypis z rejestru gruntów",
+              "Akt notarialny / dokument własności",
+            ],
+          },
+          grunt_rolny: {
+            title: "Co przygotować przy gruncie rolnym",
+            items: [
+              "Zdjęcia działki (najlepiej z drona lub z kilku stron)",
+              "Numer KW",
+              "Wypis i wyrys z rejestru gruntów",
+              "Informacja o klasie gruntu i przeznaczeniu",
+            ],
+          },
+          dzialka_budowlana: {
+            title: "Co przygotować przy działce budowlanej",
+            items: [
+              "Zdjęcia działki i okolicy (dojazd, media)",
+              "Numer KW",
+              "Wypis i wyrys, MPZP lub decyzja o warunkach zabudowy",
+              "Informacja o mediach (prąd, woda, kanalizacja)",
+            ],
+          },
+          lokal_uslugowy: {
+            title: "Co przygotować przy lokalu usługowym",
+            items: [
+              "Zdjęcia wnętrza, wejścia i witryny",
+              "Numer KW",
+              "Rzut lokalu / metraż",
+              "Umowa najmu (jeśli wynajmowany)",
+            ],
+          },
+          inna: {
+            title: "Co przygotować",
+            items: [
+              "Zdjęcia nieruchomości z różnych ujęć",
+              "Numer KW (jeśli jest)",
+              "Dokumenty potwierdzające własność",
+              "Wszystko, co pomoże inwestorowi ocenić wartość",
+            ],
+          },
+        };
+        const hint = propertyType ? HINTS[propertyType] : null;
 
-              {totalFiles === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 px-4 py-8 text-center text-sm text-white/75">
-                  Nie wgrałeś jeszcze żadnych zdjęć ani dokumentów.
-                </div>
-              ) : (
-                <>
-                  {thumbUrls.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {thumbUrls.map((u, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setPreviewOpen(true)}
-                          className="group relative aspect-square overflow-hidden rounded-xl border border-white/25 bg-white/10 ring-1 ring-white/10 transition hover:ring-2 hover:ring-white/60"
-                        >
-                          <img src={u} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
-                          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-                        </button>
-                      ))}
+        const lockReason =
+          !loanRow?.id
+            ? null
+            : (totalFiles === 0 && !kwValidation.ok)
+              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje poniżej)."
+              : totalFiles === 0
+                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja poniżej)."
+                : !kwValidation.ok
+                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja poniżej)."
+                  : null;
+
+        const filesSlot = loanRow?.id ? (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* === Twoje pliki (fancy) === */}
+            <FancyShell>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                    <FolderOpen className="h-5 w-5" strokeWidth={2.5} />
+                  </span>
+                  <div className="flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                    <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Twoje pliki</div>
+                    <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
+                      Zdjęcia nieruchomości i dokumenty
                     </div>
-                  )}
+                  </div>
+                  <Badge className="border-white/30 bg-white/15 font-bold text-white backdrop-blur-sm">
+                    {totalFiles}
+                  </Badge>
+                </div>
 
-                  {docCount > 0 && (
-                    <ul className="space-y-1.5">
-                      {documentsList!.map((d) => (
-                        <li
-                          key={d.id}
-                          className="flex items-center gap-2.5 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm backdrop-blur-sm transition hover:bg-white/15"
-                        >
-                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/20 ring-1 ring-white/30">
-                            <FileText className="h-3.5 w-3.5" />
-                          </span>
-                          <span className="flex-1 truncate font-medium text-white">{d.file_name}</span>
-                          {d.document_type && (
-                            <Badge className="border-white/30 bg-white/10 text-[10px] font-medium uppercase tracking-wider text-white/90">
-                              {d.document_type}
-                            </Badge>
-                          )}
+                {thumbUrls.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {thumbUrls.map((u, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setPreviewOpen(true)}
+                        className="group relative aspect-square overflow-hidden rounded-xl border border-white/25 bg-white/10 ring-1 ring-white/10 transition hover:ring-2 hover:ring-white/60"
+                      >
+                        <img src={u} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                        <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {hint && (
+                  <div className="rounded-2xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
+                    <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-white/85">
+                      {hint.title}
+                    </div>
+                    <ul className="space-y-1 text-xs text-white/85">
+                      {hint.items.map((it, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                          <span>{it}</span>
                         </li>
                       ))}
                     </ul>
-                  )}
+                  </div>
+                )}
 
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <div className="flex gap-3 text-[11px] text-white/75">
-                      <span className="inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {photoPaths.length} zdjęć</span>
-                      <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" /> {docCount} dokumentów</span>
+                {totalFiles === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 px-4 py-6 text-center text-sm text-white/80">
+                    Nie wgrałeś jeszcze żadnych zdjęć ani dokumentów. Dodaj je w sekcji „Zdjęcia nieruchomości" i „Dokumenty dochodowe" poniżej.
+                  </div>
+                ) : (
+                  <>
+                    {docCount > 0 && (
+                      <ul className="space-y-1.5">
+                        {documentsList!.map((d) => (
+                          <li
+                            key={d.id}
+                            className="flex items-center gap-2.5 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm backdrop-blur-sm transition hover:bg-white/15"
+                          >
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/20 ring-1 ring-white/30">
+                              <FileText className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="flex-1 truncate font-medium text-white">{d.file_name}</span>
+                            {d.document_type && (
+                              <Badge className="border-white/30 bg-white/10 text-[10px] font-medium uppercase tracking-wider text-white/90">
+                                {d.document_type}
+                              </Badge>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <div className="flex gap-3 text-[11px] text-white/75">
+                        <span className="inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {photoPaths.length} zdjęć</span>
+                        <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" /> {docCount} dokumentów</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => setPreviewOpen(true)}
+                        className="rounded-xl bg-white/20 font-semibold uppercase tracking-[0.12em] text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/30"
+                      >
+                        <Eye className="mr-1.5 h-4 w-4" /> Podgląd
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => setPreviewOpen(true)}
-                      className="rounded-xl bg-white/20 font-semibold uppercase tracking-[0.12em] text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/30"
-                    >
-                      <Eye className="mr-1.5 h-4 w-4" /> Podgląd
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </FancyShell>
+                  </>
+                )}
+              </div>
+            </FancyShell>
 
-          {/* === Numer KW (fancy) === */}
-          <FancyShell>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                  <BookText className="h-5 w-5" strokeWidth={2.5} />
-                </span>
-                <div className="leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
-                  <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Numer księgi wieczystej</div>
-                  <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
-                    Wpisz numer KW swojej nieruchomości
+            {/* === Numer KW (fancy) === */}
+            <FancyShell>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                    <BookText className="h-5 w-5" strokeWidth={2.5} />
+                  </span>
+                  <div className="leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                    <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Numer księgi wieczystej</div>
+                    <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
+                      Wpisz numer KW swojej nieruchomości
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="relative">
-                <Input
-                  id="kw"
-                  value={kw}
-                  onChange={(e) => setKw(e.target.value.toUpperCase())}
-                  onBlur={() => setKwTouched(true)}
-                  placeholder="np. WA1M/00123456/7"
-                  aria-invalid={showKwError || undefined}
-                  aria-describedby="kw-help"
-                  className={`h-14 rounded-2xl border-2 bg-white/10 pl-12 pr-12 text-lg font-bold tracking-wider tabular-nums text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:ring-2 ${
-                    showKwError
-                      ? "border-rose-400/70 focus-visible:border-rose-300 focus-visible:ring-rose-300/40"
-                      : "border-white/30 focus-visible:border-white/70 focus-visible:ring-white/40"
-                  }`}
-                />
-                <BookText className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${showKwError ? "text-rose-300" : "text-white/80"}`} />
-                {kwValidation.ok && (
-                  <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white/25 ring-1 ring-white/40 shadow backdrop-blur-sm">
-                    <Check className="h-4 w-4" strokeWidth={3} />
-                  </span>
-                )}
-                {showKwError && (
-                  <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-rose-500/90 text-white shadow ring-1 ring-rose-300/60">
-                    <span className="text-sm font-black leading-none">!</span>
-                  </span>
-                )}
-              </div>
+                <div className="relative">
+                  <Input
+                    id="kw"
+                    value={kw}
+                    onChange={(e) => setKw(e.target.value.toUpperCase())}
+                    onBlur={() => setKwTouched(true)}
+                    placeholder="np. WA1M/00123456/7"
+                    aria-invalid={showKwError || undefined}
+                    aria-describedby="kw-help"
+                    className={`h-14 rounded-2xl border-2 bg-white/10 pl-12 pr-12 text-lg font-bold tracking-wider tabular-nums text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:ring-2 ${
+                      showKwError
+                        ? "border-rose-400/70 focus-visible:border-rose-300 focus-visible:ring-rose-300/40"
+                        : "border-white/30 focus-visible:border-white/70 focus-visible:ring-white/40"
+                    }`}
+                  />
+                  <BookText className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${showKwError ? "text-rose-300" : "text-white/80"}`} />
+                  {kwValidation.ok && (
+                    <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white/25 ring-1 ring-white/40 shadow backdrop-blur-sm">
+                      <Check className="h-4 w-4" strokeWidth={3} />
+                    </span>
+                  )}
+                  {showKwError && (
+                    <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-rose-500/90 text-white shadow ring-1 ring-rose-300/60">
+                      <span className="text-sm font-black leading-none">!</span>
+                    </span>
+                  )}
+                </div>
 
-              {showKwError ? (
-                <div
-                  id="kw-help"
-                  role="alert"
-                  className="rounded-xl border border-rose-300/40 bg-rose-500/15 px-3 py-2 text-xs text-rose-50 backdrop-blur-sm"
+                {showKwError ? (
+                  <div
+                    id="kw-help"
+                    role="alert"
+                    className="rounded-xl border border-rose-300/40 bg-rose-500/15 px-3 py-2 text-xs text-rose-50 backdrop-blur-sm"
+                  >
+                    <p className="font-semibold">{kwValidation.error}</p>
+                    {kwValidation.hint && <p className="mt-0.5 text-rose-100/85">{kwValidation.hint}</p>}
+                  </div>
+                ) : (
+                  <p id="kw-help" className="text-[11px] text-white/70">
+                    Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold text-white/90">WA1M/00123456/7</span>).
+                  </p>
+                )}
+
+                <Button
+                  size="lg"
+                  onClick={() => void saveKw()}
+                  disabled={savingKw || !propertyRow?.id || !kwValidation.ok}
+                  className="w-full rounded-2xl bg-white/15 text-base font-bold uppercase tracking-[0.14em] text-white ring-1 ring-white/30 backdrop-blur-sm shadow-[0_10px_30px_-10px_oklch(0.15_0.05_265/0.7)] hover:bg-white/25 disabled:opacity-50"
                 >
-                  <p className="font-semibold">{kwValidation.error}</p>
-                  {kwValidation.hint && <p className="mt-0.5 text-rose-100/85">{kwValidation.hint}</p>}
-                </div>
-              ) : (
-                <p id="kw-help" className="text-[11px] text-white/70">
-                  Format: 4 znaki sądu / 8 cyfr / cyfra kontrolna (np. <span className="font-mono font-semibold text-white/90">WA1M/00123456/7</span>).
-                </p>
-              )}
+                  <Save className="mr-2 h-5 w-5" />
+                  {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
+                </Button>
+              </div>
+            </FancyShell>
+          </div>
+        ) : null;
 
-              <Button
-                size="lg"
-                onClick={() => void saveKw()}
-                disabled={savingKw || !propertyRow?.id || !kwValidation.ok}
-                className="w-full rounded-2xl bg-white/15 text-base font-bold uppercase tracking-[0.14em] text-white ring-1 ring-white/30 backdrop-blur-sm shadow-[0_10px_30px_-10px_oklch(0.15_0.05_265/0.7)] hover:bg-white/25 disabled:opacity-50"
-              >
-                <Save className="mr-2 h-5 w-5" />
-                {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
-              </Button>
-            </div>
-          </FancyShell>
-        </div>
-      )}
+        return <InvestorProposalCalculator filesSlot={filesSlot} lockReason={lockReason} />;
+      })()}
+
 
       {/* === Info: weryfikuj, by obniżyć koszty === */}
       <FancyShell>
