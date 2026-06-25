@@ -41,7 +41,7 @@ function MojeWnioski() {
         subtitle="Wnioski wprowadzone przez Ciebie lub przypisane do Twojej obsługi."
         actions={
           <Button asChild>
-            <Link to="/wniosek-formularz"><FilePlus2 className="mr-2 h-4 w-4" />Wprowadź nowy wniosek</Link>
+            <Link to="/klient"><FilePlus2 className="mr-2 h-4 w-4" />Wprowadź nowy wniosek</Link>
           </Button>
         }
       />
