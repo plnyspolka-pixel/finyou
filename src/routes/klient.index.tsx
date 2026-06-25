@@ -438,12 +438,35 @@ function KlientDashboard() {
                   </div>
                 )}
 
+                <label className="block">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => { const fs = e.target.files; e.target.value = ""; void uploadFiles(fs); }}
+                  />
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/40 bg-white/10 px-4 py-4 text-sm font-bold uppercase tracking-[0.14em] text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20"
+                  >
+                    {uploading
+                      ? <><Loader2 className="h-5 w-5 animate-spin" /> Wysyłam…</>
+                      : <><Upload className="h-5 w-5" /> Dograj zdjęcia / dokumenty</>}
+                  </span>
+                </label>
+
                 {totalFiles === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/30 bg-white/5 px-4 py-6 text-center text-sm text-white/80">
-                    Nie wgrałeś jeszcze żadnych zdjęć ani dokumentów. Dodaj je w sekcji „Zdjęcia nieruchomości" i „Dokumenty dochodowe" poniżej.
+                  <div className="rounded-2xl border border-dashed border-white/25 bg-white/5 px-4 py-4 text-center text-xs text-white/75">
+                    Wybierz typ nieruchomości powyżej — podpowiemy, co dograć.
                   </div>
                 ) : (
+                  <></>
+                )}
+                {totalFiles > 0 && (
                   <>
+
                     {docCount > 0 && (
                       <ul className="space-y-1.5">
                         {documentsList!.map((d) => (
