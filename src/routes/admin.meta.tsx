@@ -154,7 +154,9 @@ function MetaPage() {
       <Card>
         <CardHeader>
           <CardTitle>Formularze leadowe — przypisanie</CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">Każdy lead z danego formularza trafia jako "swój" do wybranej osoby (panel /posrednik).</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Każdy lead z danego formularza trafia jako „swój" do wybranej osoby (panel /posrednik) <strong>oraz</strong> automatycznie zakłada konto w wybranej kategorii: /klient, /posrednik lub /inwestor (z magic linkiem w mailach).
+          </p>
         </CardHeader>
         <CardContent>
           {!formsData?.forms.length ? (
@@ -164,6 +166,7 @@ function MetaPage() {
               <TableHeader><TableRow>
                 <TableHead>Formularz</TableHead><TableHead>Strona</TableHead>
                 <TableHead className="text-right">Leady</TableHead><TableHead>Ostatni lead</TableHead>
+                <TableHead className="w-44">Kategoria konta</TableHead>
                 <TableHead className="w-72">Właściciel leadów</TableHead>
               </TableRow></TableHeader>
               <TableBody>
@@ -173,6 +176,19 @@ function MetaPage() {
                     <TableCell className="text-sm">{f.page_name ?? "—"}</TableCell>
                     <TableCell className="text-right">{f.total_leads_pulled ?? 0}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{f.last_lead_at ? formatDateTime(f.last_lead_at) : "—"}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={(f.assigned_role ?? "klient")}
+                        onValueChange={(v) => setRole.mutate({ formId: f.id, role: v as any })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="klient">Klient (/klient)</SelectItem>
+                          <SelectItem value="operator">Pośrednik (/posrednik)</SelectItem>
+                          <SelectItem value="inwestor">Inwestor (/inwestor)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                     <TableCell>
                       <Select
                         value={f.assigned_user_id ?? "__none__"}
@@ -193,6 +209,7 @@ function MetaPage() {
             </Table>
           )}
         </CardContent>
+
       </Card>
 
 
