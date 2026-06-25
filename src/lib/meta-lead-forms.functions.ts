@@ -17,7 +17,7 @@ export const listMetaLeadForms = createServerFn({ method: "GET" })
     const [{ data: forms }, { data: roles }, { data: profiles }] = await Promise.all([
       supabaseAdmin
         .from("meta_lead_forms")
-        .select("id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, last_lead_at, total_leads_pulled")
+        .select("id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, assigned_role, last_lead_at, total_leads_pulled")
         .order("form_name", { ascending: true }),
       supabaseAdmin.from("user_roles").select("user_id, role").in("role", ["administrator", "operator"]),
       supabaseAdmin.from("profiles").select("user_id, first_name, last_name, email"),
@@ -53,6 +53,21 @@ export const setMetaLeadFormAssignee = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const setMetaLeadFormRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { formId: string; role: "klient" | "operator" | "inwestor" }) => d)
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .update({ assigned_role: data.role as any })
+      .eq("id", data.formId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 // Backfill: dla wszystkich klientów ze źródła meta_lead (lub starych meta_leads) —
 // załóż konto auth (rola: klient) jeśli jeszcze go nie ma. Magic linki generowane są

@@ -60,11 +60,14 @@ async function upsertClientAndApplication(opts: {
   formId?: string | null;
 }): Promise<{ loanApplicationId: string | null; clientId: string | null; returnLink: string | null; firstName: string | null }> {
   let assignedUserId: string | null = null;
+  let assignedRole: "klient" | "operator" | "inwestor" = "klient";
   if (opts.formId) {
     const { data: form } = await supabaseAdmin
-      .from("meta_lead_forms").select("assigned_user_id").eq("meta_form_id", String(opts.formId)).maybeSingle();
+      .from("meta_lead_forms").select("assigned_user_id, assigned_role").eq("meta_form_id", String(opts.formId)).maybeSingle();
     assignedUserId = (form as any)?.assigned_user_id ?? null;
+    assignedRole = ((form as any)?.assigned_role ?? "klient") as typeof assignedRole;
   }
+
   const phoneNorm = opts.phone ? normPhone(opts.phone) : null;
   const { first, last } = splitName(opts.fullName);
 
@@ -118,42 +121,24 @@ async function upsertClientAndApplication(opts: {
     }
   }
 
-  // 1b) Auto-create auth user + magic link (rola: klient) – tylko jeśli mamy email
+  // 1b) Auto-create auth user + magic link – w roli przypisanej do formularza
   let magicLink: string | null = null;
   if (opts.email && clientId) {
     try {
-      let authUserId: string | null = null;
-      const { data: createRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-        email: opts.email,
-        email_confirm: true,
-        user_metadata: { first_name: first, last_name: last, source: "meta_lead" },
+      const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
+      const r = await ensureKlientAccountAndMagicLink(opts.email, {
+        firstName: first, lastName: last, source: "meta_lead", role: assignedRole,
       });
-      if (createErr && !String(createErr.message ?? "").toLowerCase().includes("registered")) {
-        console.error("[meta-leads-webhook] createUser error", createErr);
+      if (r.userId) {
+        await supabaseAdmin.from("clients").update({ user_id: r.userId }).eq("id", clientId);
       }
-      authUserId = createRes?.user?.id ?? null;
-      if (!authUserId) {
-        const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-        const found = list?.users?.find((u) => (u.email ?? "").toLowerCase() === opts.email!.toLowerCase());
-        authUserId = found?.id ?? null;
-      }
-      if (authUserId) {
-        await supabaseAdmin.from("clients").update({ user_id: authUserId }).eq("id", clientId);
-        await supabaseAdmin.from("user_roles").upsert(
-          { user_id: authUserId, role: "klient" as any },
-          { onConflict: "user_id,role" },
-        );
-        const { data: linkRes } = await supabaseAdmin.auth.admin.generateLink({
-          type: "magiclink",
-          email: opts.email,
-          options: { redirectTo: `${opts.origin}/klient` },
-        });
-        magicLink = (linkRes?.properties as any)?.action_link ?? null;
-      }
+      magicLink = r.magicLink;
     } catch (e) {
       console.error("[meta-leads-webhook] auth-bootstrap error", e);
     }
   }
+
+
 
   // 2) Wniosek — szukaj istniejącego "nowy_lead" tego klienta, inaczej utwórz
   const { data: existingApp } = await supabaseAdmin
