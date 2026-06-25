@@ -1,19 +1,85 @@
 import type { ReactNode } from "react";
 
+type Variant = "navy" | "silver";
+
 /**
- * Wspólny "premium" kontener w stylu przycisku "Twoja oferta":
- * obracający się conic-gradient + ciemne navy tło + dryfujące blob-y + smugi.
- * Wymusza biały kolor tekstu wewnątrz (dla Label, p itd.).
+ * Wspólny "premium" kontener:
+ * - navy (domyślny): obracający się conic-gradient + ciemne navy tło + dryfujące blob-y
+ * - silver: jasna, srebrno-platynowa wersja w tym samym duchu (ciemny tekst, srebrne smugi)
  */
 export function FancyShell({
   children,
   className = "",
   innerClassName = "",
+  variant = "navy",
 }: {
   children: ReactNode;
   className?: string;
   innerClassName?: string;
+  variant?: Variant;
 }) {
+  if (variant === "silver") {
+    return (
+      <div
+        className={`relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-18px_oklch(0.55_0.02_265/0.45)] ${className}`}
+      >
+        <span
+          aria-hidden
+          className="absolute left-1/2 top-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "conic-gradient(from 0deg, oklch(0.95 0.01 260), oklch(0.78 0.02 250), oklch(0.88 0.015 255), oklch(0.70 0.02 260), oklch(0.95 0.01 260))",
+            animation: "fy-kw-spin 9s linear infinite",
+          }}
+        />
+        <div className={`relative overflow-hidden rounded-[22px] p-5 text-slate-800 md:p-6 ${innerClassName}`}>
+          <span
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(120% 140% at 0% 0%, oklch(0.99 0.005 250) 0%, oklch(0.94 0.01 255) 55%, oklch(0.88 0.015 260) 100%)",
+            }}
+          />
+          <span
+            aria-hidden
+            className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl"
+            style={{
+              background: "radial-gradient(circle, oklch(0.85 0.03 250 / 0.85), transparent 70%)",
+              animation: "fy-kw-drift-a 11s ease-in-out infinite alternate",
+            }}
+          />
+          <span
+            aria-hidden
+            className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl"
+            style={{
+              background: "radial-gradient(circle, oklch(0.92 0.02 255 / 0.85), transparent 70%)",
+              animation: "fy-kw-drift-b 13s ease-in-out infinite alternate",
+            }}
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 opacity-40 mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "linear-gradient(115deg, transparent 0 48%, oklch(0.98 0.005 250 / 0.55) 48% 49%, transparent 49% 62%, oklch(0.96 0.005 250 / 0.45) 62% 62.5%, transparent 62.5%)",
+              backgroundSize: "180% 100%",
+              animation: "fy-kw-lines 9s linear infinite",
+            }}
+          />
+          <div className="relative">{children}</div>
+        </div>
+        <style>{`
+          @keyframes fy-kw-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+          @keyframes fy-kw-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
+          @keyframes fy-kw-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
+          @keyframes fy-kw-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
+          @keyframes fy-kw-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] ${className}`}
