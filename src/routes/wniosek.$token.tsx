@@ -50,7 +50,7 @@ function WniosekReturn() {
 
       // 3) Nie zalogowany — zapamiętujemy token do claim po zalogowaniu/rejestracji
       try { localStorage.setItem(CLAIM_KEY, token); } catch { /* noop */ }
-      void navigate({ to: "/wniosek-start" });
+      void navigate({ to: "/klient" });
     })();
   }, [token, navigate, runClaim]);
 
