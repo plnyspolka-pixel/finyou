@@ -764,7 +764,11 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
 
       {open && (
         <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
-          <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[open]} />
+          {open === "description" ? (
+            <InvestorDescriptionCard loanId={loanId} initialText={String(loanDesc ?? "")} />
+          ) : (
+            <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[open as Exclude<TileKey, "description">]} />
+          )}
         </FancyShell>
       )}
     </section>
