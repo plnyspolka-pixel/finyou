@@ -491,7 +491,7 @@ function KlientDashboard() {
       </FancyShell>
 
       {/* === Pełny profil — dane, weryfikacje, dokumenty === */}
-      <ClientProfileSections showPasswordCard={false} />
+      <ClientProfileSections showPasswordCard={false} includePersonal={false} />
 
 
 
