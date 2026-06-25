@@ -210,6 +210,7 @@ export async function runMetaLeadsSync(): Promise<{
             const { data: app } = await supabaseAdmin.from("loan_applications").insert({
               client_id: clientId, status: "nowy_lead", source: "meta_lead",
               return_link_token: tok, return_link: returnLink, current_form_step: 1,
+              assigned_operator: (form as any).assigned_user_id ?? null,
             }).select("id").single();
             loanApplicationId = app?.id ?? null;
           }
