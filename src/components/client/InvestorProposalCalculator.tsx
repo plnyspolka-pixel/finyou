@@ -161,22 +161,37 @@ export function InvestorProposalCalculator({
     }
     setSendingToInvestors(true);
     try {
+      const acceptedSnapshot = {
+        loan_amount: amount,
+        period_months: months,
+        annual_rate: annualRate,
+        max_monthly_payment: maxPayment || null,
+        property_type: propertyType,
+        accepted_at: new Date().toISOString(),
+      };
       const { error } = await supabase.from("loan_applications").update({
         loan_amount: amount,
         preferred_period_months: months,
         annual_investor_rate: annualRate,
         max_monthly_payment: maxPayment || null,
+        accepted_terms: acceptedSnapshot,
+        accepted_terms_at: acceptedSnapshot.accepted_at,
+        accepted_loan_amount: amount,
+        accepted_period_months: months,
+        accepted_annual_rate: annualRate,
+        accepted_max_monthly_payment: maxPayment || null,
         status: "wyslany_do_inwestorow",
       }).eq("id", loan.id);
       if (error) throw error;
-      toast.success("Wniosek wysłany do inwestorów. Powiadomimy Cię o decyzji.");
+      toast.success("Warunki zaakceptowane i zapisane. Wniosek trafił do inwestorów.");
       setRefreshTick((t) => t + 1);
     } catch (e: any) {
-      toast.error(e?.message ?? "Nie udało się wysłać wniosku");
+      toast.error(e?.message ?? "Nie udało się zapisać warunków");
     } finally {
       setSendingToInvestors(false);
     }
   };
+
 
   const statusLabel = loan ? (loanStatusLabels[loan.status as keyof typeof loanStatusLabels] ?? loan.status) : null;
 
@@ -262,6 +277,28 @@ export function InvestorProposalCalculator({
         </div>
       </fieldset>
 
+      {loan?.accepted_terms_at && (
+        <FancyShell>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald-400 text-emerald-950 shadow-md">
+                <Check className="h-4 w-4" strokeWidth={3} />
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-white">
+                Zaakceptowane warunki pożyczki
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-white md:grid-cols-4">
+              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Kwota</div><div className="text-lg font-bold">{Number(loan.accepted_loan_amount ?? 0).toLocaleString("pl-PL")} zł</div></div>
+              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Okres</div><div className="text-lg font-bold">{loan.accepted_period_months} mies.</div></div>
+              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Oproc. roczne</div><div className="text-lg font-bold">{Number(loan.accepted_annual_rate ?? 0)}%</div></div>
+              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Maks. rata</div><div className="text-lg font-bold">{loan.accepted_max_monthly_payment ? `${Number(loan.accepted_max_monthly_payment).toLocaleString("pl-PL")} zł` : "—"}</div></div>
+            </div>
+            <p className="text-xs text-white/70">Zaakceptowano: {new Date(loan.accepted_terms_at).toLocaleString("pl-PL")}</p>
+          </div>
+        </FancyShell>
+      )}
+
       {!locked && (
         <div className="space-y-3">
           {missingForInvestors.length > 0 && null}
@@ -272,10 +309,11 @@ export function InvestorProposalCalculator({
           >
             {sendingToInvestors
               ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
-              : <><Send className="mr-3 h-6 w-6" />Zaakceptuj warunki</>}
+              : <><Send className="mr-3 h-6 w-6" />{loan?.accepted_terms_at ? "Zaktualizuj warunki" : "Zaakceptuj warunki"}</>}
           </Button>
         </div>
       )}
+
     </div>
   );
 }
