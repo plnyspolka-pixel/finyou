@@ -369,9 +369,8 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       </div>
                       <span className="text-xs text-white/70">{timeAgo(it.created_at)}</span>
                     </div>
-                    <div className="mt-1 text-xs text-white/70">
-                      Wniosek złożony po przejściu kalkulatora
-                    </div>
+
+
 
                     <div className="mt-2 flex min-h-[3.25rem] flex-wrap content-start gap-1 text-[10px]">
                       {it.is_startup && (
