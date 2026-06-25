@@ -489,6 +489,8 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           </Card>
         </>
       )}
+      </>
+      )}
     </div>
   );
 }
