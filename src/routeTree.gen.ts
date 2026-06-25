@@ -39,8 +39,9 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
+import { Route as PosrednikWnioskiRouteImport } from './routes/posrednik.wnioski'
+import { Route as PosrednikNowyWniosekRouteImport } from './routes/posrednik.nowy-wniosek'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
-import { Route as PosrednikKreatorDokumentowRouteImport } from './routes/posrednik.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -279,17 +280,21 @@ const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
   path: '/propozycje/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PosrednikWnioskiRoute = PosrednikWnioskiRouteImport.update({
+  id: '/wnioski',
+  path: '/wnioski',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikNowyWniosekRoute = PosrednikNowyWniosekRouteImport.update({
+  id: '/nowy-wniosek',
+  path: '/nowy-wniosek',
+  getParentRoute: () => PosrednikRoute,
+} as any)
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
   getParentRoute: () => PosrednikRoute,
 } as any)
-const PosrednikKreatorDokumentowRoute =
-  PosrednikKreatorDokumentowRouteImport.update({
-    id: '/kreator-dokumentow',
-    path: '/kreator-dokumentow',
-    getParentRoute: () => PosrednikRoute,
-  } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -818,8 +823,9 @@ export interface FileRoutesByFullPath {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -935,8 +941,9 @@ export interface FileRoutesByTo {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1057,8 +1064,9 @@ export interface FileRoutesById {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1180,8 +1188,9 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/posrednik/nowy-wniosek'
+    | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1297,8 +1306,9 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/posrednik/nowy-wniosek'
+    | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1418,8 +1428,9 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
+    | '/posrednik/nowy-wniosek'
+    | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1748,18 +1759,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PropozycjeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/posrednik/wnioski': {
+      id: '/posrednik/wnioski'
+      path: '/wnioski'
+      fullPath: '/posrednik/wnioski'
+      preLoaderRoute: typeof PosrednikWnioskiRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/nowy-wniosek': {
+      id: '/posrednik/nowy-wniosek'
+      path: '/nowy-wniosek'
+      fullPath: '/posrednik/nowy-wniosek'
+      preLoaderRoute: typeof PosrednikNowyWniosekRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
     '/posrednik/leady': {
       id: '/posrednik/leady'
       path: '/leady'
       fullPath: '/posrednik/leady'
       preLoaderRoute: typeof PosrednikLeadyRouteImport
-      parentRoute: typeof PosrednikRoute
-    }
-    '/posrednik/kreator-dokumentow': {
-      id: '/posrednik/kreator-dokumentow'
-      path: '/kreator-dokumentow'
-      fullPath: '/posrednik/kreator-dokumentow'
-      preLoaderRoute: typeof PosrednikKreatorDokumentowRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/l/$slug': {
@@ -2544,14 +2562,16 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 )
 
 interface PosrednikRouteChildren {
-  PosrednikKreatorDokumentowRoute: typeof PosrednikKreatorDokumentowRoute
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
+  PosrednikNowyWniosekRoute: typeof PosrednikNowyWniosekRoute
+  PosrednikWnioskiRoute: typeof PosrednikWnioskiRoute
   PosrednikIndexRoute: typeof PosrednikIndexRoute
 }
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
-  PosrednikKreatorDokumentowRoute: PosrednikKreatorDokumentowRoute,
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
+  PosrednikNowyWniosekRoute: PosrednikNowyWniosekRoute,
+  PosrednikWnioskiRoute: PosrednikWnioskiRoute,
   PosrednikIndexRoute: PosrednikIndexRoute,
 }
 
