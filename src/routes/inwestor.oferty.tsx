@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FileSignature } from "lucide-react";
 import { formatPLN, offerStatusLabels, formatDate } from "@/lib/labels";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/oferty")({
   component: InwestorOferty,
