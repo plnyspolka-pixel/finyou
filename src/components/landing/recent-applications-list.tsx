@@ -376,11 +376,9 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-white/60">Rata miesięczna</div>
                         <div className="tabular-nums font-bold text-white">{formatPLN(f.monthly)}</div>
-                        {f.balloon > 0 && (
-                          <div className="mt-0.5 text-[10px] text-white/60">
-                            + balon {formatPLN(f.balloon)}
-                          </div>
-                        )}
+                        <div className="mt-0.5 min-h-[14px] text-[10px] text-white/60">
+                          {f.balloon > 0 ? <>+ balon {formatPLN(f.balloon)}</> : null}
+                        </div>
                       </div>
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-white/60">Roczna stopa zwrotu</div>
