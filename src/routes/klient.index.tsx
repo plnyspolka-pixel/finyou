@@ -494,8 +494,9 @@ function KlientDashboard() {
               </div>
             </FancyShell>
 
-            {/* === Numer KW (fancy) === */}
-            <FancyShell>
+            {/* === Numer KW === */}
+            <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
+
               <div className="space-y-4">
                 <div className="flex items-center gap-2.5">
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
