@@ -49,6 +49,7 @@ function InwestorWniosek() {
   const [investorId, setInvestorId] = useState<string | null>(null);
   const [docs, setDocs] = useState<any[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
 
@@ -76,6 +77,16 @@ function InwestorWniosek() {
       if (u?.signedUrl) next[d.id] = u.signedUrl;
     }));
     setDocUrls(next);
+
+    // Resolve property photos (mix of http URLs and property-photos storage paths)
+    const rawPhotos: string[] = (data?.properties?.[0]?.photos ?? []) as string[];
+    const resolved = await Promise.all(rawPhotos.map(async (src) => {
+      if (!src || typeof src !== "string") return null;
+      if (/^https?:\/\//i.test(src)) return src;
+      const { data: u } = await supabase.storage.from("property-photos").createSignedUrl(src, 3600);
+      return u?.signedUrl ?? null;
+    }));
+    setPhotoUrls(resolved.filter((s): s is string => !!s));
   })(); }, [id, user]);
 
   const openFile = async (d: any) => {
@@ -163,19 +174,21 @@ function InwestorWniosek() {
         <Card>
           <CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {(() => {
-              const urls = (p.photos ?? []).filter((s: string) => typeof s === "string" && /^https?:\/\//i.test(s));
-              if (urls.length === 0) return null;
-              return (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {urls.map((src: string, i: number) => (
-                    <a key={i} href={src} target="_blank" rel="noreferrer">
-                      <img src={src} alt="" className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition" loading="lazy" />
-                    </a>
-                  ))}
-                </div>
-              );
-            })()}
+            {photoUrls.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {photoUrls.map((src, i) => (
+                  <a key={i} href={src} target="_blank" rel="noreferrer">
+                    <img
+                      src={src}
+                      alt=""
+                      className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition"
+                      loading="lazy"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
             <div className="text-sm grid gap-1 md:grid-cols-2">
               <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
               <div><span className="text-muted-foreground">Lokalizacja:</span> {[p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
