@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2 } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
+import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { toast } from "sonner";
 
@@ -645,10 +646,20 @@ function KlientDashboard() {
   );
 }
 
-type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income";
+type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income" | "description";
 
 function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
   const [open, setOpen] = useState<TileKey | null>(null);
+
+  const { data: loanDesc } = useQuery({
+    queryKey: ["client-loan-desc", loanId],
+    queryFn: async () => {
+      const { data } = await supabase.from("loan_applications")
+        .select("investor_description").eq("id", loanId!).maybeSingle();
+      return data?.investor_description ?? "";
+    },
+    enabled: Boolean(loanId),
+  });
 
   const { data: docCounts } = useQuery({
     queryKey: ["client-doc-counts", loanId],
@@ -669,6 +680,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
   const bankDone = Boolean(clientRow?.bank_account_verified_at);
   const phoneDone = Boolean(clientRow?.phone_verified_at);
   const bikDone = Boolean(clientRow?.bik_report_uploaded_at);
+  const descDone = String(loanDesc ?? "").trim().length >= 20;
 
   const tiles: Array<{ key: TileKey; title: string; subtitle: string; done: boolean; icon: React.ReactNode }> = [
     { key: "company", title: "Dane firmy", subtitle: "NIP, REGON, KRS z GUS", done: companyDone, icon: <FileText className="h-5 w-5" /> },
@@ -677,6 +689,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
     { key: "bik", title: "Raport BIK", subtitle: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
     { key: "photos", title: "Zdjęcia nieruchomości", subtitle: "Wnętrza i z zewnątrz", done: photosDone, icon: <ImageIcon className="h-5 w-5" /> },
     { key: "income", title: "Dokumenty dochodowe", subtitle: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
+    { key: "description", title: "Opis dla inwestora", subtitle: "2–5 zdań po co i jak spłacisz", done: descDone, icon: <BookText className="h-5 w-5" /> },
   ];
 
   const doneCount = tiles.filter((t) => t.done).length;
@@ -752,7 +765,11 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
 
       {open && (
         <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
-          <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[open]} />
+          {open === "description" ? (
+            <InvestorDescriptionCard loanId={loanId} initialText={String(loanDesc ?? "")} />
+          ) : (
+            <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[open as Exclude<TileKey, "description">]} />
+          )}
         </FancyShell>
       )}
     </section>
