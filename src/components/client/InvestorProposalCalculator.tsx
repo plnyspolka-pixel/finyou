@@ -84,7 +84,9 @@ export function InvestorProposalCalculator({
     setMonths(Number(loan.preferred_period_months ?? 24));
     setAnnualRate(Number(loan.annual_investor_rate ?? 30));
     setMaxPayment(Number(loan.max_monthly_payment ?? 0));
-    setInvestorDesc(String(loan.investor_description ?? ""));
+    rateTouchedRef.current = true;
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  void 0;
     rateTouchedRef.current = true;
   }, [loan?.id]);
 
