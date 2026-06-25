@@ -101,16 +101,16 @@ function SzkoleniaInwestor() {
                   ) : (
                     <video
                       src={url}
-                      poster={v.thumbnail_url ?? undefined}
+                      poster={posters[v.id] ?? undefined}
                       controls
                       preload="metadata"
                       playsInline
                       className="aspect-video w-full rounded-md bg-black object-contain"
                     />
                   )
-                ) : v.thumbnail_url ? (
+                ) : posters[v.id] ? (
                   <img
-                    src={v.thumbnail_url}
+                    src={posters[v.id]}
                     alt=""
                     className="aspect-video w-full rounded-md object-cover"
                     loading="lazy"
