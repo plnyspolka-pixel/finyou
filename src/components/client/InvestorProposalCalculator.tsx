@@ -109,6 +109,8 @@ export function InvestorProposalCalculator({
         await supabase.from("properties").insert({ loan_application_id: loan.id, property_type: t });
       }
       setRefreshTick((x) => x + 1);
+      void qc.invalidateQueries({ queryKey: ["client-property", loan.id] });
+
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się zapisać typu nieruchomości");
     } finally {
