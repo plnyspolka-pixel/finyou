@@ -16,6 +16,7 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
+import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
@@ -311,7 +312,12 @@ function KlientDashboard() {
   return (
     <div className="space-y-6 max-w-5xl">
 
-      {(() => {
+      {!loanRow?.id && (
+        <SinglePageApplicationForm />
+      )}
+
+      {loanRow?.id && (() => {
+        const _noop = null;
         const propertyType = String((propertyRow as any)?.property_type ?? "") as
           | "mieszkanie" | "dom" | "grunt_rolny" | "dzialka_budowlana" | "lokal_uslugowy" | "inna" | "";
 
