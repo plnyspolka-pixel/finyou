@@ -11,12 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
-import { Route as WniosekZabezpieczenieRouteImport } from './routes/wniosek-zabezpieczenie'
-import { Route as WniosekWarunkiRouteImport } from './routes/wniosek-warunki'
-import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
-import { Route as WniosekOpisRouteImport } from './routes/wniosek-opis'
-import { Route as WniosekFormularzRouteImport } from './routes/wniosek-formularz'
-import { Route as Wniosek1RouteImport } from './routes/wniosek-1'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
@@ -40,7 +34,6 @@ import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikWnioskiRouteImport } from './routes/posrednik.wnioski'
-import { Route as PosrednikNowyWniosekRouteImport } from './routes/posrednik.nowy-wniosek'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -138,36 +131,6 @@ const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WniosekZabezpieczenieRoute = WniosekZabezpieczenieRouteImport.update({
-  id: '/wniosek-zabezpieczenie',
-  path: '/wniosek-zabezpieczenie',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WniosekWarunkiRoute = WniosekWarunkiRouteImport.update({
-  id: '/wniosek-warunki',
-  path: '/wniosek-warunki',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WniosekStartRoute = WniosekStartRouteImport.update({
-  id: '/wniosek-start',
-  path: '/wniosek-start',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WniosekOpisRoute = WniosekOpisRouteImport.update({
-  id: '/wniosek-opis',
-  path: '/wniosek-opis',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WniosekFormularzRoute = WniosekFormularzRouteImport.update({
-  id: '/wniosek-formularz',
-  path: '/wniosek-formularz',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Wniosek1Route = Wniosek1RouteImport.update({
-  id: '/wniosek-1',
-  path: '/wniosek-1',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -283,11 +246,6 @@ const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
 const PosrednikWnioskiRoute = PosrednikWnioskiRouteImport.update({
   id: '/wnioski',
   path: '/wnioski',
-  getParentRoute: () => PosrednikRoute,
-} as any)
-const PosrednikNowyWniosekRoute = PosrednikNowyWniosekRouteImport.update({
-  id: '/nowy-wniosek',
-  path: '/nowy-wniosek',
   getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
@@ -770,12 +728,6 @@ export interface FileRoutesByFullPath {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/wniosek-1': typeof Wniosek1Route
-  '/wniosek-formularz': typeof WniosekFormularzRoute
-  '/wniosek-opis': typeof WniosekOpisRoute
-  '/wniosek-start': typeof WniosekStartRoute
-  '/wniosek-warunki': typeof WniosekWarunkiRoute
-  '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
@@ -824,7 +776,6 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
-  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -888,12 +839,6 @@ export interface FileRoutesByTo {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/wniosek-1': typeof Wniosek1Route
-  '/wniosek-formularz': typeof WniosekFormularzRoute
-  '/wniosek-opis': typeof WniosekOpisRoute
-  '/wniosek-start': typeof WniosekStartRoute
-  '/wniosek-warunki': typeof WniosekWarunkiRoute
-  '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
@@ -942,7 +887,6 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
-  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1011,12 +955,6 @@ export interface FileRoutesById {
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/wniosek-1': typeof Wniosek1Route
-  '/wniosek-formularz': typeof WniosekFormularzRoute
-  '/wniosek-opis': typeof WniosekOpisRoute
-  '/wniosek-start': typeof WniosekStartRoute
-  '/wniosek-warunki': typeof WniosekWarunkiRoute
-  '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
@@ -1065,7 +1003,6 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
-  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1135,12 +1072,6 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
-    | '/wniosek-1'
-    | '/wniosek-formularz'
-    | '/wniosek-opis'
-    | '/wniosek-start'
-    | '/wniosek-warunki'
-    | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/admin/ai-administrator'
@@ -1189,7 +1120,6 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
-    | '/posrednik/nowy-wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1253,12 +1183,6 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
-    | '/wniosek-1'
-    | '/wniosek-formularz'
-    | '/wniosek-opis'
-    | '/wniosek-start'
-    | '/wniosek-warunki'
-    | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/admin/ai-administrator'
@@ -1307,7 +1231,6 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
-    | '/posrednik/nowy-wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1375,12 +1298,6 @@ export interface FileRouteTypes {
     | '/regulamin'
     | '/rejestracja'
     | '/sitemap.xml'
-    | '/wniosek-1'
-    | '/wniosek-formularz'
-    | '/wniosek-opis'
-    | '/wniosek-start'
-    | '/wniosek-warunki'
-    | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
     | '/zapomniane-haslo'
     | '/admin/ai-administrator'
@@ -1429,7 +1346,6 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
-    | '/posrednik/nowy-wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1498,12 +1414,6 @@ export interface RootRouteChildren {
   RegulaminRoute: typeof RegulaminRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  Wniosek1Route: typeof Wniosek1Route
-  WniosekFormularzRoute: typeof WniosekFormularzRoute
-  WniosekOpisRoute: typeof WniosekOpisRoute
-  WniosekStartRoute: typeof WniosekStartRoute
-  WniosekWarunkiRoute: typeof WniosekWarunkiRoute
-  WniosekZabezpieczenieRoute: typeof WniosekZabezpieczenieRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -1561,48 +1471,6 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-zabezpieczenie': {
-      id: '/wniosek-zabezpieczenie'
-      path: '/wniosek-zabezpieczenie'
-      fullPath: '/wniosek-zabezpieczenie'
-      preLoaderRoute: typeof WniosekZabezpieczenieRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-warunki': {
-      id: '/wniosek-warunki'
-      path: '/wniosek-warunki'
-      fullPath: '/wniosek-warunki'
-      preLoaderRoute: typeof WniosekWarunkiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-start': {
-      id: '/wniosek-start'
-      path: '/wniosek-start'
-      fullPath: '/wniosek-start'
-      preLoaderRoute: typeof WniosekStartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-opis': {
-      id: '/wniosek-opis'
-      path: '/wniosek-opis'
-      fullPath: '/wniosek-opis'
-      preLoaderRoute: typeof WniosekOpisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-formularz': {
-      id: '/wniosek-formularz'
-      path: '/wniosek-formularz'
-      fullPath: '/wniosek-formularz'
-      preLoaderRoute: typeof WniosekFormularzRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/wniosek-1': {
-      id: '/wniosek-1'
-      path: '/wniosek-1'
-      fullPath: '/wniosek-1'
-      preLoaderRoute: typeof Wniosek1RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -1764,13 +1632,6 @@ declare module '@tanstack/react-router' {
       path: '/wnioski'
       fullPath: '/posrednik/wnioski'
       preLoaderRoute: typeof PosrednikWnioskiRouteImport
-      parentRoute: typeof PosrednikRoute
-    }
-    '/posrednik/nowy-wniosek': {
-      id: '/posrednik/nowy-wniosek'
-      path: '/nowy-wniosek'
-      fullPath: '/posrednik/nowy-wniosek'
-      preLoaderRoute: typeof PosrednikNowyWniosekRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/leady': {
@@ -2563,14 +2424,12 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
-  PosrednikNowyWniosekRoute: typeof PosrednikNowyWniosekRoute
   PosrednikWnioskiRoute: typeof PosrednikWnioskiRoute
   PosrednikIndexRoute: typeof PosrednikIndexRoute
 }
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
-  PosrednikNowyWniosekRoute: PosrednikNowyWniosekRoute,
   PosrednikWnioskiRoute: PosrednikWnioskiRoute,
   PosrednikIndexRoute: PosrednikIndexRoute,
 }
@@ -2593,12 +2452,6 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminRoute: RegulaminRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  Wniosek1Route: Wniosek1Route,
-  WniosekFormularzRoute: WniosekFormularzRoute,
-  WniosekOpisRoute: WniosekOpisRoute,
-  WniosekStartRoute: WniosekStartRoute,
-  WniosekWarunkiRoute: WniosekWarunkiRoute,
-  WniosekZabezpieczenieRoute: WniosekZabezpieczenieRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   BlogSlugRoute: BlogSlugRoute,
