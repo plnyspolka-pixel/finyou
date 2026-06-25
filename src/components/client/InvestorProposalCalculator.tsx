@@ -161,22 +161,37 @@ export function InvestorProposalCalculator({
     }
     setSendingToInvestors(true);
     try {
+      const acceptedSnapshot = {
+        loan_amount: amount,
+        period_months: months,
+        annual_rate: annualRate,
+        max_monthly_payment: maxPayment || null,
+        property_type: propertyType,
+        accepted_at: new Date().toISOString(),
+      };
       const { error } = await supabase.from("loan_applications").update({
         loan_amount: amount,
         preferred_period_months: months,
         annual_investor_rate: annualRate,
         max_monthly_payment: maxPayment || null,
+        accepted_terms: acceptedSnapshot,
+        accepted_terms_at: acceptedSnapshot.accepted_at,
+        accepted_loan_amount: amount,
+        accepted_period_months: months,
+        accepted_annual_rate: annualRate,
+        accepted_max_monthly_payment: maxPayment || null,
         status: "wyslany_do_inwestorow",
       }).eq("id", loan.id);
       if (error) throw error;
-      toast.success("Wniosek wysłany do inwestorów. Powiadomimy Cię o decyzji.");
+      toast.success("Warunki zaakceptowane i zapisane. Wniosek trafił do inwestorów.");
       setRefreshTick((t) => t + 1);
     } catch (e: any) {
-      toast.error(e?.message ?? "Nie udało się wysłać wniosku");
+      toast.error(e?.message ?? "Nie udało się zapisać warunków");
     } finally {
       setSendingToInvestors(false);
     }
   };
+
 
   const statusLabel = loan ? (loanStatusLabels[loan.status as keyof typeof loanStatusLabels] ?? loan.status) : null;
 
