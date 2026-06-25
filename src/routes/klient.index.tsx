@@ -732,7 +732,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
             />
           </div>
 
-          {/* Stepper — 6 steps in a row */}
+          {/* Stepper — 6 kroków, jednolita wysokość i wyrównanie */}
           <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             {steps.map((s) => {
               const active = step === s.id;
@@ -741,7 +741,7 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
                   key={s.id}
                   type="button"
                   onClick={() => setStep(s.id)}
-                  className={`group relative overflow-hidden rounded-2xl border p-3 text-left transition-all ${
+                  className={`group relative flex h-full min-h-[112px] flex-col items-center justify-start gap-2 overflow-hidden rounded-2xl border p-3 text-center transition-all ${
                     active
                       ? "border-white/50 bg-white/15 shadow-[0_10px_30px_-12px_rgba(255,255,255,0.45)] ring-2 ring-white/40"
                       : s.done
@@ -749,25 +749,24 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
                         : "border-white/15 bg-white/[0.04] hover:border-white/30 hover:bg-white/[0.08]"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ring-1 ${
-                      s.done
-                        ? "bg-emerald-500/30 text-emerald-200 ring-emerald-300/40"
-                        : active
-                          ? "bg-white text-slate-900 ring-white/60"
-                          : "bg-white/10 text-white/80 ring-white/20"
-                    }`}>
-                      {s.done ? <Check className="h-4 w-4" strokeWidth={3} /> : s.id}
-                    </span>
-                    <div className="min-w-0 leading-tight">
-                      <div className="truncate text-[11px] font-black uppercase tracking-wider text-white">{s.label}</div>
-                      <div className="truncate text-[10px] text-white/65">{s.sub}</div>
-                    </div>
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ring-1 ${
+                    s.done
+                      ? "bg-emerald-500/30 text-emerald-200 ring-emerald-300/40"
+                      : active
+                        ? "bg-white text-slate-900 ring-white/60"
+                        : "bg-white/10 text-white/80 ring-white/20"
+                  }`}>
+                    {s.done ? <Check className="h-4 w-4" strokeWidth={3} /> : s.id}
+                  </span>
+                  <div className="flex w-full flex-1 flex-col items-center justify-center leading-tight">
+                    <div className="line-clamp-2 text-[11px] font-black uppercase tracking-wider text-white">{s.label}</div>
+                    <div className="mt-0.5 line-clamp-2 text-[10px] text-white/65">{s.sub}</div>
                   </div>
                 </button>
               );
             })}
           </div>
+
         </div>
       </FancyShell>
 
