@@ -351,18 +351,28 @@ function KlientDashboard() {
                   </Badge>
                 </div>
 
-                {thumbUrls.length > 0 && (
+                {thumbs.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
-                    {thumbUrls.map((u, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setPreviewOpen(true)}
-                        className="group relative aspect-square overflow-hidden rounded-xl border border-white/25 bg-white/10 ring-1 ring-white/10 transition hover:ring-2 hover:ring-white/60"
-                      >
-                        <img src={u} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
-                        <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-                      </button>
+                    {thumbs.map((t, i) => (
+                      <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-white/25 bg-white/10 ring-1 ring-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewOpen(true)}
+                          className="absolute inset-0 transition hover:ring-2 hover:ring-white/60"
+                          aria-label="Podgląd zdjęcia"
+                        >
+                          <img src={t.url} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); void deletePhoto(t.path); }}
+                          aria-label="Usuń zdjęcie"
+                          className="absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full bg-rose-500/90 text-white opacity-0 ring-1 ring-white/50 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 group-hover:opacity-100 focus:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
