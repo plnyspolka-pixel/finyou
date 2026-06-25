@@ -79,11 +79,11 @@ function InwestorAbonament() {
       <PaymentTestModeBanner />
 
       <div>
-        <h1 className="text-2xl font-bold">Dostęp inwestora</h1>
-        <p className="text-sm text-muted-foreground">
-          Wybierz okres, na jaki chcesz mieć dostęp do bazy zaakceptowanych wniosków o pożyczkę.
-        </p>
-      </div>
+      <FancyPageHeader
+        eyebrow="Subskrypcja"
+        title="Dostęp inwestora"
+        subtitle="Wybierz okres, na jaki chcesz mieć dostęp do bazy zaakceptowanych wniosków o pożyczkę."
+      />
 
       {session_id && (
         <Card className="border-emerald-300 bg-emerald-50">
