@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2 } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2, Lock as LockIcon } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
@@ -427,7 +427,7 @@ function KlientDashboard() {
               <Button
                 size="lg"
                 onClick={() => void markApplicationComplete()}
-                disabled={markingComplete || !loanRow?.id}
+                disabled={markingComplete || !loanRow?.id || totalFiles === 0 || !kwValidation.ok}
                 className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
               >
                 {markingComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
@@ -695,8 +695,19 @@ function KlientDashboard() {
       })()}
 
 
-      {/* === Weryfikacje — tafelki rozwijane === */}
-      <VerificationTilesSection clientRow={clientRow as any} loanId={loanRow?.id ?? null} />
+      {/* === Weryfikacje — tafelki rozwijane (odblokowane po wgraniu plików i KW) === */}
+      {totalFiles > 0 && kwValidation.ok ? (
+        <VerificationTilesSection clientRow={clientRow as any} loanId={loanRow?.id ?? null} />
+      ) : loanRow?.id ? (
+        <FancyShell variant="navy" motion={false} innerClassName="!p-5 text-center">
+          <div className="flex items-center justify-center gap-3 text-white">
+            <LockIcon className="h-5 w-5 text-amber-200" />
+            <span className="text-sm font-bold uppercase tracking-[0.14em]">
+              Dodaj zdjęcia/dokumenty i wpisz numer KW, aby odblokować pozostałe sekcje
+            </span>
+          </div>
+        </FancyShell>
+      ) : null}
 
 
 
