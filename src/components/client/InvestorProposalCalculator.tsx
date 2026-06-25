@@ -64,6 +64,8 @@ export function InvestorProposalCalculator() {
   const [annualRate, setAnnualRate] = useState<number>(30);
   const [maxPayment, setMaxPayment] = useState<number>(0);
   const [canExtend, setCanExtend] = useState<boolean>(false);
+  const [propertyType, setPropertyType] = useState<SecurityType | null>(null);
+  const [savingPropertyType, setSavingPropertyType] = useState(false);
   const [investorDesc, setInvestorDesc] = useState<string>("");
   const [savingDesc, setSavingDesc] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
