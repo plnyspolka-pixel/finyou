@@ -239,6 +239,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 phone,
                 fullName: name,
                 origin,
+                formId: v.form_id ?? details.form_id ?? null,
               });
 
               // 2) Upsert meta_leads (z podpięciem do wniosku)
