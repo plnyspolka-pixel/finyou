@@ -70,10 +70,11 @@ function InwestorList() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dostępne wnioski</h1>
-        <p className="text-sm text-muted-foreground">Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję.</p>
-      </div>
+      <FancyPageHeader
+        eyebrow="Marketplace inwestora"
+        title={`Dostępne wnioski (${apps.length})`}
+        subtitle="Wnioski dopuszczone do inwestorów — wyszukaj nieruchomość pod inwestycję."
+      />
 
       <Card>
         <CardContent className="pt-6 space-y-4">
