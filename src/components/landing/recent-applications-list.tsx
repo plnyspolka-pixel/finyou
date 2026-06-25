@@ -414,7 +414,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     </div>
                     </div>
 
-                    <details className="group mt-3 rounded-xl bg-white/5 ring-1 ring-white/10">
+                    <details className="group mt-auto rounded-xl bg-white/5 ring-1 ring-white/10 [&[open]]:mt-3">
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10">
                         <span>Harmonogram spłat ({it.preferred_period_months} rat{f.balloon > 0 ? " + balon" : ""})</span>
                         <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
