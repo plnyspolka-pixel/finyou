@@ -40,7 +40,6 @@ import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
-import { Route as PosrednikKreatorDokumentowRouteImport } from './routes/posrednik.kreator-dokumentow'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -284,12 +283,6 @@ const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
   path: '/leady',
   getParentRoute: () => PosrednikRoute,
 } as any)
-const PosrednikKreatorDokumentowRoute =
-  PosrednikKreatorDokumentowRouteImport.update({
-    id: '/kreator-dokumentow',
-    path: '/kreator-dokumentow',
-    getParentRoute: () => PosrednikRoute,
-  } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -818,7 +811,6 @@ export interface FileRoutesByFullPath {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -935,7 +927,6 @@ export interface FileRoutesByTo {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1057,7 +1048,6 @@ export interface FileRoutesById {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
-  '/posrednik/kreator-dokumentow': typeof PosrednikKreatorDokumentowRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1180,7 +1170,6 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1297,7 +1286,6 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1418,7 +1406,6 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
-    | '/posrednik/kreator-dokumentow'
     | '/posrednik/leady'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1753,13 +1740,6 @@ declare module '@tanstack/react-router' {
       path: '/leady'
       fullPath: '/posrednik/leady'
       preLoaderRoute: typeof PosrednikLeadyRouteImport
-      parentRoute: typeof PosrednikRoute
-    }
-    '/posrednik/kreator-dokumentow': {
-      id: '/posrednik/kreator-dokumentow'
-      path: '/kreator-dokumentow'
-      fullPath: '/posrednik/kreator-dokumentow'
-      preLoaderRoute: typeof PosrednikKreatorDokumentowRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/l/$slug': {
@@ -2544,13 +2524,11 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 )
 
 interface PosrednikRouteChildren {
-  PosrednikKreatorDokumentowRoute: typeof PosrednikKreatorDokumentowRoute
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikIndexRoute: typeof PosrednikIndexRoute
 }
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
-  PosrednikKreatorDokumentowRoute: PosrednikKreatorDokumentowRoute,
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
   PosrednikIndexRoute: PosrednikIndexRoute,
 }

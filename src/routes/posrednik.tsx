@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LayoutDashboard, Users, FileText, Wand2 } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FilePlus2 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
 export const Route = createFileRoute("/posrednik")({
@@ -11,8 +11,8 @@ const groups: NavGroup[] = [
     items: [
       { to: "/posrednik", label: "Pulpit", icon: LayoutDashboard, exact: true },
       { to: "/posrednik/leady", label: "Leady (wszystkie)", icon: Users },
-      { to: "/posrednik/kreator-dokumentow", label: "Kreator dokumentów", icon: Wand2 },
-      { to: "/posrednik/dokumenty", label: "Moje dokumenty", icon: FileText },
+      { to: "/posrednik/nowy-wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
+      { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
     ],
   },
 ];
@@ -22,3 +22,4 @@ function OperatorLayout() {
     <PanelShell title="Panel pośrednika" allow={["operator", "administrator"]} groups={groups} />
   );
 }
+
