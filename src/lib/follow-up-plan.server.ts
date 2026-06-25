@@ -1,10 +1,15 @@
-// Sekwencja poganiania leada przez Anię — 30 dni.
-// Mail = codziennie (30x), telefon = 13x (intensywnie w tyg.1, potem spadek), SMS = 4x (raz/tydzień).
+// Sekwencja poganiania leada przez Anię — 365 dni, opadająco.
+// Mail: codziennie w 1. m-cu, co 3 dni w m-cach 2–3, co 7 dni w m-cach 4–6, co 14 dni do końca roku.
+// Telefon: intensywnie w tyg. 1, potem coraz rzadziej (łącznie ~26 prób / rok).
+// SMS: ~12 sms / rok (w punktach „kontrolnych": 1, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365).
 // Telefon i SMS tylko 8:00–21:00 Europe/Warsaw, pon–pt (sobota/niedziela → przesuwane).
 // Mail o każdej porze (mail nie irytuje).
 //
 // Sekwencję przerywa: odpowiedź klienta (mail/SMS/messenger/IG), odebrany telefon,
 // dokończenie wniosku, status terminalny, ręczna pauza.
+//
+// Treści maili/SMS-ów cyklują po istniejących 30 szablonach mailowych / 4 SMS-owych
+// (lookup modulo), żeby nie powtarzać tych samych tekstów obok siebie.
 
 import { createClient } from "@supabase/supabase-js";
 import { LEAD_TERMINAL_STATUSES, LEAD_CONTACT_WINDOW } from "./follow-up-config";
@@ -16,70 +21,57 @@ function admin() {
 type Channel = "email" | "sms" | "call";
 
 interface Slot {
-  day: number;          // 1..30 — N-ty dzień od wpadnięcia leada (1 = dzień wpadnięcia)
+  day: number;          // 1..365 — N-ty dzień od wpadnięcia leada (1 = dzień wpadnięcia)
   hourWarsaw: number;   // godzina lokalna PL (0..23)
   channel: Channel;
-  stepIndex: number;    // numer kroku w sekwencji danego kanału
+  stepIndex: number;    // numer kroku w sekwencji danego kanału (unikalny w obrębie kanału/leada)
 }
 
-// === SEKWENCJA ===
-export const CADENCE: Slot[] = [
-  // Dzień 1 — start
-  { day: 1, hourWarsaw: 10, channel: "email", stepIndex: 1 },
-  { day: 1, hourWarsaw: 10, channel: "sms",   stepIndex: 1 },
-  { day: 1, hourWarsaw: 11, channel: "call",  stepIndex: 1 },
-  { day: 1, hourWarsaw: 15, channel: "call",  stepIndex: 2 },
-  // Dzień 2
-  { day: 2, hourWarsaw: 10, channel: "email", stepIndex: 2 },
-  { day: 2, hourWarsaw: 12, channel: "call",  stepIndex: 3 },
-  // Dzień 3
-  { day: 3, hourWarsaw: 10, channel: "email", stepIndex: 3 },
-  { day: 3, hourWarsaw: 11, channel: "call",  stepIndex: 4 },
-  // Dzień 4
-  { day: 4, hourWarsaw: 10, channel: "email", stepIndex: 4 },
-  { day: 4, hourWarsaw: 13, channel: "call",  stepIndex: 5 },
-  // Dzień 5
-  { day: 5, hourWarsaw: 10, channel: "email", stepIndex: 5 },
-  { day: 5, hourWarsaw: 11, channel: "call",  stepIndex: 6 },
-  // Dzień 6
-  { day: 6, hourWarsaw: 10, channel: "email", stepIndex: 6 },
-  { day: 6, hourWarsaw: 12, channel: "call",  stepIndex: 7 },
-  // Dzień 7
-  { day: 7, hourWarsaw: 10, channel: "email", stepIndex: 7 },
-  { day: 7, hourWarsaw: 11, channel: "sms",   stepIndex: 2 },
-  { day: 7, hourWarsaw: 14, channel: "call",  stepIndex: 8 },
-  // Tydz. 2–4 — mail codziennie, telefon rzadziej
-  { day: 8,  hourWarsaw: 10, channel: "email", stepIndex: 8 },
-  { day: 9,  hourWarsaw: 10, channel: "email", stepIndex: 9 },
-  { day: 10, hourWarsaw: 10, channel: "email", stepIndex: 10 },
-  { day: 10, hourWarsaw: 12, channel: "call",  stepIndex: 9 },
-  { day: 11, hourWarsaw: 10, channel: "email", stepIndex: 11 },
-  { day: 12, hourWarsaw: 10, channel: "email", stepIndex: 12 },
-  { day: 13, hourWarsaw: 10, channel: "email", stepIndex: 13 },
-  { day: 14, hourWarsaw: 10, channel: "email", stepIndex: 14 },
-  { day: 14, hourWarsaw: 11, channel: "sms",   stepIndex: 3 },
-  { day: 14, hourWarsaw: 12, channel: "call",  stepIndex: 10 },
-  { day: 15, hourWarsaw: 10, channel: "email", stepIndex: 15 },
-  { day: 16, hourWarsaw: 10, channel: "email", stepIndex: 16 },
-  { day: 17, hourWarsaw: 10, channel: "email", stepIndex: 17 },
-  { day: 18, hourWarsaw: 10, channel: "email", stepIndex: 18 },
-  { day: 18, hourWarsaw: 12, channel: "call",  stepIndex: 11 },
-  { day: 19, hourWarsaw: 10, channel: "email", stepIndex: 19 },
-  { day: 20, hourWarsaw: 10, channel: "email", stepIndex: 20 },
-  { day: 21, hourWarsaw: 10, channel: "email", stepIndex: 21 },
-  { day: 21, hourWarsaw: 11, channel: "sms",   stepIndex: 4 },
-  { day: 22, hourWarsaw: 10, channel: "email", stepIndex: 22 },
-  { day: 23, hourWarsaw: 10, channel: "email", stepIndex: 23 },
-  { day: 23, hourWarsaw: 12, channel: "call",  stepIndex: 12 },
-  { day: 24, hourWarsaw: 10, channel: "email", stepIndex: 24 },
-  { day: 25, hourWarsaw: 10, channel: "email", stepIndex: 25 },
-  { day: 26, hourWarsaw: 10, channel: "email", stepIndex: 26 },
-  { day: 27, hourWarsaw: 10, channel: "email", stepIndex: 27 },
-  { day: 28, hourWarsaw: 10, channel: "email", stepIndex: 28 },
-  { day: 29, hourWarsaw: 10, channel: "email", stepIndex: 29 },
-  { day: 30, hourWarsaw: 10, channel: "email", stepIndex: 30 },
-  { day: 30, hourWarsaw: 13, channel: "call",  stepIndex: 13 },
-];
+// === SEKWENCJA — generowana, opadająca przez cały rok ===
+function buildCadence(): Slot[] {
+  const slots: Slot[] = [];
+  let emailStep = 0;
+  let callStep = 0;
+  let smsStep = 0;
+
+  // E-MAIL: codziennie 1–30, co 3 dni 31–90, co 7 dni 91–182, co 14 dni 183–365
+  const emailDays = new Set<number>();
+  for (let d = 1; d <= 30; d++) emailDays.add(d);
+  for (let d = 33; d <= 90; d += 3) emailDays.add(d);
+  for (let d = 97; d <= 182; d += 7) emailDays.add(d);
+  for (let d = 196; d <= 365; d += 14) emailDays.add(d);
+  for (const d of Array.from(emailDays).sort((a, b) => a - b)) {
+    emailStep++;
+    slots.push({ day: d, hourWarsaw: 10, channel: "email", stepIndex: emailStep });
+  }
+
+  // TELEFON: intensywnie w tyg. 1, potem coraz rzadziej
+  const callDays = [
+    1, 1, 2, 3, 4, 5, 6, 7,          // tyg. 1 — 8 prób
+    10, 14, 18, 22, 28,              // tyg. 2–4 — 5 prób
+    38, 50, 62, 75, 88,              // m-c 2–3 — 5 prób
+    110, 140, 170,                   // m-c 4–6 — 3 próby
+    210, 260, 320, 365,              // m-c 7–12 — 4 próby
+  ];
+  for (const d of callDays) {
+    callStep++;
+    // dwa telefony w dniu 1 — drugi po południu
+    const hour = callStep === 2 ? 15 : 11 + (callStep % 3);
+    slots.push({ day: d, hourWarsaw: hour, channel: "call", stepIndex: callStep });
+  }
+
+  // SMS: 12 punktów kontrolnych w roku
+  const smsDays = [1, 7, 14, 21, 30, 45, 60, 90, 120, 180, 240, 365];
+  for (const d of smsDays) {
+    smsStep++;
+    slots.push({ day: d, hourWarsaw: 11, channel: "sms", stepIndex: smsStep });
+  }
+
+  return slots;
+}
+
+export const CADENCE: Slot[] = buildCadence();
+
 
 // === TREŚCI MAILI (30) ===
 type Tpl = { subject: string; body: (v: TplVars) => string };
