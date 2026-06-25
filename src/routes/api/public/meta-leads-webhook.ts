@@ -60,11 +60,14 @@ async function upsertClientAndApplication(opts: {
   formId?: string | null;
 }): Promise<{ loanApplicationId: string | null; clientId: string | null; returnLink: string | null; firstName: string | null }> {
   let assignedUserId: string | null = null;
+  let assignedRole: "klient" | "operator" | "inwestor" = "klient";
   if (opts.formId) {
     const { data: form } = await supabaseAdmin
-      .from("meta_lead_forms").select("assigned_user_id").eq("meta_form_id", String(opts.formId)).maybeSingle();
+      .from("meta_lead_forms").select("assigned_user_id, assigned_role").eq("meta_form_id", String(opts.formId)).maybeSingle();
     assignedUserId = (form as any)?.assigned_user_id ?? null;
+    assignedRole = ((form as any)?.assigned_role ?? "klient") as typeof assignedRole;
   }
+
   const phoneNorm = opts.phone ? normPhone(opts.phone) : null;
   const { first, last } = splitName(opts.fullName);
 
