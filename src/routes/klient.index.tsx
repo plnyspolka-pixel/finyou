@@ -65,7 +65,7 @@ function KlientDashboard() {
     queryKey: ["client-property", loanRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("properties")
-        .select("id, land_register_number, photos, loan_application_id, property_type")
+        .select("id, land_register_number, photos, loan_application_id, property_type, area_sqm")
         .eq("loan_application_id", loanRow!.id).maybeSingle();
       return data;
     },
@@ -96,6 +96,8 @@ function KlientDashboard() {
   const [kw, setKw] = useState("");
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
+  const [area, setArea] = useState<string>("");
+  const [savingArea, setSavingArea] = useState(false);
   const [uploading, setUploading] = useState(false);
   const qc = useQueryClient();
 
@@ -146,6 +148,8 @@ function KlientDashboard() {
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
     setKwTouched(false);
+    const a = (propertyRow as any)?.area_sqm;
+    setArea(a == null ? "" : String(a));
   }, [propertyRow?.id]);
 
   useEffect(() => {
@@ -254,6 +258,29 @@ function KlientDashboard() {
       toast.error(e?.message ?? "Nie udało się zapisać numeru KW");
     } finally {
       setSavingKw(false);
+    }
+  };
+
+  const saveArea = async () => {
+    if (!propertyRow?.id) return;
+    const normalized = area.replace(",", ".").trim();
+    const value = normalized === "" ? null : Number(normalized);
+    if (value !== null && (!Number.isFinite(value) || value <= 0 || value > 100000)) {
+      toast.error("Podaj poprawną powierzchnię w m² (np. 78,5)");
+      return;
+    }
+    setSavingArea(true);
+    try {
+      const { error } = await supabase.from("properties")
+        .update({ area_sqm: value })
+        .eq("id", propertyRow.id);
+      if (error) throw error;
+      toast.success(value == null ? "Powierzchnia wyczyszczona" : "Powierzchnia zapisana");
+      void refetchProperty();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zapisać powierzchni");
+    } finally {
+      setSavingArea(false);
     }
   };
 
@@ -407,6 +434,40 @@ function KlientDashboard() {
                     </ul>
                   </div>
                 )}
+
+                {(propertyType === "dom" || propertyType === "lokal_uslugowy") && (
+                  <div className="rounded-2xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
+                    <label htmlFor="area_sqm" className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/85">
+                      Powierzchnia użytkowa (m²)
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="area_sqm"
+                          inputMode="decimal"
+                          value={area}
+                          onChange={(e) => setArea(e.target.value.replace(/[^0-9.,]/g, ""))}
+                          placeholder="np. 78,5"
+                          className="h-11 rounded-xl border-2 border-white/30 bg-white/10 pr-12 text-base font-semibold tabular-nums text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold uppercase tracking-wider text-white/70">m²</span>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => void saveArea()}
+                        disabled={savingArea || !propertyRow?.id}
+                        className="h-11 rounded-xl bg-white/15 px-4 text-xs font-bold uppercase tracking-[0.12em] text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/25 disabled:opacity-50"
+                      >
+                        {savingArea ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-1.5 h-4 w-4" />Zapisz</>}
+                      </Button>
+                    </div>
+                    {propertyType === "lokal_uslugowy" && (
+                      <p className="mt-1.5 text-[10px] text-white/65">Wymagana, jeżeli lokal nie znajduje się w bloku.</p>
+                    )}
+                  </div>
+                )}
+
+
 
                 <label className="block">
                   <input
