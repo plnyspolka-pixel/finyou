@@ -415,6 +415,14 @@ function KlientDashboard() {
                                 {d.document_type}
                               </Badge>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => void deleteDocument(d)}
+                              aria-label="Usuń dokument"
+                              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-rose-500/80 text-white ring-1 ring-white/30 transition hover:bg-rose-600"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </li>
                         ))}
                       </ul>
