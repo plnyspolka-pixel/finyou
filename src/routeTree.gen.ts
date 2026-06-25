@@ -39,6 +39,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
+import { Route as PosrednikNowyWniosekRouteImport } from './routes/posrednik.nowy-wniosek'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -277,6 +278,11 @@ const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
   id: '/propozycje/$id',
   path: '/propozycje/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PosrednikNowyWniosekRoute = PosrednikNowyWniosekRouteImport.update({
+  id: '/nowy-wniosek',
+  path: '/nowy-wniosek',
+  getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
   id: '/leady',
@@ -812,6 +818,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -928,6 +935,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1049,6 +1057,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/nowy-wniosek': typeof PosrednikNowyWniosekRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1171,6 +1180,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
+    | '/posrednik/nowy-wniosek'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1287,6 +1297,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
+    | '/posrednik/nowy-wniosek'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1407,6 +1418,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
+    | '/posrednik/nowy-wniosek'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1734,6 +1746,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/propozycje/$id'
       preLoaderRoute: typeof PropozycjeIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/posrednik/nowy-wniosek': {
+      id: '/posrednik/nowy-wniosek'
+      path: '/nowy-wniosek'
+      fullPath: '/posrednik/nowy-wniosek'
+      preLoaderRoute: typeof PosrednikNowyWniosekRouteImport
+      parentRoute: typeof PosrednikRoute
     }
     '/posrednik/leady': {
       id: '/posrednik/leady'
@@ -2525,11 +2544,13 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
+  PosrednikNowyWniosekRoute: typeof PosrednikNowyWniosekRoute
   PosrednikIndexRoute: typeof PosrednikIndexRoute
 }
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
+  PosrednikNowyWniosekRoute: PosrednikNowyWniosekRoute,
   PosrednikIndexRoute: PosrednikIndexRoute,
 }
 
