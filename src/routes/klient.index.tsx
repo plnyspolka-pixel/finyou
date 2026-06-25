@@ -427,7 +427,7 @@ function KlientDashboard() {
               <Button
                 size="lg"
                 onClick={() => void markApplicationComplete()}
-                disabled={markingComplete || !loanRow?.id}
+                disabled={markingComplete || !loanRow?.id || totalFiles === 0 || !kwValidation.ok}
                 className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
               >
                 {markingComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
