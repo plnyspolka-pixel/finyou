@@ -49,6 +49,7 @@ function InwestorWniosek() {
   const [investorId, setInvestorId] = useState<string | null>(null);
   const [docs, setDocs] = useState<any[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
 
