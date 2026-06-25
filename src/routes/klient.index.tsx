@@ -36,16 +36,30 @@ function KlientDashboard() {
     enabled: Boolean(user),
   });
 
-  const { data: loanRow } = useQuery({
+  const { data: loanRow, refetch: refetchLoan } = useQuery({
     queryKey: ["client-loan", clientRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("loan_applications")
-        .select("id")
+        .select("id, view_count")
         .eq("client_id", clientRow!.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data;
     },
     enabled: Boolean(clientRow?.id),
   });
+
+  // Liczymy każde otwarcie strony przez właściciela wniosku jako "wyświetlenie".
+  useEffect(() => {
+    if (!loanRow?.id) return;
+    const key = `viewed:own:${loanRow.id}:${new Date().toISOString().slice(0, 13)}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    void (async () => {
+      try {
+        await supabase.rpc("increment_loan_view", { p_loan_id: loanRow.id });
+        void refetchLoan();
+      } catch { /* ignore */ }
+    })();
+  }, [loanRow?.id, refetchLoan]);
 
   const { data: propertyRow, refetch: refetchProperty } = useQuery({
     queryKey: ["client-property", loanRow?.id],
