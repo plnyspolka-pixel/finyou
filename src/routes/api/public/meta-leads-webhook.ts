@@ -92,6 +92,7 @@ async function upsertClientAndApplication(opts: {
         consent_marketing: true,
         consent_phone: true,
         consent_sms: true,
+        assigned_user_id: assignedUserId,
       })
       .select("id")
       .single();
