@@ -301,28 +301,12 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                     const v = PROPERTY_VISUAL[it.property_type] ?? PROPERTY_VISUAL.house;
                     const Icon = v.Icon;
                     return (
-                      <div
-                        className="relative flex h-24 w-full items-center justify-between overflow-hidden px-4 text-white"
-                        style={{
-                          background:
-                            "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
-                        }}
-                      >
-                        <span
-                          aria-hidden
-                          className="absolute -left-8 -top-8 h-32 w-32 rounded-full blur-2xl"
-                          style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)" }}
-                        />
-                        <span
-                          aria-hidden
-                          className="absolute -right-10 top-1 h-32 w-32 rounded-full blur-2xl"
-                          style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)" }}
-                        />
-                        <div className="relative flex items-center gap-2 text-sm font-semibold text-white">
-                          <Icon className="h-5 w-5 text-white" />
+                      <div className={`relative flex h-24 w-full items-center justify-between overflow-hidden bg-gradient-to-br ${v.gradient} px-4`}>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                          <Icon className="h-5 w-5 text-accent" />
                           {PROPERTY_TYPE_LABELS[it.property_type]}
                         </div>
-                        <div className="relative inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm ring-1 ring-white/20">
+                        <div className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-sm">
                           <MapPin className="h-3 w-3" /> {it.city}
                         </div>
                       </div>
