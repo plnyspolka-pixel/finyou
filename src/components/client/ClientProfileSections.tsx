@@ -189,7 +189,9 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           <div className="md:col-span-2"><Label>REGON</Label><Input maxLength={14} value={f.regon} onChange={(e) => setF({ ...f, regon: e.target.value.replace(/\D/g, "") })} /></div>
         </CardContent>
       </Card>
+      )}
 
+      {has("bank") && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
