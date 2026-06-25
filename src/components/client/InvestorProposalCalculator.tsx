@@ -32,7 +32,13 @@ const LOCKED_STATUSES = new Set<string>([
   "zaakceptowany_przez_klienta", "do_umowy", "zamkniety", "archiwalny",
 ]);
 
-export function InvestorProposalCalculator() {
+export function InvestorProposalCalculator({
+  filesSlot,
+  lockReason,
+}: {
+  filesSlot?: React.ReactNode;
+  lockReason?: string | null;
+} = {}) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [loan, setLoan] = useState<any | null>(null);
