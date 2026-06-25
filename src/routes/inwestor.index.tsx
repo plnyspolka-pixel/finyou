@@ -176,8 +176,14 @@ function InwestorList() {
               <Link key={a.id} to="/inwestor/wniosek/$id" params={{ id: a.id }} className="group">
                 <Card className="hover:border-primary transition-all hover:shadow-lg cursor-pointer h-full overflow-hidden flex flex-col">
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    {p?.photos?.[0] ? (
-                      <img src={p.photos[0]} alt={p.city ?? ""} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    {photoUrls[a.id] ? (
+                      <img
+                        src={photoUrls[a.id]}
+                        alt={p?.city ?? ""}
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                      />
                     ) : <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" />}
                     {p?.property_type && (
                       <Badge className="absolute top-3 left-3 bg-background/95 text-foreground hover:bg-background backdrop-blur-sm shadow">
