@@ -312,7 +312,7 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
 
     try {
       if (row.channel === "email") {
-        const tpl = EMAIL_TEMPLATES[row.step_index];
+        const tpl = EMAIL_TEMPLATES[((row.step_index - 1) % 30) + 1];
         if (!tpl || !lead.email) {
           await s.from("lead_follow_up_schedule").update({ status: "skipped", error_message: "no email/template" }).eq("id", row.id);
           skipped++; continue;
@@ -337,7 +337,7 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
         }
       } else if (row.channel === "sms") {
         const phone = lead.phone_normalized;
-        const tplFn = SMS_TEMPLATES[row.step_index];
+        const tplFn = SMS_TEMPLATES[((row.step_index - 1) % 4) + 1];
         if (!phone || !tplFn) {
           await s.from("lead_follow_up_schedule").update({ status: "skipped", error_message: "no phone/template" }).eq("id", row.id);
           skipped++; continue;
