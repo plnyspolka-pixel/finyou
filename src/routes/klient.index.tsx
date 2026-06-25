@@ -646,10 +646,12 @@ function KlientDashboard() {
   );
 }
 
-type TileKey = "company" | "bank" | "phone" | "bik" | "photos" | "income" | "description";
+type TileKey = "company" | "bank" | "phone" | "bik" | "income" | "description";
+type StepKey = 1 | 2 | 3;
 
 function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
-  const [open, setOpen] = useState<TileKey | null>(null);
+  const [step, setStep] = useState<StepKey>(1);
+  const [openExtra, setOpenExtra] = useState<Exclude<TileKey, "description" | "phone"> | null>(null);
 
   const { data: loanDesc } = useQuery({
     queryKey: ["client-loan-desc", loanId],
@@ -674,7 +676,6 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
     enabled: Boolean(loanId),
   });
 
-  const photosDone = (docCounts?.photos_all ?? 0) > 0;
   const incomeDone = (docCounts?.income_docs ?? 0) > 0;
   const companyDone = Boolean(clientRow?.nip && clientRow?.company_name);
   const bankDone = Boolean(clientRow?.bank_account_verified_at);
@@ -682,96 +683,192 @@ function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanI
   const bikDone = Boolean(clientRow?.bik_report_uploaded_at);
   const descDone = String(loanDesc ?? "").trim().length >= 20;
 
-  const tiles: Array<{ key: TileKey; title: string; subtitle: string; done: boolean; icon: React.ReactNode }> = [
+  const extraTiles: Array<{ key: Exclude<TileKey, "description" | "phone">; title: string; subtitle: string; done: boolean; icon: React.ReactNode }> = [
     { key: "company", title: "Dane firmy", subtitle: "NIP, REGON, KRS z GUS", done: companyDone, icon: <FileText className="h-5 w-5" /> },
     { key: "bank", title: "Konto bankowe", subtitle: "Weryfikacja dokumentem", done: bankDone, icon: <ShieldCheck className="h-5 w-5" /> },
-    { key: "phone", title: "Telefon", subtitle: "Potwierdzenie kodem SMS", done: phoneDone, icon: <ShieldCheck className="h-5 w-5" /> },
     { key: "bik", title: "Raport BIK", subtitle: "Aktualny raport o sobie", done: bikDone, icon: <FileText className="h-5 w-5" /> },
-    
     { key: "income", title: "Dokumenty dochodowe", subtitle: "PIT, zaświadczenia, wyciągi", done: incomeDone, icon: <FileText className="h-5 w-5" /> },
-    { key: "description", title: "Opis dla inwestora", subtitle: "2–5 zdań po co i jak spłacisz", done: descDone, icon: <BookText className="h-5 w-5" /> },
   ];
 
-  const doneCount = tiles.filter((t) => t.done).length;
+  const allTiles = [descDone, phoneDone, companyDone, bankDone, bikDone, incomeDone];
+  const doneCount = allTiles.filter(Boolean).length;
   const discount = doneCount * 0.5;
+  const totalSteps = 3;
+
+  const steps: Array<{ id: StepKey; label: string; sub: string; done: boolean }> = [
+    { id: 1, label: "Opis dla inwestora", sub: "2–5 zdań — wzbudza zaufanie", done: descDone },
+    { id: 2, label: "Numer telefonu", sub: "Potwierdzenie kodem SMS", done: phoneDone },
+    { id: 3, label: "Pozostałe weryfikacje", sub: "Firma · Konto · BIK · Dochody", done: companyDone && bankDone && bikDone && incomeDone },
+  ];
+
+  const goNext = () => setStep((s) => (s < totalSteps ? ((s + 1) as StepKey) : s));
 
   return (
     <section className="space-y-4">
-      <FancyShell variant="silver" motion={false}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-900/10 ring-1 ring-slate-900/15">
-              <Sparkles className="h-5 w-5 text-slate-700" strokeWidth={2.5} />
-            </span>
-            <div className="leading-tight">
-              <div className="text-base font-bold uppercase tracking-[0.14em] text-slate-800 sm:text-lg">
-                Każda weryfikacja = −0,5% rocznie taniej
-              </div>
-              <div className="mt-1 text-xs text-slate-600 sm:text-sm">
-                Uzupełnij poniższe sekcje. Im więcej zielonych odznak, tym niższe koszty możesz wpisać w kalkulatorze.
+      {/* Fancy navy header z progressem */}
+      <FancyShell variant="navy" motion={false}>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/25 backdrop-blur-sm">
+                <Sparkles className="h-5 w-5 text-white" strokeWidth={2.5} />
+              </span>
+              <div className="leading-tight">
+                <div className="text-base font-black uppercase tracking-[0.16em] text-white sm:text-lg">
+                  Obniż koszt pożyczki — każda weryfikacja −0,5% / rok
+                </div>
+                <div className="mt-1 text-xs text-white/75 sm:text-sm">
+                  Krok po kroku. Im więcej zielonych odznak, tym niższe oprocentowanie w kalkulatorze.
+                </div>
               </div>
             </div>
+            <div className="text-right">
+              <div className="text-4xl font-black tabular-nums text-emerald-300 drop-shadow-[0_2px_8px_rgba(16,185,129,0.45)]">
+                −{discount.toFixed(1).replace(".", ",")}%
+              </div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">rocznie · {doneCount}/6</div>
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-black tabular-nums text-emerald-600">−{discount.toFixed(1).replace(".", ",")}%</div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">rocznie · {doneCount}/{tiles.length}</div>
+
+          {/* Stepper */}
+          <div className="grid gap-2 sm:grid-cols-3">
+            {steps.map((s) => {
+              const active = step === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setStep(s.id)}
+                  className={`group relative overflow-hidden rounded-2xl border p-3 text-left transition-all ${
+                    active
+                      ? "border-white/50 bg-white/15 shadow-[0_10px_30px_-12px_rgba(255,255,255,0.45)] ring-2 ring-white/40"
+                      : "border-white/15 bg-white/[0.04] hover:border-white/30 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ring-1 ${
+                      s.done
+                        ? "bg-emerald-500/25 text-emerald-200 ring-emerald-300/40"
+                        : active
+                          ? "bg-white text-slate-900 ring-white/60"
+                          : "bg-white/10 text-white/80 ring-white/20"
+                    }`}>
+                      {s.done ? <Check className="h-4 w-4" strokeWidth={3} /> : s.id}
+                    </span>
+                    <div className="min-w-0 leading-tight">
+                      <div className="truncate text-[12px] font-black uppercase tracking-wider text-white">{s.label}</div>
+                      <div className="truncate text-[11px] text-white/65">{s.sub}</div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </FancyShell>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {tiles.map((t) => {
-          const isOpen = open === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setOpen(isOpen ? null : t.key)}
-              className={`group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all ${
-                t.done
-                  ? "border-emerald-400/60 bg-gradient-to-br from-emerald-50 to-white shadow-[0_8px_24px_-12px_rgba(16,185,129,0.45)] hover:shadow-[0_12px_32px_-12px_rgba(16,185,129,0.55)]"
-                  : "border-slate-300/70 bg-gradient-to-br from-slate-50 to-white hover:border-slate-400 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.25)]"
-              } ${isOpen ? "ring-2 ring-primary/50" : ""}`}
-            >
-              <div className="flex items-start gap-3">
-                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ${
-                  t.done ? "bg-emerald-500/15 text-emerald-700 ring-emerald-500/30" : "bg-slate-900/5 text-slate-700 ring-slate-900/10"
-                }`}>
-                  {t.done ? <Check className="h-5 w-5" strokeWidth={3} /> : t.icon}
-                </span>
-                <div className="flex-1 leading-tight">
-                  <div className="text-sm font-bold uppercase tracking-wider text-slate-800">{t.title}</div>
-                  <div className="mt-0.5 text-xs text-slate-600">{t.subtitle}</div>
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                {t.done ? (
-                  <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20">
-                    <Check className="mr-1 h-3 w-3" /> Zweryfikowane
-                  </Badge>
-                ) : (
-                  <Badge className="border-amber-500/30 bg-amber-500/15 font-bold text-amber-700 hover:bg-amber-500/20">
-                    Odblokuj −0,5%/rok
-                  </Badge>
-                )}
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700">
-                  {isOpen ? "Zwiń ▲" : "Rozwiń ▼"}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {open && (
-        <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
-          {open === "description" ? (
+      {/* Krok 1 — Opis dla inwestora */}
+      {step === 1 && (
+        <div className="animate-fade-in">
+          <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
             <InvestorDescriptionCard loanId={loanId} initialText={String(loanDesc ?? "")} />
-          ) : (
-            <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[open as Exclude<TileKey, "description">]} />
+            <div className="mt-4 flex justify-end">
+              <Button
+                size="lg"
+                onClick={goNext}
+                className="rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500"
+              >
+                Dalej — telefon →
+              </Button>
+            </div>
+          </FancyShell>
+        </div>
+      )}
+
+      {/* Krok 2 — Telefon */}
+      {step === 2 && (
+        <div className="animate-fade-in">
+          <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
+            <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={["phone"]} />
+            <div className="mt-4 flex justify-between gap-3">
+              <Button variant="ghost" size="lg" onClick={() => setStep(1)} className="rounded-2xl font-bold uppercase tracking-wider">
+                ← Wstecz
+              </Button>
+              <Button
+                size="lg"
+                onClick={goNext}
+                className="rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500"
+              >
+                Dalej — weryfikacje →
+              </Button>
+            </div>
+          </FancyShell>
+        </div>
+      )}
+
+      {/* Krok 3 — pozostałe 4 widoczne na raz */}
+      {step === 3 && (
+        <div className="animate-fade-in space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {extraTiles.map((t) => {
+              const isOpen = openExtra === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setOpenExtra(isOpen ? null : t.key)}
+                  className={`group relative overflow-hidden rounded-2xl border-2 p-4 text-left transition-all ${
+                    t.done
+                      ? "border-emerald-400/60 bg-gradient-to-br from-emerald-50 to-white shadow-[0_8px_24px_-12px_rgba(16,185,129,0.45)]"
+                      : "border-slate-300/70 bg-gradient-to-br from-slate-50 to-white hover:border-slate-400 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.25)]"
+                  } ${isOpen ? "ring-2 ring-primary/50" : ""}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ${
+                      t.done ? "bg-emerald-500/15 text-emerald-700 ring-emerald-500/30" : "bg-slate-900/5 text-slate-700 ring-slate-900/10"
+                    }`}>
+                      {t.done ? <Check className="h-5 w-5" strokeWidth={3} /> : t.icon}
+                    </span>
+                    <div className="flex-1 leading-tight">
+                      <div className="text-sm font-bold uppercase tracking-wider text-slate-800">{t.title}</div>
+                      <div className="mt-0.5 text-xs text-slate-600">{t.subtitle}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    {t.done ? (
+                      <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20">
+                        <Check className="mr-1 h-3 w-3" /> Zweryfikowane
+                      </Badge>
+                    ) : (
+                      <Badge className="border-amber-500/30 bg-amber-500/15 font-bold text-amber-700 hover:bg-amber-500/20">
+                        Odblokuj −0,5%/rok
+                      </Badge>
+                    )}
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 group-hover:text-slate-700">
+                      {isOpen ? "Zwiń ▲" : "Rozwiń ▼"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {openExtra && (
+            <div className="animate-fade-in">
+              <FancyShell variant="silver" motion={false} innerClassName="!p-4 md:!p-5">
+                <ClientProfileSections showPasswordCard={false} includePersonal={false} sections={[openExtra]} />
+              </FancyShell>
+            </div>
           )}
-        </FancyShell>
+
+          <div className="flex justify-start">
+            <Button variant="ghost" size="lg" onClick={() => setStep(2)} className="rounded-2xl font-bold uppercase tracking-wider">
+              ← Wstecz
+            </Button>
+          </div>
+        </div>
       )}
     </section>
   );
 }
+
