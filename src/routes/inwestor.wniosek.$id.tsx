@@ -163,15 +163,19 @@ function InwestorWniosek() {
         <Card>
           <CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {p.photos?.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {p.photos.map((src: string, i: number) => (
-                  <a key={i} href={src} target="_blank" rel="noreferrer">
-                    <img src={src} alt="" className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition" loading="lazy" />
-                  </a>
-                ))}
-              </div>
-            )}
+            {(() => {
+              const urls = (p.photos ?? []).filter((s: string) => typeof s === "string" && /^https?:\/\//i.test(s));
+              if (urls.length === 0) return null;
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {urls.map((src: string, i: number) => (
+                    <a key={i} href={src} target="_blank" rel="noreferrer">
+                      <img src={src} alt="" className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition" loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              );
+            })()}
             <div className="text-sm grid gap-1 md:grid-cols-2">
               <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
               <div><span className="text-muted-foreground">Lokalizacja:</span> {[p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
