@@ -86,6 +86,7 @@ import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growt
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
+import { Route as AdminAbTesterRouteImport } from './routes/admin.ab-tester'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
@@ -517,6 +518,11 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   path: '/ai-administrator',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAbTesterRoute = AdminAbTesterRouteImport.update({
+  id: '/ab-tester',
+  path: '/ab-tester',
+  getParentRoute: () => AdminRoute,
+} as any)
 const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -773,6 +779,7 @@ export interface FileRoutesByFullPath {
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
+  '/admin/ab-tester': typeof AdminAbTesterRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
@@ -890,6 +897,7 @@ export interface FileRoutesByTo {
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
+  '/admin/ab-tester': typeof AdminAbTesterRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
@@ -1012,6 +1020,7 @@ export interface FileRoutesById {
   '/wniosek-zabezpieczenie': typeof WniosekZabezpieczenieRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
+  '/admin/ab-tester': typeof AdminAbTesterRoute
   '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
@@ -1135,6 +1144,7 @@ export interface FileRouteTypes {
     | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
     | '/zapomniane-haslo'
+    | '/admin/ab-tester'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
@@ -1252,6 +1262,7 @@ export interface FileRouteTypes {
     | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
     | '/zapomniane-haslo'
+    | '/admin/ab-tester'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
@@ -1373,6 +1384,7 @@ export interface FileRouteTypes {
     | '/wniosek-zabezpieczenie'
     | '/wybor-roli'
     | '/zapomniane-haslo'
+    | '/admin/ab-tester'
     | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
@@ -2077,6 +2089,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiAdministratorRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ab-tester': {
+      id: '/admin/ab-tester'
+      path: '/ab-tester'
+      fullPath: '/admin/ab-tester'
+      preLoaderRoute: typeof AdminAbTesterRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/posrednik/leady/$id': {
       id: '/posrednik/leady/$id'
       path: '/$id'
@@ -2399,6 +2418,7 @@ const AdminKlienciRouteWithChildren = AdminKlienciRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAbTesterRoute: typeof AdminAbTesterRoute
   AdminAiAdministratorRoute: typeof AdminAiAdministratorRoute
   AdminAiCompetitorsRoute: typeof AdminAiCompetitorsRoute
   AdminAiFunnelRoute: typeof AdminAiFunnelRoute
@@ -2442,6 +2462,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAbTesterRoute: AdminAbTesterRoute,
   AdminAiAdministratorRoute: AdminAiAdministratorRoute,
   AdminAiCompetitorsRoute: AdminAiCompetitorsRoute,
   AdminAiFunnelRoute: AdminAiFunnelRoute,
@@ -2628,3 +2649,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

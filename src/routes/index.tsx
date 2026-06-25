@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
+import { LandingVariantExpress } from "@/components/landing/landing-variant-express";
 import { RecentApplicationsList } from "@/components/landing/recent-applications-list";
 import { HeroVideo } from "@/components/landing/hero-video";
+import { getOrAssignVariant, trackABEvent, type ABVariant } from "@/lib/ab-homepage";
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
@@ -51,6 +54,18 @@ function Landing() {
   const { user, roles } = useAuth();
   const panelHref = user ? defaultPathForRoles(roles) : null;
 
+  const [variant, setVariant] = useState<ABVariant>("A");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const v = getOrAssignVariant();
+    setVariant(v);
+    setReady(true);
+    trackABEvent(v, "view");
+  }, []);
+
+  if (!ready) return null;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
@@ -73,18 +88,36 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero + wniosek */}
-      <section className="border-b border-border bg-gradient-to-b from-[oklch(0.98_0.01_265)] to-background dark:from-[oklch(0.18_0.04_265)]">
-        <div className="mx-auto max-w-3xl px-4 pt-8 pb-10 md:px-6 md:pt-12 md:pb-14">
-          <HeroVideo />
-
-          <div className="mt-8">
-            <SinglePageApplicationForm />
+      {/* Variant A: Video hero + original multi-step form */}
+      {variant === "A" && (
+        <section className="border-b border-border bg-gradient-to-b from-[oklch(0.98_0.01_265)] to-background dark:from-[oklch(0.18_0.04_265)]">
+          <div className="mx-auto max-w-3xl px-4 pt-8 pb-10 md:px-6 md:pt-12 md:pb-14">
+            <HeroVideo />
+            <div className="mt-8">
+              <SinglePageApplicationForm />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Ostatnie wnioski */}
+      {/* Variant B: Express money-first flow */}
+      {variant === "B" && (
+        <section className="border-b border-border bg-gradient-to-b from-[oklch(0.98_0.01_265)] to-background dark:from-[oklch(0.18_0.04_265)]">
+          <div className="mx-auto max-w-3xl px-4 pt-8 pb-10 md:px-6 md:pt-12 md:pb-14">
+            <div className="mb-6 text-center">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
+                Pożyczka pod zastaw nieruchomości
+              </h1>
+              <p className="mt-2 text-base text-muted-foreground">
+                Do 1 000 000 zł. Decyzja w 24h. Bez BIK. 100% online.
+              </p>
+            </div>
+            <LandingVariantExpress />
+          </div>
+        </section>
+      )}
+
+      {/* Ostatnie wnioski - shown for both variants */}
       <RecentApplicationsList />
 
       {/* Footer */}
@@ -108,7 +141,7 @@ function Landing() {
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                 <li><a href={`tel:${PHONE_HREF}`} className="hover:text-foreground">{PHONE_DISPLAY}</a></li>
                 <li><a href={`mailto:${EMAIL}`} className="hover:text-foreground">{EMAIL}</a></li>
-                <li>pn–pt 9:00–17:00</li>
+                <li>pn-pt 9:00-17:00</li>
               </ul>
             </div>
             <div>
@@ -121,7 +154,7 @@ function Landing() {
             </div>
           </div>
           <div className="mt-8 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
-            <span>© {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
+            <span>&copy; {new Date().getFullYear()} Finance You sp. z o.o. Wszelkie prawa zastrzeżone.</span>
             <span>Prywatne pożyczki zabezpieczone hipoteką na nieruchomości w Polsce.</span>
           </div>
         </div>

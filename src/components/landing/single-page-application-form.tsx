@@ -22,6 +22,7 @@ import { submitLandingLoanApplication } from "@/lib/landing-application.function
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { getCurrentVariant, trackABEvent } from "@/lib/ab-homepage";
 
 const FANCY_INPUT_CLASS =
   "h-12 rounded-xl border-2 border-white/30 bg-white/10 text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40";
@@ -314,10 +315,12 @@ export function SinglePageApplicationForm() {
         return;
       }
       fireLead();
+      if (getCurrentVariant() === "A") trackABEvent("A", "step_contact");
       setStep(2);
       return;
     }
     if (step === 2) {
+      if (getCurrentVariant() === "A") trackABEvent("A", "step_path");
       setStep(3);
       return;
     }
@@ -383,6 +386,13 @@ export function SinglePageApplicationForm() {
     if (!hasPropertyPhotos) {
       toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
+    }
+
+    if (getCurrentVariant() === "A") {
+      trackABEvent("A", "step_property", { secType });
+      trackABEvent("A", "step_kw", { kwNumber: kwNumber.trim(), photosCount: photos.length });
+      trackABEvent("A", "step_calculator", { amount, months });
+      trackABEvent("A", "submit", { amount, months, secType, kwNumber: kwNumber.trim(), photosCount: photos.length });
     }
 
     setSubmitting(true);
