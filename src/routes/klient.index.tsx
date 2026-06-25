@@ -226,31 +226,6 @@ function KlientDashboard() {
 
       <InvestorProposalCalculator />
 
-      {/* === Info: weryfikuj, by obniżyć koszty === */}
-      <FancyShell>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-              <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
-            </span>
-            <div className="leading-tight">
-              <div className="text-base font-bold uppercase tracking-[0.14em] sm:text-lg">
-                Zweryfikuj dane, aby wnioskować o niższe koszty
-              </div>
-              <div className="mt-1 text-xs text-white/75 sm:text-sm">
-                Im więcej zielonych odznak (telefon, konto, BIK, dane firmy), tym lepsze warunki możesz dostać od inwestorów.
-              </div>
-            </div>
-          </div>
-          <Sparkles className="hidden h-8 w-8 text-white/60 sm:block" />
-        </div>
-      </FancyShell>
-
-      {/* === Pełny profil — dane, weryfikacje, dokumenty === */}
-      <ClientProfileSections showPasswordCard={false} />
-
-
-
       {loanRow?.id && (
         <div className="grid gap-6 lg:grid-cols-2">
           {/* === Twoje pliki (fancy) === */}
@@ -403,6 +378,30 @@ function KlientDashboard() {
           </FancyShell>
         </div>
       )}
+
+      {/* === Info: weryfikuj, by obniżyć koszty === */}
+      <FancyShell>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+              <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
+            </span>
+            <div className="leading-tight">
+              <div className="text-base font-bold uppercase tracking-[0.14em] sm:text-lg">
+                Zweryfikuj dane, aby wnioskować o niższe koszty
+              </div>
+              <div className="mt-1 text-xs text-white/75 sm:text-sm">
+                Im więcej zielonych odznak (telefon, konto, BIK, dane firmy), tym lepsze warunki możesz dostać od inwestorów.
+              </div>
+            </div>
+          </div>
+          <Sparkles className="hidden h-8 w-8 text-white/60 sm:block" />
+        </div>
+      </FancyShell>
+
+      {/* === Pełny profil — dane, weryfikacje, dokumenty === */}
+      <ClientProfileSections showPasswordCard={false} />
+
 
 
       {loanRow?.id && (
