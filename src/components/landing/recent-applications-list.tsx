@@ -165,6 +165,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       has_bik: rand() < 0.7,
       phone_verified: rand() < 0.9,
       bank_verified: rand() < 0.55,
+      photo_url: shuffledPhotos[i % shuffledPhotos.length]!,
     });
   }
   return items;
