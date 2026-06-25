@@ -385,6 +385,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                         <div className="tabular-nums font-bold text-emerald-300">
                           {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
                         </div>
+                        <div className="mt-0.5 min-h-[14px]" aria-hidden />
                       </div>
                       <div className="col-span-2 rounded-xl bg-white/10 p-3 ring-1 ring-white/15">
                         <div className="text-[11px] uppercase tracking-wide text-white/70">
