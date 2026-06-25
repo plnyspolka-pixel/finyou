@@ -189,7 +189,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
     setSeed(Math.floor(Math.random() * 1e9));
   }, []);
 
-  const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 12)), [seed]);
+  const allItems = useMemo(() => (seed == null ? [] : generateOffers(seed, 28)), [seed]);
 
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
