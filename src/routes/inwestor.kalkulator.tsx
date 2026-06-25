@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LoanCalculator } from "@/components/loan-calculator";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/kalkulator")({
   component: Kalkulator,
@@ -8,11 +9,13 @@ export const Route = createFileRoute("/inwestor/kalkulator")({
 function Kalkulator() {
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold">Kalkulator pożyczki</h1>
-        <p className="text-sm text-muted-foreground">Ustaw parametry — od razu zobaczysz harmonogram, koszty i zgodność z limitami ustawowymi.</p>
-      </div>
+      <FancyPageHeader
+        eyebrow="Narzędzia inwestora"
+        title="Kalkulator pożyczki"
+        subtitle="Ustaw parametry — od razu zobaczysz harmonogram, koszty i zgodność z limitami ustawowymi."
+      />
       <LoanCalculator />
     </div>
   );
 }
+
