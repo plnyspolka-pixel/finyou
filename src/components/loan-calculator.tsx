@@ -26,6 +26,9 @@ export type LoanCalculatorState = {
   annualRate: number;
   commissionPct: number;
   commissionPln: number;
+  financeYouFeePct: number;
+  financeYouFeePln: number;
+  grossPrincipal: number;
   maxPayment: number;
   nominalRata: number;
   cappedRata: number;
@@ -70,19 +73,26 @@ export function LoanCalculator({
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
 
+  // Prowizja Finance You — skalowana wg kwoty (10% → 4%), kredytowana do kapitału (gross principal).
+  // Identyczna logika jak w kalkulatorze na landingu.
+  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
+  const financeYouFeePct = Math.round((10 - feeT * 6) * 10) / 10;
+  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
+  const grossPrincipal = amount + financeYouFeePln;
+
   const schedule = useMemo(() => {
-    if (!amount || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
+    if (!grossPrincipal || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
     const monthlyRate = annualRate / 100 / 12;
     const rows: any[] = [];
     const start = new Date();
 
     const nominalRata = monthlyRate > 0
-      ? (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
-      : amount / months;
+      ? (grossPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
+      : grossPrincipal / months;
     const cappedRata = maxPayment > 0 ? Math.min(nominalRata, maxPayment) : nominalRata;
     const balloon = Math.max(0, (nominalRata - cappedRata) * months);
 
-    let saldo = amount;
+    let saldo = grossPrincipal;
     for (let i = 1; i <= months; i++) {
       const ods = saldo * monthlyRate;
       const last = i === months;
@@ -101,13 +111,13 @@ export function LoanCalculator({
       nominalRata,
       cappedRata,
     };
-  }, [amount, months, annualRate, maxPayment]);
+  }, [grossPrincipal, months, annualRate, maxPayment]);
 
   const commissionPln = (amount * commissionPct) / 100;
-  const nonInterestTotal = commissionPln;
+  const nonInterestTotal = commissionPln + financeYouFeePln;
   const maxNonInterest = maxNonInterestCosts(amount, months);
   const totalCost = schedule.totalOds + nonInterestTotal;
-  const totalToRepay = schedule.totalRata + nonInterestTotal;
+  const totalToRepay = schedule.totalRata + commissionPln; // FY już w racie (kredytowana), prowizja inwestora płatna z góry
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest;
@@ -115,13 +125,15 @@ export function LoanCalculator({
 
   useEffect(() => {
     onChange?.({
-      amount, months, annualRate, commissionPct, commissionPln, maxPayment,
+      amount, months, annualRate, commissionPct, commissionPln,
+      financeYouFeePct, financeYouFeePln, grossPrincipal,
+      maxPayment,
       nominalRata: schedule.nominalRata, cappedRata: schedule.cappedRata, balloon: schedule.balloon,
       totalRata: schedule.totalRata, totalOds: schedule.totalOds, totalKap: schedule.totalKap,
       totalCost, totalToRepay, schedule: schedule.rows,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount, months, annualRate, commissionPct, maxPayment, schedule.balloon, schedule.totalRata, schedule.totalOds]);
+  }, [amount, months, annualRate, commissionPct, financeYouFeePct, financeYouFeePln, grossPrincipal, maxPayment, schedule.balloon, schedule.totalRata, schedule.totalOds]);
 
   return (
     <div className="space-y-6">
@@ -153,8 +165,9 @@ export function LoanCalculator({
             <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Od tej kwoty liczone odsetki</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (z prowizją FY {financeYouFeePct}%)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
             </div>
           </div>
 
@@ -261,11 +274,13 @@ export function LoanCalculator({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
           <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
+          <div className="flex justify-between"><span>Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+          <div className="flex justify-between"><span>Kapitał startowy (od którego liczone odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
           <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem (od kwoty nominalnej)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
-          <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(nonInterestTotal)}</b></div>
+          <div className="flex justify-between"><span>Odsetki razem (od kapitału startowego)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+          <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
-          <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
+          <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
       </Card>
 
