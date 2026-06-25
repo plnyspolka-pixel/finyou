@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
+import { FancyShell } from "@/components/landing/fancy-shell";
 
 // Bez zdjęć — na landingu nie pokazujemy żadnych materiałów klientów (KW, dokumenty, fotki nieruchomości).
 const PROPERTY_VISUAL: Record<string, { Icon: typeof Home; gradient: string }> = {
