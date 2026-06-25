@@ -133,21 +133,37 @@ function mulberry32(seed: number) {
 function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
   const rand = mulberry32(seed);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)] as T;
-  // Liczniki per typ — żeby tasować zdjęcia w obrębie właściwej puli
-  const typeIdx: Record<string, number> = { apartment: 0, house: 0, plot_building: 0, commercial: 0 };
+  // Zdjęcia: tasujemy pulę i bierzemy po jednym — nigdy dwa razy to samo zdjęcie.
+  const photoPool = [...LANDING_OFFER_PHOTOS];
+  for (let i = photoPool.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [photoPool[i], photoPool[j]] = [photoPool[j]!, photoPool[i]!];
+  }
+  const maxCount = Math.min(count, photoPool.length);
   const now = Date.now();
   const items: RecentLoanApplicationItem[] = [];
-  for (let i = 0; i < count; i++) {
-    // Mniejsze kwoty: 30k – 250k, krok 5k
-    const amount = Math.round((30_000 + rand() * 220_000) / 5_000) * 5_000;
-    // Krótsze okresy → balon i wyższe stopy
-    const period = pick([24, 24, 36, 36, 36, 48, 60]);
-    // Wyższe wynagrodzenie inwestora — zgodnie z regułami kalkulatora
+  for (let i = 0; i < maxCount; i++) {
+    // Kwoty: większość ≤ 200k, sporadycznie ~500k, 1–2 sztuki ~800–900k.
+    // Sloty: index 0 → 800–900k, index 1 → 500k (czasem też 800–900k), reszta ≤ 200k.
+    let amount: number;
+    if (i === 0) {
+      amount = Math.round((800_000 + rand() * 100_000) / 10_000) * 10_000; // 800–900k
+    } else if (i === 1 && rand() < 0.5) {
+      amount = Math.round((800_000 + rand() * 100_000) / 10_000) * 10_000; // czasem druga duża
+    } else if (i < 4) {
+      amount = Math.round((450_000 + rand() * 100_000) / 10_000) * 10_000; // 450–550k
+    } else {
+      amount = Math.round((40_000 + rand() * 160_000) / 5_000) * 5_000; // 40–200k
+    }
+    // Dłuższe okresy bardziej prawdopodobne → niższe raty (bliżej minimum)
+    const period = amount > 400_000
+      ? pick([24, 30, 36])               // powyżej 400k max 36 mies.
+      : pick([36, 48, 60, 60, 72, 72]);  // do 400k preferujemy długie okresy
+    // Stopa zwrotu w okolicy minimum z kalkulatora
     const rate = period <= 36
-      ? Math.round((28 + rand() * 8) * 2) / 2   // 28% – 36% step 0.5
-      : Math.round((22 + rand() * 8) * 2) / 2;  // 22% – 30% step 0.5
+      ? Math.round((24 + rand() * 2) * 2) / 2     // 24% – 26%
+      : Math.round((15 + rand() * 3) * 2) / 2;    // 15% – 18%
     const figures = computeOfferFigures(amount, period, rate);
-    // Pierwsze 3 oferty są „świeże dziś" (3–180 min temu), reszta rozciągnięta na 7 dni
     const minutesAgo = i < 3
       ? Math.floor(rand() * 180) + 3
       : Math.floor(rand() * 60 * 24 * 7) + 60;
@@ -156,7 +172,7 @@ function generateOffers(seed: number, count = 6): RecentLoanApplicationItem[] {
       formRoll < 0.7 ? "jdg" : formRoll < 0.92 ? "sp_zoo" : "sa";
     const is_startup = rand() < 0.35;
     const property_type = pick(PROPERTY_TYPES);
-    const photo_url = photoForType(property_type, typeIdx[property_type]!++);
+    const photo_url = photoPool[i]!;
     items.push({
       id: `gen-${seed}-${i}`,
       first_name: pick(FIRST_NAMES),
