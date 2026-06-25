@@ -151,11 +151,29 @@ export function LoanCalculator({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
-          <CardDescription>Suwaki działają tak samo, jak po stronie klienta.</CardDescription>
-        </CardHeader>
+      <Card className="overflow-hidden border-transparent shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.45)] ring-1 ring-primary/20">
+        <div
+          className="relative overflow-hidden px-6 py-5 text-white"
+          style={{
+            background:
+              "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
+          }}
+        >
+          <span
+            aria-hidden
+            className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl"
+            style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)" }}
+          />
+          <span
+            aria-hidden
+            className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl"
+            style={{ background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)" }}
+          />
+          <div className="relative">
+            <CardTitle className="flex items-center gap-2 text-white"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
+            <CardDescription className="text-white/80">Suwaki działają tak samo, jak po stronie klienta.</CardDescription>
+          </div>
+        </div>
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
