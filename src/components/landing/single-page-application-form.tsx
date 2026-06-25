@@ -295,18 +295,18 @@ export function SinglePageApplicationForm({ prefilledContact }: { prefilledConta
     if (!rateTouchedRef.current) setAnnualRate(suggestedRate);
   }, [suggestedRate]);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState(prefilledContact?.firstName ?? "");
+  const [lastName, setLastName] = useState(prefilledContact?.lastName ?? "");
+  const [phone, setPhone] = useState(prefilledContact?.phone ?? "");
+  const [email, setEmail] = useState(prefilledContact?.email ?? "");
   const [kwNumber, setKwNumber] = useState("");
   const [extraKwNumbers, setExtraKwNumbers] = useState<string[]>([]);
   const [usableArea, setUsableArea] = useState("");
   const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [consentPrivacy, setConsentPrivacy] = useState(false);
-  const [consentTerms, setConsentTerms] = useState(false);
-  const [consentMarketing, setConsentMarketing] = useState(false);
+  const [consentPrivacy, setConsentPrivacy] = useState(skipContact);
+  const [consentTerms, setConsentTerms] = useState(skipContact);
+  const [consentMarketing, setConsentMarketing] = useState(skipContact);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
