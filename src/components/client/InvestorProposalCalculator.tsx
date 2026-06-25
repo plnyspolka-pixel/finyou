@@ -262,17 +262,32 @@ export function InvestorProposalCalculator({
           </div>
         </FancyShell>
 
-        <OfferCalculatorPanel
-          amount={amount} setAmount={setAmount}
-          months={months} setMonths={setMonths}
-          maxMonths={maxMonths}
-          canExtend={canExtend} setCanExtend={setCanExtend}
-          annualRate={annualRate} setAnnualRate={setAnnualRate}
-          rateTouchedRef={rateTouchedRef}
-          maxPayment={maxPayment} setMaxPayment={setMaxPayment}
-          headerLabel="Twoja oferta"
-        />
+        <div className="relative">
+          <fieldset disabled={Boolean(lockReason)} className={cn("contents", lockReason && "pointer-events-none")}>
+            <OfferCalculatorPanel
+              amount={amount} setAmount={setAmount}
+              months={months} setMonths={setMonths}
+              maxMonths={maxMonths}
+              canExtend={canExtend} setCanExtend={setCanExtend}
+              annualRate={annualRate} setAnnualRate={setAnnualRate}
+              rateTouchedRef={rateTouchedRef}
+              maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+              headerLabel="Twoja oferta"
+            />
+          </fieldset>
+          {lockReason && (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center rounded-2xl bg-background/55 backdrop-blur-[2px]">
+              <div className="pointer-events-auto mt-6 flex max-w-md items-start gap-3 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 shadow-lg dark:bg-amber-950 dark:text-amber-100">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{lockReason}</span>
+              </div>
+            </div>
+          )}
+        </div>
       </fieldset>
+
+      {filesSlot}
+
 
 
       {!locked && (
