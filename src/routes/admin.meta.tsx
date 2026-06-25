@@ -57,6 +57,15 @@ function MetaPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const backfillFn = useServerFn(backfillMetaLeadAccounts);
+  const backfill = useMutation({
+    mutationFn: () => backfillFn(),
+    onSuccess: (r: any) => {
+      toast.success(`Konta klientów: utworzono ${r.created}, podpięto istniejących ${r.linked_existing}, błędy ${r.failed} (z ${r.processed})`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
