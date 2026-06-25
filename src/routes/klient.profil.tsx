@@ -14,7 +14,7 @@ function KlientProfil() {
           Zaktualizuj swoje dane — imię, nazwisko, PESEL, e-mail, telefon i adres.
         </p>
       </div>
-      <ClientProfileSections includePersonal={true} showPasswordCard={true} />
+      <ClientProfileSections onlyPersonal includePersonal showPasswordCard={false} />
     </div>
   );
 }
