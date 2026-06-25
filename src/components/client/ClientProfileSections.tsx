@@ -14,7 +14,7 @@ import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
 import { sendPhoneOtp, verifyPhoneOtp } from "@/lib/phone-verification.functions";
 import { useServerFn } from "@tanstack/react-start";
 
-export function ClientProfileSections({ showPasswordCard = true, includePersonal = true }: { showPasswordCard?: boolean; includePersonal?: boolean }) {
+export function ClientProfileSections({ showPasswordCard = true, includePersonal = true, onlyPersonal = false }: { showPasswordCard?: boolean; includePersonal?: boolean; onlyPersonal?: boolean }) {
   const { user } = useAuth();
   const [row, setRow] = useState<any | null>(null);
   const [fetching, setFetching] = useState(false);
@@ -158,6 +158,13 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
           </Card>
         </>
       )}
+
+      {onlyPersonal && (
+        <Button onClick={save}>Zapisz</Button>
+      )}
+      {onlyPersonal ? null : (
+      <>
+
 
       <Card>
         <CardHeader>
