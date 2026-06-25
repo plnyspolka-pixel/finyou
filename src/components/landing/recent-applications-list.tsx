@@ -224,9 +224,9 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
   // ---- Wyszukiwarka / filtry --------------------------------------------
   const [q, setQ] = useState("");
   const [propType, setPropType] = useState<keyof typeof PROPERTY_TYPE_LABELS | "all">("all");
-  const [amountMax, setAmountMax] = useState<number>(250_000);
-  const [periodMax, setPeriodMax] = useState<number>(60);
-  const [minRate, setMinRate] = useState<number>(22);
+  const [amountMax, setAmountMax] = useState<number>(900_000);
+  const [periodMax, setPeriodMax] = useState<number>(72);
+  const [minRate, setMinRate] = useState<number>(15);
 
   const items = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -239,8 +239,8 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
     );
   }, [allItems, q, propType, amountMax, periodMax, minRate]);
 
-  const filtersActive = q !== "" || propType !== "all" || amountMax !== 250_000 || periodMax !== 60 || minRate !== 22;
-  const resetFilters = () => { setQ(""); setPropType("all"); setAmountMax(250_000); setPeriodMax(60); setMinRate(22); };
+  const filtersActive = q !== "" || propType !== "all" || amountMax !== 900_000 || periodMax !== 72 || minRate !== 15;
+  const resetFilters = () => { setQ(""); setPropType("all"); setAmountMax(900_000); setPeriodMax(72); setMinRate(15); };
 
   return (
     <section id="ostatnie-oferty" className="border-t border-border bg-secondary/30 scroll-mt-20">
