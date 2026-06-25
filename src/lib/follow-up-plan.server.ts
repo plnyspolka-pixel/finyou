@@ -301,8 +301,21 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
     }
 
     const firstName = lead.first_name ?? "";
-    // Wszystkie linki w mailingu/SMS kierują na stronę główną financeyou.pl
-    const returnLink = "https://financeyou.pl";
+    // Spróbuj świeży magic link (auto-zaloguje klienta do /klient). Fallback: financeyou.pl
+    let returnLink = "https://financeyou.pl";
+    if (lead.email && (row.channel === "email" || row.channel === "sms")) {
+      try {
+        const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
+        const r = await ensureKlientAccountAndMagicLink(lead.email, {
+          firstName: lead.first_name ?? null,
+          source: "meta_lead",
+        });
+        if (r.magicLink) returnLink = r.magicLink;
+        if (r.userId && lead.client_id) {
+          await s.from("clients").update({ user_id: r.userId }).eq("id", lead.client_id).is("user_id", null);
+        }
+      } catch { /* fallback do financeyou.pl */ }
+    }
     const vars: TplVars = { firstName, returnLink };
 
     try {
