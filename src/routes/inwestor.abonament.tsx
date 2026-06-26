@@ -12,8 +12,8 @@ import { CheckCircle2 } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/abonament")({
-  validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
-    session_id: typeof search.session_id === "string" ? search.session_id : undefined,
+  validateSearch: (search: Record<string, unknown>): { tpay?: string } => ({
+    tpay: typeof search.tpay === "string" ? search.tpay : undefined,
   }),
   component: InwestorAbonament,
 });
