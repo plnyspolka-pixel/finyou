@@ -92,7 +92,31 @@ export function InvestorProposalCalculator({
 
   useEffect(() => {
     if (prop?.property_type) setPropertyType(prop.property_type as SecurityType);
-  }, [prop?.id, prop?.property_type]);
+    if (prop?.city) setCity(String(prop.city));
+  }, [prop?.id, prop?.property_type, prop?.city]);
+
+  const saveCity = (value: string) => {
+    setCity(value);
+    if (!loan?.id || locked) return;
+    if (citySaveTimer.current) clearTimeout(citySaveTimer.current);
+    citySaveTimer.current = setTimeout(async () => {
+      const trimmed = value.trim();
+      try {
+        if (prop?.id) {
+          await supabase.from("properties").update({ city: trimmed || null }).eq("id", prop.id);
+          setProp((prev: any) => prev ? { ...prev, city: trimmed || null } : prev);
+        } else {
+          const { data: inserted } = await supabase.from("properties")
+            .insert({ loan_application_id: loan.id, city: trimmed || null })
+            .select("*").maybeSingle();
+          if (inserted) setProp(inserted);
+        }
+      } catch (e: any) {
+        toast.error(e?.message ?? "Nie udało się zapisać miejscowości");
+      }
+    }, 600);
+  };
+
 
   const savePropertyType = async (t: SecurityType) => {
     setPropertyType(t);
