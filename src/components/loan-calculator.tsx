@@ -359,21 +359,11 @@ export function LoanCalculator({
               <span>30%</span>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Prowizja Finance You (operatorska) {investorGuidance && <InfoTip text="Wynagrodzenie operatora platformy. NIE jest kosztem pozaodsetkowym pożyczki w rozumieniu art. 36a UoKK — nie wlicza się do limitu MPKK." />}</Label>
-              <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={financeYouFeePct} onChange={(e) => setFinanceYouFeePct(Number(e.target.value) || 0)} className="w-24" />
-                <span className="text-sm">% ({formatPLN(financeYouFeePln)})</span>
-              </div>
-            </div>
-            <Slider min={0} max={15} step={0.5} value={[Math.min(15, Math.max(0, financeYouFeePct))]} onValueChange={(v) => setFinanceYouFeePct(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>0%</span>
-              <span className="text-muted-foreground/80">nie wlicza się do MPKK</span>
-              <span>15%</span>
-            </div>
+          <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+            <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
           </div>
+
 
           </div>
 
