@@ -74,7 +74,8 @@ export const listLeads = createServerFn({ method: "GET" })
           const s = ensure(l.id);
           if (ev.channel === "voicebot_call" || ev.channel === "call") {
             s.calls++;
-            if (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt)) {
+            // Tylko ręczne telefony pośrednika (channel='call') zliczamy jako "Ostatni telefon"
+            if (ev.channel === "call" && (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt))) {
               s.lastCallAt = ev.created_at;
               s.lastCallById = ev.created_by ?? null;
             }
