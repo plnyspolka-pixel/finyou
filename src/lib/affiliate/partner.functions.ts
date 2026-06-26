@@ -294,7 +294,7 @@ export const getAffiliateStructure = createServerFn({ method: "GET" })
       return {
         depth,
         members,
-        activeCount: members.filter((m) => m.active).length,
+        activeCount: members.filter((m: { active: boolean }) => m.active).length,
         totalCount: members.length,
         commissionSum: commByLevel(depth),
       };

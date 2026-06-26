@@ -26,6 +26,7 @@ import {
 
 } from "lucide-react";
 import { generateMaterialDescription, ensureMyReferralCode } from "@/lib/marketing-materials.functions";
+import { MarketingComplianceNotice } from "@/components/affiliate/compliance-notice";
 
 function TikTokIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -156,6 +157,8 @@ function BrokerMarketingPage() {
           przypisują nowych klientów / inwestorów / pośredników do Twojego konta.
         </p>
       </div>
+
+      <MarketingComplianceNotice />
 
       <Card>
         <CardHeader>
