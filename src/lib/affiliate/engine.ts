@@ -262,6 +262,7 @@ export async function createCommissionEvent(
     financeYouFeeAmount?: number;
     loanAmount?: number;
     paymentId?: string;
+    externalRef?: string;
     productId?: string;
     applicationId?: string;
     customerId?: string;
@@ -284,6 +285,7 @@ export async function createCommissionEvent(
       source_entity_type: input.sourceEntityType ?? null,
       source_entity_id: input.sourceEntityId ?? null,
       direct_partner_id: input.directPartnerId,
+      external_ref: input.externalRef ?? null,
       gross_payment_amount: input.grossPaymentAmount ?? null,
       net_revenue_amount: input.netRevenueAmount ?? null,
       finance_you_fee_amount: input.financeYouFeeAmount ?? null,
@@ -297,6 +299,9 @@ export async function createCommissionEvent(
       occurred_at: occurredAt.toISOString(),
       confirmed_at: new Date().toISOString(),
       refund_window_until: refundUntil.toISOString(),
+      // Naliczamy prowizje od razu (inline) — oznaczamy jako przetworzone,
+      // aby tick nie liczył ich ponownie.
+      processed_at: new Date().toISOString(),
     })
     .select("id")
     .single();

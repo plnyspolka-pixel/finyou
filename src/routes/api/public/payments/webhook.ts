@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
 import { createInvoiceFromPayment } from "@/lib/accounting/auto-invoice";
+import { createCommissionEvent } from "@/lib/affiliate/engine";
 
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
@@ -114,6 +115,47 @@ async function handleCheckoutCompleted(session: any) {
     }
   } catch (e) {
     console.error("Auto-invoice failed:", (e as Error)?.message);
+  }
+
+  // Zdarzenie prowizyjne „opłacone konto inwestora" — jeśli płatnik został
+  // polecony przez aktywnego partnera (first-touch zapisany na profilu).
+  try {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("referred_by_partner_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const partnerId = prof?.referred_by_partner_id as string | null | undefined;
+    if (partnerId) {
+      const { data: partner } = await supabase
+        .from("affiliate_partners")
+        .select("status")
+        .eq("id", partnerId)
+        .maybeSingle();
+      if (partner?.status === "active") {
+        const { data: existingEv } = await supabase
+          .from("affiliate_commission_events")
+          .select("id")
+          .eq("event_type", "investor_account_paid")
+          .eq("external_ref", session.id)
+          .maybeSingle();
+        if (!existingEv) {
+          const grossAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
+          await createCommissionEvent(supabase as any, {
+            eventType: "investor_account_paid",
+            directPartnerId: partnerId,
+            sourceEntityType: "stripe_session",
+            externalRef: session.id,
+            grossPaymentAmount: grossAmount,
+            netRevenueAmount: grossAmount,
+            financeYouFeeAmount: grossAmount,
+            customerId: userId,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Investor commission event failed:", (e as Error)?.message);
   }
 }
 
