@@ -64,7 +64,13 @@ export const refetchInboundEmailBody = createServerFn({ method: "POST" })
       },
     });
     if (!r.ok) {
-      throw new Error(`Resend API ${r.status}: ${await r.text().catch(() => "")}`);
+      const errText = await r.text().catch(() => "");
+      if (r.status === 401 && /restricted_api_key|restricted to only send/i.test(errText)) {
+        throw new Error(
+          "Klucz RESEND_API_KEY ma uprawnienia tylko do wysyłki maili. Aby pobierać treść wiadomości przychodzących, wygeneruj w panelu Resend klucz z pełnym dostępem (Full access) i zaktualizuj sekret RESEND_API_KEY.",
+        );
+      }
+      throw new Error(`Resend API ${r.status}: ${errText}`);
     }
     const body: any = await r.json();
 
