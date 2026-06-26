@@ -96,6 +96,7 @@ function KlientDashboard() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [thumbs, setThumbs] = useState<{ url: string; path: string }[]>([]);
   const [kw, setKw] = useState("");
+  const [extraKws, setExtraKws] = useState<string[]>([]);
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
   const [area, setArea] = useState<string>("");
