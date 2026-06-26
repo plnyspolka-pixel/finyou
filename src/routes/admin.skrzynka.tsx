@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,30 @@ function SkrzynkaPage() {
   }, [data, q]);
 
   const selected = filtered.find((m) => m.id === selectedId) ?? filtered[0] ?? null;
+
+  // Auto-pobieranie treści dla inbound wiadomości bez html (tła + na żądanie przy zaznaczeniu).
+  const autoFetched = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (tab !== "inbound" || !data) return;
+    const needsFetch = data.filter((m) => {
+      if (autoFetched.current.has(m.id)) return false;
+      const meta = (m.metadata ?? {}) as Record<string, any>;
+      if (!meta?.email_id) return false;
+      if (meta?.html) return false;
+      if ((m.content ?? "").trim().length > 200) return false;
+      return true;
+    });
+    if (!needsFetch.length) return;
+    // Priorytet: aktualnie zaznaczona, potem do 5 najnowszych w tle.
+    const prioritized = selected && needsFetch.some((m) => m.id === selected.id)
+      ? [selected, ...needsFetch.filter((m) => m.id !== selected.id)]
+      : needsFetch;
+    const batch = prioritized.slice(0, 5);
+    for (const m of batch) {
+      autoFetched.current.add(m.id);
+      refetchBody.mutate(m.id);
+    }
+  }, [data, tab, selected, refetchBody]);
 
   return (
     <div className="space-y-4">
