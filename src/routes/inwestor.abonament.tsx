@@ -155,7 +155,7 @@ function InwestorAbonament() {
             <Button variant="ghost" size="sm" onClick={() => setActivePrice(null)}>Anuluj</Button>
           </CardHeader>
           <CardContent>
-            <StripeEmbeddedCheckoutForm priceId={activePrice} />
+            <StripeEmbeddedCheckoutForm priceId={activePrice as "investor_access_1d" | "investor_access_1m" | "investor_access_1y"} />
           </CardContent>
         </Card>
       )}
