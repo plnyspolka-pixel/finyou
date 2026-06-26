@@ -298,11 +298,10 @@ export function LoanCalculator({
               </Alert>
             )}
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Kapitał startowy (od którego liczone odsetki){investorGuidance && <InfoTip text="Kwota nominalna powiększona o kredytowaną prowizję Finance You. Od tej wartości naliczane są odsetki." />}</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(disbursedOnHand)}</b></div>
-              <div className="flex justify-between sm:col-span-2 border-t pt-1.5"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora (wypłata klientowi + prowizja FY, minus prowizja inwestora)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, grossPrincipal - commissionPln))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
             </div>
+
           </div>
 
           <div className="space-y-3">
