@@ -108,9 +108,11 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
+    const brokerIds = Array.from(new Set(Object.values(brokerByLead).flatMap((m) => Object.keys(m))));
     const callerIds = Array.from(new Set([
       ...Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean),
       ...Object.values(commsByLead).map((c) => c.lastNoteById).filter(Boolean),
+      ...brokerIds,
     ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
@@ -119,9 +121,15 @@ export const listLeads = createServerFn({ method: "GET" })
         callerNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";
       }
     }
-    for (const c of Object.values(commsByLead)) {
+    for (const [leadId, c] of Object.entries(commsByLead)) {
       c.lastCallByName = c.lastCallById ? (callerNames[c.lastCallById] ?? "Pośrednik") : null;
       c.lastNoteByName = c.lastNoteById ? (callerNames[c.lastNoteById] ?? "Pośrednik") : null;
+      const bMap = brokerByLead[leadId];
+      if (bMap) {
+        c.brokerCalls = Object.entries(bMap)
+          .map(([id, v]) => ({ id, name: callerNames[id] ?? "Pośrednik", count: v.count, lastAt: v.lastAt }))
+          .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+      }
     }
 
     // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).
