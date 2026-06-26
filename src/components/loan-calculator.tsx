@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 
@@ -169,6 +169,13 @@ export function LoanCalculator({
   const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
   const totalToRepay = schedule.totalRata + commissionPln + financeYouFeePln;
   const disbursedOnHand = Math.max(0, amount - commissionPln - financeYouFeePln);
+  // Inwestor: wkład gotówkowy = kwota nominalna - prowizja (potrącana z góry).
+  // Inwestor otrzymuje: spłaty kapitału z części "amount" + odsetki + prowizja.
+  const investorCashOut = Math.max(0, amount - commissionPln);
+  const investorTotalIn = amount + schedule.totalOds + commissionPln; // brutto: zwrot kapitału + odsetki + prowizja
+  const investorProfit = schedule.totalOds + commissionPln;
+  const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
+  const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
   const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
 
@@ -234,6 +241,57 @@ export function LoanCalculator({
         </CardContent>
       </Card>
 
+      {/* HERO — najważniejsze liczby (fancy) */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(ellipse_at_top_left,_hsl(220_70%_25%),_hsl(230_60%_12%)_60%,_hsl(235_50%_8%))] p-6 md:p-8 shadow-2xl">
+        <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-[conic-gradient(from_120deg,_#a78bfa,_#22d3ee,_#34d399,_#a78bfa)] opacity-25 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[conic-gradient(from_0deg,_#22d3ee,_#a78bfa,_#f472b6,_#22d3ee)] opacity-20 blur-3xl" />
+        <div className="relative">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">Najważniejsze liczby</p>
+          <h2 className="mt-1 text-2xl font-black text-white md:text-3xl">Co realnie wchodzi i wychodzi z tej pożyczki</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {/* Investor cash out */}
+            <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm transition hover:bg-white/[0.09]">
+              <div className="flex items-center gap-2 text-white/70">
+                <Wallet className="h-4 w-4" />
+                <span className="text-[11px] font-bold uppercase tracking-widest">Inwestor wkłada</span>
+              </div>
+              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorCashOut)}</p>
+              <p className="mt-1 text-xs text-white/65">gotówka wypłacana z konta inwestora (kwota nominalna − prowizja potrącona z góry)</p>
+            </div>
+
+            {/* Investor cash in */}
+            <div className="group relative overflow-hidden rounded-2xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/15 to-cyan-400/10 p-5 backdrop-blur-sm transition hover:from-emerald-400/20 hover:to-cyan-400/15">
+              <div className="flex items-center gap-2 text-emerald-200/90">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-[11px] font-bold uppercase tracking-widest">Inwestor odbiera łącznie</span>
+              </div>
+              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorTotalIn)}</p>
+              <p className="mt-1 text-xs text-emerald-100/80">
+                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
+              </p>
+            </div>
+
+            {/* Client on hand */}
+            <div className="group relative overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-400/15 to-rose-400/10 p-5 backdrop-blur-sm transition hover:from-amber-400/20 hover:to-rose-400/15">
+              <div className="flex items-center gap-2 text-amber-200/90">
+                <HandCoins className="h-4 w-4" />
+                <span className="text-[11px] font-bold uppercase tracking-widest">Klient dostaje na rękę</span>
+              </div>
+              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(disbursedOnHand)}</p>
+              <p className="mt-1 text-xs text-amber-100/80">
+                kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b> − prowizja FY <b className="text-white">{formatPLN(financeYouFeePln)}</b>
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs text-white/75 md:grid-cols-4">
+            <div><span className="text-white/55">Rata miesięczna</span><div className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(schedule.cappedRata)}</div></div>
+            <div><span className="text-white/55">Okres</span><div className="mt-0.5 text-base font-bold tabular-nums text-white">{months} mies.</div></div>
+            <div><span className="text-white/55">Łączna spłata</span><div className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(totalToRepay)}</div></div>
+            <div><span className="text-white/55">Krotność spłaty</span><div className={`mt-0.5 text-base font-bold tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : "text-white"}`}>{krotnosc.toFixed(2)}×</div></div>
+          </div>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>
