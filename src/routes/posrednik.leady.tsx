@@ -18,6 +18,7 @@ export const Route = createFileRoute("/posrednik/leady")({
 
 function OperatorLeadsList() {
   const fn = useServerFn(listLeads);
+  const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
@@ -25,6 +26,11 @@ function OperatorLeadsList() {
   const q = useQuery({
     queryKey: ["operator-leads", status, source, search],
     queryFn: () => fn({ data: { type: "all", status: status === "all" ? "" : status, source: source === "all" ? "" : source, search } }),
+  });
+
+  const logCall = useMutation({
+    mutationFn: (vars: { leadId: string; phone: string | null }) => logCallFn({ data: vars }),
+    onSuccess: () => q.refetch(),
   });
 
   const rows = (q.data ?? []) as any[];
