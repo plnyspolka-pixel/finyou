@@ -114,6 +114,18 @@ export const listLeads = createServerFn({ method: "GET" })
                 s.lastInboundEmailAt = ev.created_at;
                 s.lastInboundEmailSubject = ev.subject ?? null;
               }
+              if (Array.isArray(ev.attachments)) {
+                for (const a of ev.attachments as any[]) {
+                  if (!a) continue;
+                  s.inboundAttachments.push({
+                    name: a.name ?? a.file_name ?? "załącznik",
+                    mime: a.mime ?? a.content_type ?? undefined,
+                    size: typeof a.size === "number" ? a.size : undefined,
+                    path: a.path ?? undefined,
+                    at: ev.created_at,
+                  });
+                }
+              }
             }
           }
           else if (ev.channel === "manual_note") {
