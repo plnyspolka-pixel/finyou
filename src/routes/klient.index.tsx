@@ -703,7 +703,7 @@ function KlientDashboard() {
               })()}
             </FancyShell>
           </div>
-          {shortcutBlock}
+          
           </div>
         ) : null;
 
