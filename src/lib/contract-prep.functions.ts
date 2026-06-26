@@ -185,6 +185,24 @@ async function buildOrGetProfile(offerId: string): Promise<{ profileId: string; 
   return { profileId: row.id as string, profile };
 }
 
+// Reużywalny helper (bez auth) — status przygotowania umowy dla danej oferty.
+// Wykorzystywany m.in. przez Dyrektora finansowego (AI). Autoryzację zapewnia wywołujący.
+export async function buildContractStatusForOffer(offerId: string) {
+  const { profileId, profile } = await buildOrGetProfile(offerId);
+  const missingClient = computeMissing(profile, CLIENT_REQUIRED_FIELDS);
+  const missingInvestor = computeMissing(profile, INVESTOR_REQUIRED_FIELDS);
+  const clientPct = Math.round(((CLIENT_REQUIRED_FIELDS.length - missingClient.length) / CLIENT_REQUIRED_FIELDS.length) * 100);
+  const investorPct = Math.round(((INVESTOR_REQUIRED_FIELDS.length - missingInvestor.length) / INVESTOR_REQUIRED_FIELDS.length) * 100);
+  return {
+    profileId,
+    missingClient,
+    missingInvestor,
+    clientPct,
+    investorPct,
+    ready: missingClient.length === 0 && missingInvestor.length === 0,
+  };
+}
+
 // ─── Public server functions ─────────────────────────────────────────
 
 export const prepareContractForParties = createServerFn({ method: "POST" })

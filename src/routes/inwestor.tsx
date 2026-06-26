@@ -5,7 +5,7 @@ import {
   FileSignature,
   MessageSquare,
   GraduationCap,
-  Calculator,
+  Bot,
   CreditCard,
   User,
 } from "lucide-react";
@@ -23,7 +23,7 @@ const groups: NavGroup[] = [
       { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileSignature },
       { to: "/inwestor/wiadomosci", label: "Wiadomości", icon: MessageSquare },
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
-      { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
+      { to: "/inwestor/kalkulator", label: "Dyrektor finansowy", icon: Bot },
       { to: "/inwestor/abonament", label: "Abonament", icon: CreditCard },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],
