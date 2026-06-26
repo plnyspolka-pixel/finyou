@@ -62,10 +62,17 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
           const newUntil = new Date(baseDate);
           newUntil.setDate(newUntil.getDate() + planCfg.days);
 
+          // Map Tpay plan → investors.subscription_plan enum
+          const planEnumMap: Record<TpayPlanId, "podstawowy" | "profesjonalny" | "rozszerzony"> = {
+            investor_access_1d: "podstawowy",
+            investor_access_1m: "profesjonalny",
+            investor_access_1y: "rozszerzony",
+          };
+
           const payload = {
             user_id: userId,
-            subscription_plan: plan,
-            subscription_status: "active",
+            subscription_plan: planEnumMap[plan],
+            subscription_status: "active" as const,
             subscription_active_until: newUntil.toISOString(),
             updated_at: new Date().toISOString(),
           };
@@ -76,19 +83,13 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
               .update(payload)
               .eq("id", existing.id as string);
           } else {
-            await supabaseAdmin.from("investors").insert(payload);
+            await (supabaseAdmin.from("investors") as any).insert({
+              ...payload,
+              investor_type: "indywidualny",
+            });
           }
 
-          // Audit log
-          await supabaseAdmin.from("payments_log").insert({
-            user_id: userId,
-            provider: "tpay",
-            transaction_id: String(trId),
-            amount: Number(tx.amount),
-            plan,
-            status: "paid",
-            raw: body as unknown as object,
-          }).then(() => null, () => null); // ignore if table missing
+          console.log("[tpay-webhook] activated", { userId, plan, trId, amount: tx.amount });
 
           return new Response("TRUE", { status: 200 });
         } catch (e) {
