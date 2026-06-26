@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -105,8 +105,8 @@ export function LoanCalculator({
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
   const [nbpOverride, setNbpOverride] = useState<number | null>(null);
   const [nbpConfirmed, setNbpConfirmed] = useState(false);
-  const [commissionMode, setCommissionMode] = useState<"mpkk" | "manual">("manual");
   const [agreementDate, setAgreementDate] = useState<string>("");
+
   const [checkRate, setCheckRate] = useState(false);
   const [checkCommission, setCheckCommission] = useState(false);
   const [checkKrotnosc, setCheckKrotnosc] = useState(false);
@@ -117,23 +117,17 @@ export function LoanCalculator({
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You — skalowana wg kwoty (10% → 4%), kredytowana do kapitału (gross principal).
-  // Identyczna logika jak w kalkulatorze na landingu.
-  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-  const financeYouFeePct = Math.round((10 - feeT * 6) * 10) / 10;
-  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
-  const grossPrincipal = amount + financeYouFeePln;
+  // Prowizja dla inwestora to JEDYNY koszt pozaodsetkowy. Brak prowizji Finance You.
+  const financeYouFeePct = 0;
+  const financeYouFeePln = 0;
+  const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
 
-  // Model prowizji inwestora:
-  //  - „mpkk": prowizja domyślnie dopełnia łączne koszty pozaodsetkowe do limitu MPKK (z uwzgl. prowizji FY).
-  //  - „manual": prowizja sterowana suwakiem.
-  const mpkkCommissionPln = Math.max(0, maxNonInterest - financeYouFeePln);
-  const commissionPln = investorGuidance && commissionMode === "mpkk"
-    ? mpkkCommissionPln
-    : (amount * commissionPct) / 100;
-  const effectiveCommissionPct = amount > 0 ? (commissionPln / amount) * 100 : 0;
+  // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
+  const commissionPln = (amount * commissionPct) / 100;
+  const effectiveCommissionPct = commissionPct;
+
 
   const schedule = useMemo(() => {
     if (!grossPrincipal || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
@@ -304,11 +298,10 @@ export function LoanCalculator({
               </Alert>
             )}
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Kapitał startowy (od którego liczone odsetki){investorGuidance && <InfoTip text="Kwota nominalna powiększona o kredytowaną prowizję Finance You. Od tej wartości naliczane są odsetki." />}</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(disbursedOnHand)}</b></div>
-              <div className="flex justify-between sm:col-span-2 border-t pt-1.5"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora (wypłata klientowi + prowizja FY, minus prowizja inwestora)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, grossPrincipal - commissionPln))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
             </div>
+
           </div>
 
           <div className="space-y-3">
@@ -346,42 +339,24 @@ export function LoanCalculator({
             </div>
           </div>
 
-          {investorGuidance && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">Model prowizji inwestora {investorGuidance && <InfoTip text="MPKK (maksymalne pozaodsetkowe koszty kredytu) z ustawy o kredycie konsumenckim. Pożyczki hipoteczne są z niej wyłączone, ale sądy stosują MPKK jako benchmark dobrych obyczajów (art. 388 i 58 §2 KC)." />}</Label>
-              <RadioGroup value={commissionMode} onValueChange={(v) => setCommissionMode(v as "mpkk" | "manual")} className="grid sm:grid-cols-2 gap-2">
-                <label className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer text-sm ${commissionMode === "mpkk" ? "border-primary bg-primary/5" : ""}`}>
-                  <RadioGroupItem value="mpkk" className="mt-0.5" />
-                  <span><b>MPKK ref.</b> <span className="text-xs text-muted-foreground">(rekomendowane)</span><br /><span className="text-xs text-muted-foreground">prowizja dopełnia koszty pozaodsetkowe do limitu MPKK</span></span>
-                </label>
-                <label className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer text-sm ${commissionMode === "manual" ? "border-primary bg-primary/5" : ""}`}>
-                  <RadioGroupItem value="manual" className="mt-0.5" />
-                  <span><b>Ręcznie</b><br /><span className="text-xs text-muted-foreground">ustaw prowizję suwakiem poniżej</span></span>
-                </label>
-              </RadioGroup>
-            </div>
-          )}
-
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jednorazowy koszt potrącany z góry przy uruchomieniu. W modelu „MPKK ref.” liczona automatycznie." />}</Label>
+              <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
               <div className="flex items-center gap-2">
-                {investorGuidance && commissionMode === "mpkk"
-                  ? <span className="text-sm tabular-nums">{effectiveCommissionPct.toFixed(1)}% ({formatPLN(commissionPln)})</span>
-                  : <><Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" /><span className="text-sm">% ({formatPLN(commissionPln)})</span></>}
+                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
+                <span className="text-sm">% ({formatPLN(commissionPln)})</span>
               </div>
             </div>
-            {!(investorGuidance && commissionMode === "mpkk") && (
-              <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
-            )}
+            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
-              <span className={nonInterestExceeds ? "text-destructive font-medium" : ""}>
-                limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
-              </span>
+              {nonInterestExceeds ? (
+                <span className="text-destructive font-medium">przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}</span>
+              ) : <span />}
               <span>30%</span>
             </div>
           </div>
+
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -493,10 +468,9 @@ export function LoanCalculator({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
           <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-          <div className="flex justify-between"><span>Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-          <div className="flex justify-between"><span>Kapitał startowy (od którego liczone odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
           <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(disbursedOnHand)}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem (od kapitału startowego)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+          <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+
           <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
           {investorGuidance && (
             <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę: łączna kwota do spłaty ÷ kwota wypłacona." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
