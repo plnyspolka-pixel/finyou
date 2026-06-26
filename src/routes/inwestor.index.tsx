@@ -18,6 +18,27 @@ export const Route = createFileRoute("/inwestor/")({
 
 const PROPERTY_TYPES = Object.keys(propertyTypeLabels);
 
+const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i;
+const PROPERTY_PHOTO_TYPES = new Set([
+  "zdjecie_nieruchomosci",
+  "zdjecia_nieruchomosci",
+  "zdjecia_pomieszczen",
+  "zdjecia_bryly",
+  "zdjecia_lokalu",
+  "klient_upload",
+]);
+
+function isShowablePropertyPhoto(path: string) {
+  return IMAGE_EXT.test(path) && !/\/(ownership_deed|kw|documents?|dokumenty|akt|ksiega|księga)\//i.test(path);
+}
+
+function isPropertyPhotoDocument(doc: any) {
+  const filePath = String(doc?.file_path ?? "");
+  const fileName = String(doc?.file_name ?? filePath);
+  const docType = String(doc?.document_type ?? "");
+  return Boolean(filePath) && IMAGE_EXT.test(fileName) && PROPERTY_PHOTO_TYPES.has(docType);
+}
+
 function InwestorList() {
   const { user } = useAuth();
   const [apps, setApps] = useState<any[]>([]);
@@ -42,18 +63,30 @@ function InwestorList() {
     const list = data ?? [];
     setApps(list); setLoading(false);
 
+    const appIds = list.map((a) => a.id).filter(Boolean);
+    const docsByApp = new Map<string, any[]>();
+    if (appIds.length > 0) {
+      const { data: docRows } = await supabase
+        .from("documents")
+        .select("loan_application_id, file_path, file_name, document_type")
+        .in("loan_application_id", appIds);
+      (docRows ?? []).filter(isPropertyPhotoDocument).forEach((doc: any) => {
+        const appId = doc.loan_application_id;
+        docsByApp.set(appId, [...(docsByApp.get(appId) ?? []), doc]);
+      });
+    }
+
     // Resolve first photo per app to a viewable URL (storage paths → signed URLs).
-    // Wyklucz dokumenty (ownership_deed, kw) z miniatur — pokazujemy tylko zdjęcia nieruchomości.
-    const isShowable = (path: string) => !/\/(ownership_deed|kw|documents?)\//i.test(path);
+    // Najpierw properties.photos, potem fallback do tabeli documents (ścieżki mogą być userId/appId/file).
     const tasks: Array<Promise<void>> = [];
     const next: Record<string, string> = {};
     for (const a of list) {
       const photos: string[] = a.properties?.[0]?.photos ?? [];
-      const first = photos.find(isShowable) ?? photos[0];
+      const first = photos.find(isShowablePropertyPhoto) ?? docsByApp.get(a.id)?.[0]?.file_path;
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
-        for (const bucket of ["property-photos", "documents"] as const) {
+        for (const bucket of ["documents", "property-photos"] as const) {
           const { data: u } = await supabase.storage.from(bucket).createSignedUrl(first, 3600);
           if (u?.signedUrl) { next[a.id] = u.signedUrl; return; }
         }
