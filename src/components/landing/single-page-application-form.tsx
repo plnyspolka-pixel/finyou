@@ -267,6 +267,7 @@ export function SinglePageApplicationForm({
   const navigate = useNavigate();
 
   const skipContact = Boolean(prefilledContact?.email) && !brokerMode;
+  const isBroker = Boolean(brokerMode);
   const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
