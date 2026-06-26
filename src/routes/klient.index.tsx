@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2, Lock as LockIcon } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2, Lock as LockIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
