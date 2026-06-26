@@ -91,6 +91,28 @@ export const sendDfChat = createServerFn({ method: "POST" })
       .object({
         conversation_id: z.string().uuid().optional(),
         message: z.string().min(1).max(20000),
+        // Aktualny stan kalkulatora ustawiony przez inwestora (efemeryczny — dołączany
+        // do bieżącej tury, nie zapisywany w treści wiadomości).
+        calculator: z
+          .object({
+            amount: z.number().optional(),
+            months: z.number().optional(),
+            annualRate: z.number().optional(),
+            commissionPct: z.number().optional(),
+            commissionPln: z.number().optional(),
+            financeYouFeePct: z.number().optional(),
+            financeYouFeePln: z.number().optional(),
+            grossPrincipal: z.number().optional(),
+            maxPayment: z.number().optional(),
+            nominalRata: z.number().optional(),
+            cappedRata: z.number().optional(),
+            balloon: z.number().optional(),
+            totalCost: z.number().optional(),
+            totalToRepay: z.number().optional(),
+            scheduleLength: z.number().optional(),
+          })
+          .partial()
+          .optional(),
       })
       .parse(d),
   )
@@ -154,6 +176,43 @@ export const sendDfChat = createServerFn({ method: "POST" })
           role: "user",
           content: tr.map((r) => ({ type: "tool_result" as const, tool_use_id: r.tool_use_id, content: r.content, is_error: r.is_error })),
         });
+      }
+    }
+
+    // Dołącz aktualny stan kalkulatora do ostatniej wiadomości użytkownika (tylko na tę turę).
+    const calc = data.calculator;
+    if (calc && Object.keys(calc).length > 0) {
+      const fmt = (n: unknown) => (typeof n === "number" && isFinite(n) ? n.toLocaleString("pl-PL") : "—");
+      const lines = [
+        "AKTUALNE USTAWIENIA KALKULATORA (ustawione przez inwestora w interfejsie):",
+        `- Kwota pożyczki: ${fmt(calc.amount)} PLN`,
+        `- Okres: ${fmt(calc.months)} mies.`,
+        `- Oprocentowanie roczne: ${fmt(calc.annualRate)}%`,
+        `- Prowizja: ${fmt(calc.commissionPct)}% (${fmt(calc.commissionPln)} PLN)`,
+        `- Opłata Finance You: ${fmt(calc.financeYouFeePct)}% (${fmt(calc.financeYouFeePln)} PLN)`,
+        `- Kwota brutto kapitału: ${fmt(calc.grossPrincipal)} PLN`,
+        `- Maks. rata miesięczna: ${fmt(calc.maxPayment)} PLN`,
+        `- Rata nominalna: ${fmt(calc.nominalRata)} PLN`,
+        `- Rata po ograniczeniu (capped): ${fmt(calc.cappedRata)} PLN`,
+        `- Płatność balonowa: ${fmt(calc.balloon)} PLN`,
+        `- Całkowity koszt: ${fmt(calc.totalCost)} PLN`,
+        `- Całkowita kwota do spłaty: ${fmt(calc.totalToRepay)} PLN`,
+        "Możesz odnieść się do tych parametrów, ocenić je względem limitów prawnych i użyć ich np. do generowania CSV oferty lub złożenia oferty.",
+      ].join("\n");
+      const lastUserIdx = (() => {
+        for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
+        return -1;
+      })();
+      if (lastUserIdx >= 0) {
+        const existing = messages[lastUserIdx].content;
+        const baseText = typeof existing === "string" ? existing : "";
+        messages[lastUserIdx] = {
+          role: "user",
+          content: [
+            ...(baseText ? [{ type: "text" as const, text: baseText }] : []),
+            { type: "text" as const, text: `\n\n----- KONTEKST -----\n${lines}\n----- KONIEC KONTEKSTU -----` },
+          ],
+        };
       }
     }
 

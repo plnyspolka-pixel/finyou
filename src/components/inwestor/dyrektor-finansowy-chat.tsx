@@ -14,6 +14,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Bot, Send, Trash2, Plus, Loader2, Wrench, Download, History, MessageSquarePlus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import type { LoanCalculatorState } from "@/components/loan-calculator";
+
+/** Kompaktowy zrzut stanu kalkulatora wysyłany do AI (bez pełnego harmonogramu). */
+function snapshotCalculator(s: LoanCalculatorState | null | undefined) {
+  if (!s) return undefined;
+  return {
+    amount: s.amount,
+    months: s.months,
+    annualRate: s.annualRate,
+    commissionPct: s.commissionPct,
+    commissionPln: s.commissionPln,
+    financeYouFeePct: s.financeYouFeePct,
+    financeYouFeePln: s.financeYouFeePln,
+    grossPrincipal: s.grossPrincipal,
+    maxPayment: s.maxPayment,
+    nominalRata: s.nominalRata,
+    cappedRata: s.cappedRata,
+    balloon: s.balloon,
+    totalCost: s.totalCost,
+    totalToRepay: s.totalToRepay,
+    scheduleLength: s.schedule?.length,
+  };
+}
 
 type Message = {
   id: string;
@@ -25,6 +48,7 @@ type Message = {
 };
 
 const SUGGESTIONS = [
+  "Oceń parametry, które ustawiłem w kalkulatorze",
   "Pokaż moje oferty i ich statusy",
   "Którzy klienci zaakceptowali moją ofertę?",
   "Wygeneruj CSV oferty dla wybranego wniosku",
@@ -57,12 +81,18 @@ function downloadCsv(name: string, csv: string) {
   URL.revokeObjectURL(url);
 }
 
-export function DyrektorFinansowyChat() {
+export function DyrektorFinansowyChat({ calculatorState }: { calculatorState?: LoanCalculatorState | null }) {
   const [convId, setConvId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+
+  // Najświeższy stan kalkulatora — przez ref, by uniknąć nieaktualnych domknięć przy wysyłce.
+  const calcRef = useRef<LoanCalculatorState | null | undefined>(calculatorState);
+  useEffect(() => {
+    calcRef.current = calculatorState;
+  }, [calculatorState]);
 
   const sendFn = useServerFn(sendDfChat);
   const listFn = useServerFn(listDfConversations);
@@ -84,7 +114,8 @@ export function DyrektorFinansowyChat() {
   }, [messages.length]);
 
   const send = useMutation({
-    mutationFn: (text: string) => sendFn({ data: { conversation_id: convId, message: text } }),
+    mutationFn: (text: string) =>
+      sendFn({ data: { conversation_id: convId, message: text, calculator: snapshotCalculator(calcRef.current) } }),
     onSuccess: async (r) => {
       setConvId(r.conversation_id);
       setInput("");
@@ -130,7 +161,7 @@ export function DyrektorFinansowyChat() {
         <div className="flex-1">
           <div className="text-sm font-semibold">Dyrektor finansowy · AI</div>
           <div className="text-[11px] text-muted-foreground">
-            Claude · dostęp do Twoich danych, ofert, danych klientów i wzorów dokumentów
+            Claude · widzi ustawienia kalkulatora, Twoje dane, oferty, dane klientów i wzory dokumentów
           </div>
         </div>
         <Button size="sm" variant="ghost" onClick={() => setShowHistory((v) => !v)}>
