@@ -248,7 +248,7 @@ function BrokerMarketingPage() {
                                 .update({ ai_description: e.target.value || null })
                                 .eq("id", m.id);
                             }}
-                            placeholder="Kliknij „Wygeneruj" lub wpisz własny opis..."
+                            placeholder={`Kliknij „Wygeneruj" lub wpisz własny opis...`}
                             className="text-sm"
                           />
                           {m.ai_description && (
