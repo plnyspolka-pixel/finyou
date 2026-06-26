@@ -49,9 +49,9 @@ export const listLeads = createServerFn({ method: "GET" })
     const phones = Array.from(new Set(list.map((l) => l.phone_normalized).filter(Boolean))) as string[];
     const emails = Array.from(new Set(list.map((l) => l.email).filter(Boolean))) as string[];
 
-    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null };
     const commsByLead: Record<string, Comm> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     const queries: Promise<any>[] = [];
     if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("lead_id", ids)));
