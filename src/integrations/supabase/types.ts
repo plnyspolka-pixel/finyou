@@ -5656,7 +5656,83 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      loan_proposals_public: {
+        Row: {
+          amount: number | null
+          annual_rate: number | null
+          balloon: number | null
+          capped_rata: number | null
+          commission_pct: number | null
+          commission_pln: number | null
+          created_at: string | null
+          id: string | null
+          is_public: boolean | null
+          max_payment: number | null
+          months: number | null
+          nominal_rata: number | null
+          note: string | null
+          schedule: Json | null
+          source_application_id: string | null
+          status: string | null
+          total_cost: number | null
+          total_interest: number | null
+          total_to_repay: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          annual_rate?: number | null
+          balloon?: number | null
+          capped_rata?: number | null
+          commission_pct?: number | null
+          commission_pln?: number | null
+          created_at?: string | null
+          id?: string | null
+          is_public?: boolean | null
+          max_payment?: number | null
+          months?: number | null
+          nominal_rata?: number | null
+          note?: string | null
+          schedule?: Json | null
+          source_application_id?: string | null
+          status?: string | null
+          total_cost?: number | null
+          total_interest?: number | null
+          total_to_repay?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          annual_rate?: number | null
+          balloon?: number | null
+          capped_rata?: number | null
+          commission_pct?: number | null
+          commission_pln?: number | null
+          created_at?: string | null
+          id?: string | null
+          is_public?: boolean | null
+          max_payment?: number | null
+          months?: number | null
+          nominal_rata?: number | null
+          note?: string | null
+          schedule?: Json | null
+          source_application_id?: string | null
+          status?: string | null
+          total_cost?: number | null
+          total_interest?: number | null
+          total_to_repay?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_proposals_source_application_id_fkey"
+            columns: ["source_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       delete_email: {
