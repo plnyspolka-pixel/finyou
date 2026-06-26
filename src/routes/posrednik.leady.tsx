@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2 } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
@@ -118,6 +118,25 @@ function OperatorLeadsList() {
                       <Mail className="h-3 w-3" /> Mail od leada na kontakt@: <strong>{r.comms.inboundEmails}</strong>
                       {r.comms.lastInboundEmailAt && <> · {formatRelative(r.comms.lastInboundEmailAt)}</>}
                       {r.comms.lastInboundEmailSubject && <span className="opacity-70">· „{r.comms.lastInboundEmailSubject}"</span>}
+                    </div>
+                  )}
+                  {Array.isArray(r.comms.inboundAttachments) && r.comms.inboundAttachments.length > 0 && (
+                    <div className="text-xs mt-1 rounded-md bg-violet-50 text-violet-900 px-2 py-1 border border-violet-200">
+                      <div className="inline-flex items-center gap-1 font-medium">
+                        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{r.comms.inboundAttachments.length}</strong>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {r.comms.inboundAttachments.slice(0, 6).map((a: any, i: number) => (
+                          <span key={i} className="inline-flex items-center gap-1 rounded bg-white/70 border border-violet-200 px-1.5 py-0.5 text-[11px]">
+                            <Paperclip className="h-2.5 w-2.5" />
+                            <span className="truncate max-w-[160px]">{a.name}</span>
+                            {typeof a.size === "number" && <span className="opacity-60">· {Math.max(1, Math.round(a.size / 1024))} KB</span>}
+                          </span>
+                        ))}
+                        {r.comms.inboundAttachments.length > 6 && (
+                          <span className="text-[11px] opacity-70">+{r.comms.inboundAttachments.length - 6} więcej</span>
+                        )}
+                      </div>
                     </div>
                   )}
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (

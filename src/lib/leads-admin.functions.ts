@@ -50,10 +50,11 @@ export const listLeads = createServerFn({ method: "GET" })
     const emailsLower = Array.from(new Set(list.map((l) => (l.email ?? "").toLowerCase()).filter(Boolean))) as string[];
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
-    type Comm = { calls: number; sms: number; emails: number; notes: number; inboundEmails: number; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
+    type InboundAttachment = { name: string; mime?: string; size?: number; path?: string; at: string };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; inboundEmails: number; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
     const commsByLead: Record<string, Comm> = {};
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundEmails: 0, lastInboundEmailAt: null, lastInboundEmailSubject: null, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundEmails: 0, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
     const leadsByEmailLower: Record<string, any[]> = {};
@@ -63,7 +64,7 @@ export const listLeads = createServerFn({ method: "GET" })
       (leadsByEmailLower[k] ??= []).push(l);
     }
 
-    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content";
+    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments";
     const queries: Promise<any>[] = [];
     if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("lead_id", ids)));
     if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("phone_normalized", phones)));
@@ -112,6 +113,18 @@ export const listLeads = createServerFn({ method: "GET" })
               if (!s.lastInboundEmailAt || new Date(ev.created_at) > new Date(s.lastInboundEmailAt)) {
                 s.lastInboundEmailAt = ev.created_at;
                 s.lastInboundEmailSubject = ev.subject ?? null;
+              }
+              if (Array.isArray(ev.attachments)) {
+                for (const a of ev.attachments as any[]) {
+                  if (!a) continue;
+                  s.inboundAttachments.push({
+                    name: a.name ?? a.file_name ?? "załącznik",
+                    mime: a.mime ?? a.content_type ?? undefined,
+                    size: typeof a.size === "number" ? a.size : undefined,
+                    path: a.path ?? undefined,
+                    at: ev.created_at,
+                  });
+                }
               }
             }
           }
