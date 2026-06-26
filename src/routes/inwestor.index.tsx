@@ -53,8 +53,10 @@ function InwestorList() {
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
-        const { data: u } = await supabase.storage.from("property-photos").createSignedUrl(first, 3600);
-        if (u?.signedUrl) next[a.id] = u.signedUrl;
+        for (const bucket of ["property-photos", "documents"] as const) {
+          const { data: u } = await supabase.storage.from(bucket).createSignedUrl(first, 3600);
+          if (u?.signedUrl) { next[a.id] = u.signedUrl; return; }
+        }
       })());
     }
     await Promise.all(tasks);
