@@ -13,19 +13,11 @@ import {
   Download,
   Copy,
   Link as LinkIcon,
-  Facebook,
-  Linkedin,
-  Twitter,
-  MessageCircle,
-  Send,
-  Mail,
   ImageIcon,
   Video as VideoIcon,
-  Youtube,
-  Instagram,
-
 } from "lucide-react";
 import { generateMaterialDescription, ensureMyReferralCode } from "@/lib/marketing-materials.functions";
+
 
 function TikTokIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
