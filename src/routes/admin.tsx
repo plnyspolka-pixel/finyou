@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon, Network, Coins, Share2, Wallet, Building2 } from "lucide-react";
 import { AiAdminChat } from "@/components/admin/AiAdminChat";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -38,6 +38,27 @@ const groups: Group[] = [
       { to: "/admin/oferty", label: "Oferty", icon: Tag },
       { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
       { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Program pośredników",
+    items: [
+      { to: "/admin/program-posrednikow", label: "Pulpit programu", icon: Network, exact: true },
+      { to: "/admin/program-posrednikow/partnerzy", label: "Partnerzy", icon: Users },
+      { to: "/admin/program-posrednikow/struktura", label: "Struktura partnerska", icon: Share2 },
+      { to: "/admin/program-posrednikow/zdarzenia", label: "Zdarzenia prowizyjne", icon: Send },
+      { to: "/admin/program-posrednikow/prowizje", label: "Prowizje", icon: Coins },
+      { to: "/admin/program-posrednikow/wyplaty", label: "Paczki wypłat", icon: Wallet },
+      { to: "/admin/program-posrednikow/rozliczenia", label: "Rozliczenia B2B / nierejestrowana", icon: FileCheck },
+      { to: "/admin/program-posrednikow/ustawienia", label: "Stawki, limity, reguły", icon: Settings },
+    ],
+  },
+  {
+    label: "Księgowość",
+    items: [
+      { to: "/admin/ksiegowosc", label: "Pulpit księgowości", icon: Receipt, exact: true },
+      { to: "/admin/ksiegowosc/faktury", label: "Faktury sprzedaży", icon: FileText },
+      { to: "/admin/ksiegowosc/podmioty", label: "Podmioty gospodarcze", icon: Building2 },
     ],
   },
   {

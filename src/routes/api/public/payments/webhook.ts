@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+import { createInvoiceFromPayment } from "@/lib/accounting/auto-invoice";
 
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
@@ -92,6 +93,28 @@ async function handleCheckoutCompleted(session: any) {
     action: "stripe_payment_succeeded",
     new_value: { plan, days, valid_until: newEnd.toISOString(), session_id: session.id },
   });
+
+  // Automatyczne wystawienie faktury sprzedaży po zaksięgowanej wpłacie.
+  // Wybiera domyślny podmiot gospodarczy i wystawia fakturę zgodnie z jego
+  // konfiguracją (manual / Fakturowo / KSeF). Nie blokuje obsługi subskrypcji.
+  try {
+    const grossAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
+    if (grossAmount > 0) {
+      const planLabel = PLAN_TO_DB[plan] ? `Dostęp inwestora Finance You — ${PLAN_TO_DB[plan]}` : "Dostęp inwestora Finance You";
+      await createInvoiceFromPayment(supabase as any, {
+        paymentId: session.id,
+        grossAmount,
+        currency: String(session.currency ?? "pln").toUpperCase(),
+        description: planLabel,
+        buyerName: session.customer_details?.name ?? null,
+        buyerEmail: session.customer_details?.email ?? null,
+        sourceType: "stripe_payment",
+        sourceId: userId,
+      });
+    }
+  } catch (e) {
+    console.error("Auto-invoice failed:", (e as Error)?.message);
+  }
 }
 
 async function handleWebhook(req: Request, env: StripeEnv) {
