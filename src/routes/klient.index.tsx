@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2, Lock as LockIcon } from "lucide-react";
+import { FileText, Image as ImageIcon, File as FileIcon, Save, BookText, Check, FolderOpen, Eye, Eye as EyeIcon, ShieldCheck, Sparkles, Trash2, Upload, Loader2, Lock as LockIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
@@ -103,6 +103,8 @@ function KlientDashboard() {
   const [uploading, setUploading] = useState(false);
   const [forceUnlock, setForceUnlock] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
+  const [filesOpen, setFilesOpen] = useState<boolean | null>(null);
+  const [kwOpen, setKwOpen] = useState<boolean | null>(null);
   const qc = useQueryClient();
 
   const markApplicationComplete = async () => {
@@ -443,21 +445,37 @@ function KlientDashboard() {
             {/* === Twoje pliki === */}
             <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
 
+              {(() => {
+                const isComplete = totalFiles > 0;
+                const open = filesOpen ?? !isComplete;
+                return (
               <div className="space-y-4">
-                <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setFilesOpen(!open)}
+                  className="flex w-full items-center gap-2.5 text-left"
+                >
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
                     <FolderOpen className="h-5 w-5" strokeWidth={2.5} />
                   </span>
-                  <div className="flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                  <div className="min-w-0 flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
                     <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Twoje pliki</div>
                     <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
                       Zdjęcia nieruchomości i dokumenty
                     </div>
                   </div>
+                  {isComplete && (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500/30 ring-1 ring-emerald-300/50">
+                      <Check className="h-3.5 w-3.5 text-emerald-100" strokeWidth={3} />
+                    </span>
+                  )}
                   <Badge className="border-white/30 bg-white/15 font-bold text-white backdrop-blur-sm">
                     {totalFiles}
                   </Badge>
-                </div>
+                  {isComplete && (open ? <ChevronUp className="h-5 w-5 shrink-0 text-white/80" /> : <ChevronDown className="h-5 w-5 shrink-0 text-white/80" />)}
+                </button>
+                {open && (<>
+
 
                 {thumbs.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
@@ -476,9 +494,9 @@ function KlientDashboard() {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); void deletePhoto(t.path); }}
                           aria-label="Usuń zdjęcie"
-                          className="absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full bg-rose-500/90 text-white opacity-0 ring-1 ring-white/50 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 group-hover:opacity-100 focus:opacity-100"
+                          className="absolute right-1.5 top-1.5 z-10 grid h-8 w-8 place-items-center rounded-full bg-rose-500/95 text-white ring-1 ring-white/60 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 active:scale-95"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
@@ -608,24 +626,43 @@ function KlientDashboard() {
                     </div>
                   </>
                 )}
+                </>)}
               </div>
+                );
+              })()}
             </FancyShell>
 
             {/* === Numer KW === */}
             <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
 
+              {(() => {
+                const isComplete = kwValidation.ok;
+                const open = kwOpen ?? !isComplete;
+                return (
               <div className="space-y-4">
-                <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setKwOpen(!open)}
+                  className="flex w-full items-center gap-2.5 text-left"
+                >
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
                     <BookText className="h-5 w-5" strokeWidth={2.5} />
                   </span>
-                  <div className="leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                  <div className="min-w-0 flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
                     <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Numer księgi wieczystej</div>
-                    <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
-                      Wpisz numer KW swojej nieruchomości
+                    <div className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
+                      {isComplete ? kw : "Wpisz numer KW swojej nieruchomości"}
                     </div>
                   </div>
-                </div>
+                  {isComplete && (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500/30 ring-1 ring-emerald-300/50">
+                      <Check className="h-3.5 w-3.5 text-emerald-100" strokeWidth={3} />
+                    </span>
+                  )}
+                  {isComplete && (open ? <ChevronUp className="h-5 w-5 shrink-0 text-white/80" /> : <ChevronDown className="h-5 w-5 shrink-0 text-white/80" />)}
+                </button>
+                {open && (<>
+
 
                 <div className="relative">
                   <Input
@@ -679,7 +716,10 @@ function KlientDashboard() {
                   <Save className="mr-2 h-5 w-5" />
                   {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
                 </Button>
+                </>)}
               </div>
+                );
+              })()}
             </FancyShell>
           </div>
           {shortcutBlock}
