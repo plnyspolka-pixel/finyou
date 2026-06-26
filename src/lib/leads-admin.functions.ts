@@ -197,6 +197,30 @@ export const updateLead = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const logBrokerCall = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z.object({
+      leadId: z.string().uuid(),
+      phone: z.string().optional().nullable(),
+    }).parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("lead_communications").insert({
+      lead_id: data.leadId,
+      phone_normalized: data.phone ?? null,
+      channel: "call",
+      direction: "outbound",
+      status: "initiated",
+      content: "Pośrednik wybrał numer telefonu (klik tel:)",
+      created_by: context.userId,
+      metadata: { source: "broker_phone_click" },
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, at: new Date().toISOString() };
+  });
+
 export const addManualNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
