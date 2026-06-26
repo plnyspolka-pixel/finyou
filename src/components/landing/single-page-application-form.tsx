@@ -826,17 +826,19 @@ export function SinglePageApplicationForm({
               </div>
             </FancyShell>
 
-            {/* D: kalkulator oferty */}
-            <OfferCalculatorPanel
-              amount={amount} setAmount={setAmount}
-              months={months} setMonths={setMonths}
-              maxMonths={maxMonths}
-              canExtend={canExtend} setCanExtend={setCanExtend}
-              annualRate={annualRate} setAnnualRate={setAnnualRate}
-              rateTouchedRef={rateTouchedRef}
-              maxPayment={maxPayment} setMaxPayment={setMaxPayment}
-              headerLabel="Twoja wstępna oferta"
-            />
+            {/* D: kalkulator oferty (ukryty dla pośrednika) */}
+            {!isBroker && (
+              <OfferCalculatorPanel
+                amount={amount} setAmount={setAmount}
+                months={months} setMonths={setMonths}
+                maxMonths={maxMonths}
+                canExtend={canExtend} setCanExtend={setCanExtend}
+                annualRate={annualRate} setAnnualRate={setAnnualRate}
+                rateTouchedRef={rateTouchedRef}
+                maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+                headerLabel="Twoja wstępna oferta"
+              />
+            )}
           </div>
         );
       })()}
