@@ -253,11 +253,20 @@ export type PrefilledContact = {
   email?: string | null;
 };
 
-export function SinglePageApplicationForm({ prefilledContact }: { prefilledContact?: PrefilledContact } = {}) {
+export type BrokerMode = {
+  assignedOperatorId: string;
+  redirectTo?: string;
+  sourceLabel?: string;
+};
+
+export function SinglePageApplicationForm({
+  prefilledContact,
+  brokerMode,
+}: { prefilledContact?: PrefilledContact; brokerMode?: BrokerMode } = {}) {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
-  const skipContact = Boolean(prefilledContact?.email);
+  const skipContact = Boolean(prefilledContact?.email) && !brokerMode;
   const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
