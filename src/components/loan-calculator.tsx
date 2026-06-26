@@ -357,6 +357,7 @@ export function LoanCalculator({
                 <span className="text-destructive font-medium">przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}</span>
               ) : <span />}
               <span>30%</span>
+            </div>
           </div>
 
           <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
@@ -364,8 +365,6 @@ export function LoanCalculator({
             <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
           </div>
 
-
-          </div>
 
 
           <div className="space-y-3">
