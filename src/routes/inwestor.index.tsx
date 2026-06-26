@@ -42,11 +42,14 @@ function InwestorList() {
     const list = data ?? [];
     setApps(list); setLoading(false);
 
-    // Resolve first photo per app to a viewable URL (storage paths → signed URLs)
+    // Resolve first photo per app to a viewable URL (storage paths → signed URLs).
+    // Wyklucz dokumenty (ownership_deed, kw) z miniatur — pokazujemy tylko zdjęcia nieruchomości.
+    const isShowable = (path: string) => !/\/(ownership_deed|kw|documents?)\//i.test(path);
     const tasks: Array<Promise<void>> = [];
     const next: Record<string, string> = {};
     for (const a of list) {
-      const first = a.properties?.[0]?.photos?.[0];
+      const photos: string[] = a.properties?.[0]?.photos ?? [];
+      const first = photos.find(isShowable) ?? photos[0];
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
@@ -189,12 +192,6 @@ function InwestorList() {
                       <Badge className="absolute top-3 left-3 bg-background/95 text-foreground hover:bg-background backdrop-blur-sm shadow">
                         {propertyTypeLabels[p.property_type]}
                       </Badge>
-                    )}
-                    {a.annual_investor_rate != null && (
-                      <div className="absolute top-3 right-3 rounded-lg bg-primary text-primary-foreground px-3 py-1.5 shadow-lg">
-                        <div className="text-[10px] uppercase tracking-wide opacity-90 leading-none">Zysk roczny</div>
-                        <div className="text-xl font-bold leading-tight tabular-nums">{Number(a.annual_investor_rate)}%</div>
-                      </div>
                     )}
                     {p?.photos?.length > 1 && (
                       <Badge variant="secondary" className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm">
