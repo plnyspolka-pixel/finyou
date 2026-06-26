@@ -304,7 +304,50 @@ export function LoanCalculator({
               <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(disbursedOnHand)}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
             </div>
+          </div>
 
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi po potrąceniu prowizji inwestora i prowizji Finance You. Ustawienie tego suwaka dobiera kwotę nominalną pożyczki tak, aby na rękę wyszła wskazana wartość." />}</Label>
+              <Input
+                type="number"
+                value={Math.round(disbursedOnHand)}
+                onChange={(e) => {
+                  const target = Number(e.target.value) || 0;
+                  let a = target / Math.max(0.01, 1 - commissionPct / 100 - 0.07);
+                  for (let i = 0; i < 25; i++) {
+                    const t = Math.min(1, Math.max(0, (a - 20_000) / (1_000_000 - 20_000)));
+                    const feePct = 10 - t * 6;
+                    const onHand = a * (1 - commissionPct / 100 - feePct / 100);
+                    a = a + (target - onHand);
+                  }
+                  setAmount(Math.min(1_000_000, Math.max(20_000, Math.round(a / 100) * 100)));
+                }}
+                className="w-40"
+              />
+            </div>
+            <Slider
+              min={10_000}
+              max={1_000_000}
+              step={500}
+              value={[Math.min(1_000_000, Math.max(10_000, Math.round(disbursedOnHand)))]}
+              onValueChange={(v) => {
+                const target = v[0];
+                let a = target / Math.max(0.01, 1 - commissionPct / 100 - 0.07);
+                for (let i = 0; i < 25; i++) {
+                  const t = Math.min(1, Math.max(0, (a - 20_000) / (1_000_000 - 20_000)));
+                  const feePct = 10 - t * 6;
+                  const onHand = a * (1 - commissionPct / 100 - feePct / 100);
+                  a = a + (target - onHand);
+                }
+                setAmount(Math.min(1_000_000, Math.max(20_000, Math.round(a / 100) * 100)));
+              }}
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>10 000 zł</span>
+              <span>Kwota nominalna: <b className="tabular-nums text-foreground">{formatPLN(amount)}</b></span>
+              <span>1 000 000 zł</span>
+            </div>
           </div>
 
           <div className="space-y-3">
