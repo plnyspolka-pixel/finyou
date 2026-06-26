@@ -97,7 +97,10 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
-    const callerIds = Array.from(new Set(Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean))) as string[];
+    const callerIds = Array.from(new Set([
+      ...Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean),
+      ...Object.values(commsByLead).map((c) => c.lastNoteById).filter(Boolean),
+    ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
       const { data: profs } = await context.supabase.from("profiles").select("user_id, first_name, last_name, email").in("user_id", callerIds);
@@ -107,6 +110,7 @@ export const listLeads = createServerFn({ method: "GET" })
     }
     for (const c of Object.values(commsByLead)) {
       c.lastCallByName = c.lastCallById ? (callerNames[c.lastCallById] ?? "Pośrednik") : null;
+      c.lastNoteByName = c.lastNoteById ? (callerNames[c.lastNoteById] ?? "Pośrednik") : null;
     }
 
     // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).
