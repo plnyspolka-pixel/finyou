@@ -81,7 +81,14 @@ export const listLeads = createServerFn({ method: "GET" })
           }
           else if (ev.channel === "sms") s.sms++;
           else if (ev.channel === "email") s.emails++;
-          else if (ev.channel === "manual_note") s.notes++;
+          else if (ev.channel === "manual_note") {
+            s.notes++;
+            if (!s.lastNoteAt || new Date(ev.created_at) > new Date(s.lastNoteAt)) {
+              s.lastNoteAt = ev.created_at;
+              s.lastNoteContent = ev.content ?? null;
+              s.lastNoteById = ev.created_by ?? null;
+            }
+          }
           if (!s.lastAt || new Date(ev.created_at) > new Date(s.lastAt)) {
             s.lastAt = ev.created_at;
             s.lastChannel = ev.channel;
