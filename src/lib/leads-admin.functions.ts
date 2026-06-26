@@ -64,7 +64,7 @@ export const listLeads = createServerFn({ method: "GET" })
       (leadsByEmailLower[k] ??= []).push(l);
     }
 
-    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content";
+    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments";
     const queries: Promise<any>[] = [];
     if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("lead_id", ids)));
     if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("phone_normalized", phones)));
