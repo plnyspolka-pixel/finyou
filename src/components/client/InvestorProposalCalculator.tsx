@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Info, Lock, Send, Loader2, Building2, Home, Trees, Map as MapIcon, Store, FileQuestion, Check } from "lucide-react";
+import { Info, Lock, Send, Loader2, Building2, Home, Trees, Map as MapIcon, Store, FileQuestion, Check, MapPin } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
@@ -74,6 +75,8 @@ export function InvestorProposalCalculator({
   const [canExtend, setCanExtend] = useState<boolean>(false);
   const [propertyType, setPropertyType] = useState<SecurityType | null>(null);
   const [savingPropertyType, setSavingPropertyType] = useState(false);
+  const [city, setCity] = useState<string>("");
+  const citySaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sendingToInvestors, setSendingToInvestors] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rateTouchedRef = useRef(false);
@@ -89,7 +92,31 @@ export function InvestorProposalCalculator({
 
   useEffect(() => {
     if (prop?.property_type) setPropertyType(prop.property_type as SecurityType);
-  }, [prop?.id, prop?.property_type]);
+    if (prop?.city) setCity(String(prop.city));
+  }, [prop?.id, prop?.property_type, prop?.city]);
+
+  const saveCity = (value: string) => {
+    setCity(value);
+    if (!loan?.id || locked) return;
+    if (citySaveTimer.current) clearTimeout(citySaveTimer.current);
+    citySaveTimer.current = setTimeout(async () => {
+      const trimmed = value.trim();
+      try {
+        if (prop?.id) {
+          await supabase.from("properties").update({ city: trimmed || null }).eq("id", prop.id);
+          setProp((prev: any) => prev ? { ...prev, city: trimmed || null } : prev);
+        } else {
+          const { data: inserted } = await supabase.from("properties")
+            .insert({ loan_application_id: loan.id, property_type: "inna", city: trimmed || null })
+            .select("*").maybeSingle();
+          if (inserted) setProp(inserted);
+        }
+      } catch (e: any) {
+        toast.error(e?.message ?? "Nie udało się zapisać miejscowości");
+      }
+    }, 600);
+  };
+
 
   const savePropertyType = async (t: SecurityType) => {
     setPropertyType(t);
@@ -145,11 +172,12 @@ export function InvestorProposalCalculator({
     const m: string[] = [];
     if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
     if (!prop?.property_type) m.push("typ zabezpieczenia");
+    if (!String(city ?? prop?.city ?? "").trim()) m.push("miejscowość");
     if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
     if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!amount || !months || !annualRate) m.push("warunki finansowe");
     return m;
-  }, [client, prop, hasDesc, amount, months, annualRate]);
+  }, [client, prop, hasDesc, amount, months, annualRate, city]);
 
 
   const sendToInvestors = async () => {
@@ -248,7 +276,40 @@ export function InvestorProposalCalculator({
                 );
               })}
             </div>
+
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
+                  <MapPin className="h-4 w-4" strokeWidth={3} />
+                </span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-white">
+                  Miejscowość <span className="text-rose-200">*</span>
+                </span>
+              </div>
+              <p className="text-xs text-white/75">Podaj miasto/miejscowość, w której znajduje się nieruchomość.</p>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/80" />
+                <Input
+                  value={city}
+                  onChange={(e) => saveCity(e.target.value)}
+                  placeholder="np. Warszawa"
+                  aria-invalid={!city.trim() || undefined}
+                  className={cn(
+                    "h-14 rounded-2xl border-2 bg-white/10 pl-12 pr-4 text-base font-semibold text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:ring-2",
+                    city.trim()
+                      ? "border-white/30 focus-visible:border-white/70 focus-visible:ring-white/40"
+                      : "border-rose-300/60 focus-visible:border-rose-200 focus-visible:ring-rose-300/40",
+                  )}
+                />
+                {city.trim() && (
+                  <span className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white/25 ring-1 ring-white/40 shadow backdrop-blur-sm">
+                    <Check className="h-4 w-4" strokeWidth={3} />
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+
         </FancyShell>
 
         {filesSlot}
