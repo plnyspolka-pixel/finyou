@@ -198,11 +198,6 @@ function InwestorList() {
                         +{p.photos.length - 1} zdjęć
                       </Badge>
                     )}
-                    {p?.photos?.length > 1 && (
-                      <Badge variant="secondary" className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm">
-                        +{p.photos.length - 1} zdjęć
-                      </Badge>
-                    )}
                   </div>
                   <CardContent className="p-4 space-y-3 flex-1 flex flex-col">
                     <div>
