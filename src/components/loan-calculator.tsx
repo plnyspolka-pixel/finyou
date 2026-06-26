@@ -489,24 +489,6 @@ export function LoanCalculator({
         </CardContent>
       </Card>
 
-      {investorGuidance && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Copy className="h-4 w-4" /> Zapis oprocentowania do umowy</CardTitle>
-            <CardDescription>Gotowy fragment chroniący inwestora przy zmianach stóp NBP.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Textarea readOnly value={contractClause} rows={5} className="text-xs leading-relaxed" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { void navigator.clipboard?.writeText(contractClause); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-            >
-              <Copy className="mr-2 h-3.5 w-3.5" /> {copied ? "Skopiowano" : "Kopiuj zapis"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
