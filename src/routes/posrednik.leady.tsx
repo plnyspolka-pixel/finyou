@@ -115,6 +115,13 @@ function OperatorLeadsList() {
                       <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Nieznany pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
                     </div>
                   )}
+                  {r.comms.inboundEmails > 0 && (
+                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-sky-50 text-sky-800 px-2 py-1 border border-sky-200">
+                      <Mail className="h-3 w-3" /> Mail od leada na kontakt@: <strong>{r.comms.inboundEmails}</strong>
+                      {r.comms.lastInboundEmailAt && <> · {formatRelative(r.comms.lastInboundEmailAt)}</>}
+                      {r.comms.lastInboundEmailSubject && <span className="opacity-70">· „{r.comms.lastInboundEmailSubject}"</span>}
+                    </div>
+                  )}
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
                     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
                       {r.comms.brokerCalls.map((b: any) => (
