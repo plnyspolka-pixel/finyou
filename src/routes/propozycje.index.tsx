@@ -24,11 +24,7 @@ function PropozycjeList() {
     queryKey: ["loan-proposals-public"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("loan_proposals")
-        .select("id, client_name, amount, months, annual_rate, commission_pct, total_to_repay, capped_rata, balloon, status, created_at, note")
-        .eq("is_public", true)
-        .order("created_at", { ascending: false })
-        .limit(200);
+        .rpc("list_public_loan_proposals");
       if (error) throw error;
       return data ?? [];
     },
@@ -66,7 +62,7 @@ function PropozycjeList() {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
                     <CardTitle className="text-base">
-                      {p.client_name || "Propozycja bez nazwy klienta"}
+                      Propozycja pożyczki
                     </CardTitle>
                     <Badge variant={p.status === "open" ? "default" : "secondary"}>{p.status}</Badge>
                   </div>

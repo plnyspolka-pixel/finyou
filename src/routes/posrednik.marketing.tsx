@@ -77,6 +77,33 @@ function copy(text: string) {
   toast.success("Skopiowano do schowka");
 }
 
+async function shareOrCopy({
+  title,
+  text,
+  url,
+  channel,
+}: {
+  title: string;
+  text: string;
+  url: string;
+  channel: string;
+}) {
+  const message = `${text}\n\n${url}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title, text, url });
+      toast.success(`Udostępnianie: ${channel}`);
+      return;
+    }
+    await navigator.clipboard.writeText(message);
+    toast.success(`Skopiowano treść dla: ${channel}`);
+  } catch (error: any) {
+    if (error?.name === "AbortError") return;
+    await navigator.clipboard.writeText(message);
+    toast.success(`Skopiowano treść dla: ${channel}`);
+  }
+}
+
 function BrokerMarketingPage() {
   const [items, setItems] = useState<Material[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -201,8 +228,8 @@ function BrokerMarketingPage() {
                 {filtered.map((m) => {
                   const url = urls[m.id];
                   const shareUrl = refCode ? refLink(tab, refCode) : SITE_BASE;
-                  const shareText = encodeURIComponent(m.ai_description || m.description || m.title);
-                  const enc = encodeURIComponent(shareUrl);
+                  const shareText = m.ai_description || m.description || m.title;
+                  const handleShare = (channel: string) => shareOrCopy({ title: m.title, text: shareText, url: shareUrl, channel });
                   return (
                     <Card key={m.id} className="overflow-hidden">
                       <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
@@ -270,109 +297,45 @@ function BrokerMarketingPage() {
                         </div>
 
                         <div className="grid grid-cols-4 gap-2">
-                          <Button asChild size="sm" variant="outline" title="Facebook">
-                            <a
-                              href={`https://www.facebook.com/sharer/sharer.php?u=${enc}&quote=${shareText}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <Facebook className="h-4 w-4" />
-                            </a>
+                          <Button size="sm" variant="outline" title="Facebook — skopiuj / udostępnij" onClick={() => handleShare("Facebook")}>
+                            <Facebook className="h-4 w-4" />
                           </Button>
-                          <Button asChild size="sm" variant="outline" title="LinkedIn">
-                            <a
-                              href={`https://www.linkedin.com/sharing/share-offsite/?url=${enc}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <Linkedin className="h-4 w-4" />
-                            </a>
+                          <Button size="sm" variant="outline" title="LinkedIn — skopiuj / udostępnij" onClick={() => handleShare("LinkedIn")}>
+                            <Linkedin className="h-4 w-4" />
                           </Button>
-                          <Button asChild size="sm" variant="outline" title="X / Twitter">
-                            <a
-                              href={`https://twitter.com/intent/tweet?url=${enc}&text=${shareText}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <Twitter className="h-4 w-4" />
-                            </a>
+                          <Button size="sm" variant="outline" title="X — skopiuj / udostępnij" onClick={() => handleShare("X")}>
+                            <Twitter className="h-4 w-4" />
                           </Button>
-                          <Button asChild size="sm" variant="outline" title="WhatsApp">
-                            <a
-                              href={`https://api.whatsapp.com/send?text=${shareText}%20${enc}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <MessageCircle className="h-4 w-4" />
-                            </a>
+                          <Button size="sm" variant="outline" title="WhatsApp — skopiuj / udostępnij" onClick={() => handleShare("WhatsApp")}>
+                            <MessageCircle className="h-4 w-4" />
                           </Button>
-                          <Button asChild size="sm" variant="outline" title="Telegram">
-                            <a href={`https://t.me/share/url?url=${enc}&text=${shareText}`} target="_blank" rel="noreferrer">
-                              <Send className="h-4 w-4" />
-                            </a>
+                          <Button size="sm" variant="outline" title="Telegram — skopiuj / udostępnij" onClick={() => handleShare("Telegram")}>
+                            <Send className="h-4 w-4" />
                           </Button>
-                          <Button asChild size="sm" variant="outline" title="E-mail">
-                            <a href={`mailto:?subject=${encodeURIComponent(m.title)}&body=${shareText}%20${enc}`}>
-                              <Mail className="h-4 w-4" />
-                            </a>
+                          <Button size="sm" variant="outline" title="E-mail — skopiuj treść wiadomości" onClick={() => handleShare("E-mail")}>
+                            <Mail className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            title="Instagram — kopiuje opis i pobiera plik, otwórz aplikację i wklej"
-                            onClick={async () => {
-                              const caption = `${m.ai_description || m.description || m.title}\n\n${shareUrl}`;
-                              await navigator.clipboard.writeText(caption);
-                              if (url) window.open(url, "_blank");
-                              window.open("https://www.instagram.com/", "_blank");
-                              toast.success("Opis skopiowany — wklej w Instagramie");
-                            }}
+                            title="Instagram — skopiuj opis i link"
+                            onClick={() => handleShare("Instagram")}
                           >
                             <Instagram className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            title={
-                              m.media_type === "video"
-                                ? "YouTube — kopiuje opis i otwiera upload"
-                                : "YouTube — kopiuje opis (zdjęcia publikuj jako Community Post)"
-                            }
-                            onClick={async () => {
-                              const caption = `${m.ai_description || m.description || m.title}\n\n${shareUrl}`;
-                              await navigator.clipboard.writeText(caption);
-                              if (url && m.media_type === "video") window.open(url, "_blank");
-                              window.open(
-                                m.media_type === "video"
-                                  ? "https://studio.youtube.com/channel/UC/videos/upload"
-                                  : "https://studio.youtube.com/",
-                                "_blank",
-                              );
-                              toast.success("Opis skopiowany — wklej w YouTube Studio");
-                            }}
+                            title="YouTube — skopiuj opis i link"
+                            onClick={() => handleShare("YouTube")}
                           >
                             <Youtube className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            title="TikTok — kopiuje opis, pobiera plik i otwiera upload"
-                            onClick={async () => {
-                              const caption = `${m.ai_description || m.description || m.title}\n\n${shareUrl}`;
-                              await navigator.clipboard.writeText(caption);
-                              if (url) {
-                                const a = document.createElement("a");
-                                a.href = url;
-                                a.download = "";
-                                a.target = "_blank";
-                                a.rel = "noreferrer";
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                              }
-                              window.open("https://www.tiktok.com/tiktokstudio/upload", "_blank");
-                              toast.success("Opis skopiowany, plik pobrany — wklej w TikTok");
-                            }}
+                            title="TikTok — skopiuj opis i link"
+                            onClick={() => handleShare("TikTok")}
                           >
                             <TikTokIcon />
                           </Button>

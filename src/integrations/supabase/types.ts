@@ -5670,6 +5670,31 @@ export type Database = {
       exec_admin_any: { Args: { _sql: string }; Returns: Json }
       exec_admin_select: { Args: { _sql: string }; Returns: Json }
       exec_admin_write: { Args: { _sql: string }; Returns: Json }
+      get_public_loan_proposal: {
+        Args: { _id: string }
+        Returns: {
+          amount: number
+          annual_rate: number
+          balloon: number
+          capped_rata: number
+          commission_pct: number
+          commission_pln: number
+          created_at: string
+          id: string
+          is_public: boolean
+          max_payment: number
+          months: number
+          nominal_rata: number
+          note: string
+          schedule: Json
+          source_application_id: string
+          status: string
+          total_cost: number
+          total_interest: number
+          total_to_repay: number
+          updated_at: string
+        }[]
+      }
       get_public_tracking_settings: {
         Args: never
         Returns: {
@@ -5708,6 +5733,31 @@ export type Database = {
         Returns: undefined
       }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
+      list_public_loan_proposals: {
+        Args: never
+        Returns: {
+          amount: number
+          annual_rate: number
+          balloon: number
+          capped_rata: number
+          commission_pct: number
+          commission_pln: number
+          created_at: string
+          id: string
+          is_public: boolean
+          max_payment: number
+          months: number
+          nominal_rata: number
+          note: string
+          schedule: Json
+          source_application_id: string
+          status: string
+          total_cost: number
+          total_interest: number
+          total_to_repay: number
+          updated_at: string
+        }[]
+      }
       match_text_agent_knowledge: {
         Args: { match_count?: number; query_embedding: string }
         Returns: {
