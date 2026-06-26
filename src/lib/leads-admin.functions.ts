@@ -185,7 +185,7 @@ export const getLead = createServerFn({ method: "GET" })
 
       emailSequence = { loan: loanRow, sends: sends ?? [], nextVariant, totalVariants: 150 };
     }
-    return { lead, communications: comms ?? [], documents, emailSequence };
+    return { lead, communications: commsWithAuthor, documents, emailSequence };
   });
 
 
