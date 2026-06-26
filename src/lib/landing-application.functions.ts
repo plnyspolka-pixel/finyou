@@ -31,6 +31,7 @@ const SubmitSchema = z.object({
   max_monthly_payment: z.number().min(0).max(1_000_000).optional().nullable(),
   photos: z.array(PhotoSchema).max(40).optional().default([]),
   source: z.string().max(120).optional().nullable(),
+  assigned_operator_id: z.string().uuid().optional().nullable(),
 });
 
 export const submitLandingLoanApplication = createServerFn({ method: "POST" })
@@ -99,6 +100,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         annual_investor_rate: data.annual_investor_rate ?? null,
         max_monthly_payment: data.max_monthly_payment ?? null,
         source,
+        assigned_operator: data.assigned_operator_id ?? null,
       })
       .select("id")
       .single();

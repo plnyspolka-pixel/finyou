@@ -253,11 +253,20 @@ export type PrefilledContact = {
   email?: string | null;
 };
 
-export function SinglePageApplicationForm({ prefilledContact }: { prefilledContact?: PrefilledContact } = {}) {
+export type BrokerMode = {
+  assignedOperatorId: string;
+  redirectTo?: string;
+  sourceLabel?: string;
+};
+
+export function SinglePageApplicationForm({
+  prefilledContact,
+  brokerMode,
+}: { prefilledContact?: PrefilledContact; brokerMode?: BrokerMode } = {}) {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
-  const skipContact = Boolean(prefilledContact?.email);
+  const skipContact = Boolean(prefilledContact?.email) && !brokerMode;
   const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
@@ -475,7 +484,8 @@ export function SinglePageApplicationForm({ prefilledContact }: { prefilledConta
             return parts.length > 0 ? parts.join(" | ") : null;
           })(),
           photos: photoPayload,
-          source: "landing_single_page",
+          source: brokerMode?.sourceLabel ?? "landing_single_page",
+          assigned_operator_id: brokerMode?.assignedOperatorId ?? null,
         },
       });
       if (!res?.ok) throw new Error("submit failed");
@@ -497,24 +507,29 @@ export function SinglePageApplicationForm({ prefilledContact }: { prefilledConta
           lastName: lastName.trim(),
         },
       );
-      toast.success("Wniosek wysłany! Logujemy Cię do panelu…");
-      // Auto-login przez magiczny link wygenerowany na backendzie
-      if (res.token_hash) {
-        try {
-          await supabase.auth.signOut();
-        } catch {
-          /* noop */
+      if (brokerMode) {
+        toast.success("Wniosek utworzony i przypisany do Ciebie.");
+        void navigate({ to: brokerMode.redirectTo ?? "/posrednik/wnioski" });
+      } else {
+        toast.success("Wniosek wysłany! Logujemy Cię do panelu…");
+        // Auto-login przez magiczny link wygenerowany na backendzie
+        if (res.token_hash) {
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            /* noop */
+          }
+          const { error: otpErr } = await supabase.auth.verifyOtp({
+            token_hash: res.token_hash,
+            type: "magiclink",
+          });
+          if (otpErr) {
+            console.error("[landing] auto-login failed", otpErr);
+            toast.message("Sprawdź e-mail z hasłem i danymi logowania.");
+          }
         }
-        const { error: otpErr } = await supabase.auth.verifyOtp({
-          token_hash: res.token_hash,
-          type: "magiclink",
-        });
-        if (otpErr) {
-          console.error("[landing] auto-login failed", otpErr);
-          toast.message("Sprawdź e-mail z hasłem i danymi logowania.");
-        }
+        void navigate({ to: "/klient" });
       }
-      void navigate({ to: "/klient" });
     } catch (err) {
       console.error(err);
       toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
