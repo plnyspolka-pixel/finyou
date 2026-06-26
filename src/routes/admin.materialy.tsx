@@ -252,7 +252,7 @@ function MarketingMaterialsPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={url} alt={m.title} className="w-full h-full object-contain" />
                         ) : (
-                          <video src={url} controls preload="metadata" className="w-full h-full object-contain bg-black" />
+                          <video src={url} controls preload="none" playsInline className="w-full h-full object-contain bg-black" />
                         )}
                       </div>
                       <CardContent className="p-4 space-y-2">
