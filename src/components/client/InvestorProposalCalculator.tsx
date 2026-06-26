@@ -107,7 +107,7 @@ export function InvestorProposalCalculator({
           setProp((prev: any) => prev ? { ...prev, city: trimmed || null } : prev);
         } else {
           const { data: inserted } = await supabase.from("properties")
-            .insert({ loan_application_id: loan.id, city: trimmed || null })
+            .insert({ loan_application_id: loan.id, property_type: "inna", city: trimmed || null })
             .select("*").maybeSingle();
           if (inserted) setProp(inserted);
         }
