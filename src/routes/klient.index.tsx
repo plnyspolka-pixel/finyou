@@ -176,6 +176,8 @@ function KlientDashboard() {
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
+    const extras = (propertyRow as any)?.additional_land_register_numbers;
+    setExtraKws(Array.isArray(extras) ? extras.map(String) : []);
     setKwTouched(false);
     const a = (propertyRow as any)?.area_sqm;
     setArea(a == null ? "" : String(a));
