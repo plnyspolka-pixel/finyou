@@ -574,6 +574,7 @@ export function SinglePageApplicationForm({
                 <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" className={FANCY_INPUT_CLASS} /></div>
             </div>
 
+            {!isBroker && (
             <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
               <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
                 <Checkbox
@@ -614,6 +615,7 @@ export function SinglePageApplicationForm({
                 </span>
               </label>
             </div>
+            )}
           </div>
         </FancyShell>
       )}
