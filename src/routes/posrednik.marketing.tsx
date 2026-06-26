@@ -21,6 +21,9 @@ import {
   Mail,
   ImageIcon,
   Video as VideoIcon,
+  Youtube,
+  Instagram,
+
 } from "lucide-react";
 import { generateMaterialDescription, ensureMyReferralCode } from "@/lib/marketing-materials.functions";
 
