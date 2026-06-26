@@ -75,6 +75,8 @@ export function InvestorProposalCalculator({
   const [canExtend, setCanExtend] = useState<boolean>(false);
   const [propertyType, setPropertyType] = useState<SecurityType | null>(null);
   const [savingPropertyType, setSavingPropertyType] = useState(false);
+  const [city, setCity] = useState<string>("");
+  const citySaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sendingToInvestors, setSendingToInvestors] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rateTouchedRef = useRef(false);
