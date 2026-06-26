@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { listLeads } from "@/lib/leads-admin.functions";
+import { listLeads, logBrokerCall } from "@/lib/leads-admin.functions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/posrednik/leady")({
 
 function OperatorLeadsList() {
   const fn = useServerFn(listLeads);
+  const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
@@ -25,6 +26,11 @@ function OperatorLeadsList() {
   const q = useQuery({
     queryKey: ["operator-leads", status, source, search],
     queryFn: () => fn({ data: { type: "all", status: status === "all" ? "" : status, source: source === "all" ? "" : source, search } }),
+  });
+
+  const logCall = useMutation({
+    mutationFn: (vars: { leadId: string; phone: string | null }) => logCallFn({ data: vars }),
+    onSuccess: () => q.refetch(),
   });
 
   const rows = (q.data ?? []) as any[];
@@ -102,10 +108,20 @@ function OperatorLeadsList() {
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
+                  {r.comms.lastCallAt && (
+                    <div className="text-xs mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
+                      <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {phone && (
-                    <a href={`tel:${phone}`} className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700" aria-label={`Zadzwoń ${phone}`}>
+                    <a
+                      href={`tel:${phone}`}
+                      onClick={() => logCall.mutate({ leadId: r.id, phone })}
+                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                      aria-label={`Zadzwoń ${phone}`}
+                    >
                       <Phone className="h-4 w-4" />
                     </a>
                   )}

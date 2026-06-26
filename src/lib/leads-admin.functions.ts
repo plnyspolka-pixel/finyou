@@ -49,14 +49,14 @@ export const listLeads = createServerFn({ method: "GET" })
     const phones = Array.from(new Set(list.map((l) => l.phone_normalized).filter(Boolean))) as string[];
     const emails = Array.from(new Set(list.map((l) => l.email).filter(Boolean))) as string[];
 
-    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null };
     const commsByLead: Record<string, Comm> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null });
 
     const queries: Promise<any>[] = [];
-    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at").in("lead_id", ids)));
-    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at").in("phone_normalized", phones)));
-    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at").in("email", emails)));
+    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("lead_id", ids)));
+    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("phone_normalized", phones)));
+    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("email", emails)));
     const results = await Promise.all(queries);
 
     const seen = new Set<string>();
@@ -72,7 +72,13 @@ export const listLeads = createServerFn({ method: "GET" })
         );
         for (const l of matching) {
           const s = ensure(l.id);
-          if (ev.channel === "voicebot_call" || ev.channel === "call") s.calls++;
+          if (ev.channel === "voicebot_call" || ev.channel === "call") {
+            s.calls++;
+            if (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt)) {
+              s.lastCallAt = ev.created_at;
+              s.lastCallById = ev.created_by ?? null;
+            }
+          }
           else if (ev.channel === "sms") s.sms++;
           else if (ev.channel === "email") s.emails++;
           else if (ev.channel === "manual_note") s.notes++;
@@ -82,6 +88,18 @@ export const listLeads = createServerFn({ method: "GET" })
           }
         }
       }
+    }
+
+    const callerIds = Array.from(new Set(Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean))) as string[];
+    const callerNames: Record<string, string> = {};
+    if (callerIds.length) {
+      const { data: profs } = await context.supabase.from("profiles").select("user_id, first_name, last_name, email").in("user_id", callerIds);
+      for (const p of (profs ?? []) as any[]) {
+        callerNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";
+      }
+    }
+    for (const c of Object.values(commsByLead)) {
+      c.lastCallByName = c.lastCallById ? (callerNames[c.lastCallById] ?? "Pośrednik") : null;
     }
 
     // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).
@@ -177,6 +195,30 @@ export const updateLead = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("leads").update(data.patch).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const logBrokerCall = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z.object({
+      leadId: z.string().uuid(),
+      phone: z.string().optional().nullable(),
+    }).parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("lead_communications").insert({
+      lead_id: data.leadId,
+      phone_normalized: data.phone ?? null,
+      channel: "call",
+      direction: "outbound",
+      status: "initiated",
+      content: "Pośrednik wybrał numer telefonu (klik tel:)",
+      created_by: context.userId,
+      metadata: { source: "broker_phone_click" },
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, at: new Date().toISOString() };
   });
 
 export const addManualNote = createServerFn({ method: "POST" })
