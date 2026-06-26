@@ -356,7 +356,24 @@ export function LoanCalculator({
                 <span className="text-destructive font-medium">przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}</span>
               ) : <span />}
               <span>30%</span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">Prowizja Finance You (operatorska) {investorGuidance && <InfoTip text="Wynagrodzenie operatora platformy. NIE jest kosztem pozaodsetkowym pożyczki w rozumieniu art. 36a UoKK — nie wlicza się do limitu MPKK." />}</Label>
+              <div className="flex items-center gap-2">
+                <Input type="number" step="0.5" value={financeYouFeePct} onChange={(e) => setFinanceYouFeePct(Number(e.target.value) || 0)} className="w-24" />
+                <span className="text-sm">% ({formatPLN(financeYouFeePln)})</span>
+              </div>
             </div>
+            <Slider min={0} max={15} step={0.5} value={[Math.min(15, Math.max(0, financeYouFeePct))]} onValueChange={(v) => setFinanceYouFeePct(v[0])} />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0%</span>
+              <span className="text-muted-foreground/80">nie wlicza się do MPKK</span>
+              <span>15%</span>
+            </div>
+          </div>
+
           </div>
 
 
