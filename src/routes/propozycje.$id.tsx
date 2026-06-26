@@ -25,12 +25,9 @@ function PropozycjaDetail() {
     queryKey: ["loan-proposal", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("loan_proposals")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+        .rpc("get_public_loan_proposal", { _id: id });
       if (error) throw error;
-      return data;
+      return data?.[0] ?? null;
     },
   });
 
@@ -49,7 +46,7 @@ function PropozycjaDetail() {
           <>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold">{q.data.client_name || "Propozycja pożyczki"}</h1>
+                <h1 className="text-2xl font-bold">Propozycja pożyczki</h1>
                 <p className="text-sm text-muted-foreground">
                   Utworzono: {new Date(q.data.created_at).toLocaleString("pl-PL")}
                 </p>
@@ -71,13 +68,11 @@ function PropozycjaDetail() {
               </CardContent>
             </Card>
 
-            {(q.data.client_email || q.data.client_phone || q.data.note) && (
+            {q.data.note && (
               <Card>
-                <CardHeader><CardTitle>Dane klienta i notatka</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Notatka</CardTitle></CardHeader>
                 <CardContent className="space-y-1 text-sm">
-                  {q.data.client_email && <div><span className="text-muted-foreground">E-mail: </span><b>{q.data.client_email}</b></div>}
-                  {q.data.client_phone && <div><span className="text-muted-foreground">Telefon: </span><b>{q.data.client_phone}</b></div>}
-                  {q.data.note && <div className="pt-2 whitespace-pre-wrap">{q.data.note}</div>}
+                  <div className="whitespace-pre-wrap">{q.data.note}</div>
                 </CardContent>
               </Card>
             )}
