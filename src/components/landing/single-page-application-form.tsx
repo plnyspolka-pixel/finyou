@@ -314,9 +314,9 @@ export function SinglePageApplicationForm({
   const [usableArea, setUsableArea] = useState("");
   const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [consentPrivacy, setConsentPrivacy] = useState(skipContact);
-  const [consentTerms, setConsentTerms] = useState(skipContact);
-  const [consentMarketing, setConsentMarketing] = useState(skipContact);
+  const [consentPrivacy, setConsentPrivacy] = useState(skipContact || isBroker);
+  const [consentTerms, setConsentTerms] = useState(skipContact || isBroker);
+  const [consentMarketing, setConsentMarketing] = useState(skipContact || isBroker);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
