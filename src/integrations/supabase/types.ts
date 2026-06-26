@@ -4345,6 +4345,48 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_materials: {
+        Row: {
+          audience: Database["public"]["Enums"]["marketing_audience"]
+          created_at: string
+          description: string | null
+          file_size: number | null
+          id: string
+          media_type: Database["public"]["Enums"]["marketing_media_type"]
+          mime_type: string | null
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          audience: Database["public"]["Enums"]["marketing_audience"]
+          created_at?: string
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          media_type: Database["public"]["Enums"]["marketing_media_type"]
+          mime_type?: string | null
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["marketing_audience"]
+          created_at?: string
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          media_type?: Database["public"]["Enums"]["marketing_media_type"]
+          mime_type?: string | null
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       meta_ad_accounts: {
         Row: {
           account_status: number | null
@@ -5689,6 +5731,8 @@ export type Database = {
         | "oczekuje_wyplaty"
         | "wyplacony"
         | "wniosek_odrzucony"
+      marketing_audience: "klient" | "inwestor" | "posrednik"
+      marketing_media_type: "image" | "video"
       offer_status:
         | "szkic"
         | "zlozona"
@@ -5896,6 +5940,8 @@ export const Constants = {
         "wyplacony",
         "wniosek_odrzucony",
       ],
+      marketing_audience: ["klient", "inwestor", "posrednik"],
+      marketing_media_type: ["image", "video"],
       offer_status: [
         "szkic",
         "zlozona",
