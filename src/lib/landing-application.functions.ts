@@ -100,6 +100,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         annual_investor_rate: data.annual_investor_rate ?? null,
         max_monthly_payment: data.max_monthly_payment ?? null,
         source,
+        assigned_operator: data.assigned_operator_id ?? null,
       })
       .select("id")
       .single();
