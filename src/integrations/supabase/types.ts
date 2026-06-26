@@ -1266,6 +1266,59 @@ export type Database = {
         }
         Relationships: []
       }
+      broker_settlements: {
+        Row: {
+          amount: number
+          broker_user_id: string
+          client_name: string | null
+          created_at: string
+          currency: string
+          id: string
+          loan_application_id: string | null
+          notes: string | null
+          paid_at: string | null
+          period_label: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          broker_user_id: string
+          client_name?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          loan_application_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          period_label?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          broker_user_id?: string
+          client_name?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          loan_application_id?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          period_label?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broker_settlements_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_queue: {
         Row: {
           agent_id: string | null
@@ -4347,6 +4400,7 @@ export type Database = {
       }
       marketing_materials: {
         Row: {
+          ai_description: string | null
           audience: Database["public"]["Enums"]["marketing_audience"]
           created_at: string
           description: string | null
@@ -4360,6 +4414,7 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
+          ai_description?: string | null
           audience: Database["public"]["Enums"]["marketing_audience"]
           created_at?: string
           description?: string | null
@@ -4373,6 +4428,7 @@ export type Database = {
           uploaded_by?: string | null
         }
         Update: {
+          ai_description?: string | null
           audience?: Database["public"]["Enums"]["marketing_audience"]
           created_at?: string
           description?: string | null
@@ -4887,6 +4943,7 @@ export type Database = {
           id: string
           last_name: string | null
           phone: string | null
+          referral_code: string | null
           updated_at: string
           user_id: string
         }
@@ -4897,6 +4954,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -4907,6 +4965,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id?: string
         }
