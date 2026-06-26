@@ -100,6 +100,7 @@ export function LoanCalculator({
   const [months, setMonths] = useState(initialMonths);
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
+  const [financeYouFeePct, setFinanceYouFeePct] = useState(2);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
 
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
@@ -117,9 +118,9 @@ export function LoanCalculator({
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja dla inwestora to JEDYNY koszt pozaodsetkowy. Brak prowizji Finance You.
-  const financeYouFeePct = 0;
-  const financeYouFeePln = 0;
+  // Prowizja inwestora to JEDYNY koszt pozaodsetkowy w rozumieniu MPKK.
+  // Prowizja Finance You jest osobnym wynagrodzeniem operatora i NIE wchodzi do limitu MPKK.
+  const financeYouFeePln = (amount * financeYouFeePct) / 100;
   const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
@@ -162,10 +163,11 @@ export function LoanCalculator({
     };
   }, [grossPrincipal, months, annualRate, maxPayment]);
 
-  const nonInterestTotal = commissionPln + financeYouFeePln;
-  const totalCost = schedule.totalOds + nonInterestTotal;
-  const totalToRepay = schedule.totalRata + commissionPln; // FY już w racie (kredytowana), prowizja inwestora płatna z góry
-  const disbursedOnHand = Math.max(0, amount - commissionPln);
+  // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You jest osobnym wynagrodzeniem operatora i nie jest kosztem pozaodsetkowym po stronie pożyczki.
+  const nonInterestTotal = commissionPln;
+  const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
+  const totalToRepay = schedule.totalRata + commissionPln + financeYouFeePln;
+  const disbursedOnHand = Math.max(0, amount - commissionPln - financeYouFeePln);
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
   const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
 
@@ -354,7 +356,24 @@ export function LoanCalculator({
                 <span className="text-destructive font-medium">przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}</span>
               ) : <span />}
               <span>30%</span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">Prowizja Finance You (operatorska) {investorGuidance && <InfoTip text="Wynagrodzenie operatora platformy. NIE jest kosztem pozaodsetkowym pożyczki w rozumieniu art. 36a UoKK — nie wlicza się do limitu MPKK." />}</Label>
+              <div className="flex items-center gap-2">
+                <Input type="number" step="0.5" value={financeYouFeePct} onChange={(e) => setFinanceYouFeePct(Number(e.target.value) || 0)} className="w-24" />
+                <span className="text-sm">% ({formatPLN(financeYouFeePln)})</span>
+              </div>
             </div>
+            <Slider min={0} max={15} step={0.5} value={[Math.min(15, Math.max(0, financeYouFeePct))]} onValueChange={(v) => setFinanceYouFeePct(v[0])} />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0%</span>
+              <span className="text-muted-foreground/80">nie wlicza się do MPKK</span>
+              <span>15%</span>
+            </div>
+          </div>
+
           </div>
 
 
@@ -471,7 +490,8 @@ export function LoanCalculator({
           <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(disbursedOnHand)}</b></div>
           <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
 
-          <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
+          <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-muted-foreground">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
+          <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-muted-foreground">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
           {investorGuidance && (
             <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę: łączna kwota do spłaty ÷ kwota wypłacona." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
