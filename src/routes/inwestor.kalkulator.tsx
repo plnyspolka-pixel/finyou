@@ -12,9 +12,9 @@ function Kalkulator() {
       <FancyPageHeader
         eyebrow="Narzędzia inwestora"
         title="Kalkulator pożyczki"
-        subtitle="Ustaw parametry — od razu zobaczysz harmonogram, koszty i zgodność z limitami ustawowymi."
+        subtitle="Ustaw parametry — od razu zobaczysz harmonogram, koszty oraz ostrzeżenia o limitach odsetek, MPKK i krotności spłaty."
       />
-      <LoanCalculator />
+      <LoanCalculator investorGuidance />
     </div>
   );
 }
