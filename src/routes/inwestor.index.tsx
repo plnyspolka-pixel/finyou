@@ -42,11 +42,14 @@ function InwestorList() {
     const list = data ?? [];
     setApps(list); setLoading(false);
 
-    // Resolve first photo per app to a viewable URL (storage paths → signed URLs)
+    // Resolve first photo per app to a viewable URL (storage paths → signed URLs).
+    // Wyklucz dokumenty (ownership_deed, kw) z miniatur — pokazujemy tylko zdjęcia nieruchomości.
+    const isShowable = (path: string) => !/\/(ownership_deed|kw|documents?)\//i.test(path);
     const tasks: Array<Promise<void>> = [];
     const next: Record<string, string> = {};
     for (const a of list) {
-      const first = a.properties?.[0]?.photos?.[0];
+      const photos: string[] = a.properties?.[0]?.photos ?? [];
+      const first = photos.find(isShowable) ?? photos[0];
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
