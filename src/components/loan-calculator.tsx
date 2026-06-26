@@ -117,23 +117,17 @@ export function LoanCalculator({
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You — skalowana wg kwoty (10% → 4%), kredytowana do kapitału (gross principal).
-  // Identyczna logika jak w kalkulatorze na landingu.
-  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-  const financeYouFeePct = Math.round((10 - feeT * 6) * 10) / 10;
-  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
-  const grossPrincipal = amount + financeYouFeePln;
+  // Prowizja dla inwestora to JEDYNY koszt pozaodsetkowy. Brak prowizji Finance You.
+  const financeYouFeePct = 0;
+  const financeYouFeePln = 0;
+  const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
 
-  // Model prowizji inwestora:
-  //  - „mpkk": prowizja domyślnie dopełnia łączne koszty pozaodsetkowe do limitu MPKK (z uwzgl. prowizji FY).
-  //  - „manual": prowizja sterowana suwakiem.
-  const mpkkCommissionPln = Math.max(0, maxNonInterest - financeYouFeePln);
-  const commissionPln = investorGuidance && commissionMode === "mpkk"
-    ? mpkkCommissionPln
-    : (amount * commissionPct) / 100;
-  const effectiveCommissionPct = amount > 0 ? (commissionPln / amount) * 100 : 0;
+  // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
+  const commissionPln = (amount * commissionPct) / 100;
+  const effectiveCommissionPct = commissionPct;
+
 
   const schedule = useMemo(() => {
     if (!grossPrincipal || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
