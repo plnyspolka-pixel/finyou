@@ -135,6 +135,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
                     {c.metadata?.disconnection_reason && (
                       <span className="text-[10px] text-muted-foreground">• {c.metadata.disconnection_reason}</span>
                     )}
+                    {c.created_by_name && <span className="text-xs text-muted-foreground">· {c.created_by_name}</span>}
                     <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(c.created_at)}</span>
                   </div>
                   {c.subject && <div className="text-sm font-medium">{c.subject}</div>}
