@@ -77,6 +77,30 @@ function SkrzynkaPage() {
 
   const selected = filtered.find((m) => m.id === selectedId) ?? filtered[0] ?? null;
 
+  // Auto-pobieranie treści dla inbound wiadomości bez html (tła + na żądanie przy zaznaczeniu).
+  const autoFetched = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (tab !== "inbound" || !data) return;
+    const needsFetch = data.filter((m) => {
+      if (autoFetched.current.has(m.id)) return false;
+      const meta = (m.metadata ?? {}) as Record<string, any>;
+      if (!meta?.email_id) return false;
+      if (meta?.html) return false;
+      if ((m.content ?? "").trim().length > 200) return false;
+      return true;
+    });
+    if (!needsFetch.length) return;
+    // Priorytet: aktualnie zaznaczona, potem do 5 najnowszych w tle.
+    const prioritized = selected && needsFetch.some((m) => m.id === selected.id)
+      ? [selected, ...needsFetch.filter((m) => m.id !== selected.id)]
+      : needsFetch;
+    const batch = prioritized.slice(0, 5);
+    for (const m of batch) {
+      autoFetched.current.add(m.id);
+      refetchBody.mutate(m.id);
+    }
+  }, [data, tab, selected, refetchBody]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
