@@ -77,9 +77,17 @@ export const listLeads = createServerFn({ method: "GET" })
           if (ev.channel === "voicebot_call" || ev.channel === "call") {
             s.calls++;
             // Tylko ręczne telefony pośrednika (channel='call') zliczamy jako "Ostatni telefon"
-            if (ev.channel === "call" && (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt))) {
-              s.lastCallAt = ev.created_at;
-              s.lastCallById = ev.created_by ?? null;
+            if (ev.channel === "call") {
+              if (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt)) {
+                s.lastCallAt = ev.created_at;
+                s.lastCallById = ev.created_by ?? null;
+              }
+              if (ev.created_by) {
+                const bMap = (brokerByLead[l.id] ??= {});
+                const entry = (bMap[ev.created_by] ??= { count: 0, lastAt: ev.created_at });
+                entry.count++;
+                if (new Date(ev.created_at) > new Date(entry.lastAt)) entry.lastAt = ev.created_at;
+              }
             }
           }
           else if (ev.channel === "sms") s.sms++;
