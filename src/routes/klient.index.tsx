@@ -266,24 +266,31 @@ function KlientDashboard() {
   };
 
   const kwValidation = validateKw(kw);
+  const extraValidations = extraKws.map((v) => validateKw(v));
+  const allKwValid = kwValidation.ok && extraValidations.every((v) => v.ok);
   const showKwError = kwTouched && !kwValidation.ok && kw.trim().length > 0;
 
   const saveKw = async () => {
     if (!propertyRow?.id) return;
     setKwTouched(true);
-    if (!kwValidation.ok) {
+    if (!allKwValid) {
       toast.error(kwValidation.error ?? "Nieprawidłowy numer KW");
       return;
     }
     setSavingKw(true);
     try {
       const normalized = kw.trim().toUpperCase();
+      const normalizedExtras = extraKws.map((v) => v.trim().toUpperCase()).filter(Boolean);
       const { error } = await supabase.from("properties")
-        .update({ land_register_number: normalized })
+        .update({
+          land_register_number: normalized,
+          additional_land_register_numbers: normalizedExtras,
+        } as any)
         .eq("id", propertyRow.id);
       if (error) throw error;
       setKw(normalized);
-      toast.success("Numer KW zapisany poprawnie");
+      setExtraKws(normalizedExtras);
+      toast.success(normalizedExtras.length > 0 ? `Zapisano ${1 + normalizedExtras.length} numery KW` : "Numer KW zapisany poprawnie");
       void refetchProperty();
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się zapisać numeru KW");
