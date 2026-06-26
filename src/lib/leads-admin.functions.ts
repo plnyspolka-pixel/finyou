@@ -49,8 +49,10 @@ export const listLeads = createServerFn({ method: "GET" })
     const phones = Array.from(new Set(list.map((l) => l.phone_normalized).filter(Boolean))) as string[];
     const emails = Array.from(new Set(list.map((l) => l.email).filter(Boolean))) as string[];
 
-    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null };
+    type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
     const commsByLead: Record<string, Comm> = {};
+    const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
     const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     const queries: Promise<any>[] = [];
@@ -75,9 +77,17 @@ export const listLeads = createServerFn({ method: "GET" })
           if (ev.channel === "voicebot_call" || ev.channel === "call") {
             s.calls++;
             // Tylko ręczne telefony pośrednika (channel='call') zliczamy jako "Ostatni telefon"
-            if (ev.channel === "call" && (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt))) {
-              s.lastCallAt = ev.created_at;
-              s.lastCallById = ev.created_by ?? null;
+            if (ev.channel === "call") {
+              if (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt)) {
+                s.lastCallAt = ev.created_at;
+                s.lastCallById = ev.created_by ?? null;
+              }
+              if (ev.created_by) {
+                const bMap = (brokerByLead[l.id] ??= {});
+                const entry = (bMap[ev.created_by] ??= { count: 0, lastAt: ev.created_at });
+                entry.count++;
+                if (new Date(ev.created_at) > new Date(entry.lastAt)) entry.lastAt = ev.created_at;
+              }
             }
           }
           else if (ev.channel === "sms") s.sms++;
@@ -98,9 +108,11 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
+    const brokerIds = Array.from(new Set(Object.values(brokerByLead).flatMap((m) => Object.keys(m))));
     const callerIds = Array.from(new Set([
       ...Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean),
       ...Object.values(commsByLead).map((c) => c.lastNoteById).filter(Boolean),
+      ...brokerIds,
     ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
@@ -109,9 +121,15 @@ export const listLeads = createServerFn({ method: "GET" })
         callerNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";
       }
     }
-    for (const c of Object.values(commsByLead)) {
+    for (const [leadId, c] of Object.entries(commsByLead)) {
       c.lastCallByName = c.lastCallById ? (callerNames[c.lastCallById] ?? "Pośrednik") : null;
       c.lastNoteByName = c.lastNoteById ? (callerNames[c.lastNoteById] ?? "Pośrednik") : null;
+      const bMap = brokerByLead[leadId];
+      if (bMap) {
+        c.brokerCalls = Object.entries(bMap)
+          .map(([id, v]) => ({ id, name: callerNames[id] ?? "Pośrednik", count: v.count, lastAt: v.lastAt }))
+          .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+      }
     }
 
     // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).

@@ -111,8 +111,17 @@ function OperatorLeadsList() {
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
                   {r.comms.lastCallAt && (
-                    <div className="text-xs mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
-                      <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
+                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
+                      <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Nieznany pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
+                    </div>
+                  )}
+                  {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
+                    <div className="text-[11px] mt-1 flex flex-wrap gap-1">
+                      {r.comms.brokerCalls.map((b: any) => (
+                        <span key={b.id} className="inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-2 py-0.5 border border-slate-200">
+                          <Phone className="h-3 w-3" /> {b.name ?? "Pośrednik"} · {b.count}× · {formatRelative(b.lastAt)}
+                        </span>
+                      ))}
                     </div>
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
