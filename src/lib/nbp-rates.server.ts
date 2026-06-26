@@ -13,12 +13,15 @@ export interface NbpRates {
   citations: string[];
 }
 
-// Fallback — aktualny stan na 2026-05 (NBP ref. 5.75%). Używany tylko gdy Perplexity zawiedzie.
+// Fallback — stan na 2026-06 (NBP ref. 3.75%). Używany tylko gdy Perplexity zawiedzie.
+// UWAGA: stopa referencyjna zmienia się z każdą decyzją RPP — wartość poniżej jest tylko
+// awaryjna; produkcyjnie pobieramy stopę na żywo (api/perplexity) i pozwalamy ją nadpisać
+// ręcznie w kalkulatorze inwestora.
 const FALLBACK: NbpRates = {
-  referenceRate: 5.75,
-  lombardRate: 6.25,
-  depositRate: 5.25,
-  rediscountRate: 5.80,
+  referenceRate: 3.75,
+  lombardRate: 4.25,
+  depositRate: 3.25,
+  rediscountRate: 3.80,
   effectiveFrom: null,
   fetchedAt: new Date(0).toISOString(),
   source: "fallback",
