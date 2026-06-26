@@ -178,8 +178,8 @@ function MarketingMaterialsPage() {
         <CardContent>
           <form onSubmit={handleUpload} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Tytuł</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <Label>Tytuł (opcjonalnie — przy multi-upload bierze nazwę pliku)</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Kategoria</Label>
