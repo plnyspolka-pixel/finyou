@@ -103,6 +103,8 @@ function KlientDashboard() {
   const [uploading, setUploading] = useState(false);
   const [forceUnlock, setForceUnlock] = useState(false);
   const [markingComplete, setMarkingComplete] = useState(false);
+  const [filesOpen, setFilesOpen] = useState<boolean | null>(null);
+  const [kwOpen, setKwOpen] = useState<boolean | null>(null);
   const qc = useQueryClient();
 
   const markApplicationComplete = async () => {
