@@ -245,14 +245,14 @@ function MarketingMaterialsPage() {
                   const url = urls[m.id];
                   return (
                     <Card key={m.id} className="overflow-hidden">
-                      <div className="aspect-video bg-muted flex items-center justify-center">
+                      <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
                         {!url ? (
                           <div className="text-muted-foreground">...</div>
                         ) : m.media_type === "image" ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={url} alt={m.title} className="w-full h-full object-cover" />
+                          <img src={url} alt={m.title} className="w-full h-full object-contain" />
                         ) : (
-                          <video src={url} controls className="w-full h-full object-cover" />
+                          <video src={url} controls preload="metadata" className="w-full h-full object-contain bg-black" />
                         )}
                       </div>
                       <CardContent className="p-4 space-y-2">
