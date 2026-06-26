@@ -188,7 +188,7 @@ function BrokerMarketingPage() {
                   const url = urls[m.id];
                   const shareUrl = refCode ? refLink(tab, refCode) : SITE_BASE;
                   const shareText = m.ai_description || m.description || m.title;
-                  const handleShare = (channel: string) => shareOrCopy({ title: m.title, text: shareText, url: shareUrl, channel });
+                  void shareUrl; void shareText;
                   return (
                     <Card key={m.id} className="overflow-hidden">
                       <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
