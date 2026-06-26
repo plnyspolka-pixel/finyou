@@ -163,10 +163,11 @@ export function LoanCalculator({
     };
   }, [grossPrincipal, months, annualRate, maxPayment]);
 
-  const nonInterestTotal = commissionPln + financeYouFeePln;
-  const totalCost = schedule.totalOds + nonInterestTotal;
-  const totalToRepay = schedule.totalRata + commissionPln; // FY już w racie (kredytowana), prowizja inwestora płatna z góry
-  const disbursedOnHand = Math.max(0, amount - commissionPln);
+  // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You jest osobnym wynagrodzeniem operatora i nie jest kosztem pozaodsetkowym po stronie pożyczki.
+  const nonInterestTotal = commissionPln;
+  const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
+  const totalToRepay = schedule.totalRata + commissionPln + financeYouFeePln;
+  const disbursedOnHand = Math.max(0, amount - commissionPln - financeYouFeePln);
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
   const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
 
