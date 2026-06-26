@@ -165,9 +165,10 @@ export function LoanCalculator({
             <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (z prowizją FY {financeYouFeePct}%)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (od którego liczone odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+              <div className="flex justify-between sm:col-span-2 border-t pt-1.5"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora (kwota pożyczki − prowizja inwestora potrącana z wypłaty)</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
             </div>
           </div>
 
