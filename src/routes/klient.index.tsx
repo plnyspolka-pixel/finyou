@@ -626,7 +626,10 @@ function KlientDashboard() {
                     </div>
                   </>
                 )}
+                </>)}
               </div>
+                );
+              })()}
             </FancyShell>
 
             {/* === Numer KW === */}
