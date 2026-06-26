@@ -47,7 +47,7 @@ export const listLeads = createServerFn({ method: "GET" })
 
     const ids = list.map((l) => l.id);
     const phones = Array.from(new Set(list.map((l) => l.phone_normalized).filter(Boolean))) as string[];
-    const emails = Array.from(new Set(list.map((l) => l.email).filter(Boolean))) as string[];
+    const emailsLower = Array.from(new Set(list.map((l) => (l.email ?? "").toLowerCase()).filter(Boolean))) as string[];
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
     type Comm = { calls: number; sms: number; emails: number; notes: number; inboundEmails: number; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
@@ -55,24 +55,37 @@ export const listLeads = createServerFn({ method: "GET" })
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
     const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundEmails: 0, lastInboundEmailAt: null, lastInboundEmailSubject: null, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
+    // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
+    const leadsByEmailLower: Record<string, any[]> = {};
+    for (const l of list) {
+      const k = (l.email ?? "").toLowerCase();
+      if (!k) continue;
+      (leadsByEmailLower[k] ??= []).push(l);
+    }
+
     const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content";
     const queries: Promise<any>[] = [];
     if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("lead_id", ids)));
     if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("phone_normalized", phones)));
-    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("email", emails)));
+    if (emailsLower.length) {
+      // ilike.any() = case-insensitive email match, catches inbound emails filed against a different (auto-created) lead row.
+      const orExpr = emailsLower.map((e) => `email.ilike.${e}`).join(",");
+      queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).or(orExpr)));
+    }
     const results = await Promise.all(queries);
 
     const seen = new Set<string>();
     for (const r of results) {
       for (const ev of (r.data ?? []) as any[]) {
-        const key = `${ev.lead_id ?? ""}|${ev.phone_normalized ?? ""}|${ev.email ?? ""}|${ev.channel}|${ev.created_at}`;
+        const evEmailLower = (ev.email ?? "").toLowerCase();
+        const key = `${ev.lead_id ?? ""}|${ev.phone_normalized ?? ""}|${evEmailLower}|${ev.channel}|${ev.direction ?? ""}|${ev.created_at}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        const matching = list.filter((l) =>
-          (ev.lead_id && l.id === ev.lead_id) ||
-          (ev.phone_normalized && l.phone_normalized === ev.phone_normalized) ||
-          (ev.email && l.email === ev.email)
-        );
+        const matched = new Set<any>();
+        if (ev.lead_id) for (const l of list) if (l.id === ev.lead_id) matched.add(l);
+        if (ev.phone_normalized) for (const l of list) if (l.phone_normalized === ev.phone_normalized) matched.add(l);
+        if (evEmailLower && leadsByEmailLower[evEmailLower]) for (const l of leadsByEmailLower[evEmailLower]) matched.add(l);
+        const matching = Array.from(matched);
         for (const l of matching) {
           const s = ensure(l.id);
           if (ev.channel === "voicebot_call" || ev.channel === "call") {
