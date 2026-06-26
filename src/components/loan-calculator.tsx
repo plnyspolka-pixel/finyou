@@ -169,6 +169,13 @@ export function LoanCalculator({
   const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
   const totalToRepay = schedule.totalRata + commissionPln + financeYouFeePln;
   const disbursedOnHand = Math.max(0, amount - commissionPln - financeYouFeePln);
+  // Inwestor: wkład gotówkowy = kwota nominalna - prowizja (potrącana z góry).
+  // Inwestor otrzymuje: spłaty kapitału z części "amount" + odsetki + prowizja.
+  const investorCashOut = Math.max(0, amount - commissionPln);
+  const investorTotalIn = amount + schedule.totalOds + commissionPln; // brutto: zwrot kapitału + odsetki + prowizja
+  const investorProfit = schedule.totalOds + commissionPln;
+  const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
+  const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
   const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
 
