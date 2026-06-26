@@ -339,42 +339,24 @@ export function LoanCalculator({
             </div>
           </div>
 
-          {investorGuidance && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">Model prowizji inwestora {investorGuidance && <InfoTip text="MPKK (maksymalne pozaodsetkowe koszty kredytu) z ustawy o kredycie konsumenckim. Pożyczki hipoteczne są z niej wyłączone, ale sądy stosują MPKK jako benchmark dobrych obyczajów (art. 388 i 58 §2 KC)." />}</Label>
-              <RadioGroup value={commissionMode} onValueChange={(v) => setCommissionMode(v as "mpkk" | "manual")} className="grid sm:grid-cols-2 gap-2">
-                <label className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer text-sm ${commissionMode === "mpkk" ? "border-primary bg-primary/5" : ""}`}>
-                  <RadioGroupItem value="mpkk" className="mt-0.5" />
-                  <span><b>MPKK ref.</b> <span className="text-xs text-muted-foreground">(rekomendowane)</span><br /><span className="text-xs text-muted-foreground">prowizja dopełnia koszty pozaodsetkowe do limitu MPKK</span></span>
-                </label>
-                <label className={`flex items-start gap-2 rounded-md border p-2.5 cursor-pointer text-sm ${commissionMode === "manual" ? "border-primary bg-primary/5" : ""}`}>
-                  <RadioGroupItem value="manual" className="mt-0.5" />
-                  <span><b>Ręcznie</b><br /><span className="text-xs text-muted-foreground">ustaw prowizję suwakiem poniżej</span></span>
-                </label>
-              </RadioGroup>
-            </div>
-          )}
-
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jednorazowy koszt potrącany z góry przy uruchomieniu. W modelu „MPKK ref.” liczona automatycznie." />}</Label>
+              <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
               <div className="flex items-center gap-2">
-                {investorGuidance && commissionMode === "mpkk"
-                  ? <span className="text-sm tabular-nums">{effectiveCommissionPct.toFixed(1)}% ({formatPLN(commissionPln)})</span>
-                  : <><Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" /><span className="text-sm">% ({formatPLN(commissionPln)})</span></>}
+                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
+                <span className="text-sm">% ({formatPLN(commissionPln)})</span>
               </div>
             </div>
-            {!(investorGuidance && commissionMode === "mpkk") && (
-              <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
-            )}
+            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
-              <span className={nonInterestExceeds ? "text-destructive font-medium" : ""}>
-                limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
-              </span>
+              {nonInterestExceeds ? (
+                <span className="text-destructive font-medium">przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}</span>
+              ) : <span />}
               <span>30%</span>
             </div>
           </div>
+
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
