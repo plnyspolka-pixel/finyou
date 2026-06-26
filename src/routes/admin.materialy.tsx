@@ -56,7 +56,8 @@ function MarketingMaterialsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [audience, setAudience] = useState<Audience>("klient");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -90,42 +91,56 @@ function MarketingMaterialsPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !title.trim()) {
-      toast.error("Podaj tytuł i wybierz plik");
+    if (files.length === 0) {
+      toast.error("Wybierz przynajmniej jeden plik");
       return;
     }
     setUploading(true);
+    let ok = 0;
+    let fail = 0;
     try {
-      const mediaType: MediaType = file.type.startsWith("video/") ? "video" : "image";
-      const ext = file.name.split(".").pop() || "bin";
-      const path = `${audience}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
-        contentType: file.type,
-        upsert: false,
-      });
-      if (upErr) throw upErr;
       const { data: userData } = await supabase.auth.getUser();
-      const { error: insErr } = await supabase.from("marketing_materials").insert({
-        title: title.trim(),
-        description: description.trim() || null,
-        audience,
-        media_type: mediaType,
-        storage_path: path,
-        mime_type: file.type,
-        file_size: file.size,
-        uploaded_by: userData.user?.id ?? null,
-      });
-      if (insErr) throw insErr;
-      toast.success("Materiał dodany");
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        setUploadProgress(`${i + 1}/${files.length} — ${f.name}`);
+        try {
+          const mediaType: MediaType = f.type.startsWith("video/") ? "video" : "image";
+          const ext = f.name.split(".").pop() || "bin";
+          const path = `${audience}/${crypto.randomUUID()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, f, {
+            contentType: f.type,
+            upsert: false,
+          });
+          if (upErr) throw upErr;
+          const baseTitle = title.trim() || f.name.replace(/\.[^.]+$/, "");
+          const finalTitle = files.length > 1 && title.trim() ? `${baseTitle} (${i + 1})` : baseTitle;
+          const { error: insErr } = await supabase.from("marketing_materials").insert({
+            title: finalTitle,
+            description: description.trim() || null,
+            audience,
+            media_type: mediaType,
+            storage_path: path,
+            mime_type: f.type,
+            file_size: f.size,
+            uploaded_by: userData.user?.id ?? null,
+          });
+          if (insErr) throw insErr;
+          ok++;
+        } catch (err: any) {
+          console.error("upload failed", f.name, err);
+          fail++;
+        }
+      }
+      if (ok) toast.success(`Wgrano ${ok} plik(ów)${fail ? `, ${fail} błędów` : ""}`);
+      if (!ok && fail) toast.error(`Błąd uploadu (${fail})`);
       setTitle("");
       setDescription("");
-      setFile(null);
+      setFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       await load();
-    } catch (err: any) {
-      toast.error(err.message ?? "Błąd uploadu");
     } finally {
       setUploading(false);
+      setUploadProgress("");
     }
   };
 
@@ -186,18 +201,21 @@ function MarketingMaterialsPage() {
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Plik (zdjęcie lub film)</Label>
+              <Label>Pliki (możesz wybrać wiele — zdjęcia i filmy)</Label>
               <Input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,video/*"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                required
+                multiple
+                onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
               />
+              {files.length > 0 && (
+                <p className="text-xs text-muted-foreground">Wybrano {files.length} plik(ów)</p>
+              )}
             </div>
-            <div className="md:col-span-2">
-              <Button type="submit" disabled={uploading}>
-                {uploading ? "Wgrywam..." : "Dodaj materiał"}
+            <div className="md:col-span-2 flex items-center gap-3">
+              <Button type="submit" disabled={uploading || files.length === 0}>
+                {uploading ? `Wgrywam... ${uploadProgress}` : `Dodaj ${files.length || ""} materiał(ów)`}
               </Button>
             </div>
           </form>

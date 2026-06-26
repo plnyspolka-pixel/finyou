@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LayoutDashboard, Users, FileText, FilePlus2 } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FilePlus2, Megaphone, Wallet } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
 export const Route = createFileRoute("/posrednik")({
@@ -13,6 +13,8 @@ const groups: NavGroup[] = [
       { to: "/posrednik/leady", label: "Leady (wszystkie)", icon: Users },
       { to: "/posrednik/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
+      { to: "/posrednik/marketing", label: "Materiały marketingowe", icon: Megaphone },
+      { to: "/posrednik/rozliczenia", label: "Rozliczenia", icon: Wallet },
     ],
   },
 ];
