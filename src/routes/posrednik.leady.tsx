@@ -108,10 +108,20 @@ function OperatorLeadsList() {
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
+                  {r.comms.lastCallAt && (
+                    <div className="text-xs mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
+                      <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {phone && (
-                    <a href={`tel:${phone}`} className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700" aria-label={`Zadzwoń ${phone}`}>
+                    <a
+                      href={`tel:${phone}`}
+                      onClick={() => logCall.mutate({ leadId: r.id, phone })}
+                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                      aria-label={`Zadzwoń ${phone}`}
+                    >
                       <Phone className="h-4 w-4" />
                     </a>
                   )}
