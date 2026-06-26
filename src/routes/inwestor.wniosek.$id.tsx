@@ -83,8 +83,11 @@ function InwestorWniosek() {
     const resolved = await Promise.all(rawPhotos.map(async (src) => {
       if (!src || typeof src !== "string") return null;
       if (/^https?:\/\//i.test(src)) return src;
-      const { data: u } = await supabase.storage.from("property-photos").createSignedUrl(src, 3600);
-      return u?.signedUrl ?? null;
+      for (const bucket of ["property-photos", "documents"] as const) {
+        const { data: u } = await supabase.storage.from(bucket).createSignedUrl(src, 3600);
+        if (u?.signedUrl) return u.signedUrl;
+      }
+      return null;
     }));
     setPhotoUrls(resolved.filter((s): s is string => !!s));
   })(); }, [id, user]);
