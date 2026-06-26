@@ -232,22 +232,6 @@ function InwestorWniosek() {
       <InvestorSummaryCard applicationId={id} />
 
 
-      {propertyDocs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dokumenty i zdjęcia z wniosku</CardTitle>
-            <CardDescription>Załączniki dotyczące nieruchomości i własności.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(propGroups).map(([t, items]) => (
-              <div key={t} className="space-y-2">
-                <div className="text-sm font-medium flex items-center gap-2">{docTypeLabels[t] ?? t} <Badge variant="secondary">{items.length}</Badge></div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{items.map(renderDocCard)}</div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
