@@ -304,15 +304,21 @@ export function InvestorProposalCalculator({
           {missingForInvestors.length > 0 && null}
           <Button
             onClick={() => void sendToInvestors()}
-            disabled={sendingToInvestors}
-            className="h-16 w-full rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-lg font-black uppercase tracking-[0.18em] text-white shadow-[0_18px_45px_-12px_oklch(0.55_0.18_150/0.7)] ring-1 ring-emerald-300/50 transition hover:from-emerald-400 hover:via-emerald-500 hover:to-emerald-600 hover:shadow-[0_20px_55px_-12px_oklch(0.55_0.18_150/0.85)] disabled:opacity-60"
+            disabled={sendingToInvestors || Boolean(lockReason)}
+            aria-disabled={sendingToInvestors || Boolean(lockReason)}
+            className={cn(
+              "h-16 w-full rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-lg font-black uppercase tracking-[0.18em] text-white shadow-[0_18px_45px_-12px_oklch(0.55_0.18_150/0.7)] ring-1 ring-emerald-300/50 transition hover:from-emerald-400 hover:via-emerald-500 hover:to-emerald-600 hover:shadow-[0_20px_55px_-12px_oklch(0.55_0.18_150/0.85)] disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:hover:from-emerald-500 disabled:hover:via-emerald-600 disabled:hover:to-emerald-700",
+            )}
           >
             {sendingToInvestors
               ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
-              : <><Send className="mr-3 h-6 w-6" />{loan?.accepted_terms_at ? "Zaktualizuj warunki" : "Zaakceptuj warunki"}</>}
+              : lockReason
+                ? <><Lock className="mr-3 h-6 w-6" />Zaakceptuj warunki</>
+                : <><Send className="mr-3 h-6 w-6" />{loan?.accepted_terms_at ? "Zaktualizuj warunki" : "Zaakceptuj warunki"}</>}
           </Button>
         </div>
       )}
+
 
     </div>
   );
