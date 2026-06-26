@@ -189,32 +189,20 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
           <div className="whitespace-pre-wrap line-clamp-2">{last}</div>
         </div>
       )}
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="text-xs inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="h-3 w-3" /> {last ? "Dodaj kolejną notatkę" : "Dodaj notatkę"}
-        </button>
-      ) : (
-        <div className="space-y-1">
-          <Textarea
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Notatka widoczna dla wszystkich pośredników…"
-            rows={2}
-            className="text-sm"
-            autoFocus
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
-              {m.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Zapisz"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setValue(""); }}>Anuluj</Button>
-          </div>
+      <div className="space-y-1">
+        <Textarea
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Dodaj notatkę widoczną dla wszystkich pośredników…"
+          rows={2}
+          className="text-sm"
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
+            {m.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : (<><Plus className="h-3 w-3 mr-1" />Zapisz notatkę</>)}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
