@@ -115,6 +115,7 @@ function OperatorLeadsList() {
                       <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
                     </div>
                   )}
+                  <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {phone && (
