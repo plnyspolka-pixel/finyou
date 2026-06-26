@@ -98,13 +98,28 @@ const groups: Group[] = [
   },
 ];
 
+// Widok dla samej księgowości: tylko moduł księgowości + rozliczenia programu.
+const accountingGroups: Group[] = [
+  { items: [{ to: "/admin/ksiegowosc", label: "Pulpit księgowości", icon: Receipt, exact: true }] },
+  {
+    label: "Księgowość",
+    items: [
+      { to: "/admin/ksiegowosc/faktury", label: "Faktury sprzedaży", icon: FileText },
+      { to: "/admin/ksiegowosc/podmioty", label: "Podmioty gospodarcze", icon: Building2 },
+      { to: "/admin/program-posrednikow/rozliczenia", label: "Rozliczenia B2B / nierejestrowana", icon: FileCheck },
+    ],
+  },
+];
+
 function AdminLayout() {
   const { roles } = useAuth();
+  const isStaff = roles.includes("administrator") || roles.includes("operator");
+  const isAccountant = roles.includes("ksiegowosc");
   return (
     <PanelShell
-      title="Panel administratora"
-      allow={["administrator", "operator"]}
-      groups={groups}
+      title={isStaff ? "Panel administratora" : "Panel księgowości"}
+      allow={["administrator", "operator", "ksiegowosc"]}
+      groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
       footer={roles.includes("administrator") ? <AiAdminChat /> : null}
     />
   );
