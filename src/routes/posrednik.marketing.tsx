@@ -13,27 +13,11 @@ import {
   Download,
   Copy,
   Link as LinkIcon,
-  Facebook,
-  Linkedin,
-  Twitter,
-  MessageCircle,
-  Send,
-  Mail,
   ImageIcon,
   Video as VideoIcon,
-  Youtube,
-  Instagram,
-
 } from "lucide-react";
 import { generateMaterialDescription, ensureMyReferralCode } from "@/lib/marketing-materials.functions";
 
-function TikTokIcon({ className = "h-4 w-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V9.01a8.16 8.16 0 0 0 4.77 1.52V7.1a4.85 4.85 0 0 1-1.84-.41z" />
-    </svg>
-  );
-}
 
 export const Route = createFileRoute("/posrednik/marketing")({
   component: BrokerMarketingPage,
@@ -77,32 +61,7 @@ function copy(text: string) {
   toast.success("Skopiowano do schowka");
 }
 
-async function shareOrCopy({
-  title,
-  text,
-  url,
-  channel,
-}: {
-  title: string;
-  text: string;
-  url: string;
-  channel: string;
-}) {
-  const message = `${text}\n\n${url}`;
-  try {
-    if (navigator.share) {
-      await navigator.share({ title, text, url });
-      toast.success(`Udostępnianie: ${channel}`);
-      return;
-    }
-    await navigator.clipboard.writeText(message);
-    toast.success(`Skopiowano treść dla: ${channel}`);
-  } catch (error: any) {
-    if (error?.name === "AbortError") return;
-    await navigator.clipboard.writeText(message);
-    toast.success(`Skopiowano treść dla: ${channel}`);
-  }
-}
+
 
 function BrokerMarketingPage() {
   const [items, setItems] = useState<Material[]>([]);
@@ -229,7 +188,7 @@ function BrokerMarketingPage() {
                   const url = urls[m.id];
                   const shareUrl = refCode ? refLink(tab, refCode) : SITE_BASE;
                   const shareText = m.ai_description || m.description || m.title;
-                  const handleShare = (channel: string) => shareOrCopy({ title: m.title, text: shareText, url: shareUrl, channel });
+                  void shareUrl; void shareText;
                   return (
                     <Card key={m.id} className="overflow-hidden">
                       <div className="aspect-video bg-black flex items-center justify-center overflow-hidden">
@@ -296,50 +255,6 @@ function BrokerMarketingPage() {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
-                          <Button size="sm" variant="outline" title="Facebook — skopiuj / udostępnij" onClick={() => handleShare("Facebook")}>
-                            <Facebook className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="LinkedIn — skopiuj / udostępnij" onClick={() => handleShare("LinkedIn")}>
-                            <Linkedin className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="X — skopiuj / udostępnij" onClick={() => handleShare("X")}>
-                            <Twitter className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="WhatsApp — skopiuj / udostępnij" onClick={() => handleShare("WhatsApp")}>
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="Telegram — skopiuj / udostępnij" onClick={() => handleShare("Telegram")}>
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="E-mail — skopiuj treść wiadomości" onClick={() => handleShare("E-mail")}>
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="Instagram — skopiuj opis i link"
-                            onClick={() => handleShare("Instagram")}
-                          >
-                            <Instagram className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="YouTube — skopiuj opis i link"
-                            onClick={() => handleShare("YouTube")}
-                          >
-                            <Youtube className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="TikTok — skopiuj opis i link"
-                            onClick={() => handleShare("TikTok")}
-                          >
-                            <TikTokIcon />
-                          </Button>
-                        </div>
 
 
 
