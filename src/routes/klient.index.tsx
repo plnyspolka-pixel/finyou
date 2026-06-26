@@ -478,7 +478,7 @@ function KlientDashboard() {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); void deletePhoto(t.path); }}
                           aria-label="Usuń zdjęcie"
-                          className="absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full bg-rose-500/90 text-white opacity-0 ring-1 ring-white/50 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 group-hover:opacity-100 focus:opacity-100"
+                          className="absolute right-1.5 top-1.5 z-10 grid h-8 w-8 place-items-center rounded-full bg-rose-500/95 text-white ring-1 ring-white/60 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 active:scale-95"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
