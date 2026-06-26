@@ -1,79 +1,53 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 
-async function resolveOrCreateCustomer(
-  stripe: ReturnType<typeof createStripeClient>,
-  options: { email?: string; userId?: string },
-): Promise<string> {
-  if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) {
-    throw new Error("Invalid userId");
-  }
-  if (options.userId) {
-    const found = await stripe.customers.search({
-      query: `metadata['userId']:'${options.userId}'`,
-      limit: 1,
-    });
-    if (found.data.length) return found.data[0].id;
-  }
-  if (options.email) {
-    const existing = await stripe.customers.list({ email: options.email, limit: 1 });
-    if (existing.data.length) {
-      const customer = existing.data[0];
-      if (options.userId && customer.metadata?.userId !== options.userId) {
-        await stripe.customers.update(customer.id, {
-          metadata: { ...customer.metadata, userId: options.userId },
-        });
-      }
-      return customer.id;
-    }
-  }
-  const created = await stripe.customers.create({
-    ...(options.email && { email: options.email }),
-    ...(options.userId && { metadata: { userId: options.userId } }),
-  });
-  return created.id;
-}
+export const TPAY_PLANS = {
+  investor_access_1d: { amount: 99, days: 1, label: "Dostęp inwestora — 1 dzień" },
+  investor_access_1m: { amount: 399, days: 30, label: "Dostęp inwestora — 1 miesiąc" },
+  investor_access_1y: { amount: 2999, days: 365, label: "Dostęp inwestora — 1 rok" },
+} as const;
+
+export type TpayPlanId = keyof typeof TPAY_PLANS;
 
 export const createInvestorAccessCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { priceId: string; returnUrl: string; environment: StripeEnv }) => {
-    if (!/^investor_access_(1d|1m|1y)$/.test(data.priceId)) {
-      throw new Error("Invalid priceId");
-    }
+  .inputValidator((data: { priceId: TpayPlanId; returnUrl: string }) => {
+    if (!(data.priceId in TPAY_PLANS)) throw new Error("Invalid priceId");
+    if (!/^https?:\/\//.test(data.returnUrl)) throw new Error("Invalid returnUrl");
     return data;
   })
   .handler(async ({ data, context }) => {
-    const { userId, supabase } = context;
-    const { data: { user } } = await supabase.auth.getUser();
-    const email = user?.email ?? undefined;
+    try {
+      const { userId, supabase } = context;
+      const { data: userRes } = await supabase.auth.getUser();
+      const user = userRes?.user;
+      const email = user?.email ?? "no-reply@financeyou.pl";
+      const meta = (user?.user_metadata ?? {}) as Record<string, string | undefined>;
+      const fullName =
+        [meta.first_name, meta.last_name].filter(Boolean).join(" ").trim() ||
+        meta.full_name ||
+        email;
 
-    const stripe = createStripeClient(data.environment);
+      const plan = TPAY_PLANS[data.priceId];
+      const origin = new URL(data.returnUrl).origin;
+      const successUrl = `${origin}/inwestor/abonament?tpay=success`;
+      const errorUrl = `${origin}/inwestor/abonament?tpay=error`;
+      const notifyUrl = `${origin}/api/public/payments/tpay-webhook`;
 
-    const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
-    if (!prices.data.length) throw new Error("Price not found");
-    const stripePrice = prices.data[0];
+      const { createTpayTransaction } = await import("@/lib/tpay.server");
+      const tx = await createTpayTransaction({
+        amount: plan.amount,
+        description: plan.label,
+        email,
+        name: fullName,
+        crc: `${userId}|${data.priceId}`,
+        notifyUrl,
+        successUrl,
+        errorUrl,
+      });
 
-    const productId = typeof stripePrice.product === "string"
-      ? stripePrice.product
-      : stripePrice.product.id;
-    const product = await stripe.products.retrieve(productId);
-
-    const customerId = await resolveOrCreateCustomer(stripe, { email, userId });
-
-    const session = await stripe.checkout.sessions.create({
-      line_items: [{ price: stripePrice.id, quantity: 1 }],
-      mode: "payment",
-      ui_mode: "embedded_page",
-      return_url: data.returnUrl,
-      customer: customerId,
-      payment_intent_data: { description: product.name },
-      managed_payments: { enabled: true },
-      metadata: {
-        userId,
-        plan: data.priceId,
-      },
-    } as any);
-
-    return session.client_secret;
+      return { paymentUrl: tx.transactionPaymentUrl, transactionId: tx.transactionId };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Tpay error" };
+    }
   });
