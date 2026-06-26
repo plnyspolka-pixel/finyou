@@ -49,14 +49,14 @@ export const listLeads = createServerFn({ method: "GET" })
     const phones = Array.from(new Set(list.map((l) => l.phone_normalized).filter(Boolean))) as string[];
     const emails = Array.from(new Set(list.map((l) => l.email).filter(Boolean))) as string[];
 
-    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null };
     const commsByLead: Record<string, Comm> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     const queries: Promise<any>[] = [];
-    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("lead_id", ids)));
-    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("phone_normalized", phones)));
-    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by").in("email", emails)));
+    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by, content").in("lead_id", ids)));
+    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by, content").in("phone_normalized", phones)));
+    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by, content").in("email", emails)));
     const results = await Promise.all(queries);
 
     const seen = new Set<string>();
@@ -81,7 +81,14 @@ export const listLeads = createServerFn({ method: "GET" })
           }
           else if (ev.channel === "sms") s.sms++;
           else if (ev.channel === "email") s.emails++;
-          else if (ev.channel === "manual_note") s.notes++;
+          else if (ev.channel === "manual_note") {
+            s.notes++;
+            if (!s.lastNoteAt || new Date(ev.created_at) > new Date(s.lastNoteAt)) {
+              s.lastNoteAt = ev.created_at;
+              s.lastNoteContent = ev.content ?? null;
+              s.lastNoteById = ev.created_by ?? null;
+            }
+          }
           if (!s.lastAt || new Date(ev.created_at) > new Date(s.lastAt)) {
             s.lastAt = ev.created_at;
             s.lastChannel = ev.channel;
@@ -90,7 +97,10 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
-    const callerIds = Array.from(new Set(Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean))) as string[];
+    const callerIds = Array.from(new Set([
+      ...Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean),
+      ...Object.values(commsByLead).map((c) => c.lastNoteById).filter(Boolean),
+    ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
       const { data: profs } = await context.supabase.from("profiles").select("user_id, first_name, last_name, email").in("user_id", callerIds);
@@ -100,6 +110,7 @@ export const listLeads = createServerFn({ method: "GET" })
     }
     for (const c of Object.values(commsByLead)) {
       c.lastCallByName = c.lastCallById ? (callerNames[c.lastCallById] ?? "Pośrednik") : null;
+      c.lastNoteByName = c.lastNoteById ? (callerNames[c.lastNoteById] ?? "Pośrednik") : null;
     }
 
     // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).
@@ -139,6 +150,21 @@ export const getLead = createServerFn({ method: "GET" })
       .eq("lead_id", data.id)
       .order("created_at", { ascending: false });
 
+    const commAuthorIds = Array.from(new Set(((comms ?? []) as any[]).map((c) => c.created_by).filter(Boolean))) as string[];
+    const commAuthorNames: Record<string, string> = {};
+    if (commAuthorIds.length) {
+      const { data: profs } = await context.supabase
+        .from("profiles").select("user_id, first_name, last_name, email").in("user_id", commAuthorIds);
+      for (const p of (profs ?? []) as any[]) {
+        commAuthorNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";
+      }
+    }
+    const commsWithAuthor = ((comms ?? []) as any[]).map((c) => ({
+      ...c,
+      created_by_name: c.created_by ? (commAuthorNames[c.created_by] ?? "Pośrednik") : null,
+    }));
+
+
     let documents: any[] = [];
     let emailSequence: any = null;
     if (lead.loan_application_id) {
@@ -170,7 +196,7 @@ export const getLead = createServerFn({ method: "GET" })
 
       emailSequence = { loan: loanRow, sends: sends ?? [], nextVariant, totalVariants: 150 };
     }
-    return { lead, communications: comms ?? [], documents, emailSequence };
+    return { lead, communications: commsWithAuthor, documents, emailSequence };
   });
 
 
