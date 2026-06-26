@@ -4872,6 +4872,7 @@ export type Database = {
       }
       properties: {
         Row: {
+          additional_land_register_numbers: string[]
           address: string | null
           area_sqm: number | null
           city: string | null
@@ -4892,6 +4893,7 @@ export type Database = {
           voivodeship: string | null
         }
         Insert: {
+          additional_land_register_numbers?: string[]
           address?: string | null
           area_sqm?: number | null
           city?: string | null
@@ -4912,6 +4914,7 @@ export type Database = {
           voivodeship?: string | null
         }
         Update: {
+          additional_land_register_numbers?: string[]
           address?: string | null
           area_sqm?: number | null
           city?: string | null

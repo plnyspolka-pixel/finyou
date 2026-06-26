@@ -96,6 +96,7 @@ function KlientDashboard() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [thumbs, setThumbs] = useState<{ url: string; path: string }[]>([]);
   const [kw, setKw] = useState("");
+  const [extraKws, setExtraKws] = useState<string[]>([]);
   const [savingKw, setSavingKw] = useState(false);
   const [kwTouched, setKwTouched] = useState(false);
   const [area, setArea] = useState<string>("");
@@ -175,6 +176,8 @@ function KlientDashboard() {
 
   useEffect(() => {
     setKw(String((propertyRow as any)?.land_register_number ?? ""));
+    const extras = (propertyRow as any)?.additional_land_register_numbers;
+    setExtraKws(Array.isArray(extras) ? extras.map(String) : []);
     setKwTouched(false);
     const a = (propertyRow as any)?.area_sqm;
     setArea(a == null ? "" : String(a));
@@ -263,24 +266,31 @@ function KlientDashboard() {
   };
 
   const kwValidation = validateKw(kw);
+  const extraValidations = extraKws.map((v) => validateKw(v));
+  const allKwValid = kwValidation.ok && extraValidations.every((v) => v.ok);
   const showKwError = kwTouched && !kwValidation.ok && kw.trim().length > 0;
 
   const saveKw = async () => {
     if (!propertyRow?.id) return;
     setKwTouched(true);
-    if (!kwValidation.ok) {
+    if (!allKwValid) {
       toast.error(kwValidation.error ?? "Nieprawidłowy numer KW");
       return;
     }
     setSavingKw(true);
     try {
       const normalized = kw.trim().toUpperCase();
+      const normalizedExtras = extraKws.map((v) => v.trim().toUpperCase()).filter(Boolean);
       const { error } = await supabase.from("properties")
-        .update({ land_register_number: normalized })
+        .update({
+          land_register_number: normalized,
+          additional_land_register_numbers: normalizedExtras,
+        } as any)
         .eq("id", propertyRow.id);
       if (error) throw error;
       setKw(normalized);
-      toast.success("Numer KW zapisany poprawnie");
+      setExtraKws(normalizedExtras);
+      toast.success(normalizedExtras.length > 0 ? `Zapisano ${1 + normalizedExtras.length} numery KW` : "Numer KW zapisany poprawnie");
       void refetchProperty();
     } catch (e: any) {
       toast.error(e?.message ?? "Nie udało się zapisać numeru KW");
@@ -405,39 +415,10 @@ function KlientDashboard() {
           ? null
           : !loanRow?.id
             ? null
-            : (totalFiles === 0 && !kwValidation.ok)
-              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej) lub kliknij „Przejdź do kalkulatora”."
-              : totalFiles === 0
-                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
-                : !kwValidation.ok
-                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
-                  : null;
+            : !kwValidation.ok
+              ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej)."
+              : null;
 
-        const shortcutBlock = (
-          <FancyShell variant="navy" motion={false} innerClassName="!p-4 sm:!p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-500/20 ring-1 ring-emerald-300/40">
-                  <Check className="h-5 w-5 text-emerald-200" strokeWidth={3} />
-                </span>
-                <div className="leading-tight">
-                  <div className="text-base font-black uppercase tracking-[0.16em] text-white sm:text-lg">
-                    Wszystko gotowe? Przejdź do kalkulatora
-                  </div>
-                </div>
-              </div>
-              <Button
-                size="lg"
-                onClick={() => void markApplicationComplete()}
-                disabled={markingComplete || !loanRow?.id || totalFiles === 0 || !kwValidation.ok}
-                className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
-              >
-                {markingComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
-                {markingComplete ? "Zapisuję…" : "Przejdź do kalkulatora →"}
-              </Button>
-            </div>
-          </FancyShell>
-        );
 
         const filesSlot = loanRow?.id ? (
           <div className="space-y-4">
@@ -707,22 +688,67 @@ function KlientDashboard() {
                   </p>
                 )}
 
+                {extraKws.length > 0 && (
+                  <div className="space-y-2">
+                    {extraKws.map((val, idx) => {
+                      const v = extraValidations[idx];
+                      return (
+                        <div key={idx} className="relative">
+                          <Input
+                            value={val}
+                            onChange={(e) => {
+                              const next = [...extraKws];
+                              next[idx] = e.target.value.toUpperCase();
+                              setExtraKws(next);
+                            }}
+                            placeholder={`Dodatkowy KW #${idx + 2}`}
+                            className={`h-14 rounded-2xl border-2 bg-white/10 pl-12 pr-20 text-lg font-bold tracking-wider tabular-nums text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:ring-2 ${
+                              !v.ok && val.trim().length > 0
+                                ? "border-rose-400/70 focus-visible:border-rose-300 focus-visible:ring-rose-300/40"
+                                : "border-white/30 focus-visible:border-white/70 focus-visible:ring-white/40"
+                            }`}
+                          />
+                          <BookText className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/80" />
+                          <button
+                            type="button"
+                            onClick={() => setExtraKws(extraKws.filter((_, i) => i !== idx))}
+                            aria-label="Usuń numer KW"
+                            className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl bg-rose-500/80 text-white ring-1 ring-white/30 transition hover:bg-rose-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setExtraKws([...extraKws, ""])}
+                  className="w-full rounded-2xl border-2 border-dashed border-white/30 bg-white/5 font-bold uppercase tracking-[0.12em] text-white hover:bg-white/15"
+                >
+                  + Dodaj kolejny numer KW
+                </Button>
+
                 <Button
                   size="lg"
                   onClick={() => void saveKw()}
-                  disabled={savingKw || !propertyRow?.id || !kwValidation.ok}
+                  disabled={savingKw || !propertyRow?.id || !allKwValid}
                   className="w-full rounded-2xl bg-white/15 text-base font-bold uppercase tracking-[0.14em] text-white ring-1 ring-white/30 backdrop-blur-sm shadow-[0_10px_30px_-10px_oklch(0.15_0.05_265/0.7)] hover:bg-white/25 disabled:opacity-50"
                 >
                   <Save className="mr-2 h-5 w-5" />
-                  {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
+                  {savingKw ? "Zapisywanie..." : extraKws.length > 0 ? `Zapisz ${1 + extraKws.length} numery KW` : "Zapisz numer KW"}
                 </Button>
+
                 </>)}
               </div>
                 );
               })()}
             </FancyShell>
           </div>
-          {shortcutBlock}
+          
           </div>
         ) : null;
 
