@@ -50,15 +50,16 @@ export const listLeads = createServerFn({ method: "GET" })
     const emails = Array.from(new Set(list.map((l) => l.email).filter(Boolean))) as string[];
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
-    type Comm = { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; inboundEmails: number; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
     const commsByLead: Record<string, Comm> = {};
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundEmails: 0, lastInboundEmailAt: null, lastInboundEmailSubject: null, lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
+    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content";
     const queries: Promise<any>[] = [];
-    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by, content").in("lead_id", ids)));
-    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by, content").in("phone_normalized", phones)));
-    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select("lead_id, phone_normalized, email, channel, created_at, created_by, content").in("email", emails)));
+    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("lead_id", ids)));
+    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("phone_normalized", phones)));
+    if (emails.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("email", emails)));
     const results = await Promise.all(queries);
 
     const seen = new Set<string>();
@@ -91,7 +92,16 @@ export const listLeads = createServerFn({ method: "GET" })
             }
           }
           else if (ev.channel === "sms") s.sms++;
-          else if (ev.channel === "email") s.emails++;
+          else if (ev.channel === "email") {
+            s.emails++;
+            if (ev.direction === "inbound") {
+              s.inboundEmails++;
+              if (!s.lastInboundEmailAt || new Date(ev.created_at) > new Date(s.lastInboundEmailAt)) {
+                s.lastInboundEmailAt = ev.created_at;
+                s.lastInboundEmailSubject = ev.subject ?? null;
+              }
+            }
+          }
           else if (ev.channel === "manual_note") {
             s.notes++;
             if (!s.lastNoteAt || new Date(ev.created_at) > new Date(s.lastNoteAt)) {
