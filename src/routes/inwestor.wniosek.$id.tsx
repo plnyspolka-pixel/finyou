@@ -37,6 +37,15 @@ const docTypeLabels: Record<string, string> = {
   klient_upload: "Pozostałe",
 };
 
+const PROPERTY_PHOTO_TYPES = new Set([
+  "zdjecie_nieruchomosci",
+  "zdjecia_nieruchomosci",
+  "zdjecia_pomieszczen",
+  "zdjecia_bryly",
+  "zdjecia_lokalu",
+  "klient_upload",
+]);
+
 function isImage(name: string) {
   return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(name);
 }
@@ -78,12 +87,17 @@ function InwestorWniosek() {
     }));
     setDocUrls(next);
 
-    // Resolve property photos (mix of http URLs and property-photos storage paths)
-    const rawPhotos: string[] = (data?.properties?.[0]?.photos ?? []) as string[];
+    // Resolve property photos (mix of http URLs, property-photos paths and document uploads).
+    const rawPhotos: string[] = [
+      ...(((data?.properties?.[0]?.photos ?? []) as string[]).filter((src) => isImage(src))),
+      ...list
+        .filter((d: any) => d.file_path && PROPERTY_PHOTO_TYPES.has(d.document_type ?? "") && isImage(d.file_name ?? d.file_path))
+        .map((d: any) => d.file_path),
+    ].filter((src, index, arr) => src && arr.indexOf(src) === index);
     const resolved = await Promise.all(rawPhotos.map(async (src) => {
       if (!src || typeof src !== "string") return null;
       if (/^https?:\/\//i.test(src)) return src;
-      for (const bucket of ["property-photos", "documents"] as const) {
+      for (const bucket of ["documents", "property-photos"] as const) {
         const { data: u } = await supabase.storage.from(bucket).createSignedUrl(src, 3600);
         if (u?.signedUrl) return u.signedUrl;
       }
