@@ -267,6 +267,7 @@ export function SinglePageApplicationForm({
   const navigate = useNavigate();
 
   const skipContact = Boolean(prefilledContact?.email) && !brokerMode;
+  const isBroker = Boolean(brokerMode);
   const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
@@ -313,9 +314,9 @@ export function SinglePageApplicationForm({
   const [usableArea, setUsableArea] = useState("");
   const [city, setCity] = useState("");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
-  const [consentPrivacy, setConsentPrivacy] = useState(skipContact);
-  const [consentTerms, setConsentTerms] = useState(skipContact);
-  const [consentMarketing, setConsentMarketing] = useState(skipContact);
+  const [consentPrivacy, setConsentPrivacy] = useState(skipContact || isBroker);
+  const [consentTerms, setConsentTerms] = useState(skipContact || isBroker);
+  const [consentMarketing, setConsentMarketing] = useState(skipContact || isBroker);
   const [submitting, setSubmitting] = useState(false);
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
@@ -384,7 +385,7 @@ export function SinglePageApplicationForm({
         return;
       }
       fireLead();
-      setStep(2);
+      setStep(isBroker ? 3 : 2);
       return;
     }
     if (step === 2) {
@@ -538,15 +539,15 @@ export function SinglePageApplicationForm({
     }
   };
 
-  // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2)
+  // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2 lub 3 w broker mode)
   useEffect(() => {
     const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
     if (step === 1 && step1Done) {
       fireLead();
-      setStep(2);
+      setStep(isBroker ? 3 : 2);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing]);
+  }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing, isBroker]);
 
 
   return (
@@ -561,7 +562,7 @@ export function SinglePageApplicationForm({
       {step === 1 && (
         <FancyShell>
           <div className="space-y-5">
-            <SocialLoginButtons />
+            {!isBroker && <SocialLoginButtons />}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="f-fn" className="text-white">Imię *</Label>
                 <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={FANCY_INPUT_CLASS} /></div>
@@ -573,6 +574,7 @@ export function SinglePageApplicationForm({
                 <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" className={FANCY_INPUT_CLASS} /></div>
             </div>
 
+            {!isBroker && (
             <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
               <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
                 <Checkbox
@@ -613,6 +615,7 @@ export function SinglePageApplicationForm({
                 </span>
               </label>
             </div>
+            )}
           </div>
         </FancyShell>
       )}
