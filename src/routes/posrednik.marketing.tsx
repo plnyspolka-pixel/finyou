@@ -261,8 +261,8 @@ function BrokerMarketingPage() {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
-                          <Button asChild size="sm" variant="outline">
+                        <div className="grid grid-cols-4 gap-2">
+                          <Button asChild size="sm" variant="outline" title="Facebook">
                             <a
                               href={`https://www.facebook.com/sharer/sharer.php?u=${enc}&quote=${shareText}`}
                               target="_blank"
@@ -271,7 +271,7 @@ function BrokerMarketingPage() {
                               <Facebook className="h-4 w-4" />
                             </a>
                           </Button>
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="outline" title="LinkedIn">
                             <a
                               href={`https://www.linkedin.com/sharing/share-offsite/?url=${enc}`}
                               target="_blank"
@@ -280,7 +280,7 @@ function BrokerMarketingPage() {
                               <Linkedin className="h-4 w-4" />
                             </a>
                           </Button>
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="outline" title="X / Twitter">
                             <a
                               href={`https://twitter.com/intent/tweet?url=${enc}&text=${shareText}`}
                               target="_blank"
@@ -289,7 +289,7 @@ function BrokerMarketingPage() {
                               <Twitter className="h-4 w-4" />
                             </a>
                           </Button>
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="outline" title="WhatsApp">
                             <a
                               href={`https://api.whatsapp.com/send?text=${shareText}%20${enc}`}
                               target="_blank"
@@ -298,17 +298,55 @@ function BrokerMarketingPage() {
                               <MessageCircle className="h-4 w-4" />
                             </a>
                           </Button>
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="outline" title="Telegram">
                             <a href={`https://t.me/share/url?url=${enc}&text=${shareText}`} target="_blank" rel="noreferrer">
                               <Send className="h-4 w-4" />
                             </a>
                           </Button>
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm" variant="outline" title="E-mail">
                             <a href={`mailto:?subject=${encodeURIComponent(m.title)}&body=${shareText}%20${enc}`}>
                               <Mail className="h-4 w-4" />
                             </a>
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Instagram — kopiuje opis i pobiera plik, otwórz aplikację i wklej"
+                            onClick={async () => {
+                              const caption = `${m.ai_description || m.description || m.title}\n\n${shareUrl}`;
+                              await navigator.clipboard.writeText(caption);
+                              if (url) window.open(url, "_blank");
+                              window.open("https://www.instagram.com/", "_blank");
+                              toast.success("Opis skopiowany — wklej w Instagramie");
+                            }}
+                          >
+                            <Instagram className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title={
+                              m.media_type === "video"
+                                ? "YouTube — kopiuje opis i otwiera upload"
+                                : "YouTube — kopiuje opis (zdjęcia publikuj jako Community Post)"
+                            }
+                            onClick={async () => {
+                              const caption = `${m.ai_description || m.description || m.title}\n\n${shareUrl}`;
+                              await navigator.clipboard.writeText(caption);
+                              if (url && m.media_type === "video") window.open(url, "_blank");
+                              window.open(
+                                m.media_type === "video"
+                                  ? "https://studio.youtube.com/channel/UC/videos/upload"
+                                  : "https://studio.youtube.com/",
+                                "_blank",
+                              );
+                              toast.success("Opis skopiowany — wklej w YouTube Studio");
+                            }}
+                          >
+                            <Youtube className="h-4 w-4" />
+                          </Button>
                         </div>
+
 
                         {url && (
                           <Button asChild size="sm" variant="secondary" className="w-full">
