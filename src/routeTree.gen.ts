@@ -35,6 +35,8 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikWnioskiRouteImport } from './routes/posrednik.wnioski'
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
+import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.rozliczenia'
+import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -253,6 +255,16 @@ const PosrednikWnioskiRoute = PosrednikWnioskiRouteImport.update({
 const PosrednikWniosekRoute = PosrednikWniosekRouteImport.update({
   id: '/wniosek',
   path: '/wniosek',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikRozliczeniaRoute = PosrednikRozliczeniaRouteImport.update({
+  id: '/rozliczenia',
+  path: '/rozliczenia',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikMarketingRoute = PosrednikMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
@@ -789,6 +801,8 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
@@ -902,6 +916,8 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
@@ -1020,6 +1036,8 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
+  '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
@@ -1139,6 +1157,8 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
+    | '/posrednik/marketing'
+    | '/posrednik/rozliczenia'
     | '/posrednik/wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
@@ -1252,6 +1272,8 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
+    | '/posrednik/marketing'
+    | '/posrednik/rozliczenia'
     | '/posrednik/wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
@@ -1369,6 +1391,8 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/l/$slug'
     | '/posrednik/leady'
+    | '/posrednik/marketing'
+    | '/posrednik/rozliczenia'
     | '/posrednik/wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
@@ -1663,6 +1687,20 @@ declare module '@tanstack/react-router' {
       path: '/wniosek'
       fullPath: '/posrednik/wniosek'
       preLoaderRoute: typeof PosrednikWniosekRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/rozliczenia': {
+      id: '/posrednik/rozliczenia'
+      path: '/rozliczenia'
+      fullPath: '/posrednik/rozliczenia'
+      preLoaderRoute: typeof PosrednikRozliczeniaRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/marketing': {
+      id: '/posrednik/marketing'
+      path: '/marketing'
+      fullPath: '/posrednik/marketing'
+      preLoaderRoute: typeof PosrednikMarketingRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/leady': {
@@ -2464,6 +2502,8 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
+  PosrednikMarketingRoute: typeof PosrednikMarketingRoute
+  PosrednikRozliczeniaRoute: typeof PosrednikRozliczeniaRoute
   PosrednikWniosekRoute: typeof PosrednikWniosekRoute
   PosrednikWnioskiRoute: typeof PosrednikWnioskiRoute
   PosrednikIndexRoute: typeof PosrednikIndexRoute
@@ -2471,6 +2511,8 @@ interface PosrednikRouteChildren {
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
+  PosrednikMarketingRoute: PosrednikMarketingRoute,
+  PosrednikRozliczeniaRoute: PosrednikRozliczeniaRoute,
   PosrednikWniosekRoute: PosrednikWniosekRoute,
   PosrednikWnioskiRoute: PosrednikWnioskiRoute,
   PosrednikIndexRoute: PosrednikIndexRoute,
