@@ -105,8 +105,8 @@ export function LoanCalculator({
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
   const [nbpOverride, setNbpOverride] = useState<number | null>(null);
   const [nbpConfirmed, setNbpConfirmed] = useState(false);
-  const [commissionMode, setCommissionMode] = useState<"mpkk" | "manual">("manual");
   const [agreementDate, setAgreementDate] = useState<string>("");
+
   const [checkRate, setCheckRate] = useState(false);
   const [checkCommission, setCheckCommission] = useState(false);
   const [checkKrotnosc, setCheckKrotnosc] = useState(false);
