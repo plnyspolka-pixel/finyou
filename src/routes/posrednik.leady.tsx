@@ -160,14 +160,12 @@ function OperatorLeadsList() {
 
 function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
   const addFn = useServerFn(addManualNote);
-  const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const m = useMutation({
     mutationFn: () => addFn({ data: { leadId: lead.id, content: value.trim() } }),
     onSuccess: () => {
       toast.success("Notatka dodana");
       setValue("");
-      setOpen(false);
       onSaved();
     },
     onError: (e: any) => toast.error(e?.message ?? "Nie udało się zapisać notatki"),
