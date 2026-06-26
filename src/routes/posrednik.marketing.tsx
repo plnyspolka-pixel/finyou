@@ -57,36 +57,12 @@ function refLink(role: Audience, code: string) {
 }
 
 function copy(text: string) {
+function copy(text: string) {
   navigator.clipboard.writeText(text);
   toast.success("Skopiowano do schowka");
 }
 
-async function shareOrCopy({
-  title,
-  text,
-  url,
-  channel,
-}: {
-  title: string;
-  text: string;
-  url: string;
-  channel: string;
-}) {
-  const message = `${text}\n\n${url}`;
-  try {
-    if (navigator.share) {
-      await navigator.share({ title, text, url });
-      toast.success(`Udostępnianie: ${channel}`);
-      return;
-    }
-    await navigator.clipboard.writeText(message);
-    toast.success(`Skopiowano treść dla: ${channel}`);
-  } catch (error: any) {
-    if (error?.name === "AbortError") return;
-    await navigator.clipboard.writeText(message);
-    toast.success(`Skopiowano treść dla: ${channel}`);
-  }
-}
+
 
 function BrokerMarketingPage() {
   const [items, setItems] = useState<Material[]>([]);
