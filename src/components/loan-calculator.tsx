@@ -100,6 +100,7 @@ export function LoanCalculator({
   const [months, setMonths] = useState(initialMonths);
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
+  const [financeYouFeePct, setFinanceYouFeePct] = useState(2);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
 
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
@@ -117,9 +118,9 @@ export function LoanCalculator({
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja dla inwestora to JEDYNY koszt pozaodsetkowy. Brak prowizji Finance You.
-  const financeYouFeePct = 0;
-  const financeYouFeePln = 0;
+  // Prowizja inwestora to JEDYNY koszt pozaodsetkowy w rozumieniu MPKK.
+  // Prowizja Finance You jest osobnym wynagrodzeniem operatora i NIE wchodzi do limitu MPKK.
+  const financeYouFeePln = (amount * financeYouFeePct) / 100;
   const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
