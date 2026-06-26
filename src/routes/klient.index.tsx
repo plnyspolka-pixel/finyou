@@ -445,21 +445,37 @@ function KlientDashboard() {
             {/* === Twoje pliki === */}
             <FancyShell motion={false} className="h-full" innerClassName="h-full flex flex-col">
 
+              {(() => {
+                const isComplete = totalFiles > 0;
+                const open = filesOpen ?? !isComplete;
+                return (
               <div className="space-y-4">
-                <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setFilesOpen(!open)}
+                  className="flex w-full items-center gap-2.5 text-left"
+                >
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
                     <FolderOpen className="h-5 w-5" strokeWidth={2.5} />
                   </span>
-                  <div className="flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
+                  <div className="min-w-0 flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
                     <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Twoje pliki</div>
                     <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
                       Zdjęcia nieruchomości i dokumenty
                     </div>
                   </div>
+                  {isComplete && (
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500/30 ring-1 ring-emerald-300/50">
+                      <Check className="h-3.5 w-3.5 text-emerald-100" strokeWidth={3} />
+                    </span>
+                  )}
                   <Badge className="border-white/30 bg-white/15 font-bold text-white backdrop-blur-sm">
                     {totalFiles}
                   </Badge>
-                </div>
+                  {isComplete && (open ? <ChevronUp className="h-5 w-5 shrink-0 text-white/80" /> : <ChevronDown className="h-5 w-5 shrink-0 text-white/80" />)}
+                </button>
+                {open && (<>
+
 
                 {thumbs.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
