@@ -92,7 +92,16 @@ export const listLeads = createServerFn({ method: "GET" })
             }
           }
           else if (ev.channel === "sms") s.sms++;
-          else if (ev.channel === "email") s.emails++;
+          else if (ev.channel === "email") {
+            s.emails++;
+            if (ev.direction === "inbound") {
+              s.inboundEmails++;
+              if (!s.lastInboundEmailAt || new Date(ev.created_at) > new Date(s.lastInboundEmailAt)) {
+                s.lastInboundEmailAt = ev.created_at;
+                s.lastInboundEmailSubject = ev.subject ?? null;
+              }
+            }
+          }
           else if (ev.channel === "manual_note") {
             s.notes++;
             if (!s.lastNoteAt || new Date(ev.created_at) > new Date(s.lastNoteAt)) {
