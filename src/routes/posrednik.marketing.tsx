@@ -345,7 +345,31 @@ function BrokerMarketingPage() {
                           >
                             <Youtube className="h-4 w-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="TikTok — kopiuje opis, pobiera plik i otwiera upload"
+                            onClick={async () => {
+                              const caption = `${m.ai_description || m.description || m.title}\n\n${shareUrl}`;
+                              await navigator.clipboard.writeText(caption);
+                              if (url) {
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = "";
+                                a.target = "_blank";
+                                a.rel = "noreferrer";
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                              }
+                              window.open("https://www.tiktok.com/tiktokstudio/upload", "_blank");
+                              toast.success("Opis skopiowany, plik pobrany — wklej w TikTok");
+                            }}
+                          >
+                            <TikTokIcon />
+                          </Button>
                         </div>
+
 
 
                         {url && (
