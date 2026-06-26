@@ -193,11 +193,10 @@ function InwestorList() {
                         {propertyTypeLabels[p.property_type]}
                       </Badge>
                     )}
-                    {a.annual_investor_rate != null && (
-                      <div className="absolute top-3 right-3 rounded-lg bg-primary text-primary-foreground px-3 py-1.5 shadow-lg">
-                        <div className="text-[10px] uppercase tracking-wide opacity-90 leading-none">Zysk roczny</div>
-                        <div className="text-xl font-bold leading-tight tabular-nums">{Number(a.annual_investor_rate)}%</div>
-                      </div>
+                    {p?.photos?.length > 1 && (
+                      <Badge variant="secondary" className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm">
+                        +{p.photos.length - 1} zdjęć
+                      </Badge>
                     )}
                     {p?.photos?.length > 1 && (
                       <Badge variant="secondary" className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm">
