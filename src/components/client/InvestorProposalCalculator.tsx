@@ -177,7 +177,7 @@ export function InvestorProposalCalculator({
     if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!amount || !months || !annualRate) m.push("warunki finansowe");
     return m;
-  }, [client, prop, hasDesc, amount, months, annualRate]);
+  }, [client, prop, hasDesc, amount, months, annualRate, city]);
 
 
   const sendToInvestors = async () => {
