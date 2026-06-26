@@ -72,7 +72,7 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
           const payload = {
             user_id: userId,
             subscription_plan: planEnumMap[plan],
-            subscription_status: "active" as const,
+            subscription_status: "aktywny" as const,
             subscription_active_until: newUntil.toISOString(),
             updated_at: new Date().toISOString(),
           };
