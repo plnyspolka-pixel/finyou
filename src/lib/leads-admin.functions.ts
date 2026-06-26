@@ -139,6 +139,21 @@ export const getLead = createServerFn({ method: "GET" })
       .eq("lead_id", data.id)
       .order("created_at", { ascending: false });
 
+    const commAuthorIds = Array.from(new Set(((comms ?? []) as any[]).map((c) => c.created_by).filter(Boolean))) as string[];
+    const commAuthorNames: Record<string, string> = {};
+    if (commAuthorIds.length) {
+      const { data: profs } = await context.supabase
+        .from("profiles").select("user_id, first_name, last_name, email").in("user_id", commAuthorIds);
+      for (const p of (profs ?? []) as any[]) {
+        commAuthorNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";
+      }
+    }
+    const commsWithAuthor = ((comms ?? []) as any[]).map((c) => ({
+      ...c,
+      created_by_name: c.created_by ? (commAuthorNames[c.created_by] ?? "Pośrednik") : null,
+    }));
+
+
     let documents: any[] = [];
     let emailSequence: any = null;
     if (lead.loan_application_id) {
