@@ -12,8 +12,8 @@ import { CheckCircle2 } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/inwestor/abonament")({
-  validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
-    session_id: typeof search.session_id === "string" ? search.session_id : undefined,
+  validateSearch: (search: Record<string, unknown>): { tpay?: string } => ({
+    tpay: typeof search.tpay === "string" ? search.tpay : undefined,
   }),
   component: InwestorAbonament,
 });
@@ -45,7 +45,7 @@ const PLANS = [
 
 function InwestorAbonament() {
   const { user } = useAuth();
-  const { session_id } = useSearch({ from: "/inwestor/abonament" });
+  const { tpay } = useSearch({ from: "/inwestor/abonament" });
   const [inv, setInv] = useState<any | null>(null);
   const [activePrice, setActivePrice] = useState<string | null>(null);
 
@@ -59,7 +59,7 @@ function InwestorAbonament() {
 
   // After Stripe return, poll briefly for webhook to update investor row
   useEffect(() => {
-    if (!session_id) return;
+    if (!tpay) return;
     setActivePrice(null);
     let attempts = 0;
     const interval = setInterval(() => {
@@ -69,7 +69,7 @@ function InwestorAbonament() {
     }, 1500);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session_id]);
+  }, [tpay]);
 
   const activeUntil = inv?.subscription_active_until ? new Date(inv.subscription_active_until) : null;
   const hasActiveAccess = activeUntil && activeUntil > new Date();
@@ -84,7 +84,7 @@ function InwestorAbonament() {
         subtitle="Wybierz okres, na jaki chcesz mieć dostęp do bazy zaakceptowanych wniosków o pożyczkę."
       />
 
-      {session_id && (
+      {tpay && (
         <Card className="border-emerald-300 bg-emerald-50">
           <CardContent className="flex items-center gap-3 py-4 text-emerald-900">
             <CheckCircle2 className="h-5 w-5" />
@@ -155,7 +155,7 @@ function InwestorAbonament() {
             <Button variant="ghost" size="sm" onClick={() => setActivePrice(null)}>Anuluj</Button>
           </CardHeader>
           <CardContent>
-            <StripeEmbeddedCheckoutForm priceId={activePrice} />
+            <StripeEmbeddedCheckoutForm priceId={activePrice as "investor_access_1d" | "investor_access_1m" | "investor_access_1y"} />
           </CardContent>
         </Card>
       )}
