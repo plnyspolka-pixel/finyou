@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 
