@@ -480,7 +480,7 @@ function KlientDashboard() {
                           aria-label="Usuń zdjęcie"
                           className="absolute right-1.5 top-1.5 z-10 grid h-8 w-8 place-items-center rounded-full bg-rose-500/95 text-white ring-1 ring-white/60 shadow-lg backdrop-blur-sm transition hover:bg-rose-600 active:scale-95"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
