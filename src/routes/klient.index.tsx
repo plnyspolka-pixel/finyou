@@ -415,39 +415,10 @@ function KlientDashboard() {
           ? null
           : !loanRow?.id
             ? null
-            : (totalFiles === 0 && !kwValidation.ok)
-              ? "Aby odblokować kalkulator, dodaj zdjęcia/dokumenty i wpisz numer KW (sekcje powyżej) lub kliknij „Przejdź do kalkulatora”."
-              : totalFiles === 0
-                ? "Aby odblokować kalkulator, dodaj zdjęcia lub dokumenty nieruchomości (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
-                : !kwValidation.ok
-                  ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej) lub kliknij „Przejdź do kalkulatora”."
-                  : null;
+            : !kwValidation.ok
+              ? "Aby odblokować kalkulator, wpisz numer księgi wieczystej (sekcja powyżej)."
+              : null;
 
-        const shortcutBlock = (
-          <FancyShell variant="navy" motion={false} innerClassName="!p-4 sm:!p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-500/20 ring-1 ring-emerald-300/40">
-                  <Check className="h-5 w-5 text-emerald-200" strokeWidth={3} />
-                </span>
-                <div className="leading-tight">
-                  <div className="text-base font-black uppercase tracking-[0.16em] text-white sm:text-lg">
-                    Wszystko gotowe? Przejdź do kalkulatora
-                  </div>
-                </div>
-              </div>
-              <Button
-                size="lg"
-                onClick={() => void markApplicationComplete()}
-                disabled={markingComplete || !loanRow?.id || totalFiles === 0 || !kwValidation.ok}
-                className="shrink-0 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 text-base font-black uppercase tracking-wider text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
-              >
-                {markingComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
-                {markingComplete ? "Zapisuję…" : "Przejdź do kalkulatora →"}
-              </Button>
-            </div>
-          </FancyShell>
-        );
 
         const filesSlot = loanRow?.id ? (
           <div className="space-y-4">
