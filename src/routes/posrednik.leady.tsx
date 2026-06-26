@@ -141,3 +141,64 @@ function OperatorLeadsList() {
     </div>
   );
 }
+
+function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
+  const addFn = useServerFn(addManualNote);
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const m = useMutation({
+    mutationFn: () => addFn({ data: { leadId: lead.id, content: value.trim() } }),
+    onSuccess: () => {
+      toast.success("Notatka dodana");
+      setValue("");
+      setOpen(false);
+      onSaved();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Nie udało się zapisać notatki"),
+  });
+
+  const last = lead.comms?.lastNoteContent as string | null;
+  const lastBy = lead.comms?.lastNoteByName as string | null;
+  const lastAt = lead.comms?.lastNoteAt as string | null;
+  const count = lead.comms?.notes ?? 0;
+
+  return (
+    <div className="mt-2 space-y-1">
+      {last && (
+        <div className="text-xs rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-2 py-1">
+          <div className="flex items-center gap-1 font-medium">
+            <StickyNote className="h-3 w-3" /> {lastBy ?? "Pośrednik"} · {formatRelative(lastAt!)}
+            {count > 1 && <span className="text-amber-700/70">· +{count - 1} wcześniej</span>}
+          </div>
+          <div className="whitespace-pre-wrap line-clamp-2">{last}</div>
+        </div>
+      )}
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-xs inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+        >
+          <Plus className="h-3 w-3" /> {last ? "Dodaj kolejną notatkę" : "Dodaj notatkę"}
+        </button>
+      ) : (
+        <div className="space-y-1">
+          <Textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Notatka widoczna dla wszystkich pośredników…"
+            rows={2}
+            className="text-sm"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
+              {m.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Zapisz"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setValue(""); }}>Anuluj</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
