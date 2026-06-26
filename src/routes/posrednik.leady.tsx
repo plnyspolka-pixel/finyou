@@ -100,8 +100,6 @@ function OperatorLeadsList() {
                     />
                   )}
                   <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                    {phone && <span>📞 {phone}</span>}
-                    {r.email && <span>✉️ {r.email}</span>}
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms.lastAt && <span>· ostatni kontakt {formatRelative(r.comms.lastAt)}</span>}
                   </div>
