@@ -716,7 +716,10 @@ function KlientDashboard() {
                   <Save className="mr-2 h-5 w-5" />
                   {savingKw ? "Zapisywanie..." : "Zapisz numer KW"}
                 </Button>
+                </>)}
               </div>
+                );
+              })()}
             </FancyShell>
           </div>
           {shortcutBlock}
