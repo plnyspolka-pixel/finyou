@@ -172,6 +172,7 @@ export function InvestorProposalCalculator({
     const m: string[] = [];
     if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
     if (!prop?.property_type) m.push("typ zabezpieczenia");
+    if (!String(city ?? prop?.city ?? "").trim()) m.push("miejscowość");
     if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
     if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!amount || !months || !annualRate) m.push("warunki finansowe");
