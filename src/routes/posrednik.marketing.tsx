@@ -57,7 +57,6 @@ function refLink(role: Audience, code: string) {
 }
 
 function copy(text: string) {
-function copy(text: string) {
   navigator.clipboard.writeText(text);
   toast.success("Skopiowano do schowka");
 }
