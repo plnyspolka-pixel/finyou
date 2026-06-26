@@ -313,7 +313,7 @@ export function InvestorProposalCalculator({
             {sendingToInvestors
               ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
               : lockReason
-                ? <><LockIcon className="mr-3 h-6 w-6" />Zaakceptuj warunki</>
+                ? <><Lock className="mr-3 h-6 w-6" />Zaakceptuj warunki</>
                 : <><Send className="mr-3 h-6 w-6" />{loan?.accepted_terms_at ? "Zaktualizuj warunki" : "Zaakceptuj warunki"}</>}
           </Button>
         </div>
