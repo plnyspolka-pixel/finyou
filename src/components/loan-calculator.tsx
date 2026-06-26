@@ -468,10 +468,9 @@ export function LoanCalculator({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
           <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-          <div className="flex justify-between"><span>Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-          <div className="flex justify-between"><span>Kapitał startowy (od którego liczone odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
           <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(disbursedOnHand)}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem (od kapitału startowego)</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+          <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+
           <div className="flex justify-between"><span>Prowizja dla inwestora</span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
           {investorGuidance && (
             <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę: łączna kwota do spłaty ÷ kwota wypłacona." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
