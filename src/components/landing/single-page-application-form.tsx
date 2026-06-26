@@ -385,7 +385,7 @@ export function SinglePageApplicationForm({
         return;
       }
       fireLead();
-      setStep(2);
+      setStep(isBroker ? 3 : 2);
       return;
     }
     if (step === 2) {
