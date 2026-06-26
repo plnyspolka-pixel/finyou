@@ -234,50 +234,6 @@ export function LoanCalculator({
         </CardContent>
       </Card>
 
-      {investorGuidance && (
-        <Card className="border-primary/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base"><Scale className="h-4 w-4" /> Aktualna stopa referencyjna NBP</CardTitle>
-            <CardDescription>
-              Limit odsetek maksymalnych zależy od stopy referencyjnej NBP, która zmienia się z każdym posiedzeniem RPP. Zweryfikuj wartość przed podpisaniem umowy.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Stopa referencyjna NBP (%)</Label>
-                <Input
-                  type="number"
-                  step="0.25"
-                  value={effectiveRefRate}
-                  onChange={(e) => { setNbpOverride(Number(e.target.value) || 0); setNbpConfirmed(false); }}
-                  className="w-32"
-                />
-              </div>
-              <Button variant="outline" size="sm" onClick={() => { setNbpOverride(null); setNbpConfirmed(true); void ratesQ.refetch(); }}>
-                <RefreshCw className={`mr-2 h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} /> Aktualizuj z NBP
-              </Button>
-              <Button variant={nbpConfirmed ? "secondary" : "default"} size="sm" onClick={() => setNbpConfirmed(true)}>
-                <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> {nbpConfirmed ? "Stopa potwierdzona" : "Potwierdzam aktualną stopę"}
-              </Button>
-              <a href="https://nbp.pl/podstawowe-stopy-procentowe-nbp/" target="_blank" rel="noopener noreferrer" className="text-xs text-primary inline-flex items-center gap-1 hover:underline">
-                nbp.pl <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-3">
-              <div className="flex justify-between sm:flex-col sm:gap-0.5"><span className="text-muted-foreground">Stopa ref. NBP</span><b className="tabular-nums">{effectiveRefRate.toFixed(2)}%</b></div>
-              <div className="flex justify-between sm:flex-col sm:gap-0.5"><span className="text-muted-foreground">Odsetki ustawowe (+3,5 p.p.)</span><b className="tabular-nums">{statutoryInterest.toFixed(2)}%</b></div>
-              <div className="flex justify-between sm:flex-col sm:gap-0.5"><span className="text-muted-foreground">Odsetki maksymalne (×2)</span><b className="tabular-nums text-primary">{MAX_INTEREST_RATE.toFixed(2)}%</b></div>
-            </div>
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                Decyzje RPP zapadają co miesiąc. Zalecany zapis w umowie: <i>„oprocentowanie = 2 × (stopa ref. NBP + 3,5 p.p.)"</i> zamiast konkretnego procentu — chroni inwestora przy zmianach stóp (art. 359 §2¹ KC).
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader>
