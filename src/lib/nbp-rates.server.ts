@@ -1,6 +1,6 @@
-// Pobieranie aktualnych podstawowych stóp procentowych NBP.
-// NBP nie udostępnia publicznego JSON-a ze stopami (strony są chronione przez WAF),
-// więc używamy Perplexity (sonar) z filtrem domeny nbp.pl jako wiarygodnego źródła.
+// Pobieranie aktualnych podstawowych stóp procentowych NBP bezpośrednio z oficjalnego
+// źródła NBP: https://static.nbp.pl/dane/stopy/stopy_procentowe.xml
+// (publiczny, bez klucza; ten sam plik, który zasila stronę nbp.pl/stopy-procentowe).
 
 export interface NbpRates {
   referenceRate: number;        // stopa referencyjna NBP (%)
@@ -9,14 +9,11 @@ export interface NbpRates {
   rediscountRate: number | null;
   effectiveFrom: string | null; // data obowiązywania (ISO)
   fetchedAt: string;            // kiedy pobraliśmy
-  source: "perplexity" | "fallback";
+  source: "nbp" | "fallback";
   citations: string[];
 }
 
-// Fallback — stan na 2026-06 (NBP ref. 3.75%). Używany tylko gdy Perplexity zawiedzie.
-// UWAGA: stopa referencyjna zmienia się z każdą decyzją RPP — wartość poniżej jest tylko
-// awaryjna; produkcyjnie pobieramy stopę na żywo (api/perplexity) i pozwalamy ją nadpisać
-// ręcznie w kalkulatorze inwestora.
+// Awaryjny snapshot — używany tylko gdy NBP jest nieosiągalny.
 const FALLBACK: NbpRates = {
   referenceRate: 3.75,
   lombardRate: 4.25,
@@ -30,57 +27,49 @@ const FALLBACK: NbpRates = {
 
 let CACHE: { value: NbpRates; expiresAt: number } | null = null;
 const TTL_MS = 12 * 60 * 60 * 1000; // 12h
+const NBP_URL = "https://static.nbp.pl/dane/stopy/stopy_procentowe.xml";
 
-function extractJson(s: string): any | null {
-  const m = s.match(/\{[\s\S]*\}/);
-  if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+function parsePct(s: string | undefined): number | null {
+  if (!s) return null;
+  const n = Number(s.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
 }
 
-async function fetchFromPerplexity(): Promise<NbpRates | null> {
-  const apiKey = process.env.PERPLEXITY_API_KEY;
-  if (!apiKey) return null;
+function pickPozycja(xml: string, id: string): { rate: number | null; from: string | null } {
+  // Dopasuj <pozycja ... id="X" ... /> z dowolną kolejnością atrybutów.
+  const re = new RegExp(`<pozycja\\b[^/]*id="${id}"[^/]*/>`, "i");
+  const m = xml.match(re);
+  if (!m) return { rate: null, from: null };
+  const block = m[0];
+  const rate = parsePct(block.match(/oprocentowanie="([^"]+)"/i)?.[1]);
+  const from = block.match(/obowiazuje_od="([^"]+)"/i)?.[1] ?? null;
+  return { rate, from };
+}
 
+async function fetchFromNbp(): Promise<NbpRates | null> {
   try {
-    const res = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          { role: "system", content: "Odpowiadasz wyłącznie poprawnym JSON-em, bez backticków." },
-          { role: "user", content:
-            `Podaj aktualne podstawowe stopy procentowe Narodowego Banku Polskiego. ` +
-            `Zwróć wyłącznie JSON: { "referenceRate": number, "lombardRate": number, ` +
-            `"depositRate": number, "rediscountRate": number, "effectiveFrom": "YYYY-MM-DD" }. ` +
-            `Wartości w procentach (np. 5.75 dla 5,75%). Źródło: nbp.pl.`,
-          },
-        ],
-        temperature: 0,
-        search_recency_filter: "month",
-        search_domain_filter: ["nbp.pl"],
-      }),
+    const res = await fetch(NBP_URL, {
+      headers: { "User-Agent": "FinanceYou/1.0", Accept: "application/xml,text/xml,*/*" },
     });
-
     if (!res.ok) return null;
-    const j: any = await res.json();
-    const content: string = j?.choices?.[0]?.message?.content ?? "";
-    const citations: string[] = Array.isArray(j?.citations) ? j.citations : [];
-    const parsed = extractJson(content);
-    if (!parsed) return null;
+    const xml = await res.text();
 
-    const ref = Number(parsed.referenceRate);
-    if (!Number.isFinite(ref) || ref <= 0 || ref > 30) return null;
+    const ref = pickPozycja(xml, "ref");
+    if (ref.rate == null || ref.rate <= 0 || ref.rate > 30) return null;
+
+    const lom = pickPozycja(xml, "lom");
+    const dep = pickPozycja(xml, "dep");
+    const red = pickPozycja(xml, "red");
 
     return {
-      referenceRate: ref,
-      lombardRate: Number.isFinite(Number(parsed.lombardRate)) ? Number(parsed.lombardRate) : null,
-      depositRate: Number.isFinite(Number(parsed.depositRate)) ? Number(parsed.depositRate) : null,
-      rediscountRate: Number.isFinite(Number(parsed.rediscountRate)) ? Number(parsed.rediscountRate) : null,
-      effectiveFrom: typeof parsed.effectiveFrom === "string" ? parsed.effectiveFrom : null,
+      referenceRate: ref.rate,
+      lombardRate: lom.rate,
+      depositRate: dep.rate,
+      rediscountRate: red.rate,
+      effectiveFrom: ref.from,
       fetchedAt: new Date().toISOString(),
-      source: "perplexity",
-      citations,
+      source: "nbp",
+      citations: [NBP_URL],
     };
   } catch {
     return null;
@@ -90,7 +79,7 @@ async function fetchFromPerplexity(): Promise<NbpRates | null> {
 export async function getNbpRatesCached(): Promise<NbpRates> {
   const now = Date.now();
   if (CACHE && CACHE.expiresAt > now) return CACHE.value;
-  const fresh = await fetchFromPerplexity();
+  const fresh = await fetchFromNbp();
   const value = fresh ?? FALLBACK;
   CACHE = { value, expiresAt: now + TTL_MS };
   return value;
