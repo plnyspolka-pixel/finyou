@@ -296,50 +296,6 @@ function BrokerMarketingPage() {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
-                          <Button size="sm" variant="outline" title="Facebook — skopiuj / udostępnij" onClick={() => handleShare("Facebook")}>
-                            <Facebook className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="LinkedIn — skopiuj / udostępnij" onClick={() => handleShare("LinkedIn")}>
-                            <Linkedin className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="X — skopiuj / udostępnij" onClick={() => handleShare("X")}>
-                            <Twitter className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="WhatsApp — skopiuj / udostępnij" onClick={() => handleShare("WhatsApp")}>
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="Telegram — skopiuj / udostępnij" onClick={() => handleShare("Telegram")}>
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" title="E-mail — skopiuj treść wiadomości" onClick={() => handleShare("E-mail")}>
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="Instagram — skopiuj opis i link"
-                            onClick={() => handleShare("Instagram")}
-                          >
-                            <Instagram className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="YouTube — skopiuj opis i link"
-                            onClick={() => handleShare("YouTube")}
-                          >
-                            <Youtube className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="TikTok — skopiuj opis i link"
-                            onClick={() => handleShare("TikTok")}
-                          >
-                            <TikTokIcon />
-                          </Button>
-                        </div>
 
 
 
