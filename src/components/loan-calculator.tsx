@@ -82,7 +82,7 @@ function InfoTip({ text }: { text: string }) {
 export function LoanCalculator({
   initialAmount = 100_000,
   initialMonths = 12,
-  initialAnnualRate = 15,
+  initialAnnualRate = 10,
   initialCommissionPct = 5,
   initialMaxPayment = 5000,
   onChange,
