@@ -26,9 +26,6 @@ export function StripeEmbeddedCheckoutForm({ priceId, returnUrl }: Props) {
     if (buyerType === "company") {
       if (!buyerName.trim()) return toast.error("Podaj nazwę firmy");
       if (!buyerNip.trim()) return toast.error("Podaj NIP");
-    } else {
-      if (!buyerName.trim()) return toast.error("Podaj imię i nazwisko (do faktury)");
-      if (!buyerEmail.trim()) return toast.error("Podaj e-mail (do wysyłki faktury)");
     }
     setLoading(true);
     try {
@@ -129,15 +126,15 @@ export function StripeEmbeddedCheckoutForm({ priceId, returnUrl }: Props) {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="p-name">Imię i nazwisko *</Label>
+              <Label htmlFor="p-name">Imię i nazwisko</Label>
               <Input id="p-name" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="Jan Kowalski" />
             </div>
             <div>
-              <Label htmlFor="p-email">E-mail do faktury *</Label>
+              <Label htmlFor="p-email">E-mail do potwierdzenia</Label>
               <Input id="p-email" type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} />
             </div>
             <p className="sm:col-span-2 text-xs text-muted-foreground">
-              Faktura (bez VAT-u nabywcy) zostanie wystawiona automatycznie po zaksięgowaniu wpłaty i wysłana na podany e-mail.
+              Dla osób fizycznych faktura nie jest wystawiana automatycznie. Jeśli będziesz jej potrzebować, napisz na kontakt@financeyou.pl — wystawimy ją po podaniu adresu.
             </p>
           </div>
         )}

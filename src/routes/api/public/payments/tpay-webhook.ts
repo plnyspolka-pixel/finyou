@@ -91,7 +91,8 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
 
           console.log("[tpay-webhook] activated", { userId, plan, trId, amount: tx.amount });
 
-          // Automatyczne wystawienie faktury (osoba fizyczna lub firma).
+          // Firma → automatyczna faktura VAT. Osoba fizyczna → wpis do
+          // rejestru sprzedaży (faktura wystawiana dopiero na żądanie).
           try {
             const { data: buyer } = await (supabaseAdmin
               .from("tpay_transaction_buyers") as any)
@@ -101,28 +102,40 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
 
             const grossAmount = Number(tx.amount) || planCfg.amount;
             if (grossAmount > 0) {
-              const { createInvoiceFromPayment } = await import("@/lib/accounting/auto-invoice");
-              const buyerNameParts: string[] = [];
-              if (buyer?.buyer_address) buyerNameParts.push(buyer.buyer_address);
-              if (buyer?.buyer_postal_code || buyer?.buyer_city) {
-                buyerNameParts.push(
-                  [buyer?.buyer_postal_code, buyer?.buyer_city].filter(Boolean).join(" "),
+              if (buyer?.buyer_type === "company") {
+                const { createInvoiceFromPayment } = await import("@/lib/accounting/auto-invoice");
+                await createInvoiceFromPayment(supabaseAdmin as any, {
+                  paymentId: String(trId),
+                  grossAmount,
+                  currency: "PLN",
+                  description: planCfg.label,
+                  buyerName: buyer?.buyer_name ?? null,
+                  buyerEmail: buyer?.buyer_email ?? null,
+                  buyerNip: buyer?.buyer_nip ?? null,
+                  sourceType: "stripe_payment",
+                  sourceId: userId,
+                });
+              } else {
+                await (supabaseAdmin.from("individual_sales_register") as any).upsert(
+                  {
+                    transaction_id: String(trId),
+                    user_id: userId,
+                    buyer_name: buyer?.buyer_name ?? null,
+                    buyer_email: buyer?.buyer_email ?? null,
+                    buyer_address: buyer?.buyer_address ?? null,
+                    buyer_city: buyer?.buyer_city ?? null,
+                    buyer_postal_code: buyer?.buyer_postal_code ?? null,
+                    description: planCfg.label,
+                    gross_amount: grossAmount,
+                    currency: "PLN",
+                    paid_at: new Date().toISOString(),
+                  },
+                  { onConflict: "transaction_id" },
                 );
               }
-              await createInvoiceFromPayment(supabaseAdmin as any, {
-                paymentId: String(trId),
-                grossAmount,
-                currency: "PLN",
-                description: planCfg.label,
-                buyerName: buyer?.buyer_name ?? null,
-                buyerEmail: buyer?.buyer_email ?? null,
-                buyerNip: buyer?.buyer_type === "company" ? (buyer?.buyer_nip ?? null) : null,
-                sourceType: "stripe_payment",
-                sourceId: userId,
-              });
             }
           } catch (e) {
-            console.error("[tpay-webhook] auto-invoice failed", (e as Error)?.message);
+            console.error("[tpay-webhook] sales register/invoice failed", (e as Error)?.message);
           }
 
           return new Response("TRUE", { status: 200 });

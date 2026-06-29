@@ -115,6 +115,7 @@ import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marke
 import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
 import { Route as AdminMarketingLandingRouteImport } from './routes/admin.marketing.landing'
 import { Route as AdminMarketingEmailRouteImport } from './routes/admin.marketing.email'
+import { Route as AdminKsiegowoscRejestrOfRouteImport } from './routes/admin.ksiegowosc.rejestr-of'
 import { Route as AdminKsiegowoscPodmiotyRouteImport } from './routes/admin.ksiegowosc.podmioty'
 import { Route as AdminKsiegowoscFakturyRouteImport } from './routes/admin.ksiegowosc.faktury'
 import { Route as AdminKlienciIdRouteImport } from './routes/admin.klienci.$id'
@@ -692,6 +693,12 @@ const AdminMarketingEmailRoute = AdminMarketingEmailRouteImport.update({
   path: '/marketing/email',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminKsiegowoscRejestrOfRoute =
+  AdminKsiegowoscRejestrOfRouteImport.update({
+    id: '/ksiegowosc/rejestr-of',
+    path: '/ksiegowosc/rejestr-of',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminKsiegowoscPodmiotyRoute = AdminKsiegowoscPodmiotyRouteImport.update({
   id: '/ksiegowosc/podmioty',
   path: '/ksiegowosc/podmioty',
@@ -943,6 +950,7 @@ export interface FileRoutesByFullPath {
   '/admin/klienci/$id': typeof AdminKlienciIdRoute
   '/admin/ksiegowosc/faktury': typeof AdminKsiegowoscFakturyRoute
   '/admin/ksiegowosc/podmioty': typeof AdminKsiegowoscPodmiotyRoute
+  '/admin/ksiegowosc/rejestr-of': typeof AdminKsiegowoscRejestrOfRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
@@ -1076,6 +1084,7 @@ export interface FileRoutesByTo {
   '/admin/klienci/$id': typeof AdminKlienciIdRoute
   '/admin/ksiegowosc/faktury': typeof AdminKsiegowoscFakturyRoute
   '/admin/ksiegowosc/podmioty': typeof AdminKsiegowoscPodmiotyRoute
+  '/admin/ksiegowosc/rejestr-of': typeof AdminKsiegowoscRejestrOfRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
@@ -1214,6 +1223,7 @@ export interface FileRoutesById {
   '/admin/klienci/$id': typeof AdminKlienciIdRoute
   '/admin/ksiegowosc/faktury': typeof AdminKsiegowoscFakturyRoute
   '/admin/ksiegowosc/podmioty': typeof AdminKsiegowoscPodmiotyRoute
+  '/admin/ksiegowosc/rejestr-of': typeof AdminKsiegowoscRejestrOfRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
@@ -1353,6 +1363,7 @@ export interface FileRouteTypes {
     | '/admin/klienci/$id'
     | '/admin/ksiegowosc/faktury'
     | '/admin/ksiegowosc/podmioty'
+    | '/admin/ksiegowosc/rejestr-of'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
@@ -1486,6 +1497,7 @@ export interface FileRouteTypes {
     | '/admin/klienci/$id'
     | '/admin/ksiegowosc/faktury'
     | '/admin/ksiegowosc/podmioty'
+    | '/admin/ksiegowosc/rejestr-of'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
@@ -1623,6 +1635,7 @@ export interface FileRouteTypes {
     | '/admin/klienci/$id'
     | '/admin/ksiegowosc/faktury'
     | '/admin/ksiegowosc/podmioty'
+    | '/admin/ksiegowosc/rejestr-of'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
@@ -2479,6 +2492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMarketingEmailRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ksiegowosc/rejestr-of': {
+      id: '/admin/ksiegowosc/rejestr-of'
+      path: '/ksiegowosc/rejestr-of'
+      fullPath: '/admin/ksiegowosc/rejestr-of'
+      preLoaderRoute: typeof AdminKsiegowoscRejestrOfRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ksiegowosc/podmioty': {
       id: '/admin/ksiegowosc/podmioty'
       path: '/ksiegowosc/podmioty'
@@ -2748,6 +2768,7 @@ interface AdminRouteChildren {
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
   AdminKsiegowoscFakturyRoute: typeof AdminKsiegowoscFakturyRoute
   AdminKsiegowoscPodmiotyRoute: typeof AdminKsiegowoscPodmiotyRoute
+  AdminKsiegowoscRejestrOfRoute: typeof AdminKsiegowoscRejestrOfRoute
   AdminMarketingEmailRoute: typeof AdminMarketingEmailRoute
   AdminMarketingLandingRoute: typeof AdminMarketingLandingRoute
   AdminMarketingSocialRoute: typeof AdminMarketingSocialRoute
@@ -2803,6 +2824,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
   AdminKsiegowoscFakturyRoute: AdminKsiegowoscFakturyRoute,
   AdminKsiegowoscPodmiotyRoute: AdminKsiegowoscPodmiotyRoute,
+  AdminKsiegowoscRejestrOfRoute: AdminKsiegowoscRejestrOfRoute,
   AdminMarketingEmailRoute: AdminMarketingEmailRoute,
   AdminMarketingLandingRoute: AdminMarketingLandingRoute,
   AdminMarketingSocialRoute: AdminMarketingSocialRoute,

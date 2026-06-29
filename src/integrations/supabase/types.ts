@@ -3504,6 +3504,74 @@ export type Database = {
         }
         Relationships: []
       }
+      individual_sales_register: {
+        Row: {
+          buyer_address: string | null
+          buyer_city: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_postal_code: string | null
+          created_at: string
+          currency: string
+          description: string
+          gross_amount: number
+          id: string
+          invoice_id: string | null
+          invoice_requested_at: string | null
+          notes: string | null
+          paid_at: string
+          transaction_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          buyer_address?: string | null
+          buyer_city?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_postal_code?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          gross_amount: number
+          id?: string
+          invoice_id?: string | null
+          invoice_requested_at?: string | null
+          notes?: string | null
+          paid_at?: string
+          transaction_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          buyer_address?: string | null
+          buyer_city?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_postal_code?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          gross_amount?: number
+          id?: string
+          invoice_id?: string | null
+          invoice_requested_at?: string | null
+          notes?: string | null
+          paid_at?: string
+          transaction_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_sales_register_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "sales_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institutional_investor_settings: {
         Row: {
           created_at: string

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Receipt, Building2, FileCheck, ShieldCheck, Wallet, Send, Clock, AlertTriangle } from "lucide-react";
+import { Receipt, Building2, FileCheck, ShieldCheck, Wallet, Send, Clock, AlertTriangle, Users } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
 import { getAccountingStats } from "@/lib/accounting/functions";
 
@@ -65,6 +65,10 @@ function KsiegowoscIndex() {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" /> Podmioty gospodarcze</CardTitle></CardHeader>
           <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Dwa podmioty, podmiot domyślny, konfiguracja KSeF/Fakturowo.</p><Button asChild variant="outline" size="sm"><Link to="/admin/ksiegowosc/podmioty">Zarządzaj podmiotami</Link></Button></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Rejestr sprzedaży OF</CardTitle></CardHeader>
+          <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Sprzedaż dla osób fizycznych — faktura wystawiana tylko na żądanie po uzupełnieniu adresu.</p><Button asChild variant="outline" size="sm"><Link to="/admin/ksiegowosc/rejestr-of">Otwórz rejestr</Link></Button></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><FileCheck className="h-4 w-4" /> Rozliczenia partnerów</CardTitle></CardHeader>
