@@ -1,5 +1,8 @@
 // Tpay Open API client (PRODUCTION). Internal use only.
-const TPAY_API_BASE = "https://api.tpay.com";
+// Correct base for Tpay Open API is openapi.tpay.com (production)
+// / openapi.sandbox.tpay.com (sandbox). api.tpay.com nie istnieje jako publiczne API
+// i potrafi zwracać linki płatności prowadzące do secure.tpay.com, który odrzuca połączenie.
+const TPAY_API_BASE = process.env.TPAY_API_BASE || "https://openapi.tpay.com";
 
 function getEnv(name: string): string {
   const v = process.env[name];
