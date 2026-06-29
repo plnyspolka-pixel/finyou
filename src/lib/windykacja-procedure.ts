@@ -336,6 +336,36 @@ export const DOCUMENT_LABELS: Record<WindDocumentType, string> = {
   notatka: "Notatka",
 };
 
+// ── Etykiety typów zdarzeń (oś czasu / raport) ───────────────────────
+export const EVENT_TYPE_LABELS: Record<WindEventType, string> = {
+  sms: "SMS",
+  email: "E-mail",
+  telefon: "Telefon",
+  pismo_nadane: "Pismo nadane",
+  pismo_doreczone: "Pismo doręczone",
+  pismo_awizo: "Awizo",
+  pismo_zwrot: "Zwrot przesyłki",
+  wplata: "Wpłata",
+  dokument_wygenerowany: "Dokument wygenerowany",
+  zmiana_etapu: "Zmiana etapu",
+  notatka: "Notatka",
+  czynnosc_sadowa: "Czynność sądowa",
+};
+
+export const DELIVERY_STATUS_LABELS: Record<WindDeliveryStatus, string> = {
+  oczekuje: "oczekuje na doręczenie",
+  doreczone: "doręczone",
+  awizowane: "awizowane",
+  termin_uplynal: "termin upłynął (fikcja doręczenia)",
+  zwrot: "zwrot — fikcja doręczenia",
+};
+
+/** Termin (ISO) liczony jako data skutecznego doręczenia + 7 dni, jeśli ustalono. */
+export function deliveryDeadline(deliveryISO?: string | null): string | null {
+  if (!deliveryISO) return null;
+  return addDaysISO(deliveryISO, TERM_DAYS);
+}
+
 export function documentsForPath(path: WindPath): WindDocumentType[] {
   switch (path) {
     case "miekka":

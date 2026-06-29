@@ -84,6 +84,7 @@ import {
   Paperclip,
   Eye,
   Calculator,
+  FileDown,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
@@ -248,7 +249,14 @@ function WindykacjaCaseCard() {
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Panel windykacji
         </Link>
-        <Badge className={PATH_BADGE[kase.sciezka]}>{PATH_LABELS[kase.sciezka]}</Badge>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/inwestor/windykacja/$caseId/raport" params={{ caseId }} target="_blank">
+              <FileDown className="h-4 w-4 mr-1" /> Raport dowodowy (PDF)
+            </Link>
+          </Button>
+          <Badge className={PATH_BADGE[kase.sciezka]}>{PATH_LABELS[kase.sciezka]}</Badge>
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">

@@ -127,6 +127,7 @@ import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kre
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as InwestorWindykacjaCaseIdRaportRouteImport } from './routes/inwestor.windykacja.$caseId.raport'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsTpayWebhookRouteImport } from './routes/api/public/payments/tpay-webhook'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
@@ -758,6 +759,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InwestorWindykacjaCaseIdRaportRoute =
+  InwestorWindykacjaCaseIdRaportRouteImport.update({
+    id: '/raport',
+    path: '/raport',
+    getParentRoute: () => InwestorWindykacjaCaseIdRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -987,7 +994,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
-  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1012,6 +1019,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1123,7 +1131,7 @@ export interface FileRoutesByTo {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
-  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
@@ -1148,6 +1156,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1264,7 +1273,7 @@ export interface FileRoutesById {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
-  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1289,6 +1298,7 @@ export interface FileRoutesById {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1431,6 +1441,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1567,6 +1578,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1707,6 +1719,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -2601,6 +2614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inwestor/windykacja/$caseId/raport': {
+      id: '/inwestor/windykacja/$caseId/raport'
+      path: '/raport'
+      fullPath: '/inwestor/windykacja/$caseId/raport'
+      preLoaderRoute: typeof InwestorWindykacjaCaseIdRaportRouteImport
+      parentRoute: typeof InwestorWindykacjaCaseIdRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -2884,12 +2904,26 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface InwestorWindykacjaCaseIdRouteChildren {
+  InwestorWindykacjaCaseIdRaportRoute: typeof InwestorWindykacjaCaseIdRaportRoute
+}
+
+const InwestorWindykacjaCaseIdRouteChildren: InwestorWindykacjaCaseIdRouteChildren =
+  {
+    InwestorWindykacjaCaseIdRaportRoute: InwestorWindykacjaCaseIdRaportRoute,
+  }
+
+const InwestorWindykacjaCaseIdRouteWithChildren =
+  InwestorWindykacjaCaseIdRoute._addFileChildren(
+    InwestorWindykacjaCaseIdRouteChildren,
+  )
+
 interface InwestorWindykacjaRouteChildren {
-  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRoute
+  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRouteWithChildren
 }
 
 const InwestorWindykacjaRouteChildren: InwestorWindykacjaRouteChildren = {
-  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRoute,
+  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRouteWithChildren,
 }
 
 const InwestorWindykacjaRouteWithChildren =
