@@ -270,7 +270,9 @@ function InwestorList() {
                       <div className="font-medium text-muted-foreground uppercase tracking-wide text-[10px]">Parametry wnioskowane przez klienta</div>
                       <div className="grid grid-cols-2 gap-1.5">
                         <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-muted-foreground" />{a.preferred_period_months ?? "—"} mies.</div>
-                        <div className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5 text-muted-foreground" />LTV {a.estimated_ltv ?? "—"}%</div>
+                        {a.estimated_ltv != null && (
+                          <div className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5 text-muted-foreground" />LTV {a.estimated_ltv}%</div>
+                        )}
                         {a.max_monthly_payment != null && (
                           <div className="flex items-center gap-1.5 col-span-2"><TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />Max rata: {formatPLN(a.max_monthly_payment)}</div>
                         )}
