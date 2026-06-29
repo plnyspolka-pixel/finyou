@@ -31,6 +31,7 @@ export type DebtCase = {
   fee_letter_court: number;
   fee_letter_bailiff: number;
   notes: string | null;
+  no_payments_declared: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -68,7 +69,7 @@ export type DebtAction = {
 };
 
 const CASE_COLS =
-  "id, investor_user_id, status, debtor_name, debtor_pesel, debtor_address, debtor_email, debtor_phone, contract_number, contract_file_path, contract_file_name, principal_amount, payout_date, due_date, contractual_annual_rate, penalty_annual_rate, max_statutory_rate, fee_sms, fee_email, fee_phone, fee_letter_debtor, fee_letter_court, fee_letter_bailiff, notes, created_at, updated_at";
+  "id, investor_user_id, status, debtor_name, debtor_pesel, debtor_address, debtor_email, debtor_phone, contract_number, contract_file_path, contract_file_name, principal_amount, payout_date, due_date, contractual_annual_rate, penalty_annual_rate, max_statutory_rate, fee_sms, fee_email, fee_phone, fee_letter_debtor, fee_letter_court, fee_letter_bailiff, notes, no_payments_declared, created_at, updated_at";
 
 const emptyToNull = (v: unknown) => (v === "" ? null : v);
 const num = z.coerce.number().nonnegative();

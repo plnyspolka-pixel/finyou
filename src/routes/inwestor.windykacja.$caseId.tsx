@@ -17,6 +17,11 @@ import {
   type DebtAction,
   type DebtActionType,
 } from "@/lib/debt-collection.functions";
+import {
+  extractDebtContract,
+  extractDebtPaymentsFromStatement,
+  setNoPaymentsDeclared,
+} from "@/lib/debt-collection-ocr.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import {
   calculateDebt,
@@ -71,7 +76,9 @@ import {
   Loader2,
   Download,
   Calculator,
+  Sparkles,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
   component: WindykacjaDetail,
@@ -129,6 +136,9 @@ function WindykacjaDetail() {
   const doAction = useServerFn(performDebtAction);
   const removeAction = useServerFn(deleteDebtAction);
   const fetchNbp = useServerFn(getNbpRates);
+  const extractContract = useServerFn(extractDebtContract);
+  const extractStatement = useServerFn(extractDebtPaymentsFromStatement);
+  const setNoPayments = useServerFn(setNoPaymentsDeclared);
 
   const [form, setForm] = useState<DebtCase | null>(null);
   const [payments, setPayments] = useState<DebtPayment[]>([]);
@@ -136,6 +146,8 @@ function WindykacjaDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importingStatement, setImportingStatement] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [nbpRef, setNbpRef] = useState<number | null>(null);
 
   // Nowa wpłata
@@ -243,7 +255,16 @@ function WindykacjaDetail() {
     }
   };
 
-  // ── Upload umowy ───────────────────────────────────────────────────
+  // ── Pomocnik: plik → data URL (base64) ──────────────────────────────
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error("Nie udało się wczytać pliku."));
+      fr.onload = () => resolve(String(fr.result ?? ""));
+      fr.readAsDataURL(file);
+    });
+
+  // ── Upload umowy + auto‑uzupełnianie danych z AI ───────────────────
   const onUploadContract = async (file: File) => {
     if (!user) return;
     setUploading(true);
@@ -258,7 +279,25 @@ function WindykacjaDetail() {
         });
       if (error) throw new Error(error.message);
       await persist({ contract_file_path: path, contract_file_name: file.name }, true);
-      toast.success("Umowa wgrana");
+      toast.success("Umowa wgrana — uzupełniam dane…");
+
+      setExtracting(true);
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        const res = await extractContract({
+          data: { caseId, dataUrl, mimeType: file.type || "application/pdf", fileName: file.name },
+        });
+        if (res.ok) {
+          toast.success(`Uzupełniono ${res.updated} pól z umowy.`);
+          await reload();
+        } else {
+          toast.message("Nie udało się odczytać danych z umowy — uzupełnij ręcznie.");
+        }
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Nie udało się odczytać umowy");
+      } finally {
+        setExtracting(false);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się wgrać pliku");
     } finally {
@@ -274,6 +313,50 @@ function WindykacjaDetail() {
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
     else toast.error("Nie udało się otworzyć pliku");
   };
+
+  // ── Import wpłat z wyciągu bankowego ───────────────────────────────
+  const onUploadStatement = async (file: File) => {
+    setImportingStatement(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const res = await extractStatement({
+        data: {
+          caseId,
+          dataUrl,
+          mimeType: file.type || "application/pdf",
+          fileName: file.name,
+          debtorName: form?.debtor_name ?? null,
+        },
+      });
+      if (res.inserted > 0) {
+        toast.success(`Zaimportowano ${res.inserted} wpłat z wyciągu.`);
+        await reload();
+        // Jeżeli były wpłaty, automatycznie odznaczamy "brak wpłat"
+        if (form?.no_payments_declared) {
+          await setNoPayments({ data: { caseId, value: false } });
+        }
+      } else {
+        toast.message("Nie znaleziono żadnych wpłat od klienta w tym wyciągu.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się przetworzyć wyciągu");
+    } finally {
+      setImportingStatement(false);
+    }
+  };
+
+  // ── Toggle: brak wpłat od klienta ──────────────────────────────────
+  const toggleNoPayments = async (value: boolean) => {
+    if (!form) return;
+    setForm({ ...form, no_payments_declared: value });
+    try {
+      await setNoPayments({ data: { caseId, value } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się zapisać");
+      setForm((f) => (f ? { ...f, no_payments_declared: !value } : f));
+    }
+  };
+
 
   // ── Wpłaty ─────────────────────────────────────────────────────────
   const onAddPayment = async () => {
@@ -553,9 +636,9 @@ function WindykacjaDetail() {
                       e.target.value = "";
                     }}
                   />
-                  <Button asChild variant="secondary" size="sm" disabled={uploading}>
+                  <Button asChild variant="secondary" size="sm" disabled={uploading || extracting}>
                     <span>
-                      {uploading ? (
+                      {uploading || extracting ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                       ) : (
                         <Upload className="h-4 w-4 mr-1" />
@@ -564,7 +647,15 @@ function WindykacjaDetail() {
                     </span>
                   </Button>
                 </label>
+                {extracting && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" /> AI uzupełnia dane z umowy…
+                  </span>
+                )}
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Po wgraniu umowy AI automatycznie uzupełni dane dłużnika, kwotę, terminy i odsetki — sprawdź i popraw, jeśli trzeba.
+              </p>
             </CardContent>
           </Card>
 
@@ -637,13 +728,54 @@ function WindykacjaDetail() {
 
           {/* Wpłaty klienta */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Wpłaty klienta</CardTitle>
+            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base">Wpłaty klienta</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Wgraj wyciąg bankowy — AI wyciągnie wpłaty od klienta i doda je automatycznie.
+                </p>
+              </div>
+              <label className="inline-flex">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png,.csv"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onUploadStatement(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button asChild variant="secondary" size="sm" disabled={importingStatement}>
+                  <span>
+                    {importingStatement ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-1" />
+                    )}
+                    Wgraj wyciąg
+                  </span>
+                </Button>
+              </label>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-[150px_1fr_1fr_auto] gap-2 items-end">
+              <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 cursor-pointer">
+                <Checkbox
+                  checked={form.no_payments_declared}
+                  onCheckedChange={(v) => void toggleNoPayments(v === true)}
+                  className="mt-0.5"
+                />
+                <div className="text-sm">
+                  <div className="font-medium">Brak wpłat od klienta</div>
+                  <div className="text-xs text-muted-foreground">
+                    Zaznacz, jeżeli klient nie dokonał żadnej wpłaty. Saldo będzie liczone tak, jakby nic nie zostało spłacone.
+                  </div>
+                </div>
+              </label>
+
+              <div className={`grid grid-cols-1 sm:grid-cols-[150px_1fr_1fr_auto] gap-2 items-end ${form.no_payments_declared ? "opacity-50" : ""}`}>
                 <Field label="Data">
-                  <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+                  <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} disabled={form.no_payments_declared} />
                 </Field>
                 <Field label="Kwota (zł)">
                   <Input
@@ -652,6 +784,7 @@ function WindykacjaDetail() {
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
                     placeholder="np. 1500"
+                    disabled={form.no_payments_declared}
                   />
                 </Field>
                 <Field label="Opis">
@@ -659,15 +792,18 @@ function WindykacjaDetail() {
                     value={payNote}
                     onChange={(e) => setPayNote(e.target.value)}
                     placeholder="np. przelew"
+                    disabled={form.no_payments_declared}
                   />
                 </Field>
-                <Button onClick={onAddPayment}>
+                <Button onClick={onAddPayment} disabled={form.no_payments_declared}>
                   <Plus className="h-4 w-4 mr-1" /> Dodaj
                 </Button>
               </div>
               {payments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Brak wpłat. Wgraj wszystkie wpłaty klienta, aby wyliczyć saldo.
+                  {form.no_payments_declared
+                    ? "Oznaczono: brak wpłat od klienta."
+                    : "Brak wpłat. Wgraj wyciąg bankowy lub dodaj wpłatę ręcznie."}
                 </p>
               ) : (
                 <div className="divide-y rounded-md border">
