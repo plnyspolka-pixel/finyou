@@ -17,6 +17,7 @@ import {
   Video as VideoIcon,
 } from "lucide-react";
 import { generateMaterialDescription, ensureMyReferralCode } from "@/lib/marketing-materials.functions";
+import { MarketingComplianceNotice } from "@/components/affiliate/compliance-notice";
 
 
 export const Route = createFileRoute("/posrednik/marketing")({
@@ -142,6 +143,8 @@ function BrokerMarketingPage() {
           przypisują nowych klientów / inwestorów / pośredników do Twojego konta.
         </p>
       </div>
+
+      <MarketingComplianceNotice />
 
       <Card>
         <CardHeader>

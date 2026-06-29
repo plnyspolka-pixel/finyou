@@ -14,6 +14,764 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_entities: {
+        Row: {
+          active: boolean
+          address_city: string | null
+          address_country: string | null
+          address_postal_code: string | null
+          address_street: string | null
+          bank_account: string | null
+          created_at: string
+          default_vat_rate: string
+          email: string | null
+          fakturowo_api_id_encrypted: string | null
+          id: string
+          invoice_next_number: number
+          invoice_prefix: string
+          is_default: boolean
+          ksef_environment: string
+          ksef_nip: string | null
+          ksef_token_encrypted: string | null
+          legal_name: string
+          name: string
+          nip: string | null
+          phone: string | null
+          provider: string
+          regon: string | null
+          updated_at: string
+          vat_payer: boolean
+        }
+        Insert: {
+          active?: boolean
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
+          bank_account?: string | null
+          created_at?: string
+          default_vat_rate?: string
+          email?: string | null
+          fakturowo_api_id_encrypted?: string | null
+          id?: string
+          invoice_next_number?: number
+          invoice_prefix?: string
+          is_default?: boolean
+          ksef_environment?: string
+          ksef_nip?: string | null
+          ksef_token_encrypted?: string | null
+          legal_name: string
+          name: string
+          nip?: string | null
+          phone?: string | null
+          provider?: string
+          regon?: string | null
+          updated_at?: string
+          vat_payer?: boolean
+        }
+        Update: {
+          active?: boolean
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
+          bank_account?: string | null
+          created_at?: string
+          default_vat_rate?: string
+          email?: string | null
+          fakturowo_api_id_encrypted?: string | null
+          id?: string
+          invoice_next_number?: number
+          invoice_prefix?: string
+          is_default?: boolean
+          ksef_environment?: string
+          ksef_nip?: string | null
+          ksef_token_encrypted?: string | null
+          legal_name?: string
+          name?: string
+          nip?: string | null
+          phone?: string | null
+          provider?: string
+          regon?: string | null
+          updated_at?: string
+          vat_payer?: boolean
+        }
+        Relationships: []
+      }
+      affiliate_audit_logs: {
+        Row: {
+          action: string
+          actor_role: string | null
+          actor_user_id: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_commission_events: {
+        Row: {
+          application_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          currency: string
+          customer_id: string | null
+          direct_partner_id: string
+          event_status: string
+          event_type: string
+          external_ref: string | null
+          finance_you_fee_amount: number | null
+          gross_payment_amount: number | null
+          id: string
+          loan_amount: number | null
+          net_revenue_amount: number | null
+          occurred_at: string
+          paid_account_id: string | null
+          payment_id: string | null
+          processed_at: string | null
+          product_id: string | null
+          refund_window_until: string | null
+          source_entity_id: string | null
+          source_entity_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          direct_partner_id: string
+          event_status?: string
+          event_type: string
+          external_ref?: string | null
+          finance_you_fee_amount?: number | null
+          gross_payment_amount?: number | null
+          id?: string
+          loan_amount?: number | null
+          net_revenue_amount?: number | null
+          occurred_at?: string
+          paid_account_id?: string | null
+          payment_id?: string | null
+          processed_at?: string | null
+          product_id?: string | null
+          refund_window_until?: string | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          direct_partner_id?: string
+          event_status?: string
+          event_type?: string
+          external_ref?: string | null
+          finance_you_fee_amount?: number | null
+          gross_payment_amount?: number | null
+          id?: string
+          loan_amount?: number | null
+          net_revenue_amount?: number | null
+          occurred_at?: string
+          paid_account_id?: string | null
+          payment_id?: string | null
+          processed_at?: string | null
+          product_id?: string | null
+          refund_window_until?: string | null
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commission_events_direct_partner_id_fkey"
+            columns: ["direct_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_commission_rules: {
+        Row: {
+          active: boolean
+          basis_type: string
+          created_at: string
+          event_type: string
+          fixed_amount: number | null
+          id: string
+          max_commission: number | null
+          min_commission: number | null
+          name: string
+          network_level: number
+          percent_rate: number | null
+          product_id: string | null
+          refund_window_days: number
+          requires_admin_approval: boolean
+          settlement_type_filter: string | null
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          active?: boolean
+          basis_type: string
+          created_at?: string
+          event_type: string
+          fixed_amount?: number | null
+          id?: string
+          max_commission?: number | null
+          min_commission?: number | null
+          name: string
+          network_level: number
+          percent_rate?: number | null
+          product_id?: string | null
+          refund_window_days?: number
+          requires_admin_approval?: boolean
+          settlement_type_filter?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          active?: boolean
+          basis_type?: string
+          created_at?: string
+          event_type?: string
+          fixed_amount?: number | null
+          id?: string
+          max_commission?: number | null
+          min_commission?: number | null
+          name?: string
+          network_level?: number
+          percent_rate?: number | null
+          product_id?: string | null
+          refund_window_days?: number
+          requires_admin_approval?: boolean
+          settlement_type_filter?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_commissions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          basis_amount: number
+          basis_type: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          commission_event_id: string
+          commission_rate: number | null
+          created_at: string
+          currency: string
+          direct_partner_id: string | null
+          gross_amount: number
+          id: string
+          invoice_id: string | null
+          network_level: number
+          paid_at: string | null
+          partner_id: string
+          payable_at: string | null
+          payout_batch_id: string | null
+          requires_business_registration: boolean
+          requires_invoice: boolean
+          requires_unregistered_activity_statement: boolean
+          rule_id: string | null
+          settlement_type: string
+          status: string
+          tax_quarter: number
+          tax_year: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          basis_amount?: number
+          basis_type: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          commission_event_id: string
+          commission_rate?: number | null
+          created_at?: string
+          currency?: string
+          direct_partner_id?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_id?: string | null
+          network_level: number
+          paid_at?: string | null
+          partner_id: string
+          payable_at?: string | null
+          payout_batch_id?: string | null
+          requires_business_registration?: boolean
+          requires_invoice?: boolean
+          requires_unregistered_activity_statement?: boolean
+          rule_id?: string | null
+          settlement_type: string
+          status?: string
+          tax_quarter: number
+          tax_year: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          basis_amount?: number
+          basis_type?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          commission_event_id?: string
+          commission_rate?: number | null
+          created_at?: string
+          currency?: string
+          direct_partner_id?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_id?: string | null
+          network_level?: number
+          paid_at?: string | null
+          partner_id?: string
+          payable_at?: string | null
+          payout_batch_id?: string | null
+          requires_business_registration?: boolean
+          requires_invoice?: boolean
+          requires_unregistered_activity_statement?: boolean
+          rule_id?: string | null
+          settlement_type?: string
+          status?: string
+          tax_quarter?: number
+          tax_year?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_commission_event_id_fkey"
+            columns: ["commission_event_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_commission_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_direct_partner_id_fkey"
+            columns: ["direct_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_payout_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_commission_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_invoices: {
+        Row: {
+          created_at: string
+          currency: string
+          file_url: string | null
+          gross_amount: number
+          id: string
+          invoice_number: string | null
+          issue_date: string | null
+          net_amount: number
+          partner_id: string
+          status: string
+          vat_amount: number | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          file_url?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          net_amount?: number
+          partner_id: string
+          status?: string
+          vat_amount?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          file_url?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          net_amount?: number
+          partner_id?: string
+          status?: string
+          vat_amount?: number | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_network_closure: {
+        Row: {
+          ancestor_partner_id: string
+          created_at: string
+          depth: number
+          descendant_partner_id: string
+        }
+        Insert: {
+          ancestor_partner_id: string
+          created_at?: string
+          depth: number
+          descendant_partner_id: string
+        }
+        Update: {
+          ancestor_partner_id?: string
+          created_at?: string
+          depth?: number
+          descendant_partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_network_closure_ancestor_partner_id_fkey"
+            columns: ["ancestor_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_network_closure_descendant_partner_id_fkey"
+            columns: ["descendant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_partners: {
+        Row: {
+          address_city: string | null
+          address_country: string | null
+          address_postal_code: string | null
+          address_street: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bank_account_encrypted: string | null
+          billing_email: string | null
+          company_name: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          nip: string | null
+          pesel_encrypted: string | null
+          phone: string | null
+          referral_code: string | null
+          referral_slug: string | null
+          regon: string | null
+          settlement_type: string
+          source_description: string | null
+          sponsor_partner_id: string | null
+          status: string
+          tax_office: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
+          updated_at: string
+          user_id: string | null
+          vat_payer: boolean | null
+          website_url: string | null
+        }
+        Insert: {
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_account_encrypted?: string | null
+          billing_email?: string | null
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          nip?: string | null
+          pesel_encrypted?: string | null
+          phone?: string | null
+          referral_code?: string | null
+          referral_slug?: string | null
+          regon?: string | null
+          settlement_type: string
+          source_description?: string | null
+          sponsor_partner_id?: string | null
+          status?: string
+          tax_office?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vat_payer?: boolean | null
+          website_url?: string | null
+        }
+        Update: {
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_account_encrypted?: string | null
+          billing_email?: string | null
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          nip?: string | null
+          pesel_encrypted?: string | null
+          phone?: string | null
+          referral_code?: string | null
+          referral_slug?: string | null
+          regon?: string | null
+          settlement_type?: string
+          source_description?: string | null
+          sponsor_partner_id?: string | null
+          status?: string
+          tax_office?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vat_payer?: boolean | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_partners_sponsor_partner_id_fkey"
+            columns: ["sponsor_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payout_batches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          name: string
+          paid_at: string | null
+          paid_by: string | null
+          payout_count: number
+          status: string
+          total_amount: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          name: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_count?: number
+          status?: string
+          total_amount?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          name?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_count?: number
+          status?: string
+          total_amount?: number
+        }
+        Relationships: []
+      }
+      affiliate_payout_items: {
+        Row: {
+          amount: number
+          bank_account_snapshot_encrypted: string | null
+          commission_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          partner_id: string
+          payout_batch_id: string
+          status: string
+          transfer_title: string | null
+        }
+        Insert: {
+          amount?: number
+          bank_account_snapshot_encrypted?: string | null
+          commission_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          partner_id: string
+          payout_batch_id: string
+          status?: string
+          transfer_title?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_snapshot_encrypted?: string | null
+          commission_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          partner_id?: string
+          payout_batch_id?: string
+          status?: string
+          transfer_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payout_items_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payout_items_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payout_items_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_unregistered_activity_limits: {
+        Row: {
+          active: boolean
+          created_at: string
+          currency: string
+          id: string
+          limit_amount: number
+          quarter: number
+          source_note: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          id?: string
+          limit_amount: number
+          quarter: number
+          source_note?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          id?: string
+          limit_amount?: number
+          quarter?: number
+          source_note?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       ai_admin_audit_log: {
         Row: {
           conversation_id: string | null
@@ -3938,6 +4696,7 @@ export type Database = {
           preferred_email_hour: number | null
           preferred_period_months: number | null
           property_quality: string | null
+          referred_by_partner_id: string | null
           reminder_attempts: number
           reminder_email_count: number
           reminder_email_first_sent_at: string | null
@@ -4018,6 +4777,7 @@ export type Database = {
           preferred_email_hour?: number | null
           preferred_period_months?: number | null
           property_quality?: string | null
+          referred_by_partner_id?: string | null
           reminder_attempts?: number
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
@@ -4098,6 +4858,7 @@ export type Database = {
           preferred_email_hour?: number | null
           preferred_period_months?: number | null
           property_quality?: string | null
+          referred_by_partner_id?: string | null
           reminder_attempts?: number
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
@@ -4125,6 +4886,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_applications_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -4943,7 +5711,9 @@ export type Database = {
           id: string
           last_name: string | null
           phone: string | null
+          referral_captured_at: string | null
           referral_code: string | null
+          referred_by_partner_id: string | null
           updated_at: string
           user_id: string
         }
@@ -4954,7 +5724,9 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          referral_captured_at?: string | null
           referral_code?: string | null
+          referred_by_partner_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -4965,11 +5737,21 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          referral_captured_at?: string | null
           referral_code?: string | null
+          referred_by_partner_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
@@ -5339,6 +6121,125 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_invoices: {
+        Row: {
+          buyer_city: string | null
+          buyer_country: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_nip: string | null
+          buyer_postal_code: string | null
+          buyer_street: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          due_date: string | null
+          entity_id: string | null
+          error_message: string | null
+          fakturowo_document_id: string | null
+          gross_amount: number
+          id: string
+          invoice_number: string | null
+          issue_date: string | null
+          items: Json
+          ksef_element_reference: string | null
+          ksef_reference_number: string | null
+          ksef_status: string
+          ksef_upo_xml: string | null
+          net_amount: number
+          payment_id: string | null
+          pdf_url: string | null
+          provider: string | null
+          sale_date: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          vat_amount: number
+          vat_rate: string
+        }
+        Insert: {
+          buyer_city?: string | null
+          buyer_country?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          entity_id?: string | null
+          error_message?: string | null
+          fakturowo_document_id?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          items?: Json
+          ksef_element_reference?: string | null
+          ksef_reference_number?: string | null
+          ksef_status?: string
+          ksef_upo_xml?: string | null
+          net_amount?: number
+          payment_id?: string | null
+          pdf_url?: string | null
+          provider?: string | null
+          sale_date?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: string
+        }
+        Update: {
+          buyer_city?: string | null
+          buyer_country?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          entity_id?: string | null
+          error_message?: string | null
+          fakturowo_document_id?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          items?: Json
+          ksef_element_reference?: string | null
+          ksef_reference_number?: string | null
+          ksef_status?: string
+          ksef_upo_xml?: string | null
+          net_amount?: number
+          payment_id?: string | null
+          pdf_url?: string | null
+          provider?: string | null
+          sale_date?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_invoices_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_posts: {
         Row: {
           ai_model: string | null
@@ -5659,6 +6560,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      affiliate_current_partner_id: { Args: never; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -5786,7 +6688,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "administrator" | "operator" | "klient" | "inwestor"
+      app_role:
+        | "administrator"
+        | "operator"
+        | "klient"
+        | "inwestor"
+        | "ksiegowosc"
       automation_status: "aktywna" | "wstrzymana" | "zakonczona" | "blad"
       consent_kind: "privacy" | "marketing" | "terms" | "terms_investor"
       contact_channel:
@@ -5991,7 +6898,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["administrator", "operator", "klient", "inwestor"],
+      app_role: [
+        "administrator",
+        "operator",
+        "klient",
+        "inwestor",
+        "ksiegowosc",
+      ],
       automation_status: ["aktywna", "wstrzymana", "zakonczona", "blad"],
       consent_kind: ["privacy", "marketing", "terms", "terms_investor"],
       contact_channel: [
