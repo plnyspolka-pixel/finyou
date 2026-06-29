@@ -17,8 +17,18 @@ import { InvestorSummaryCard } from "@/components/property-analysis/investor-sum
 import { formatPLN } from "@/lib/loan-math";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { openOrCreateThread } from "@/lib/chat.functions";
+import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
+
+// Reguły z kalkulatora na /klient: max okres maleje wraz z kwotą.
+function maxMonthsForAmount(amount: number): number {
+  if (!amount) return 12;
+  if (amount <= 400_000) return 72;
+  const t = Math.min(1, Math.max(0, (amount - 400_000) / (1_000_000 - 400_000)));
+  return Math.round(36 - t * (36 - 12));
+}
 
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
@@ -61,6 +71,9 @@ function InwestorWniosek() {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
+  const fetchRates = useServerFn(getNbpRates);
+  const ratesQ = useQuery({ queryKey: ["nbp-rates"], queryFn: () => fetchRates(), staleTime: 12 * 60 * 60 * 1000 });
+  const maxAnnualRate = ((ratesQ.data?.referenceRate ?? 3.75) + 3.5) * 2;
 
   // Calc state — wypełniana przez LoanCalculator (onChange)
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
@@ -261,10 +274,11 @@ function InwestorWniosek() {
       </Card>
 
       <LoanCalculator
+        key={`calc-${ratesQ.data?.referenceRate ?? "loading"}`}
         initialAmount={Number(app.loan_amount) || 100_000}
-        initialMonths={Number(app.preferred_period_months) || 12}
-        initialAnnualRate={Number(app.annual_investor_rate) || 15}
-        initialMaxPayment={Number(app.max_monthly_payment) || 5000}
+        initialMonths={maxMonthsForAmount(Number(app.loan_amount) || 100_000)}
+        initialAnnualRate={Math.round(maxAnnualRate * 10) / 10}
+        initialMaxPayment={Number(app.max_monthly_payment) || 0}
         onChange={setCalc}
       />
 
