@@ -249,6 +249,11 @@ function InwestorList() {
                       <div className="grid grid-cols-2 gap-2 text-sm border-y py-2">
                         <div className="flex items-center gap-1.5"><Ruler className="h-3.5 w-3.5 text-muted-foreground" />{p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
                         <div className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-muted-foreground" />{formatPLN(p.estimated_value)}</div>
+                        {p.land_register_number && (
+                          <div className="flex items-center gap-1.5 col-span-2 text-xs text-muted-foreground font-mono" title="Pełny numer KW widoczny we wniosku">
+                            KW: {maskKw(p.land_register_number)}
+                          </div>
+                        )}
                       </div>
                     )}
 
