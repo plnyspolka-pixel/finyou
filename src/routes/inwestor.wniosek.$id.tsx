@@ -243,19 +243,17 @@ function InwestorWniosek() {
 
 
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ImageIcon className="h-5 w-5" />Dokumenty dochodowe</CardTitle>
-          <CardDescription>Wyciągi bankowe, PIT, zaświadczenia o dochodzie.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {incomeDocs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Klient nie dodał jeszcze dokumentów dochodowych.</p>
-          ) : (
+      {incomeDocs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><ImageIcon className="h-5 w-5" />Dokumenty dochodowe <span className="text-xs font-normal text-muted-foreground">(bonus)</span></CardTitle>
+            <CardDescription>Wyciągi bankowe, PIT, zaświadczenia o dochodzie.</CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{incomeDocs.map(renderDocCard)}</div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
