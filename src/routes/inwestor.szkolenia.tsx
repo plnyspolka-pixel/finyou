@@ -84,12 +84,13 @@ function SzkoleniaInwestor() {
           const url = urls[v.id] ?? null;
           const external = url ? isExternal(url) : false;
           return (
-            <Card key={v.id} className="overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-lg">{v.title}</CardTitle>
+            <Card key={v.id} className="overflow-hidden flex flex-col h-full">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg line-clamp-2 min-h-[3.5rem]">{v.title}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {v.description && <p className="text-sm text-muted-foreground">{v.description}</p>}
+              <CardContent className="space-y-3 flex flex-col flex-1">
+                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{v.description ?? ""}</p>
+                <div className="mt-auto">
                 {url ? (
                   external ? (
                     <iframe
@@ -121,6 +122,7 @@ function SzkoleniaInwestor() {
                     Materiał wkrótce
                   </div>
                 )}
+                </div>
               </CardContent>
             </Card>
           );
