@@ -101,6 +101,10 @@ export function LoanCalculator({
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
+  const rateTouched = useRef(false);
+  const commissionTouched = useRef(false);
+  const setAnnualRateTouched = (v: number) => { rateTouched.current = true; setAnnualRate(v); };
+  const setCommissionPctTouched = (v: number) => { commissionTouched.current = true; setCommissionPct(v); };
 
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
   const [nbpOverride, setNbpOverride] = useState<number | null>(null);
