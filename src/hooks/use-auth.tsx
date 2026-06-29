@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "administrator" | "operator" | "klient" | "inwestor";
+export type AppRole = "administrator" | "operator" | "klient" | "inwestor" | "ksiegowosc";
 
 interface AuthState {
   user: User | null;
@@ -71,6 +71,7 @@ export function useAuth() {
 
 export function defaultPathForRoles(roles: AppRole[]): string {
   if (roles.includes("administrator") || roles.includes("operator")) return "/admin";
+  if (roles.includes("ksiegowosc")) return "/admin/ksiegowosc";
   if (roles.includes("inwestor")) return "/inwestor";
   return "/klient";
 }

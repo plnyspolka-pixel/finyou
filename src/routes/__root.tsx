@@ -16,6 +16,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
 import { GoogleAnalytics } from "@/lib/google-analytics";
 import { MicrosoftClarity } from "@/lib/clarity";
+import { ReferralCapture } from "@/components/affiliate/referral-capture";
 
 function NotFoundComponent() {
   return (
@@ -114,6 +115,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <ReferralCapture />
         <FacebookPixel />
         <GoogleAnalytics />
         <MicrosoftClarity />
