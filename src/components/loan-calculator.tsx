@@ -483,64 +483,85 @@ export function LoanCalculator({
         </Alert>
       )}
 
-      {/* OSTRZEŻENIE #1 — przekroczenie limitu odsetek */}
+      {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność */}
+      {/* 1) Odsetki maksymalne (art. 359 §2¹ KC) */}
       {interestExceeds ? (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Przekraczasz maksymalne odsetki ustawowe</AlertTitle>
+          <AlertTitle>Odsetki — przekroczony limit ustawowy</AlertTitle>
           <AlertDescription className="pt-1">
             Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (<b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2 × (stopa ref. NBP {effectiveRefRate.toFixed(2)}% + 3,5 p.p.), art. 359 §2¹ KC).
-            Pożyczkobiorca może żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna. Suwak jest ograniczony do limitu.
+            Pożyczkobiorca może żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna.
           </AlertDescription>
         </Alert>
-      ) : !anyWarning && (
-        <Alert>
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>Parametry mieszczą się w limitach ustawowych</AlertTitle>
-          <AlertDescription>Odsetki ≤ {MAX_INTEREST_RATE.toFixed(2)}% · koszty pozaodsetkowe ≤ {formatPLN(maxNonInterest)}.</AlertDescription>
-        </Alert>
-      )}
-
-      {/* OSTRZEŻENIA inwestora: prowizja > MPKK, prowizja > 45%, krotność */}
-      {investorGuidance && commissionPln > maxNonInterest + 1e-9 && !nonInterestExceeds && (
-        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
-          <AlertTriangle className="h-4 w-4 !text-amber-600" />
-          <AlertTitle>Prowizja powyżej referencyjnego limitu MPKK</AlertTitle>
+      ) : (
+        <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
+          <CheckCircle2 className="h-4 w-4 !text-emerald-600" />
+          <AlertTitle>Odsetki w limicie ustawowym</AlertTitle>
           <AlertDescription className="text-sm">
-            Prowizja <b>{formatPLN(commissionPln)}</b> przekracza referencyjny limit MPKK <b>{formatPLN(maxNonInterest)}</b>. Pożyczka hipoteczna jest wyłączona z ustawy o kredycie konsumenckim,
-            jednak sądy stosują MPKK jako punkt odniesienia przy ocenie zasad współżycia społecznego (art. 58 §2 KC) i wyzysku (art. 388 KC). Ryzyko rośnie przy zabezpieczeniu hipoteką (niskie ryzyko pożyczkodawcy).
+            Oprocentowanie <b>{annualRate.toFixed(2)}%</b> ≤ limit <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (art. 359 §2¹ KC — odsetki maksymalne).
           </AlertDescription>
         </Alert>
       )}
 
-      {investorGuidance && commissionOver45 && (
-        <Alert variant="destructive">
-          <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>Prowizja przekracza 45% kwoty wypłaconej</AlertTitle>
-          <AlertDescription className="text-sm">
-            Prowizja <b>{formatPLN(commissionPln)}</b> przekracza 45% kwoty nominalnej — absolutne maksimum referencyjne MPKK. Silne ryzyko prawne (wyzysk / lichwa).
-          </AlertDescription>
-        </Alert>
+      {/* 2) MPKK — zasady współżycia społecznego (art. 58 §2 KC) / wyzysk (art. 388 KC) */}
+      {investorGuidance && (
+        nonInterestExceeds || commissionOver45 ? (
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>MPKK — silne ryzyko zasad współżycia społecznego</AlertTitle>
+            <AlertDescription className="text-sm">
+              Prowizja <b>{formatPLN(commissionPln)}</b> {commissionOver45 ? "przekracza 45% kwoty nominalnej — absolutne maksimum referencyjne MPKK" : <>przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b></>}. Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
+            </AlertDescription>
+          </Alert>
+        ) : commissionPln > maxNonInterest + 1e-9 ? (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+            <AlertTriangle className="h-4 w-4 !text-amber-600" />
+            <AlertTitle>MPKK — prowizja powyżej referencyjnego limitu</AlertTitle>
+            <AlertDescription className="text-sm">
+              Prowizja <b>{formatPLN(commissionPln)}</b> przekracza referencyjny limit MPKK <b>{formatPLN(maxNonInterest)}</b>. Sądy stosują MPKK przy ocenie zasad współżycia społecznego (art. 58 §2 KC) i wyzysku (art. 388 KC).
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
+            <CheckCircle2 className="h-4 w-4 !text-emerald-600" />
+            <AlertTitle>MPKK w limicie — zgodne z zasadami współżycia społecznego</AlertTitle>
+            <AlertDescription className="text-sm">
+              Koszty pozaodsetkowe <b>{formatPLN(commissionPln)}</b> ≤ <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
+            </AlertDescription>
+          </Alert>
+        )
       )}
 
-      {investorGuidance && krotnoscDanger ? (
-        <Alert variant="destructive">
-          <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>Krotność spłaty {krotnosc.toFixed(2)}× — strefa podwyższonego ryzyka</AlertTitle>
-          <AlertDescription className="text-sm">
-            Pożyczkobiorca oddaje <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną na rękę. Powyżej 2,0× rośnie ryzyko zakwalifikowania jako lichwa (art. 304 KK — kara do 3 lat) oraz wyzysk (art. 388 KC).
-            Przy pożyczkach pod zastaw nieruchomości — gdzie ryzyko pożyczkodawcy jest ograniczone hipoteką — sądy stosują wyższe standardy ekwiwalentności świadczeń.
-          </AlertDescription>
-        </Alert>
-      ) : investorGuidance && krotnoscWarn && (
-        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
-          <AlertTriangle className="h-4 w-4 !text-amber-600" />
-          <AlertTitle>Krotność spłaty {krotnosc.toFixed(2)}×</AlertTitle>
-          <AlertDescription className="text-sm">
-            Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę, którą otrzymał. Powyżej 2,0× istnieje ryzyko zakwalifikowania jako lichwa (art. 304 KK). Przy pożyczkach hipotecznych sądy są bardziej krytyczne.
-          </AlertDescription>
-        </Alert>
+      {/* 3) Krotność spłaty — lichwa (art. 304 KK) */}
+      {investorGuidance && (
+        krotnoscDanger ? (
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Krotność {krotnosc.toFixed(2)}× — ryzyko lichwy (art. 304 KK)</AlertTitle>
+            <AlertDescription className="text-sm">
+              Pożyczkobiorca oddaje <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną na rękę. Powyżej 2,0× rośnie ryzyko zakwalifikowania jako lichwa (art. 304 KK — kara do 3 lat) i wyzysk (art. 388 KC).
+            </AlertDescription>
+          </Alert>
+        ) : krotnoscWarn ? (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+            <AlertTriangle className="h-4 w-4 !text-amber-600" />
+            <AlertTitle>Krotność {krotnosc.toFixed(2)}× — strefa ostrzegawcza</AlertTitle>
+            <AlertDescription className="text-sm">
+              Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę, którą otrzymał. Powyżej 2,0× istnieje ryzyko zakwalifikowania jako lichwa (art. 304 KK).
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
+            <CheckCircle2 className="h-4 w-4 !text-emerald-600" />
+            <AlertTitle>Krotność {krotnosc.toFixed(2)}× — bezpieczna (brak ryzyka lichwy)</AlertTitle>
+            <AlertDescription className="text-sm">
+              Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną — poniżej progu 2,0× (art. 304 KK).
+            </AlertDescription>
+          </Alert>
+        )
       )}
+
 
       <Card className={investorGuidance && krotnoscDanger ? "border-destructive" : undefined}>
         <CardHeader>
