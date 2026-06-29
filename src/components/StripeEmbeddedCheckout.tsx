@@ -26,6 +26,9 @@ export function StripeEmbeddedCheckoutForm({ priceId, returnUrl }: Props) {
     if (buyerType === "company") {
       if (!buyerName.trim()) return toast.error("Podaj nazwę firmy");
       if (!buyerNip.trim()) return toast.error("Podaj NIP");
+    } else {
+      if (!buyerName.trim()) return toast.error("Podaj imię i nazwisko (do faktury)");
+      if (!buyerEmail.trim()) return toast.error("Podaj e-mail (do wysyłki faktury)");
     }
     setLoading(true);
     try {
