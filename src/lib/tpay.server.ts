@@ -109,7 +109,7 @@ export type TpayTransactionStatus = {
 export async function getTpayTransaction(transactionId: string): Promise<TpayTransactionStatus> {
   const token = await getAccessToken();
   const res = await fetch(`${TPAY_API_BASE}/transactions/${encodeURIComponent(transactionId)}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { ...COMMON_HEADERS, Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     const body = await res.text();
