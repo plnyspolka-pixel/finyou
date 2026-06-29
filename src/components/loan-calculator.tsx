@@ -399,11 +399,9 @@ export function LoanCalculator({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi po potrąceniu prowizji inwestora i prowizji Finance You. Ustawienie tego suwaka dobiera kwotę nominalną pożyczki tak, aby na rękę wyszła wskazana wartość." />}</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(disbursedOnHand)}
-                onChange={(e) => {
-                  const target = Number(e.target.value) || 0;
+                onCommit={(target) => {
                   let a = target / Math.max(0.01, 1 - commissionPct / 100 - 0.07);
                   for (let i = 0; i < 25; i++) {
                     const t = Math.min(1, Math.max(0, (a - 20_000) / (1_000_000 - 20_000)));
