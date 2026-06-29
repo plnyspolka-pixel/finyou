@@ -26,6 +26,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
+import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
@@ -35,9 +36,13 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikWnioskiRouteImport } from './routes/posrednik.wnioski'
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
+import { Route as PosrednikStrukturaRouteImport } from './routes/posrednik.struktura'
 import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.rozliczenia'
+import { Route as PosrednikProwizjeRouteImport } from './routes/posrednik.prowizje'
+import { Route as PosrednikProgramRouteImport } from './routes/posrednik.program'
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
+import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -84,6 +89,8 @@ import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growt
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
+import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
+import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
@@ -97,10 +104,19 @@ import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/publi
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
+import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
+import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/admin.program-posrednikow.wyplaty'
+import { Route as AdminProgramPosrednikowUstawieniaRouteImport } from './routes/admin.program-posrednikow.ustawienia'
+import { Route as AdminProgramPosrednikowStrukturaRouteImport } from './routes/admin.program-posrednikow.struktura'
+import { Route as AdminProgramPosrednikowRozliczeniaRouteImport } from './routes/admin.program-posrednikow.rozliczenia'
+import { Route as AdminProgramPosrednikowProwizjeRouteImport } from './routes/admin.program-posrednikow.prowizje'
+import { Route as AdminProgramPosrednikowPartnerzyRouteImport } from './routes/admin.program-posrednikow.partnerzy'
 import { Route as AdminMarketingTrackingRouteImport } from './routes/admin.marketing.tracking'
 import { Route as AdminMarketingSocialRouteImport } from './routes/admin.marketing.social'
 import { Route as AdminMarketingLandingRouteImport } from './routes/admin.marketing.landing'
 import { Route as AdminMarketingEmailRouteImport } from './routes/admin.marketing.email'
+import { Route as AdminKsiegowoscPodmiotyRouteImport } from './routes/admin.ksiegowosc.podmioty'
+import { Route as AdminKsiegowoscFakturyRouteImport } from './routes/admin.ksiegowosc.faktury'
 import { Route as AdminKlienciIdRouteImport } from './routes/admin.klienci.$id'
 import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy.$id'
 import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
@@ -125,6 +141,7 @@ import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
+import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 
@@ -213,6 +230,11 @@ const PosrednikIndexRoute = PosrednikIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const PosrednicyIndexRoute = PosrednicyIndexRouteImport.update({
+  id: '/posrednicy/',
+  path: '/posrednicy/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -258,9 +280,24 @@ const PosrednikWniosekRoute = PosrednikWniosekRouteImport.update({
   path: '/wniosek',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const PosrednikStrukturaRoute = PosrednikStrukturaRouteImport.update({
+  id: '/struktura',
+  path: '/struktura',
+  getParentRoute: () => PosrednikRoute,
+} as any)
 const PosrednikRozliczeniaRoute = PosrednikRozliczeniaRouteImport.update({
   id: '/rozliczenia',
   path: '/rozliczenia',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikProwizjeRoute = PosrednikProwizjeRouteImport.update({
+  id: '/prowizje',
+  path: '/prowizje',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikProgramRoute = PosrednikProgramRouteImport.update({
+  id: '/program',
+  path: '/program',
   getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikMarketingRoute = PosrednikMarketingRouteImport.update({
@@ -272,6 +309,11 @@ const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
   getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednicyRejestracjaRoute = PosrednicyRejestracjaRouteImport.update({
+  id: '/posrednicy/rejestracja',
+  path: '/posrednicy/rejestracja',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
@@ -505,6 +547,17 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   path: '/ai-administrator',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProgramPosrednikowIndexRoute =
+  AdminProgramPosrednikowIndexRouteImport.update({
+    id: '/program-posrednikow/',
+    path: '/program-posrednikow/',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminKsiegowoscIndexRoute = AdminKsiegowoscIndexRouteImport.update({
+  id: '/ksiegowosc/',
+  path: '/ksiegowosc/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -577,6 +630,48 @@ const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   path: '/wnioski/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProgramPosrednikowZdarzeniaRoute =
+  AdminProgramPosrednikowZdarzeniaRouteImport.update({
+    id: '/program-posrednikow/zdarzenia',
+    path: '/program-posrednikow/zdarzenia',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminProgramPosrednikowWyplatyRoute =
+  AdminProgramPosrednikowWyplatyRouteImport.update({
+    id: '/program-posrednikow/wyplaty',
+    path: '/program-posrednikow/wyplaty',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminProgramPosrednikowUstawieniaRoute =
+  AdminProgramPosrednikowUstawieniaRouteImport.update({
+    id: '/program-posrednikow/ustawienia',
+    path: '/program-posrednikow/ustawienia',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminProgramPosrednikowStrukturaRoute =
+  AdminProgramPosrednikowStrukturaRouteImport.update({
+    id: '/program-posrednikow/struktura',
+    path: '/program-posrednikow/struktura',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminProgramPosrednikowRozliczeniaRoute =
+  AdminProgramPosrednikowRozliczeniaRouteImport.update({
+    id: '/program-posrednikow/rozliczenia',
+    path: '/program-posrednikow/rozliczenia',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminProgramPosrednikowProwizjeRoute =
+  AdminProgramPosrednikowProwizjeRouteImport.update({
+    id: '/program-posrednikow/prowizje',
+    path: '/program-posrednikow/prowizje',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminProgramPosrednikowPartnerzyRoute =
+  AdminProgramPosrednikowPartnerzyRouteImport.update({
+    id: '/program-posrednikow/partnerzy',
+    path: '/program-posrednikow/partnerzy',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminMarketingTrackingRoute = AdminMarketingTrackingRouteImport.update({
   id: '/marketing/tracking',
   path: '/marketing/tracking',
@@ -595,6 +690,16 @@ const AdminMarketingLandingRoute = AdminMarketingLandingRouteImport.update({
 const AdminMarketingEmailRoute = AdminMarketingEmailRouteImport.update({
   id: '/marketing/email',
   path: '/marketing/email',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKsiegowoscPodmiotyRoute = AdminKsiegowoscPodmiotyRouteImport.update({
+  id: '/ksiegowosc/podmioty',
+  path: '/ksiegowosc/podmioty',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKsiegowoscFakturyRoute = AdminKsiegowoscFakturyRouteImport.update({
+  id: '/ksiegowosc/faktury',
+  path: '/ksiegowosc/faktury',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminKlienciIdRoute = AdminKlienciIdRouteImport.update({
@@ -734,6 +839,12 @@ const ApiPublicHooksAniaCallbacksRoute =
     path: '/api/public/hooks/ania-callbacks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAffiliateEventsTickRoute =
+  ApiPublicHooksAffiliateEventsTickRouteImport.update({
+    id: '/api/public/hooks/affiliate-events-tick',
+    path: '/api/public/hooks/affiliate-events-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
   id: '/api/public/email/open',
   path: '/api/public/email/open',
@@ -807,9 +918,13 @@ export interface FileRoutesByFullPath {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
+  '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/program': typeof PosrednikProgramRoute
+  '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
+  '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
@@ -819,16 +934,26 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/klienci/$id': typeof AdminKlienciIdRoute
+  '/admin/ksiegowosc/faktury': typeof AdminKsiegowoscFakturyRoute
+  '/admin/ksiegowosc/podmioty': typeof AdminKsiegowoscPodmiotyRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
+  '/admin/program-posrednikow/partnerzy': typeof AdminProgramPosrednikowPartnerzyRoute
+  '/admin/program-posrednikow/prowizje': typeof AdminProgramPosrednikowProwizjeRoute
+  '/admin/program-posrednikow/rozliczenia': typeof AdminProgramPosrednikowRozliczeniaRoute
+  '/admin/program-posrednikow/struktura': typeof AdminProgramPosrednikowStrukturaRoute
+  '/admin/program-posrednikow/ustawienia': typeof AdminProgramPosrednikowUstawieniaRoute
+  '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
+  '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -842,8 +967,11 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
+  '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
+  '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
@@ -923,9 +1051,13 @@ export interface FileRoutesByTo {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
+  '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/program': typeof PosrednikProgramRoute
+  '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
+  '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
@@ -935,16 +1067,26 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/klienci/$id': typeof AdminKlienciIdRoute
+  '/admin/ksiegowosc/faktury': typeof AdminKsiegowoscFakturyRoute
+  '/admin/ksiegowosc/podmioty': typeof AdminKsiegowoscPodmiotyRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
+  '/admin/program-posrednikow/partnerzy': typeof AdminProgramPosrednikowPartnerzyRoute
+  '/admin/program-posrednikow/prowizje': typeof AdminProgramPosrednikowProwizjeRoute
+  '/admin/program-posrednikow/rozliczenia': typeof AdminProgramPosrednikowRozliczeniaRoute
+  '/admin/program-posrednikow/struktura': typeof AdminProgramPosrednikowStrukturaRoute
+  '/admin/program-posrednikow/ustawienia': typeof AdminProgramPosrednikowUstawieniaRoute
+  '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
+  '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -958,8 +1100,11 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
+  '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
+  '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
@@ -1044,9 +1189,13 @@ export interface FileRoutesById {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
+  '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/program': typeof PosrednikProgramRoute
+  '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
+  '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
@@ -1056,16 +1205,26 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
   '/admin/inwestorzy/$id': typeof AdminInwestorzyIdRoute
   '/admin/klienci/$id': typeof AdminKlienciIdRoute
+  '/admin/ksiegowosc/faktury': typeof AdminKsiegowoscFakturyRoute
+  '/admin/ksiegowosc/podmioty': typeof AdminKsiegowoscPodmiotyRoute
   '/admin/marketing/email': typeof AdminMarketingEmailRoute
   '/admin/marketing/landing': typeof AdminMarketingLandingRoute
   '/admin/marketing/social': typeof AdminMarketingSocialRoute
   '/admin/marketing/tracking': typeof AdminMarketingTrackingRoute
+  '/admin/program-posrednikow/partnerzy': typeof AdminProgramPosrednikowPartnerzyRoute
+  '/admin/program-posrednikow/prowizje': typeof AdminProgramPosrednikowProwizjeRoute
+  '/admin/program-posrednikow/rozliczenia': typeof AdminProgramPosrednikowRozliczeniaRoute
+  '/admin/program-posrednikow/struktura': typeof AdminProgramPosrednikowStrukturaRoute
+  '/admin/program-posrednikow/ustawienia': typeof AdminProgramPosrednikowUstawieniaRoute
+  '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
+  '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
@@ -1079,8 +1238,11 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
+  '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
+  '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
@@ -1166,9 +1328,13 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
+    | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
+    | '/posrednik/program'
+    | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
+    | '/posrednik/struktura'
     | '/posrednik/wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
@@ -1178,16 +1344,26 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
     | '/admin/klienci/$id'
+    | '/admin/ksiegowosc/faktury'
+    | '/admin/ksiegowosc/podmioty'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
+    | '/admin/program-posrednikow/partnerzy'
+    | '/admin/program-posrednikow/prowizje'
+    | '/admin/program-posrednikow/rozliczenia'
+    | '/admin/program-posrednikow/struktura'
+    | '/admin/program-posrednikow/ustawienia'
+    | '/admin/program-posrednikow/wyplaty'
+    | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
@@ -1201,8 +1377,11 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
+    | '/admin/ksiegowosc/'
+    | '/admin/program-posrednikow/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
@@ -1282,9 +1461,13 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
+    | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
+    | '/posrednik/program'
+    | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
+    | '/posrednik/struktura'
     | '/posrednik/wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
@@ -1294,16 +1477,26 @@ export interface FileRouteTypes {
     | '/blog'
     | '/inwestor'
     | '/klient'
+    | '/posrednicy'
     | '/posrednik'
     | '/propozycje'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
     | '/admin/klienci/$id'
+    | '/admin/ksiegowosc/faktury'
+    | '/admin/ksiegowosc/podmioty'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
+    | '/admin/program-posrednikow/partnerzy'
+    | '/admin/program-posrednikow/prowizje'
+    | '/admin/program-posrednikow/rozliczenia'
+    | '/admin/program-posrednikow/struktura'
+    | '/admin/program-posrednikow/ustawienia'
+    | '/admin/program-posrednikow/wyplaty'
+    | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
@@ -1317,8 +1510,11 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
+    | '/admin/ksiegowosc'
+    | '/admin/program-posrednikow'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
@@ -1402,9 +1598,13 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
+    | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
+    | '/posrednik/program'
+    | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
+    | '/posrednik/struktura'
     | '/posrednik/wniosek'
     | '/posrednik/wnioski'
     | '/propozycje/$id'
@@ -1414,16 +1614,26 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
     | '/admin/inwestorzy/$id'
     | '/admin/klienci/$id'
+    | '/admin/ksiegowosc/faktury'
+    | '/admin/ksiegowosc/podmioty'
     | '/admin/marketing/email'
     | '/admin/marketing/landing'
     | '/admin/marketing/social'
     | '/admin/marketing/tracking'
+    | '/admin/program-posrednikow/partnerzy'
+    | '/admin/program-posrednikow/prowizje'
+    | '/admin/program-posrednikow/rozliczenia'
+    | '/admin/program-posrednikow/struktura'
+    | '/admin/program-posrednikow/ustawienia'
+    | '/admin/program-posrednikow/wyplaty'
+    | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
@@ -1437,8 +1647,11 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
+    | '/admin/ksiegowosc/'
+    | '/admin/program-posrednikow/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
@@ -1481,10 +1694,12 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   LSlugRoute: typeof LSlugRoute
+  PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  PosrednicyIndexRoute: typeof PosrednicyIndexRoute
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
@@ -1497,6 +1712,7 @@ export interface RootRouteChildren {
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
+  ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
@@ -1640,6 +1856,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikIndexRouteImport
       parentRoute: typeof PosrednikRoute
     }
+    '/posrednicy/': {
+      id: '/posrednicy/'
+      path: '/posrednicy'
+      fullPath: '/posrednicy/'
+      preLoaderRoute: typeof PosrednicyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/klient/': {
       id: '/klient/'
       path: '/'
@@ -1703,11 +1926,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikWniosekRouteImport
       parentRoute: typeof PosrednikRoute
     }
+    '/posrednik/struktura': {
+      id: '/posrednik/struktura'
+      path: '/struktura'
+      fullPath: '/posrednik/struktura'
+      preLoaderRoute: typeof PosrednikStrukturaRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
     '/posrednik/rozliczenia': {
       id: '/posrednik/rozliczenia'
       path: '/rozliczenia'
       fullPath: '/posrednik/rozliczenia'
       preLoaderRoute: typeof PosrednikRozliczeniaRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/prowizje': {
+      id: '/posrednik/prowizje'
+      path: '/prowizje'
+      fullPath: '/posrednik/prowizje'
+      preLoaderRoute: typeof PosrednikProwizjeRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/program': {
+      id: '/posrednik/program'
+      path: '/program'
+      fullPath: '/posrednik/program'
+      preLoaderRoute: typeof PosrednikProgramRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/marketing': {
@@ -1723,6 +1967,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednik/leady'
       preLoaderRoute: typeof PosrednikLeadyRouteImport
       parentRoute: typeof PosrednikRoute
+    }
+    '/posrednicy/rejestracja': {
+      id: '/posrednicy/rejestracja'
+      path: '/posrednicy/rejestracja'
+      fullPath: '/posrednicy/rejestracja'
+      preLoaderRoute: typeof PosrednicyRejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -2046,6 +2297,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiAdministratorRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/program-posrednikow/': {
+      id: '/admin/program-posrednikow/'
+      path: '/program-posrednikow'
+      fullPath: '/admin/program-posrednikow/'
+      preLoaderRoute: typeof AdminProgramPosrednikowIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ksiegowosc/': {
+      id: '/admin/ksiegowosc/'
+      path: '/ksiegowosc'
+      fullPath: '/admin/ksiegowosc/'
+      preLoaderRoute: typeof AdminKsiegowoscIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/posrednik/leady/$id': {
       id: '/posrednik/leady/$id'
       path: '/$id'
@@ -2137,6 +2402,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWnioskiIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/program-posrednikow/zdarzenia': {
+      id: '/admin/program-posrednikow/zdarzenia'
+      path: '/program-posrednikow/zdarzenia'
+      fullPath: '/admin/program-posrednikow/zdarzenia'
+      preLoaderRoute: typeof AdminProgramPosrednikowZdarzeniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/program-posrednikow/wyplaty': {
+      id: '/admin/program-posrednikow/wyplaty'
+      path: '/program-posrednikow/wyplaty'
+      fullPath: '/admin/program-posrednikow/wyplaty'
+      preLoaderRoute: typeof AdminProgramPosrednikowWyplatyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/program-posrednikow/ustawienia': {
+      id: '/admin/program-posrednikow/ustawienia'
+      path: '/program-posrednikow/ustawienia'
+      fullPath: '/admin/program-posrednikow/ustawienia'
+      preLoaderRoute: typeof AdminProgramPosrednikowUstawieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/program-posrednikow/struktura': {
+      id: '/admin/program-posrednikow/struktura'
+      path: '/program-posrednikow/struktura'
+      fullPath: '/admin/program-posrednikow/struktura'
+      preLoaderRoute: typeof AdminProgramPosrednikowStrukturaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/program-posrednikow/rozliczenia': {
+      id: '/admin/program-posrednikow/rozliczenia'
+      path: '/program-posrednikow/rozliczenia'
+      fullPath: '/admin/program-posrednikow/rozliczenia'
+      preLoaderRoute: typeof AdminProgramPosrednikowRozliczeniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/program-posrednikow/prowizje': {
+      id: '/admin/program-posrednikow/prowizje'
+      path: '/program-posrednikow/prowizje'
+      fullPath: '/admin/program-posrednikow/prowizje'
+      preLoaderRoute: typeof AdminProgramPosrednikowProwizjeRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/program-posrednikow/partnerzy': {
+      id: '/admin/program-posrednikow/partnerzy'
+      path: '/program-posrednikow/partnerzy'
+      fullPath: '/admin/program-posrednikow/partnerzy'
+      preLoaderRoute: typeof AdminProgramPosrednikowPartnerzyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/marketing/tracking': {
       id: '/admin/marketing/tracking'
       path: '/marketing/tracking'
@@ -2163,6 +2477,20 @@ declare module '@tanstack/react-router' {
       path: '/marketing/email'
       fullPath: '/admin/marketing/email'
       preLoaderRoute: typeof AdminMarketingEmailRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ksiegowosc/podmioty': {
+      id: '/admin/ksiegowosc/podmioty'
+      path: '/ksiegowosc/podmioty'
+      fullPath: '/admin/ksiegowosc/podmioty'
+      preLoaderRoute: typeof AdminKsiegowoscPodmiotyRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ksiegowosc/faktury': {
+      id: '/admin/ksiegowosc/faktury'
+      path: '/ksiegowosc/faktury'
+      fullPath: '/admin/ksiegowosc/faktury'
+      preLoaderRoute: typeof AdminKsiegowoscFakturyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/klienci/$id': {
@@ -2333,6 +2661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAniaCallbacksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/affiliate-events-tick': {
+      id: '/api/public/hooks/affiliate-events-tick'
+      path: '/api/public/hooks/affiliate-events-tick'
+      fullPath: '/api/public/hooks/affiliate-events-tick'
+      preLoaderRoute: typeof ApiPublicHooksAffiliateEventsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/open': {
       id: '/api/public/email/open'
       path: '/api/public/email/open'
@@ -2411,11 +2746,22 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
+  AdminKsiegowoscFakturyRoute: typeof AdminKsiegowoscFakturyRoute
+  AdminKsiegowoscPodmiotyRoute: typeof AdminKsiegowoscPodmiotyRoute
   AdminMarketingEmailRoute: typeof AdminMarketingEmailRoute
   AdminMarketingLandingRoute: typeof AdminMarketingLandingRoute
   AdminMarketingSocialRoute: typeof AdminMarketingSocialRoute
   AdminMarketingTrackingRoute: typeof AdminMarketingTrackingRoute
+  AdminProgramPosrednikowPartnerzyRoute: typeof AdminProgramPosrednikowPartnerzyRoute
+  AdminProgramPosrednikowProwizjeRoute: typeof AdminProgramPosrednikowProwizjeRoute
+  AdminProgramPosrednikowRozliczeniaRoute: typeof AdminProgramPosrednikowRozliczeniaRoute
+  AdminProgramPosrednikowStrukturaRoute: typeof AdminProgramPosrednikowStrukturaRoute
+  AdminProgramPosrednikowUstawieniaRoute: typeof AdminProgramPosrednikowUstawieniaRoute
+  AdminProgramPosrednikowWyplatyRoute: typeof AdminProgramPosrednikowWyplatyRoute
+  AdminProgramPosrednikowZdarzeniaRoute: typeof AdminProgramPosrednikowZdarzeniaRoute
   AdminWnioskiIdRoute: typeof AdminWnioskiIdRoute
+  AdminKsiegowoscIndexRoute: typeof AdminKsiegowoscIndexRoute
+  AdminProgramPosrednikowIndexRoute: typeof AdminProgramPosrednikowIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -2455,11 +2801,24 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
+  AdminKsiegowoscFakturyRoute: AdminKsiegowoscFakturyRoute,
+  AdminKsiegowoscPodmiotyRoute: AdminKsiegowoscPodmiotyRoute,
   AdminMarketingEmailRoute: AdminMarketingEmailRoute,
   AdminMarketingLandingRoute: AdminMarketingLandingRoute,
   AdminMarketingSocialRoute: AdminMarketingSocialRoute,
   AdminMarketingTrackingRoute: AdminMarketingTrackingRoute,
+  AdminProgramPosrednikowPartnerzyRoute: AdminProgramPosrednikowPartnerzyRoute,
+  AdminProgramPosrednikowProwizjeRoute: AdminProgramPosrednikowProwizjeRoute,
+  AdminProgramPosrednikowRozliczeniaRoute:
+    AdminProgramPosrednikowRozliczeniaRoute,
+  AdminProgramPosrednikowStrukturaRoute: AdminProgramPosrednikowStrukturaRoute,
+  AdminProgramPosrednikowUstawieniaRoute:
+    AdminProgramPosrednikowUstawieniaRoute,
+  AdminProgramPosrednikowWyplatyRoute: AdminProgramPosrednikowWyplatyRoute,
+  AdminProgramPosrednikowZdarzeniaRoute: AdminProgramPosrednikowZdarzeniaRoute,
   AdminWnioskiIdRoute: AdminWnioskiIdRoute,
+  AdminKsiegowoscIndexRoute: AdminKsiegowoscIndexRoute,
+  AdminProgramPosrednikowIndexRoute: AdminProgramPosrednikowIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -2524,7 +2883,10 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
+  PosrednikProgramRoute: typeof PosrednikProgramRoute
+  PosrednikProwizjeRoute: typeof PosrednikProwizjeRoute
   PosrednikRozliczeniaRoute: typeof PosrednikRozliczeniaRoute
+  PosrednikStrukturaRoute: typeof PosrednikStrukturaRoute
   PosrednikWniosekRoute: typeof PosrednikWniosekRoute
   PosrednikWnioskiRoute: typeof PosrednikWnioskiRoute
   PosrednikIndexRoute: typeof PosrednikIndexRoute
@@ -2533,7 +2895,10 @@ interface PosrednikRouteChildren {
 const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
   PosrednikMarketingRoute: PosrednikMarketingRoute,
+  PosrednikProgramRoute: PosrednikProgramRoute,
+  PosrednikProwizjeRoute: PosrednikProwizjeRoute,
   PosrednikRozliczeniaRoute: PosrednikRozliczeniaRoute,
+  PosrednikStrukturaRoute: PosrednikStrukturaRoute,
   PosrednikWniosekRoute: PosrednikWniosekRoute,
   PosrednikWnioskiRoute: PosrednikWnioskiRoute,
   PosrednikIndexRoute: PosrednikIndexRoute,
@@ -2563,10 +2928,12 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   LSlugRoute: LSlugRoute,
+  PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
+  PosrednicyIndexRoute: PosrednicyIndexRoute,
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
@@ -2579,6 +2946,8 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
+  ApiPublicHooksAffiliateEventsTickRoute:
+    ApiPublicHooksAffiliateEventsTickRoute,
   ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
