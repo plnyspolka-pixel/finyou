@@ -592,7 +592,7 @@ export function LoanCalculator({
           {investorGuidance && schedule.rows.length > 0 && (
             <Dialog open={exportOpen} onOpenChange={setExportOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV</Button>
+                <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -627,22 +627,22 @@ export function LoanCalculator({
           )}
         </CardHeader>
         <CardContent>
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto rounded-lg border border-white/10">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead><TableHead>Termin</TableHead><TableHead>Rata</TableHead><TableHead>Kapitał</TableHead><TableHead>Odsetki</TableHead><TableHead>Saldo</TableHead>
+                <TableRow className="border-white/10 hover:bg-transparent">
+                  <TableHead className="text-white/80">#</TableHead><TableHead className="text-white/80">Termin</TableHead><TableHead className="text-white/80">Rata</TableHead><TableHead className="text-white/80">Kapitał</TableHead><TableHead className="text-white/80">Odsetki</TableHead><TableHead className="text-white/80">Saldo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {schedule.rows.map((r) => (
-                  <TableRow key={r.idx}>
-                    <TableCell>{r.idx}</TableCell>
-                    <TableCell>{r.date}</TableCell>
-                    <TableCell className="tabular-nums">{formatPLN(r.rata)}</TableCell>
-                    <TableCell className="tabular-nums">{formatPLN(r.kap)}</TableCell>
-                    <TableCell className="tabular-nums">{formatPLN(r.ods)}</TableCell>
-                    <TableCell className="tabular-nums">{formatPLN(r.saldo)}</TableCell>
+                  <TableRow key={r.idx} className="border-white/10 hover:bg-white/5">
+                    <TableCell className="text-white/90">{r.idx}</TableCell>
+                    <TableCell className="text-white/90">{r.date}</TableCell>
+                    <TableCell className="tabular-nums text-white">{formatPLN(r.rata)}</TableCell>
+                    <TableCell className="tabular-nums text-white">{formatPLN(r.kap)}</TableCell>
+                    <TableCell className="tabular-nums text-white">{formatPLN(r.ods)}</TableCell>
+                    <TableCell className="tabular-nums text-white">{formatPLN(r.saldo)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
