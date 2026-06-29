@@ -33,13 +33,19 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      void navigate({ to: "/logowanie" });
+      const role = allow?.includes("inwestor")
+        ? "inwestor"
+        : allow?.includes("operator")
+        ? "posrednik"
+        : "klient";
+      void navigate({ to: "/logowanie", search: { role, next: pathname } as never });
       return;
     }
     if (allow && !allow.some((r) => roles.includes(r))) {
       void navigate({ to: "/" });
     }
-  }, [loading, user, roles, allow, navigate]);
+  }, [loading, user, roles, allow, navigate, pathname]);
+
 
   if (loading || !user) {
     return (
