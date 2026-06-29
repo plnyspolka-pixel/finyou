@@ -8,6 +8,7 @@ import {
   Calculator,
   CreditCard,
   User,
+  Gavel,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
