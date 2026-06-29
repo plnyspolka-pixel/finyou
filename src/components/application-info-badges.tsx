@@ -3,13 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import {
   Rocket,
-  Briefcase,
   Building2,
   FileText,
-  ShieldCheck,
   Landmark,
   CheckCircle2,
-  XCircle,
   Phone,
   AlertCircle,
 } from "lucide-react";
