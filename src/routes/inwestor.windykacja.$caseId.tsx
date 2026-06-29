@@ -17,6 +17,11 @@ import {
   type DebtAction,
   type DebtActionType,
 } from "@/lib/debt-collection.functions";
+import {
+  extractDebtContract,
+  extractDebtPaymentsFromStatement,
+  setNoPaymentsDeclared,
+} from "@/lib/debt-collection-ocr.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import {
   calculateDebt,
