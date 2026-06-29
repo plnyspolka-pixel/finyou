@@ -46,6 +46,7 @@ import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.r
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
+import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -93,6 +94,7 @@ import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
+import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
@@ -330,6 +332,11 @@ const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   id: '/powiadomienia',
   path: '/powiadomienia',
   getParentRoute: () => KlientRoute,
+} as any)
+const InwestorWindykacjaRoute = InwestorWindykacjaRouteImport.update({
+  id: '/windykacja',
+  path: '/windykacja',
+  getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
   id: '/wiadomosci',
@@ -569,6 +576,12 @@ const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   path: '/wniosek/$id',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorWindykacjaCaseIdRoute =
+  InwestorWindykacjaCaseIdRouteImport.update({
+    id: '/$caseId',
+    path: '/$caseId',
+    getParentRoute: () => InwestorWindykacjaRoute,
+  } as any)
 const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
   id: '/umowa/$offerId',
   path: '/umowa/$offerId',
@@ -922,6 +935,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -973,6 +987,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1056,6 +1071,7 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -1107,6 +1123,7 @@ export interface FileRoutesByTo {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
@@ -1195,6 +1212,7 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -1246,6 +1264,7 @@ export interface FileRoutesById {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1335,6 +1354,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1386,6 +1406,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
+    | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
     | '/admin/ksiegowosc/'
@@ -1469,6 +1490,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1520,6 +1542,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
+    | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
     | '/admin/ksiegowosc'
@@ -1607,6 +1630,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1658,6 +1682,7 @@ export interface FileRouteTypes {
     | '/api/public/resend-webhook'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
+    | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
     | '/admin/ksiegowosc/'
@@ -2009,6 +2034,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
       parentRoute: typeof KlientRoute
     }
+    '/inwestor/windykacja': {
+      id: '/inwestor/windykacja'
+      path: '/windykacja'
+      fullPath: '/inwestor/windykacja'
+      preLoaderRoute: typeof InwestorWindykacjaRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/wiadomosci': {
       id: '/inwestor/wiadomosci'
       path: '/wiadomosci'
@@ -2337,6 +2369,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/wniosek/$id'
       preLoaderRoute: typeof InwestorWniosekIdRouteImport
       parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/windykacja/$caseId': {
+      id: '/inwestor/windykacja/$caseId'
+      path: '/$caseId'
+      fullPath: '/inwestor/windykacja/$caseId'
+      preLoaderRoute: typeof InwestorWindykacjaCaseIdRouteImport
+      parentRoute: typeof InwestorWindykacjaRoute
     }
     '/inwestor/umowa/$offerId': {
       id: '/inwestor/umowa/$offerId'
@@ -2845,6 +2884,17 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface InwestorWindykacjaRouteChildren {
+  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRoute
+}
+
+const InwestorWindykacjaRouteChildren: InwestorWindykacjaRouteChildren = {
+  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRoute,
+}
+
+const InwestorWindykacjaRouteWithChildren =
+  InwestorWindykacjaRoute._addFileChildren(InwestorWindykacjaRouteChildren)
+
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
@@ -2853,6 +2903,7 @@ interface InwestorRouteChildren {
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
+  InwestorWindykacjaRoute: typeof InwestorWindykacjaRouteWithChildren
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorUmowaOfferIdRoute: typeof InwestorUmowaOfferIdRoute
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
@@ -2866,6 +2917,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
+  InwestorWindykacjaRoute: InwestorWindykacjaRouteWithChildren,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorUmowaOfferIdRoute: InwestorUmowaOfferIdRoute,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
