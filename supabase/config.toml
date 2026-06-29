@@ -2,3 +2,6 @@ project_id = "jqvepxhulxdnbwbogkhe"
 
 [functions.rcn-proxy]
 verify_jwt = false
+
+[functions.tpay-proxy]
+verify_jwt = false

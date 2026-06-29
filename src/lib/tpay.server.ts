@@ -25,9 +25,36 @@ const COMMON_HEADERS = {
   "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
 };
 
+// Aplikacja działa na Cloudflare Workers, a API Tpay stoi za Cloudflare z
+// Bot Fight Mode, które blokuje żądania wychodzące z sieci Cloudflare (403
+// "Attention Required"). Dlatego — analogicznie do `rcn-proxy` dla geoportalu —
+// kierujemy żądania do Tpay przez Supabase Edge Function `tpay-proxy`, która
+// wychodzi z innego (niezablokowanego) zakresu IP. Bez skonfigurowanego
+// SUPABASE_URL (np. w testach/lokalnie) lecimy bezpośrednio.
+async function tpayFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const proxyBase = process.env.SUPABASE_URL;
+  if (!proxyBase) return fetch(url, init);
+
+  const headers: Record<string, string> = {};
+  new Headers(init.headers as HeadersInit | undefined).forEach((value, key) => {
+    headers[key] = value;
+  });
+
+  return fetch(`${proxyBase}/functions/v1/tpay-proxy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url,
+      method: init.method ?? "GET",
+      headers,
+      body: typeof init.body === "string" ? init.body : null,
+    }),
+  });
+}
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken && cachedToken.exp > Date.now() + 30_000) return cachedToken.token;
-  const res = await fetch(`${TPAY_API_BASE}/oauth/auth`, {
+  const res = await tpayFetch(`${TPAY_API_BASE}/oauth/auth`, {
     method: "POST",
     headers: { ...COMMON_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -67,7 +94,7 @@ export type TpayCreatedTransaction = {
 
 export async function createTpayTransaction(input: TpayCreateInput): Promise<TpayCreatedTransaction> {
   const token = await getAccessToken();
-  const res = await fetch(`${TPAY_API_BASE}/transactions`, {
+  const res = await tpayFetch(`${TPAY_API_BASE}/transactions`, {
     method: "POST",
     headers: {
       ...COMMON_HEADERS,
@@ -116,7 +143,7 @@ export type TpayTransactionStatus = {
 
 export async function getTpayTransaction(transactionId: string): Promise<TpayTransactionStatus> {
   const token = await getAccessToken();
-  const res = await fetch(`${TPAY_API_BASE}/transactions/${encodeURIComponent(transactionId)}`, {
+  const res = await tpayFetch(`${TPAY_API_BASE}/transactions/${encodeURIComponent(transactionId)}`, {
     headers: { ...COMMON_HEADERS, Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
