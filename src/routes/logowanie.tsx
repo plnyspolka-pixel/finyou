@@ -132,7 +132,7 @@ function LoginPage() {
     try {
       window.localStorage.setItem("pending_role_selection", r);
     } catch {}
-    void navigate({ to: "/logowanie", search: (prev) => ({ ...prev, role: r }) });
+    void navigate({ to: "/logowanie", search: (prev: Record<string, unknown>) => ({ ...prev, role: r }) });
   };
 
   return (
