@@ -6372,6 +6372,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tpay_transaction_buyers: {
+        Row: {
+          buyer_address: string | null
+          buyer_city: string | null
+          buyer_country: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_nip: string | null
+          buyer_postal_code: string | null
+          buyer_type: string
+          created_at: string
+          id: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          buyer_address?: string | null
+          buyer_city?: string | null
+          buyer_country?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_type: string
+          created_at?: string
+          id?: string
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          buyer_address?: string | null
+          buyer_city?: string | null
+          buyer_country?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_type?: string
+          created_at?: string
+          id?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tracking_settings: {
         Row: {
           client_pixel_id: string | null
