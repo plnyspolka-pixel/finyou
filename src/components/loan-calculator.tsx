@@ -321,8 +321,6 @@ export function LoanCalculator({
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
       <FancyShell><Card className={FANCY_CARD_CLS}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
