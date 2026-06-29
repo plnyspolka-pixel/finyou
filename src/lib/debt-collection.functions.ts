@@ -31,6 +31,7 @@ export type DebtCase = {
   fee_letter_court: number;
   fee_letter_bailiff: number;
   notes: string | null;
+  no_payments_declared: boolean;
   created_at: string;
   updated_at: string;
 };
