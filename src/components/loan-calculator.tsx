@@ -181,7 +181,11 @@ export function LoanCalculator({
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
-  const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
+  // Prowizja Finance You jest wynagrodzeniem operatora (poza MPKK) i NIE wlicza się do tego limitu —
+  // wyłączamy ją zarówno z licznika (łączna spłata), jak i z mianownika (kwota na rękę).
+  const krotnoscBasis = Math.max(0, amount - commissionPln);
+  const krotnoscRepay = totalToRepay - financeYouFeePln;
+  const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
