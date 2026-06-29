@@ -18,6 +18,15 @@ export const Route = createFileRoute("/inwestor/")({
 
 const PROPERTY_TYPES = Object.keys(propertyTypeLabels);
 
+function maskKw(kw: string): string {
+  // Format: XX1X/00123456/7 → zachowujemy kod sądu, maskujemy numer i cyfrę kontrolną
+  const parts = kw.trim().toUpperCase().split("/");
+  if (parts.length !== 3) return kw.replace(/\d/g, "•");
+  const [court, num, _check] = parts;
+  const masked = num.length > 2 ? num.slice(0, 2) + "•".repeat(Math.max(0, num.length - 2)) : "•".repeat(num.length);
+  return `${court}/${masked}/•`;
+}
+
 const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i;
 const PROPERTY_PHOTO_TYPES = new Set([
   "zdjecie_nieruchomosci",
