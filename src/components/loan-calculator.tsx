@@ -501,7 +501,7 @@ export function LoanCalculator({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Maksymalna rata dla klienta</Label>
-              <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
+              <NumberField value={maxPayment} onCommit={(n) => setMaxPayment(n || 0)} className="w-40" />
             </div>
             <Slider min={500} max={50000} step={100} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>500 zł</span><span>50 000 zł</span></div>
