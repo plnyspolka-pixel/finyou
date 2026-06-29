@@ -71,6 +71,9 @@ function InwestorWniosek() {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
+  const fetchRates = useServerFn(getNbpRates);
+  const ratesQ = useQuery({ queryKey: ["nbp-rates"], queryFn: () => fetchRates(), staleTime: 12 * 60 * 60 * 1000 });
+  const maxAnnualRate = ((ratesQ.data?.referenceRate ?? 3.75) + 3.5) * 2;
 
   // Calc state — wypełniana przez LoanCalculator (onChange)
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
