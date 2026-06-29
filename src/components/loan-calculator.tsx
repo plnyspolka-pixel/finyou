@@ -16,6 +16,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
+import { FancyShell } from "@/components/landing/fancy-shell";
+
+const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
 
 // Limity ustawowe:
 // Odsetki ustawowe (art. 359 §2 KC): stopa ref. NBP + 3,5 p.p.
