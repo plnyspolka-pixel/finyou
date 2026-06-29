@@ -20,6 +20,54 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 
 const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
 
+/** Pole liczbowe z lokalnym stanem tekstu — nie nadpisuje wpisywanej wartości w trakcie edycji. */
+function NumberField({
+  value,
+  onCommit,
+  className,
+  step,
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+  className?: string;
+  step?: string | number;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState<string>(String(value));
+  useEffect(() => {
+    if (!focused) setDraft(String(value));
+  }, [value, focused]);
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      step={step}
+      value={focused ? draft : String(value)}
+      onFocus={(e) => {
+        setFocused(true);
+        setDraft(String(value));
+        e.currentTarget.select();
+      }}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/\s+/g, "").replace(",", ".");
+        setDraft(e.target.value);
+        if (raw === "" || raw === "-" || raw === "." || raw === "-.") return;
+        const n = Number(raw);
+        if (Number.isFinite(n)) onCommit(n);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const n = Number(draft.replace(/\s+/g, "").replace(",", "."));
+        onCommit(Number.isFinite(n) ? n : 0);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+      }}
+      className={className}
+    />
+  );
+}
+
 // Limity ustawowe:
 // Odsetki ustawowe (art. 359 §2 KC): stopa ref. NBP + 3,5 p.p.
 // Odsetki maksymalne (art. 359 §2¹ KC): 2 × odsetki ustawowe = 2 × (stopa ref. NBP + 3,5 p.p.).
