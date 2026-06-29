@@ -255,19 +255,19 @@ export function LoanCalculator({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-          <div className="flex items-center gap-2 font-medium">
+      <FancyShell><Card className={FANCY_CARD_CLS}>
+        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-white">
+          <div className="flex items-center gap-2 font-semibold">
             <RefreshCw className={`h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} />
-            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-muted-foreground">(dane offline)</span>}
+            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-white/60">(dane offline)</span>}
           </div>
-          <span>Referencyjna: <b className="tabular-nums">{effectiveRefRate.toFixed(2)}%</b>{investorGuidance && nbpOverride != null && <span className="text-xs text-amber-600"> (ręcznie)</span>}</span>
-          {ratesQ.data?.lombardRate != null && <span>Lombardowa: <b className="tabular-nums">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
-          {ratesQ.data?.depositRate != null && <span>Depozytowa: <b className="tabular-nums">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
-          <span className="text-muted-foreground">Maks. odsetki ustawowe: <b className="tabular-nums text-foreground">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
-          {ratesQ.data?.effectiveFrom && <span className="text-xs text-muted-foreground ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
+          <span className="text-white/80">Referencyjna: <b className="tabular-nums text-white">{effectiveRefRate.toFixed(2)}%</b>{investorGuidance && nbpOverride != null && <span className="text-xs text-amber-300"> (ręcznie)</span>}</span>
+          {ratesQ.data?.lombardRate != null && <span className="text-white/80">Lombardowa: <b className="tabular-nums text-white">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
+          {ratesQ.data?.depositRate != null && <span className="text-white/80">Depozytowa: <b className="tabular-nums text-white">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
+          <span className="text-white/70">Maks. odsetki ustawowe: <b className="tabular-nums text-emerald-300">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
+          {ratesQ.data?.effectiveFrom && <span className="text-xs text-white/60 ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
         </CardContent>
-      </Card>
+      </Card></FancyShell>
 
       {/* HERO — najważniejsze liczby (fancy) */}
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(ellipse_at_top_left,_hsl(220_70%_25%),_hsl(230_60%_12%)_60%,_hsl(235_50%_8%))] p-6 md:p-8 shadow-2xl">
@@ -486,84 +486,93 @@ export function LoanCalculator({
         </Alert>
       )}
 
-      {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność */}
-      {/* 1) Odsetki maksymalne (art. 359 §2¹ KC) */}
-      {interestExceeds ? (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Odsetki — przekroczony limit ustawowy</AlertTitle>
-          <AlertDescription className="pt-1">
-            Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (<b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2 × (stopa ref. NBP {effectiveRefRate.toFixed(2)}% + 3,5 p.p.), art. 359 §2¹ KC).
-            Pożyczkobiorca może żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
-          <CheckCircle2 className="h-4 w-4 !text-emerald-600" />
-          <AlertTitle>Odsetki w limicie ustawowym</AlertTitle>
-          <AlertDescription className="text-sm">
-            Oprocentowanie <b>{annualRate.toFixed(2)}%</b> ≤ limit <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (art. 359 §2¹ KC — odsetki maksymalne).
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność (fancy) */}
+      {(() => {
+        const okCls = "border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 via-emerald-400/10 to-transparent text-emerald-50 backdrop-blur-sm shadow-[0_0_30px_-12px_rgba(16,185,129,0.5)] [&_b]:text-white";
+        const warnCls = "border-amber-400/40 bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-transparent text-amber-50 backdrop-blur-sm shadow-[0_0_30px_-12px_rgba(245,158,11,0.5)] [&_b]:text-white";
+        const dangerCls = "border-rose-400/50 bg-gradient-to-r from-rose-500/20 via-rose-400/10 to-transparent text-rose-50 backdrop-blur-sm shadow-[0_0_30px_-10px_rgba(244,63,94,0.6)] [&_b]:text-white";
+        return (
+          <div className="space-y-3">
+            {/* 1) Odsetki maksymalne (art. 359 §2¹ KC) */}
+            {interestExceeds ? (
+              <Alert className={dangerCls}>
+                <AlertTriangle className="h-4 w-4 !text-rose-300" />
+                <AlertTitle>Odsetki — przekroczony limit ustawowy</AlertTitle>
+                <AlertDescription className="pt-1 text-rose-100/90">
+                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (<b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2 × (stopa ref. NBP {effectiveRefRate.toFixed(2)}% + 3,5 p.p.), art. 359 §2¹ KC).
+                  Pożyczkobiorca może żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className={okCls}>
+                <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                <AlertTitle>Odsetki w limicie ustawowym</AlertTitle>
+                <AlertDescription className="text-sm text-emerald-100/90">
+                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> ≤ limit <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (art. 359 §2¹ KC — odsetki maksymalne).
+                </AlertDescription>
+              </Alert>
+            )}
 
-      {/* 2) MPKK — zasady współżycia społecznego (art. 58 §2 KC) / wyzysk (art. 388 KC) */}
-      {investorGuidance && (
-        nonInterestExceeds || commissionOver45 ? (
-          <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>MPKK — silne ryzyko zasad współżycia społecznego</AlertTitle>
-            <AlertDescription className="text-sm">
-              Prowizja <b>{formatPLN(commissionPln)}</b> {commissionOver45 ? "przekracza 45% kwoty nominalnej — absolutne maksimum referencyjne MPKK" : <>przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b></>}. Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
-            </AlertDescription>
-          </Alert>
-        ) : commissionPln > maxNonInterest + 1e-9 ? (
-          <Alert className="border-amber-300 bg-amber-50 text-amber-900">
-            <AlertTriangle className="h-4 w-4 !text-amber-600" />
-            <AlertTitle>MPKK — prowizja powyżej referencyjnego limitu</AlertTitle>
-            <AlertDescription className="text-sm">
-              Prowizja <b>{formatPLN(commissionPln)}</b> przekracza referencyjny limit MPKK <b>{formatPLN(maxNonInterest)}</b>. Sądy stosują MPKK przy ocenie zasad współżycia społecznego (art. 58 §2 KC) i wyzysku (art. 388 KC).
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
-            <CheckCircle2 className="h-4 w-4 !text-emerald-600" />
-            <AlertTitle>MPKK w limicie — zgodne z zasadami współżycia społecznego</AlertTitle>
-            <AlertDescription className="text-sm">
-              Koszty pozaodsetkowe <b>{formatPLN(commissionPln)}</b> ≤ <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
-            </AlertDescription>
-          </Alert>
-        )
-      )}
+            {/* 2) MPKK — zasady współżycia społecznego (art. 58 §2 KC) / wyzysk (art. 388 KC) */}
+            {investorGuidance && (
+              nonInterestExceeds || commissionOver45 ? (
+                <Alert className={dangerCls}>
+                  <ShieldAlert className="h-4 w-4 !text-rose-300" />
+                  <AlertTitle>MPKK — silne ryzyko zasad współżycia społecznego</AlertTitle>
+                  <AlertDescription className="text-sm text-rose-100/90">
+                    Prowizja <b>{formatPLN(commissionPln)}</b> {commissionOver45 ? "przekracza 45% kwoty nominalnej — absolutne maksimum referencyjne MPKK" : <>przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b></>}. Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
+                  </AlertDescription>
+                </Alert>
+              ) : commissionPln > maxNonInterest + 1e-9 ? (
+                <Alert className={warnCls}>
+                  <AlertTriangle className="h-4 w-4 !text-amber-300" />
+                  <AlertTitle>MPKK — prowizja powyżej referencyjnego limitu</AlertTitle>
+                  <AlertDescription className="text-sm text-amber-100/90">
+                    Prowizja <b>{formatPLN(commissionPln)}</b> przekracza referencyjny limit MPKK <b>{formatPLN(maxNonInterest)}</b>. Sądy stosują MPKK przy ocenie zasad współżycia społecznego (art. 58 §2 KC) i wyzysku (art. 388 KC).
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className={okCls}>
+                  <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                  <AlertTitle>MPKK w limicie — zgodne z zasadami współżycia społecznego</AlertTitle>
+                  <AlertDescription className="text-sm text-emerald-100/90">
+                    Koszty pozaodsetkowe <b>{formatPLN(commissionPln)}</b> ≤ <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
+                  </AlertDescription>
+                </Alert>
+              )
+            )}
 
-      {/* 3) Krotność spłaty — lichwa (art. 304 KK) */}
-      {investorGuidance && (
-        krotnoscDanger ? (
-          <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Krotność {krotnosc.toFixed(2)}× — ryzyko lichwy (art. 304 KK)</AlertTitle>
-            <AlertDescription className="text-sm">
-              Pożyczkobiorca oddaje <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną na rękę. Powyżej 2,0× rośnie ryzyko zakwalifikowania jako lichwa (art. 304 KK — kara do 3 lat) i wyzysk (art. 388 KC).
-            </AlertDescription>
-          </Alert>
-        ) : krotnoscWarn ? (
-          <Alert className="border-amber-300 bg-amber-50 text-amber-900">
-            <AlertTriangle className="h-4 w-4 !text-amber-600" />
-            <AlertTitle>Krotność {krotnosc.toFixed(2)}× — strefa ostrzegawcza</AlertTitle>
-            <AlertDescription className="text-sm">
-              Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę, którą otrzymał. Powyżej 2,0× istnieje ryzyko zakwalifikowania jako lichwa (art. 304 KK).
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
-            <CheckCircle2 className="h-4 w-4 !text-emerald-600" />
-            <AlertTitle>Krotność {krotnosc.toFixed(2)}× — bezpieczna (brak ryzyka lichwy)</AlertTitle>
-            <AlertDescription className="text-sm">
-              Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną — poniżej progu 2,0× (art. 304 KK).
-            </AlertDescription>
-          </Alert>
-        )
-      )}
+            {/* 3) Krotność spłaty — lichwa (art. 304 KK) */}
+            {investorGuidance && (
+              krotnoscDanger ? (
+                <Alert className={dangerCls}>
+                  <ShieldAlert className="h-4 w-4 !text-rose-300" />
+                  <AlertTitle>Krotność {krotnosc.toFixed(2)}× — ryzyko lichwy (art. 304 KK)</AlertTitle>
+                  <AlertDescription className="text-sm text-rose-100/90">
+                    Pożyczkobiorca oddaje <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną na rękę. Powyżej 2,0× rośnie ryzyko zakwalifikowania jako lichwa (art. 304 KK — kara do 3 lat) i wyzysk (art. 388 KC).
+                  </AlertDescription>
+                </Alert>
+              ) : krotnoscWarn ? (
+                <Alert className={warnCls}>
+                  <AlertTriangle className="h-4 w-4 !text-amber-300" />
+                  <AlertTitle>Krotność {krotnosc.toFixed(2)}× — strefa ostrzegawcza</AlertTitle>
+                  <AlertDescription className="text-sm text-amber-100/90">
+                    Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę, którą otrzymał. Powyżej 2,0× istnieje ryzyko zakwalifikowania jako lichwa (art. 304 KK).
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className={okCls}>
+                  <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                  <AlertTitle>Krotność {krotnosc.toFixed(2)}× — bezpieczna (brak ryzyka lichwy)</AlertTitle>
+                  <AlertDescription className="text-sm text-emerald-100/90">
+                    Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną — poniżej progu 2,0× (art. 304 KK).
+                  </AlertDescription>
+                </Alert>
+              )
+            )}
+          </div>
+        );
+      })()}
 
 
       <FancyShell><Card className={`${FANCY_CARD_CLS} ${investorGuidance && krotnoscDanger ? "ring-2 ring-rose-400/60" : ""}`}>
