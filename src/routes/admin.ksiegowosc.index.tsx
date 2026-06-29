@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Receipt, Building2, FileCheck, ShieldCheck, Wallet, Send, Clock, AlertTriangle } from "lucide-react";
+import { Receipt, Building2, FileCheck, ShieldCheck, Wallet, Send, Clock, AlertTriangle, Users } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
 import { getAccountingStats } from "@/lib/accounting/functions";
 
