@@ -17,8 +17,18 @@ import { InvestorSummaryCard } from "@/components/property-analysis/investor-sum
 import { formatPLN } from "@/lib/loan-math";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { openOrCreateThread } from "@/lib/chat.functions";
+import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
+
+// Reguły z kalkulatora na /klient: max okres maleje wraz z kwotą.
+function maxMonthsForAmount(amount: number): number {
+  if (!amount) return 12;
+  if (amount <= 400_000) return 72;
+  const t = Math.min(1, Math.max(0, (amount - 400_000) / (1_000_000 - 400_000)));
+  return Math.round(36 - t * (36 - 12));
+}
 
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
