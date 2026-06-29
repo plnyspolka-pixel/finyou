@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Wallet, Eye } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
