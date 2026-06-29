@@ -76,7 +76,9 @@ import {
   Loader2,
   Download,
   Calculator,
+  Sparkles,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
   component: WindykacjaDetail,
