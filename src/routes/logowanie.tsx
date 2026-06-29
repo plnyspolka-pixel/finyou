@@ -12,6 +12,7 @@ import { z } from "zod";
 const searchSchema = z.object({
   claim: z.string().optional(),
   next: z.string().optional(),
+  role: z.enum(["klient", "inwestor", "posrednik"]).optional(),
 });
 
 export const Route = createFileRoute("/logowanie")({
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/logowanie")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { claim, next } = useSearch({ from: "/logowanie" });
+  const { claim, next, role } = useSearch({ from: "/logowanie" });
 
   // Zapisz token claim w localStorage, żeby pulpit go „odebrał" po logowaniu
   if (typeof window !== "undefined" && claim) {
@@ -49,7 +50,10 @@ function LoginPage() {
     } catch {}
   }
 
-  const target = next && next.startsWith("/") ? next : "/klient";
+  const roleTarget =
+    role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient";
+  const target = next && next.startsWith("/") ? next : roleTarget;
+
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
