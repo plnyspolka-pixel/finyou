@@ -1,8 +1,7 @@
 // Tpay Open API client (PRODUCTION). Internal use only.
-// Correct base for Tpay Open API is openapi.tpay.com (production)
-// / openapi.sandbox.tpay.com (sandbox). api.tpay.com nie istnieje jako publiczne API
-// i potrafi zwracać linki płatności prowadzące do secure.tpay.com, który odrzuca połączenie.
-const TPAY_API_BASE = process.env.TPAY_API_BASE || "https://openapi.tpay.com";
+// Correct production base for Tpay Open API is api.tpay.com.
+// openapi.tpay.com currently returns a Cloudflare block for server-side calls.
+const TPAY_API_BASE = process.env.TPAY_API_BASE || "https://api.tpay.com";
 
 function getEnv(name: string): string {
   const v = process.env[name];
@@ -19,12 +18,9 @@ const COMMON_HEADERS = {
   "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
 };
 
-// Aplikacja działa na Cloudflare Workers, a API Tpay stoi za Cloudflare z
-// Bot Fight Mode, które blokuje żądania wychodzące z sieci Cloudflare (403
-// "Attention Required"). Dlatego — analogicznie do `rcn-proxy` dla geoportalu —
-// kierujemy żądania do Tpay przez Supabase Edge Function `tpay-proxy`, która
-// wychodzi z innego (niezablokowanego) zakresu IP. Bez skonfigurowanego
-// SUPABASE_URL (np. w testach/lokalnie) lecimy bezpośrednio.
+// Aplikacja działa na Cloudflare Workers. Dla stabilności kierujemy żądania
+// Tpay przez Edge Function `tpay-proxy`; bez SUPABASE_URL (testy/lokalnie)
+// lecimy bezpośrednio na api.tpay.com.
 async function tpayFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const proxyBase = process.env.SUPABASE_URL;
   if (!proxyBase) return fetch(url, init);
