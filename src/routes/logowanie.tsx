@@ -12,6 +12,7 @@ import { z } from "zod";
 const searchSchema = z.object({
   claim: z.string().optional(),
   next: z.string().optional(),
+  role: z.enum(["klient", "inwestor", "posrednik"]).optional(),
 });
 
 export const Route = createFileRoute("/logowanie")({
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/logowanie")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { claim, next } = useSearch({ from: "/logowanie" });
+  const { claim, next, role } = useSearch({ from: "/logowanie" });
 
   // Zapisz token claim w localStorage, żeby pulpit go „odebrał" po logowaniu
   if (typeof window !== "undefined" && claim) {
@@ -49,7 +50,10 @@ function LoginPage() {
     } catch {}
   }
 
-  const target = next && next.startsWith("/") ? next : "/klient";
+  const roleTarget =
+    role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient";
+  const target = next && next.startsWith("/") ? next : roleTarget;
+
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,6 +121,8 @@ function LoginPage() {
     void navigate({ to: target });
   };
 
+
+
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -125,10 +131,11 @@ function LoginPage() {
           <CardDescription>
             {claim
               ? "Zaloguj się, aby dokończyć swój wniosek — automatycznie połączymy go z Twoim kontem."
-              : "Wybierz sposób logowania — hasło, link e-mail lub Google."}
+              : "Po zalogowaniu trafisz do swojego panelu."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+
           {sent ? (
             <div className="rounded-md border bg-muted/40 p-4 text-sm">
               <p className="font-medium">Sprawdź skrzynkę {email}</p>
@@ -137,6 +144,7 @@ function LoginPage() {
               </p>
             </div>
           ) : (
+
             <Tabs defaultValue="password" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="password">Hasło</TabsTrigger>

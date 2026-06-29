@@ -12,15 +12,9 @@ function getEnv(name: string): string {
 
 let cachedToken: { token: string; exp: number } | null = null;
 
-// Tpay's Open API sits behind Cloudflare. A custom/library User-Agent gets
-// flagged by Bot Fight Mode and the request is answered with a 403
-// "Attention Required" challenge page before it ever reaches the API.
-// Presenting a standard browser User-Agent + browser-like Accept headers
-// avoids that challenge. (If Cloudflare still blocks on server-IP/ASN, the
-// server IP must be whitelisted by Tpay support — that part is not fixable here.)
 const COMMON_HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
   Accept: "application/json, text/plain, */*",
   "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.8",
 };

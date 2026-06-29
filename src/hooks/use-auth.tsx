@@ -27,8 +27,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-    setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
+    const next = ((data ?? []) as { role: AppRole }[]).map((r) => r.role);
+    setRoles(next);
+
+    // Auto-fix: jeśli użytkownik wybrał inną rolę przed zalogowaniem (np. wszedł na /inwestor
+    // → /logowanie?role=inwestor i zalogował się przez Google/magic link bez ustawienia roli
+    // przy rejestracji), przekieruj go do wyboru roli, gdzie nadamy właściwą rolę.
+    try {
+      const pending =
+        typeof window !== "undefined" ? window.localStorage.getItem("pending_role_selection") : null;
+      if (!pending) return;
+      const needsFix =
+        (pending === "inwestor" && !next.includes("inwestor") && !next.includes("administrator")) ||
+        (pending === "posrednik" && !next.includes("operator") && !next.includes("administrator")) ||
+        (pending === "klient" && next.length > 0 && !next.includes("klient"));
+      if (needsFix && typeof window !== "undefined" && !window.location.pathname.startsWith("/wybor-roli")) {
+        window.location.assign("/wybor-roli");
+      } else if (!needsFix) {
+        window.localStorage.removeItem("pending_role_selection");
+      }
+    } catch {}
   };
+
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
