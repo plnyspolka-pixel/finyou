@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +16,6 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 import { ClientProfileSections } from "@/components/client/ClientProfileSections";
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
@@ -38,7 +37,7 @@ function KlientDashboard() {
     enabled: Boolean(user),
   });
 
-  const { data: loanRow, refetch: refetchLoan } = useQuery({
+  const { data: loanRow, refetch: refetchLoan, isFetched: loanFetched } = useQuery({
     queryKey: ["client-loan", clientRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("loan_applications")
@@ -48,6 +47,34 @@ function KlientDashboard() {
     },
     enabled: Boolean(clientRow?.id),
   });
+
+  // Klient bez wniosku ma od razu widzieć panel z zablokowanym kalkulatorem
+  // (jak w opublikowanej wersji), a nie formularz landingowy. Dlatego po
+  // zalogowaniu automatycznie zakładamy szkic wniosku, na którym opiera się
+  // cała sekcja (typ nieruchomości, KW, pliki, kalkulator).
+  const creatingDraftRef = useRef(false);
+  const [draftError, setDraftError] = useState(false);
+  useEffect(() => {
+    if (!clientRow?.id) return;
+    if (loanRow?.id) return;
+    if (!loanFetched) return;
+    if (creatingDraftRef.current) return;
+    creatingDraftRef.current = true;
+    setDraftError(false);
+    void (async () => {
+      try {
+        const { error } = await supabase.from("loan_applications").insert({
+          client_id: clientRow.id,
+          status: "nowy_lead",
+        });
+        if (error) throw error;
+        await refetchLoan();
+      } catch {
+        creatingDraftRef.current = false;
+        setDraftError(true);
+      }
+    })();
+  }, [clientRow?.id, loanRow?.id, loanFetched, refetchLoan]);
 
   // Liczymy każde otwarcie strony przez właściciela wniosku jako "wyświetlenie".
   useEffect(() => {
@@ -348,15 +375,27 @@ function KlientDashboard() {
   return (
     <div className="space-y-6 max-w-5xl">
 
-      {!loanRow?.id && (
-        <SinglePageApplicationForm
-          prefilledContact={{
-            firstName: (clientRow as any)?.first_name ?? (user?.user_metadata as any)?.first_name ?? "",
-            lastName: (clientRow as any)?.last_name ?? (user?.user_metadata as any)?.last_name ?? "",
-            phone: (clientRow as any)?.phone ?? "",
-            email: (clientRow as any)?.email ?? user?.email ?? "",
-          }}
-        />
+      {!loanRow?.id && !draftError && (
+        <div className="space-y-6">
+          <Skeleton className="h-56 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      )}
+
+      {!loanRow?.id && draftError && (
+        <Card className="max-w-2xl">
+          <CardHeader><CardTitle>Nie udało się otworzyć panelu</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Wystąpił problem przy przygotowaniu Twojego wniosku. Spróbuj ponownie.
+            </p>
+            <Button
+              onClick={() => { creatingDraftRef.current = false; setDraftError(false); void refetchLoan(); }}
+            >
+              Spróbuj ponownie
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {loanRow?.id && (() => {
