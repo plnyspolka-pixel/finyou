@@ -57,7 +57,7 @@ function InwestorList() {
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase
       .from("loan_applications")
-      .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street)")
+      .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street, land_register_number)")
       .eq("available_to_investors", true)
       .order("created_at", { ascending: false });
     const list = data ?? [];
