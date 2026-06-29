@@ -255,19 +255,19 @@ export function LoanCalculator({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-          <div className="flex items-center gap-2 font-medium">
+      <FancyShell><Card className={FANCY_CARD_CLS}>
+        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-white">
+          <div className="flex items-center gap-2 font-semibold">
             <RefreshCw className={`h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} />
-            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-muted-foreground">(dane offline)</span>}
+            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-white/60">(dane offline)</span>}
           </div>
-          <span>Referencyjna: <b className="tabular-nums">{effectiveRefRate.toFixed(2)}%</b>{investorGuidance && nbpOverride != null && <span className="text-xs text-amber-600"> (ręcznie)</span>}</span>
-          {ratesQ.data?.lombardRate != null && <span>Lombardowa: <b className="tabular-nums">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
-          {ratesQ.data?.depositRate != null && <span>Depozytowa: <b className="tabular-nums">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
-          <span className="text-muted-foreground">Maks. odsetki ustawowe: <b className="tabular-nums text-foreground">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
-          {ratesQ.data?.effectiveFrom && <span className="text-xs text-muted-foreground ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
+          <span className="text-white/80">Referencyjna: <b className="tabular-nums text-white">{effectiveRefRate.toFixed(2)}%</b>{investorGuidance && nbpOverride != null && <span className="text-xs text-amber-300"> (ręcznie)</span>}</span>
+          {ratesQ.data?.lombardRate != null && <span className="text-white/80">Lombardowa: <b className="tabular-nums text-white">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
+          {ratesQ.data?.depositRate != null && <span className="text-white/80">Depozytowa: <b className="tabular-nums text-white">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
+          <span className="text-white/70">Maks. odsetki ustawowe: <b className="tabular-nums text-emerald-300">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
+          {ratesQ.data?.effectiveFrom && <span className="text-xs text-white/60 ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
         </CardContent>
-      </Card>
+      </Card></FancyShell>
 
       {/* HERO — najważniejsze liczby (fancy) */}
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(ellipse_at_top_left,_hsl(220_70%_25%),_hsl(230_60%_12%)_60%,_hsl(235_50%_8%))] p-6 md:p-8 shadow-2xl">
