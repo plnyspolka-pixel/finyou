@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -101,6 +101,10 @@ export function LoanCalculator({
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
+  const rateTouched = useRef(false);
+  const commissionTouched = useRef(false);
+  const setAnnualRateTouched = (v: number) => { rateTouched.current = true; setAnnualRate(v); };
+  const setCommissionPctTouched = (v: number) => { commissionTouched.current = true; setCommissionPct(v); };
 
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
   const [nbpOverride, setNbpOverride] = useState<number | null>(null);
@@ -177,7 +181,11 @@ export function LoanCalculator({
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
-  const krotnosc = disbursedOnHand > 0 ? totalToRepay / disbursedOnHand : 0;
+  // Prowizja Finance You jest wynagrodzeniem operatora (poza MPKK) i NIE wlicza się do tego limitu —
+  // wyłączamy ją zarówno z licznika (łączna spłata), jak i z mianownika (kwota na rękę).
+  const krotnoscBasis = Math.max(0, amount - commissionPln);
+  const krotnoscRepay = totalToRepay - financeYouFeePln;
+  const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
@@ -186,6 +194,23 @@ export function LoanCalculator({
   const krotnoscDanger = krotnosc > 2.0;
   const periodWarn = months > 24;
   const anyWarning = interestExceeds || nonInterestExceeds;
+
+  useEffect(() => {
+    if (!rateTouched.current) {
+      const rounded = Math.floor(MAX_INTEREST_RATE * 10) / 10;
+      if (Math.abs(annualRate - rounded) > 1e-9) setAnnualRate(rounded);
+    }
+  }, [MAX_INTEREST_RATE, annualRate]);
+
+  useEffect(() => {
+    if (!commissionTouched.current) {
+      // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty nominalnej),
+      // przycięta do zakresu suwaka (0–30%).
+      const mpkkPct = Math.min(30, Math.max(0, 10 + 10 * (months / 12)));
+      const rounded = Math.floor(mpkkPct * 2) / 2; // krok 0,5%
+      if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
+    }
+  }, [months, commissionPct]);
 
   useEffect(() => {
     onChange?.({
@@ -385,11 +410,11 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Roczne oprocentowanie (odsetki) {investorGuidance && <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.1" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24" />
+                <Input type="number" step="0.1" value={annualRate} onChange={(e) => setAnnualRateTouched(Number(e.target.value) || 0)} className="w-24" />
                 <span className="text-sm">%</span>
               </div>
             </div>
-            <Slider min={0} max={MAX_INTEREST_RATE} step={0.1} value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
+            <Slider min={0} max={MAX_INTEREST_RATE} step={0.1} value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRateTouched(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
               <span className={interestExceeds ? "text-destructive font-medium" : ""}>
@@ -403,11 +428,11 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
+                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPctTouched(Number(e.target.value) || 0)} className="w-24" />
                 <span className="text-sm">% ({formatPLN(commissionPln)})</span>
               </div>
             </div>
-            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
+            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPctTouched(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
               {nonInterestExceeds ? (
@@ -540,7 +565,7 @@ export function LoanCalculator({
           <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-muted-foreground">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
           <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-muted-foreground">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
           {investorGuidance && (
-            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę: łączna kwota do spłaty ÷ kwota wypłacona." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
+            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
