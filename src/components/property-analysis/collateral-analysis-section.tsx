@@ -64,11 +64,14 @@ export function CollateralAnalysisSection({ applicationId, readOnly = false }: {
 
   const result = row?.result_json as PropertyAnalysisResult | undefined;
 
+  // W trybie readOnly (widok inwestora) sekcja pojawia się jako bonus tylko gdy analiza jest gotowa.
+  if (readOnly && !result) return null;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Analiza zabezpieczenia</h3>
+          <h3 className="text-lg font-semibold">Analiza zabezpieczenia {readOnly && <span className="text-xs font-normal text-muted-foreground">(bonus)</span>}</h3>
           <p className="text-xs text-muted-foreground">Automatyczna analiza nieruchomości jako zabezpieczenia pożyczki.</p>
         </div>
         {!readOnly && (
@@ -79,11 +82,9 @@ export function CollateralAnalysisSection({ applicationId, readOnly = false }: {
         )}
       </div>
 
-      {!result && (
+      {!result && !readOnly && (
         <Card><CardContent className="py-6 text-sm text-muted-foreground">
-          {readOnly
-            ? "Analiza zabezpieczenia jest w przygotowaniu — pojawi się tu, gdy zostanie zakończona."
-            : "Brak wyników. Uruchom analizę, aby zebrać dane ze źródeł zewnętrznych."}
+          Brak wyników. Uruchom analizę, aby zebrać dane ze źródeł zewnętrznych.
         </CardContent></Card>
       )}
 
