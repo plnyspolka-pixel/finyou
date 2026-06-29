@@ -428,11 +428,11 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value) || 0)} className="w-24" />
+                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPctTouched(Number(e.target.value) || 0)} className="w-24" />
                 <span className="text-sm">% ({formatPLN(commissionPln)})</span>
               </div>
             </div>
-            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPct(v[0])} />
+            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPctTouched(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
               {nonInterestExceeds ? (
