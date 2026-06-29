@@ -2681,6 +2681,7 @@ export type Database = {
           id: string
           investor_user_id: string
           max_statutory_rate: number
+          no_payments_declared: boolean
           notes: string | null
           payout_date: string | null
           penalty_annual_rate: number
@@ -2709,6 +2710,7 @@ export type Database = {
           id?: string
           investor_user_id?: string
           max_statutory_rate?: number
+          no_payments_declared?: boolean
           notes?: string | null
           payout_date?: string | null
           penalty_annual_rate?: number
@@ -2737,6 +2739,7 @@ export type Database = {
           id?: string
           investor_user_id?: string
           max_statutory_rate?: number
+          no_payments_declared?: boolean
           notes?: string | null
           payout_date?: string | null
           penalty_annual_rate?: number
