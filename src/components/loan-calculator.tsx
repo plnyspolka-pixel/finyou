@@ -488,9 +488,10 @@ export function LoanCalculator({
 
       {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność (fancy) */}
       {(() => {
-        const okCls = "border-emerald-400/40 bg-gradient-to-r from-emerald-500/15 via-emerald-400/10 to-transparent text-emerald-50 backdrop-blur-sm shadow-[0_0_30px_-12px_rgba(16,185,129,0.5)] [&_b]:text-white";
-        const warnCls = "border-amber-400/40 bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-transparent text-amber-50 backdrop-blur-sm shadow-[0_0_30px_-12px_rgba(245,158,11,0.5)] [&_b]:text-white";
-        const dangerCls = "border-rose-400/50 bg-gradient-to-r from-rose-500/20 via-rose-400/10 to-transparent text-rose-50 backdrop-blur-sm shadow-[0_0_30px_-10px_rgba(244,63,94,0.6)] [&_b]:text-white";
+        const baseCls = "border-2 rounded-xl p-4 [&_b]:text-white [&_b]:font-bold [&>svg]:!top-4 [&>svg]:!left-4 [&>svg+div]:!pl-7 [&_[data-slot=alert-title]]:!text-base [&_[data-slot=alert-title]]:!font-bold [&_[data-slot=alert-title]]:!mb-1";
+        const okCls = `${baseCls} border-emerald-400/70 bg-emerald-950/80 text-emerald-50 shadow-[0_0_40px_-12px_rgba(16,185,129,0.7)] [&_[data-slot=alert-description]]:!text-emerald-50/95`;
+        const warnCls = `${baseCls} border-amber-400/70 bg-amber-950/80 text-amber-50 shadow-[0_0_40px_-12px_rgba(245,158,11,0.7)] [&_[data-slot=alert-description]]:!text-amber-50/95`;
+        const dangerCls = `${baseCls} border-rose-400/80 bg-rose-950/80 text-rose-50 shadow-[0_0_40px_-10px_rgba(244,63,94,0.8)] [&_[data-slot=alert-description]]:!text-rose-50/95`;
         return (
           <div className="space-y-3">
             {/* 1) Odsetki maksymalne (art. 359 §2¹ KC) */}
