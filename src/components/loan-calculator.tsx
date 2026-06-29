@@ -588,7 +588,7 @@ export function LoanCalculator({
 
       <FancyShell><Card className={FANCY_CARD_CLS}>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Harmonogram spłat</CardTitle>
+          <CardTitle className="text-white">Harmonogram spłat</CardTitle>
           {investorGuidance && schedule.rows.length > 0 && (
             <Dialog open={exportOpen} onOpenChange={setExportOpen}>
               <DialogTrigger asChild>
