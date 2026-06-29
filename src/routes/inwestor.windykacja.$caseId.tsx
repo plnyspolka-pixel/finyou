@@ -136,6 +136,9 @@ function WindykacjaDetail() {
   const doAction = useServerFn(performDebtAction);
   const removeAction = useServerFn(deleteDebtAction);
   const fetchNbp = useServerFn(getNbpRates);
+  const extractContract = useServerFn(extractDebtContract);
+  const extractStatement = useServerFn(extractDebtPaymentsFromStatement);
+  const setNoPayments = useServerFn(setNoPaymentsDeclared);
 
   const [form, setForm] = useState<DebtCase | null>(null);
   const [payments, setPayments] = useState<DebtPayment[]>([]);
@@ -143,6 +146,8 @@ function WindykacjaDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importingStatement, setImportingStatement] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [nbpRef, setNbpRef] = useState<number | null>(null);
 
   // Nowa wpłata
