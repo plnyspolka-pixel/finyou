@@ -5786,7 +5786,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "administrator" | "operator" | "klient" | "inwestor"
+      app_role:
+        | "administrator"
+        | "operator"
+        | "klient"
+        | "inwestor"
+        | "ksiegowosc"
       automation_status: "aktywna" | "wstrzymana" | "zakonczona" | "blad"
       consent_kind: "privacy" | "marketing" | "terms" | "terms_investor"
       contact_channel:
@@ -5991,7 +5996,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["administrator", "operator", "klient", "inwestor"],
+      app_role: [
+        "administrator",
+        "operator",
+        "klient",
+        "inwestor",
+        "ksiegowosc",
+      ],
       automation_status: ["aktywna", "wstrzymana", "zakonczona", "blad"],
       consent_kind: ["privacy", "marketing", "terms", "terms_investor"],
       contact_channel: [
