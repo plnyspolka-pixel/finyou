@@ -5,32 +5,43 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  getDebtCase,
-  upsertDebtCase,
-  deleteDebtCase,
-  addDebtPayment,
-  deleteDebtPayment,
-  performDebtAction,
-  deleteDebtAction,
-  type DebtCase,
-  type DebtPayment,
-  type DebtAction,
-  type DebtActionType,
-} from "@/lib/debt-collection.functions";
-import { getNbpRates } from "@/lib/nbp-rates.functions";
+  getWindCase,
+  updateWindCase,
+  updateWindLoan,
+  updateWindBorrower,
+  changeWindStage,
+  performWindContact,
+  addWindPismoNadane,
+  addWindDelivery,
+  addWindWplata,
+  addWindNotatka,
+  generateWindDocument,
+  type WindCase,
+  type WindLoan,
+  type WindBorrower,
+  type WindEvent,
+  type WindDocument,
+} from "@/lib/windykacja.functions";
+import {
+  PATH_LABELS,
+  PATH_BADGE,
+  PATH_STAGES,
+  stageLabel,
+  delayColorClass,
+  suggestNextAction,
+  effectiveDeliveryDate,
+  documentsForPath,
+  DOCUMENT_LABELS,
+  type WindPath,
+  type WindEventLite,
+  type WindDocumentType,
+} from "@/lib/windykacja-procedure";
 import {
   calculateDebt,
   maxDelayInterestRate,
-  DEFAULT_MAX_DELAY_RATE,
-  type DebtCalcResult,
+  DEFAULT_NBP_REFERENCE_RATE,
 } from "@/lib/debt-collection-math";
-import {
-  buildSmsBody,
-  buildEmailBody,
-  buildLetter,
-  type LetterKind,
-} from "@/lib/debt-collection-letters";
-import { formatPLN, formatDate } from "@/lib/labels";
+import { formatPLN, formatDate, formatDateTime } from "@/lib/labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,108 +66,103 @@ import {
 } from "@/components/ui/dialog";
 import {
   ArrowLeft,
-  Upload,
-  Save,
-  Trash2,
-  FileText,
-  Plus,
-  Send,
-  Phone,
-  Mail,
   MessageSquare,
+  Mail,
+  Phone,
+  FileText,
+  FileSignature,
+  Wallet,
+  StickyNote,
+  GitBranch,
+  Loader2,
+  Send,
+  Upload,
+  Lightbulb,
   Gavel,
   Building2,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Download,
+  ShieldCheck,
+  Paperclip,
+  Eye,
   Calculator,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
-  component: WindykacjaDetail,
+  component: WindykacjaCaseCard,
 });
 
+const nowISO = () => new Date().toISOString();
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-const ACTION_META: Record<
-  DebtActionType,
-  {
-    label: string;
-    icon: typeof Phone;
-    feeField: keyof DebtCase;
-    channel: "phone" | "email" | "none";
-  }
-> = {
-  sms: { label: "SMS", icon: MessageSquare, feeField: "fee_sms", channel: "phone" },
-  email: { label: "E-mail", icon: Mail, feeField: "fee_email", channel: "email" },
-  phone: { label: "Telefon", icon: Phone, feeField: "fee_phone", channel: "phone" },
-  letter_debtor: {
-    label: "Pismo do dłużnika",
-    icon: FileText,
-    feeField: "fee_letter_debtor",
-    channel: "none",
-  },
-  letter_court: {
-    label: "Pismo do sądu",
-    icon: Gavel,
-    feeField: "fee_letter_court",
-    channel: "none",
-  },
-  letter_bailiff: {
-    label: "Pismo do komornika",
-    icon: Building2,
-    feeField: "fee_letter_bailiff",
-    channel: "none",
-  },
+type ActionKind =
+  | "sms"
+  | "email"
+  | "telefon"
+  | "pismo"
+  | "doreczenie"
+  | "dokument"
+  | "wplata"
+  | "notatka"
+  | "etap"
+  | null;
+
+const EVENT_ICON: Record<string, typeof FileText> = {
+  sms: MessageSquare,
+  email: Mail,
+  telefon: Phone,
+  pismo_nadane: FileText,
+  pismo_doreczone: ShieldCheck,
+  pismo_awizo: FileText,
+  pismo_zwrot: FileText,
+  wplata: Wallet,
+  dokument_wygenerowany: FileSignature,
+  zmiana_etapu: GitBranch,
+  notatka: StickyNote,
+  czynnosc_sadowa: Gavel,
 };
 
-function num(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
+const DELIVERY_LABEL: Record<string, string> = {
+  oczekuje: "oczekuje na doręczenie",
+  doreczone: "doręczone",
+  awizowane: "awizowane",
+  termin_uplynal: "termin upłynął (fikcja doręczenia)",
+  zwrot: "zwrot — fikcja doręczenia",
+};
 
-function WindykacjaDetail() {
+function WindykacjaCaseCard() {
   const { caseId } = Route.useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const fetchCase = useServerFn(getDebtCase);
-  const saveCase = useServerFn(upsertDebtCase);
-  const removeCase = useServerFn(deleteDebtCase);
-  const addPayment = useServerFn(addDebtPayment);
-  const removePayment = useServerFn(deleteDebtPayment);
-  const doAction = useServerFn(performDebtAction);
-  const removeAction = useServerFn(deleteDebtAction);
-  const fetchNbp = useServerFn(getNbpRates);
+  const fetchCase = useServerFn(getWindCase);
+  const saveCase = useServerFn(updateWindCase);
+  const saveLoan = useServerFn(updateWindLoan);
+  const saveBorrower = useServerFn(updateWindBorrower);
+  const doStage = useServerFn(changeWindStage);
+  const doContact = useServerFn(performWindContact);
+  const doPismo = useServerFn(addWindPismoNadane);
+  const doDelivery = useServerFn(addWindDelivery);
+  const doWplata = useServerFn(addWindWplata);
+  const doNotatka = useServerFn(addWindNotatka);
+  const genDoc = useServerFn(generateWindDocument);
 
-  const [form, setForm] = useState<DebtCase | null>(null);
-  const [payments, setPayments] = useState<DebtPayment[]>([]);
-  const [actions, setActions] = useState<DebtAction[]>([]);
+  const [kase, setKase] = useState<WindCase | null>(null);
+  const [loan, setLoan] = useState<WindLoan | null>(null);
+  const [borrower, setBorrower] = useState<WindBorrower | null>(null);
+  const [events, setEvents] = useState<WindEvent[]>([]);
+  const [documents, setDocuments] = useState<WindDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [nbpRef, setNbpRef] = useState<number | null>(null);
-
-  // Nowa wpłata
-  const [payDate, setPayDate] = useState(todayISO());
-  const [payAmount, setPayAmount] = useState("");
-  const [payNote, setPayNote] = useState("");
-
-  // Dialog działania
-  const [actionType, setActionType] = useState<DebtActionType | null>(null);
-  const [actionTarget, setActionTarget] = useState("");
-  const [actionSubject, setActionSubject] = useState("");
-  const [actionContent, setActionContent] = useState("");
-  const [actionFee, setActionFee] = useState("");
-  const [actionBusy, setActionBusy] = useState(false);
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [action, setAction] = useState<ActionKind>(null);
+  const [docPreview, setDocPreview] = useState<WindDocument | null>(null);
 
   const reload = useCallback(async () => {
     try {
       const res = await fetchCase({ data: { caseId } });
-      setForm(res.case);
-      setPayments(res.payments);
-      setActions(res.actions);
+      setKase(res.case);
+      setLoan(res.loan);
+      setBorrower(res.borrower);
+      setEvents(res.events);
+      setDocuments(res.documents);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się pobrać sprawy");
     } finally {
@@ -168,760 +174,873 @@ function WindykacjaDetail() {
     void reload();
   }, [reload]);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const r = await fetchNbp();
-        setNbpRef(r.referenceRate);
-      } catch {
-        /* podpowiedź opcjonalna */
-      }
-    })();
-  }, [fetchNbp]);
+  const eventsLite: WindEventLite[] = useMemo(
+    () =>
+      events.map((e) => ({
+        typ: e.typ,
+        data_zdarzenia: e.data_zdarzenia,
+        data_doreczenia: e.data_doreczenia,
+        status_doreczenia: e.status_doreczenia,
+      })),
+    [events],
+  );
 
-  const set = <K extends keyof DebtCase>(key: K, value: DebtCase[K]) =>
-    setForm((f) => (f ? { ...f, [key]: value } : f));
+  const suggestion = useMemo(() => {
+    if (!kase) return null;
+    return suggestNextAction(
+      {
+        sciezka: kase.sciezka,
+        etap: kase.etap,
+        opoznienie_dni: kase.opoznienie_dni,
+        kwota_zalegla: kase.kwota_zalegla,
+      },
+      eventsLite,
+      nowISO(),
+    );
+  }, [kase, eventsLite]);
 
-  // ── Kalkulacja zadłużenia na dziś ──────────────────────────────────
-  const calc: DebtCalcResult | null = useMemo(() => {
-    if (!form) return null;
+  // Wyliczenie zadłużenia z odsetkami maksymalnymi (silnik kalkulacyjny).
+  const debt = useMemo(() => {
+    if (!loan) return null;
+    const payments = events
+      .filter((e) => e.typ === "wplata")
+      .map((e) => ({
+        paid_on: e.data_zdarzenia.slice(0, 10),
+        amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
+      }));
     return calculateDebt({
-      principalAmount: num(form.principal_amount),
-      payoutDate: form.payout_date,
-      dueDate: form.due_date,
-      contractualAnnualRate: num(form.contractual_annual_rate),
-      penaltyAnnualRate: num(form.penalty_annual_rate),
-      maxStatutoryRate: num(form.max_statutory_rate),
-      payments: payments.map((p) => ({ paid_on: p.paid_on, amount: num(p.amount) })),
-      actionFees: actions
-        .filter((a) => a.status !== "failed")
-        .map((a) => ({ action_date: a.action_date, fee: num(a.fee) })),
+      principalAmount: Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0),
+      payoutDate: loan.data_umowy,
+      dueDate: loan.termin_splaty,
+      contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
+      penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
+      maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
+      payments,
+      actionFees: [],
       asOf: todayISO(),
     });
-  }, [form, payments, actions]);
+  }, [loan, events]);
 
-  const suggestedMaxRate = nbpRef != null ? maxDelayInterestRate(nbpRef) : DEFAULT_MAX_DELAY_RATE;
-
-  const persist = async (patch?: Partial<DebtCase>, silent = false) => {
-    if (!form) return;
-    setSaving(true);
-    try {
-      const merged = { ...form, ...patch };
-      const saved = await saveCase({
-        data: {
-          id: merged.id,
-          status: merged.status,
-          debtor_name: merged.debtor_name,
-          debtor_pesel: merged.debtor_pesel,
-          debtor_address: merged.debtor_address,
-          debtor_email: merged.debtor_email,
-          debtor_phone: merged.debtor_phone,
-          contract_number: merged.contract_number,
-          contract_file_path: merged.contract_file_path,
-          contract_file_name: merged.contract_file_name,
-          principal_amount: num(merged.principal_amount),
-          payout_date: merged.payout_date,
-          due_date: merged.due_date,
-          contractual_annual_rate: num(merged.contractual_annual_rate),
-          penalty_annual_rate: num(merged.penalty_annual_rate),
-          max_statutory_rate: num(merged.max_statutory_rate),
-          fee_sms: num(merged.fee_sms),
-          fee_email: num(merged.fee_email),
-          fee_phone: num(merged.fee_phone),
-          fee_letter_debtor: num(merged.fee_letter_debtor),
-          fee_letter_court: num(merged.fee_letter_court),
-          fee_letter_bailiff: num(merged.fee_letter_bailiff),
-          notes: merged.notes,
-        },
-      });
-      setForm(saved);
-      if (!silent) toast.success("Zapisano");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się zapisać");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ── Upload umowy ───────────────────────────────────────────────────
-  const onUploadContract = async (file: File) => {
-    if (!user) return;
-    setUploading(true);
-    try {
-      const safe = file.name.replace(/[^\w.-]+/g, "_");
-      const path = `${user.id}/windykacja/${caseId}/${Date.now()}_${safe}`;
-      const { error } = await supabase.storage
-        .from("documents")
-        .upload(path, file, {
-          upsert: false,
-          contentType: file.type || "application/octet-stream",
-        });
-      if (error) throw new Error(error.message);
-      await persist({ contract_file_path: path, contract_file_name: file.name }, true);
-      toast.success("Umowa wgrana");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się wgrać pliku");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const openContract = async () => {
-    if (!form?.contract_file_path) return;
-    const { data } = await supabase.storage
-      .from("documents")
-      .createSignedUrl(form.contract_file_path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-    else toast.error("Nie udało się otworzyć pliku");
-  };
-
-  // ── Wpłaty ─────────────────────────────────────────────────────────
-  const onAddPayment = async () => {
-    const amount = Number(payAmount.replace(",", "."));
-    if (!payDate || !Number.isFinite(amount) || amount === 0) {
-      toast.error("Podaj datę i kwotę wpłaty");
-      return;
-    }
-    try {
-      const row = await addPayment({ data: { caseId, paid_on: payDate, amount, note: payNote } });
-      setPayments((p) => [...p, row].sort((a, b) => a.paid_on.localeCompare(b.paid_on)));
-      setPayAmount("");
-      setPayNote("");
-      toast.success("Dodano wpłatę");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się dodać wpłaty");
-    }
-  };
-
-  const onDeletePayment = async (id: string) => {
-    try {
-      await removePayment({ data: { paymentId: id } });
-      setPayments((p) => p.filter((x) => x.id !== id));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Błąd usuwania");
-    }
-  };
-
-  // ── Działania ──────────────────────────────────────────────────────
-  const openAction = (type: DebtActionType) => {
-    if (!form || !calc) return;
-    setActionType(type);
-    const meta = ACTION_META[type];
-    setActionFee(String(num(form[meta.feeField])));
-    if (meta.channel === "phone") setActionTarget(form.debtor_phone ?? "");
-    else if (meta.channel === "email") setActionTarget(form.debtor_email ?? "");
-    else setActionTarget(form.debtor_name ?? "");
-
-    if (type === "sms") {
-      setActionSubject("");
-      setActionContent(buildSmsBody(form, calc));
-    } else if (type === "email") {
-      setActionSubject("Wezwanie do zapłaty");
-      setActionContent(buildEmailBody(form, calc));
-    } else if (type === "phone") {
-      setActionSubject("Rozmowa telefoniczna");
-      setActionContent("");
-    } else {
-      const kind: LetterKind =
-        type === "letter_court" ? "court" : type === "letter_bailiff" ? "bailiff" : "debtor";
-      const letter = buildLetter(kind, form, calc);
-      setActionSubject(letter.subject);
-      setActionContent(letter.body);
-    }
-  };
-
-  const submitAction = async () => {
-    if (!actionType) return;
-    setActionBusy(true);
-    try {
-      const row = await doAction({
-        data: {
-          caseId,
-          action_type: actionType,
-          channel_target: actionTarget,
-          subject: actionSubject,
-          content: actionContent,
-          fee: Number(actionFee.replace(",", ".")) || 0,
-          action_date: todayISO(),
-        },
-      });
-      setActions((a) => [row, ...a]);
-      if (row.status === "failed") {
-        toast.error(`Nie wykonano: ${row.error_message ?? "błąd"} (opłaty nie naliczono)`);
-      } else if (row.status === "sent") {
-        toast.success(`Wysłano. Naliczono opłatę ${formatPLN(row.fee)}`);
-      } else {
-        toast.success(`Zarejestrowano działanie. Naliczono opłatę ${formatPLN(row.fee)}`);
-      }
-      setActionType(null);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się wykonać działania");
-    } finally {
-      setActionBusy(false);
-    }
-  };
-
-  const onDeleteAction = async (id: string) => {
-    try {
-      await removeAction({ data: { actionId: id } });
-      setActions((a) => a.filter((x) => x.id !== id));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Błąd usuwania");
-    }
-  };
-
-  const onDeleteCase = async () => {
-    if (!confirm("Usunąć całą sprawę windykacyjną wraz z wpłatami i działaniami?")) return;
-    try {
-      await removeCase({ data: { caseId } });
-      toast.success("Sprawa usunięta");
-      void navigate({ to: "/inwestor/windykacja" });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się usunąć sprawy");
-    }
-  };
+  const filteredEvents = useMemo(() => {
+    if (eventFilter === "all") return events;
+    if (eventFilter === "pisma") return events.filter((e) => e.typ.startsWith("pismo"));
+    if (eventFilter === "kontakt")
+      return events.filter((e) => ["sms", "email", "telefon"].includes(e.typ));
+    if (eventFilter === "sadowe") return events.filter((e) => e.typ === "czynnosc_sadowa");
+    return events;
+  }, [events, eventFilter]);
 
   if (loading) return <div className="text-muted-foreground">Ładowanie…</div>;
-  if (!form) return <div className="text-muted-foreground">Nie znaleziono sprawy.</div>;
+  if (!kase || !loan || !borrower)
+    return <div className="text-muted-foreground">Nie znaleziono sprawy.</div>;
+
+  const refreshAfterEvent = (ev?: WindEvent) => {
+    if (ev) setEvents((p) => [ev, ...p]);
+    void reload();
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <Link
           to="/inwestor/windykacja"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Wszystkie sprawy
+          <ArrowLeft className="h-4 w-4 mr-1" /> Panel windykacji
         </Link>
-        <div className="flex items-center gap-2">
-          <Select
-            value={form.status}
-            onValueChange={(v) => void persist({ status: v as DebtCase["status"] }, true)}
-          >
-            <SelectTrigger className="w-[150px] h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">Szkic</SelectItem>
-              <SelectItem value="active">W toku</SelectItem>
-              <SelectItem value="closed">Zamknięta</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="ghost" size="icon" onClick={onDeleteCase} aria-label="Usuń sprawę">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
+        <Badge className={PATH_BADGE[kase.sciezka]}>{PATH_LABELS[kase.sciezka]}</Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* LEWA: dane sprawy */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Dłużnik */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Dłużnik</CardTitle>
-            </CardHeader>
-            <CardContent className="grid sm:grid-cols-2 gap-3">
-              <Field label="Imię i nazwisko / firma">
-                <Input
-                  value={form.debtor_name ?? ""}
-                  onChange={(e) => set("debtor_name", e.target.value)}
+      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+        {/* LEWA — oś czasu */}
+        <div className="space-y-4">
+          {/* Sugerowane działanie */}
+          {suggestion && (
+            <Card className={suggestion.urgent ? "border-amber-400 dark:border-amber-700" : ""}>
+              <CardContent className="pt-5 flex items-start gap-3">
+                <Lightbulb
+                  className={`h-5 w-5 mt-0.5 shrink-0 ${suggestion.urgent ? "text-amber-600" : "text-primary"}`}
                 />
-              </Field>
-              <Field label="PESEL / NIP">
-                <Input
-                  value={form.debtor_pesel ?? ""}
-                  onChange={(e) => set("debtor_pesel", e.target.value)}
-                />
-              </Field>
-              <Field label="E-mail">
-                <Input
-                  type="email"
-                  value={form.debtor_email ?? ""}
-                  onChange={(e) => set("debtor_email", e.target.value)}
-                />
-              </Field>
-              <Field label="Telefon">
-                <Input
-                  value={form.debtor_phone ?? ""}
-                  onChange={(e) => set("debtor_phone", e.target.value)}
-                />
-              </Field>
-              <Field label="Adres" className="sm:col-span-2">
-                <Input
-                  value={form.debtor_address ?? ""}
-                  onChange={(e) => set("debtor_address", e.target.value)}
-                />
-              </Field>
-            </CardContent>
-          </Card>
-
-          {/* Umowa pożyczki */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Umowa pożyczki</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="Numer umowy">
-                  <Input
-                    value={form.contract_number ?? ""}
-                    onChange={(e) => set("contract_number", e.target.value)}
-                  />
-                </Field>
-                <Field label="Kapitał / kwota pożyczki (zł)">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={form.principal_amount ?? 0}
-                    onChange={(e) => set("principal_amount", num(e.target.value))}
-                  />
-                </Field>
-                <Field label="Data wypłaty">
-                  <Input
-                    type="date"
-                    value={form.payout_date ?? ""}
-                    onChange={(e) => set("payout_date", e.target.value)}
-                  />
-                </Field>
-                <Field label="Termin spłaty (wymagalność)">
-                  <Input
-                    type="date"
-                    value={form.due_date ?? ""}
-                    onChange={(e) => set("due_date", e.target.value)}
-                  />
-                </Field>
-                <Field label="Odsetki kapitałowe (roczne %)">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={form.contractual_annual_rate ?? 0}
-                    onChange={(e) => set("contractual_annual_rate", num(e.target.value))}
-                  />
-                </Field>
-                <Field label="Odsetki za opóźnienie wg umowy (roczne %)">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={form.penalty_annual_rate ?? 0}
-                    onChange={(e) => set("penalty_annual_rate", num(e.target.value))}
-                  />
-                </Field>
-                <Field label="Max. odsetki za opóźnienie (limit %)" className="sm:col-span-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      value={form.max_statutory_rate ?? 0}
-                      onChange={(e) => set("max_statutory_rate", num(e.target.value))}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => set("max_statutory_rate", suggestedMaxRate)}
-                    >
-                      Ustaw {suggestedMaxRate}%
-                    </Button>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Sugerowane następne działanie
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Odsetki maksymalne = 2 × (stopa ref. NBP {nbpRef ?? "?"}% + 5,5 p.p.). Efektywna
-                    stopa opóźnienia nie przekroczy tego limitu.
-                  </p>
-                </Field>
-              </div>
-
-              <Separator />
-
-              <div className="flex flex-wrap items-center gap-3">
-                {form.contract_file_path ? (
-                  <Button variant="outline" size="sm" onClick={openContract}>
-                    <Download className="h-4 w-4 mr-1" />{" "}
-                    {form.contract_file_name || "Pobierz umowę"}
-                  </Button>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Nie wgrano pliku umowy.</span>
-                )}
-                <label className="inline-flex">
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void onUploadContract(f);
-                      e.target.value = "";
-                    }}
-                  />
-                  <Button asChild variant="secondary" size="sm" disabled={uploading}>
-                    <span>
-                      {uploading ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <Upload className="h-4 w-4 mr-1" />
-                      )}
-                      {form.contract_file_path ? "Zmień plik" : "Wgraj umowę"}
-                    </span>
-                  </Button>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cennik działań */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Opłaty za działania windykacyjne (wg umowy)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid sm:grid-cols-3 gap-3">
-              <Field label="SMS (zł)">
-                <Input
-                  type="number"
-                  value={form.fee_sms ?? 0}
-                  onChange={(e) => set("fee_sms", num(e.target.value))}
-                />
-              </Field>
-              <Field label="E-mail (zł)">
-                <Input
-                  type="number"
-                  value={form.fee_email ?? 0}
-                  onChange={(e) => set("fee_email", num(e.target.value))}
-                />
-              </Field>
-              <Field label="Telefon (zł)">
-                <Input
-                  type="number"
-                  value={form.fee_phone ?? 0}
-                  onChange={(e) => set("fee_phone", num(e.target.value))}
-                />
-              </Field>
-              <Field label="Pismo do dłużnika (zł)">
-                <Input
-                  type="number"
-                  value={form.fee_letter_debtor ?? 0}
-                  onChange={(e) => set("fee_letter_debtor", num(e.target.value))}
-                />
-              </Field>
-              <Field label="Pismo do sądu (zł)">
-                <Input
-                  type="number"
-                  value={form.fee_letter_court ?? 0}
-                  onChange={(e) => set("fee_letter_court", num(e.target.value))}
-                />
-              </Field>
-              <Field label="Pismo do komornika (zł)">
-                <Input
-                  type="number"
-                  value={form.fee_letter_bailiff ?? 0}
-                  onChange={(e) => set("fee_letter_bailiff", num(e.target.value))}
-                />
-              </Field>
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center gap-2">
-            <Button onClick={() => void persist()} disabled={saving}>
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1" />
-              )}{" "}
-              Zapisz sprawę
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Możesz zapisać szkic i wrócić później.
-            </span>
-          </div>
-
-          {/* Wpłaty klienta */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Wpłaty klienta</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-[150px_1fr_1fr_auto] gap-2 items-end">
-                <Field label="Data">
-                  <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
-                </Field>
-                <Field label="Kwota (zł)">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={payAmount}
-                    onChange={(e) => setPayAmount(e.target.value)}
-                    placeholder="np. 1500"
-                  />
-                </Field>
-                <Field label="Opis">
-                  <Input
-                    value={payNote}
-                    onChange={(e) => setPayNote(e.target.value)}
-                    placeholder="np. przelew"
-                  />
-                </Field>
-                <Button onClick={onAddPayment}>
-                  <Plus className="h-4 w-4 mr-1" /> Dodaj
-                </Button>
-              </div>
-              {payments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Brak wpłat. Wgraj wszystkie wpłaty klienta, aby wyliczyć saldo.
-                </p>
-              ) : (
-                <div className="divide-y rounded-md border">
-                  {payments.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="tabular-nums text-muted-foreground w-24">
-                          {formatDate(p.paid_on)}
-                        </span>
-                        <span className="font-medium tabular-nums">{formatPLN(p.amount)}</span>
-                        {p.note && <span className="text-muted-foreground">{p.note}</span>}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => onDeletePayment(p.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
-                  ))}
+                  <div className="text-sm mt-0.5">{suggestion.text}</div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Historia działań */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Historia działań</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-base">Oś czasu zdarzeń</CardTitle>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="w-[160px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Wszystkie</SelectItem>
+                  <SelectItem value="pisma">Tylko pisma</SelectItem>
+                  <SelectItem value="kontakt">Tylko kontakt</SelectItem>
+                  <SelectItem value="sadowe">Tylko sądowe</SelectItem>
+                </SelectContent>
+              </Select>
             </CardHeader>
             <CardContent>
-              {actions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Brak działań.</p>
+              {filteredEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Brak zdarzeń.</p>
               ) : (
-                <div className="divide-y rounded-md border">
-                  {actions.map((a) => {
-                    const meta = ACTION_META[a.action_type];
-                    const Icon = meta?.icon ?? FileText;
-                    return (
-                      <div
-                        key={a.id}
-                        className="flex items-start justify-between gap-3 px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-start gap-2 min-w-0">
-                          <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium">{meta?.label ?? a.action_type}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(a.action_date)}
-                              </span>
-                              {a.status === "sent" && (
-                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200">
-                                  <CheckCircle2 className="h-3 w-3 mr-0.5" />
-                                  wysłano
-                                </Badge>
-                              )}
-                              {a.status === "failed" && (
-                                <Badge variant="destructive">
-                                  <XCircle className="h-3 w-3 mr-0.5" />
-                                  błąd
-                                </Badge>
-                              )}
-                              {a.status === "recorded" && (
-                                <Badge variant="secondary">zarejestrowano</Badge>
-                              )}
-                              {a.fee > 0 && (
-                                <span className="text-xs font-medium">
-                                  opłata {formatPLN(a.fee)}
-                                </span>
-                              )}
-                            </div>
-                            {a.subject && (
-                              <div className="text-xs text-muted-foreground truncate">
-                                {a.subject}
-                              </div>
-                            )}
-                            {a.error_message && (
-                              <div className="text-xs text-destructive">{a.error_message}</div>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          onClick={() => onDeleteAction(a.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ol className="relative border-l ml-3 space-y-4">
+                  {filteredEvents.map((e) => (
+                    <TimelineItem key={e.id} e={e} />
+                  ))}
+                </ol>
               )}
             </CardContent>
           </Card>
+
+          {documents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Dokumenty ({documents.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {documents.map((d) => (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileSignature className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="truncate">{d.tytul}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(d.created_at)}
+                      </span>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setDocPreview(d)}>
+                      <Eye className="h-4 w-4 mr-1" /> Podgląd
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* PRAWA: kalkulacja + działania */}
-        <div className="space-y-6">
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calculator className="h-4 w-4" /> Zadłużenie na dziś
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {calc && (
-                <>
-                  <div className="text-3xl font-bold tabular-nums">{formatPLN(calc.totalDue)}</div>
-                  <p className="text-xs text-muted-foreground">stan na {formatDate(calc.asOf)}</p>
-                  <Separator />
-                  <Row label="Kapitał" value={calc.principalOutstanding} />
-                  {calc.contractualInterest > 0 && (
-                    <Row label="Odsetki kapitałowe" value={calc.contractualInterest} />
-                  )}
-                  <Row label="Odsetki za opóźnienie" value={calc.delayInterest} />
-                  <Row label="Koszty windykacji" value={calc.costsOutstanding} />
-                  <Separator />
-                  <Row label="Suma wpłat" value={calc.totalPaid} muted />
-                  <Row label="Naliczone opłaty" value={calc.totalFeesCharged} muted />
-                  <div className="text-xs text-muted-foreground space-y-1 pt-1">
-                    <div>Opóźnienie: {calc.daysOverdue} dni</div>
-                    <div>
-                      Stopa odsetek za opóźnienie: {calc.effectiveDelayRate}%
-                      {calc.penaltyCapped && (
-                        <span className="text-amber-600"> (obcięta do max)</span>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
+        {/* PRAWA — panel sterowania */}
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="pt-5 space-y-3">
+              <div>
+                <div className="text-lg font-semibold">{borrower.imie_nazwisko}</div>
+                <div className="text-xs text-muted-foreground">
+                  Umowa {loan.numer_umowy ?? "—"} ·{" "}
+                  {borrower.pesel
+                    ? `PESEL ${borrower.pesel}`
+                    : borrower.nip
+                      ? `NIP ${borrower.nip}`
+                      : ""}
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <Info label="Kwota zaległa" value={formatPLN(kase.kwota_zalegla)} strong />
+                <Info label="Saldo pożyczki" value={formatPLN(loan.saldo_pozostale)} />
+                <Info
+                  label="Opóźnienie"
+                  value={`${kase.opoznienie_dni} dni`}
+                  valueClass={delayColorClass(kase.opoznienie_dni)}
+                />
+                <Info label="Termin spłaty" value={formatDate(loan.termin_splaty)} />
+                <Info label="KW" value={loan.numer_kw ?? "—"} />
+                <Info label="Akt 777" value={loan.akt_notarialny_777 ?? "—"} />
+              </div>
             </CardContent>
           </Card>
 
+          {/* Stepper etapu */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle className="text-base">
+                Etap: {stageLabel(kase.sciezka, kase.etap)}
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setAction("etap")}>
+                <GitBranch className="h-4 w-4 mr-1" /> Zmień
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <ol className="space-y-1.5">
+                {PATH_STAGES[kase.sciezka].map((s, i) => {
+                  const idx = PATH_STAGES[kase.sciezka].findIndex((x) => x.key === kase.etap);
+                  const done = i < idx;
+                  const current = i === idx;
+                  return (
+                    <li key={s.key} className="flex items-center gap-2 text-sm">
+                      <span
+                        className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold ${
+                          current
+                            ? "bg-primary text-primary-foreground"
+                            : done
+                              ? "bg-green-600 text-white"
+                              : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {i + 1}
+                      </span>
+                      <span
+                        className={
+                          current
+                            ? "font-medium"
+                            : done
+                              ? "text-muted-foreground line-through"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {s.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </CardContent>
+          </Card>
+
+          {/* Zadłużenie z odsetkami maksymalnymi */}
+          {debt && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calculator className="h-4 w-4" /> Wyliczenie zadłużenia
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5 text-sm">
+                <RowL label="Kapitał / należność główna" value={debt.principalOutstanding} />
+                <RowL label="Odsetki za opóźnienie (maks.)" value={debt.delayInterest} />
+                <Separator className="my-1" />
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Razem na dziś</span>
+                  <span className="tabular-nums">{formatPLN(debt.totalDue)}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground pt-1">
+                  Stopa odsetek maks.: {debt.effectiveDelayRate}% (limit art. 481 §2¹ KC).
+                  Opóźnienie: {debt.daysOverdue} dni.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Akcje */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Send className="h-4 w-4" /> Zleć działanie
-              </CardTitle>
+              <CardTitle className="text-base">Działania</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
-              {(Object.keys(ACTION_META) as DebtActionType[]).map((t) => {
-                const meta = ACTION_META[t];
-                const Icon = meta.icon;
-                return (
-                  <Button
-                    key={t}
-                    variant="outline"
-                    size="sm"
-                    className="justify-start h-auto py-2"
-                    onClick={() => openAction(t)}
-                  >
-                    <Icon className="h-4 w-4 mr-1.5 shrink-0" />
-                    <span className="text-left text-xs leading-tight">
-                      {meta.label}
-                      <br />
-                      <span className="text-muted-foreground">
-                        {formatPLN(num(form[meta.feeField]))}
-                      </span>
-                    </span>
-                  </Button>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-5 text-xs text-muted-foreground space-y-2">
-              <p>Potrzebujesz w pełni sformatowanego dokumentu DOCX?</p>
-              <Button asChild variant="link" size="sm" className="px-0 h-auto">
-                <Link to="/inwestor/kreator-dokumentow">Otwórz Kreator dokumentów →</Link>
-              </Button>
+              <ActBtn
+                icon={MessageSquare}
+                label="Wyślij SMS"
+                onClick={() => setAction("sms")}
+                hint={suggestion?.hint === "sms"}
+              />
+              <ActBtn
+                icon={Mail}
+                label="Wyślij e-mail"
+                onClick={() => setAction("email")}
+                hint={suggestion?.hint === "email"}
+              />
+              <ActBtn
+                icon={Phone}
+                label="Zadzwoń"
+                onClick={() => setAction("telefon")}
+                hint={suggestion?.hint === "telefon"}
+              />
+              <ActBtn
+                icon={FileText}
+                label="Dodaj pismo"
+                onClick={() => setAction("pismo")}
+                hint={suggestion?.hint === "pismo"}
+              />
+              <ActBtn
+                icon={ShieldCheck}
+                label="Doręczenie"
+                onClick={() => setAction("doreczenie")}
+                hint={suggestion?.hint === "doreczenie"}
+              />
+              <ActBtn
+                icon={FileSignature}
+                label="Generuj dokument"
+                onClick={() => setAction("dokument")}
+                hint={suggestion?.hint === "dokument"}
+              />
+              <ActBtn icon={Wallet} label="Dodaj wpłatę" onClick={() => setAction("wplata")} />
+              <ActBtn
+                icon={StickyNote}
+                label="Dodaj notatkę"
+                onClick={() => setAction("notatka")}
+              />
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Dialog działania */}
-      <Dialog open={actionType != null} onOpenChange={(o) => !o && setActionType(null)}>
-        <DialogContent className="max-w-lg">
-          {actionType && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{ACTION_META[actionType].label}</DialogTitle>
-                <DialogDescription>
-                  {actionType === "sms" || actionType === "email"
-                    ? "Wiadomość zostanie wysłana do dłużnika, a opłata naliczona po udanej wysyłce."
-                    : "Działanie zostanie zarejestrowane, a opłata naliczona zgodnie z umową."}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <Field
-                  label={
-                    ACTION_META[actionType].channel === "email"
-                      ? "Adres e-mail"
-                      : ACTION_META[actionType].channel === "phone"
-                        ? "Numer telefonu"
-                        : "Adresat"
-                  }
-                >
-                  <Input value={actionTarget} onChange={(e) => setActionTarget(e.target.value)} />
-                </Field>
-                {actionType !== "sms" && (
-                  <Field label="Temat / tytuł">
-                    <Input
-                      value={actionSubject}
-                      onChange={(e) => setActionSubject(e.target.value)}
-                    />
-                  </Field>
-                )}
-                <Field label={actionType === "phone" ? "Notatka z rozmowy" : "Treść"}>
-                  <Textarea
-                    rows={actionType === "sms" ? 4 : 10}
-                    value={actionContent}
-                    onChange={(e) => setActionContent(e.target.value)}
-                  />
-                </Field>
-                <Field label="Opłata do naliczenia (zł)">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={actionFee}
-                    onChange={(e) => setActionFee(e.target.value)}
-                  />
-                </Field>
-              </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setActionType(null)}>
-                  Anuluj
-                </Button>
-                <Button onClick={submitAction} disabled={actionBusy}>
-                  {actionBusy ? (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-1" />
-                  )}
-                  {actionType === "sms" || actionType === "email"
-                    ? "Wyślij i nalicz"
-                    : "Zarejestruj i nalicz"}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
+      {/* MODALE AKCJI */}
+      {action && (
+        <ActionDialog
+          kind={action}
+          onClose={() => setAction(null)}
+          caseId={caseId}
+          kase={kase}
+          loan={loan}
+          borrower={borrower}
+          events={events}
+          userId={user?.id}
+          fns={{ doContact, doPismo, doDelivery, doWplata, doNotatka, genDoc, doStage }}
+          onDone={(ev) => {
+            setAction(null);
+            refreshAfterEvent(ev);
+          }}
+        />
+      )}
+
+      {/* Podgląd dokumentu */}
+      <Dialog open={docPreview != null} onOpenChange={(o) => !o && setDocPreview(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{docPreview?.tytul}</DialogTitle>
+          </DialogHeader>
+          <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">
+            {docPreview?.tresc}
+          </pre>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
-function Field({
+// ── Pozycja osi czasu ────────────────────────────────────────────────
+function TimelineItem({ e }: { e: WindEvent }) {
+  const Icon = EVENT_ICON[e.typ] ?? FileText;
+  const meta = e.metadata as { kwota?: number; numer_nadania?: string };
+  const delivery = e.status_doreczenia;
+  const deadline =
+    e.data_doreczenia &&
+    (delivery === "doreczone" || delivery === "termin_uplynal" || delivery === "zwrot")
+      ? new Date(new Date(e.data_doreczenia).getTime() + 7 * 86_400_000)
+      : null;
+  const overdue = deadline ? Date.now() > deadline.getTime() : false;
+  return (
+    <li className="ml-5">
+      <span className="absolute -left-[9px] grid h-4 w-4 place-items-center rounded-full bg-background ring-2 ring-border">
+        <Icon className="h-2.5 w-2.5 text-muted-foreground" />
+      </span>
+      <div className="rounded-md border p-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="font-medium text-sm">{e.tytul}</span>
+          <span className="text-xs text-muted-foreground">{formatDateTime(e.data_zdarzenia)}</span>
+        </div>
+        {e.typ === "wplata" && meta?.kwota != null && (
+          <div className="text-sm font-semibold text-green-700 dark:text-green-400 mt-0.5">
+            {formatPLN(meta.kwota)}
+          </div>
+        )}
+        {e.tresc && (
+          <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-4">
+            {e.tresc}
+          </p>
+        )}
+        {meta?.numer_nadania && (
+          <div className="text-[11px] text-muted-foreground mt-1">
+            Nr nadania: {meta.numer_nadania}
+          </div>
+        )}
+        {delivery && (
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap text-xs">
+            <Badge variant="secondary">{DELIVERY_LABEL[delivery] ?? delivery}</Badge>
+            {e.data_doreczenia && delivery !== "oczekuje" && (
+              <span className="text-muted-foreground">data: {formatDate(e.data_doreczenia)}</span>
+            )}
+            {deadline && (
+              <span className={overdue ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                {overdue
+                  ? "termin 7 dni upłynął — można składać wniosek o klauzulę"
+                  : `termin upływa ${formatDate(deadline.toISOString())}`}
+              </span>
+            )}
+          </div>
+        )}
+        {e.zalacznik_url ? (
+          <div className="mt-1.5 flex items-center gap-1 text-xs text-primary">
+            <Paperclip className="h-3 w-3" /> załącznik
+          </div>
+        ) : e.typ.startsWith("pismo") ? (
+          <div className="mt-1.5 text-[11px] text-amber-600">
+            niekompletne — brak skanu (dowodu)
+          </div>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function Info({
+  label,
+  value,
+  strong,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  valueClass?: string;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div
+        className={`${strong ? "text-base font-bold" : "text-sm"} tabular-nums ${valueClass ?? ""}`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function RowL({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums">{formatPLN(value)}</span>
+    </div>
+  );
+}
+
+function ActBtn({
+  icon: Icon,
+  label,
+  onClick,
+  hint,
+}: {
+  icon: typeof Mail;
+  label: string;
+  onClick: () => void;
+  hint?: boolean;
+}) {
+  return (
+    <Button
+      variant={hint ? "default" : "outline"}
+      size="sm"
+      className="justify-start"
+      onClick={onClick}
+    >
+      <Icon className="h-4 w-4 mr-1.5 shrink-0" /> <span className="text-xs">{label}</span>
+    </Button>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// MODAL AKCJI
+// ════════════════════════════════════════════════════════════════════
+type Fns = {
+  doContact: ReturnType<typeof useServerFn<typeof performWindContact>>;
+  doPismo: ReturnType<typeof useServerFn<typeof addWindPismoNadane>>;
+  doDelivery: ReturnType<typeof useServerFn<typeof addWindDelivery>>;
+  doWplata: ReturnType<typeof useServerFn<typeof addWindWplata>>;
+  doNotatka: ReturnType<typeof useServerFn<typeof addWindNotatka>>;
+  genDoc: ReturnType<typeof useServerFn<typeof generateWindDocument>>;
+  doStage: ReturnType<typeof useServerFn<typeof changeWindStage>>;
+};
+
+function ActionDialog({
+  kind,
+  onClose,
+  caseId,
+  kase,
+  loan,
+  borrower,
+  events,
+  userId,
+  fns,
+  onDone,
+}: {
+  kind: Exclude<ActionKind, null>;
+  onClose: () => void;
+  caseId: string;
+  kase: WindCase;
+  loan: WindLoan;
+  borrower: WindBorrower;
+  events: WindEvent[];
+  userId?: string;
+  fns: Fns;
+  onDone: (ev?: WindEvent) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [v, setV] = useState<Record<string, string>>(() =>
+    initialValues(kind, kase, loan, borrower),
+  );
+  const [file, setFile] = useState<File | null>(null);
+  const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }));
+
+  const uploadScan = async (): Promise<string | null> => {
+    if (!file || !userId) return null;
+    const safe = file.name.replace(/[^\w.-]+/g, "_");
+    const path = `${userId}/windykacja/${caseId}/${Date.now()}_${safe}`;
+    const { error } = await supabase.storage
+      .from("documents")
+      .upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
+    if (error) {
+      toast.error(`Upload: ${error.message}`);
+      return null;
+    }
+    return path;
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      if (kind === "sms" || kind === "email" || kind === "telefon") {
+        const ev = await fns.doContact({
+          data: { caseId, typ: kind, target: v.target, subject: v.subject, tresc: v.tresc },
+        });
+        if ((ev.metadata as { ok?: boolean })?.ok === false)
+          toast.error("Wysyłka nie powiodła się — zdarzenie zapisane.");
+        else toast.success("Zapisano zdarzenie");
+        onDone(ev);
+      } else if (kind === "pismo") {
+        const scan = await uploadScan();
+        const ev = await fns.doPismo({
+          data: {
+            caseId,
+            tytul: v.tytul,
+            data_nadania: v.data_nadania,
+            numer_nadania: v.numer_nadania,
+            zalacznik_url: scan,
+            tresc: v.tresc,
+          },
+        });
+        toast.success("Dodano pismo nadane");
+        onDone(ev);
+      } else if (kind === "doreczenie") {
+        const scan = await uploadScan();
+        const map: Record<
+          string,
+          {
+            typ: "pismo_doreczone" | "pismo_awizo" | "pismo_zwrot";
+            status: "doreczone" | "awizowane" | "termin_uplynal" | "zwrot";
+          }
+        > = {
+          doreczone: { typ: "pismo_doreczone", status: "doreczone" },
+          awizo: { typ: "pismo_awizo", status: "awizowane" },
+          termin: { typ: "pismo_zwrot", status: "termin_uplynal" },
+          zwrot: { typ: "pismo_zwrot", status: "zwrot" },
+        };
+        const m = map[v.rodzaj] ?? map.doreczone;
+        const ev = await fns.doDelivery({
+          data: {
+            caseId,
+            typ: m.typ,
+            status_doreczenia: m.status,
+            data: v.data,
+            zalacznik_url: scan,
+            note: v.note,
+          },
+        });
+        toast.success("Zaktualizowano doręczenie");
+        onDone(ev);
+      } else if (kind === "wplata") {
+        const res = await fns.doWplata({
+          data: { caseId, loanId: loan.id, kwota: Number(v.kwota), data: v.data, sposob: v.sposob },
+        });
+        toast.success("Odnotowano wpłatę");
+        onDone(res.event);
+      } else if (kind === "notatka") {
+        const ev = await fns.doNotatka({ data: { caseId, tresc: v.tresc } });
+        toast.success("Dodano notatkę");
+        onDone(ev);
+      } else if (kind === "dokument") {
+        const res = await fns.genDoc({ data: { caseId, typ: v.typ as WindDocumentType } });
+        toast.success("Wygenerowano dokument");
+        onDone(res.event);
+      } else if (kind === "etap") {
+        const ev = await fns.doStage({
+          data: { caseId, sciezka: v.sciezka as WindPath, etap: v.etap, note: v.note },
+        });
+        toast.success("Zmieniono etap");
+        onDone(ev);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się wykonać działania");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{TITLES[kind]}</DialogTitle>
+          {(kind === "sms" || kind === "email") && (
+            <DialogDescription>
+              Wiadomość zostanie wysłana i zapisana w rejestrze dowodowym.
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        <div className="space-y-3">
+          {(kind === "sms" || kind === "telefon") && (
+            <Fld label="Numer telefonu">
+              <Input value={v.target ?? ""} onChange={(e) => set("target", e.target.value)} />
+            </Fld>
+          )}
+          {kind === "email" && (
+            <>
+              <Fld label="Adres e-mail">
+                <Input value={v.target ?? ""} onChange={(e) => set("target", e.target.value)} />
+              </Fld>
+              <Fld label="Temat">
+                <Input value={v.subject ?? ""} onChange={(e) => set("subject", e.target.value)} />
+              </Fld>
+            </>
+          )}
+          {(kind === "sms" || kind === "email" || kind === "telefon" || kind === "notatka") && (
+            <Fld
+              label={
+                kind === "telefon"
+                  ? "Notatka z rozmowy (wymagana)"
+                  : kind === "notatka"
+                    ? "Treść notatki"
+                    : "Treść"
+              }
+            >
+              <Textarea
+                rows={kind === "sms" ? 4 : 8}
+                value={v.tresc ?? ""}
+                onChange={(e) => set("tresc", e.target.value)}
+              />
+            </Fld>
+          )}
+
+          {kind === "pismo" && (
+            <>
+              <Fld label="Tytuł pisma">
+                <Input
+                  value={v.tytul ?? ""}
+                  onChange={(e) => set("tytul", e.target.value)}
+                  placeholder="np. Wezwanie do zapłaty — nadane"
+                />
+              </Fld>
+              <div className="grid grid-cols-2 gap-3">
+                <Fld label="Data nadania">
+                  <Input
+                    type="date"
+                    value={v.data_nadania ?? ""}
+                    onChange={(e) => set("data_nadania", e.target.value)}
+                  />
+                </Fld>
+                <Fld label="Numer nadania">
+                  <Input
+                    value={v.numer_nadania ?? ""}
+                    onChange={(e) => set("numer_nadania", e.target.value)}
+                  />
+                </Fld>
+              </div>
+              <ScanField file={file} setFile={setFile} required />
+            </>
+          )}
+
+          {kind === "doreczenie" && (
+            <>
+              <Fld label="Rodzaj zdarzenia">
+                <Select value={v.rodzaj} onValueChange={(val) => set("rodzaj", val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="doreczone">Doręczone (zwrotka)</SelectItem>
+                    <SelectItem value="awizo">Awizo</SelectItem>
+                    <SelectItem value="termin">
+                      Termin odbioru upłynął (fikcja doręczenia)
+                    </SelectItem>
+                    <SelectItem value="zwrot">Zwrot przesyłki (fikcja doręczenia)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Fld>
+              <Fld label="Data">
+                <Input
+                  type="date"
+                  value={v.data ?? ""}
+                  onChange={(e) => set("data", e.target.value)}
+                />
+              </Fld>
+              <ScanField file={file} setFile={setFile} />
+            </>
+          )}
+
+          {kind === "wplata" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Fld label="Kwota (zł)">
+                <Input
+                  type="number"
+                  value={v.kwota ?? ""}
+                  onChange={(e) => set("kwota", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Data">
+                <Input
+                  type="date"
+                  value={v.data ?? ""}
+                  onChange={(e) => set("data", e.target.value)}
+                />
+              </Fld>
+              <Fld label="Sposób" className="col-span-2">
+                <Input
+                  value={v.sposob ?? ""}
+                  onChange={(e) => set("sposob", e.target.value)}
+                  placeholder="np. przelew"
+                />
+              </Fld>
+            </div>
+          )}
+
+          {kind === "dokument" && (
+            <Fld label="Typ dokumentu">
+              <Select value={v.typ} onValueChange={(val) => set("typ", val)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {documentsForPath(kase.sciezka).map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {DOCUMENT_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Fld>
+          )}
+
+          {kind === "etap" && (
+            <>
+              <Fld label="Ścieżka">
+                <Select value={v.sciezka} onValueChange={(val) => set("sciezka", val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(PATH_LABELS) as WindPath[]).map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {PATH_LABELS[p]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Fld>
+              <Fld label="Etap">
+                <Select value={v.etap} onValueChange={(val) => set("etap", val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PATH_STAGES[(v.sciezka as WindPath) ?? kase.sciezka].map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Fld>
+              <Fld label="Notatka (opcjonalnie)">
+                <Textarea
+                  rows={3}
+                  value={v.note ?? ""}
+                  onChange={(e) => set("note", e.target.value)}
+                />
+              </Fld>
+            </>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Anuluj
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-1" />
+            )}
+            {kind === "sms" || kind === "email" ? "Wyślij" : "Zapisz"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ScanField({
+  file,
+  setFile,
+  required,
+}: {
+  file: File | null;
+  setFile: (f: File | null) => void;
+  required?: boolean;
+}) {
+  return (
+    <Fld label={`Skan ${required ? "(dowód — zalecany)" : "(opcjonalnie)"}`}>
+      <label className="inline-flex">
+        <input
+          type="file"
+          className="hidden"
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+        <Button asChild variant="secondary" size="sm">
+          <span>
+            <Upload className="h-4 w-4 mr-1" /> {file ? file.name : "Wybierz plik"}
+          </span>
+        </Button>
+      </label>
+    </Fld>
+  );
+}
+
+const TITLES: Record<Exclude<ActionKind, null>, string> = {
+  sms: "Wyślij SMS",
+  email: "Wyślij e-mail",
+  telefon: "Rozmowa telefoniczna",
+  pismo: "Dodaj pismo nadane",
+  doreczenie: "Aktualizacja doręczenia",
+  dokument: "Generuj dokument",
+  wplata: "Dodaj wpłatę",
+  notatka: "Dodaj notatkę",
+  etap: "Zmień etap / ścieżkę",
+};
+
+function initialValues(
+  kind: Exclude<ActionKind, null>,
+  kase: WindCase,
+  loan: WindLoan,
+  borrower: WindBorrower,
+): Record<string, string> {
+  const base: Record<string, string> = { data: todayISO(), data_nadania: todayISO() };
+  if (kind === "sms" || kind === "telefon") base.target = borrower.telefon ?? "";
+  if (kind === "email") {
+    base.target = borrower.email ?? "";
+    base.subject = "Finance You — wezwanie do zapłaty";
+  }
+  if (kind === "sms")
+    base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(kase.kwota_zalegla)}. Prosimy o pilną spłatę.`;
+  if (kind === "doreczenie") base.rodzaj = "doreczone";
+  if (kind === "dokument") base.typ = documentsForPath(kase.sciezka)[0];
+  if (kind === "etap") {
+    base.sciezka = kase.sciezka;
+    base.etap = kase.etap;
+  }
+  return base;
+}
+
+function Fld({
   label,
   children,
   className,
@@ -934,17 +1053,6 @@ function Field({
     <div className={`space-y-1 ${className ?? ""}`}>
       <Label className="text-xs">{label}</Label>
       {children}
-    </div>
-  );
-}
-
-function Row({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span className={muted ? "text-muted-foreground" : ""}>{label}</span>
-      <span className={`tabular-nums ${muted ? "text-muted-foreground" : "font-medium"}`}>
-        {formatPLN(value)}
-      </span>
     </div>
   );
 }
