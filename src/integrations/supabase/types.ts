@@ -2603,6 +2603,184 @@ export type Database = {
           },
         ]
       }
+      debt_collection_actions: {
+        Row: {
+          action_date: string
+          action_type: string
+          case_id: string
+          channel_target: string | null
+          content: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          external_id: string | null
+          fee: number
+          id: string
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          action_date?: string
+          action_type: string
+          case_id: string
+          channel_target?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          fee?: number
+          id?: string
+          status?: string
+          subject?: string | null
+        }
+        Update: {
+          action_date?: string
+          action_type?: string
+          case_id?: string
+          channel_target?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          fee?: number
+          id?: string
+          status?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_collection_actions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "debt_collection_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debt_collection_cases: {
+        Row: {
+          contract_file_name: string | null
+          contract_file_path: string | null
+          contract_number: string | null
+          contractual_annual_rate: number
+          created_at: string
+          debtor_address: string | null
+          debtor_email: string | null
+          debtor_name: string | null
+          debtor_pesel: string | null
+          debtor_phone: string | null
+          due_date: string | null
+          fee_email: number
+          fee_letter_bailiff: number
+          fee_letter_court: number
+          fee_letter_debtor: number
+          fee_phone: number
+          fee_sms: number
+          id: string
+          investor_user_id: string
+          max_statutory_rate: number
+          notes: string | null
+          payout_date: string | null
+          penalty_annual_rate: number
+          principal_amount: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contract_file_name?: string | null
+          contract_file_path?: string | null
+          contract_number?: string | null
+          contractual_annual_rate?: number
+          created_at?: string
+          debtor_address?: string | null
+          debtor_email?: string | null
+          debtor_name?: string | null
+          debtor_pesel?: string | null
+          debtor_phone?: string | null
+          due_date?: string | null
+          fee_email?: number
+          fee_letter_bailiff?: number
+          fee_letter_court?: number
+          fee_letter_debtor?: number
+          fee_phone?: number
+          fee_sms?: number
+          id?: string
+          investor_user_id?: string
+          max_statutory_rate?: number
+          notes?: string | null
+          payout_date?: string | null
+          penalty_annual_rate?: number
+          principal_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contract_file_name?: string | null
+          contract_file_path?: string | null
+          contract_number?: string | null
+          contractual_annual_rate?: number
+          created_at?: string
+          debtor_address?: string | null
+          debtor_email?: string | null
+          debtor_name?: string | null
+          debtor_pesel?: string | null
+          debtor_phone?: string | null
+          due_date?: string | null
+          fee_email?: number
+          fee_letter_bailiff?: number
+          fee_letter_court?: number
+          fee_letter_debtor?: number
+          fee_phone?: number
+          fee_sms?: number
+          id?: string
+          investor_user_id?: string
+          max_statutory_rate?: number
+          notes?: string | null
+          payout_date?: string | null
+          penalty_annual_rate?: number
+          principal_amount?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      debt_collection_payments: {
+        Row: {
+          amount: number
+          case_id: string
+          created_at: string
+          id: string
+          note: string | null
+          paid_on: string
+        }
+        Insert: {
+          amount: number
+          case_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_on: string
+        }
+        Update: {
+          amount?: number
+          case_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_collection_payments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "debt_collection_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
           audience: string[] | null
@@ -6790,6 +6968,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      owns_debt_collection_case: {
+        Args: { _case_id: string }
+        Returns: boolean
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
