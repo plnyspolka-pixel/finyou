@@ -91,6 +91,40 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
 
           console.log("[tpay-webhook] activated", { userId, plan, trId, amount: tx.amount });
 
+          // Automatyczne wystawienie faktury (osoba fizyczna lub firma).
+          try {
+            const { data: buyer } = await (supabaseAdmin
+              .from("tpay_transaction_buyers") as any)
+              .select("*")
+              .eq("transaction_id", String(trId))
+              .maybeSingle();
+
+            const grossAmount = Number(tx.amount) || planCfg.amount;
+            if (grossAmount > 0) {
+              const { createInvoiceFromPayment } = await import("@/lib/accounting/auto-invoice");
+              const buyerNameParts: string[] = [];
+              if (buyer?.buyer_address) buyerNameParts.push(buyer.buyer_address);
+              if (buyer?.buyer_postal_code || buyer?.buyer_city) {
+                buyerNameParts.push(
+                  [buyer?.buyer_postal_code, buyer?.buyer_city].filter(Boolean).join(" "),
+                );
+              }
+              await createInvoiceFromPayment(supabaseAdmin as any, {
+                paymentId: String(trId),
+                grossAmount,
+                currency: "PLN",
+                description: planCfg.label,
+                buyerName: buyer?.buyer_name ?? null,
+                buyerEmail: buyer?.buyer_email ?? null,
+                buyerNip: buyer?.buyer_type === "company" ? (buyer?.buyer_nip ?? null) : null,
+                sourceType: "stripe_payment",
+                sourceId: userId,
+              });
+            }
+          } catch (e) {
+            console.error("[tpay-webhook] auto-invoice failed", (e as Error)?.message);
+          }
+
           return new Response("TRUE", { status: 200 });
         } catch (e) {
           console.error("[tpay-webhook] error", e);
