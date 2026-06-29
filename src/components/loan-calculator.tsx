@@ -470,17 +470,6 @@ export function LoanCalculator({
         </CardContent>
       </Card>
 
-      {/* OSTRZEŻENIE #5 — stopa NBP niezweryfikowana */}
-      {investorGuidance && !nbpConfirmed && (
-        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
-          <Info className="h-4 w-4 !text-amber-600" />
-          <AlertTitle>Zweryfikuj aktualną stopę referencyjną NBP</AlertTitle>
-          <AlertDescription className="text-sm">
-            Limit odsetek maksymalnych zależy od stopy referencyjnej NBP. Aktualna wartość w kalkulatorze: <b>{effectiveRefRate.toFixed(2)}%</b>
-            {ratesQ.data?.effectiveFrom ? ` (obowiązuje od ${ratesQ.data.effectiveFrom})` : ""}. Potwierdź ją na nbp.pl przed podpisaniem umowy.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {nonInterestExceeds && (
         <Alert variant="destructive">
