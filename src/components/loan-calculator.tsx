@@ -566,27 +566,27 @@ export function LoanCalculator({
       )}
 
 
-      <Card className={investorGuidance && krotnoscDanger ? "border-destructive" : undefined}>
+      <FancyShell><Card className={`${FANCY_CARD_CLS} ${investorGuidance && krotnoscDanger ? "ring-2 ring-rose-400/60" : ""}`}>
         <CardHeader>
-          <CardTitle>Podsumowanie</CardTitle>
+          <CardTitle className="text-white">Podsumowanie</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
           <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-          <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-primary">{formatPLN(disbursedOnHand)}</b></div>
+          <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-emerald-300">{formatPLN(disbursedOnHand)}</b></div>
           <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
 
-          <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-muted-foreground">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
-          <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-muted-foreground">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+          <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-white/60">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
+          <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
           {investorGuidance && (
-            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
+            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
-          <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
+          <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
-      </Card>
+      </Card></FancyShell>
 
 
-      <Card>
+      <FancyShell><Card className={FANCY_CARD_CLS}>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Harmonogram spłat</CardTitle>
           {investorGuidance && schedule.rows.length > 0 && (
