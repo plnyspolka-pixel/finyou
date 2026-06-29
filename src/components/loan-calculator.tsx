@@ -649,7 +649,7 @@ export function LoanCalculator({
             </Table>
           </div>
         </CardContent>
-      </Card>
+      </Card></FancyShell>
 
       {investorGuidance && (
         <p className="text-xs text-muted-foreground leading-relaxed">
