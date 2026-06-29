@@ -636,9 +636,9 @@ function WindykacjaDetail() {
                       e.target.value = "";
                     }}
                   />
-                  <Button asChild variant="secondary" size="sm" disabled={uploading}>
+                  <Button asChild variant="secondary" size="sm" disabled={uploading || extracting}>
                     <span>
-                      {uploading ? (
+                      {uploading || extracting ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                       ) : (
                         <Upload className="h-4 w-4 mr-1" />
@@ -647,7 +647,15 @@ function WindykacjaDetail() {
                     </span>
                   </Button>
                 </label>
+                {extracting && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" /> AI uzupełnia dane z umowy…
+                  </span>
+                )}
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Po wgraniu umowy AI automatycznie uzupełni dane dłużnika, kwotę, terminy i odsetki — sprawdź i popraw, jeśli trzeba.
+              </p>
             </CardContent>
           </Card>
 
