@@ -565,7 +565,7 @@ export function LoanCalculator({
           <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-muted-foreground">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
           <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-muted-foreground">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
           {investorGuidance && (
-            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę: łączna kwota do spłaty ÷ kwota wypłacona." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
+            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-destructive" : krotnoscWarn ? "text-amber-600" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
