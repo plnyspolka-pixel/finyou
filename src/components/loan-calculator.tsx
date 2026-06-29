@@ -592,7 +592,7 @@ export function LoanCalculator({
           {investorGuidance && schedule.rows.length > 0 && (
             <Dialog open={exportOpen} onOpenChange={setExportOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV</Button>
+                <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
