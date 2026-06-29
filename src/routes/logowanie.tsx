@@ -123,11 +123,6 @@ function LoginPage() {
 
 
 
-      window.localStorage.setItem("pending_role_selection", r);
-    } catch {}
-    void navigate({ to: "/logowanie", search: (prev: Record<string, unknown>) => ({ ...prev, role: r }) });
-  };
-
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
