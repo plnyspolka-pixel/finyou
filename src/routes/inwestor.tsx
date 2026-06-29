@@ -21,7 +21,7 @@ const groups: NavGroup[] = [
       { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileSignature },
-      { to: "/inwestor/wiadomosci", label: "Wiadomości", icon: MessageSquare },
+      
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/inwestor/abonament", label: "Abonament", icon: CreditCard },
