@@ -728,13 +728,54 @@ function WindykacjaDetail() {
 
           {/* Wpłaty klienta */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Wpłaty klienta</CardTitle>
+            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base">Wpłaty klienta</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Wgraj wyciąg bankowy — AI wyciągnie wpłaty od klienta i doda je automatycznie.
+                </p>
+              </div>
+              <label className="inline-flex">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png,.csv"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onUploadStatement(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button asChild variant="secondary" size="sm" disabled={importingStatement}>
+                  <span>
+                    {importingStatement ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-1" />
+                    )}
+                    Wgraj wyciąg
+                  </span>
+                </Button>
+              </label>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-[150px_1fr_1fr_auto] gap-2 items-end">
+              <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 cursor-pointer">
+                <Checkbox
+                  checked={form.no_payments_declared}
+                  onCheckedChange={(v) => void toggleNoPayments(v === true)}
+                  className="mt-0.5"
+                />
+                <div className="text-sm">
+                  <div className="font-medium">Brak wpłat od klienta</div>
+                  <div className="text-xs text-muted-foreground">
+                    Zaznacz, jeżeli klient nie dokonał żadnej wpłaty. Saldo będzie liczone tak, jakby nic nie zostało spłacone.
+                  </div>
+                </div>
+              </label>
+
+              <div className={`grid grid-cols-1 sm:grid-cols-[150px_1fr_1fr_auto] gap-2 items-end ${form.no_payments_declared ? "opacity-50" : ""}`}>
                 <Field label="Data">
-                  <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+                  <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} disabled={form.no_payments_declared} />
                 </Field>
                 <Field label="Kwota (zł)">
                   <Input
@@ -743,6 +784,7 @@ function WindykacjaDetail() {
                     value={payAmount}
                     onChange={(e) => setPayAmount(e.target.value)}
                     placeholder="np. 1500"
+                    disabled={form.no_payments_declared}
                   />
                 </Field>
                 <Field label="Opis">
@@ -750,15 +792,18 @@ function WindykacjaDetail() {
                     value={payNote}
                     onChange={(e) => setPayNote(e.target.value)}
                     placeholder="np. przelew"
+                    disabled={form.no_payments_declared}
                   />
                 </Field>
-                <Button onClick={onAddPayment}>
+                <Button onClick={onAddPayment} disabled={form.no_payments_declared}>
                   <Plus className="h-4 w-4 mr-1" /> Dodaj
                 </Button>
               </div>
               {payments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Brak wpłat. Wgraj wszystkie wpłaty klienta, aby wyliczyć saldo.
+                  {form.no_payments_declared
+                    ? "Oznaczono: brak wpłat od klienta."
+                    : "Brak wpłat. Wgraj wyciąg bankowy lub dodaj wpłatę ręcznie."}
                 </p>
               ) : (
                 <div className="divide-y rounded-md border">
