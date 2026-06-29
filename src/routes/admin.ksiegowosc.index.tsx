@@ -67,6 +67,10 @@ function KsiegowoscIndex() {
           <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Dwa podmioty, podmiot domyślny, konfiguracja KSeF/Fakturowo.</p><Button asChild variant="outline" size="sm"><Link to="/admin/ksiegowosc/podmioty">Zarządzaj podmiotami</Link></Button></CardContent>
         </Card>
         <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Rejestr sprzedaży OF</CardTitle></CardHeader>
+          <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Sprzedaż dla osób fizycznych — faktura wystawiana tylko na żądanie po uzupełnieniu adresu.</p><Button asChild variant="outline" size="sm"><Link to="/admin/ksiegowosc/rejestr-of">Otwórz rejestr</Link></Button></CardContent>
+        </Card>
+        <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><FileCheck className="h-4 w-4" /> Rozliczenia partnerów</CardTitle></CardHeader>
           <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Faktury B2B partnerów i ewidencja działalności nierejestrowanej.</p><Button asChild variant="outline" size="sm"><Link to="/admin/program-posrednikow/rozliczenia">Rozliczenia programu</Link></Button></CardContent>
         </Card>
