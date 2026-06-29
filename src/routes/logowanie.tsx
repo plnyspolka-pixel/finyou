@@ -121,15 +121,8 @@ function LoginPage() {
     void navigate({ to: target });
   };
 
-  const roleTiles: { value: "klient" | "inwestor" | "posrednik"; label: string }[] = [
-    { value: "klient", label: "Klient" },
-    { value: "inwestor", label: "Inwestor" },
-    { value: "posrednik", label: "Pośrednik" },
-  ];
-  const activeRole = role ?? "klient";
 
-  const setRole = (r: "klient" | "inwestor" | "posrednik") => {
-    try {
+
       window.localStorage.setItem("pending_role_selection", r);
     } catch {}
     void navigate({ to: "/logowanie", search: (prev: Record<string, unknown>) => ({ ...prev, role: r }) });
