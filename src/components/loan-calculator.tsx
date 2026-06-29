@@ -196,6 +196,23 @@ export function LoanCalculator({
   const anyWarning = interestExceeds || nonInterestExceeds;
 
   useEffect(() => {
+    if (!rateTouched.current) {
+      const rounded = Math.floor(MAX_INTEREST_RATE * 10) / 10;
+      if (Math.abs(annualRate - rounded) > 1e-9) setAnnualRate(rounded);
+    }
+  }, [MAX_INTEREST_RATE, annualRate]);
+
+  useEffect(() => {
+    if (!commissionTouched.current) {
+      // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty nominalnej),
+      // przycięta do zakresu suwaka (0–30%).
+      const mpkkPct = Math.min(30, Math.max(0, 10 + 10 * (months / 12)));
+      const rounded = Math.floor(mpkkPct * 2) / 2; // krok 0,5%
+      if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
+    }
+  }, [months, commissionPct]);
+
+  useEffect(() => {
     onChange?.({
       amount, months, annualRate, commissionPct: effectiveCommissionPct, commissionPln,
       financeYouFeePct, financeYouFeePln, grossPrincipal,
