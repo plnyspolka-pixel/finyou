@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Wallet, Eye } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Eye } from "lucide-react";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
@@ -184,9 +184,6 @@ function InwestorWniosek() {
       <Link to="/inwestor" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-1 h-4 w-4" />Wróć</Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">Wniosek {formatPLN(app.loan_amount)} · {app.preferred_period_months} mies.</h1>
-        {app.annual_investor_rate != null && (
-          <Badge className="text-base px-3 py-1"><Wallet className="mr-1 h-4 w-4" />Zysk roczny {Number(app.annual_investor_rate)}%</Badge>
-        )}
         <Badge variant="secondary"><Eye className="mr-1 h-3 w-3" />{app.view_count ?? 0} odsłon</Badge>
       </div>
 

@@ -3,13 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import {
   Rocket,
-  Briefcase,
   Building2,
   FileText,
-  ShieldCheck,
   Landmark,
   CheckCircle2,
-  XCircle,
   Phone,
   AlertCircle,
 } from "lucide-react";
@@ -104,19 +101,6 @@ export function ApplicationInfoBadges({
 
   const chips: Array<{ key: string; node: React.ReactNode }> = [];
 
-  // Działalność
-  if (app.business_status) {
-    chips.push({
-      key: "biz",
-      node: (
-        <Badge variant="outline" className="gap-1">
-          <Briefcase className="h-3 w-3" />
-          {businessStatusLabels[app.business_status] ?? app.business_status}
-        </Badge>
-      ),
-    });
-  }
-
   // Forma prawna
   if (app.business_legal_form) {
     chips.push({
@@ -154,52 +138,20 @@ export function ApplicationInfoBadges({
     }
   }
 
-  // NIP
-  if (app.nip) {
-    const verified = Boolean(app.business_nip_verified_at);
+  // Dokumenty dochodowe – pokazujemy tylko gdy klient je dostarczył
+  if (incomeDocsCount && incomeDocsCount > 0) {
     chips.push({
-      key: "nip",
+      key: "income",
       node: (
-        <Badge variant={verified ? "default" : "outline"} className="gap-1">
-          <Landmark className="h-3 w-3" />
-          NIP {app.nip}
-          {verified ? <CheckCircle2 className="h-3 w-3" /> : null}
+        <Badge variant="default" className="gap-1">
+          <FileText className="h-3 w-3" />
+          Dochody ({incomeDocsCount})
+          <CheckCircle2 className="h-3 w-3" />
         </Badge>
       ),
     });
   }
 
-  // Dokumenty dochodowe
-  if (incomeDocsCount != null) {
-    const has = incomeDocsCount > 0;
-    if (has || showNegative) {
-      chips.push({
-        key: "income",
-        node: (
-          <Badge variant={has ? "default" : "outline"} className="gap-1">
-            <FileText className="h-3 w-3" />
-            {has ? `Dochody (${incomeDocsCount})` : "Brak dokumentów dochodowych"}
-            {has ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3 text-muted-foreground" />}
-          </Badge>
-        ),
-      });
-    }
-  }
-
-  // BIK
-  const hasBik = Boolean(c.bik_report_uploaded_at);
-  if (hasBik || showNegative) {
-    chips.push({
-      key: "bik",
-      node: (
-        <Badge variant={hasBik ? "default" : "outline"} className="gap-1">
-          <ShieldCheck className="h-3 w-3" />
-          BIK
-          {hasBik ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3 text-muted-foreground" />}
-        </Badge>
-      ),
-    });
-  }
 
   // Rachunek bankowy
   if (c.bank_account_verified_at) {
