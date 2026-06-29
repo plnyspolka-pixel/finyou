@@ -121,19 +121,7 @@ function LoginPage() {
     void navigate({ to: target });
   };
 
-  const roleTiles: { value: "klient" | "inwestor" | "posrednik"; label: string }[] = [
-    { value: "klient", label: "Klient" },
-    { value: "inwestor", label: "Inwestor" },
-    { value: "posrednik", label: "Pośrednik" },
-  ];
-  const activeRole = role ?? "klient";
 
-  const setRole = (r: "klient" | "inwestor" | "posrednik") => {
-    try {
-      window.localStorage.setItem("pending_role_selection", r);
-    } catch {}
-    void navigate({ to: "/logowanie", search: (prev: Record<string, unknown>) => ({ ...prev, role: r }) });
-  };
 
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
@@ -143,26 +131,11 @@ function LoginPage() {
           <CardDescription>
             {claim
               ? "Zaloguj się, aby dokończyć swój wniosek — automatycznie połączymy go z Twoim kontem."
-              : `Logujesz się jako ${activeRole === "posrednik" ? "pośrednik" : activeRole}. Po zalogowaniu trafisz do swojego panelu.`}
+              : "Po zalogowaniu trafisz do swojego panelu."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            {roleTiles.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => setRole(t.value)}
-                className={`rounded-md border px-3 py-2 text-sm font-medium transition ${
-                  activeRole === t.value
-                    ? "border-accent bg-accent/10 text-foreground ring-2 ring-accent/40"
-                    : "border-border text-muted-foreground hover:border-accent/60 hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+
           {sent ? (
             <div className="rounded-md border bg-muted/40 p-4 text-sm">
               <p className="font-medium">Sprawdź skrzynkę {email}</p>
