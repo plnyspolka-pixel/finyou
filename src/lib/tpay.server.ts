@@ -62,6 +62,7 @@ export async function createTpayTransaction(input: TpayCreateInput): Promise<Tpa
   const res = await fetch(`${TPAY_API_BASE}/transactions`, {
     method: "POST",
     headers: {
+      ...COMMON_HEADERS,
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
