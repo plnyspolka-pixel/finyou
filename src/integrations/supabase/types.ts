@@ -149,6 +149,7 @@ export type Database = {
           direct_partner_id: string
           event_status: string
           event_type: string
+          external_ref: string | null
           finance_you_fee_amount: number | null
           gross_payment_amount: number | null
           id: string
@@ -157,6 +158,7 @@ export type Database = {
           occurred_at: string
           paid_account_id: string | null
           payment_id: string | null
+          processed_at: string | null
           product_id: string | null
           refund_window_until: string | null
           source_entity_id: string | null
@@ -174,6 +176,7 @@ export type Database = {
           direct_partner_id: string
           event_status?: string
           event_type: string
+          external_ref?: string | null
           finance_you_fee_amount?: number | null
           gross_payment_amount?: number | null
           id?: string
@@ -182,6 +185,7 @@ export type Database = {
           occurred_at?: string
           paid_account_id?: string | null
           payment_id?: string | null
+          processed_at?: string | null
           product_id?: string | null
           refund_window_until?: string | null
           source_entity_id?: string | null
@@ -199,6 +203,7 @@ export type Database = {
           direct_partner_id?: string
           event_status?: string
           event_type?: string
+          external_ref?: string | null
           finance_you_fee_amount?: number | null
           gross_payment_amount?: number | null
           id?: string
@@ -207,6 +212,7 @@ export type Database = {
           occurred_at?: string
           paid_account_id?: string | null
           payment_id?: string | null
+          processed_at?: string | null
           product_id?: string | null
           refund_window_until?: string | null
           source_entity_id?: string | null
@@ -4690,6 +4696,7 @@ export type Database = {
           preferred_email_hour: number | null
           preferred_period_months: number | null
           property_quality: string | null
+          referred_by_partner_id: string | null
           reminder_attempts: number
           reminder_email_count: number
           reminder_email_first_sent_at: string | null
@@ -4770,6 +4777,7 @@ export type Database = {
           preferred_email_hour?: number | null
           preferred_period_months?: number | null
           property_quality?: string | null
+          referred_by_partner_id?: string | null
           reminder_attempts?: number
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
@@ -4850,6 +4858,7 @@ export type Database = {
           preferred_email_hour?: number | null
           preferred_period_months?: number | null
           property_quality?: string | null
+          referred_by_partner_id?: string | null
           reminder_attempts?: number
           reminder_email_count?: number
           reminder_email_first_sent_at?: string | null
@@ -4877,6 +4886,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_applications_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -5695,7 +5711,9 @@ export type Database = {
           id: string
           last_name: string | null
           phone: string | null
+          referral_captured_at: string | null
           referral_code: string | null
+          referred_by_partner_id: string | null
           updated_at: string
           user_id: string
         }
@@ -5706,7 +5724,9 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          referral_captured_at?: string | null
           referral_code?: string | null
+          referred_by_partner_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -5717,11 +5737,21 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          referral_captured_at?: string | null
           referral_code?: string | null
+          referred_by_partner_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
