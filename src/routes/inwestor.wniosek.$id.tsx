@@ -216,12 +216,17 @@ function InwestorWniosek() {
                 ))}
               </div>
             )}
-            <div className="text-sm grid gap-1 md:grid-cols-2">
-              <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
-              <div><span className="text-muted-foreground">Lokalizacja:</span> {[p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
-              <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
-              <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>
-            </div>
+            {(() => {
+              const loc = [p.city, p.voivodeship].filter(Boolean).join(", ");
+              return (
+                <div className="text-sm grid gap-1 md:grid-cols-2">
+                  <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
+                  {loc && <div><span className="text-muted-foreground">Lokalizacja:</span> {loc}</div>}
+                  {p.area_sqm && <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm} m²</div>}
+                  {p.estimated_value && <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>}
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
