@@ -12,11 +12,16 @@ function getEnv(name: string): string {
 
 let cachedToken: { token: string; exp: number } | null = null;
 
+const COMMON_HEADERS = {
+  "User-Agent": "FinanceYou/1.0 (+https://financeyou.pl)",
+  Accept: "application/json",
+};
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken && cachedToken.exp > Date.now() + 30_000) return cachedToken.token;
   const res = await fetch(`${TPAY_API_BASE}/oauth/auth`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...COMMON_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify({
       client_id: getEnv("TPAY_CLIENT_ID"),
       client_secret: getEnv("TPAY_CLIENT_SECRET"),
@@ -33,6 +38,7 @@ async function getAccessToken(): Promise<string> {
   };
   return data.access_token;
 }
+
 
 export type TpayCreateInput = {
   amount: number;            // PLN
@@ -56,6 +62,7 @@ export async function createTpayTransaction(input: TpayCreateInput): Promise<Tpa
   const res = await fetch(`${TPAY_API_BASE}/transactions`, {
     method: "POST",
     headers: {
+      ...COMMON_HEADERS,
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
@@ -102,7 +109,7 @@ export type TpayTransactionStatus = {
 export async function getTpayTransaction(transactionId: string): Promise<TpayTransactionStatus> {
   const token = await getAccessToken();
   const res = await fetch(`${TPAY_API_BASE}/transactions/${encodeURIComponent(transactionId)}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { ...COMMON_HEADERS, Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     const body = await res.text();
