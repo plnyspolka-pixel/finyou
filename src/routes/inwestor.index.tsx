@@ -277,9 +277,6 @@ function InwestorList() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-1">
-                      <Badge variant="outline" className="text-xs">{visibilityLabels[a.visibility_level]}</Badge>
-                    </div>
                   </CardContent>
                 </Card>
               </Link>
