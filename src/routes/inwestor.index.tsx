@@ -18,6 +18,15 @@ export const Route = createFileRoute("/inwestor/")({
 
 const PROPERTY_TYPES = Object.keys(propertyTypeLabels);
 
+function maskKw(kw: string): string {
+  // Format: XX1X/00123456/7 → zachowujemy kod sądu, maskujemy numer i cyfrę kontrolną
+  const parts = kw.trim().toUpperCase().split("/");
+  if (parts.length !== 3) return kw.replace(/\d/g, "•");
+  const [court, num, _check] = parts;
+  const masked = num.length > 2 ? num.slice(0, 2) + "•".repeat(Math.max(0, num.length - 2)) : "•".repeat(num.length);
+  return `${court}/${masked}/•`;
+}
+
 const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i;
 const PROPERTY_PHOTO_TYPES = new Set([
   "zdjecie_nieruchomosci",
@@ -57,7 +66,7 @@ function InwestorList() {
   useEffect(() => { if (!user) return; void (async () => {
     const { data } = await supabase
       .from("loan_applications")
-      .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street)")
+      .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street, land_register_number)")
       .eq("available_to_investors", true)
       .order("created_at", { ascending: false });
     const list = data ?? [];
@@ -249,6 +258,11 @@ function InwestorList() {
                       <div className="grid grid-cols-2 gap-2 text-sm border-y py-2">
                         <div className="flex items-center gap-1.5"><Ruler className="h-3.5 w-3.5 text-muted-foreground" />{p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
                         <div className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-muted-foreground" />{formatPLN(p.estimated_value)}</div>
+                        {p.land_register_number && (
+                          <div className="flex items-center gap-1.5 col-span-2 text-xs text-muted-foreground font-mono" title="Pełny numer KW widoczny we wniosku">
+                            KW: {maskKw(p.land_register_number)}
+                          </div>
+                        )}
                       </div>
                     )}
 
