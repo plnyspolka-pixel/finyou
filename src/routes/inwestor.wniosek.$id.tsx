@@ -274,10 +274,11 @@ function InwestorWniosek() {
       </Card>
 
       <LoanCalculator
+        key={`calc-${ratesQ.data?.referenceRate ?? "loading"}`}
         initialAmount={Number(app.loan_amount) || 100_000}
-        initialMonths={Number(app.preferred_period_months) || 12}
-        initialAnnualRate={Number(app.annual_investor_rate) || 15}
-        initialMaxPayment={Number(app.max_monthly_payment) || 5000}
+        initialMonths={maxMonthsForAmount(Number(app.loan_amount) || 100_000)}
+        initialAnnualRate={Math.round(maxAnnualRate * 10) / 10}
+        initialMaxPayment={Number(app.max_monthly_payment) || 0}
         onChange={setCalc}
       />
 
