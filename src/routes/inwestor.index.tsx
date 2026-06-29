@@ -249,7 +249,7 @@ function InwestorList() {
                       {p && (
                         <div className="flex items-center text-sm text-muted-foreground mt-0.5">
                           <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
-                          <span className="truncate">{[p.street, p.city, p.voivodeship].filter(Boolean).join(", ")}</span>
+                          <span className="truncate">{[p.city, p.voivodeship].filter(Boolean).join(", ")}</span>
                         </div>
                       )}
                     </div>
@@ -277,9 +277,6 @@ function InwestorList() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-auto pt-1">
-                      <Badge variant="outline" className="text-xs">{visibilityLabels[a.visibility_level]}</Badge>
-                    </div>
                   </CardContent>
                 </Card>
               </Link>
