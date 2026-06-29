@@ -477,7 +477,7 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPctTouched(Number(e.target.value) || 0)} className="w-24" />
+                <NumberField step="0.5" value={commissionPct} onCommit={(n) => setCommissionPctTouched(n || 0)} className="w-24" />
                 <span className="text-sm">% ({formatPLN(commissionPln)})</span>
               </div>
             </div>
