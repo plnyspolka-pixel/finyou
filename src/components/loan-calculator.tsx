@@ -410,11 +410,11 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Roczne oprocentowanie (odsetki) {investorGuidance && <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.1" value={annualRate} onChange={(e) => setAnnualRate(Number(e.target.value) || 0)} className="w-24" />
+                <Input type="number" step="0.1" value={annualRate} onChange={(e) => setAnnualRateTouched(Number(e.target.value) || 0)} className="w-24" />
                 <span className="text-sm">%</span>
               </div>
             </div>
-            <Slider min={0} max={MAX_INTEREST_RATE} step={0.1} value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRate(v[0])} />
+            <Slider min={0} max={MAX_INTEREST_RATE} step={0.1} value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRateTouched(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0%</span>
               <span className={interestExceeds ? "text-destructive font-medium" : ""}>
