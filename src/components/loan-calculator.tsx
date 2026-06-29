@@ -471,7 +471,7 @@ export function LoanCalculator({
             )}
           </div>
         </CardContent>
-      </Card>
+      </Card></FancyShell>
 
 
       {nonInterestExceeds && (
