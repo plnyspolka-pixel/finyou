@@ -459,7 +459,7 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Roczne oprocentowanie (odsetki) {investorGuidance && <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.1" value={annualRate} onChange={(e) => setAnnualRateTouched(Number(e.target.value) || 0)} className="w-24" />
+                <NumberField step="0.1" value={annualRate} onCommit={(n) => setAnnualRateTouched(n || 0)} className="w-24" />
                 <span className="text-sm">%</span>
               </div>
             </div>
