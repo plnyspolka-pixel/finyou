@@ -33,7 +33,7 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Track
         className={cn(
           "relative h-2.5 w-full grow overflow-hidden rounded-full",
-          gradient ? "" : "bg-primary/20",
+          gradient ? "" : "bg-foreground/25 dark:bg-white/25 ring-1 ring-inset ring-foreground/10",
         )}
         style={gradientStyle}
       >

@@ -20,6 +20,54 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 
 const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
 
+/** Pole liczbowe z lokalnym stanem tekstu — nie nadpisuje wpisywanej wartości w trakcie edycji. */
+function NumberField({
+  value,
+  onCommit,
+  className,
+  step,
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+  className?: string;
+  step?: string | number;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState<string>(String(value));
+  useEffect(() => {
+    if (!focused) setDraft(String(value));
+  }, [value, focused]);
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      step={step}
+      value={focused ? draft : String(value)}
+      onFocus={(e) => {
+        setFocused(true);
+        setDraft(String(value));
+        e.currentTarget.select();
+      }}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/\s+/g, "").replace(",", ".");
+        setDraft(e.target.value);
+        if (raw === "" || raw === "-" || raw === "." || raw === "-.") return;
+        const n = Number(raw);
+        if (Number.isFinite(n)) onCommit(n);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const n = Number(draft.replace(/\s+/g, "").replace(",", "."));
+        onCommit(Number.isFinite(n) ? n : 0);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+      }}
+      className={className}
+    />
+  );
+}
+
 // Limity ustawowe:
 // Odsetki ustawowe (art. 359 §2 KC): stopa ref. NBP + 3,5 p.p.
 // Odsetki maksymalne (art. 359 §2¹ KC): 2 × odsetki ustawowe = 2 × (stopa ref. NBP + 3,5 p.p.).
@@ -330,7 +378,7 @@ export function LoanCalculator({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o prowizję inwestora; odsetki liczone są od kapitału startowego (kwota nominalna + kredytowana prowizja Finance You)." />}</Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-40" />
+              <NumberField value={amount} onCommit={(n) => setAmount(n || 0)} className="w-40" />
             </div>
             <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
@@ -351,11 +399,9 @@ export function LoanCalculator({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi po potrąceniu prowizji inwestora i prowizji Finance You. Ustawienie tego suwaka dobiera kwotę nominalną pożyczki tak, aby na rękę wyszła wskazana wartość." />}</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(disbursedOnHand)}
-                onChange={(e) => {
-                  const target = Number(e.target.value) || 0;
+                onCommit={(target) => {
                   let a = target / Math.max(0.01, 1 - commissionPct / 100 - 0.07);
                   for (let i = 0; i < 25; i++) {
                     const t = Math.min(1, Math.max(0, (a - 20_000) / (1_000_000 - 20_000)));
@@ -413,7 +459,7 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Roczne oprocentowanie (odsetki) {investorGuidance && <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.1" value={annualRate} onChange={(e) => setAnnualRateTouched(Number(e.target.value) || 0)} className="w-24" />
+                <NumberField step="0.1" value={annualRate} onCommit={(n) => setAnnualRateTouched(n || 0)} className="w-24" />
                 <span className="text-sm">%</span>
               </div>
             </div>
@@ -431,7 +477,7 @@ export function LoanCalculator({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" step="0.5" value={commissionPct} onChange={(e) => setCommissionPctTouched(Number(e.target.value) || 0)} className="w-24" />
+                <NumberField step="0.5" value={commissionPct} onCommit={(n) => setCommissionPctTouched(n || 0)} className="w-24" />
                 <span className="text-sm">% ({formatPLN(commissionPln)})</span>
               </div>
             </div>
@@ -455,7 +501,7 @@ export function LoanCalculator({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Maksymalna rata dla klienta</Label>
-              <Input type="number" value={maxPayment} onChange={(e) => setMaxPayment(Number(e.target.value) || 0)} className="w-40" />
+              <NumberField value={maxPayment} onCommit={(n) => setMaxPayment(n || 0)} className="w-40" />
             </div>
             <Slider min={500} max={50000} step={100} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>500 zł</span><span>50 000 zł</span></div>
