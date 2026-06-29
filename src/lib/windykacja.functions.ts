@@ -715,6 +715,66 @@ export const generateWindDocument = createServerFn({ method: "POST" })
     return { document: doc as WindDocument, event: ev as WindEvent };
   });
 
+// ── Rejestracja dokumentu DOCX wygenerowanego z szablonu Kreatora ────
+// (Sam plik DOCX powstaje przez generateDocxFromTemplate; tu wiążemy go ze
+//  sprawą: zdarzenie dowodowe + wpis dokumentu z linkiem do pliku.)
+export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: Record<string, unknown>) =>
+    z
+      .object({
+        caseId: z.string().uuid(),
+        typ: z.enum([
+          "wezwanie",
+          "wypowiedzenie",
+          "wniosek_klauzula",
+          "wniosek_komornik",
+          "aneks",
+          "porozumienie",
+          "ugoda",
+          "zawiadomienie_286",
+          "zawiadomienie_297",
+          "notatka",
+        ]),
+        tytul: z.string().min(1),
+        plik_url: z.string().min(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = loose(context.supabase);
+    const { data: ev, error: eErr } = await db
+      .from("wind_events")
+      .insert({
+        case_id: data.caseId,
+        typ: "dokument_wygenerowany",
+        kategoria: "systemowe",
+        tytul: `Wygenerowano (DOCX): ${data.tytul}`,
+        tresc: "Dokument utworzony z gotowego szablonu Kreatora dokumentów.",
+        zalacznik_url: data.plik_url,
+        autor: context.claims?.email ?? null,
+      })
+      .select(EVENT_COLS)
+      .single();
+    if (eErr) throw new Error(eErr.message);
+
+    const { data: doc, error: dErr } = await db
+      .from("wind_documents")
+      .insert({
+        case_id: data.caseId,
+        event_id: ev.id,
+        typ: data.typ,
+        tytul: data.tytul,
+        plik_url: data.plik_url,
+        status: "gotowy",
+      })
+      .select(DOC_COLS)
+      .single();
+    if (dErr) throw new Error(dErr.message);
+
+    return { document: doc as WindDocument, event: ev as WindEvent };
+  });
+
 // ── Seed danych demonstracyjnych ─────────────────────────────────────
 export const seedWindDemo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -16,12 +16,22 @@ import {
   addWindWplata,
   addWindNotatka,
   generateWindDocument,
+  recordWindGeneratedDoc,
   type WindCase,
   type WindLoan,
   type WindBorrower,
   type WindEvent,
   type WindDocument,
 } from "@/lib/windykacja.functions";
+import {
+  listDocxTemplates,
+  getDocxTemplatePreview,
+  generateDocxFromTemplate,
+  getGeneratedDocSignedUrl,
+  type DocTemplate,
+} from "@/lib/document-generator.functions";
+import { extractOrderedFields } from "@/lib/document-fields";
+import { buildWindTemplateValues } from "@/lib/windykacja-docfill";
 import {
   PATH_LABELS,
   PATH_BADGE,
@@ -85,6 +95,7 @@ import {
   Eye,
   Calculator,
   FileDown,
+  Download,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
@@ -145,6 +156,20 @@ function WindykacjaCaseCard() {
   const doWplata = useServerFn(addWindWplata);
   const doNotatka = useServerFn(addWindNotatka);
   const genDoc = useServerFn(generateWindDocument);
+  const listTemplates = useServerFn(listDocxTemplates);
+  const previewTemplate = useServerFn(getDocxTemplatePreview);
+  const genDocx = useServerFn(generateDocxFromTemplate);
+  const recordDoc = useServerFn(recordWindGeneratedDoc);
+  const signUrl = useServerFn(getGeneratedDocSignedUrl);
+
+  const downloadDoc = async (path: string) => {
+    try {
+      const { url } = await signUrl({ data: { path } });
+      window.open(url, "_blank");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się pobrać pliku");
+    }
+  };
 
   const [kase, setKase] = useState<WindCase | null>(null);
   const [loan, setLoan] = useState<WindLoan | null>(null);
@@ -325,9 +350,15 @@ function WindykacjaCaseCard() {
                         {formatDate(d.created_at)}
                       </span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setDocPreview(d)}>
-                      <Eye className="h-4 w-4 mr-1" /> Podgląd
-                    </Button>
+                    {d.plik_url ? (
+                      <Button variant="ghost" size="sm" onClick={() => downloadDoc(d.plik_url!)}>
+                        <Download className="h-4 w-4 mr-1" /> Pobierz DOCX
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => setDocPreview(d)}>
+                        <Eye className="h-4 w-4 mr-1" /> Podgląd
+                      </Button>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -501,7 +532,19 @@ function WindykacjaCaseCard() {
           borrower={borrower}
           events={events}
           userId={user?.id}
-          fns={{ doContact, doPismo, doDelivery, doWplata, doNotatka, genDoc, doStage }}
+          fns={{
+            doContact,
+            doPismo,
+            doDelivery,
+            doWplata,
+            doNotatka,
+            genDoc,
+            doStage,
+            listTemplates,
+            previewTemplate,
+            genDocx,
+            recordDoc,
+          }}
           onDone={(ev) => {
             setAction(null);
             refreshAfterEvent(ev);
@@ -655,6 +698,10 @@ type Fns = {
   doNotatka: ReturnType<typeof useServerFn<typeof addWindNotatka>>;
   genDoc: ReturnType<typeof useServerFn<typeof generateWindDocument>>;
   doStage: ReturnType<typeof useServerFn<typeof changeWindStage>>;
+  listTemplates: ReturnType<typeof useServerFn<typeof listDocxTemplates>>;
+  previewTemplate: ReturnType<typeof useServerFn<typeof getDocxTemplatePreview>>;
+  genDocx: ReturnType<typeof useServerFn<typeof generateDocxFromTemplate>>;
+  recordDoc: ReturnType<typeof useServerFn<typeof recordWindGeneratedDoc>>;
 };
 
 function ActionDialog({
@@ -685,7 +732,23 @@ function ActionDialog({
     initialValues(kind, kase, loan, borrower),
   );
   const [file, setFile] = useState<File | null>(null);
+  const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const set = (k: string, val: string) => setV((p) => ({ ...p, [k]: val }));
+
+  // Wzory DOCX z Kreatora dokumentów (kategorie windykacyjne na górze).
+  useEffect(() => {
+    if (kind !== "dokument") return;
+    void (async () => {
+      try {
+        const all = await fns.listTemplates();
+        const wind = all.filter((t) => (t.category ?? "").startsWith("windykacja"));
+        const rest = all.filter((t) => !(t.category ?? "").startsWith("windykacja"));
+        setTemplates([...wind, ...rest]);
+      } catch {
+        /* lista wzorów opcjonalna */
+      }
+    })();
+  }, [kind, fns]);
 
   const uploadScan = async (): Promise<string | null> => {
     if (!file || !userId) return null;
@@ -764,9 +827,50 @@ function ActionDialog({
         toast.success("Dodano notatkę");
         onDone(ev);
       } else if (kind === "dokument") {
-        const res = await fns.genDoc({ data: { caseId, typ: v.typ as WindDocumentType } });
-        toast.success("Wygenerowano dokument");
-        onDone(res.event);
+        if (v.source === "docx") {
+          if (!v.templateId) {
+            toast.error("Wybierz wzór DOCX");
+            setBusy(false);
+            return;
+          }
+          const tpl = templates.find((t) => t.id === v.templateId);
+          // 1) podgląd → pola → auto-uzupełnienie danymi sprawy
+          const { text } = await fns.previewTemplate({ data: { templateId: v.templateId } });
+          const fields = extractOrderedFields(text);
+          const values = buildWindTemplateValues(fields, {
+            dluznik: borrower.imie_nazwisko,
+            adres: borrower.adres_do_doreczen || borrower.adres_zamieszkania || "",
+            pesel: borrower.pesel,
+            nip: borrower.nip,
+            kwota_zalegla: Number(kase.kwota_zalegla || 0),
+            saldo: Number(loan.saldo_pozostale || 0),
+            prowizja: loan.prowizja,
+            kwota_pozyczki: loan.kwota_pozyczki,
+            numer_kw: loan.numer_kw,
+            akt_777: loan.akt_notarialny_777,
+            numer_umowy: loan.numer_umowy,
+            data_umowy: loan.data_umowy,
+            rachunek: loan.rachunek_splaty,
+            dataISO: todayISO(),
+          });
+          // 2) wygeneruj DOCX z wzoru
+          const gen = await fns.genDocx({ data: { templateId: v.templateId, values } });
+          // 3) zapisz w sprawie (zdarzenie + dokument z linkiem)
+          const res = await fns.recordDoc({
+            data: {
+              caseId,
+              typ: v.typ as WindDocumentType,
+              tytul: tpl?.name ?? "Dokument",
+              plik_url: gen.docxPath,
+            },
+          });
+          toast.success("Wygenerowano DOCX z wzoru Kreatora");
+          onDone(res.event);
+        } else {
+          const res = await fns.genDoc({ data: { caseId, typ: v.typ as WindDocumentType } });
+          toast.success("Wygenerowano dokument");
+          onDone(res.event);
+        }
       } else if (kind === "etap") {
         const ev = await fns.doStage({
           data: { caseId, sciezka: v.sciezka as WindPath, etap: v.etap, note: v.note },
@@ -910,20 +1014,59 @@ function ActionDialog({
           )}
 
           {kind === "dokument" && (
-            <Fld label="Typ dokumentu">
-              <Select value={v.typ} onValueChange={(val) => set("typ", val)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {documentsForPath(kase.sciezka).map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {DOCUMENT_LABELS[t]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Fld>
+            <>
+              <Fld label="Źródło dokumentu">
+                <Select value={v.source} onValueChange={(val) => set("source", val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="docx">Gotowy wzór DOCX (Kreator dokumentów)</SelectItem>
+                    <SelectItem value="tekst">Szablon tekstowy (szybki podgląd)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Fld>
+              <Fld label="Kategoria (do akt sprawy)">
+                <Select value={v.typ} onValueChange={(val) => set("typ", val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {documentsForPath(kase.sciezka).map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {DOCUMENT_LABELS[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Fld>
+              {v.source === "docx" && (
+                <Fld label="Wzór DOCX">
+                  <Select
+                    value={v.templateId ?? ""}
+                    onValueChange={(val) => set("templateId", val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={templates.length ? "Wybierz wzór…" : "Ładowanie wzorów…"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                          {t.category ? ` · ${t.category}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Wzór zostanie automatycznie uzupełniony danymi sprawy (dłużnik, kwoty, KW,
+                    data). Puste pola pozostaną do ręcznego wpełnienia.
+                  </p>
+                </Fld>
+              )}
+            </>
           )}
 
           {kind === "etap" && (
@@ -1040,7 +1183,11 @@ function initialValues(
   if (kind === "sms")
     base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(kase.kwota_zalegla)}. Prosimy o pilną spłatę.`;
   if (kind === "doreczenie") base.rodzaj = "doreczone";
-  if (kind === "dokument") base.typ = documentsForPath(kase.sciezka)[0];
+  if (kind === "dokument") {
+    base.typ = documentsForPath(kase.sciezka)[0];
+    base.source = "docx";
+    base.templateId = "";
+  }
   if (kind === "etap") {
     base.sciezka = kase.sciezka;
     base.etap = kase.etap;
