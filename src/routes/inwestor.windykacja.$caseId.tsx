@@ -255,7 +255,16 @@ function WindykacjaDetail() {
     }
   };
 
-  // ── Upload umowy ───────────────────────────────────────────────────
+  // ── Pomocnik: plik → data URL (base64) ──────────────────────────────
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error("Nie udało się wczytać pliku."));
+      fr.onload = () => resolve(String(fr.result ?? ""));
+      fr.readAsDataURL(file);
+    });
+
+  // ── Upload umowy + auto‑uzupełnianie danych z AI ───────────────────
   const onUploadContract = async (file: File) => {
     if (!user) return;
     setUploading(true);
@@ -270,7 +279,25 @@ function WindykacjaDetail() {
         });
       if (error) throw new Error(error.message);
       await persist({ contract_file_path: path, contract_file_name: file.name }, true);
-      toast.success("Umowa wgrana");
+      toast.success("Umowa wgrana — uzupełniam dane…");
+
+      setExtracting(true);
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        const res = await extractContract({
+          data: { caseId, dataUrl, mimeType: file.type || "application/pdf", fileName: file.name },
+        });
+        if (res.ok) {
+          toast.success(`Uzupełniono ${res.updated} pól z umowy.`);
+          await reload();
+        } else {
+          toast.message("Nie udało się odczytać danych z umowy — uzupełnij ręcznie.");
+        }
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Nie udało się odczytać umowy");
+      } finally {
+        setExtracting(false);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nie udało się wgrać pliku");
     } finally {
@@ -286,6 +313,50 @@ function WindykacjaDetail() {
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
     else toast.error("Nie udało się otworzyć pliku");
   };
+
+  // ── Import wpłat z wyciągu bankowego ───────────────────────────────
+  const onUploadStatement = async (file: File) => {
+    setImportingStatement(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const res = await extractStatement({
+        data: {
+          caseId,
+          dataUrl,
+          mimeType: file.type || "application/pdf",
+          fileName: file.name,
+          debtorName: form?.debtor_name ?? null,
+        },
+      });
+      if (res.inserted > 0) {
+        toast.success(`Zaimportowano ${res.inserted} wpłat z wyciągu.`);
+        await reload();
+        // Jeżeli były wpłaty, automatycznie odznaczamy "brak wpłat"
+        if (form?.no_payments_declared) {
+          await setNoPayments({ data: { caseId, value: false } });
+        }
+      } else {
+        toast.message("Nie znaleziono żadnych wpłat od klienta w tym wyciągu.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się przetworzyć wyciągu");
+    } finally {
+      setImportingStatement(false);
+    }
+  };
+
+  // ── Toggle: brak wpłat od klienta ──────────────────────────────────
+  const toggleNoPayments = async (value: boolean) => {
+    if (!form) return;
+    setForm({ ...form, no_payments_declared: value });
+    try {
+      await setNoPayments({ data: { caseId, value } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się zapisać");
+      setForm((f) => (f ? { ...f, no_payments_declared: !value } : f));
+    }
+  };
+
 
   // ── Wpłaty ─────────────────────────────────────────────────────────
   const onAddPayment = async () => {
