@@ -224,6 +224,9 @@ function InwestorWniosek() {
                   {loc && <div><span className="text-muted-foreground">Lokalizacja:</span> {loc}</div>}
                   {p.area_sqm && <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm} m²</div>}
                   {p.estimated_value && <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>}
+                  {p.land_register_number && (
+                    <div className="md:col-span-2"><span className="text-muted-foreground">Numer KW:</span> <span className="font-mono font-medium">{p.land_register_number}</span></div>
+                  )}
                 </div>
               );
             })()}
