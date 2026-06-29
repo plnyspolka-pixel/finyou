@@ -90,6 +90,7 @@ import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growt
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
+import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.windykacja.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
@@ -555,6 +556,11 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   path: '/ai-administrator',
   getParentRoute: () => AdminRoute,
 } as any)
+const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => InwestorWindykacjaRoute,
+} as any)
 const AdminProgramPosrednikowIndexRoute =
   AdminProgramPosrednikowIndexRouteImport.update({
     id: '/program-posrednikow/',
@@ -992,6 +998,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
+  '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
@@ -1071,7 +1078,6 @@ export interface FileRoutesByTo {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -1128,6 +1134,7 @@ export interface FileRoutesByTo {
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
+  '/inwestor/windykacja': typeof InwestorWindykacjaIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
@@ -1269,6 +1276,7 @@ export interface FileRoutesById {
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
+  '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
@@ -1411,6 +1419,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
+    | '/inwestor/windykacja/'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/affiliate-events-tick'
@@ -1490,7 +1499,6 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1547,6 +1555,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady/$id'
     | '/admin/ksiegowosc'
     | '/admin/program-posrednikow'
+    | '/inwestor/windykacja'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/affiliate-events-tick'
@@ -1687,6 +1696,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
+    | '/inwestor/windykacja/'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/affiliate-events-tick'
@@ -2342,6 +2352,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiAdministratorRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/inwestor/windykacja/': {
+      id: '/inwestor/windykacja/'
+      path: '/'
+      fullPath: '/inwestor/windykacja/'
+      preLoaderRoute: typeof InwestorWindykacjaIndexRouteImport
+      parentRoute: typeof InwestorWindykacjaRoute
+    }
     '/admin/program-posrednikow/': {
       id: '/admin/program-posrednikow/'
       path: '/program-posrednikow'
@@ -2886,10 +2903,12 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface InwestorWindykacjaRouteChildren {
   InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRoute
+  InwestorWindykacjaIndexRoute: typeof InwestorWindykacjaIndexRoute
 }
 
 const InwestorWindykacjaRouteChildren: InwestorWindykacjaRouteChildren = {
   InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRoute,
+  InwestorWindykacjaIndexRoute: InwestorWindykacjaIndexRoute,
 }
 
 const InwestorWindykacjaRouteWithChildren =
@@ -3050,13 +3069,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
