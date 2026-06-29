@@ -323,8 +323,10 @@ export function LoanCalculator({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
-          <CardDescription>Suwaki działają tak samo, jak po stronie klienta.</CardDescription>
+      <FancyShell><Card className={FANCY_CARD_CLS}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-white"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
+          <CardDescription className="text-white/70">Suwaki działają tak samo, jak po stronie klienta.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
