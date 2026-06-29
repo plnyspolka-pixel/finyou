@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_entities: {
+        Row: {
+          active: boolean
+          address_city: string | null
+          address_country: string | null
+          address_postal_code: string | null
+          address_street: string | null
+          bank_account: string | null
+          created_at: string
+          default_vat_rate: string
+          email: string | null
+          fakturowo_api_id_encrypted: string | null
+          id: string
+          invoice_next_number: number
+          invoice_prefix: string
+          is_default: boolean
+          ksef_environment: string
+          ksef_nip: string | null
+          ksef_token_encrypted: string | null
+          legal_name: string
+          name: string
+          nip: string | null
+          phone: string | null
+          provider: string
+          regon: string | null
+          updated_at: string
+          vat_payer: boolean
+        }
+        Insert: {
+          active?: boolean
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
+          bank_account?: string | null
+          created_at?: string
+          default_vat_rate?: string
+          email?: string | null
+          fakturowo_api_id_encrypted?: string | null
+          id?: string
+          invoice_next_number?: number
+          invoice_prefix?: string
+          is_default?: boolean
+          ksef_environment?: string
+          ksef_nip?: string | null
+          ksef_token_encrypted?: string | null
+          legal_name: string
+          name: string
+          nip?: string | null
+          phone?: string | null
+          provider?: string
+          regon?: string | null
+          updated_at?: string
+          vat_payer?: boolean
+        }
+        Update: {
+          active?: boolean
+          address_city?: string | null
+          address_country?: string | null
+          address_postal_code?: string | null
+          address_street?: string | null
+          bank_account?: string | null
+          created_at?: string
+          default_vat_rate?: string
+          email?: string | null
+          fakturowo_api_id_encrypted?: string | null
+          id?: string
+          invoice_next_number?: number
+          invoice_prefix?: string
+          is_default?: boolean
+          ksef_environment?: string
+          ksef_nip?: string | null
+          ksef_token_encrypted?: string | null
+          legal_name?: string
+          name?: string
+          nip?: string | null
+          phone?: string | null
+          provider?: string
+          regon?: string | null
+          updated_at?: string
+          vat_payer?: boolean
+        }
+        Relationships: []
+      }
       affiliate_audit_logs: {
         Row: {
           action: string
@@ -6006,6 +6090,125 @@ export type Database = {
           was_auto_enriched?: boolean
         }
         Relationships: []
+      }
+      sales_invoices: {
+        Row: {
+          buyer_city: string | null
+          buyer_country: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_nip: string | null
+          buyer_postal_code: string | null
+          buyer_street: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          due_date: string | null
+          entity_id: string | null
+          error_message: string | null
+          fakturowo_document_id: string | null
+          gross_amount: number
+          id: string
+          invoice_number: string | null
+          issue_date: string | null
+          items: Json
+          ksef_element_reference: string | null
+          ksef_reference_number: string | null
+          ksef_status: string
+          ksef_upo_xml: string | null
+          net_amount: number
+          payment_id: string | null
+          pdf_url: string | null
+          provider: string | null
+          sale_date: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          vat_amount: number
+          vat_rate: string
+        }
+        Insert: {
+          buyer_city?: string | null
+          buyer_country?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          entity_id?: string | null
+          error_message?: string | null
+          fakturowo_document_id?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          items?: Json
+          ksef_element_reference?: string | null
+          ksef_reference_number?: string | null
+          ksef_status?: string
+          ksef_upo_xml?: string | null
+          net_amount?: number
+          payment_id?: string | null
+          pdf_url?: string | null
+          provider?: string | null
+          sale_date?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: string
+        }
+        Update: {
+          buyer_city?: string | null
+          buyer_country?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_date?: string | null
+          entity_id?: string | null
+          error_message?: string | null
+          fakturowo_document_id?: string | null
+          gross_amount?: number
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          items?: Json
+          ksef_element_reference?: string | null
+          ksef_reference_number?: string | null
+          ksef_status?: string
+          ksef_upo_xml?: string | null
+          net_amount?: number
+          payment_id?: string | null
+          pdf_url?: string | null
+          provider?: string | null
+          sale_date?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_invoices_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_posts: {
         Row: {
