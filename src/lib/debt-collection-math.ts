@@ -1,27 +1,30 @@
 // ════════════════════════════════════════════════════════════════════
 // OBLICZENIA WINDYKACYJNE — czyste, deterministyczne funkcje.
 //
-// KLUCZOWA ZASADA (od jakiego kapitału naliczamy odsetki za opóźnienie):
+// STRUKTURA NALEŻNOŚCI (model inwestora):
+//   kwota teoretyczna = kwota na rękę (klient) + prowizja Finance You +
+//                       prowizja inwestora.
+//   Całą kwotę teoretyczną klient oddaje (to jest „kapitał").
+//   ALE odsetki (kapitałowe i za opóźnienie) naliczamy WYŁĄCZNIE od części
+//   oprocentowanej = kwota na rękę + prowizja Finance You. Prowizja inwestora
+//   jest spłacana razem z kapitałem, lecz NIE jest oprocentowana.
 //
-//   • UMOWA NIEWYPOWIEDZIANA — wymagalne są tylko poszczególne, zapadłe
-//     raty. Odsetki za opóźnienie naliczamy WYŁĄCZNIE od zaległych rat
-//     (kwoty już wymagalnej), a nie od całego kapitału. Pozostała część
-//     kapitału nie jest jeszcze wymagalna.
-//
-//   • UMOWA WYPOWIEDZIANA — z chwilą skutecznego wypowiedzenia cała
-//     pozostała należność staje się natychmiast wymagalna. Odsetki za
-//     opóźnienie naliczamy od CAŁOŚCI na dany dzień: kapitał + zaległe
-//     odsetki kapitałowe + prowizja + pozostałe dopłaty/koszty.
+// OD JAKIEJ KWOTY NALICZAMY ODSETKI ZA OPÓŹNIENIE:
+//   • UMOWA NIEWYPOWIEDZIANA — wymagalne są tylko zapadłe raty. Odsetki za
+//     opóźnienie naliczamy WYŁĄCZNIE od zaległych rat (w części oprocentowanej),
+//     nie od całego kapitału.
+//   • UMOWA WYPOWIEDZIANA — z chwilą skutecznego wypowiedzenia cała pozostała
+//     należność jest wymagalna. Odsetki za opóźnienie naliczamy od całości
+//     oprocentowanej części (kapitał oprocentowany + zaległe odsetki + dopłaty),
+//     wciąż z pominięciem prowizji inwestora.
 //
 // Reżimy w czasie:
 //   1. Od daty wypłaty do terminu spłaty — odsetki kapitałowe (umowne) od
-//      niespłaconego kapitału.
-//   2. Po terminie / po wypowiedzeniu — odsetki za opóźnienie, ograniczone
-//      do odsetek MAKSYMALNYCH (art. 481 §2¹ KC): efektywna stopa =
-//      min(stopa umowna, stopa maks.). Podstawa naliczenia zależy od tego,
-//      czy umowa została wypowiedziana (patrz wyżej).
-//   3. Wpłaty klienta zaliczane są wg art. 451 KC: koszty → odsetki →
-//      kapitał.
+//      oprocentowanej, niespłaconej części kapitału.
+//   2. Po terminie / po wypowiedzeniu — odsetki za opóźnienie, ograniczone do
+//      odsetek MAKSYMALNYCH (art. 481 §2¹ KC): efektywna stopa =
+//      min(stopa umowna, stopa maks.).
+//   3. Wpłaty klienta zaliczane są wg art. 451 KC: koszty → odsetki → kapitał.
 //
 // Symulacja dzienna gwarantuje poprawne traktowanie częściowych wpłat
 // i zmiany reżimu odsetkowego po wymagalności/wypowiedzeniu.
@@ -51,6 +54,32 @@ export function round2(n: number): number {
 export type DcPayment = { paid_on: string; amount: number };
 export type DcActionFee = { action_date: string; fee: number };
 
+/**
+ * Rozbija kwoty pożyczki na część oprocentowaną i prowizję inwestora.
+ *
+ *   kwota teoretyczna (kwota_calkowita) = kwota na rękę (kwota_pozyczki)
+ *       + prowizja Finance You (prowizja) + prowizja inwestora.
+ *
+ * Część oprocentowana = kwota na rękę + prowizja Finance You.
+ * Prowizja inwestora  = reszta kwoty teoretycznej (spłacana z kapitałem,
+ *                       bez odsetek).
+ */
+export function splitInvestorPrincipal(loan: {
+  kwota_pozyczki?: number | null;
+  prowizja?: number | null;
+  kwota_calkowita?: number | null;
+}): { bearing: number; investorCommission: number } {
+  const naReke = Math.max(0, Number(loan.kwota_pozyczki) || 0);
+  const prowFY = Math.max(0, Number(loan.prowizja) || 0);
+  const calkowita = Math.max(0, Number(loan.kwota_calkowita) || 0);
+  const bearing = naReke + prowFY;
+  if (bearing <= 0) {
+    // Brak rozbicia (np. tylko kwota całkowita) — traktujemy całość jako oprocentowaną.
+    return { bearing: calkowita, investorCommission: 0 };
+  }
+  return { bearing, investorCommission: Math.max(0, calkowita - bearing) };
+}
+
 /** Na jakiej podstawie naliczane są odsetki za opóźnienie na dzień `asOf`. */
 export type DelayInterestRegime =
   | "brak" // brak opóźnienia / brak podstawy
@@ -58,7 +87,17 @@ export type DelayInterestRegime =
   | "calosc_po_wypowiedzeniu"; // umowa wypowiedziana — cała należność
 
 export interface DebtCalcInput {
+  /**
+   * Oprocentowana część kapitału = kwota na rękę + prowizja Finance You.
+   * Od tej kwoty naliczane są wszystkie odsetki.
+   */
   principalAmount: number;
+  /**
+   * Prowizja inwestora — część kapitału spłacana razem z kapitałem, ale
+   * NIEoprocentowana (nie wchodzi do podstawy odsetek).
+   */
+  interestExemptPrincipal?: number;
+
   payoutDate?: string | null;
   dueDate?: string | null;
   contractualAnnualRate: number; // odsetki kapitałowe (do terminu spłaty)
@@ -75,8 +114,6 @@ export interface DebtCalcInput {
    * wymagalnej raty = brak odsetek za opóźnienie).
    */
   overdueInstallmentsAmount?: number | null;
-  /** Prowizja — doliczana do całości wymagalnej po wypowiedzeniu. */
-  commission?: number;
   /** Pozostałe dopłaty/koszty umowne — doliczane do całości po wypowiedzeniu. */
   surcharges?: number;
 
@@ -99,10 +136,10 @@ export interface DebtCalcResult {
   /** Podstawa, od której naliczane są odsetki za opóźnienie na dzień asOf. */
   delayInterestBase: number;
 
-  principalOutstanding: number; // niespłacony kapitał
+  principalOutstanding: number; // niespłacona oprocentowana część kapitału
+  investorCommissionOutstanding: number; // niespłacona prowizja inwestora (bez odsetek)
   contractualInterest: number; // pozostałe odsetki kapitałowe
   delayInterest: number; // pozostałe odsetki za opóźnienie
-  commissionOutstanding: number; // niespłacona prowizja
   surchargesOutstanding: number; // niespłacone dopłaty
   costsOutstanding: number; // pozostałe koszty (opłaty windykacyjne)
 
@@ -136,10 +173,10 @@ function isoDay(d: Date): string {
  */
 export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
   const principal = Math.max(0, Number(input.principalAmount) || 0);
+  const exempt = Math.max(0, Number(input.interestExemptPrincipal) || 0);
   const contractualRate = Math.max(0, Number(input.contractualAnnualRate) || 0);
   const penaltyRate = Math.max(0, Number(input.penaltyAnnualRate) || 0);
   const maxRate = Math.max(0, Number(input.maxStatutoryRate) || 0);
-  const commission = Math.max(0, Number(input.commission) || 0);
   const surcharges = Math.max(0, Number(input.surcharges) || 0);
   const overdueInstallments = Math.max(0, Number(input.overdueInstallmentsAmount) || 0);
 
@@ -166,10 +203,10 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
   const start = payout ?? toDate(payments[0]?.paid_on) ?? toDate(fees[0]?.action_date) ?? asOf;
 
   // Salda
-  let principalBal = principal;
+  let principalBal = principal; // oprocentowana część kapitału
+  let exemptBal = exempt; // prowizja inwestora (bez odsetek)
   let interestBal = 0; // odsetki kapitałowe niespłacone
   let delayBal = 0; // odsetki za opóźnienie niespłacone
-  let commissionBal = commission; // prowizja niespłacona
   let surchargesBal = surcharges; // dopłaty niespłacone
   let costsBal = 0; // koszty (opłaty) niespłacone
 
@@ -212,7 +249,7 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
       const accelerated = afterDue || afterTermination;
 
       if (!accelerated) {
-        // Reżim kapitałowy — odsetki umowne od niespłaconego kapitału.
+        // Reżim kapitałowy — odsetki umowne od oprocentowanej części kapitału.
         if (contractualRate > 0 && principalBal > 0) {
           const inc = (principalBal * contractualRate) / 100 / 365;
           interestBal += inc;
@@ -222,14 +259,15 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
         lastBase = 0;
       } else {
         // Reżim odsetek za opóźnienie — podstawa zależy od wypowiedzenia.
+        // Prowizja inwestora (exemptBal) NIGDY nie wchodzi do podstawy odsetek.
         let base: number;
         let regime: DelayInterestRegime;
         if (afterTermination) {
-          // Cała należność wymagalna: kapitał + odsetki + prowizja + dopłaty + koszty.
-          base = principalBal + interestBal + commissionBal + surchargesBal + costsBal;
+          // Cała oprocentowana należność wymagalna: kapitał + odsetki + dopłaty + koszty.
+          base = principalBal + interestBal + surchargesBal + costsBal;
           regime = "calosc_po_wypowiedzeniu";
         } else {
-          // Umowa niewypowiedziana: tylko zaległe raty (nie więcej niż dług główny).
+          // Umowa niewypowiedziana: tylko zaległe raty (z części oprocentowanej).
           base = Math.min(overdueInstallments, principalBal + interestBal);
           regime = base > 0 ? "zalegle_raty" : "brak";
         }
@@ -248,7 +286,8 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
     if (feeToday) costsBal += feeToday;
 
     // 3. Wpłaty klienta tego dnia → zaliczenie wg art. 451 KC:
-    //    koszty → dopłaty → odsetki za opóźnienie → odsetki kapitałowe → prowizja → kapitał.
+    //    koszty → dopłaty → odsetki za opóźnienie → odsetki kapitałowe →
+    //    kapitał oprocentowany → prowizja inwestora.
     let pay = paymentsByDay.get(key) ?? 0;
     if (pay > 0) {
       const toCosts = Math.min(pay, costsBal);
@@ -267,13 +306,13 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
       interestBal -= toInterest;
       pay -= toInterest;
 
-      const toCommission = Math.min(pay, commissionBal);
-      commissionBal -= toCommission;
-      pay -= toCommission;
-
       const toPrincipal = Math.min(pay, principalBal);
       principalBal -= toPrincipal;
       pay -= toPrincipal;
+
+      const toExempt = Math.min(pay, exemptBal);
+      exemptBal -= toExempt;
+      pay -= toExempt;
       // Nadpłata (pay > 0) pozostaje nierozliczona — pomijamy (saldo = 0).
     }
   }
@@ -281,16 +320,16 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
   const daysOverdue = due ? Math.max(0, daysBetween(due, asOf)) : 0;
 
   const principalOutstanding = round2(Math.max(0, principalBal));
+  const investorCommissionOutstanding = round2(Math.max(0, exemptBal));
   const contractualInterest = round2(Math.max(0, interestBal));
   const delayInterest = round2(Math.max(0, delayBal));
-  const commissionOutstanding = round2(Math.max(0, commissionBal));
   const surchargesOutstanding = round2(Math.max(0, surchargesBal));
   const costsOutstanding = round2(Math.max(0, costsBal));
   const totalDue = round2(
     principalOutstanding +
+      investorCommissionOutstanding +
       contractualInterest +
       delayInterest +
-      commissionOutstanding +
       surchargesOutstanding +
       costsOutstanding,
   );
@@ -304,9 +343,9 @@ export function calculateDebt(input: DebtCalcInput): DebtCalcResult {
     delayRegime: lastRegime,
     delayInterestBase: lastBase,
     principalOutstanding,
+    investorCommissionOutstanding,
     contractualInterest,
     delayInterest,
-    commissionOutstanding,
     surchargesOutstanding,
     costsOutstanding,
     totalPaid,

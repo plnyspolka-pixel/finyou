@@ -504,7 +504,7 @@ const STEP_GUIDE: Record<WindPath, Record<string, StepGuide>> = {
   twarda: {
     wypowiedzenie: {
       tytul: "Wypowiedz umowę",
-      opis: "Sytuacja jest poważna. Wypowiedzenie sprawia, że CAŁY dług staje się od razu wymagalny — odsetki liczymy wtedy od całości (kapitał, odsetki, prowizja, dopłaty), a nie tylko od zaległych rat. Wygeneruj pismo i wyślij listem poleconym.",
+      opis: "Sytuacja jest poważna. Wypowiedzenie sprawia, że CAŁY dług staje się od razu wymagalny — odsetki liczymy wtedy od całej oprocentowanej należności (kapitał na rękę + prowizja Finance You + odsetki + dopłaty), a nie tylko od zaległych rat. Prowizję inwestora klient i tak oddaje, ale bez odsetek. Wygeneruj pismo i wyślij listem poleconym.",
       podstawa_prawna: [
         "art. 723 k.c. — termin zwrotu pożyczki po wypowiedzeniu",
         "postanowienia umowy o przesłankach i terminie wypowiedzenia",

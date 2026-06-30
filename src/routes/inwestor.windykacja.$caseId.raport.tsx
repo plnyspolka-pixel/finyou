@@ -18,7 +18,7 @@ import {
   effectiveDeliveryDate,
   deliveryDeadline,
 } from "@/lib/windykacja-procedure";
-import { calculateDebt } from "@/lib/debt-collection-math";
+import { calculateDebt, splitInvestorPrincipal } from "@/lib/debt-collection-math";
 import { formatPLN, formatDate, formatDateTime } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
@@ -102,10 +102,10 @@ function EvidenceReport() {
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
-    const calkowita = Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0);
-    const prowizja = Number(loan.prowizja || 0);
+    const { bearing, investorCommission } = splitInvestorPrincipal(loan);
     return calculateDebt({
-      principalAmount: Math.max(0, calkowita - prowizja),
+      principalAmount: bearing,
+      interestExemptPrincipal: investorCommission,
       payoutDate: loan.data_umowy,
       dueDate: loan.termin_splaty,
       contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
@@ -114,7 +114,6 @@ function EvidenceReport() {
       terminated: Boolean(loan.data_wypowiedzenia) || loan.status === "wypowiedziana",
       terminationDate: loan.data_wypowiedzenia,
       overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
-      commission: prowizja,
       surcharges: Number(loan.kwota_doplat || 0),
       payments,
       actionFees: [],
@@ -210,19 +209,21 @@ function EvidenceReport() {
             <table>
               <tbody>
                 <tr>
-                  <th style={{ width: "30%" }}>Należność główna (kapitał)</th>
+                  <th style={{ width: "30%" }}>
+                    Kapitał oprocentowany (na rękę + prow. Finance You)
+                  </th>
                   <td>{formatPLN(debt.principalOutstanding)}</td>
                 </tr>
+                {debt.investorCommissionOutstanding > 0 && (
+                  <tr>
+                    <th>Prowizja inwestora (spłacana z kapitałem, bez odsetek)</th>
+                    <td>{formatPLN(debt.investorCommissionOutstanding)}</td>
+                  </tr>
+                )}
                 {debt.contractualInterest > 0 && (
                   <tr>
                     <th>Odsetki kapitałowe (umowne)</th>
                     <td>{formatPLN(debt.contractualInterest)}</td>
-                  </tr>
-                )}
-                {debt.commissionOutstanding > 0 && (
-                  <tr>
-                    <th>Prowizja</th>
-                    <td>{formatPLN(debt.commissionOutstanding)}</td>
                   </tr>
                 )}
                 {debt.surchargesOutstanding > 0 && (
@@ -243,7 +244,7 @@ function EvidenceReport() {
             </table>
             <p className="text-gray-600 mt-1" style={{ fontSize: "11px" }}>
               {debt.delayRegime === "calosc_po_wypowiedzeniu"
-                ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości wymagalnej należności (${formatPLN(debt.delayInterestBase)}) na podstawie art. 481 § 2¹ k.c.`
+                ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości oprocentowanej należności (${formatPLN(debt.delayInterestBase)}; kapitał na rękę + prowizja Finance You + odsetki + dopłaty) na podstawie art. 481 § 2¹ k.c. Prowizja inwestora jest należna, lecz nieoprocentowana.`
                 : debt.delayRegime === "zalegle_raty"
                   ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od zaległych rat (${formatPLN(debt.delayInterestBase)}).`
                   : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}

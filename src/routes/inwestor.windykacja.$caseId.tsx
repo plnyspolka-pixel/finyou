@@ -53,6 +53,7 @@ import {
 } from "@/lib/windykacja-procedure";
 import {
   calculateDebt,
+  splitInvestorPrincipal,
   maxDelayInterestRate,
   DEFAULT_NBP_REFERENCE_RATE,
   type DebtCalcResult,
@@ -256,12 +257,12 @@ function WindykacjaCaseCard() {
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
-    const calkowita = Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0);
-    const prowizja = Number(loan.prowizja || 0);
+    const { bearing, investorCommission } = splitInvestorPrincipal(loan);
     return calculateDebt({
-      // Kapitał = całkowita kwota do zwrotu pomniejszona o prowizję (prowizja
-      // jest osobną pozycją — unikamy podwójnego liczenia).
-      principalAmount: Math.max(0, calkowita - prowizja),
+      // Część oprocentowana = kwota na rękę + prowizja Finance You.
+      principalAmount: bearing,
+      // Prowizja inwestora — spłacana z kapitałem, bez odsetek.
+      interestExemptPrincipal: investorCommission,
       payoutDate: loan.data_umowy,
       dueDate: loan.termin_splaty,
       contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
@@ -270,7 +271,6 @@ function WindykacjaCaseCard() {
       terminated,
       terminationDate: loan.data_wypowiedzenia,
       overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
-      commission: prowizja,
       surcharges: Number(loan.kwota_doplat || 0),
       payments,
       actionFees: [],
@@ -551,12 +551,18 @@ function WindykacjaCaseCard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1.5 text-sm">
-                <RowL label="Kapitał / należność główna" value={debt.principalOutstanding} />
+                <RowL
+                  label="Kapitał oprocentowany (na rękę + prow. Finance You)"
+                  value={debt.principalOutstanding}
+                />
+                {debt.investorCommissionOutstanding > 0 && (
+                  <RowL
+                    label="Prowizja inwestora (bez odsetek)"
+                    value={debt.investorCommissionOutstanding}
+                  />
+                )}
                 {debt.contractualInterest > 0 && (
                   <RowL label="Odsetki kapitałowe (umowne)" value={debt.contractualInterest} />
-                )}
-                {debt.commissionOutstanding > 0 && (
-                  <RowL label="Prowizja" value={debt.commissionOutstanding} />
                 )}
                 {debt.surchargesOutstanding > 0 && (
                   <RowL label="Dopłaty / koszty umowne" value={debt.surchargesOutstanding} />
@@ -572,9 +578,9 @@ function WindykacjaCaseCard() {
                     {debt.delayRegime === "calosc_po_wypowiedzeniu" ? (
                       <>
                         <span className="font-medium text-foreground">Umowa wypowiedziana —</span>{" "}
-                        odsetki za opóźnienie naliczamy od całości:{" "}
-                        {formatPLN(debt.delayInterestBase)} (kapitał + odsetki + prowizja +
-                        dopłaty).
+                        odsetki za opóźnienie od całości oprocentowanej:{" "}
+                        {formatPLN(debt.delayInterestBase)} (kapitał na rękę + prowizja Finance You
+                        + odsetki + dopłaty). Prowizja inwestora jest należna, ale bez odsetek.
                       </>
                     ) : debt.delayRegime === "zalegle_raty" ? (
                       <>
