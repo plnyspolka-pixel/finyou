@@ -800,7 +800,7 @@ function KlientDashboard() {
 
 type TileKey = "description" | "phone" | "company" | "bank" | "bik" | "income";
 
-function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
+export function VerificationTilesSection({ clientRow, loanId }: { clientRow: any; loanId: string | null }) {
   const [step, setStep] = useState<number>(1);
 
   const { data: loanDesc } = useQuery({
