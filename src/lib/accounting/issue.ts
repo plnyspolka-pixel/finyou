@@ -124,7 +124,7 @@ export async function issueSalesInvoice(
       { legal_name: ent.legal_name, nip: ent.ksef_nip || ent.nip, address_street: ent.address_street, address_postal_code: ent.address_postal_code, address_city: ent.address_city, address_country: ent.address_country },
     );
     const ksef = await ksefSubmitInvoice(
-      { ksef_environment: ent.ksef_environment, ksef_nip: ent.ksef_nip || ent.nip, ksef_token_encrypted: ent.ksef_token_encrypted },
+      { ksef_environment: ent.ksef_environment, ksef_nip: ent.ksef_nip || ent.nip, ksef_token_encrypted: ent.ksef_token_encrypted, legal_name: ent.legal_name },
       xml,
     );
     patch.ksef_status = ksef.status;

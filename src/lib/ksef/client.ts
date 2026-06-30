@@ -16,7 +16,21 @@ export type KsefEntity = {
   ksef_environment: KsefEnvironment;
   ksef_nip?: string | null;
   ksef_token_encrypted?: string | null;
+  legal_name?: string | null;
 };
+
+/** Wybiera token KSeF z env w zależności od podmiotu (po nazwie). */
+function pickEnvToken(entity: KsefEntity): string | null {
+  const name = (entity.legal_name ?? "").toLowerCase();
+  if (name.includes("finance you")) return process.env.KSEF_TOKEN_FINANCE_YOU ?? null;
+  if (name.includes("pieczak")) return process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
+  // Fallback: spróbuj kolejno (Finance You jako główny podmiot operacyjny).
+  return (
+    process.env.KSEF_TOKEN_FINANCE_YOU ??
+    process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ??
+    null
+  );
+}
 
 export type KsefResult = {
   status: "disabled" | "pending" | "accepted" | "rejected" | "error";
@@ -49,8 +63,8 @@ function isMock(token: string | null): boolean {
 
 /** Wysyła fakturę do KSeF (lub symuluje w trybie mock). */
 export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Promise<KsefResult> {
-  // Fallback: jeśli podmiot nie ma jeszcze tokenu / środowiska, użyj globalnego tokenu z env.
-  const envToken = process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
+  // Fallback: jeśli podmiot nie ma jeszcze tokenu / środowiska, użyj globalnego tokenu z env (dopasowanego do podmiotu).
+  const envToken = pickEnvToken(entity);
   const effectiveEnv: KsefEnvironment =
     entity.ksef_environment && entity.ksef_environment !== "disabled"
       ? entity.ksef_environment
