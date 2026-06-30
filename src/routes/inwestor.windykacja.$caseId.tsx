@@ -17,6 +17,7 @@ import {
   addWindNotatka,
   generateWindDocument,
   recordWindGeneratedDoc,
+  setWindTermination,
   type WindCase,
   type WindLoan,
   type WindBorrower,
@@ -42,14 +43,20 @@ import {
   effectiveDeliveryDate,
   documentsForPath,
   DOCUMENT_LABELS,
+  stepGuide,
+  stageProgress,
   type WindPath,
   type WindEventLite,
   type WindDocumentType,
+  type StepActionKind,
+  type StepGuide,
 } from "@/lib/windykacja-procedure";
 import {
   calculateDebt,
+  splitInvestorPrincipal,
   maxDelayInterestRate,
   DEFAULT_NBP_REFERENCE_RATE,
+  type DebtCalcResult,
 } from "@/lib/debt-collection-math";
 import { formatPLN, formatDate, formatDateTime } from "@/lib/labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +104,11 @@ import {
   Calculator,
   FileDown,
   Download,
+  ChevronRight,
+  ChevronLeft,
+  Scale,
+  CheckCircle2,
+  Settings2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
@@ -157,6 +169,7 @@ function WindykacjaCaseCard() {
   const doWplata = useServerFn(addWindWplata);
   const doNotatka = useServerFn(addWindNotatka);
   const genDoc = useServerFn(generateWindDocument);
+  const setTermination = useServerFn(setWindTermination);
   const listTemplates = useServerFn(listDocxTemplates);
   const previewTemplate = useServerFn(getDocxTemplatePreview);
   const genDocx = useServerFn(generateDocxFromTemplate);
@@ -180,6 +193,9 @@ function WindykacjaCaseCard() {
   const [loading, setLoading] = useState(true);
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [action, setAction] = useState<ActionKind>(null);
+  const [docPreset, setDocPreset] = useState<WindDocumentType | null>(null);
+  const [advanced, setAdvanced] = useState(false);
+  const [busyNav, setBusyNav] = useState(false);
   const [docPreview, setDocPreview] = useState<WindDocument | null>(null);
 
   const reload = useCallback(async () => {
@@ -226,27 +242,42 @@ function WindykacjaCaseCard() {
     );
   }, [kase, eventsLite]);
 
+  const terminated = useMemo(
+    () => Boolean(loan?.data_wypowiedzenia) || loan?.status === "wypowiedziana",
+    [loan],
+  );
+
   // Wyliczenie zadłużenia z odsetkami maksymalnymi (silnik kalkulacyjny).
+  // Logika finansowa zależy od wypowiedzenia: gdy umowa wypowiedziana —
+  // odsetki za opóźnienie od całości; gdy nie — tylko od zaległych rat.
   const debt = useMemo(() => {
-    if (!loan) return null;
+    if (!loan || !kase) return null;
     const payments = events
       .filter((e) => e.typ === "wplata")
       .map((e) => ({
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
+    const { bearing, investorCommission } = splitInvestorPrincipal(loan);
     return calculateDebt({
-      principalAmount: Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0),
+      // Część oprocentowana = kwota na rękę + prowizja Finance You.
+      principalAmount: bearing,
+      // Prowizja inwestora — spłacana z kapitałem, bez odsetek.
+      interestExemptPrincipal: investorCommission,
       payoutDate: loan.data_umowy,
       dueDate: loan.termin_splaty,
       contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
       penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
       maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
+      terminated,
+      terminationDate: loan.data_wypowiedzenia,
+      overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
+      surcharges: Number(loan.kwota_doplat || 0),
       payments,
       actionFees: [],
       asOf: todayISO(),
     });
-  }, [loan, events]);
+  }, [loan, kase, events, terminated]);
 
   const filteredEvents = useMemo(() => {
     if (eventFilter === "all") return events;
@@ -265,6 +296,57 @@ function WindykacjaCaseCard() {
     if (ev) setEvents((p) => [ev, ...p]);
     void reload();
   };
+
+  // Otwiera jedno, główne działanie kroku (z ewentualnym typem dokumentu).
+  const openStepAction = (kind: StepActionKind, docType?: WindDocumentType | null) => {
+    if (kind === "info") return;
+    setDocPreset(docType ?? null);
+    setAction(kind as ActionKind);
+  };
+
+  // „Dalej / Wstecz" — przejście między etapami ścieżki.
+  const goToStage = async (etap: string) => {
+    if (!kase) return;
+    setBusyNav(true);
+    try {
+      const ev = await doStage({ data: { caseId, sciezka: kase.sciezka, etap, note: null } });
+      toast.success("Przejście do kolejnego kroku");
+      refreshAfterEvent(ev);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się zmienić etapu");
+    } finally {
+      setBusyNav(false);
+    }
+  };
+
+  // Jednorazowy wybór dla sprawy: czy umowa jest wypowiedziana.
+  const onSetTermination = async (isTerminated: boolean, date?: string) => {
+    if (!loan) return;
+    setBusyNav(true);
+    try {
+      const ev = await setTermination({
+        data: {
+          loanId: loan.id,
+          caseId,
+          terminated: isTerminated,
+          data_wypowiedzenia: date ?? null,
+        },
+      });
+      toast.success(isTerminated ? "Oznaczono jako wypowiedzianą" : "Cofnięto wypowiedzenie");
+      refreshAfterEvent(ev);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się zapisać");
+    } finally {
+      setBusyNav(false);
+    }
+  };
+
+  const stages = PATH_STAGES[kase.sciezka];
+  const { index: stageIdx, total: stageTotal } = stageProgress(kase.sciezka, kase.etap);
+  const guide = stepGuide(kase.sciezka, kase.etap);
+  const prevStage = stageIdx > 0 ? stages[stageIdx - 1] : null;
+  const nextStage = stageIdx < stages.length - 1 ? stages[stageIdx + 1] : null;
+  const settled = kase.kwota_zalegla <= 0;
 
   return (
     <div className="space-y-5">
@@ -290,26 +372,30 @@ function WindykacjaCaseCard() {
         }
       />
 
+      {/* ASYSTENT KROK PO KROKU — prosty przewodnik dla inwestora. */}
+      <WizardCard
+        guide={guide}
+        stageIdx={stageIdx}
+        stageTotal={stageTotal}
+        suggestionText={suggestion?.text}
+        urgent={suggestion?.urgent}
+        settled={settled}
+        terminated={terminated}
+        terminationDate={loan.data_wypowiedzenia}
+        debt={debt}
+        prevLabel={prevStage?.label ?? null}
+        nextLabel={nextStage?.label ?? null}
+        busy={busyNav}
+        onAction={openStepAction}
+        onPrev={prevStage ? () => goToStage(prevStage.key) : undefined}
+        onNext={nextStage ? () => goToStage(nextStage.key) : undefined}
+        onSetTermination={onSetTermination}
+        onWplata={() => setAction("wplata")}
+      />
+
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         {/* LEWA — oś czasu */}
         <div className="space-y-4">
-          {/* Sugerowane działanie */}
-          {suggestion && (
-            <Card className={suggestion.urgent ? "border-amber-400 dark:border-amber-700" : ""}>
-              <CardContent className="pt-5 flex items-start gap-3">
-                <Lightbulb
-                  className={`h-5 w-5 mt-0.5 shrink-0 ${suggestion.urgent ? "text-amber-600" : "text-primary"}`}
-                />
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Sugerowane następne działanie
-                  </div>
-                  <div className="text-sm mt-0.5">{suggestion.text}</div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
               <CardTitle className="text-base">Oś czasu zdarzeń</CardTitle>
@@ -400,55 +486,67 @@ function WindykacjaCaseCard() {
                 <Info label="KW" value={loan.numer_kw ?? "—"} />
                 <Info label="Akt 777" value={loan.akt_notarialny_777 ?? "—"} />
               </div>
+              <Separator />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-center text-muted-foreground"
+                onClick={() => setAdvanced((a) => !a)}
+              >
+                <Settings2 className="h-4 w-4 mr-1" />
+                {advanced ? "Ukryj tryb zaawansowany" : "Tryb zaawansowany (wszystkie działania)"}
+              </Button>
             </CardContent>
           </Card>
 
-          {/* Stepper etapu */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-              <CardTitle className="text-base">
-                Etap: {stageLabel(kase.sciezka, kase.etap)}
-              </CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setAction("etap")}>
-                <GitBranch className="h-4 w-4 mr-1" /> Zmień
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <ol className="space-y-1.5">
-                {PATH_STAGES[kase.sciezka].map((s, i) => {
-                  const idx = PATH_STAGES[kase.sciezka].findIndex((x) => x.key === kase.etap);
-                  const done = i < idx;
-                  const current = i === idx;
-                  return (
-                    <li key={s.key} className="flex items-center gap-2 text-sm">
-                      <span
-                        className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold ${
-                          current
-                            ? "bg-primary text-primary-foreground"
-                            : done
-                              ? "bg-green-600 text-white"
-                              : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {i + 1}
-                      </span>
-                      <span
-                        className={
-                          current
-                            ? "font-medium"
-                            : done
-                              ? "text-muted-foreground line-through"
-                              : "text-muted-foreground"
-                        }
-                      >
-                        {s.label}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </CardContent>
-          </Card>
+          {/* Stepper etapu — tryb zaawansowany */}
+          {advanced && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+                <CardTitle className="text-base">
+                  Etap: {stageLabel(kase.sciezka, kase.etap)}
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setAction("etap")}>
+                  <GitBranch className="h-4 w-4 mr-1" /> Zmień
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-1.5">
+                  {PATH_STAGES[kase.sciezka].map((s, i) => {
+                    const idx = PATH_STAGES[kase.sciezka].findIndex((x) => x.key === kase.etap);
+                    const done = i < idx;
+                    const current = i === idx;
+                    return (
+                      <li key={s.key} className="flex items-center gap-2 text-sm">
+                        <span
+                          className={`grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold ${
+                            current
+                              ? "bg-primary text-primary-foreground"
+                              : done
+                                ? "bg-green-600 text-white"
+                                : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {i + 1}
+                        </span>
+                        <span
+                          className={
+                            current
+                              ? "font-medium"
+                              : done
+                                ? "text-muted-foreground line-through"
+                                : "text-muted-foreground"
+                          }
+                        >
+                          {s.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Zadłużenie z odsetkami maksymalnymi */}
           {debt && (
@@ -459,71 +557,110 @@ function WindykacjaCaseCard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1.5 text-sm">
-                <RowL label="Kapitał / należność główna" value={debt.principalOutstanding} />
+                <RowL
+                  label="Kapitał oprocentowany (na rękę + prow. Finance You)"
+                  value={debt.principalOutstanding}
+                />
+                {debt.investorCommissionOutstanding > 0 && (
+                  <RowL
+                    label="Prowizja inwestora (bez odsetek)"
+                    value={debt.investorCommissionOutstanding}
+                  />
+                )}
+                {debt.contractualInterest > 0 && (
+                  <RowL label="Odsetki kapitałowe (umowne)" value={debt.contractualInterest} />
+                )}
+                {debt.surchargesOutstanding > 0 && (
+                  <RowL label="Dopłaty / koszty umowne" value={debt.surchargesOutstanding} />
+                )}
                 <RowL label="Odsetki za opóźnienie (maks.)" value={debt.delayInterest} />
                 <Separator className="my-1" />
                 <div className="flex items-center justify-between font-semibold">
                   <span>Razem na dziś</span>
                   <span className="tabular-nums">{formatPLN(debt.totalDue)}</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground pt-1">
-                  Stopa odsetek maks.: {debt.effectiveDelayRate}% (limit art. 481 §2¹ KC).
-                  Opóźnienie: {debt.daysOverdue} dni.
-                </p>
+                <div className="rounded-md bg-muted/60 p-2 text-[11px] text-muted-foreground mt-1 space-y-0.5">
+                  <div>
+                    {debt.delayRegime === "calosc_po_wypowiedzeniu" ? (
+                      <>
+                        <span className="font-medium text-foreground">Umowa wypowiedziana —</span>{" "}
+                        odsetki za opóźnienie od całości oprocentowanej:{" "}
+                        {formatPLN(debt.delayInterestBase)} (kapitał na rękę + prowizja Finance You
+                        + odsetki + dopłaty). Prowizja inwestora jest należna, ale bez odsetek.
+                      </>
+                    ) : debt.delayRegime === "zalegle_raty" ? (
+                      <>
+                        <span className="font-medium text-foreground">
+                          Umowa niewypowiedziana —
+                        </span>{" "}
+                        odsetki za opóźnienie tylko od zaległych rat:{" "}
+                        {formatPLN(debt.delayInterestBase)}.
+                      </>
+                    ) : (
+                      <>Brak wymagalnej zaległości — odsetki za opóźnienie nie są naliczane.</>
+                    )}
+                  </div>
+                  <div>
+                    Stopa odsetek maks.: {debt.effectiveDelayRate}% (limit art. 481 § 2¹ k.c.).
+                    Opóźnienie: {debt.daysOverdue} dni.
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Akcje */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Działania</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
-              <ActBtn
-                icon={MessageSquare}
-                label="Wyślij SMS"
-                onClick={() => setAction("sms")}
-                hint={suggestion?.hint === "sms"}
-              />
-              <ActBtn
-                icon={Mail}
-                label="Wyślij e-mail"
-                onClick={() => setAction("email")}
-                hint={suggestion?.hint === "email"}
-              />
-              <ActBtn
-                icon={Phone}
-                label="Zadzwoń"
-                onClick={() => setAction("telefon")}
-                hint={suggestion?.hint === "telefon"}
-              />
-              <ActBtn
-                icon={FileText}
-                label="Dodaj pismo"
-                onClick={() => setAction("pismo")}
-                hint={suggestion?.hint === "pismo"}
-              />
-              <ActBtn
-                icon={ShieldCheck}
-                label="Doręczenie"
-                onClick={() => setAction("doreczenie")}
-                hint={suggestion?.hint === "doreczenie"}
-              />
-              <ActBtn
-                icon={FileSignature}
-                label="Generuj dokument"
-                onClick={() => setAction("dokument")}
-                hint={suggestion?.hint === "dokument"}
-              />
-              <ActBtn icon={Wallet} label="Dodaj wpłatę" onClick={() => setAction("wplata")} />
-              <ActBtn
-                icon={StickyNote}
-                label="Dodaj notatkę"
-                onClick={() => setAction("notatka")}
-              />
-            </CardContent>
-          </Card>
+          {/* Akcje — tryb zaawansowany (pełna paleta działań) */}
+          {advanced && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Wszystkie działania</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-2">
+                <ActBtn
+                  icon={MessageSquare}
+                  label="Wyślij SMS"
+                  onClick={() => setAction("sms")}
+                  hint={suggestion?.hint === "sms"}
+                />
+                <ActBtn
+                  icon={Mail}
+                  label="Wyślij e-mail"
+                  onClick={() => setAction("email")}
+                  hint={suggestion?.hint === "email"}
+                />
+                <ActBtn
+                  icon={Phone}
+                  label="Zadzwoń"
+                  onClick={() => setAction("telefon")}
+                  hint={suggestion?.hint === "telefon"}
+                />
+                <ActBtn
+                  icon={FileText}
+                  label="Dodaj pismo"
+                  onClick={() => setAction("pismo")}
+                  hint={suggestion?.hint === "pismo"}
+                />
+                <ActBtn
+                  icon={ShieldCheck}
+                  label="Doręczenie"
+                  onClick={() => setAction("doreczenie")}
+                  hint={suggestion?.hint === "doreczenie"}
+                />
+                <ActBtn
+                  icon={FileSignature}
+                  label="Generuj dokument"
+                  onClick={() => setAction("dokument")}
+                  hint={suggestion?.hint === "dokument"}
+                />
+                <ActBtn icon={Wallet} label="Dodaj wpłatę" onClick={() => setAction("wplata")} />
+                <ActBtn
+                  icon={StickyNote}
+                  label="Dodaj notatkę"
+                  onClick={() => setAction("notatka")}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -531,7 +668,11 @@ function WindykacjaCaseCard() {
       {action && (
         <ActionDialog
           kind={action}
-          onClose={() => setAction(null)}
+          initialDocType={docPreset}
+          onClose={() => {
+            setAction(null);
+            setDocPreset(null);
+          }}
           caseId={caseId}
           kase={kase}
           loan={loan}
@@ -553,6 +694,7 @@ function WindykacjaCaseCard() {
           }}
           onDone={(ev) => {
             setAction(null);
+            setDocPreset(null);
             refreshAfterEvent(ev);
           }}
         />
@@ -694,6 +836,221 @@ function ActBtn({
 }
 
 // ════════════════════════════════════════════════════════════════════
+// ASYSTENT KROK PO KROKU (hero) — prosty przewodnik „następny / następny".
+// ════════════════════════════════════════════════════════════════════
+const STEP_ACTION_ICON: Record<StepActionKind, typeof Mail> = {
+  sms: MessageSquare,
+  telefon: Phone,
+  email: Mail,
+  pismo: FileText,
+  doreczenie: ShieldCheck,
+  dokument: FileSignature,
+  wplata: Wallet,
+  notatka: StickyNote,
+  etap: GitBranch,
+  info: Lightbulb,
+};
+
+function WizardCard({
+  guide,
+  stageIdx,
+  stageTotal,
+  suggestionText,
+  urgent,
+  settled,
+  terminated,
+  terminationDate,
+  debt,
+  prevLabel,
+  nextLabel,
+  busy,
+  onAction,
+  onPrev,
+  onNext,
+  onSetTermination,
+  onWplata,
+}: {
+  guide: StepGuide;
+  stageIdx: number;
+  stageTotal: number;
+  suggestionText?: string;
+  urgent?: boolean;
+  settled: boolean;
+  terminated: boolean;
+  terminationDate: string | null;
+  debt: DebtCalcResult | null;
+  prevLabel: string | null;
+  nextLabel: string | null;
+  busy: boolean;
+  onAction: (kind: StepActionKind, docType?: WindDocumentType | null) => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  onSetTermination: (terminated: boolean, date?: string) => void;
+  onWplata: () => void;
+}) {
+  const [askDate, setAskDate] = useState(false);
+  const [date, setDate] = useState(todayISO());
+  const Icon = STEP_ACTION_ICON[guide.akcja] ?? Lightbulb;
+  const pct = stageTotal > 0 ? Math.round(((stageIdx + 1) / stageTotal) * 100) : 0;
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-primary" /> Asystent krok po kroku
+          </CardTitle>
+          <Badge variant="secondary">
+            Krok {Math.min(stageIdx + 1, stageTotal)} z {stageTotal}
+          </Badge>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* JEDNORAZOWY WYBÓR DLA SPRAWY: czy umowa jest wypowiedziana. */}
+        <div className="rounded-lg border bg-muted/40 p-3 space-y-2">
+          <div className="text-sm font-medium flex items-center gap-2">
+            <Scale className="h-4 w-4 text-muted-foreground" /> Czy umowa jest wypowiedziana?
+          </div>
+          <p className="text-xs text-muted-foreground">
+            To jeden raz ustalana decyzja dla tej sprawy. Decyduje, od jakiej kwoty liczymy odsetki
+            za opóźnienie: po wypowiedzeniu — od całości długu; przed — tylko od zaległych rat.
+          </p>
+          {askDate ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Data wypowiedzenia</Label>
+                <Input
+                  type="date"
+                  className="h-9 w-[160px]"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  onSetTermination(true, date);
+                  setAskDate(false);
+                }}
+              >
+                Potwierdź wypowiedzenie
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setAskDate(false)}>
+                Anuluj
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={!terminated ? "default" : "outline"}
+                disabled={busy}
+                onClick={() => terminated && onSetTermination(false)}
+              >
+                Nie — umowa obowiązuje
+              </Button>
+              <Button
+                size="sm"
+                variant={terminated ? "default" : "outline"}
+                disabled={busy}
+                onClick={() => (terminated ? undefined : setAskDate(true))}
+              >
+                Tak — wypowiedziana
+                {terminated && terminationDate ? ` (${formatDate(terminationDate)})` : ""}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {settled ? (
+          <div className="rounded-lg border border-green-300 bg-green-50 p-4 text-sm dark:border-green-800 dark:bg-green-900/20">
+            <div className="flex items-center gap-2 font-medium text-green-800 dark:text-green-200">
+              <CheckCircle2 className="h-5 w-5" /> Zaległość uregulowana
+            </div>
+            <p className="mt-1 text-green-700 dark:text-green-300">
+              Klient spłacił zaległość. Możesz zamknąć sprawę z wynikiem „spłacona" w trybie
+              zaawansowanym.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div>
+              <div className="text-base font-semibold">{guide.tytul}</div>
+              <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">{guide.opis}</p>
+            </div>
+
+            {suggestionText && (
+              <div
+                className={`flex items-start gap-2 rounded-md border p-2.5 text-sm ${
+                  urgent
+                    ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20"
+                    : "bg-muted/40"
+                }`}
+              >
+                <Lightbulb
+                  className={`h-4 w-4 mt-0.5 shrink-0 ${urgent ? "text-amber-600" : "text-primary"}`}
+                />
+                <span>{suggestionText}</span>
+              </div>
+            )}
+
+            {/* PODSTAWA PRAWNA — co i na jakiej podstawie robimy. */}
+            {guide.podstawa_prawna.length > 0 && (
+              <div className="rounded-md border border-dashed p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Scale className="h-3.5 w-3.5" /> Podstawa prawna
+                </div>
+                <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+                  {guide.podstawa_prawna.map((p, i) => (
+                    <li key={i} className="flex gap-1.5">
+                      <span className="text-primary">§</span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* JEDNO główne działanie + nawigacja Wstecz / Dalej. */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                size="lg"
+                className="sm:flex-1"
+                disabled={busy}
+                onClick={() => onAction(guide.akcja, guide.dokumentTyp)}
+              >
+                <Icon className="h-4 w-4 mr-2" /> {guide.akcjaLabel}
+              </Button>
+              <div className="flex gap-2">
+                {onPrev && (
+                  <Button variant="ghost" disabled={busy} onClick={onPrev}>
+                    <ChevronLeft className="h-4 w-4 mr-1" /> {prevLabel ?? "Wstecz"}
+                  </Button>
+                )}
+                {onNext && (
+                  <Button variant="outline" disabled={busy} onClick={onNext}>
+                    {nextLabel ?? "Dalej"} <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onWplata}>
+              <Wallet className="h-4 w-4 mr-1" /> Klient zapłacił? Odnotuj wpłatę
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 // MODAL AKCJI
 // ════════════════════════════════════════════════════════════════════
 type Fns = {
@@ -712,6 +1069,7 @@ type Fns = {
 
 function ActionDialog({
   kind,
+  initialDocType,
   onClose,
   caseId,
   kase,
@@ -723,6 +1081,7 @@ function ActionDialog({
   onDone,
 }: {
   kind: Exclude<ActionKind, null>;
+  initialDocType?: WindDocumentType | null;
   onClose: () => void;
   caseId: string;
   kase: WindCase;
@@ -735,7 +1094,7 @@ function ActionDialog({
 }) {
   const [busy, setBusy] = useState(false);
   const [v, setV] = useState<Record<string, string>>(() =>
-    initialValues(kind, kase, loan, borrower),
+    initialValues(kind, kase, loan, borrower, initialDocType),
   );
   const [file, setFile] = useState<File | null>(null);
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
@@ -1179,6 +1538,7 @@ function initialValues(
   kase: WindCase,
   loan: WindLoan,
   borrower: WindBorrower,
+  initialDocType?: WindDocumentType | null,
 ): Record<string, string> {
   const base: Record<string, string> = { data: todayISO(), data_nadania: todayISO() };
   if (kind === "sms" || kind === "telefon") base.target = borrower.telefon ?? "";
@@ -1190,7 +1550,8 @@ function initialValues(
     base.tresc = `Przypomnienie: zaległość z umowy ${loan.numer_umowy ?? ""} wynosi ${formatPLN(kase.kwota_zalegla)}. Prosimy o pilną spłatę.`;
   if (kind === "doreczenie") base.rodzaj = "doreczone";
   if (kind === "dokument") {
-    base.typ = documentsForPath(kase.sciezka)[0];
+    const allowed = documentsForPath(kase.sciezka);
+    base.typ = initialDocType && allowed.includes(initialDocType) ? initialDocType : allowed[0];
     base.source = "docx";
     base.templateId = "";
   }

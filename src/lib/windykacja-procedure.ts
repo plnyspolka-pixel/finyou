@@ -378,3 +378,241 @@ export function documentsForPath(path: WindPath): WindDocumentType[] {
       return ["zawiadomienie_286", "zawiadomienie_297", "notatka"];
   }
 }
+
+// ════════════════════════════════════════════════════════════════════
+// PRZEWODNIK KROK PO KROKU (asystent dla inwestora).
+// Każdy etap ma: prosty opis „co teraz zrobić i dlaczego", podstawę prawną
+// (przepisy, na podstawie których działamy) oraz JEDNO główne działanie.
+// Cel: inwestor nie musi znać procedury — klika „Dalej".
+// ════════════════════════════════════════════════════════════════════
+
+/** Jedno, główne działanie przypisane do kroku przewodnika. */
+export type StepActionKind =
+  | "sms"
+  | "telefon"
+  | "email"
+  | "pismo"
+  | "doreczenie"
+  | "dokument"
+  | "wplata"
+  | "notatka"
+  | "etap"
+  | "info";
+
+export interface StepGuide {
+  /** Krótki, zrozumiały tytuł kroku. */
+  tytul: string;
+  /** Prosty język: co teraz zrobić i po co. */
+  opis: string;
+  /** Przepisy, na podstawie których działamy na tym etapie. */
+  podstawa_prawna: string[];
+  /** Jedno główne działanie do wykonania (przycisk „zrób to teraz"). */
+  akcja: StepActionKind;
+  /** Etykieta przycisku głównego działania. */
+  akcjaLabel: string;
+  /** Jeśli akcja = „dokument" — jaki dokument zaproponować. */
+  dokumentTyp?: WindDocumentType;
+}
+
+const STEP_GUIDE: Record<WindPath, Record<string, StepGuide>> = {
+  miekka: {
+    kontakt_wstepny: {
+      tytul: "Skontaktuj się z klientem",
+      opis: "Najpierw spokojnie przypomnij o zaległości — SMS-em i telefonicznie. Na tym etapie nie straszymy sądem, tylko ustalamy, kiedy klient zapłaci.",
+      podstawa_prawna: [
+        "art. 354 k.c. — dłużnik powinien wykonać zobowiązanie zgodnie z jego treścią",
+        "art. 481 § 1 k.c. — za czas opóźnienia należą się odsetki",
+      ],
+      akcja: "sms",
+      akcjaLabel: "Wyślij SMS z przypomnieniem",
+    },
+    monitoring: {
+      tytul: "Czekaj na zadeklarowaną wpłatę",
+      opis: "Klient obiecał spłatę. Odnotuj wpłatę, gdy wpłynie. Jeśli termin minie bez zapłaty, system zaproponuje przejście do oficjalnego wezwania.",
+      podstawa_prawna: ["art. 451 k.c. — wpłaty zaliczamy kolejno: koszty → odsetki → kapitał"],
+      akcja: "wplata",
+      akcjaLabel: "Odnotuj wpłatę",
+    },
+    restrukturyzacja: {
+      tytul: "Rozłóż dług na raty (porozumienie)",
+      opis: "Jeśli klient chce płacić, ale nie naraz — podpiszcie porozumienie ratalne. To wciąż tańsze i szybsze niż sąd.",
+      podstawa_prawna: [
+        "art. 917 k.c. — ugoda (wzajemne ustępstwa stron)",
+        "art. 353¹ k.c. — swoboda kształtowania treści umowy",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Przygotuj porozumienie ratalne",
+      dokumentTyp: "porozumienie",
+    },
+  },
+  standardowa: {
+    wezwanie: {
+      tytul: "Wyślij oficjalne wezwanie do zapłaty",
+      opis: "Czas na pismo z twardym terminem 7 dni. To formalny warunek, by później ruszyć z egzekucją. Wygeneruj dokument — dane klienta wstawimy automatycznie.",
+      podstawa_prawna: [
+        "art. 455 k.c. — wezwanie wyznacza termin spełnienia świadczenia",
+        "art. 476 k.c. — po terminie dłużnik pozostaje w zwłoce",
+        "art. 481 § 2¹ k.c. — odsetki maksymalne za opóźnienie",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj wezwanie do zapłaty",
+      dokumentTyp: "wezwanie",
+    },
+    oczekiwanie_doreczenie: {
+      tytul: "Nadaj pismo i czekaj na doręczenie",
+      opis: "Wyślij wezwanie listem poleconym i zapisz numer nadania — to dowód. Gdy wróci zwrotka albo awizo, odnotuj doręczenie. Od tej daty liczy się 7 dni.",
+      podstawa_prawna: [
+        "art. 61 § 1 k.c. — oświadczenie jest skuteczne, gdy adresat mógł się z nim zapoznać",
+        "tzw. fikcja doręczenia — dwukrotne awizo / zwrot traktujemy jak doręczenie",
+      ],
+      akcja: "pismo",
+      akcjaLabel: "Dodaj nadane pismo",
+    },
+    po_terminie: {
+      tytul: "Minął termin — przygotuj wniosek o klauzulę",
+      opis: "7 dni minęło, klient nie zapłacił. Jeśli macie akt notarialny 777, możecie iść prosto do sądu po klauzulę wykonalności — bez całego procesu.",
+      podstawa_prawna: [
+        "art. 777 § 1 pkt 5 k.p.c. — akt notarialny jako tytuł egzekucyjny",
+        "art. 781 k.p.c. — sąd nadaje klauzulę wykonalności",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj wniosek o klauzulę",
+      dokumentTyp: "wniosek_klauzula",
+    },
+    klauzula: {
+      tytul: "Złóż wniosek o klauzulę w sądzie",
+      opis: "Zanieś lub wyślij wniosek do sądu i odnotuj to jako czynność sądową. Sąd nada klauzulę — wtedy masz tytuł wykonawczy dla komornika.",
+      podstawa_prawna: [
+        "art. 776 k.p.c. — podstawą egzekucji jest tytuł wykonawczy",
+        "art. 781 § 1 k.p.c. — właściwość sądu do nadania klauzuli",
+      ],
+      akcja: "notatka",
+      akcjaLabel: "Odnotuj złożenie wniosku",
+    },
+    egzekucja_miekka: {
+      tytul: "Skieruj sprawę do komornika",
+      opis: "Masz tytuł wykonawczy. Złóż wniosek do komornika o egzekucję z konta, wynagrodzenia lub ruchomości dłużnika.",
+      podstawa_prawna: [
+        "art. 796 k.p.c. — wszczęcie egzekucji na wniosek wierzyciela",
+        "art. 889 i nast. k.p.c. — egzekucja z rachunku bankowego",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj wniosek do komornika",
+      dokumentTyp: "wniosek_komornik",
+    },
+  },
+  twarda: {
+    wypowiedzenie: {
+      tytul: "Wypowiedz umowę",
+      opis: "Sytuacja jest poważna. Wypowiedzenie sprawia, że CAŁY dług staje się od razu wymagalny — odsetki liczymy wtedy od całej oprocentowanej należności (kapitał na rękę + prowizja Finance You + odsetki + dopłaty), a nie tylko od zaległych rat. Prowizję inwestora klient i tak oddaje, ale bez odsetek. Wygeneruj pismo i wyślij listem poleconym.",
+      podstawa_prawna: [
+        "art. 723 k.c. — termin zwrotu pożyczki po wypowiedzeniu",
+        "postanowienia umowy o przesłankach i terminie wypowiedzenia",
+        "art. 481 § 2¹ k.c. — odsetki maksymalne od całej wymagalnej kwoty",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj wypowiedzenie umowy",
+      dokumentTyp: "wypowiedzenie",
+    },
+    oczekiwanie_doreczenie: {
+      tytul: "Doręcz wypowiedzenie",
+      opis: "Nadaj wypowiedzenie listem poleconym i zapisz dowód nadania. Wypowiedzenie działa dopiero, gdy dotrze do dłużnika (lub po awizo/zwrocie).",
+      podstawa_prawna: [
+        "art. 61 § 1 k.c. — skuteczność oświadczenia z chwilą możliwości zapoznania się",
+      ],
+      akcja: "pismo",
+      akcjaLabel: "Dodaj nadane wypowiedzenie",
+    },
+    klauzula: {
+      tytul: "Uzyskaj klauzulę wykonalności",
+      opis: "Po skutecznym wypowiedzeniu złóż wniosek o klauzulę do aktu 777. To otwiera drogę do egzekucji z nieruchomości (hipoteki).",
+      podstawa_prawna: [
+        "art. 777 § 1 pkt 5 k.p.c. — akt notarialny jako tytuł egzekucyjny",
+        "art. 781 k.p.c. — nadanie klauzuli wykonalności",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj wniosek o klauzulę",
+      dokumentTyp: "wniosek_klauzula",
+    },
+    egzekucja_nieruchomosc: {
+      tytul: "Egzekucja z nieruchomości",
+      opis: "Złóż do komornika wniosek o egzekucję z nieruchomości obciążonej hipoteką. Komornik zajmie nieruchomość i rozpocznie procedurę licytacji.",
+      podstawa_prawna: [
+        "art. 921 i nast. k.p.c. — egzekucja z nieruchomości",
+        "art. 65 ustawy o księgach wieczystych i hipotece — zaspokojenie z hipoteki",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj wniosek do komornika",
+      dokumentTyp: "wniosek_komornik",
+    },
+    licytacja: {
+      tytul: "Licytacja i podział sumy",
+      opis: "Komornik prowadzi licytację. Monitoruj postępowanie i odnotowuj kolejne czynności — z uzyskanej sumy zaspokoisz się jako wierzyciel hipoteczny.",
+      podstawa_prawna: [
+        "art. 1023 k.p.c. — plan podziału sumy uzyskanej z egzekucji",
+        "art. 1025 k.p.c. — kolejność zaspokojenia wierzycieli",
+      ],
+      akcja: "notatka",
+      akcjaLabel: "Odnotuj czynność / postęp",
+    },
+  },
+  karna: {
+    ocena_przeslanek: {
+      tytul: "Oceń, czy to oszustwo",
+      opis: "Jeśli klient od początku nie zamierzał spłacać (zero wpłat, fałszywe dane, zerwany kontakt), to może być przestępstwo. Zapisz swoje ustalenia w notatce.",
+      podstawa_prawna: [
+        "art. 286 § 1 k.k. — oszustwo (zamiar niewywiązania się od początku)",
+        "art. 297 § 1 k.k. — oszustwo kredytowe (nierzetelne dokumenty)",
+      ],
+      akcja: "notatka",
+      akcjaLabel: "Zapisz ocenę przesłanek",
+    },
+    zabezpieczenie_dowodow: {
+      tytul: "Zbierz dowody",
+      opis: "Skompletuj wniosek, umowę, oświadczenia klienta, historię rachunku i wydruki (KRS/CEIDG/KW). To załączniki do zawiadomienia dla prokuratury.",
+      podstawa_prawna: ["art. 304 § 1 k.p.k. — społeczny obowiązek zawiadomienia o przestępstwie"],
+      akcja: "pismo",
+      akcjaLabel: "Dodaj dokument do akt",
+    },
+    zawiadomienie: {
+      tytul: "Złóż zawiadomienie do prokuratury",
+      opis: "Wygeneruj zawiadomienie o podejrzeniu przestępstwa i złóż je w prokuraturze. Ścieżkę cywilną (odzyskanie pieniędzy) prowadź dalej równolegle.",
+      podstawa_prawna: [
+        "art. 286 § 1 k.k. / art. 297 § 1 k.k. — kwalifikacja czynu",
+        "art. 304 k.p.k. — zawiadomienie o przestępstwie",
+      ],
+      akcja: "dokument",
+      akcjaLabel: "Wygeneruj zawiadomienie",
+      dokumentTyp: "zawiadomienie_286",
+    },
+    zlozone: {
+      tytul: "Zawiadomienie złożone — monitoruj",
+      opis: "Prokuratura prowadzi postępowanie. Odnotowuj korespondencję i decyzje. Równolegle dochodź należności w postępowaniu cywilnym/egzekucyjnym.",
+      podstawa_prawna: ["art. 305 k.p.k. — wszczęcie lub odmowa wszczęcia śledztwa"],
+      akcja: "notatka",
+      akcjaLabel: "Odnotuj postęp sprawy",
+    },
+  },
+};
+
+/** Zwraca przewodnik dla danego etapu (z bezpiecznym fallbackiem). */
+export function stepGuide(path: WindPath, etap: string): StepGuide {
+  return (
+    STEP_GUIDE[path]?.[etap] ?? {
+      tytul: stageLabel(path, etap),
+      opis: "Wykonaj działanie zgodnie z procedurą lub zmień etap sprawy.",
+      podstawa_prawna: [],
+      akcja: "notatka",
+      akcjaLabel: "Dodaj notatkę",
+    }
+  );
+}
+
+/**
+ * Indeks etapu w ścieżce (do paska „Krok X z Y"). Zwraca {index, total}.
+ */
+export function stageProgress(path: WindPath, etap: string): { index: number; total: number } {
+  const stages = PATH_STAGES[path] ?? [];
+  const idx = stages.findIndex((s) => s.key === etap);
+  return { index: idx < 0 ? 0 : idx, total: stages.length };
+}

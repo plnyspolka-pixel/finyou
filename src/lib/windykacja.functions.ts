@@ -57,6 +57,8 @@ export type WindLoan = {
   status: WindLoanStatus;
   saldo_pozostale: number;
   data_ostatniej_wplaty: string | null;
+  data_wypowiedzenia: string | null;
+  kwota_doplat: number;
 };
 
 export type WindPriority = "niski" | "sredni" | "wysoki" | "krytyczny";
@@ -113,7 +115,7 @@ export type WindDocument = {
 export type WindCaseEnriched = WindCase & { loan: WindLoan; borrower: WindBorrower };
 
 const LOAN_COLS =
-  "id, borrower_id, numer_umowy, data_umowy, kwota_pozyczki, kwota_calkowita, prowizja, termin_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, rachunek_splaty, oprocentowanie_roczne, stopa_odsetek_max, status, saldo_pozostale, data_ostatniej_wplaty";
+  "id, borrower_id, numer_umowy, data_umowy, kwota_pozyczki, kwota_calkowita, prowizja, termin_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, rachunek_splaty, oprocentowanie_roczne, stopa_odsetek_max, status, saldo_pozostale, data_ostatniej_wplaty, data_wypowiedzenia, kwota_doplat";
 const BORROWER_COLS =
   "id, imie_nazwisko, typ, pesel, nip, dowod_osobisty, adres_zamieszkania, adres_do_doreczen, email, telefon, email_zgoda_doreczenia, notatki";
 const CASE_COLS =
@@ -385,6 +387,63 @@ export const changeWindStage = createServerFn({ method: "POST" })
         kategoria: "systemowe",
         tytul: `Zmiana etapu → ${data.sciezka} / ${data.etap}`,
         tresc: emptyToNull(data.note),
+        autor: context.claims?.email ?? null,
+      })
+      .select(EVENT_COLS)
+      .single();
+    if (eErr) throw new Error(eErr.message);
+    return ev as WindEvent;
+  });
+
+// ── Status wypowiedzenia umowy (jednorazowy wybór dla firmy/sprawy) ───
+// Decyduje o logice finansowej: po wypowiedzeniu odsetki za opóźnienie
+// naliczamy od CAŁOŚCI, przed — tylko od zaległych rat.
+export const setWindTermination = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: Record<string, unknown>) =>
+    z
+      .object({
+        loanId: z.string().uuid(),
+        caseId: z.string().uuid(),
+        terminated: z.boolean(),
+        data_wypowiedzenia: z.string().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = loose(context.supabase);
+    const { data: loan } = await db
+      .from("wind_loans")
+      .select("status")
+      .eq("id", data.loanId)
+      .maybeSingle();
+
+    const patch: Record<string, unknown> = data.terminated
+      ? {
+          status: "wypowiedziana",
+          data_wypowiedzenia: data.data_wypowiedzenia || todayISO(),
+        }
+      : {
+          // Cofnięcie wypowiedzenia: wracamy do statusu „w zwłoce".
+          status: loan?.status === "wypowiedziana" ? "w_zwloce" : loan?.status,
+          data_wypowiedzenia: null,
+        };
+
+    const { error } = await db.from("wind_loans").update(patch).eq("id", data.loanId);
+    if (error) throw new Error(error.message);
+
+    const { data: ev, error: eErr } = await db
+      .from("wind_events")
+      .insert({
+        case_id: data.caseId,
+        typ: "notatka",
+        kategoria: "systemowe",
+        tytul: data.terminated
+          ? "Umowa oznaczona jako wypowiedziana"
+          : "Cofnięto status wypowiedzenia",
+        tresc: data.terminated
+          ? `Od dnia ${patch.data_wypowiedzenia} cała należność jest wymagalna; odsetki za opóźnienie naliczane są od całości (art. 481 § 2¹ k.c.).`
+          : "Umowa niewypowiedziana — odsetki za opóźnienie naliczane są wyłącznie od zaległych rat.",
         autor: context.claims?.email ?? null,
       })
       .select(EVENT_COLS)
@@ -806,6 +865,8 @@ export const seedWindDemo = createServerFn({ method: "POST" })
       status: WindLoanStatus;
       zalegla: number;
       saldo: number;
+      wypowiedzenie_daysAgo?: number;
+      doplaty?: number;
       events: Array<Partial<WindEvent> & { typ: WindEventType; tytul: string }>;
     }) {
       const { data: borrower } = await db
@@ -842,6 +903,9 @@ export const seedWindDemo = createServerFn({ method: "POST" })
           stopa_odsetek_max: 24.5,
           status: args.status,
           saldo_pozostale: args.saldo,
+          data_wypowiedzenia:
+            args.wypowiedzenie_daysAgo != null ? dateOnly(args.wypowiedzenie_daysAgo) : null,
+          kwota_doplat: args.doplaty ?? 0,
         })
         .select("id")
         .single();
@@ -984,6 +1048,8 @@ export const seedWindDemo = createServerFn({ method: "POST" })
       status: "windykacja_komornicza",
       zalegla: 372000,
       saldo: 372000,
+      wypowiedzenie_daysAgo: 40,
+      doplaty: 5000,
       events: [
         {
           typ: "dokument_wygenerowany",

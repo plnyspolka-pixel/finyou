@@ -18,7 +18,7 @@ import {
   effectiveDeliveryDate,
   deliveryDeadline,
 } from "@/lib/windykacja-procedure";
-import { calculateDebt } from "@/lib/debt-collection-math";
+import { calculateDebt, splitInvestorPrincipal } from "@/lib/debt-collection-math";
 import { formatPLN, formatDate, formatDateTime } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
@@ -95,25 +95,31 @@ function EvidenceReport() {
   );
 
   const debt = useMemo(() => {
-    if (!loan) return null;
+    if (!loan || !kase) return null;
     const payments = events
       .filter((e) => e.typ === "wplata")
       .map((e) => ({
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
+    const { bearing, investorCommission } = splitInvestorPrincipal(loan);
     return calculateDebt({
-      principalAmount: Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0),
+      principalAmount: bearing,
+      interestExemptPrincipal: investorCommission,
       payoutDate: loan.data_umowy,
       dueDate: loan.termin_splaty,
       contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
       penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
       maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
+      terminated: Boolean(loan.data_wypowiedzenia) || loan.status === "wypowiedziana",
+      terminationDate: loan.data_wypowiedzenia,
+      overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
+      surcharges: Number(loan.kwota_doplat || 0),
       payments,
       actionFees: [],
       asOf: todayISO(),
     });
-  }, [loan, events]);
+  }, [loan, kase, events]);
 
   const attachments = useMemo(() => events.filter((e) => e.zalacznik_url), [events]);
 
@@ -203,9 +209,29 @@ function EvidenceReport() {
             <table>
               <tbody>
                 <tr>
-                  <th style={{ width: "30%" }}>Należność główna</th>
+                  <th style={{ width: "30%" }}>
+                    Kapitał oprocentowany (na rękę + prow. Finance You)
+                  </th>
                   <td>{formatPLN(debt.principalOutstanding)}</td>
                 </tr>
+                {debt.investorCommissionOutstanding > 0 && (
+                  <tr>
+                    <th>Prowizja inwestora (spłacana z kapitałem, bez odsetek)</th>
+                    <td>{formatPLN(debt.investorCommissionOutstanding)}</td>
+                  </tr>
+                )}
+                {debt.contractualInterest > 0 && (
+                  <tr>
+                    <th>Odsetki kapitałowe (umowne)</th>
+                    <td>{formatPLN(debt.contractualInterest)}</td>
+                  </tr>
+                )}
+                {debt.surchargesOutstanding > 0 && (
+                  <tr>
+                    <th>Dopłaty / koszty umowne</th>
+                    <td>{formatPLN(debt.surchargesOutstanding)}</td>
+                  </tr>
+                )}
                 <tr>
                   <th>Odsetki za opóźnienie (maks., {debt.effectiveDelayRate}%)</th>
                   <td>{formatPLN(debt.delayInterest)}</td>
@@ -216,6 +242,13 @@ function EvidenceReport() {
                 </tr>
               </tbody>
             </table>
+            <p className="text-gray-600 mt-1" style={{ fontSize: "11px" }}>
+              {debt.delayRegime === "calosc_po_wypowiedzeniu"
+                ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości oprocentowanej należności (${formatPLN(debt.delayInterestBase)}; kapitał na rękę + prowizja Finance You + odsetki + dopłaty) na podstawie art. 481 § 2¹ k.c. Prowizja inwestora jest należna, lecz nieoprocentowana.`
+                : debt.delayRegime === "zalegle_raty"
+                  ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od zaległych rat (${formatPLN(debt.delayInterestBase)}).`
+                  : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}
+            </p>
           </div>
         )}
 
