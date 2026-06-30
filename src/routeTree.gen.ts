@@ -46,6 +46,7 @@ import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.r
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
+import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -334,6 +335,11 @@ const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   path: '/powiadomienia',
   getParentRoute: () => KlientRoute,
 } as any)
+const InwestorWindykacjaRoute = InwestorWindykacjaRouteImport.update({
+  id: '/windykacja',
+  path: '/windykacja',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
   id: '/wiadomosci',
   path: '/wiadomosci',
@@ -552,9 +558,9 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   getParentRoute: () => AdminRoute,
 } as any)
 const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
-  id: '/windykacja/',
-  path: '/windykacja/',
-  getParentRoute: () => InwestorRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => InwestorWindykacjaRoute,
 } as any)
 const AdminProgramPosrednikowIndexRoute =
   AdminProgramPosrednikowIndexRouteImport.update({
@@ -579,9 +585,9 @@ const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
 } as any)
 const InwestorWindykacjaCaseIdRoute =
   InwestorWindykacjaCaseIdRouteImport.update({
-    id: '/windykacja/$caseId',
-    path: '/windykacja/$caseId',
-    getParentRoute: () => InwestorRoute,
+    id: '/$caseId',
+    path: '/$caseId',
+    getParentRoute: () => InwestorWindykacjaRoute,
   } as any)
 const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
   id: '/umowa/$offerId',
@@ -942,6 +948,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -1221,6 +1228,7 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
+  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -1364,6 +1372,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1642,6 +1651,7 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
+    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -2047,6 +2057,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
       parentRoute: typeof KlientRoute
     }
+    '/inwestor/windykacja': {
+      id: '/inwestor/windykacja'
+      path: '/windykacja'
+      fullPath: '/inwestor/windykacja'
+      preLoaderRoute: typeof InwestorWindykacjaRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/wiadomosci': {
       id: '/inwestor/wiadomosci'
       path: '/wiadomosci'
@@ -2350,10 +2367,10 @@ declare module '@tanstack/react-router' {
     }
     '/inwestor/windykacja/': {
       id: '/inwestor/windykacja/'
-      path: '/windykacja'
+      path: '/'
       fullPath: '/inwestor/windykacja/'
       preLoaderRoute: typeof InwestorWindykacjaIndexRouteImport
-      parentRoute: typeof InwestorRoute
+      parentRoute: typeof InwestorWindykacjaRoute
     }
     '/admin/program-posrednikow/': {
       id: '/admin/program-posrednikow/'
@@ -2385,10 +2402,10 @@ declare module '@tanstack/react-router' {
     }
     '/inwestor/windykacja/$caseId': {
       id: '/inwestor/windykacja/$caseId'
-      path: '/windykacja/$caseId'
+      path: '/$caseId'
       fullPath: '/inwestor/windykacja/$caseId'
       preLoaderRoute: typeof InwestorWindykacjaCaseIdRouteImport
-      parentRoute: typeof InwestorRoute
+      parentRoute: typeof InwestorWindykacjaRoute
     }
     '/inwestor/umowa/$offerId': {
       id: '/inwestor/umowa/$offerId'
@@ -2918,6 +2935,19 @@ const InwestorWindykacjaCaseIdRouteWithChildren =
     InwestorWindykacjaCaseIdRouteChildren,
   )
 
+interface InwestorWindykacjaRouteChildren {
+  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRouteWithChildren
+  InwestorWindykacjaIndexRoute: typeof InwestorWindykacjaIndexRoute
+}
+
+const InwestorWindykacjaRouteChildren: InwestorWindykacjaRouteChildren = {
+  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRouteWithChildren,
+  InwestorWindykacjaIndexRoute: InwestorWindykacjaIndexRoute,
+}
+
+const InwestorWindykacjaRouteWithChildren =
+  InwestorWindykacjaRoute._addFileChildren(InwestorWindykacjaRouteChildren)
+
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
@@ -2926,11 +2956,10 @@ interface InwestorRouteChildren {
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
+  InwestorWindykacjaRoute: typeof InwestorWindykacjaRouteWithChildren
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorUmowaOfferIdRoute: typeof InwestorUmowaOfferIdRoute
-  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRouteWithChildren
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
-  InwestorWindykacjaIndexRoute: typeof InwestorWindykacjaIndexRoute
 }
 
 const InwestorRouteChildren: InwestorRouteChildren = {
@@ -2941,11 +2970,10 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
+  InwestorWindykacjaRoute: InwestorWindykacjaRouteWithChildren,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorUmowaOfferIdRoute: InwestorUmowaOfferIdRoute,
-  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRouteWithChildren,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
-  InwestorWindykacjaIndexRoute: InwestorWindykacjaIndexRoute,
 }
 
 const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
