@@ -17,6 +17,7 @@ import { ClientProfileSections } from "@/components/client/ClientProfileSections
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
+import { InvestorOffersSection } from "@/components/client/InvestorOffersSection";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/klient/")({
