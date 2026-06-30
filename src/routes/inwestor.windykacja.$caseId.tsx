@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import {
   Select,
   SelectContent,
@@ -267,22 +268,27 @@ function WindykacjaCaseCard() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <Link
-          to="/inwestor/windykacja"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Panel windykacji
-        </Link>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/inwestor/windykacja/$caseId/raport" params={{ caseId }} target="_blank">
-              <FileDown className="h-4 w-4 mr-1" /> Raport dowodowy (PDF)
-            </Link>
-          </Button>
-          <Badge className={PATH_BADGE[kase.sciezka]}>{PATH_LABELS[kase.sciezka]}</Badge>
-        </div>
-      </div>
+      <Link
+        to="/inwestor/windykacja"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4 mr-1" /> Panel windykacji
+      </Link>
+      <FancyPageHeader
+        eyebrow="Sprawa windykacyjna"
+        title={<>Sprawa {loan?.numer_umowy ?? caseId.slice(0, 8)}</>}
+        subtitle={borrower?.imie_nazwisko ?? undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button asChild variant="secondary" size="sm" className="bg-white/15 text-white border-white/20 hover:bg-white/25">
+              <Link to="/inwestor/windykacja/$caseId/raport" params={{ caseId }} target="_blank">
+                <FileDown className="h-4 w-4 mr-1" /> Raport (PDF)
+              </Link>
+            </Button>
+            <Badge className={PATH_BADGE[kase.sciezka]}>{PATH_LABELS[kase.sciezka]}</Badge>
+          </div>
+        }
+      />
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         {/* LEWA — oś czasu */}
