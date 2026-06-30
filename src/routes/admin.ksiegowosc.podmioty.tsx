@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Building2, Star, Plus, Pencil, ShieldCheck } from "lucide-react";
+import { Building2, Star, Plus, Pencil, ShieldCheck, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { listAccountingEntities, upsertAccountingEntity, setDefaultAccountingEntity } from "@/lib/accounting/functions";
+import { applyKsefTokenToAllEntities } from "@/lib/accounting/apply-ksef-token.functions";
 
 export const Route = createFileRoute("/admin/ksiegowosc/podmioty")({
   component: PodmiotyPage,
