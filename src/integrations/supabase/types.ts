@@ -6912,6 +6912,7 @@ export type Database = {
           investor_user_id: string
           kwota_777: number | null
           kwota_calkowita: number
+          kwota_doplat: number | null
           kwota_hipoteki: number | null
           kwota_pozyczki: number
           numer_kw: string | null
@@ -6936,6 +6937,7 @@ export type Database = {
           investor_user_id?: string
           kwota_777?: number | null
           kwota_calkowita?: number
+          kwota_doplat?: number | null
           kwota_hipoteki?: number | null
           kwota_pozyczki?: number
           numer_kw?: string | null
@@ -6960,6 +6962,7 @@ export type Database = {
           investor_user_id?: string
           kwota_777?: number | null
           kwota_calkowita?: number
+          kwota_doplat?: number | null
           kwota_hipoteki?: number | null
           kwota_pozyczki?: number
           numer_kw?: string | null
