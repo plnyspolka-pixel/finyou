@@ -1,0 +1,1 @@
+ALTER TABLE public.wind_loans ADD COLUMN IF NOT EXISTS data_wypowiedzenia DATE;
