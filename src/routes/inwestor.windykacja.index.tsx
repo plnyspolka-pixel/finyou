@@ -54,7 +54,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-export const Route = createFileRoute("/inwestor/windykacja")({
+export const Route = createFileRoute("/inwestor/windykacja/")({
   component: WindykacjaDashboard,
 });
 
