@@ -62,9 +62,8 @@ function isMock(token: string | null): boolean {
 }
 
 /** Wysyła fakturę do KSeF (lub symuluje w trybie mock). */
-export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Promise<KsefResult> {
-  // Fallback: jeśli podmiot nie ma jeszcze tokenu / środowiska, użyj globalnego tokenu z env.
-  const envToken = process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
+  // Fallback: jeśli podmiot nie ma jeszcze tokenu / środowiska, użyj globalnego tokenu z env (dopasowanego do podmiotu).
+  const envToken = pickEnvToken(entity);
   const effectiveEnv: KsefEnvironment =
     entity.ksef_environment && entity.ksef_environment !== "disabled"
       ? entity.ksef_environment
