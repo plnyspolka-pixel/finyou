@@ -44,6 +44,7 @@ import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marke
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
+import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
@@ -324,6 +325,11 @@ const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const KlientPropozycjeRoute = KlientPropozycjeRouteImport.update({
+  id: '/propozycje',
+  path: '/propozycje',
+  getParentRoute: () => KlientRoute,
 } as any)
 const KlientProfilRoute = KlientProfilRouteImport.update({
   id: '/profil',
@@ -951,6 +957,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
+  '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
@@ -1088,6 +1095,7 @@ export interface FileRoutesByTo {
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
+  '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
@@ -1231,6 +1239,7 @@ export interface FileRoutesById {
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
+  '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
@@ -1375,6 +1384,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
+    | '/klient/propozycje'
     | '/l/$slug'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
@@ -1512,6 +1522,7 @@ export interface FileRouteTypes {
     | '/inwestor/wiadomosci'
     | '/klient/powiadomienia'
     | '/klient/profil'
+    | '/klient/propozycje'
     | '/l/$slug'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
@@ -1654,6 +1665,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
+    | '/klient/propozycje'
     | '/l/$slug'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
@@ -2042,6 +2054,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/l/$slug'
       preLoaderRoute: typeof LSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/klient/propozycje': {
+      id: '/klient/propozycje'
+      path: '/propozycje'
+      fullPath: '/klient/propozycje'
+      preLoaderRoute: typeof KlientPropozycjeRouteImport
+      parentRoute: typeof KlientRoute
     }
     '/klient/profil': {
       id: '/klient/profil'
@@ -2983,12 +3002,14 @@ const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
 interface KlientRouteChildren {
   KlientPowiadomieniaRoute: typeof KlientPowiadomieniaRoute
   KlientProfilRoute: typeof KlientProfilRoute
+  KlientPropozycjeRoute: typeof KlientPropozycjeRoute
   KlientIndexRoute: typeof KlientIndexRoute
 }
 
 const KlientRouteChildren: KlientRouteChildren = {
   KlientPowiadomieniaRoute: KlientPowiadomieniaRoute,
   KlientProfilRoute: KlientProfilRoute,
+  KlientPropozycjeRoute: KlientPropozycjeRoute,
   KlientIndexRoute: KlientIndexRoute,
 }
 
