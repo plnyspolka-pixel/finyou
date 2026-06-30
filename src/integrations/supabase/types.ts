@@ -6907,6 +6907,7 @@ export type Database = {
           created_at: string
           data_ostatniej_wplaty: string | null
           data_umowy: string | null
+          data_wypowiedzenia: string | null
           id: string
           investor_user_id: string
           kwota_777: number | null
@@ -6930,6 +6931,7 @@ export type Database = {
           created_at?: string
           data_ostatniej_wplaty?: string | null
           data_umowy?: string | null
+          data_wypowiedzenia?: string | null
           id?: string
           investor_user_id?: string
           kwota_777?: number | null
@@ -6953,6 +6955,7 @@ export type Database = {
           created_at?: string
           data_ostatniej_wplaty?: string | null
           data_umowy?: string | null
+          data_wypowiedzenia?: string | null
           id?: string
           investor_user_id?: string
           kwota_777?: number | null
