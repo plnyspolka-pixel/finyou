@@ -25,6 +25,14 @@ function brandedErrorResponse(): Response {
   });
 }
 
+function redirectLegacyPreviewPath(request: Request): Response | undefined {
+  const url = new URL(request.url);
+  if (url.pathname !== "/index") return undefined;
+
+  url.pathname = "/";
+  return Response.redirect(url.toString(), 308);
+}
+
 function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
   let payload: unknown;
   try {
@@ -69,6 +77,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const redirect = redirectLegacyPreviewPath(request);
+      if (redirect) return redirect;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
