@@ -42,7 +42,7 @@ function PodmiotyPage() {
   const listFn = useServerFn(listAccountingEntities);
   const upsertFn = useServerFn(upsertAccountingEntity);
   const defaultFn = useServerFn(setDefaultAccountingEntity);
-  const applyTokenFn = useServerFn(applyKsefTokenToAllEntities);
+  
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["accounting-entities"], queryFn: () => listFn() });
 
