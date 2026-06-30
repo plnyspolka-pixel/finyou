@@ -74,11 +74,11 @@ export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Prom
     return { status: "accepted", referenceNumber: ref, elementReference: ref, upoXml: upo, message: "Tryb testowy (mock) — faktura nie została wysłana do realnego KSeF." };
   }
 
-  const base = ksefBaseUrl(entity.ksef_environment);
+  const base = ksefBaseUrl(effectiveEnv);
   if (!base) return { status: "error", message: "Nieznane środowisko KSeF." };
 
   try {
-    return await ksefRealSubmit(base, entity, token, faXml, hash);
+    return await ksefRealSubmit(base, effectiveEntity, token, faXml, hash);
   } catch (e) {
     return { status: "error", message: `Błąd integracji KSeF: ${(e as Error).message}` };
   }
