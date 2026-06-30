@@ -275,8 +275,8 @@ function WindykacjaCaseCard() {
       </Link>
       <FancyPageHeader
         eyebrow="Sprawa windykacyjna"
-        title={<>Sprawa {kase.sygnatura ?? caseId.slice(0, 8)}</>}
-        subtitle={borrower ? `${borrower.imie ?? ""} ${borrower.nazwisko ?? ""}`.trim() || undefined : undefined}
+        title={<>Sprawa {loan?.numer_umowy ?? caseId.slice(0, 8)}</>}
+        subtitle={borrower?.imie_nazwisko ?? undefined}
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="secondary" size="sm" className="bg-white/15 text-white border-white/20 hover:bg-white/25">
