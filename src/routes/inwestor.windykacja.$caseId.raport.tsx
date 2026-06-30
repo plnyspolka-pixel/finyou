@@ -95,25 +95,32 @@ function EvidenceReport() {
   );
 
   const debt = useMemo(() => {
-    if (!loan) return null;
+    if (!loan || !kase) return null;
     const payments = events
       .filter((e) => e.typ === "wplata")
       .map((e) => ({
         paid_on: e.data_zdarzenia.slice(0, 10),
         amount: Number((e.metadata as { kwota?: number })?.kwota ?? 0),
       }));
+    const calkowita = Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0);
+    const prowizja = Number(loan.prowizja || 0);
     return calculateDebt({
-      principalAmount: Number(loan.kwota_calkowita || loan.kwota_pozyczki || 0),
+      principalAmount: Math.max(0, calkowita - prowizja),
       payoutDate: loan.data_umowy,
       dueDate: loan.termin_splaty,
       contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
       penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
       maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
+      terminated: Boolean(loan.data_wypowiedzenia) || loan.status === "wypowiedziana",
+      terminationDate: loan.data_wypowiedzenia,
+      overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),
+      commission: prowizja,
+      surcharges: Number(loan.kwota_doplat || 0),
       payments,
       actionFees: [],
       asOf: todayISO(),
     });
-  }, [loan, events]);
+  }, [loan, kase, events]);
 
   const attachments = useMemo(() => events.filter((e) => e.zalacznik_url), [events]);
 
@@ -203,9 +210,27 @@ function EvidenceReport() {
             <table>
               <tbody>
                 <tr>
-                  <th style={{ width: "30%" }}>Należność główna</th>
+                  <th style={{ width: "30%" }}>Należność główna (kapitał)</th>
                   <td>{formatPLN(debt.principalOutstanding)}</td>
                 </tr>
+                {debt.contractualInterest > 0 && (
+                  <tr>
+                    <th>Odsetki kapitałowe (umowne)</th>
+                    <td>{formatPLN(debt.contractualInterest)}</td>
+                  </tr>
+                )}
+                {debt.commissionOutstanding > 0 && (
+                  <tr>
+                    <th>Prowizja</th>
+                    <td>{formatPLN(debt.commissionOutstanding)}</td>
+                  </tr>
+                )}
+                {debt.surchargesOutstanding > 0 && (
+                  <tr>
+                    <th>Dopłaty / koszty umowne</th>
+                    <td>{formatPLN(debt.surchargesOutstanding)}</td>
+                  </tr>
+                )}
                 <tr>
                   <th>Odsetki za opóźnienie (maks., {debt.effectiveDelayRate}%)</th>
                   <td>{formatPLN(debt.delayInterest)}</td>
@@ -216,6 +241,13 @@ function EvidenceReport() {
                 </tr>
               </tbody>
             </table>
+            <p className="text-gray-600 mt-1" style={{ fontSize: "11px" }}>
+              {debt.delayRegime === "calosc_po_wypowiedzeniu"
+                ? `Umowa wypowiedziana — odsetki za opóźnienie naliczone od całości wymagalnej należności (${formatPLN(debt.delayInterestBase)}) na podstawie art. 481 § 2¹ k.c.`
+                : debt.delayRegime === "zalegle_raty"
+                  ? `Umowa niewypowiedziana — odsetki za opóźnienie naliczone wyłącznie od zaległych rat (${formatPLN(debt.delayInterestBase)}).`
+                  : "Brak wymagalnej zaległości — odsetki za opóźnienie nie naliczane."}
+            </p>
           </div>
         )}
 
