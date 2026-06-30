@@ -49,13 +49,22 @@ function isMock(token: string | null): boolean {
 
 /** Wysyła fakturę do KSeF (lub symuluje w trybie mock). */
 export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Promise<KsefResult> {
-  if (entity.ksef_environment === "disabled") {
+  // Fallback: jeśli podmiot nie ma jeszcze tokenu / środowiska, użyj globalnego tokenu z env.
+  const envToken = process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
+  const effectiveEnv: KsefEnvironment =
+    entity.ksef_environment && entity.ksef_environment !== "disabled"
+      ? entity.ksef_environment
+      : envToken
+        ? "prod"
+        : "disabled";
+  if (effectiveEnv === "disabled") {
     return { status: "disabled", message: "KSeF wyłączony dla tego podmiotu." };
   }
-  const token = decryptSensitive(entity.ksef_token_encrypted);
+  const token = decryptSensitive(entity.ksef_token_encrypted) ?? envToken;
   if (!token) {
     return { status: "disabled", message: "Brak tokenu KSeF dla podmiotu." };
   }
+  const effectiveEntity: KsefEntity = { ...entity, ksef_environment: effectiveEnv };
 
   const hash = sha256Base64(faXml);
 
@@ -65,11 +74,11 @@ export async function ksefSubmitInvoice(entity: KsefEntity, faXml: string): Prom
     return { status: "accepted", referenceNumber: ref, elementReference: ref, upoXml: upo, message: "Tryb testowy (mock) — faktura nie została wysłana do realnego KSeF." };
   }
 
-  const base = ksefBaseUrl(entity.ksef_environment);
+  const base = ksefBaseUrl(effectiveEnv);
   if (!base) return { status: "error", message: "Nieznane środowisko KSeF." };
 
   try {
-    return await ksefRealSubmit(base, entity, token, faXml, hash);
+    return await ksefRealSubmit(base, effectiveEntity, token, faXml, hash);
   } catch (e) {
     return { status: "error", message: `Błąd integracji KSeF: ${(e as Error).message}` };
   }

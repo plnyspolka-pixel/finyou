@@ -10,10 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Building2, Star, Plus, Pencil, ShieldCheck, KeyRound } from "lucide-react";
+import { Building2, Star, Plus, Pencil, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { listAccountingEntities, upsertAccountingEntity, setDefaultAccountingEntity } from "@/lib/accounting/functions";
-import { applyKsefTokenToAllEntities } from "@/lib/accounting/apply-ksef-token.functions";
 
 export const Route = createFileRoute("/admin/ksiegowosc/podmioty")({
   component: PodmiotyPage,
@@ -43,7 +42,7 @@ function PodmiotyPage() {
   const listFn = useServerFn(listAccountingEntities);
   const upsertFn = useServerFn(upsertAccountingEntity);
   const defaultFn = useServerFn(setDefaultAccountingEntity);
-  const applyTokenFn = useServerFn(applyKsefTokenToAllEntities);
+  
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["accounting-entities"], queryFn: () => listFn() });
 
@@ -100,16 +99,7 @@ function PodmiotyPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="h-6 w-6" /> Podmioty gospodarcze</h1>
           <p className="text-sm text-muted-foreground">Dwa podmioty wystawiające faktury. Wybierz, który jest domyślny dla faktur automatycznych.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={async () => {
-            try {
-              const res: any = await applyTokenFn();
-              toast.success(`Token KSeF zastosowany do ${res.count} podmiotów`);
-              void qc.invalidateQueries({ queryKey: ["accounting-entities"] });
-            } catch (e) { toast.error("Błąd", { description: (e as Error).message }); }
-          }}><KeyRound className="mr-2 h-4 w-4" /> Wstaw token KSeF (z env)</Button>
-          <Button onClick={() => { setForm(EMPTY); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Dodaj podmiot</Button>
-        </div>
+        <Button onClick={() => { setForm(EMPTY); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Dodaj podmiot</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
