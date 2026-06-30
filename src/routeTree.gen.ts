@@ -46,7 +46,6 @@ import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.r
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
-import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
@@ -128,6 +127,7 @@ import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kre
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as InwestorWindykacjaCaseIdRaportRouteImport } from './routes/inwestor.windykacja.$caseId.raport'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsTpayWebhookRouteImport } from './routes/api/public/payments/tpay-webhook'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
@@ -333,11 +333,6 @@ const KlientPowiadomieniaRoute = KlientPowiadomieniaRouteImport.update({
   id: '/powiadomienia',
   path: '/powiadomienia',
   getParentRoute: () => KlientRoute,
-} as any)
-const InwestorWindykacjaRoute = InwestorWindykacjaRouteImport.update({
-  id: '/windykacja',
-  path: '/windykacja',
-  getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorWiadomosciRoute = InwestorWiadomosciRouteImport.update({
   id: '/wiadomosci',
@@ -557,9 +552,9 @@ const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
   getParentRoute: () => AdminRoute,
 } as any)
 const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => InwestorWindykacjaRoute,
+  id: '/windykacja/',
+  path: '/windykacja/',
+  getParentRoute: () => InwestorRoute,
 } as any)
 const AdminProgramPosrednikowIndexRoute =
   AdminProgramPosrednikowIndexRouteImport.update({
@@ -584,9 +579,9 @@ const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
 } as any)
 const InwestorWindykacjaCaseIdRoute =
   InwestorWindykacjaCaseIdRouteImport.update({
-    id: '/$caseId',
-    path: '/$caseId',
-    getParentRoute: () => InwestorWindykacjaRoute,
+    id: '/windykacja/$caseId',
+    path: '/windykacja/$caseId',
+    getParentRoute: () => InwestorRoute,
   } as any)
 const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
   id: '/umowa/$offerId',
@@ -764,6 +759,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InwestorWindykacjaCaseIdRaportRoute =
+  InwestorWindykacjaCaseIdRaportRouteImport.update({
+    id: '/raport',
+    path: '/raport',
+    getParentRoute: () => InwestorWindykacjaCaseIdRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -941,7 +942,6 @@ export interface FileRoutesByFullPath {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -993,7 +993,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
-  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1019,6 +1019,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1129,7 +1130,7 @@ export interface FileRoutesByTo {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
-  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
@@ -1155,6 +1156,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1219,7 +1221,6 @@ export interface FileRoutesById {
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
-  '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/l/$slug': typeof LSlugRoute
@@ -1271,7 +1272,7 @@ export interface FileRoutesById {
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
-  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRoute
+  '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1297,6 +1298,7 @@ export interface FileRoutesById {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1362,7 +1364,6 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1440,6 +1441,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1576,6 +1578,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1639,7 +1642,6 @@ export interface FileRouteTypes {
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
-    | '/inwestor/windykacja'
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/l/$slug'
@@ -1717,6 +1719,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -2044,13 +2047,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KlientPowiadomieniaRouteImport
       parentRoute: typeof KlientRoute
     }
-    '/inwestor/windykacja': {
-      id: '/inwestor/windykacja'
-      path: '/windykacja'
-      fullPath: '/inwestor/windykacja'
-      preLoaderRoute: typeof InwestorWindykacjaRouteImport
-      parentRoute: typeof InwestorRoute
-    }
     '/inwestor/wiadomosci': {
       id: '/inwestor/wiadomosci'
       path: '/wiadomosci'
@@ -2354,10 +2350,10 @@ declare module '@tanstack/react-router' {
     }
     '/inwestor/windykacja/': {
       id: '/inwestor/windykacja/'
-      path: '/'
+      path: '/windykacja'
       fullPath: '/inwestor/windykacja/'
       preLoaderRoute: typeof InwestorWindykacjaIndexRouteImport
-      parentRoute: typeof InwestorWindykacjaRoute
+      parentRoute: typeof InwestorRoute
     }
     '/admin/program-posrednikow/': {
       id: '/admin/program-posrednikow/'
@@ -2389,10 +2385,10 @@ declare module '@tanstack/react-router' {
     }
     '/inwestor/windykacja/$caseId': {
       id: '/inwestor/windykacja/$caseId'
-      path: '/$caseId'
+      path: '/windykacja/$caseId'
       fullPath: '/inwestor/windykacja/$caseId'
       preLoaderRoute: typeof InwestorWindykacjaCaseIdRouteImport
-      parentRoute: typeof InwestorWindykacjaRoute
+      parentRoute: typeof InwestorRoute
     }
     '/inwestor/umowa/$offerId': {
       id: '/inwestor/umowa/$offerId'
@@ -2617,6 +2613,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/lovable/email/auth/preview'
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/inwestor/windykacja/$caseId/raport': {
+      id: '/inwestor/windykacja/$caseId/raport'
+      path: '/raport'
+      fullPath: '/inwestor/windykacja/$caseId/raport'
+      preLoaderRoute: typeof InwestorWindykacjaCaseIdRaportRouteImport
+      parentRoute: typeof InwestorWindykacjaCaseIdRoute
     }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
@@ -2901,18 +2904,19 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface InwestorWindykacjaRouteChildren {
-  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRoute
-  InwestorWindykacjaIndexRoute: typeof InwestorWindykacjaIndexRoute
+interface InwestorWindykacjaCaseIdRouteChildren {
+  InwestorWindykacjaCaseIdRaportRoute: typeof InwestorWindykacjaCaseIdRaportRoute
 }
 
-const InwestorWindykacjaRouteChildren: InwestorWindykacjaRouteChildren = {
-  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRoute,
-  InwestorWindykacjaIndexRoute: InwestorWindykacjaIndexRoute,
-}
+const InwestorWindykacjaCaseIdRouteChildren: InwestorWindykacjaCaseIdRouteChildren =
+  {
+    InwestorWindykacjaCaseIdRaportRoute: InwestorWindykacjaCaseIdRaportRoute,
+  }
 
-const InwestorWindykacjaRouteWithChildren =
-  InwestorWindykacjaRoute._addFileChildren(InwestorWindykacjaRouteChildren)
+const InwestorWindykacjaCaseIdRouteWithChildren =
+  InwestorWindykacjaCaseIdRoute._addFileChildren(
+    InwestorWindykacjaCaseIdRouteChildren,
+  )
 
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
@@ -2922,10 +2926,11 @@ interface InwestorRouteChildren {
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
-  InwestorWindykacjaRoute: typeof InwestorWindykacjaRouteWithChildren
   InwestorIndexRoute: typeof InwestorIndexRoute
   InwestorUmowaOfferIdRoute: typeof InwestorUmowaOfferIdRoute
+  InwestorWindykacjaCaseIdRoute: typeof InwestorWindykacjaCaseIdRouteWithChildren
   InwestorWniosekIdRoute: typeof InwestorWniosekIdRoute
+  InwestorWindykacjaIndexRoute: typeof InwestorWindykacjaIndexRoute
 }
 
 const InwestorRouteChildren: InwestorRouteChildren = {
@@ -2936,10 +2941,11 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
-  InwestorWindykacjaRoute: InwestorWindykacjaRouteWithChildren,
   InwestorIndexRoute: InwestorIndexRoute,
   InwestorUmowaOfferIdRoute: InwestorUmowaOfferIdRoute,
+  InwestorWindykacjaCaseIdRoute: InwestorWindykacjaCaseIdRouteWithChildren,
   InwestorWniosekIdRoute: InwestorWniosekIdRoute,
+  InwestorWindykacjaIndexRoute: InwestorWindykacjaIndexRoute,
 }
 
 const InwestorRouteWithChildren = InwestorRoute._addFileChildren(
@@ -3069,13 +3075,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

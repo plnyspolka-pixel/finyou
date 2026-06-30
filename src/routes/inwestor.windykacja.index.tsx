@@ -1,66 +1,152 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { listDebtCases, upsertDebtCase, type DebtCase } from "@/lib/debt-collection.functions";
+import {
+  listWindDashboard,
+  createWindCase,
+  seedWindDemo,
+  type WindCase,
+  type WindLoan,
+  type WindBorrower,
+} from "@/lib/windykacja.functions";
+import {
+  PATH_BADGE,
+  PATH_LABELS,
+  stageLabel,
+  delayColorClass,
+  suggestNextAction,
+  needsActionToday,
+  type WindPath,
+  type WindEventLite,
+} from "@/lib/windykacja-procedure";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { formatPLN, formatDate } from "@/lib/labels";
-import { Gavel, Plus, FileWarning, CheckCircle2, FileText } from "lucide-react";
+import {
+  Gavel,
+  Plus,
+  AlertTriangle,
+  Wallet,
+  FolderOpen,
+  Flame,
+  Loader2,
+  ArrowRight,
+} from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/")({
-  component: WindykacjaList,
+  component: WindykacjaDashboard,
 });
 
-const STATUS: Record<DebtCase["status"], { label: string; cls: string }> = {
-  draft: { label: "Szkic", cls: "bg-muted text-muted-foreground" },
-  active: {
-    label: "W toku",
-    cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
-  },
-  closed: {
-    label: "Zamknięta",
-    cls: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
-  },
+type CaseRow = WindCase & { loan: (WindLoan & { borrower: WindBorrower }) | null };
+type DashEvent = WindEventLite & { case_id: string; tytul: string };
+
+const PRIORITY_BADGE: Record<string, string> = {
+  niski: "bg-muted text-muted-foreground",
+  sredni: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
+  wysoki: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+  krytyczny: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
 };
 
-function WindykacjaList() {
-  const navigate = useNavigate();
-  const fetchCases = useServerFn(listDebtCases);
-  const createCase = useServerFn(upsertDebtCase);
-  const [cases, setCases] = useState<DebtCase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+const nowISO = () => new Date().toISOString();
 
-  const reload = useMemo(
-    () => async () => {
-      try {
-        setCases(await fetchCases());
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Nie udało się pobrać spraw");
-      } finally {
-        setLoading(false);
+function WindykacjaDashboard() {
+  const navigate = useNavigate();
+  const fetchDash = useServerFn(listWindDashboard);
+  const createCase = useServerFn(createWindCase);
+  const seedDemo = useServerFn(seedWindDemo);
+
+  const [cases, setCases] = useState<CaseRow[]>([]);
+  const [eventsByCase, setEventsByCase] = useState<Record<string, DashEvent[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [pathFilter, setPathFilter] = useState<string>("all");
+
+  const reload = useCallback(async () => {
+    try {
+      const res = await fetchDash();
+      setCases(res.cases as CaseRow[]);
+      const map: Record<string, DashEvent[]> = {};
+      for (const e of res.events) {
+        (map[e.case_id] ??= []).push(e as unknown as DashEvent);
       }
-    },
-    [fetchCases],
-  );
+      setEventsByCase(map);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się pobrać danych");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchDash]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  const newCase = async () => {
-    setCreating(true);
+  const metrics = useMemo(() => {
+    const active = cases.filter((c) => !c.data_zamkniecia);
+    const total = active.reduce((s, c) => s + Number(c.kwota_zalegla || 0), 0);
+    const today = active.filter((c) =>
+      needsActionToday(
+        {
+          sciezka: c.sciezka,
+          etap: c.etap,
+          opoznienie_dni: c.opoznienie_dni,
+          kwota_zalegla: c.kwota_zalegla,
+        },
+        eventsByCase[c.id] ?? [],
+        nowISO(),
+      ),
+    );
+    const critical = active.filter((c) => c.priorytet === "krytyczny");
+    return {
+      activeCount: active.length,
+      total,
+      todayCount: today.length,
+      criticalCount: critical.length,
+      today,
+    };
+  }, [cases, eventsByCase]);
+
+  const filtered = useMemo(() => {
+    const list = pathFilter === "all" ? cases : cases.filter((c) => c.sciezka === pathFilter);
+    return [...list].sort((a, b) => {
+      const pr = ["krytyczny", "wysoki", "sredni", "niski"];
+      const d = pr.indexOf(a.priorytet) - pr.indexOf(b.priorytet);
+      if (d !== 0) return d;
+      return b.opoznienie_dni - a.opoznienie_dni;
+    });
+  }, [cases, pathFilter]);
+
+  const onSeed = async () => {
+    setSeeding(true);
     try {
-      const c = await createCase({ data: { status: "draft" } });
-      toast.success("Utworzono nową sprawę (szkic)");
-      void navigate({ to: "/inwestor/windykacja/$caseId", params: { caseId: c.id } });
+      await seedDemo();
+      toast.success("Dodano dane przykładowe");
+      await reload();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Nie udało się utworzyć sprawy");
+      toast.error(e instanceof Error ? e.message : "Nie udało się dodać danych");
     } finally {
-      setCreating(false);
+      setSeeding(false);
     }
   };
 
@@ -68,14 +154,35 @@ function WindykacjaList() {
     <div className="space-y-6">
       <FancyPageHeader
         eyebrow="Windykacja"
-        title="Sprawy windykacyjne"
-        subtitle="Wgraj umowę pożyczki i wpłaty klienta — system wyliczy zadłużenie z maksymalnymi odsetkami za opóźnienie i pozwoli zlecać działania."
+        title="Panel windykacji"
+        subtitle="Prowadź proces windykacji krok po kroku — z rejestrem dowodowym, terminami doręczeń i podpowiedzią następnego działania."
         actions={
-          <Button onClick={newCase} disabled={creating}>
-            <Plus className="h-4 w-4 mr-1" /> Nowa sprawa
-          </Button>
+          <NewCaseDialog
+            onCreated={(id) =>
+              navigate({ to: "/inwestor/windykacja/$caseId", params: { caseId: id } })
+            }
+            createCase={createCase}
+          />
         }
       />
+
+      {/* Karty metryczne */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric icon={FolderOpen} label="Sprawy w toku" value={String(metrics.activeCount)} />
+        <Metric icon={Wallet} label="Kwota w windykacji" value={formatPLN(metrics.total)} />
+        <Metric
+          icon={AlertTriangle}
+          label="Wymaga działania dziś"
+          value={String(metrics.todayCount)}
+          accent="amber"
+        />
+        <Metric
+          icon={Flame}
+          label="Sprawy krytyczne"
+          value={String(metrics.criticalCount)}
+          accent="red"
+        />
+      </div>
 
       {loading ? (
         <p className="text-muted-foreground">Ładowanie…</p>
@@ -84,52 +191,379 @@ function WindykacjaList() {
           <CardContent className="py-12 text-center space-y-3">
             <Gavel className="h-10 w-10 mx-auto text-muted-foreground" />
             <p className="text-muted-foreground">Brak spraw windykacyjnych.</p>
-            <Button onClick={newCase} disabled={creating}>
-              <Plus className="h-4 w-4 mr-1" /> Załóż pierwszą sprawę
-            </Button>
+            <div className="flex items-center justify-center gap-2">
+              <NewCaseDialog
+                onCreated={(id) =>
+                  navigate({ to: "/inwestor/windykacja/$caseId", params: { caseId: id } })
+                }
+                createCase={createCase}
+              />
+              <Button variant="outline" onClick={onSeed} disabled={seeding}>
+                {seeding ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} Załaduj dane
+                przykładowe
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {cases.map((c) => {
-            const st = STATUS[c.status] ?? STATUS.draft;
-            return (
-              <Link
-                key={c.id}
-                to="/inwestor/windykacja/$caseId"
-                params={{ caseId: c.id }}
-                className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                preload="intent"
-              >
-                <Card className="hover:border-primary transition-all hover:shadow-md h-full cursor-pointer">
-                  <CardContent className="pt-5 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-semibold truncate">
-                        {c.debtor_name || "Dłużnik (uzupełnij)"}
+        <>
+          {/* Wymaga działania dziś */}
+          {metrics.today.length > 0 && (
+            <Card className="border-amber-300 dark:border-amber-800">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" /> Wymaga działania dziś (
+                  {metrics.today.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {metrics.today.map((c) => {
+                  const s = suggestNextAction(
+                    {
+                      sciezka: c.sciezka,
+                      etap: c.etap,
+                      opoznienie_dni: c.opoznienie_dni,
+                      kwota_zalegla: c.kwota_zalegla,
+                    },
+                    eventsByCase[c.id] ?? [],
+                    nowISO(),
+                  );
+                  return (
+                    <Link
+                      key={c.id}
+                      to="/inwestor/windykacja/$caseId"
+                      params={{ caseId: c.id }}
+                      className="flex items-center justify-between gap-3 rounded-md border p-3 hover:border-primary transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">
+                          {c.loan?.borrower?.imie_nazwisko ?? "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{s.text}</div>
                       </div>
-                      <Badge className={st.cls}>{st.label}</Badge>
-                    </div>
-                    <div className="text-2xl font-bold tabular-nums">
-                      {formatPLN(c.principal_amount)}
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5" /> Umowa: {c.contract_number || "—"}
-                        {c.contract_file_path ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                        ) : (
-                          <FileWarning className="h-3.5 w-3.5 text-amber-600" />
-                        )}
+                      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Filtr + lista spraw */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-base">Sprawy ({filtered.length})</CardTitle>
+              <Select value={pathFilter} onValueChange={setPathFilter}>
+                <SelectTrigger className="w-[220px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Wszystkie ścieżki</SelectItem>
+                  {(Object.keys(PATH_LABELS) as WindPath[]).map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {PATH_LABELS[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {filtered.map((c) => {
+                const ev = eventsByCase[c.id] ?? [];
+                const last = ev[0];
+                return (
+                  <Link
+                    key={c.id}
+                    to="/inwestor/windykacja/$caseId"
+                    params={{ caseId: c.id }}
+                    className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr_auto] gap-3 items-center rounded-md border p-3 hover:border-primary transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">
+                        {c.loan?.borrower?.imie_nazwisko ?? "—"}
                       </div>
-                      <div>Termin spłaty: {formatDate(c.due_date)}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        Umowa {c.loan?.numer_umowy ?? "—"} ·{" "}
+                        {last
+                          ? `${last.tytul} (${formatDate(last.data_zdarzenia)})`
+                          : "brak zdarzeń"}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
+                    <div>
+                      <div className="text-lg font-bold tabular-nums">
+                        {formatPLN(c.kwota_zalegla)}
+                      </div>
+                      <div className={`text-xs font-medium ${delayColorClass(c.opoznienie_dni)}`}>
+                        opóźnienie {c.opoznienie_dni} dni
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 items-start">
+                      <Badge className={PATH_BADGE[c.sciezka]}>{PATH_LABELS[c.sciezka]}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {stageLabel(c.sciezka, c.etap)}
+                      </span>
+                    </div>
+                    <Badge className={PRIORITY_BADGE[c.priorytet]}>{c.priorytet}</Badge>
+                  </Link>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </>
       )}
+    </div>
+  );
+}
+
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: typeof Wallet;
+  label: string;
+  value: string;
+  accent?: "amber" | "red";
+}) {
+  const color =
+    accent === "amber" ? "text-amber-600" : accent === "red" ? "text-red-600" : "text-primary";
+  return (
+    <Card>
+      <CardContent className="pt-5 flex items-center gap-3">
+        <div className={`grid h-10 w-10 place-items-center rounded-lg bg-muted ${color}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs text-muted-foreground">{label}</div>
+          <div className="text-xl font-bold tabular-nums truncate">{value}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NewCaseDialog({
+  onCreated,
+  createCase,
+}: {
+  onCreated: (caseId: string) => void;
+  createCase: ReturnType<typeof useServerFn<typeof createWindCase>>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [f, setF] = useState({
+    imie_nazwisko: "",
+    typ: "osoba_fizyczna" as "osoba_fizyczna" | "firma",
+    pesel: "",
+    email: "",
+    telefon: "",
+    adres_zamieszkania: "",
+    numer_umowy: "",
+    data_umowy: "",
+    kwota_pozyczki: "",
+    kwota_calkowita: "",
+    termin_splaty: "",
+    kwota_zalegla: "",
+    numer_kw: "",
+    sciezka: "miekka" as WindPath,
+    priorytet: "sredni" as "niski" | "sredni" | "wysoki" | "krytyczny",
+  });
+  const upd = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  const submit = async () => {
+    if (!f.imie_nazwisko.trim()) {
+      toast.error("Podaj dłużnika");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await createCase({
+        data: {
+          imie_nazwisko: f.imie_nazwisko,
+          typ: f.typ,
+          pesel: f.pesel,
+          email: f.email,
+          telefon: f.telefon,
+          adres_zamieszkania: f.adres_zamieszkania,
+          adres_do_doreczen: f.adres_zamieszkania,
+          email_zgoda_doreczenia: false,
+          numer_umowy: f.numer_umowy,
+          data_umowy: f.data_umowy,
+          kwota_pozyczki: Number(f.kwota_pozyczki) || 0,
+          kwota_calkowita: Number(f.kwota_calkowita) || 0,
+          prowizja: 0,
+          termin_splaty: f.termin_splaty,
+          numer_kw: f.numer_kw,
+          oprocentowanie_roczne: 0,
+          stopa_odsetek_max: 24.5,
+          kwota_zalegla: Number(f.kwota_zalegla) || 0,
+          sciezka: f.sciezka,
+          etap:
+            f.sciezka === "miekka"
+              ? "kontakt_wstepny"
+              : f.sciezka === "standardowa"
+                ? "wezwanie"
+                : f.sciezka === "twarda"
+                  ? "wypowiedzenie"
+                  : "ocena_przeslanek",
+          priorytet: f.priorytet,
+        },
+      });
+      toast.success("Utworzono sprawę");
+      setOpen(false);
+      onCreated(res.caseId);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się utworzyć sprawy");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-1" /> Nowa sprawa
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nowa sprawa windykacyjna</DialogTitle>
+          <DialogDescription>
+            Dane dłużnika i pożyczki. Pozostałe pola uzupełnisz na karcie sprawy.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Fld label="Dłużnik / firma" className="sm:col-span-2">
+            <Input value={f.imie_nazwisko} onChange={(e) => upd("imie_nazwisko", e.target.value)} />
+          </Fld>
+          <Fld label="Typ">
+            <Select value={f.typ} onValueChange={(v) => upd("typ", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="osoba_fizyczna">Osoba fizyczna</SelectItem>
+                <SelectItem value="firma">Firma</SelectItem>
+              </SelectContent>
+            </Select>
+          </Fld>
+          <Fld label="PESEL / NIP">
+            <Input value={f.pesel} onChange={(e) => upd("pesel", e.target.value)} />
+          </Fld>
+          <Fld label="E-mail">
+            <Input value={f.email} onChange={(e) => upd("email", e.target.value)} />
+          </Fld>
+          <Fld label="Telefon">
+            <Input value={f.telefon} onChange={(e) => upd("telefon", e.target.value)} />
+          </Fld>
+          <Fld label="Adres" className="sm:col-span-2">
+            <Input
+              value={f.adres_zamieszkania}
+              onChange={(e) => upd("adres_zamieszkania", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Numer umowy">
+            <Input value={f.numer_umowy} onChange={(e) => upd("numer_umowy", e.target.value)} />
+          </Fld>
+          <Fld label="Data umowy">
+            <Input
+              type="date"
+              value={f.data_umowy}
+              onChange={(e) => upd("data_umowy", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Kwota pożyczki (zł)">
+            <Input
+              type="number"
+              value={f.kwota_pozyczki}
+              onChange={(e) => upd("kwota_pozyczki", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Kwota całkowita do zwrotu (zł)">
+            <Input
+              type="number"
+              value={f.kwota_calkowita}
+              onChange={(e) => upd("kwota_calkowita", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Termin spłaty">
+            <Input
+              type="date"
+              value={f.termin_splaty}
+              onChange={(e) => upd("termin_splaty", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Kwota zaległa (zł)">
+            <Input
+              type="number"
+              value={f.kwota_zalegla}
+              onChange={(e) => upd("kwota_zalegla", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Numer KW">
+            <Input value={f.numer_kw} onChange={(e) => upd("numer_kw", e.target.value)} />
+          </Fld>
+          <Fld label="Ścieżka">
+            <Select value={f.sciezka} onValueChange={(v) => upd("sciezka", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PATH_LABELS) as WindPath[]).map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {PATH_LABELS[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Fld>
+          <Fld label="Priorytet">
+            <Select value={f.priorytet} onValueChange={(v) => upd("priorytet", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="niski">Niski</SelectItem>
+                <SelectItem value="sredni">Średni</SelectItem>
+                <SelectItem value="wysoki">Wysoki</SelectItem>
+                <SelectItem value="krytyczny">Krytyczny</SelectItem>
+              </SelectContent>
+            </Select>
+          </Fld>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Anuluj
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-1" />
+            )}{" "}
+            Utwórz sprawę
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Fld({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`space-y-1 ${className ?? ""}`}>
+      <Label className="text-xs">{label}</Label>
+      {children}
     </div>
   );
 }
