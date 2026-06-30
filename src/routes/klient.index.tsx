@@ -761,6 +761,10 @@ function KlientDashboard() {
         );
       })()}
 
+      {loanRow?.id && <InvestorOffersSection loanApplicationId={loanRow.id} />}
+
+
+
 
       {/* === Weryfikacje — tafelki rozwijane (odblokowane po wgraniu plików i KW) === */}
       {totalFiles > 0 && kwValidation.ok ? (
