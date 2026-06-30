@@ -761,7 +761,7 @@ function KlientDashboard() {
         );
       })()}
 
-      {loanRow?.id && <InvestorOffersSection loanApplicationId={loanRow.id} />}
+      
 
 
 
