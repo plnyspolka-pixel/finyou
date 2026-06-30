@@ -353,16 +353,19 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
 
     try {
       if (row.channel === "email") {
-        const tpl = EMAIL_TEMPLATES[((row.step_index - 1) % 30) + 1];
+        const emailCount = Object.keys(EMAIL_TEMPLATES).length;
+        const tpl = EMAIL_TEMPLATES[((row.step_index - 1) % emailCount) + 1];
         if (!tpl || !lead.email) {
           await s.from("lead_follow_up_schedule").update({ status: "skipped", error_message: "no email/template" }).eq("id", row.id);
           skipped++; continue;
         }
+        const bodyText = tpl.body(vars);
         const { sendResendEmail } = await import("@/lib/resend-send.server");
         const r = await sendResendEmail({
           to: lead.email,
           subject: tpl.subject,
-          text: tpl.body(vars),
+          text: bodyText,
+          html: renderEmailHtml(bodyText, tpl.subject),
           fromName: "Ania z Finance You",
         });
         await s.from("lead_follow_up_schedule").update({
@@ -373,12 +376,13 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
           attempts: 1,
         }).eq("id", row.id);
         if (r.ok) {
-          await logComm(row.lead_id, "email", lead.email, tpl.body(vars), tpl.subject, r.id ?? null, row.step_index);
+          await logComm(row.lead_id, "email", lead.email, bodyText, tpl.subject, r.id ?? null, row.step_index);
           sent++;
         }
       } else if (row.channel === "sms") {
         const phone = lead.phone_normalized;
-        const tplFn = SMS_TEMPLATES[((row.step_index - 1) % 4) + 1];
+        const smsCount = Object.keys(SMS_TEMPLATES).length;
+        const tplFn = SMS_TEMPLATES[((row.step_index - 1) % smsCount) + 1];
         if (!phone || !tplFn) {
           await s.from("lead_follow_up_schedule").update({ status: "skipped", error_message: "no phone/template" }).eq("id", row.id);
           skipped++; continue;
