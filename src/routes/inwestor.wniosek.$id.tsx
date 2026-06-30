@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { openOrCreateThread } from "@/lib/chat.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 // Reguły z kalkulatora na /klient: max okres maleje wraz z kwotą.
 function maxMonthsForAmount(amount: number): number {
