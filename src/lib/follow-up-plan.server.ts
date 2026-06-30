@@ -161,13 +161,35 @@ export const EMAIL_TEMPLATES: Record<number, Tpl> = {
        body: (v) => `${greet(v)}\n\nTwój profil ciągle u nas jest, inwestorzy też. Jeśli pożyczka nadal Ci się przyda — wystarczy kliknąć i dokończyć.\n\n${cta(v)}${sig}` },
   30:{ subject: "Drzwi zostają dla Ciebie otwarte",
        body: (v) => `${greet(v)}\n\nGdyby kiedyś sytuacja się zmieniła — Twój link jest aktualny, a my chętnie wracamy do rozmowy. Dziękuję, że dałeś nam szansę być w pobliżu.\n\n${cta(v)}${sig}\n\n— Ania` },
+
+  // === Kalkulator — przewijane w trakcie sekwencji, kilka razy ===
+  31:{ subject: "Policz swoją ratę w 30 sekund",
+       body: (v) => `${greet(v)}\n\nNie musisz dzwonić ani pisać — wejdź do swojego panelu i przesuń trzy suwaki w kalkulatorze: kwota, okres spłaty, oprocentowanie. Od razu zobaczysz miesięczną ratę i pełen harmonogram.\n\n${ctaCalc(v)}\n\nKalkulator pokazuje uczciwie wszystkie koszty — bez gwiazdek, bez „od".${sig}` },
+  32:{ subject: "Twoja rata może być niższa, niż myślisz",
+       body: (v) => `${greet(v)}\n\nNa długim okresie spłaty (nawet do 72 miesięcy) rata potrafi spaść o połowę w porównaniu z krótkim kredytem bankowym. Sprawdź to sam w naszym kalkulatorze — nic nie podpisujesz, tylko liczysz.\n\n${ctaCalc(v)}${sig}` },
+  33:{ subject: "Zobacz dokładnie, ile zapłacisz — zanim cokolwiek zdecydujesz",
+       body: (v) => `${greet(v)}\n\nW kalkulatorze w Twoim panelu zobaczysz: ratę miesięczną, całkowity koszt, harmonogram co do złotówki oraz status zgodności z przepisami (odsetki maks., MPKK, krotność spłaty). Pełna przejrzystość, zero niespodzianek.\n\n${ctaCalc(v)}${sig}` },
+  34:{ subject: "Pobaw się suwakami — to nic nie kosztuje",
+       body: (v) => `${greet(v)}\n\nKalkulator jest po to, żebyś sam sprawdził różne warianty: krótszy okres = wyższa rata, niższy koszt; dłuższy okres = niższa rata, łatwiejszy budżet. Wybierzesz to, co naprawdę pasuje do Ciebie.\n\n${ctaCalc(v)}${sig}` },
+  35:{ subject: "3 minuty z kalkulatorem = realna pomoc finansowa",
+       body: (v) => `${greet(v)}\n\nKlienci, którzy poświęcają 3 minuty na kalkulator, częściej dostają finansowanie — bo wchodzą do rozmowy z konkretną kwotą i ratą, którą udźwigną. Spróbuj teraz.\n\n${ctaCalc(v)}${sig}` },
+  36:{ subject: "Twoja rata, Twoje warunki — Ty decydujesz",
+       body: (v) => `${greet(v)}\n\nU nas to Ty ustawiasz parametry: ile chcesz pożyczyć i na jak długo. My zbieramy oferty od wielu inwestorów i pokazujemy najkorzystniejszą. Zacznij od kalkulatora — to Twój pierwszy krok do decyzji.\n\n${ctaCalc(v)}${sig}` },
 };
 
 export const SMS_TEMPLATES: Record<number, (v: TplVars) => string> = {
-  1: (v) => `Finance You: ${v.firstName ?? "Cześć"}, dokończ wniosek o pożyczkę: ${v.returnLink}`,
-  2: (v) => `Finance You: hej ${v.firstName ?? ""}, masz jeszcze otwarty wniosek — wejdź: ${v.returnLink}`,
-  3: (v) => `Finance You: ${v.firstName ?? "Cześć"}, jeszcze tu jesteśmy. Dokończ wniosek: ${v.returnLink}`,
-  4: (v) => `Finance You: ostatnia szansa — dokończ wniosek: ${v.returnLink} . Stop=STOP`,
+  1:  (v) => `Finance You: ${v.firstName || "Cześć"}, dokończ wniosek o pożyczkę na financeyou.pl → ${v.returnLink}`,
+  2:  (v) => `Finance You: hej${v.firstName ? " " + v.firstName : ""}, masz otwarty wniosek. Wróć: ${v.returnLink}`,
+  3:  (v) => `Finance You: policz swoją ratę w kalkulatorze — 30 sek: ${v.returnLink}`,
+  4:  (v) => `Finance You: ${v.firstName || "Cześć"}, sprawdź ile wyniesie Twoja rata: ${v.returnLink}`,
+  5:  (v) => `Finance You: pomożemy Ci finansowo — wystarczy dokończyć wniosek: ${v.returnLink}`,
+  6:  (v) => `Finance You: ${v.firstName || ""} Twój profil pasuje do naszych inwestorów. Dokończ: ${v.returnLink}`,
+  7:  (v) => `Finance You: niska rata, długi okres spłaty, decyzja w 24h. Sprawdź: ${v.returnLink}`,
+  8:  (v) => `Finance You: pobaw się suwakami w kalkulatorze i zobacz swoją ratę: ${v.returnLink}`,
+  9:  (v) => `Finance You: ${v.firstName || "Cześć"}, otrzymasz pomoc finansową szybciej, niż myślisz: ${v.returnLink}`,
+  10: (v) => `Finance You: jeden klik = zalogowany w panelu, gotowy wniosek czeka: ${v.returnLink}`,
+  11: (v) => `Finance You: ${v.firstName || ""} masz jeszcze chwilę? Dokończ wniosek: ${v.returnLink}`,
+  12: (v) => `Finance You: ostatnia szansa w tym miesiącu — dokończ wniosek: ${v.returnLink} . Stop=STOP`,
 };
 
 
