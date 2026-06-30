@@ -2603,187 +2603,6 @@ export type Database = {
           },
         ]
       }
-      debt_collection_actions: {
-        Row: {
-          action_date: string
-          action_type: string
-          case_id: string
-          channel_target: string | null
-          content: string | null
-          created_at: string
-          created_by: string | null
-          error_message: string | null
-          external_id: string | null
-          fee: number
-          id: string
-          status: string
-          subject: string | null
-        }
-        Insert: {
-          action_date?: string
-          action_type: string
-          case_id: string
-          channel_target?: string | null
-          content?: string | null
-          created_at?: string
-          created_by?: string | null
-          error_message?: string | null
-          external_id?: string | null
-          fee?: number
-          id?: string
-          status?: string
-          subject?: string | null
-        }
-        Update: {
-          action_date?: string
-          action_type?: string
-          case_id?: string
-          channel_target?: string | null
-          content?: string | null
-          created_at?: string
-          created_by?: string | null
-          error_message?: string | null
-          external_id?: string | null
-          fee?: number
-          id?: string
-          status?: string
-          subject?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "debt_collection_actions_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "debt_collection_cases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      debt_collection_cases: {
-        Row: {
-          contract_file_name: string | null
-          contract_file_path: string | null
-          contract_number: string | null
-          contractual_annual_rate: number
-          created_at: string
-          debtor_address: string | null
-          debtor_email: string | null
-          debtor_name: string | null
-          debtor_pesel: string | null
-          debtor_phone: string | null
-          due_date: string | null
-          fee_email: number
-          fee_letter_bailiff: number
-          fee_letter_court: number
-          fee_letter_debtor: number
-          fee_phone: number
-          fee_sms: number
-          id: string
-          investor_user_id: string
-          max_statutory_rate: number
-          no_payments_declared: boolean
-          notes: string | null
-          payout_date: string | null
-          penalty_annual_rate: number
-          principal_amount: number
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          contract_file_name?: string | null
-          contract_file_path?: string | null
-          contract_number?: string | null
-          contractual_annual_rate?: number
-          created_at?: string
-          debtor_address?: string | null
-          debtor_email?: string | null
-          debtor_name?: string | null
-          debtor_pesel?: string | null
-          debtor_phone?: string | null
-          due_date?: string | null
-          fee_email?: number
-          fee_letter_bailiff?: number
-          fee_letter_court?: number
-          fee_letter_debtor?: number
-          fee_phone?: number
-          fee_sms?: number
-          id?: string
-          investor_user_id?: string
-          max_statutory_rate?: number
-          no_payments_declared?: boolean
-          notes?: string | null
-          payout_date?: string | null
-          penalty_annual_rate?: number
-          principal_amount?: number
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          contract_file_name?: string | null
-          contract_file_path?: string | null
-          contract_number?: string | null
-          contractual_annual_rate?: number
-          created_at?: string
-          debtor_address?: string | null
-          debtor_email?: string | null
-          debtor_name?: string | null
-          debtor_pesel?: string | null
-          debtor_phone?: string | null
-          due_date?: string | null
-          fee_email?: number
-          fee_letter_bailiff?: number
-          fee_letter_court?: number
-          fee_letter_debtor?: number
-          fee_phone?: number
-          fee_sms?: number
-          id?: string
-          investor_user_id?: string
-          max_statutory_rate?: number
-          no_payments_declared?: boolean
-          notes?: string | null
-          payout_date?: string | null
-          penalty_annual_rate?: number
-          principal_amount?: number
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      debt_collection_payments: {
-        Row: {
-          amount: number
-          case_id: string
-          created_at: string
-          id: string
-          note: string | null
-          paid_on: string
-        }
-        Insert: {
-          amount: number
-          case_id: string
-          created_at?: string
-          id?: string
-          note?: string | null
-          paid_on: string
-        }
-        Update: {
-          amount?: number
-          case_id?: string
-          created_at?: string
-          id?: string
-          note?: string | null
-          paid_on?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "debt_collection_payments_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "debt_collection_cases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       document_templates: {
         Row: {
           audience: string[] | null
@@ -6849,6 +6668,318 @@ export type Database = {
         }
         Relationships: []
       }
+      wind_borrowers: {
+        Row: {
+          adres_do_doreczen: string | null
+          adres_zamieszkania: string | null
+          created_at: string
+          dowod_osobisty: string | null
+          email: string | null
+          email_zgoda_doreczenia: boolean
+          id: string
+          imie_nazwisko: string
+          investor_user_id: string
+          nip: string | null
+          notatki: string | null
+          pesel: string | null
+          telefon: string | null
+          typ: Database["public"]["Enums"]["wind_borrower_type"]
+          updated_at: string
+        }
+        Insert: {
+          adres_do_doreczen?: string | null
+          adres_zamieszkania?: string | null
+          created_at?: string
+          dowod_osobisty?: string | null
+          email?: string | null
+          email_zgoda_doreczenia?: boolean
+          id?: string
+          imie_nazwisko?: string
+          investor_user_id?: string
+          nip?: string | null
+          notatki?: string | null
+          pesel?: string | null
+          telefon?: string | null
+          typ?: Database["public"]["Enums"]["wind_borrower_type"]
+          updated_at?: string
+        }
+        Update: {
+          adres_do_doreczen?: string | null
+          adres_zamieszkania?: string | null
+          created_at?: string
+          dowod_osobisty?: string | null
+          email?: string | null
+          email_zgoda_doreczenia?: boolean
+          id?: string
+          imie_nazwisko?: string
+          investor_user_id?: string
+          nip?: string | null
+          notatki?: string | null
+          pesel?: string | null
+          telefon?: string | null
+          typ?: Database["public"]["Enums"]["wind_borrower_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wind_collection_cases: {
+        Row: {
+          created_at: string
+          data_otwarcia: string
+          data_zamkniecia: string | null
+          etap: string
+          id: string
+          investor_user_id: string
+          kwota_zalegla: number
+          loan_id: string
+          opoznienie_dni: number
+          osoba_prowadzaca: string | null
+          priorytet: Database["public"]["Enums"]["wind_priority"]
+          sciezka: Database["public"]["Enums"]["wind_path"]
+          updated_at: string
+          wynik: Database["public"]["Enums"]["wind_case_result"] | null
+        }
+        Insert: {
+          created_at?: string
+          data_otwarcia?: string
+          data_zamkniecia?: string | null
+          etap?: string
+          id?: string
+          investor_user_id?: string
+          kwota_zalegla?: number
+          loan_id: string
+          opoznienie_dni?: number
+          osoba_prowadzaca?: string | null
+          priorytet?: Database["public"]["Enums"]["wind_priority"]
+          sciezka?: Database["public"]["Enums"]["wind_path"]
+          updated_at?: string
+          wynik?: Database["public"]["Enums"]["wind_case_result"] | null
+        }
+        Update: {
+          created_at?: string
+          data_otwarcia?: string
+          data_zamkniecia?: string | null
+          etap?: string
+          id?: string
+          investor_user_id?: string
+          kwota_zalegla?: number
+          loan_id?: string
+          opoznienie_dni?: number
+          osoba_prowadzaca?: string | null
+          priorytet?: Database["public"]["Enums"]["wind_priority"]
+          sciezka?: Database["public"]["Enums"]["wind_path"]
+          updated_at?: string
+          wynik?: Database["public"]["Enums"]["wind_case_result"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wind_collection_cases_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "wind_loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wind_documents: {
+        Row: {
+          case_id: string
+          created_at: string
+          event_id: string | null
+          id: string
+          investor_user_id: string
+          plik_url: string | null
+          status: Database["public"]["Enums"]["wind_document_status"]
+          tresc: string | null
+          typ: Database["public"]["Enums"]["wind_document_type"]
+          tytul: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          investor_user_id?: string
+          plik_url?: string | null
+          status?: Database["public"]["Enums"]["wind_document_status"]
+          tresc?: string | null
+          typ: Database["public"]["Enums"]["wind_document_type"]
+          tytul: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          investor_user_id?: string
+          plik_url?: string | null
+          status?: Database["public"]["Enums"]["wind_document_status"]
+          tresc?: string | null
+          typ?: Database["public"]["Enums"]["wind_document_type"]
+          tytul?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wind_documents_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "wind_collection_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wind_documents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "wind_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wind_events: {
+        Row: {
+          autor: string | null
+          case_id: string
+          created_at: string
+          data_doreczenia: string | null
+          data_zdarzenia: string
+          id: string
+          investor_user_id: string
+          kategoria: Database["public"]["Enums"]["wind_event_category"]
+          metadata: Json
+          status_doreczenia:
+            | Database["public"]["Enums"]["wind_delivery_status"]
+            | null
+          tresc: string | null
+          typ: Database["public"]["Enums"]["wind_event_type"]
+          tytul: string
+          zalacznik_url: string | null
+        }
+        Insert: {
+          autor?: string | null
+          case_id: string
+          created_at?: string
+          data_doreczenia?: string | null
+          data_zdarzenia?: string
+          id?: string
+          investor_user_id?: string
+          kategoria?: Database["public"]["Enums"]["wind_event_category"]
+          metadata?: Json
+          status_doreczenia?:
+            | Database["public"]["Enums"]["wind_delivery_status"]
+            | null
+          tresc?: string | null
+          typ: Database["public"]["Enums"]["wind_event_type"]
+          tytul: string
+          zalacznik_url?: string | null
+        }
+        Update: {
+          autor?: string | null
+          case_id?: string
+          created_at?: string
+          data_doreczenia?: string | null
+          data_zdarzenia?: string
+          id?: string
+          investor_user_id?: string
+          kategoria?: Database["public"]["Enums"]["wind_event_category"]
+          metadata?: Json
+          status_doreczenia?:
+            | Database["public"]["Enums"]["wind_delivery_status"]
+            | null
+          tresc?: string | null
+          typ?: Database["public"]["Enums"]["wind_event_type"]
+          tytul?: string
+          zalacznik_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wind_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "wind_collection_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wind_loans: {
+        Row: {
+          akt_notarialny_777: string | null
+          borrower_id: string
+          created_at: string
+          data_ostatniej_wplaty: string | null
+          data_umowy: string | null
+          id: string
+          investor_user_id: string
+          kwota_777: number | null
+          kwota_calkowita: number
+          kwota_hipoteki: number | null
+          kwota_pozyczki: number
+          numer_kw: string | null
+          numer_umowy: string | null
+          oprocentowanie_roczne: number
+          prowizja: number
+          rachunek_splaty: string | null
+          saldo_pozostale: number
+          status: Database["public"]["Enums"]["wind_loan_status"]
+          stopa_odsetek_max: number
+          termin_splaty: string | null
+          updated_at: string
+        }
+        Insert: {
+          akt_notarialny_777?: string | null
+          borrower_id: string
+          created_at?: string
+          data_ostatniej_wplaty?: string | null
+          data_umowy?: string | null
+          id?: string
+          investor_user_id?: string
+          kwota_777?: number | null
+          kwota_calkowita?: number
+          kwota_hipoteki?: number | null
+          kwota_pozyczki?: number
+          numer_kw?: string | null
+          numer_umowy?: string | null
+          oprocentowanie_roczne?: number
+          prowizja?: number
+          rachunek_splaty?: string | null
+          saldo_pozostale?: number
+          status?: Database["public"]["Enums"]["wind_loan_status"]
+          stopa_odsetek_max?: number
+          termin_splaty?: string | null
+          updated_at?: string
+        }
+        Update: {
+          akt_notarialny_777?: string | null
+          borrower_id?: string
+          created_at?: string
+          data_ostatniej_wplaty?: string | null
+          data_umowy?: string | null
+          id?: string
+          investor_user_id?: string
+          kwota_777?: number | null
+          kwota_calkowita?: number
+          kwota_hipoteki?: number | null
+          kwota_pozyczki?: number
+          numer_kw?: string | null
+          numer_umowy?: string | null
+          oprocentowanie_roczne?: number
+          prowizja?: number
+          rachunek_splaty?: string | null
+          saldo_pozostale?: number
+          status?: Database["public"]["Enums"]["wind_loan_status"]
+          stopa_odsetek_max?: number
+          termin_splaty?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wind_loans_borrower_id_fkey"
+            columns: ["borrower_id"]
+            isOneToOne: false
+            referencedRelation: "wind_borrowers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -6972,10 +7103,6 @@ export type Database = {
         }
         Returns: number
       }
-      owns_debt_collection_case: {
-        Args: { _case_id: string }
-        Returns: boolean
-      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -7069,6 +7196,54 @@ export type Database = {
       subscription_plan: "podstawowy" | "rozszerzony" | "profesjonalny"
       subscription_status: "aktywny" | "nieaktywny" | "wstrzymany" | "probny"
       visibility_level: "zanonimizowane" | "czesciowe" | "pelne"
+      wind_borrower_type: "osoba_fizyczna" | "firma"
+      wind_case_result:
+        | "splacona"
+        | "ugoda"
+        | "egzekucja_w_toku"
+        | "umorzona"
+        | "przekazana_karna"
+      wind_delivery_status:
+        | "oczekuje"
+        | "doreczone"
+        | "awizowane"
+        | "termin_uplynal"
+        | "zwrot"
+      wind_document_status: "szkic" | "gotowy" | "wyslany"
+      wind_document_type:
+        | "wezwanie"
+        | "wypowiedzenie"
+        | "wniosek_klauzula"
+        | "wniosek_komornik"
+        | "aneks"
+        | "porozumienie"
+        | "ugoda"
+        | "zawiadomienie_286"
+        | "zawiadomienie_297"
+        | "notatka"
+      wind_event_category: "automatyczne" | "manualne" | "systemowe"
+      wind_event_type:
+        | "sms"
+        | "email"
+        | "telefon"
+        | "pismo_nadane"
+        | "pismo_doreczone"
+        | "pismo_awizo"
+        | "pismo_zwrot"
+        | "wplata"
+        | "dokument_wygenerowany"
+        | "zmiana_etapu"
+        | "notatka"
+        | "czynnosc_sadowa"
+      wind_loan_status:
+        | "aktywna"
+        | "w_zwloce"
+        | "wypowiedziana"
+        | "windykacja_komornicza"
+        | "splacona"
+        | "windykacja_karna"
+      wind_path: "miekka" | "standardowa" | "twarda" | "karna"
+      wind_priority: "niski" | "sredni" | "wysoki" | "krytyczny"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7286,6 +7461,59 @@ export const Constants = {
       subscription_plan: ["podstawowy", "rozszerzony", "profesjonalny"],
       subscription_status: ["aktywny", "nieaktywny", "wstrzymany", "probny"],
       visibility_level: ["zanonimizowane", "czesciowe", "pelne"],
+      wind_borrower_type: ["osoba_fizyczna", "firma"],
+      wind_case_result: [
+        "splacona",
+        "ugoda",
+        "egzekucja_w_toku",
+        "umorzona",
+        "przekazana_karna",
+      ],
+      wind_delivery_status: [
+        "oczekuje",
+        "doreczone",
+        "awizowane",
+        "termin_uplynal",
+        "zwrot",
+      ],
+      wind_document_status: ["szkic", "gotowy", "wyslany"],
+      wind_document_type: [
+        "wezwanie",
+        "wypowiedzenie",
+        "wniosek_klauzula",
+        "wniosek_komornik",
+        "aneks",
+        "porozumienie",
+        "ugoda",
+        "zawiadomienie_286",
+        "zawiadomienie_297",
+        "notatka",
+      ],
+      wind_event_category: ["automatyczne", "manualne", "systemowe"],
+      wind_event_type: [
+        "sms",
+        "email",
+        "telefon",
+        "pismo_nadane",
+        "pismo_doreczone",
+        "pismo_awizo",
+        "pismo_zwrot",
+        "wplata",
+        "dokument_wygenerowany",
+        "zmiana_etapu",
+        "notatka",
+        "czynnosc_sadowa",
+      ],
+      wind_loan_status: [
+        "aktywna",
+        "w_zwloce",
+        "wypowiedziana",
+        "windykacja_komornicza",
+        "splacona",
+        "windykacja_karna",
+      ],
+      wind_path: ["miekka", "standardowa", "twarda", "karna"],
+      wind_priority: ["niski", "sredni", "wysoki", "krytyczny"],
     },
   },
 } as const
