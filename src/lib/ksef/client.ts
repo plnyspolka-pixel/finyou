@@ -16,7 +16,21 @@ export type KsefEntity = {
   ksef_environment: KsefEnvironment;
   ksef_nip?: string | null;
   ksef_token_encrypted?: string | null;
+  legal_name?: string | null;
 };
+
+/** Wybiera token KSeF z env w zależności od podmiotu (po nazwie). */
+function pickEnvToken(entity: KsefEntity): string | null {
+  const name = (entity.legal_name ?? "").toLowerCase();
+  if (name.includes("finance you")) return process.env.KSEF_TOKEN_FINANCE_YOU ?? null;
+  if (name.includes("pieczak")) return process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ?? null;
+  // Fallback: spróbuj kolejno (Finance You jako główny podmiot operacyjny).
+  return (
+    process.env.KSEF_TOKEN_FINANCE_YOU ??
+    process.env.KSEF_TOKEN_FUNDACJA_IM_PIECZAKA ??
+    null
+  );
+}
 
 export type KsefResult = {
   status: "disabled" | "pending" | "accepted" | "rejected" | "error";
