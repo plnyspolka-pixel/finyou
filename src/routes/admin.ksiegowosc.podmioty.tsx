@@ -99,16 +99,7 @@ function PodmiotyPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Building2 className="h-6 w-6" /> Podmioty gospodarcze</h1>
           <p className="text-sm text-muted-foreground">Dwa podmioty wystawiające faktury. Wybierz, który jest domyślny dla faktur automatycznych.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={async () => {
-            try {
-              const res: any = await applyTokenFn();
-              toast.success(`Token KSeF zastosowany do ${res.count} podmiotów`);
-              void qc.invalidateQueries({ queryKey: ["accounting-entities"] });
-            } catch (e) { toast.error("Błąd", { description: (e as Error).message }); }
-          }}><KeyRound className="mr-2 h-4 w-4" /> Wstaw token KSeF (z env)</Button>
-          <Button onClick={() => { setForm(EMPTY); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Dodaj podmiot</Button>
-        </div>
+        <Button onClick={() => { setForm(EMPTY); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Dodaj podmiot</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
