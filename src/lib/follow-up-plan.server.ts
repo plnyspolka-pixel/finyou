@@ -73,13 +73,32 @@ function buildCadence(): Slot[] {
 export const CADENCE: Slot[] = buildCadence();
 
 
-// === TREŚCI MAILI (30) ===
+// === TREŚCI MAILI ===
 type Tpl = { subject: string; body: (v: TplVars) => string };
 interface TplVars { firstName: string; returnLink: string; }
 
 const greet = (v: TplVars) => v.firstName ? `Cześć ${v.firstName}!` : "Cześć!";
 const cta = (v: TplVars) => `Dokończ wniosek tutaj: ${v.returnLink}`;
+const ctaCalc = (v: TplVars) => `Policz swoją ratę w kalkulatorze: ${v.returnLink}`;
 const sig = "\n\nZespół Finance You";
+
+/**
+ * Zamienia gołe URL-e w tekście na ładne anchor "financeyou.pl" wskazujące na ten sam URL
+ * (magic link działa pod spodem, ale wizualnie klient widzi nasz brand).
+ */
+function renderEmailHtml(textBody: string, subject: string): string {
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const linkify = (line: string) =>
+    line.replace(/(https?:\/\/[^\s]+)/g, (url) =>
+      `<a href="${url}" style="color:#0f172a;font-weight:600;text-decoration:underline">financeyou.pl</a>`,
+    );
+  const paragraphs = textBody.split(/\n{2,}/).map((p) => {
+    const lines = p.split("\n").map((l) => linkify(escape(l))).join("<br/>");
+    return `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#0f172a">${lines}</p>`;
+  }).join("");
+  return `<div data-fy-section="follow-up"><h2 style="font-size:18px;margin:0 0 16px;color:#0f172a">${escape(subject)}</h2>${paragraphs}</div>`;
+}
 
 export const EMAIL_TEMPLATES: Record<number, Tpl> = {
   1: { subject: "Cieszymy się, że jesteś z nami — zostały tylko 2 kroki",
