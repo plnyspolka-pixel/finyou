@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import {
   Select,
   SelectContent,
