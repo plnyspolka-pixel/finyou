@@ -58,10 +58,10 @@ function readAsDataUrl(file: File): Promise<string> {
 
 
 const STEPS = [
-  { id: 1, label: "Nieruchomość", icon: Home },
-  { id: 2, label: "Zdjęcia i KW", icon: Upload },
-  { id: 3, label: "Dane kontaktowe", icon: UserRound },
-  { id: 4, label: "Kalkulator", icon: Send },
+  { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", icon: Home },
+  { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", icon: Upload },
+  { id: 3, shortLabel: "Dane", label: "Dane kontaktowe", icon: UserRound },
+  { id: 4, shortLabel: "Oferta", label: "Kalkulator", icon: Send },
 ] as const;
 
 type StepId = 1 | 2 | 3 | 4;
