@@ -24,11 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FancyShell } from "@/components/landing/fancy-shell";
-import {
-  PropertyTypesShowcase,
-  PROPERTY_SHOWCASE_KEY_TO_SECURITY,
-  PROPERTY_DOCS_BY_SECURITY,
-} from "@/components/landing/property-types-showcase";
+import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
+import { SecurityTypePicker } from "@/components/security-type-picker";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { supabase } from "@/integrations/supabase/client";
