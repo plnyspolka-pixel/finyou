@@ -133,11 +133,11 @@ function LoginPage() {
           ) : (
 
             <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="password">Hasło</TabsTrigger>
                 <TabsTrigger value="magic">Link e-mail</TabsTrigger>
-                <TabsTrigger value="google">Google</TabsTrigger>
               </TabsList>
+
 
               <TabsContent value="password" className="mt-4">
                 <form className="space-y-4" onSubmit={submitPassword}>
