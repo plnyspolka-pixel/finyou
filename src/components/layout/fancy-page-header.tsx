@@ -61,21 +61,21 @@ export function FancyPageHeader({
             animation: "fy-ph-lines 7s linear infinite",
           }}
         />
-        <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+        <div className="relative flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div className="min-w-0">
             {eyebrow && (
               <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
                 {eyebrow}
               </p>
             )}
-            <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-white drop-shadow-sm md:text-3xl">
+            <h1 className="mt-1.5 text-xl font-extrabold tracking-tight text-white drop-shadow-sm break-words [overflow-wrap:anywhere] sm:text-2xl md:text-3xl">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-1.5 text-sm text-white/75 md:text-[15px]">{subtitle}</p>
+              <p className="mt-1.5 text-sm text-white/75 break-words [overflow-wrap:anywhere] md:text-[15px]">{subtitle}</p>
             )}
           </div>
-          {actions && <div className="shrink-0">{actions}</div>}
+          {actions && <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">{actions}</div>}
         </div>
       </div>
       <style>{`
