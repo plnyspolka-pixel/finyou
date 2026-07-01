@@ -173,12 +173,13 @@ export function LandingWizardForm() {
   }, [firstName, lastName, phone, email, consentPrivacy, consentTerms, consentMarketing]);
 
   const stepDone: Record<StepId, boolean> = {
-    1: typeSelected && city.trim().length > 0,
-    2: hasPropertyPhotos,
-    3: kwOk,
-    4: contactValid,
+    1: typeSelected,
+    2: city.trim().length > 0,
+    3: hasPropertyPhotos,
+    4: kwOk,
+    5: contactValid,
   };
-  const allDone = stepDone[1] && stepDone[2] && stepDone[3] && stepDone[4];
+  const allDone = stepDone[1] && stepDone[2] && stepDone[3] && stepDone[4] && stepDone[5];
 
   const fireLead = () => {
     if (leadFiredRef.current || !contactValid) return;
@@ -193,21 +194,22 @@ export function LandingWizardForm() {
   const goNext = () => {
     if (!stepDone[step]) {
       const msgs: Record<StepId, string> = {
-        1: "Wybierz typ nieruchomości i podaj miejscowość.",
-        2: "Dodaj przynajmniej jedno zdjęcie / dokument nieruchomości.",
-        3: "Podaj numer księgi wieczystej lub dołącz akt własności.",
-        4: "Uzupełnij dane rejestracyjne i zaakceptuj zgody.",
+        1: "Wybierz typ nieruchomości.",
+        2: "Podaj miejscowość, w której znajduje się nieruchomość.",
+        3: "Dodaj przynajmniej jedno zdjęcie / dokument nieruchomości.",
+        4: "Podaj numer księgi wieczystej lub dołącz akt własności.",
+        5: "Uzupełnij dane rejestracyjne i zaakceptuj zgody.",
       };
       toast.error(msgs[step]);
       return;
     }
-    if (step === 4) {
+    if (step === 5) {
       fireLead();
       // scroll to calculator
       setTimeout(() => document.getElementById("landing-wizard-calc")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
       return;
     }
-    setStep((s) => (Math.min(4, s + 1) as StepId));
+    setStep((s) => (Math.min(5, s + 1) as StepId));
   };
   const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
 
