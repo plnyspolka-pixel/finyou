@@ -379,12 +379,12 @@ export function LandingWizardForm() {
       )}
 
       {/* Step 2: Twoje pliki */}
-      {step === 2 && (
+      {step === 3 && (
         <FancyShell>
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-white/85">
               <Upload className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Twoje pliki</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Twoje pliki</span>
             </div>
             {docHint && (
               <div className="rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
@@ -436,12 +436,12 @@ export function LandingWizardForm() {
       )}
 
       {/* Step 3: Numer KW */}
-      {step === 3 && (
+      {step === 4 && (
         <FancyShell>
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-white/85">
               <BookText className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Numer księgi wieczystej</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 4 · Numer księgi wieczystej</span>
             </div>
             <Input
               value={kwNumber}
@@ -508,12 +508,12 @@ export function LandingWizardForm() {
       )}
 
       {/* Step 4: Dane do rejestracji */}
-      {step === 4 && (
+      {step === 5 && (
         <FancyShell>
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <UserRound className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 4 · Dane do rejestracji</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 5 · Dane do rejestracji</span>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-white/70">
@@ -579,7 +579,7 @@ export function LandingWizardForm() {
         </Button>
         <Button type="button" variant="cta" size="lg" onClick={goNext}
           className="ml-auto flex-1 text-base md:flex-none">
-          {step < 4 ? (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>) : allDone ? (<>Do kalkulatora ↓</>) : (<>Uzupełnij dane</>)}
+          {step < 5 ? (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>) : allDone ? (<>Do kalkulatora ↓</>) : (<>Uzupełnij dane</>)}
         </Button>
       </div>
 
@@ -593,7 +593,7 @@ export function LandingWizardForm() {
               </span>
               <p className="text-sm font-bold uppercase tracking-widest text-white">Kalkulator zablokowany</p>
               <p className="max-w-xs text-xs text-white/75">
-                Ukończ wszystkie 4 kroki wizarda powyżej, aby zobaczyć swoją wstępną ofertę i wysłać wniosek.
+                Ukończ wszystkie 5 kroków wizarda powyżej, aby zobaczyć swoją wstępną ofertę i wysłać wniosek.
               </p>
               <div className="mt-1 flex flex-wrap justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
                 {STEPS.map((s) => (
