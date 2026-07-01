@@ -285,7 +285,7 @@ export function LandingWizardForm() {
                   key={s.id}
                   type="button"
                   onClick={() => setStep(s.id as StepId)}
-                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all ${
+                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2 sm:p-3 text-center transition-all ${
                     active
                       ? "border-white/60 bg-white/15 ring-2 ring-white/40"
                       : done
@@ -293,7 +293,7 @@ export function LandingWizardForm() {
                         : "border-white/15 bg-white/[0.04] hover:border-white/30"
                   }`}
                 >
-                  <span className={`grid h-9 w-9 place-items-center rounded-full text-sm font-black ring-1 ${
+                  <span className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full text-sm font-black ring-1 ${
                     done
                       ? "bg-emerald-500/30 text-emerald-100 ring-emerald-300/40"
                       : active
@@ -302,8 +302,9 @@ export function LandingWizardForm() {
                   }`}>
                     {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <Icon className="h-4 w-4" />}
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white leading-tight">
-                    {s.label}
+                  <span className="text-[11px] sm:text-[10px] font-semibold sm:font-bold sm:uppercase sm:tracking-wider text-white leading-tight break-words">
+                    <span className="sm:hidden">{s.shortLabel}</span>
+                    <span className="hidden sm:inline">{s.label}</span>
                   </span>
                 </button>
               );
