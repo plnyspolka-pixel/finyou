@@ -131,32 +131,41 @@ function pickDate(o: InvoiceMeta, ...keys: string[]): string | null {
 }
 
 async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subject2", monthsBack: number): Promise<InvoiceMeta[]> {
-  const from = new Date(); from.setMonth(from.getMonth() - monthsBack);
-  const dateFrom = from.toISOString();
-  const dateTo = new Date().toISOString();
+  // KSeF 2.0 wymaga zakresu dat max 3 miesiące — pobieramy w oknach 3-miesięcznych.
   const out: InvoiceMeta[] = [];
   const pageSize = 100;
-  for (let pageOffset = 0, page = 0; page < 100; page += 1, pageOffset += pageSize) {
-    const res = await fetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${s.accessToken}`,
-      },
-      body: JSON.stringify({
-        subjectType,
-        dateRange: { dateType: "issue", from: dateFrom, to: dateTo },
-      }),
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`POST /invoices/query/metadata ${res.status}: ${txt.slice(0, 200)}`);
+  const end = new Date();
+  const start = new Date(); start.setMonth(start.getMonth() - monthsBack);
+  let windowFrom = new Date(start);
+  while (windowFrom < end) {
+    const windowTo = new Date(windowFrom);
+    windowTo.setMonth(windowTo.getMonth() + 3);
+    if (windowTo > end) windowTo.setTime(end.getTime());
+    const dateFrom = windowFrom.toISOString();
+    const dateTo = windowTo.toISOString();
+    for (let pageOffset = 0, page = 0; page < 100; page += 1, pageOffset += pageSize) {
+      const res = await fetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${s.accessToken}`,
+        },
+        body: JSON.stringify({
+          subjectType,
+          dateRange: { dateType: "issue", from: dateFrom, to: dateTo },
+        }),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`POST /invoices/query/metadata ${res.status}: ${txt.slice(0, 200)}`);
+      }
+      const j = (await res.json()) as { invoices?: InvoiceMeta[]; items?: InvoiceMeta[]; hasMore?: boolean };
+      const list = j.invoices ?? j.items ?? [];
+      for (const it of list) out.push(it);
+      if (list.length < pageSize) break;
     }
-    const j = (await res.json()) as { invoices?: InvoiceMeta[]; items?: InvoiceMeta[]; hasMore?: boolean };
-    const list = j.invoices ?? j.items ?? [];
-    for (const it of list) out.push(it);
-    if (list.length < pageSize) break;
+    windowFrom = windowTo;
   }
   return out;
 }

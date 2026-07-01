@@ -70,10 +70,12 @@ function toDate(v: string | undefined): string | null {
 async function fetchFakturowoList(apiId: string, direction: "sales" | "purchase", monthsBack: number) {
   const from = new Date();
   from.setMonth(from.getMonth() - monthsBack);
+  // UWAGA: Fakturowo API nie akceptuje `dokument_rodzaj=1` (koszt) na tym endpoincie
+  // — parametr filtruje tylko typy sprzedaży. Dla sprzedaży pobieramy wszystko
+  // bez filtra rodzaju; dla kosztów używamy alternatywnego zadania (7).
   const body = form({
     api_id: apiId,
-    api_zadanie: 6,
-    dokument_rodzaj: direction === "sales" ? 0 : 1, // 0=sprzedaż, 1=koszt
+    api_zadanie: direction === "sales" ? 6 : 7,
     dokument_data_wystawienia_od: from.toISOString().slice(0, 10),
     dokument_data_wystawienia_do: new Date().toISOString().slice(0, 10),
   });
