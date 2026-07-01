@@ -1,9 +1,22 @@
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { analyzeWindDocument, type WindOcrResult } from "@/lib/windykacja-ocr.functions";
+import {
+  analyzeWindDocument,
+  analyzeWindContract,
+  type WindOcrResult,
+  type WindContractData,
+} from "@/lib/windykacja-ocr.functions";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, Loader2, ScanLine, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  Camera,
+  Upload,
+  Loader2,
+  ScanLine,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+} from "lucide-react";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -150,6 +163,104 @@ export function SmartScanField({
         <div className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>{REASON_MSG[result.reason] ?? "Nie udało się odczytać — wpisz dane ręcznie."}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * „Wgraj / sfotografuj umowę" — odczytuje dane z umowy pożyczki i przez
+ * `onExtract` wypełnia formularz nowej sprawy. Inwestor nie musi nic
+ * przepisywać.
+ */
+export function ContractScanField({ onExtract }: { onExtract: (d: WindContractData) => void }) {
+  const analyze = useServerFn(analyzeWindContract);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const camRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<WindContractData | null>(null);
+
+  const handle = async (file: File | null) => {
+    setDone(null);
+    if (!file) return;
+    setBusy(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const d = await analyze({
+        data: { dataUrl, mimeType: file.type || "image/jpeg", fileName: file.name },
+      });
+      if (d.reason === "ok") {
+        onExtract(d);
+        setDone(d);
+        toast.success("Odczytano umowę — sprawdź dane i uzupełnij brakujące.");
+      } else {
+        toast.error(REASON_MSG[d.reason] ?? "Nie udało się odczytać umowy.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Błąd odczytu umowy");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-dashed bg-muted/30 p-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <FileText className="h-4 w-4 text-primary" /> Masz umowę? Wgraj ją — wypełnimy dane za
+        Ciebie
+      </div>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Zrób zdjęcie lub wgraj umowę pożyczki (PDF/zdjęcie). Odczytamy dłużnika, kwoty i terminy.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button type="button" size="sm" disabled={busy} onClick={() => camRef.current?.click()}>
+          {busy ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Camera className="h-4 w-4 mr-1" />
+          )}
+          Zrób zdjęcie umowy
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-1" /> Wgraj umowę
+        </Button>
+      </div>
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          void handle(e.target.files?.[0] ?? null);
+          e.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          void handle(e.target.files?.[0] ?? null);
+          e.currentTarget.value = "";
+        }}
+      />
+      {busy && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Odczytuję umowę…
+        </div>
+      )}
+      {done && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-300">
+          <CheckCircle2 className="h-4 w-4" /> Uzupełniono dane z umowy — sprawdź poniżej.
         </div>
       )}
     </div>
