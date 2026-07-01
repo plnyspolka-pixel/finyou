@@ -86,7 +86,7 @@ export function PropertyTypesShowcase({
         const isSelected = selectMode && selectedKey === p.key;
         const highlight = isOpen || isSelected;
         return (
-          <BlurFade key={p.key} delay={0.06 + i * 0.05} inView>
+          <BlurFade key={p.key} delay={0.06 + i * 0.05}>
             <div
               className={[
                 "group relative overflow-hidden rounded-2xl p-[1.5px] transition-all duration-300",
