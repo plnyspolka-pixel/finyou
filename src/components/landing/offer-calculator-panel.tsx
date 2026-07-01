@@ -28,6 +28,7 @@ export type OfferCalculatorPanelProps = {
   maxPayment: number;
   setMaxPayment: (v: number) => void;
   headerLabel?: string;
+  shellVariant?: "navy" | "silver" | "gold";
 };
 
 export function OfferCalculatorPanel({
