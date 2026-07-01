@@ -205,23 +205,17 @@ async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promis
 // ---------------- Orkiestrator ----------------
 
 export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
+  // Fakturowo wyłączone z cyklicznego syncu — jest tylko jednorazowy import
+  // z UI (przycisk „Import Fakturowo"). Cała bieżąca księgowość idzie przez KSeF.
+  void syncFakturowoOne;
   const { data: entities } = await accountingDb.from("accounting_entities").select("*").eq("active", true).order("created_at", { ascending: true });
   const results: SyncResult[] = [];
-  let fakturowoFallbackUsed = false;
   for (const e of ((entities ?? []) as any[])) {
-    const hasOwnFakturowo = Boolean(e.fakturowo_api_id_encrypted);
-    const canDoFakturowo = hasOwnFakturowo || (!fakturowoFallbackUsed && Boolean(process.env.FAKTUROWO_API_ID));
     for (const dir of ["sales", "purchase"] as const) {
-      if (canDoFakturowo) {
-        const rFak = await syncFakturowoOne(e, dir);
-        await upsertSyncStatus(e.id, "fakturowo", dir, rFak.ok, rFak.message, rFak.count);
-        results.push({ entity: e.name, direction: dir, ...rFak });
-      }
       const rKsef = await syncKsefOne(e, dir);
       await upsertSyncStatus(e.id, "ksef", dir, rKsef.ok, rKsef.message, rKsef.count);
       results.push({ entity: e.name, direction: dir, ...rKsef });
     }
-    if (canDoFakturowo && !hasOwnFakturowo) fakturowoFallbackUsed = true;
   }
   return { results };
 }
