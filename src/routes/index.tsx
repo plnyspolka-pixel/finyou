@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
-import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
+import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
 import { RecentApplicationsList } from "@/components/landing/recent-applications-list";
 import { HeroVideo } from "@/components/landing/hero-video";
 
