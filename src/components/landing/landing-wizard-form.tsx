@@ -334,7 +334,7 @@ export function LandingWizardForm() {
         </div>
       </FancyShell>
 
-      {/* Step 1: Typ + Miejscowość */}
+      {/* Step 1: Typ nieruchomości */}
       {step === 1 && (
         <FancyShell>
           <div className="space-y-5">
@@ -342,14 +342,25 @@ export function LandingWizardForm() {
               <Home className="h-5 w-5" />
               <span className="text-sm font-bold uppercase tracking-widest">Krok 1 · Typ nieruchomości</span>
             </div>
-            <PropertyTypesShowcase
-              selectedKey={selectedShowcaseKey}
-              onSelect={(key) => {
-                const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
-                if (mapped) setSecType(mapped);
+            <SecurityTypePicker
+              value={typeSelected ? secType : null}
+              onChange={(t) => {
+                setSecType(t);
                 setTypeSelected(true);
               }}
             />
+          </div>
+        </FancyShell>
+      )}
+
+      {/* Step 2: Miejscowość */}
+      {step === 2 && (
+        <FancyShell>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white/85">
+              <MapPin className="h-5 w-5" />
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Miejscowość</span>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="lw-city" className="flex items-center gap-2 text-base font-bold uppercase tracking-[0.14em] text-white">
                 <MapPin className="h-4 w-4" /> Miejscowość *
