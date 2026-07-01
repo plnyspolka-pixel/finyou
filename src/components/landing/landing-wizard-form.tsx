@@ -515,7 +515,6 @@ export function LandingWizardForm() {
               <UserRound className="h-5 w-5" />
               <span className="text-sm font-bold uppercase tracking-widest">Krok 5 · Dane do rejestracji</span>
             </div>
-            <div className="space-y-3">
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="lw-fn" className="text-white">Imię *</Label>
