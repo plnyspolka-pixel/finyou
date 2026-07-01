@@ -94,7 +94,7 @@ export function OfferCalculatorPanel({
   const fig = { monthly: chosenPayment, balloon: balloonAmount, total: totalPaid, investorCompensation: totalInterest };
 
   return (
-    <FancyShell>
+    <FancyShell variant={shellVariant}>
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
