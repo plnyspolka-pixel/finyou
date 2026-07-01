@@ -112,11 +112,20 @@ function KsiegowoscDokumenty() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="h-6 w-6" /> Dokumenty księgowe</h1>
           <p className="text-sm text-muted-foreground">Jeden rejestr — faktury sprzedaży i kosztowe, z Fakturowo i KSeF, dla wszystkich podmiotów.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadCsv}><Download className="h-4 w-4 mr-1" /> Eksport CSV</Button>
+          <Button
+            variant="outline"
+            onClick={() => importFakMut.mutate()}
+            disabled={importFakMut.isPending}
+            title="Jednorazowy import z Fakturowo dla Finance You. Bieżąca księgowość działa dalej przez KSeF."
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${importFakMut.isPending ? "animate-spin" : ""}`} />
+            {importFakMut.isPending ? "Importuję…" : "Import Fakturowo (jednorazowo)"}
+          </Button>
           <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
             <RefreshCw className={`h-4 w-4 mr-1 ${syncMut.isPending ? "animate-spin" : ""}`} />
-            {syncMut.isPending ? "Synchronizuję…" : "Synchronizuj teraz"}
+            {syncMut.isPending ? "Synchronizuję…" : "Synchronizuj KSeF"}
           </Button>
         </div>
       </div>
