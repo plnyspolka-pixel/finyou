@@ -948,7 +948,7 @@ export function VerificationTilesSection({ clientRow, loanId }: { clientRow: any
                 </Badge>
               ) : (
                 <Badge className="shrink-0 border-amber-400/40 bg-amber-500/20 font-bold text-amber-200 hover:bg-amber-500/25">
-                  −0,5%/rok
+                  Do uzupełnienia
                 </Badge>
               )}
             </div>
