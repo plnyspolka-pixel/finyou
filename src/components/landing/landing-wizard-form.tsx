@@ -325,7 +325,7 @@ export function LandingWizardForm() {
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <Home className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 1 · Nieruchomość</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">Krok 1 · Nieruchomość</span>
             </div>
             <SecurityTypePicker
               value={typeSelected ? secType : null}
@@ -357,7 +357,7 @@ export function LandingWizardForm() {
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <Upload className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Zdjęcia i numer KW</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">Krok 2 · Zdjęcia i numer KW</span>
             </div>
 
             {docHint && (
@@ -487,7 +487,7 @@ export function LandingWizardForm() {
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <UserRound className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Dane kontaktowe</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">Krok 3 · Dane kontaktowe</span>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
