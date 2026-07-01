@@ -302,9 +302,8 @@ export function LandingWizardForm() {
                   }`}>
                     {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <Icon className="h-4 w-4" />}
                   </span>
-                  <span className="text-[11px] sm:text-[10px] font-semibold sm:font-bold sm:uppercase sm:tracking-wider text-white leading-tight break-words">
-                    <span className="sm:hidden">{s.shortLabel}</span>
-                    <span className="hidden sm:inline">{s.label}</span>
+                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white leading-tight whitespace-nowrap">
+                    {s.shortLabel}
                   </span>
                 </button>
               );
