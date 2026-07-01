@@ -198,15 +198,6 @@ function LoginPage() {
                   </p>
                 </form>
               </TabsContent>
-
-              <TabsContent value="google" className="mt-4 space-y-4">
-                <Button type="button" variant="outline" className="w-full" disabled={loading} onClick={signInGoogle}>
-                  {loading ? "Przekierowanie…" : "Kontynuuj przez Google"}
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Użyjemy Twojego adresu Google, by stworzyć lub odnaleźć konto.
-                </p>
-              </TabsContent>
             </Tabs>
           )}
         </CardContent>
