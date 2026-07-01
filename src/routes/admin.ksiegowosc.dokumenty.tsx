@@ -62,10 +62,11 @@ function KsiegowoscDokumenty() {
 
   const importFakMut = useMutation({
     mutationFn: async () => {
-      const fy = (entitiesQ.data as any[] | undefined)?.find((e) =>
-        String(e.name || "").toLowerCase().includes("finance you"),
-      );
-      if (!fy) throw new Error('Nie znaleziono podmiotu „Finance You"');
+      const list = (entitiesQ.data as any[] | undefined) ?? [];
+      const fy =
+        list.find((e) => String(e.nip || "").replace(/\D/g, "") === "7010611803") ||
+        list.find((e) => String(e.name || "").toLowerCase().includes("finance you"));
+      if (!fy) throw new Error('Nie znaleziono podmiotu Finance You (NIP 7010611803)');
       return syncFakFn({ data: { entityId: fy.id } });
     },
     onSuccess: (r: any) => {
