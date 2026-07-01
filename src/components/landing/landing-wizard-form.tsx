@@ -284,14 +284,6 @@ export function LandingWizardForm() {
     }
   };
 
-  const secToShowcase: Record<string, string> = {
-    mieszkanie: "mieszkanie",
-    dom: "dom",
-    lokal_uslugowy: "lokal",
-    grunt_rolny: "rolna",
-    dzialka_budowlana: "budowlana",
-  };
-  const selectedShowcaseKey = secToShowcase[secType] ?? null;
   const docHint = PROPERTY_DOCS_BY_SECURITY[secType];
 
   return (
