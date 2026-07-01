@@ -58,14 +58,13 @@ function readAsDataUrl(file: File): Promise<string> {
 
 
 const STEPS = [
-  { id: 1, label: "Typ nieruchomości", icon: Home },
-  { id: 2, label: "Miejscowość", icon: MapPin },
-  { id: 3, label: "Twoje pliki", icon: Upload },
-  { id: 4, label: "Numer KW", icon: BookText },
-  { id: 5, label: "Rejestracja", icon: UserRound },
+  { id: 1, label: "Nieruchomość", icon: Home },
+  { id: 2, label: "Zdjęcia i KW", icon: Upload },
+  { id: 3, label: "Dane kontaktowe", icon: UserRound },
+  { id: 4, label: "Kalkulator", icon: Send },
 ] as const;
 
-type StepId = 1 | 2 | 3 | 4 | 5;
+type StepId = 1 | 2 | 3 | 4;
 
 export function LandingWizardForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
