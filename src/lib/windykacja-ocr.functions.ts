@@ -192,3 +192,156 @@ export const analyzeWindDocument = createServerFn({ method: "POST" })
       return empty("ai_error");
     }
   });
+
+// ════════════════════════════════════════════════════════════════════
+// ODCZYT UMOWY POŻYCZKI — wypełnia formularz nowej sprawy danymi z umowy.
+// Inwestor robi zdjęcie / wgrywa umowę, a system wyciąga dane dłużnika i
+// pożyczki, żeby nie trzeba było niczego przepisywać ręcznie.
+// ════════════════════════════════════════════════════════════════════
+
+export interface WindContractData {
+  reason: WindOcrResult["reason"];
+  imie_nazwisko: string | null;
+  typ: "osoba_fizyczna" | "firma" | null;
+  pesel: string | null;
+  nip: string | null;
+  email: string | null;
+  telefon: string | null;
+  adres: string | null;
+  numer_umowy: string | null;
+  data_umowy: string | null; // ISO yyyy-mm-dd
+  kwota_pozyczki: number | null; // kwota na rękę / wypłacona
+  kwota_calkowita: number | null; // całkowita kwota do zwrotu
+  prowizja: number | null;
+  termin_splaty: string | null; // ISO yyyy-mm-dd
+  numer_kw: string | null;
+  podsumowanie: string;
+}
+
+const CONTRACT_USER_PROMPT = `To jest umowa pożyczki. Wyodrębnij dane i zwróć WYŁĄCZNIE JSON:
+{
+  "imie_nazwisko": imię i nazwisko pożyczkobiorcy/dłużnika albo nazwa firmy,
+  "typ": "osoba_fizyczna" lub "firma",
+  "pesel": PESEL pożyczkobiorcy (11 cyfr) albo null,
+  "nip": NIP (dla firmy) albo null,
+  "email": e-mail pożyczkobiorcy albo null,
+  "telefon": telefon pożyczkobiorcy albo null,
+  "adres": adres zamieszkania / siedziby pożyczkobiorcy albo null,
+  "numer_umowy": numer umowy albo null,
+  "data_umowy": data zawarcia umowy w formacie yyyy-mm-dd albo null,
+  "kwota_pozyczki": kwota wypłacona/na rękę jako liczba albo null,
+  "kwota_calkowita": całkowita kwota do zwrotu jako liczba albo null,
+  "prowizja": prowizja jako liczba albo null,
+  "termin_splaty": ostateczny termin spłaty w formacie yyyy-mm-dd albo null,
+  "numer_kw": numer księgi wieczystej (format AA1A/00000000/0) albo null,
+  "podsumowanie": jedno zdanie po polsku podsumowujące umowę
+}
+Pożyczkodawcą jest firma (np. Finance You) — NIE wpisuj jej jako pożyczkobiorcy. Kwoty bez waluty i spacji. Jeśli czegoś nie ma — null. Zwróć wyłącznie JSON.`;
+
+function str(v: unknown, max = 200): string | null {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
+}
+
+function emptyContract(reason: WindOcrResult["reason"]): WindContractData {
+  return {
+    reason,
+    imie_nazwisko: null,
+    typ: null,
+    pesel: null,
+    nip: null,
+    email: null,
+    telefon: null,
+    adres: null,
+    numer_umowy: null,
+    data_umowy: null,
+    kwota_pozyczki: null,
+    kwota_calkowita: null,
+    prowizja: null,
+    termin_splaty: null,
+    numer_kw: null,
+    podsumowanie: "",
+  };
+}
+
+export const analyzeWindContract = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        dataUrl: z.string().min(20).max(15_000_000),
+        mimeType: z.string().min(3).max(100),
+        fileName: z.string().max(200).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }): Promise<WindContractData> => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) return emptyContract("no_key");
+
+    const isPdf = data.mimeType === "application/pdf" || /\.pdf$/i.test(data.fileName ?? "");
+    const isImage = data.mimeType.startsWith("image/");
+    if (!isPdf && !isImage) return emptyContract("unsupported");
+
+    const userContent: unknown[] = [{ type: "text", text: CONTRACT_USER_PROMPT }];
+    if (isImage) userContent.push({ type: "image_url", image_url: { url: data.dataUrl } });
+    else
+      userContent.push({
+        type: "file",
+        file: { filename: data.fileName ?? "umowa.pdf", file_data: data.dataUrl },
+      });
+
+    let text = "";
+    try {
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent },
+          ],
+        }),
+      });
+      if (resp.status === 429) return emptyContract("rate_limited");
+      if (resp.status === 402) return emptyContract("ai_quota");
+      if (!resp.ok) return emptyContract("ai_error");
+      const json = await resp.json();
+      text = json?.choices?.[0]?.message?.content ?? "";
+    } catch {
+      return emptyContract("ai_error");
+    }
+
+    try {
+      const cleaned = text.replace(/^```json\s*|\s*```$/g, "").trim();
+      const p = JSON.parse(cleaned) as Record<string, unknown>;
+      const nip = str(p.nip, 20);
+      return {
+        reason: "ok",
+        imie_nazwisko: str(p.imie_nazwisko),
+        typ:
+          p.typ === "firma"
+            ? "firma"
+            : p.typ === "osoba_fizyczna"
+              ? "osoba_fizyczna"
+              : nip
+                ? "firma"
+                : "osoba_fizyczna",
+        pesel: str(p.pesel, 20),
+        nip,
+        email: str(p.email, 200),
+        telefon: str(p.telefon, 40),
+        adres: str(p.adres, 300),
+        numer_umowy: str(p.numer_umowy, 80),
+        data_umowy: toIsoDate(p.data_umowy),
+        kwota_pozyczki: toNumber(p.kwota_pozyczki),
+        kwota_calkowita: toNumber(p.kwota_calkowita),
+        prowizja: toNumber(p.prowizja),
+        termin_splaty: toIsoDate(p.termin_splaty),
+        numer_kw: str(p.numer_kw, 40),
+        podsumowanie: typeof p.podsumowanie === "string" ? p.podsumowanie.slice(0, 500) : "",
+      };
+    } catch {
+      return emptyContract("ai_error");
+    }
+  });

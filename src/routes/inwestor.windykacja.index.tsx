@@ -42,6 +42,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ContractScanField } from "@/components/inwestor/wind-smart-scan";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   Gavel,
@@ -363,6 +364,7 @@ function NewCaseDialog({
     data_umowy: "",
     kwota_pozyczki: "",
     kwota_calkowita: "",
+    prowizja: "",
     termin_splaty: "",
     kwota_zalegla: "",
     numer_kw: "",
@@ -392,7 +394,7 @@ function NewCaseDialog({
           data_umowy: f.data_umowy,
           kwota_pozyczki: Number(f.kwota_pozyczki) || 0,
           kwota_calkowita: Number(f.kwota_calkowita) || 0,
-          prowizja: 0,
+          prowizja: Number(f.prowizja) || 0,
           termin_splaty: f.termin_splaty,
           numer_kw: f.numer_kw,
           oprocentowanie_roczne: 0,
@@ -431,9 +433,31 @@ function NewCaseDialog({
         <DialogHeader>
           <DialogTitle>Nowa sprawa windykacyjna</DialogTitle>
           <DialogDescription>
-            Dane dłużnika i pożyczki. Pozostałe pola uzupełnisz na karcie sprawy.
+            Wgraj umowę, a dane wypełnią się same — albo wpisz je ręcznie.
           </DialogDescription>
         </DialogHeader>
+        <ContractScanField
+          onExtract={(d) =>
+            setF((p) => ({
+              ...p,
+              imie_nazwisko: d.imie_nazwisko ?? p.imie_nazwisko,
+              typ: d.typ ?? p.typ,
+              pesel: d.pesel ?? d.nip ?? p.pesel,
+              email: d.email ?? p.email,
+              telefon: d.telefon ?? p.telefon,
+              adres_zamieszkania: d.adres ?? p.adres_zamieszkania,
+              numer_umowy: d.numer_umowy ?? p.numer_umowy,
+              data_umowy: d.data_umowy ?? p.data_umowy,
+              kwota_pozyczki:
+                d.kwota_pozyczki != null ? String(d.kwota_pozyczki) : p.kwota_pozyczki,
+              kwota_calkowita:
+                d.kwota_calkowita != null ? String(d.kwota_calkowita) : p.kwota_calkowita,
+              prowizja: d.prowizja != null ? String(d.prowizja) : p.prowizja,
+              termin_splaty: d.termin_splaty ?? p.termin_splaty,
+              numer_kw: d.numer_kw ?? p.numer_kw,
+            }))
+          }
+        />
         <div className="grid sm:grid-cols-2 gap-3">
           <Fld label="Dłużnik / firma" className="sm:col-span-2">
             <Input value={f.imie_nazwisko} onChange={(e) => upd("imie_nazwisko", e.target.value)} />
@@ -486,6 +510,13 @@ function NewCaseDialog({
               type="number"
               value={f.kwota_calkowita}
               onChange={(e) => upd("kwota_calkowita", e.target.value)}
+            />
+          </Fld>
+          <Fld label="Prowizja Finance You (zł)">
+            <Input
+              type="number"
+              value={f.prowizja}
+              onChange={(e) => upd("prowizja", e.target.value)}
             />
           </Fld>
           <Fld label="Termin spłaty">
