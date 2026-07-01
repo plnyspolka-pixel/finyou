@@ -65,7 +65,7 @@ function KsiegowoscDokumenty() {
       const fy = (entitiesQ.data as any[] | undefined)?.find((e) =>
         String(e.name || "").toLowerCase().includes("finance you"),
       );
-      if (!fy) throw new Error("Nie znaleziono podmiotu „Finance You"");
+      if (!fy) throw new Error('Nie znaleziono podmiotu „Finance You"');
       return syncFakFn({ data: { entityId: fy.id } });
     },
     onSuccess: (r: any) => {
