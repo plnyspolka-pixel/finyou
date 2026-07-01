@@ -870,9 +870,9 @@ export function VerificationTilesSection({ clientRow, loanId }: { clientRow: any
             </div>
             <div className="text-right">
               <div className="text-4xl font-black tabular-nums text-emerald-300 drop-shadow-[0_2px_8px_rgba(16,185,129,0.45)]">
-                −{discount.toFixed(1).replace(".", ",")}%
+                {doneCount}/{totalSteps}
               </div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">rocznie · {doneCount}/{totalSteps}</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">weryfikacji ukończonych</div>
             </div>
           </div>
 
