@@ -1,10 +1,9 @@
-// Wspólny rdzeń synchronizacji Fakturowo + KSeF, wywoływany zarówno z
+// Wspólny rdzeń synchronizacji Fakturowo + KSeF (2.0), wywoływany zarówno z
 // createServerFn (UI "Synchronizuj teraz"), jak i z hooka cron /api/public/hooks/sync-accounting.
-import { publicEncrypt, constants } from "node:crypto";
 import { accountingDb } from "./db";
 import { decryptSensitive } from "@/lib/affiliate/crypto";
-import { ksefBaseUrl, type KsefEntity, type KsefEnvironment } from "@/lib/ksef/client";
-import { pickEnvTokenFor } from "@/lib/ksef/session";
+import type { KsefEntity } from "@/lib/ksef/client";
+import { openKsefSession, closeKsefSession, type KsefSession } from "@/lib/ksef/session";
 
 type SyncResult = { entity: string; direction: "sales" | "purchase"; ok: boolean; count: number; message: string | null };
 
