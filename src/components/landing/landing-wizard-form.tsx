@@ -56,16 +56,6 @@ function readAsDataUrl(file: File): Promise<string> {
   });
 }
 
-async function handleSocialLogin(provider: "google" | "apple") {
-  try {
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) toast.error("Nie udało się zalogować. Spróbuj ponownie.");
-  } catch {
-    toast.error("Nie udało się zalogować. Spróbuj ponownie.");
-  }
-}
 
 const STEPS = [
   { id: 1, label: "Typ nieruchomości", icon: Home },
