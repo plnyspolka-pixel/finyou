@@ -105,21 +105,8 @@ function LoginPage() {
     });
   };
 
-  const signInGoogle = async () => {
-    setLoading(true);
-    const { lovable } = await import("@/integrations/lovable");
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}${target}`,
-    });
-    if (result.error) {
-      setLoading(false);
-      toast.error("Nie udało się zalogować Google", { description: result.error.message });
-      return;
-    }
-    if (result.redirected) return;
-    setLoading(false);
-    void navigate({ to: target });
-  };
+
+
 
 
 
@@ -146,11 +133,11 @@ function LoginPage() {
           ) : (
 
             <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="password">Hasło</TabsTrigger>
                 <TabsTrigger value="magic">Link e-mail</TabsTrigger>
-                <TabsTrigger value="google">Google</TabsTrigger>
               </TabsList>
+
 
               <TabsContent value="password" className="mt-4">
                 <form className="space-y-4" onSubmit={submitPassword}>
@@ -210,15 +197,6 @@ function LoginPage() {
                     Bez haseł — kliknij link z maila, by się zalogować.
                   </p>
                 </form>
-              </TabsContent>
-
-              <TabsContent value="google" className="mt-4 space-y-4">
-                <Button type="button" variant="outline" className="w-full" disabled={loading} onClick={signInGoogle}>
-                  {loading ? "Przekierowanie…" : "Kontynuuj przez Google"}
-                </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Użyjemy Twojego adresu Google, by stworzyć lub odnaleźć konto.
-                </p>
               </TabsContent>
             </Tabs>
           )}

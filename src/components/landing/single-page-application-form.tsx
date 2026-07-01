@@ -22,59 +22,6 @@ import { submitLandingLoanApplication } from "@/lib/landing-application.function
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
-import { lovable } from "@/integrations/lovable";
-
-async function handleSocialLogin(provider: "google" | "apple") {
-  try {
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Nie udało się zalogować. Spróbuj ponownie.");
-    }
-  } catch {
-    toast.error("Nie udało się zalogować. Spróbuj ponownie.");
-  }
-}
-
-function SocialLoginButtons() {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-white/70">
-        <div className="h-px flex-1 bg-white/20" />
-        <span>Zaloguj się jednym kliknięciem</span>
-        <div className="h-px flex-1 bg-white/20" />
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => handleSocialLogin("google")}
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/30 bg-white/10 px-3 py-3 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
-          aria-label="Zaloguj przez Google"
-        >
-          <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
-            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
-            <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-            <path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.4l-6.5-5.5c-2 1.4-4.6 2.3-7.5 2.3-5.3 0-9.7-3.4-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
-            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.5 5.5C41.3 36 44 30.5 44 24c0-1.3-.1-2.4-.4-3.5z"/>
-          </svg>
-          <span>Google</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleSocialLogin("apple")}
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/30 bg-white/10 px-3 py-3 text-sm font-medium text-white backdrop-blur-sm transition hover:bg-white/20"
-          aria-label="Zaloguj przez Apple"
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" aria-hidden="true">
-            <path d="M17.05 12.04c-.03-2.79 2.28-4.13 2.38-4.2-1.3-1.9-3.32-2.16-4.04-2.19-1.72-.17-3.36 1.01-4.23 1.01-.87 0-2.22-.99-3.65-.96-1.88.03-3.61 1.09-4.58 2.77-1.95 3.38-.5 8.39 1.41 11.13.93 1.34 2.04 2.85 3.49 2.79 1.4-.06 1.93-.91 3.62-.91s2.17.91 3.65.88c1.51-.03 2.46-1.37 3.39-2.71 1.07-1.56 1.51-3.07 1.54-3.15-.03-.01-2.96-1.14-2.98-4.46zM14.27 4.04c.77-.94 1.29-2.24 1.15-3.54-1.11.05-2.46.74-3.26 1.67-.71.83-1.34 2.16-1.18 3.43 1.24.1 2.5-.63 3.29-1.56z"/>
-          </svg>
-          <span>Apple</span>
-        </button>
-      </div>
-    </div>
-  );
-}
 
 const FANCY_INPUT_CLASS =
   "h-12 rounded-xl border-2 border-white/30 bg-white/10 text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40";
@@ -555,7 +502,7 @@ export function SinglePageApplicationForm({
       {step === 1 && (
         <FancyShell>
           <div className="space-y-5">
-            {!isBroker && <SocialLoginButtons />}
+            
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="f-fn" className="text-white">Imię *</Label>
                 <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={FANCY_INPUT_CLASS} /></div>
