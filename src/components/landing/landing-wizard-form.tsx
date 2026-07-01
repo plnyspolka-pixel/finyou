@@ -318,13 +318,13 @@ export function LandingWizardForm() {
         </div>
       </FancyShell>
 
-      {/* Step 1: Typ nieruchomości */}
+      {/* Step 1: Typ nieruchomości + miejscowość */}
       {step === 1 && (
         <FancyShell>
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <Home className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 1 · Typ nieruchomości</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 1 · Nieruchomość</span>
             </div>
             <SecurityTypePicker
               value={typeSelected ? secType : null}
@@ -333,19 +333,7 @@ export function LandingWizardForm() {
                 setTypeSelected(true);
               }}
             />
-          </div>
-        </FancyShell>
-      )}
-
-      {/* Step 2: Miejscowość */}
-      {step === 2 && (
-        <FancyShell>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-white/85">
-              <MapPin className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Miejscowość</span>
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2">
               <Label htmlFor="lw-city" className="flex items-center gap-2 text-base font-bold uppercase tracking-[0.14em] text-white">
                 <MapPin className="h-4 w-4" /> Miejscowość *
               </Label>
@@ -362,14 +350,15 @@ export function LandingWizardForm() {
         </FancyShell>
       )}
 
-      {/* Step 2: Twoje pliki */}
-      {step === 3 && (
+      {/* Step 2: Zdjęcia + numer KW */}
+      {step === 2 && (
         <FancyShell>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <Upload className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Twoje pliki</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Zdjęcia i numer KW</span>
             </div>
+
             {docHint && (
               <div className="rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-white/85">Co przygotować — {docHint.title}</p>
@@ -383,121 +372,121 @@ export function LandingWizardForm() {
                 </ul>
               </div>
             )}
-            <div className="flex gap-2">
-              <button type="button" onClick={() => fileRef.current?.click()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/40 bg-white/10 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20">
-                <Upload className="h-4 w-4" /> Dodaj plik
-              </button>
-              <button type="button" onClick={() => camRef.current?.click()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/60 bg-white/20 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white/30 sm:hidden">
-                <Camera className="h-4 w-4" /> Zrób zdjęcie
-              </button>
-            </div>
-            <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
-              onChange={(e) => { addPhotos(e.target.files, "property_photos"); e.currentTarget.value = ""; }} />
-            <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
-              onChange={(e) => { addPhotos(e.target.files, "property_photos"); e.currentTarget.value = ""; }} />
-            {propertyPhotos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {propertyPhotos.map((p) => (
-                  <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
-                    {p.type.startsWith("image/") ? (
-                      <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
-                    ) : (
-                      <div className="grid aspect-square place-items-center bg-white/10">
-                        <FileText className="h-6 w-6 text-white/80" />
-                      </div>
-                    )}
-                    <button type="button" onClick={() => removePhoto(p.id)}
-                      className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-xs font-bold text-foreground shadow"
-                      aria-label="Usuń">×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </FancyShell>
-      )}
 
-      {/* Step 3: Numer KW */}
-      {step === 4 && (
-        <FancyShell>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-white/85">
-              <BookText className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 4 · Numer księgi wieczystej</span>
-            </div>
-            <Input
-              value={kwNumber}
-              onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
-              placeholder="np. WA1M/00123456/7"
-              className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 px-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
-            />
-            <p className="text-xs text-white/75">Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w mObywatelu.</p>
-            {extraKwNumbers.map((val, idx) => (
-              <div key={idx} className="flex gap-2">
-                <Input value={val}
-                  onChange={(e) => {
-                    const v = e.target.value.toUpperCase();
-                    setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
-                  }}
-                  placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                  className={`${FANCY_INPUT_CLASS} font-mono tracking-wider`} />
-                <Button type="button" variant="outline" size="lg"
-                  onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                  className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-white">
+                <Upload className="h-4 w-4" /> Zdjęcia nieruchomości
+              </Label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => fileRef.current?.click()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/40 bg-white/10 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20">
+                  <Upload className="h-4 w-4" /> Dodaj plik
+                </button>
+                <button type="button" onClick={() => camRef.current?.click()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/60 bg-white/20 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white/30 sm:hidden">
+                  <Camera className="h-4 w-4" /> Zrób zdjęcie
+                </button>
               </div>
-            ))}
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm"
-                className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
-                + Dodaj kolejny numer KW
-              </Button>
-              <Button type="button" variant="outline" size="sm"
-                className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                onClick={() => deedRef.current?.click()}>
-                + Dodaj akt własności
-              </Button>
-              <input ref={deedRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
-                onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
-            </div>
-            {photos.some((p) => p.bucket === "ownership_deed") && (
-              <ul className="flex flex-wrap gap-2">
-                {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
-                  <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
-                    <FileText className="h-3.5 w-3.5" />
-                    <span className="max-w-[160px] truncate">{p.name}</span>
-                    <button type="button" onClick={() => removePhoto(p.id)}
-                      className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground">×</button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {BUILDING_TYPES.includes(secType) && (
-              <div className="space-y-2 pt-2">
-                <Label className="text-white">Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span></Label>
-                <div className="flex items-center gap-2">
-                  <Input type="number" inputMode="decimal" min={1} step="0.1"
-                    value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
-                    placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
-                  <span className="text-sm text-white/75">m²</span>
+              <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
+                onChange={(e) => { addPhotos(e.target.files, "property_photos"); e.currentTarget.value = ""; }} />
+              <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
+                onChange={(e) => { addPhotos(e.target.files, "property_photos"); e.currentTarget.value = ""; }} />
+              {propertyPhotos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {propertyPhotos.map((p) => (
+                    <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
+                      {p.type.startsWith("image/") ? (
+                        <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
+                      ) : (
+                        <div className="grid aspect-square place-items-center bg-white/10">
+                          <FileText className="h-6 w-6 text-white/80" />
+                        </div>
+                      )}
+                      <button type="button" onClick={() => removePhoto(p.id)}
+                        className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-xs font-bold text-foreground shadow"
+                        aria-label="Usuń">×</button>
+                    </div>
+                  ))}
                 </div>
+              )}
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-white">
+                <BookText className="h-4 w-4" /> Numer księgi wieczystej
+              </Label>
+              <Input
+                value={kwNumber}
+                onChange={(e) => setKwNumber(e.target.value.toUpperCase())}
+                placeholder="np. WA1M/00123456/7"
+                className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 px-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
+              />
+              <p className="text-xs text-white/75">Numer sprawdzisz w mObywatelu. Alternatywnie dołącz akt własności.</p>
+              {extraKwNumbers.map((val, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <Input value={val}
+                    onChange={(e) => {
+                      const v = e.target.value.toUpperCase();
+                      setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                    }}
+                    placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                    className={`${FANCY_INPUT_CLASS} font-mono tracking-wider`} />
+                  <Button type="button" variant="outline" size="lg"
+                    onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm"
+                  className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                  onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
+                  + Dodaj kolejny numer KW
+                </Button>
+                <Button type="button" variant="outline" size="sm"
+                  className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                  onClick={() => deedRef.current?.click()}>
+                  + Dodaj akt własności
+                </Button>
+                <input ref={deedRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
+                  onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
               </div>
-            )}
+              {photos.some((p) => p.bucket === "ownership_deed") && (
+                <ul className="flex flex-wrap gap-2">
+                  {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
+                    <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span className="max-w-[160px] truncate">{p.name}</span>
+                      <button type="button" onClick={() => removePhoto(p.id)}
+                        className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground">×</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {BUILDING_TYPES.includes(secType) && (
+                <div className="space-y-2 pt-2">
+                  <Label className="text-white">Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span></Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" inputMode="decimal" min={1} step="0.1"
+                      value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
+                      placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
+                    <span className="text-sm text-white/75">m²</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </FancyShell>
       )}
 
-      {/* Step 4: Dane do rejestracji */}
-      {step === 5 && (
+      {/* Step 3: Dane kontaktowe */}
+      {step === 3 && (
         <FancyShell>
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <UserRound className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 5 · Dane do rejestracji</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Dane kontaktowe</span>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -531,44 +520,9 @@ export function LandingWizardForm() {
         </FancyShell>
       )}
 
-      {/* Nawigacja */}
-      <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={step === 1 || submitting}>
-          <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
-        </Button>
-        <Button type="button" variant="cta" size="lg" onClick={goNext}
-          className="ml-auto flex-1 text-base md:flex-none">
-          {step < 5 ? (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>) : allDone ? (<>Do kalkulatora ↓</>) : (<>Uzupełnij dane</>)}
-        </Button>
-      </div>
-
-      {/* Locked calculator */}
-      <div id="landing-wizard-calc" className="relative">
-        {!allDone && (
-          <div className="pointer-events-none absolute inset-0 z-20 flex items-start justify-center rounded-3xl bg-slate-950/60 backdrop-blur-sm">
-            <div className="mt-16 flex flex-col items-center gap-3 rounded-2xl border border-white/20 bg-slate-900/80 px-6 py-5 text-center shadow-2xl">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 ring-1 ring-white/30">
-                <Lock className="h-6 w-6 text-white" />
-              </span>
-              <p className="text-sm font-bold uppercase tracking-widest text-white">Kalkulator zablokowany</p>
-              <p className="max-w-xs text-xs text-white/75">
-                Ukończ wszystkie 5 kroków wizarda powyżej, aby zobaczyć swoją wstępną ofertę i wysłać wniosek.
-              </p>
-              <div className="mt-1 flex flex-wrap justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-                {STEPS.map((s) => (
-                  <span key={s.id} className={`rounded-full px-2 py-1 ring-1 ${
-                    stepDone[s.id as StepId]
-                      ? "bg-emerald-500/25 text-emerald-100 ring-emerald-300/40"
-                      : "bg-white/5 text-white/60 ring-white/20"
-                  }`}>
-                    {stepDone[s.id as StepId] ? "✓" : s.id}. {s.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        <div className={allDone ? "" : "pointer-events-none select-none opacity-40 grayscale"} aria-hidden={!allDone}>
+      {/* Step 4: Kalkulator (gold) */}
+      {step === 4 && (
+        <div id="landing-wizard-calc" className="space-y-4">
           <OfferCalculatorPanel
             amount={amount} setAmount={setAmount}
             months={months} setMonths={setMonths}
@@ -578,31 +532,43 @@ export function LandingWizardForm() {
             rateTouchedRef={rateTouchedRef}
             maxPayment={maxPayment} setMaxPayment={setMaxPayment}
             headerLabel="Twoja wstępna oferta"
+            shellVariant="gold"
           />
-        </div>
-      </div>
 
-      {allDone && (
-        <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 p-4 backdrop-blur-sm">
-          <Button
-            type="button"
-            variant="cta"
-            size="lg"
-            onClick={() => void onSubmit()}
-            disabled={submitting}
-            className="w-full text-base"
-          >
-            {submitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-            ) : (
-              <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
-            )}
-          </Button>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
-          </p>
+          <div className="rounded-2xl border-2 border-amber-300/60 bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/15 p-4 backdrop-blur-sm">
+            <Button
+              type="button"
+              variant="cta"
+              size="lg"
+              onClick={() => void onSubmit()}
+              disabled={submitting || !allDone}
+              className="w-full text-base"
+            >
+              {submitting ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+              ) : (
+                <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
+              )}
+            </Button>
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
+            </p>
+          </div>
         </div>
       )}
+
+      {/* Nawigacja */}
+      <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
+        <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={step === 1 || submitting}>
+          <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
+        </Button>
+        {step < 4 && (
+          <Button type="button" variant="cta" size="lg" onClick={goNext}
+            className="ml-auto flex-1 text-base md:flex-none">
+            {step === 3 ? (<>Do kalkulatora <ChevronRight className="ml-1 h-5 w-5" /></>) : (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>)}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
