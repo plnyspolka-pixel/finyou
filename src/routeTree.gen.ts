@@ -136,6 +136,7 @@ import { Route as ApiPublicPaymentsTpayWebhookRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
 import { Route as ApiPublicHooksVoicebotInboundRouteImport } from './routes/api/public/hooks/voicebot-inbound'
 import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/api/public/hooks/voicebot-enrich-tick'
+import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
@@ -814,6 +815,12 @@ const ApiPublicHooksVoicebotEnrichTickRoute =
     path: '/api/public/hooks/voicebot-enrich-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSyncAccountingRoute =
+  ApiPublicHooksSyncAccountingRouteImport.update({
+    id: '/api/public/hooks/sync-accounting',
+    path: '/api/public/hooks/sync-accounting',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSeedBlogRoute = ApiPublicHooksSeedBlogRouteImport.update({
   id: '/api/public/hooks/seed-blog',
   path: '/api/public/hooks/seed-blog',
@@ -1036,6 +1043,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1175,6 +1183,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1320,6 +1329,7 @@ export interface FileRoutesById {
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
+  '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
   '/api/public/hooks/voicebot-enrich-tick': typeof ApiPublicHooksVoicebotEnrichTickRoute
   '/api/public/hooks/voicebot-inbound': typeof ApiPublicHooksVoicebotInboundRoute
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
@@ -1466,6 +1476,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -1605,6 +1616,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -1749,6 +1761,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
+    | '/api/public/hooks/sync-accounting'
     | '/api/public/hooks/voicebot-enrich-tick'
     | '/api/public/hooks/voicebot-inbound'
     | '/api/public/hooks/voicebot-opt-out'
@@ -1811,6 +1824,7 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
+  ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
   ApiPublicHooksVoicebotEnrichTickRoute: typeof ApiPublicHooksVoicebotEnrichTickRoute
   ApiPublicHooksVoicebotInboundRoute: typeof ApiPublicHooksVoicebotInboundRoute
   ApiPublicHooksVoicebotOptOutRoute: typeof ApiPublicHooksVoicebotOptOutRoute
@@ -2712,6 +2726,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksVoicebotEnrichTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-accounting': {
+      id: '/api/public/hooks/sync-accounting'
+      path: '/api/public/hooks/sync-accounting'
+      fullPath: '/api/public/hooks/sync-accounting'
+      preLoaderRoute: typeof ApiPublicHooksSyncAccountingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/seed-blog': {
       id: '/api/public/hooks/seed-blog'
       path: '/api/public/hooks/seed-blog'
@@ -3134,6 +3155,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
   ApiPublicHooksSeedBlogRoute: ApiPublicHooksSeedBlogRoute,
+  ApiPublicHooksSyncAccountingRoute: ApiPublicHooksSyncAccountingRoute,
   ApiPublicHooksVoicebotEnrichTickRoute: ApiPublicHooksVoicebotEnrichTickRoute,
   ApiPublicHooksVoicebotInboundRoute: ApiPublicHooksVoicebotInboundRoute,
   ApiPublicHooksVoicebotOptOutRoute: ApiPublicHooksVoicebotOptOutRoute,
@@ -3146,13 +3168,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
