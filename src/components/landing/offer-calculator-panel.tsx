@@ -28,6 +28,7 @@ export type OfferCalculatorPanelProps = {
   maxPayment: number;
   setMaxPayment: (v: number) => void;
   headerLabel?: string;
+  shellVariant?: "navy" | "silver" | "gold";
 };
 
 export function OfferCalculatorPanel({
@@ -39,6 +40,7 @@ export function OfferCalculatorPanel({
   rateTouchedRef,
   maxPayment, setMaxPayment,
   headerLabel = "Wniosek przyjęty",
+  shellVariant = "navy",
 }: OfferCalculatorPanelProps) {
   const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
   const FINANCEYOU_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
@@ -92,7 +94,7 @@ export function OfferCalculatorPanel({
   const fig = { monthly: chosenPayment, balloon: balloonAmount, total: totalPaid, investorCompensation: totalInterest };
 
   return (
-    <FancyShell>
+    <FancyShell variant={shellVariant}>
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
