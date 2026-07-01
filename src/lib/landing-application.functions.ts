@@ -134,12 +134,26 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         type: "magiclink",
         email: data.email,
       });
-      tokenHash = link?.properties?.hashed_token ?? null;
       if (!userId) userId = link?.user?.id ?? null;
       // 3) Połącz klienta z kontem auth
       if (userId) {
         await supabaseAdmin.from("clients").update({ user_id: userId }).eq("id", client.id);
       }
+      // 4) Autologowanie tylko dla kont bez uprawnień admina
+      let isAdmin = false;
+      if (userId) {
+        const { data: adminRow } = await supabaseAdmin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .in("role", ["admin", "super_admin"])
+          .maybeSingle();
+        isAdmin = !!adminRow;
+      }
+      if (!isAdmin) {
+        tokenHash = link?.properties?.hashed_token ?? null;
+      }
+
     } catch (err) {
       console.error("[landing-application] auth user create/link failed", err);
     }
