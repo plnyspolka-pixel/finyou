@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type Variant = "navy" | "silver";
+type Variant = "navy" | "silver" | "gold";
 
 /**
  * Wspólny "premium" kontener:
