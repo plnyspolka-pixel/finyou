@@ -40,6 +40,7 @@ export function OfferCalculatorPanel({
   rateTouchedRef,
   maxPayment, setMaxPayment,
   headerLabel = "Wniosek przyjęty",
+  shellVariant = "navy",
 }: OfferCalculatorPanelProps) {
   const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
   const FINANCEYOU_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
