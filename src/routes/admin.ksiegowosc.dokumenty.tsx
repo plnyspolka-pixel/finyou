@@ -50,17 +50,31 @@ function KsiegowoscDokumenty() {
   const statusQ = useQuery({ queryKey: ["accounting-sync-status"], queryFn: () => statusFn() });
 
   const syncMut = useMutation({
-    mutationFn: async () => {
-      const [f, k] = await Promise.all([syncFakFn({ data: {} }), syncKsefFn({ data: {} })]);
-      return { f, k };
-    },
+    mutationFn: async () => syncKsefFn({ data: {} }),
     onSuccess: (r: any) => {
-      const total = [...(r.f?.results ?? []), ...(r.k?.results ?? [])].reduce((s, x) => s + (x.count || 0), 0);
-      toast.success(`Zsynchronizowano ${total} dokumentów`);
+      const total = (r?.results ?? []).reduce((s: number, x: any) => s + (x.count || 0), 0);
+      toast.success(`KSeF: zsynchronizowano ${total} dokumentów`);
       qc.invalidateQueries({ queryKey: ["accounting-documents"] });
       qc.invalidateQueries({ queryKey: ["accounting-sync-status"] });
     },
-    onError: (e: Error) => toast.error(`Sync nie powiódł się: ${e.message}`),
+    onError: (e: Error) => toast.error(`Sync KSeF nie powiódł się: ${e.message}`),
+  });
+
+  const importFakMut = useMutation({
+    mutationFn: async () => {
+      const fy = (entitiesQ.data as any[] | undefined)?.find((e) =>
+        String(e.name || "").toLowerCase().includes("finance you"),
+      );
+      if (!fy) throw new Error("Nie znaleziono podmiotu „Finance You"");
+      return syncFakFn({ data: { entityId: fy.id } });
+    },
+    onSuccess: (r: any) => {
+      const total = (r?.results ?? []).reduce((s: number, x: any) => s + (x.count || 0), 0);
+      toast.success(`Fakturowo (jednorazowo): zaimportowano ${total} dokumentów`);
+      qc.invalidateQueries({ queryKey: ["accounting-documents"] });
+      qc.invalidateQueries({ queryKey: ["accounting-sync-status"] });
+    },
+    onError: (e: Error) => toast.error(`Import Fakturowo nie powiódł się: ${e.message}`),
   });
 
   const totals = useMemo(() => {
