@@ -79,7 +79,7 @@ function MediaThumbs({ photoPaths, docCount, onOpen }: { photoPaths: string[]; d
     <button type="button" onClick={onOpen} className="flex items-center gap-1.5 group" title="Otwórz podgląd załączników">
       <div className="flex items-center gap-1">
         {urls.map((u, i) => (
-          <img key={i} src={u} alt="" className="h-12 w-12 rounded object-cover border group-hover:ring-2 group-hover:ring-primary transition" loading="lazy" />
+          <img key={i} src={u} alt="" className="h-12 w-12 rounded object-cover border group-hover:ring-2 group-hover:ring-primary transition" loading="lazy" decoding="async" />
         ))}
         {docCount > 0 && (
           <div className="h-12 w-12 rounded border bg-muted flex flex-col items-center justify-center group-hover:ring-2 group-hover:ring-primary transition">

@@ -119,6 +119,7 @@ export function PropertyTypesShowcase({
                       src={p.img}
                       alt={p.title}
                       loading="lazy"
+                      decoding="async"
                       width={800}
                       height={800}
                       className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110"

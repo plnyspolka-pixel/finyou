@@ -469,7 +469,7 @@ function KlientDashboard() {
                           className="absolute inset-0 transition hover:ring-2 hover:ring-white/60"
                           aria-label="Podgląd zdjęcia"
                         >
-                          <img src={t.url} alt="" loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                          <img src={t.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition group-hover:scale-105" />
                           <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
                         </button>
                         <button

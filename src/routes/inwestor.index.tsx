@@ -229,6 +229,7 @@ function InwestorList() {
                         alt={p?.city ?? ""}
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" />}

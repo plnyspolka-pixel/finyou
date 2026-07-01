@@ -81,17 +81,22 @@ function InwestorWniosek() {
   const [note, setNote] = useState("");
 
   useEffect(() => { void (async () => {
-    const { data } = await supabase.from("loan_applications").select("*, properties(*)").eq("id", id).maybeSingle();
+    // Wniosek, profil inwestora i dokumenty pobieramy równolegle — nie ma między
+    // nimi zależności, więc nie ma powodu czekać na jedno przed drugim.
+    const [appRes, invRes, docRes] = await Promise.all([
+      supabase.from("loan_applications").select("*, properties(*)").eq("id", id).maybeSingle(),
+      user
+        ? supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null as { id: string } | null }),
+      supabase.from("documents").select("*").eq("loan_application_id", id).order("created_at", { ascending: false }),
+    ]);
+    const data = appRes.data;
     setApp(data);
     if (data) {
       void supabase.rpc("increment_loan_view" as any, { _loan_id: id });
     }
-    if (user) {
-      const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
-      if (inv) setInvestorId(inv.id);
-    }
-    const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", id).order("created_at", { ascending: false });
-    const list = ds ?? [];
+    if (invRes.data) setInvestorId(invRes.data.id);
+    const list = docRes.data ?? [];
     setDocs(list);
     const imgs = list.filter((d: any) => d.file_path && isImage(d.file_name ?? ""));
     const next: Record<string, string> = {};
@@ -169,7 +174,7 @@ function InwestorWniosek() {
     return (
       <button key={d.id} onClick={() => void openFile(d)} className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
         <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
-          {img ? <img src={url} alt={d.file_name} className="h-full w-full object-cover group-hover:scale-105 transition" />
+          {img ? <img src={url} alt={d.file_name} loading="lazy" decoding="async" className="h-full w-full object-cover group-hover:scale-105 transition" />
             : <FileText className="h-10 w-10 text-muted-foreground" />}
         </div>
         <div className="px-2 py-1.5 text-xs flex items-center justify-between gap-1">
@@ -215,6 +220,7 @@ function InwestorWniosek() {
                       alt=""
                       className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition"
                       loading="lazy"
+                      decoding="async"
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     />
                   </a>

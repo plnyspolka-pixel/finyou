@@ -88,6 +88,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "icon", type: "image/png", href: faviconAsset.url },
       { rel: "apple-touch-icon", href: faviconAsset.url },
+      // Supabase obsługuje auth, dane i obrazy ze storage na każdej stronie —
+      // wcześniejsze nawiązanie połączenia (DNS+TLS) przyspiesza pierwszy fetch,
+      // w tym ładowanie podglądów grafik z signed URL-i.
+      { rel: "preconnect", href: "https://jqvepxhulxdnbwbogkhe.supabase.co", crossOrigin: "anonymous" },
+      { rel: "dns-prefetch", href: "https://jqvepxhulxdnbwbogkhe.supabase.co" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" },

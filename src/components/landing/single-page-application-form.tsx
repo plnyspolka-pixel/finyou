@@ -219,7 +219,7 @@ function PhotoBucket({
           {own.map((p) => (
             <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
               {p.type.startsWith("image/") ? (
-                <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
+                <img src={p.url} alt={p.name} loading="lazy" decoding="async" className="aspect-square w-full object-cover" />
               ) : (
                 <div className="grid aspect-square place-items-center bg-white/10">
                   <FileText className="h-6 w-6 text-white/80" />

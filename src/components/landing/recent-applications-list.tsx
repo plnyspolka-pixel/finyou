@@ -355,6 +355,9 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                           src={it.photo_url}
                           alt={`${PROPERTY_TYPE_LABELS[it.property_type]} — ${it.city}`}
                           loading="lazy"
+                          decoding="async"
+                          width={640}
+                          height={160}
                           className="absolute inset-0 h-full w-full object-cover"
                         />
                         <div

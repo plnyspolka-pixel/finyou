@@ -65,50 +65,56 @@ export function MediaPreviewDialog({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const all: MediaItem[] = [];
 
-      // Photos (property-photos bucket)
-      if (photoPaths.length > 0) {
-        const { data } = await supabase.storage
-          .from("property-photos")
-          .createSignedUrls(photoPaths, 60 * 60);
-        (data ?? []).forEach((d, i) => {
-          if (d.signedUrl) {
-            const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
-            all.push({
-              key: `photo:${photoPaths[i]}`,
+      // Zdjęcia i wiersze dokumentów pobieramy równolegle — nie czekamy na jedno,
+      // żeby zacząć drugie (wcześniej było sekwencyjnie, co spowalniało podgląd).
+      const [photoRes, docRes] = await Promise.all([
+        photoPaths.length > 0
+          ? supabase.storage.from("property-photos").createSignedUrls(photoPaths, 60 * 60)
+          : Promise.resolve({ data: [] as { signedUrl: string | null }[] }),
+        supabase
+          .from("documents")
+          .select("id,file_name,file_path,file_url,document_type,created_at")
+          .eq("loan_application_id", loanApplicationId)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const photoItems: MediaItem[] = (photoRes.data ?? [])
+        .map((d, i): MediaItem | null => {
+          if (!d?.signedUrl) return null;
+          const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
+          return {
+            key: `photo:${photoPaths[i]}`,
+            name,
+            url: d.signedUrl,
+            kind: inferKind(name) === "other" ? "image" : inferKind(name),
+            source: "photo",
+          };
+        })
+        .filter((x): x is MediaItem => x !== null);
+
+      // Podpisywanie URL-i dokumentów równolegle (wcześniej pętla po jednym).
+      const docItems: MediaItem[] = (
+        await Promise.all(
+          ((docRes.data ?? []) as Doc[]).map(async (d): Promise<MediaItem | null> => {
+            let url = d.file_url ?? null;
+            if (!url && d.file_path) url = await signDocument(d.file_path);
+            if (!url) return null;
+            const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
+            return {
+              key: `doc:${d.id}`,
               name,
-              url: d.signedUrl,
-              kind: inferKind(name) === "other" ? "image" : inferKind(name),
-              source: "photo",
-            });
-          }
-        });
-      }
-
-      // Documents
-      const { data: docRows } = await supabase
-        .from("documents")
-        .select("id,file_name,file_path,file_url,document_type,created_at")
-        .eq("loan_application_id", loanApplicationId)
-        .order("created_at", { ascending: false });
-
-      for (const d of (docRows ?? []) as Doc[]) {
-        let url = d.file_url ?? null;
-        if (!url && d.file_path) url = await signDocument(d.file_path);
-        if (!url) continue;
-        const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
-        all.push({
-          key: `doc:${d.id}`,
-          name,
-          url,
-          kind: inferKind(name),
-          source: "document",
-          docType: d.document_type,
-        });
-      }
+              url,
+              kind: inferKind(name),
+              source: "document",
+              docType: d.document_type,
+            };
+          }),
+        )
+      ).filter((x): x is MediaItem => x !== null);
 
       if (!cancelled) {
+        const all = [...photoItems, ...docItems];
         setItems(all);
         setActive(all[0] ?? null);
         setLoading(false);
@@ -159,7 +165,7 @@ export function MediaPreviewDialog({
                       title={it.name}
                     >
                       {it.kind === "image" ? (
-                        <img src={it.url} alt={it.name} loading="lazy" className="h-full w-full object-cover" />
+                        <img src={it.url} alt={it.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full flex flex-col items-center justify-center gap-1 p-2 bg-muted">
                           {it.kind === "pdf" ? (
@@ -211,7 +217,7 @@ export function MediaPreviewDialog({
                   </div>
                   <div className="flex-1 min-h-0 overflow-auto bg-black/5">
                     {active.kind === "image" && (
-                      <img src={active.url} alt={active.name} className="max-h-full max-w-full w-auto mx-auto object-contain" />
+                      <img src={active.url} alt={active.name} decoding="async" fetchPriority="high" className="max-h-full max-w-full w-auto mx-auto object-contain" />
                     )}
                     {active.kind === "pdf" && (
                       <iframe src={active.url} title={active.name} className="w-full h-full min-h-[70vh] bg-white" />
