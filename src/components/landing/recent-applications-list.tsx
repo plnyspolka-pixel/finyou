@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight, ChevronRight, Home, Building2, Trees, Store, Search, X } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, Home, Building2, Trees, Store, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
@@ -385,32 +385,7 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
 
 
 
-                    <div className="mt-2 flex min-h-[3.25rem] flex-wrap content-start gap-1 text-[10px]">
-                      {it.is_startup && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2 py-0.5 font-semibold text-white">🚀 Startup</span>
-                      )}
-                      {it.business_legal_form && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 font-semibold text-white ring-1 ring-white/15">
-                          🏢 {it.business_legal_form === "jdg" ? "JDG" : it.business_legal_form === "sp_zoo" ? "Sp. z o.o." : "Sp. akcyjna"}
-                          {it.nip_verified && <span className="text-emerald-300">✓ NIP</span>}
-                        </span>
-                      )}
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_income_docs ? "bg-emerald-400/20 text-emerald-200" : "bg-white/10 text-white/70 ring-1 ring-white/15"}`}>
-                        📄 Dochód {it.has_income_docs ? "✓" : "—"}
-                      </span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${it.has_bik ? "bg-emerald-400/20 text-emerald-200" : "bg-white/10 text-white/70 ring-1 ring-white/15"}`}>
-                        🛡 BIK {it.has_bik ? "✓" : "—"}
-                      </span>
-                      {it.phone_verified && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2 py-0.5 font-semibold text-emerald-200">📞 Telefon ✓</span>
-                      )}
-                      {it.bank_verified && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2 py-0.5 font-semibold text-emerald-200">🏦 Rachunek ✓</span>
-                      )}
-                    </div>
-
-
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
                       <div>
                         <div className="text-[11px] uppercase tracking-wide text-white/60">Kwota</div>
                         <div className="tabular-nums font-bold text-white">{formatPLN(it.loan_amount)}</div>
@@ -420,84 +395,11 @@ export function RecentApplicationsList(_props: { initial?: RecentLoanApplication
                         <div className="tabular-nums font-bold text-white">{it.preferred_period_months} mies.</div>
                       </div>
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-white/60">Rata miesięczna</div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/60">Rata</div>
                         <div className="tabular-nums font-bold text-white">{formatPLN(f.monthly)}</div>
-                        <div className="mt-0.5 min-h-[14px] text-[10px] text-white/60">
-                          {f.balloon > 0 ? <>+ balon {formatPLN(f.balloon)}</> : null}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[11px] uppercase tracking-wide text-white/60">Roczna stopa zwrotu</div>
-                        <div className="tabular-nums font-bold text-emerald-300">
-                          {it.annual_investor_rate.toFixed(1).replace(".", ",")}%
-                        </div>
-                        <div className="mt-0.5 min-h-[14px]" aria-hidden />
-                      </div>
-                      <div className="col-span-2 rounded-xl bg-white/10 p-3 ring-1 ring-white/15">
-                        <div className="text-[11px] uppercase tracking-wide text-white/70">
-                          Zysk inwestora (całość)
-                        </div>
-                        <div className="tabular-nums text-lg font-extrabold text-white">
-                          {formatPLN(f.investorCompensation)}
                       </div>
                     </div>
 
-                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-white/5 px-3 py-2 text-[11px] ring-1 ring-white/10">
-                      <span
-                        className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                          it.wants_extension_option
-                            ? "bg-emerald-400/25 text-emerald-200"
-                            : "bg-white/10 text-white/60"
-                        }`}
-                      >
-                        {it.wants_extension_option ? "✓" : "—"}
-                      </span>
-                      <span className="text-white/85">
-                        {it.wants_extension_option
-                          ? "Klient wnioskuje o możliwość przedłużenia okresu pożyczki"
-                          : "Klient nie wnioskuje o opcję przedłużenia"}
-                      </span>
-                    </div>
-                    </div>
-
-                    <details className="group mt-auto rounded-xl bg-white/5 ring-1 ring-white/10">
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10">
-                        <span>Harmonogram spłat ({it.preferred_period_months} rat{f.balloon > 0 ? " + balon" : ""})</span>
-                        <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
-                      </summary>
-                      <div className="max-h-72 overflow-auto border-t border-white/10">
-                        <table className="w-full text-right text-[11px] tabular-nums">
-                          <thead className="sticky top-0 bg-white/10 text-[10px] uppercase tracking-wider text-white/70 backdrop-blur">
-                            <tr>
-                              <th className="px-2 py-1.5 text-left font-semibold">#</th>
-                              <th className="px-2 py-1.5 font-semibold">Rata</th>
-                              <th className="px-2 py-1.5 font-semibold">Odsetki</th>
-                              <th className="px-2 py-1.5 font-semibold">Kapitał</th>
-                              <th className="px-2 py-1.5 font-semibold">Saldo</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {f.schedule.map((row, idx) => (
-                              <tr
-                                key={idx}
-                                className={`border-t border-white/10 ${row.n === "balon" ? "bg-white/10 font-semibold" : ""}`}
-                              >
-                                <td className="px-2 py-1 text-left text-white">
-                                  {row.n === "balon" ? "Balon" : row.n}
-                                </td>
-                                <td className="px-2 py-1 font-semibold text-white">{formatPLN(row.payment)}</td>
-                                <td className="px-2 py-1 text-white/70">{formatPLN(row.interest)}</td>
-                                <td className="px-2 py-1 text-white/70">{formatPLN(row.principal)}</td>
-                                <td className="px-2 py-1 text-white">{formatPLN(row.balance)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <p className="px-3 py-2 text-[10px] text-white/60">
-                        Kapitał startowy: {formatPLN(f.grossPrincipal)} = kwota pożyczki {formatPLN(it.loan_amount)} + prowizja Finance You {formatPLN(f.fee)} ({f.feePct}%).
-                      </p>
-                    </details>
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <Button asChild size="sm" className="bg-white text-primary hover:bg-white/90">

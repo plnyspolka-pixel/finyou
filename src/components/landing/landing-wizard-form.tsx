@@ -24,11 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FancyShell } from "@/components/landing/fancy-shell";
-import {
-  PropertyTypesShowcase,
-  PROPERTY_SHOWCASE_KEY_TO_SECURITY,
-  PROPERTY_DOCS_BY_SECURITY,
-} from "@/components/landing/property-types-showcase";
+import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
+import { SecurityTypePicker } from "@/components/security-type-picker";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,13 +68,14 @@ async function handleSocialLogin(provider: "google" | "apple") {
 }
 
 const STEPS = [
-  { id: 1, label: "Typ + miejscowość", icon: Home },
-  { id: 2, label: "Twoje pliki", icon: Upload },
-  { id: 3, label: "Numer KW", icon: BookText },
-  { id: 4, label: "Rejestracja", icon: UserRound },
+  { id: 1, label: "Typ nieruchomości", icon: Home },
+  { id: 2, label: "Miejscowość", icon: MapPin },
+  { id: 3, label: "Twoje pliki", icon: Upload },
+  { id: 4, label: "Numer KW", icon: BookText },
+  { id: 5, label: "Rejestracja", icon: UserRound },
 ] as const;
 
-type StepId = 1 | 2 | 3 | 4;
+type StepId = 1 | 2 | 3 | 4 | 5;
 
 export function LandingWizardForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
@@ -175,12 +173,13 @@ export function LandingWizardForm() {
   }, [firstName, lastName, phone, email, consentPrivacy, consentTerms, consentMarketing]);
 
   const stepDone: Record<StepId, boolean> = {
-    1: typeSelected && city.trim().length > 0,
-    2: hasPropertyPhotos,
-    3: kwOk,
-    4: contactValid,
+    1: typeSelected,
+    2: city.trim().length > 0,
+    3: hasPropertyPhotos,
+    4: kwOk,
+    5: contactValid,
   };
-  const allDone = stepDone[1] && stepDone[2] && stepDone[3] && stepDone[4];
+  const allDone = stepDone[1] && stepDone[2] && stepDone[3] && stepDone[4] && stepDone[5];
 
   const fireLead = () => {
     if (leadFiredRef.current || !contactValid) return;
@@ -195,21 +194,22 @@ export function LandingWizardForm() {
   const goNext = () => {
     if (!stepDone[step]) {
       const msgs: Record<StepId, string> = {
-        1: "Wybierz typ nieruchomości i podaj miejscowość.",
-        2: "Dodaj przynajmniej jedno zdjęcie / dokument nieruchomości.",
-        3: "Podaj numer księgi wieczystej lub dołącz akt własności.",
-        4: "Uzupełnij dane rejestracyjne i zaakceptuj zgody.",
+        1: "Wybierz typ nieruchomości.",
+        2: "Podaj miejscowość, w której znajduje się nieruchomość.",
+        3: "Dodaj przynajmniej jedno zdjęcie / dokument nieruchomości.",
+        4: "Podaj numer księgi wieczystej lub dołącz akt własności.",
+        5: "Uzupełnij dane rejestracyjne i zaakceptuj zgody.",
       };
       toast.error(msgs[step]);
       return;
     }
-    if (step === 4) {
+    if (step === 5) {
       fireLead();
       // scroll to calculator
       setTimeout(() => document.getElementById("landing-wizard-calc")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
       return;
     }
-    setStep((s) => (Math.min(4, s + 1) as StepId));
+    setStep((s) => (Math.min(5, s + 1) as StepId));
   };
   const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
 
@@ -284,14 +284,6 @@ export function LandingWizardForm() {
     }
   };
 
-  const secToShowcase: Record<string, string> = {
-    mieszkanie: "mieszkanie",
-    dom: "dom",
-    lokal_uslugowy: "lokal",
-    grunt_rolny: "rolna",
-    dzialka_budowlana: "budowlana",
-  };
-  const selectedShowcaseKey = secToShowcase[secType] ?? null;
   const docHint = PROPERTY_DOCS_BY_SECURITY[secType];
 
   return (
@@ -299,7 +291,7 @@ export function LandingWizardForm() {
       {/* Stepper */}
       <FancyShell>
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             {STEPS.map((s) => {
               const done = stepDone[s.id as StepId];
               const active = step === s.id;
@@ -336,13 +328,13 @@ export function LandingWizardForm() {
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-              style={{ width: `${(Object.values(stepDone).filter(Boolean).length / 4) * 100}%` }}
+              style={{ width: `${(Object.values(stepDone).filter(Boolean).length / 5) * 100}%` }}
             />
           </div>
         </div>
       </FancyShell>
 
-      {/* Step 1: Typ + Miejscowość */}
+      {/* Step 1: Typ nieruchomości */}
       {step === 1 && (
         <FancyShell>
           <div className="space-y-5">
@@ -350,14 +342,25 @@ export function LandingWizardForm() {
               <Home className="h-5 w-5" />
               <span className="text-sm font-bold uppercase tracking-widest">Krok 1 · Typ nieruchomości</span>
             </div>
-            <PropertyTypesShowcase
-              selectedKey={selectedShowcaseKey}
-              onSelect={(key) => {
-                const mapped = PROPERTY_SHOWCASE_KEY_TO_SECURITY[key] as SecurityType | undefined;
-                if (mapped) setSecType(mapped);
+            <SecurityTypePicker
+              value={typeSelected ? secType : null}
+              onChange={(t) => {
+                setSecType(t);
                 setTypeSelected(true);
               }}
             />
+          </div>
+        </FancyShell>
+      )}
+
+      {/* Step 2: Miejscowość */}
+      {step === 2 && (
+        <FancyShell>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white/85">
+              <MapPin className="h-5 w-5" />
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Miejscowość</span>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="lw-city" className="flex items-center gap-2 text-base font-bold uppercase tracking-[0.14em] text-white">
                 <MapPin className="h-4 w-4" /> Miejscowość *
@@ -376,12 +379,12 @@ export function LandingWizardForm() {
       )}
 
       {/* Step 2: Twoje pliki */}
-      {step === 2 && (
+      {step === 3 && (
         <FancyShell>
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-white/85">
               <Upload className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 2 · Twoje pliki</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Twoje pliki</span>
             </div>
             {docHint && (
               <div className="rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
@@ -433,12 +436,12 @@ export function LandingWizardForm() {
       )}
 
       {/* Step 3: Numer KW */}
-      {step === 3 && (
+      {step === 4 && (
         <FancyShell>
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-white/85">
               <BookText className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 3 · Numer księgi wieczystej</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 4 · Numer księgi wieczystej</span>
             </div>
             <Input
               value={kwNumber}
@@ -505,12 +508,12 @@ export function LandingWizardForm() {
       )}
 
       {/* Step 4: Dane do rejestracji */}
-      {step === 4 && (
+      {step === 5 && (
         <FancyShell>
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <UserRound className="h-5 w-5" />
-              <span className="text-sm font-bold uppercase tracking-widest">Krok 4 · Dane do rejestracji</span>
+              <span className="text-sm font-bold uppercase tracking-widest">Krok 5 · Dane do rejestracji</span>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-xs uppercase tracking-wider text-white/70">
@@ -576,7 +579,7 @@ export function LandingWizardForm() {
         </Button>
         <Button type="button" variant="cta" size="lg" onClick={goNext}
           className="ml-auto flex-1 text-base md:flex-none">
-          {step < 4 ? (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>) : allDone ? (<>Do kalkulatora ↓</>) : (<>Uzupełnij dane</>)}
+          {step < 5 ? (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>) : allDone ? (<>Do kalkulatora ↓</>) : (<>Uzupełnij dane</>)}
         </Button>
       </div>
 
@@ -590,7 +593,7 @@ export function LandingWizardForm() {
               </span>
               <p className="text-sm font-bold uppercase tracking-widest text-white">Kalkulator zablokowany</p>
               <p className="max-w-xs text-xs text-white/75">
-                Ukończ wszystkie 4 kroki wizarda powyżej, aby zobaczyć swoją wstępną ofertę i wysłać wniosek.
+                Ukończ wszystkie 5 kroków wizarda powyżej, aby zobaczyć swoją wstępną ofertę i wysłać wniosek.
               </p>
               <div className="mt-1 flex flex-wrap justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
                 {STEPS.map((s) => (
