@@ -1,10 +1,9 @@
-// Wspólny rdzeń synchronizacji Fakturowo + KSeF, wywoływany zarówno z
+// Wspólny rdzeń synchronizacji Fakturowo + KSeF (2.0), wywoływany zarówno z
 // createServerFn (UI "Synchronizuj teraz"), jak i z hooka cron /api/public/hooks/sync-accounting.
-import { publicEncrypt, constants } from "node:crypto";
 import { accountingDb } from "./db";
 import { decryptSensitive } from "@/lib/affiliate/crypto";
-import { ksefBaseUrl, type KsefEntity, type KsefEnvironment } from "@/lib/ksef/client";
-import { pickEnvTokenFor } from "@/lib/ksef/session";
+import type { KsefEntity } from "@/lib/ksef/client";
+import { openKsefSession, closeKsefSession, type KsefSession } from "@/lib/ksef/session";
 
 type SyncResult = { entity: string; direction: "sales" | "purchase"; ok: boolean; count: number; message: string | null };
 
@@ -99,89 +98,98 @@ async function syncFakturowoOne(entity: any, direction: "sales" | "purchase"): P
   return { ok: true, count: inserted, message: null };
 }
 
-// ---------------- KSeF ----------------
+// ---------------- KSeF 2.0 ----------------
 
-type KsefSession = { baseUrl: string; environment: KsefEnvironment; sessionToken: string; nip: string };
+type InvoiceMeta = Record<string, unknown>;
 
-async function openSession(entity: KsefEntity): Promise<KsefSession> {
-  const envToken = pickEnvTokenFor(entity);
-  const environment: KsefEnvironment = entity.ksef_environment && entity.ksef_environment !== "disabled" ? entity.ksef_environment : envToken ? "prod" : "disabled";
-  if (environment === "disabled") throw new Error("KSeF wyłączony dla podmiotu.");
-  const token = decryptSensitive(entity.ksef_token_encrypted) ?? envToken;
-  if (!token) throw new Error("Brak tokenu KSeF.");
-  const nip = entity.ksef_nip ?? "";
-  if (!nip) throw new Error("Brak NIP podmiotu.");
-  const base = ksefBaseUrl(environment);
-  if (!base) throw new Error("Nieznane środowisko KSeF.");
-  const mfPublicKey = process.env.KSEF_MF_PUBLIC_KEY;
-  if (!mfPublicKey) throw new Error("Brak sekretu KSEF_MF_PUBLIC_KEY — nie można otworzyć sesji KSeF.");
-
-  const chRes = await fetch(`${base}/api/online/Session/AuthorisationChallenge`, {
-    method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ contextIdentifier: { type: "onip", identifier: nip } }),
-  });
-  if (!chRes.ok) throw new Error(`AuthorisationChallenge ${chRes.status}`);
-  const ch = (await chRes.json()) as { challenge: string; timestamp: string };
-  const encrypted = publicEncrypt(
-    { key: mfPublicKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
-    Buffer.from(`${token}|${Date.parse(ch.timestamp)}`, "utf8"),
-  ).toString("base64");
-  const initXml = `<?xml version="1.0" encoding="UTF-8"?><ns3:InitSessionTokenRequest xmlns:ns3="http://ksef.mf.gov.pl/schema/gtw/svc/online/auth/request/2021/10/01/0001"><ns3:Context><Challenge>${ch.challenge}</Challenge><Identifier xsi:type="ns2:SubjectIdentifierByCompanyType" xmlns:ns2="http://ksef.mf.gov.pl/schema/gtw/svc/types/2021/10/01/0001" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><Identifier>${nip}</Identifier></Identifier><DocumentType><Service>KSeF</Service><FormCode><SystemCode>FA (2)</SystemCode><SchemaVersion>1-0E</SchemaVersion><TargetNamespace>http://crd.gov.pl/wzor/2023/06/29/12648/</TargetNamespace><Value>FA</Value></FormCode></DocumentType><Token>${encrypted}</Token></ns3:Context></ns3:InitSessionTokenRequest>`;
-  const initRes = await fetch(`${base}/api/online/Session/InitToken`, { method: "POST", headers: { "Content-Type": "application/octet-stream", Accept: "application/json" }, body: initXml });
-  if (!initRes.ok) throw new Error(`InitToken ${initRes.status}`);
-  const session = (await initRes.json()) as { sessionToken?: { token: string } };
-  if (!session.sessionToken?.token) throw new Error("Brak sessionToken.");
-  return { baseUrl: base, environment, sessionToken: session.sessionToken.token, nip };
-}
-
-async function closeSession(s: KsefSession) {
-  try { await fetch(`${s.baseUrl}/api/online/Session/Terminate`, { method: "GET", headers: { SessionToken: s.sessionToken, Accept: "application/json" } }); } catch {}
-}
-
-async function queryRefs(s: KsefSession, subjectType: "subject1" | "subject2", monthsBack: number): Promise<string[]> {
-  const from = new Date(); from.setMonth(from.getMonth() - monthsBack);
-  const refs: string[] = []; let pageOffset = 0; const pageSize = 100;
-  for (let page = 0; page < 50; page++) {
-    const res = await fetch(`${s.baseUrl}/api/online/Query/Invoice/Sync?PageSize=${pageSize}&PageOffset=${pageOffset}`, {
-      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", SessionToken: s.sessionToken },
-      body: JSON.stringify({ queryCriteria: { subjectType, type: "range", acquisitionTimestampThresholdFrom: from.toISOString(), acquisitionTimestampThresholdTo: new Date().toISOString() } }),
-    });
-    if (!res.ok) throw new Error(`Query ${res.status}`);
-    const json = (await res.json()) as { invoiceHeaderList?: Array<{ ksefReferenceNumber?: string }> };
-    const list = json.invoiceHeaderList ?? [];
-    for (const it of list) if (it.ksefReferenceNumber) refs.push(it.ksefReferenceNumber);
-    if (list.length < pageSize) break;
-    pageOffset += pageSize;
+function pickStr(o: InvoiceMeta, ...keys: string[]): string | null {
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === "string" && v.trim()) return v;
+    if (typeof v === "number") return String(v);
+    if (v && typeof v === "object") {
+      const inner = (v as Record<string, unknown>).value ?? (v as Record<string, unknown>).identifier ?? (v as Record<string, unknown>).name;
+      if (typeof inner === "string" && inner) return inner;
+    }
   }
-  return refs;
+  return null;
+}
+function pickNum(o: InvoiceMeta, ...keys: string[]): number {
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && v.trim()) {
+      const n = Number(v.replace(/\s/g, "").replace(",", "."));
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  return 0;
+}
+function pickDate(o: InvoiceMeta, ...keys: string[]): string | null {
+  const s = pickStr(o, ...keys);
+  return s ? /^(\d{4})-(\d{2})-(\d{2})/.exec(s)?.[0] ?? null : null;
 }
 
-async function fetchXml(s: KsefSession, ref: string): Promise<string | null> {
-  const res = await fetch(`${s.baseUrl}/api/online/Invoice/Get/${encodeURIComponent(ref)}`, { method: "GET", headers: { SessionToken: s.sessionToken, Accept: "application/octet-stream" } });
-  return res.ok ? await res.text() : null;
+async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subject2", monthsBack: number): Promise<InvoiceMeta[]> {
+  const from = new Date(); from.setMonth(from.getMonth() - monthsBack);
+  const dateFrom = from.toISOString();
+  const dateTo = new Date().toISOString();
+  const out: InvoiceMeta[] = [];
+  const pageSize = 100;
+  for (let pageOffset = 0, page = 0; page < 100; page += 1, pageOffset += pageSize) {
+    const res = await fetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${s.accessToken}`,
+      },
+      body: JSON.stringify({
+        subjectType,
+        dateRange: { dateType: "issue", from: dateFrom, to: dateTo },
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`POST /invoices/query/metadata ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    const j = (await res.json()) as { invoices?: InvoiceMeta[]; items?: InvoiceMeta[]; hasMore?: boolean };
+    const list = j.invoices ?? j.items ?? [];
+    for (const it of list) out.push(it);
+    if (list.length < pageSize) break;
+  }
+  return out;
 }
-
-function pickTag(xml: string, tag: string) { return new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, "i").exec(xml)?.[1]?.trim() ?? null; }
-const xmlNum = (s: string | null) => (s ? Number(String(s).replace(",", ".")) || 0 : 0);
 
 async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promise<{ ok: boolean; count: number; message: string | null }> {
   let s: KsefSession | null = null;
   try {
-    s = await openSession(entity as KsefEntity);
-    const refs = await queryRefs(s, direction === "sales" ? "subject1" : "subject2", 24);
+    s = await openKsefSession(entity as KsefEntity);
+    const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
     let saved = 0;
-    for (const ref of refs) {
-      const xml = await fetchXml(s, ref);
-      if (!xml) continue;
+    for (const it of list) {
+      const ref = pickStr(it, "ksefReferenceNumber", "referenceNumber");
+      if (!ref) continue;
+      const isSales = direction === "sales";
+      const cpNameKey = isSales ? ["buyerName", "buyer"] : ["sellerName", "seller"];
+      const cpNipKey = isSales ? ["buyerNip", "buyerIdentifier"] : ["sellerNip", "sellerIdentifier"];
       const row = {
-        entity_id: entity.id, direction, source: "ksef" as const, external_id: ref,
-        invoice_number: pickTag(xml, "P_2"), issue_date: pickTag(xml, "P_1"), sale_date: pickTag(xml, "P_6"),
-        counterparty_name: pickTag(xml, "Nazwa") ?? pickTag(xml, "PelnaNazwa"),
-        counterparty_nip: pickTag(xml, "NIP"), currency: "PLN",
-        net_amount: xmlNum(pickTag(xml, "P_13_1") ?? pickTag(xml, "P_13")),
-        vat_amount: xmlNum(pickTag(xml, "P_14_1") ?? pickTag(xml, "P_14")),
-        gross_amount: xmlNum(pickTag(xml, "P_15")),
-        xml_content: xml, ksef_reference_number: ref, ksef_status: "accepted",
+        entity_id: entity.id,
+        direction,
+        source: "ksef" as const,
+        external_id: ref,
+        invoice_number: pickStr(it, "invoiceNumber", "number"),
+        issue_date: pickDate(it, "issueDate", "issuingDate", "invoicingDate"),
+        sale_date: pickDate(it, "invoicingDate", "issueDate", "issuingDate"),
+        counterparty_name: pickStr(it, ...cpNameKey),
+        counterparty_nip: pickStr(it, ...cpNipKey),
+        currency: pickStr(it, "currency", "currencyCode") ?? "PLN",
+        net_amount: pickNum(it, "netAmount", "net"),
+        vat_amount: pickNum(it, "vatAmount", "vat"),
+        gross_amount: pickNum(it, "grossAmount", "gross"),
+        ksef_reference_number: ref,
+        ksef_status: "accepted",
+        raw_payload: it as Record<string, unknown>,
       };
       const { error } = await accountingDb.from("accounting_documents").upsert(row, { onConflict: "entity_id,source,direction,external_id" });
       if (!error) saved += 1;
@@ -190,7 +198,7 @@ async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promis
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
   } finally {
-    if (s) await closeSession(s);
+    if (s) await closeKsefSession(s);
   }
 }
 
