@@ -41,13 +41,14 @@ export type KsefResult = {
 };
 
 export function ksefBaseUrl(env: KsefEnvironment): string | null {
+  // KSeF 2.0 (API v2). API 1.0 zostało wyłączone.
   switch (env) {
     case "test":
-      return "https://ksef-test.mf.gov.pl";
+      return "https://api-test.ksef.mf.gov.pl";
     case "demo":
-      return "https://ksef-demo.mf.gov.pl";
+      return "https://api-demo.ksef.mf.gov.pl";
     case "prod":
-      return "https://ksef.mf.gov.pl";
+      return "https://api.ksef.mf.gov.pl";
     default:
       return null;
   }
