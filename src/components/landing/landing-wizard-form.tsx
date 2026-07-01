@@ -30,7 +30,7 @@ import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-pane
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
-import { lovable } from "@/integrations/lovable";
+
 import type { SecurityType } from "@/lib/loan-math";
 
 const FANCY_INPUT_CLASS =
