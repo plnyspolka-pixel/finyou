@@ -861,10 +861,10 @@ export function VerificationTilesSection({ clientRow, loanId }: { clientRow: any
               </span>
               <div className="leading-tight">
                 <div className="text-base font-black uppercase tracking-[0.16em] text-white sm:text-lg">
-                  Obniż koszt pożyczki — każda weryfikacja −0,5% / rok
+                  Zwiększ szanse na niższe koszty pożyczki
                 </div>
                 <div className="mt-1 text-xs text-white/75 sm:text-sm">
-                  Krok po kroku. Im więcej zielonych odznak, tym niższe oprocentowanie w kalkulatorze.
+                  Każda weryfikacja pozwala Ci ubiegać się o niższe koszty w naszym kalkulatorze. Ostateczne warunki ustala inwestor.
                 </div>
               </div>
             </div>
