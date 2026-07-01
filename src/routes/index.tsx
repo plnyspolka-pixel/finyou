@@ -53,11 +53,13 @@ function Landing() {
   const panelHref = user ? defaultPathForRoles(roles) : null;
   const navigate = useNavigate();
 
+  const isAdmin = roles.includes("administrator") || roles.includes("operator") || roles.includes("ksiegowosc");
   useEffect(() => {
-    if (!loading && user && panelHref) {
+    if (!loading && user && panelHref && !isAdmin) {
       navigate({ to: panelHref, replace: true });
     }
-  }, [loading, user, panelHref, navigate]);
+  }, [loading, user, panelHref, navigate, isAdmin]);
+
 
   return (
     <div className="min-h-screen bg-background">
