@@ -502,7 +502,7 @@ export function SinglePageApplicationForm({
       {step === 1 && (
         <FancyShell>
           <div className="space-y-5">
-            {!isBroker && <SocialLoginButtons />}
+            
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="f-fn" className="text-white">Imię *</Label>
                 <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={FANCY_INPUT_CLASS} /></div>
