@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Phone } from "lucide-react";
+import { Phone, Menu, X } from "lucide-react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
 import { RecentApplicationsList } from "@/components/landing/recent-applications-list";
-import { HeroVideo } from "@/components/landing/hero-video";
+
 
 const PHONE_DISPLAY = "+48 732 059 898";
 const PHONE_HREF = "+48732059898";
