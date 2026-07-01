@@ -265,13 +265,8 @@ export function LandingWizardForm() {
         { value: amount, currency: "PLN", content_category: secType, loan_period_months: months },
         { email: email.trim(), phone: phone.trim(), firstName: firstName.trim(), lastName: lastName.trim() },
       );
-      toast.success("Wniosek wysłany! Logujemy Cię do panelu…");
-      if (res.token_hash) {
-        try { await supabase.auth.signOut(); } catch { /* noop */ }
-        const { error: otpErr } = await supabase.auth.verifyOtp({ token_hash: res.token_hash, type: "magiclink" });
-        if (otpErr) toast.message("Sprawdź e-mail z hasłem i danymi logowania.");
-      }
-      void navigate({ to: "/klient" });
+      toast.success("Wniosek wysłany! Sprawdź e-mail — wysłaliśmy dane do logowania.");
+      void navigate({ to: "/" });
     } catch (err) {
       console.error(err);
       toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
