@@ -1,81 +1,71 @@
-# Plan: kreator dokumentów, panel operatora, propozycje inwestora
 
-Zakres jest bardzo szeroki — robię to w **4 osobnych iteracjach**, każda kończy się czymś działającym i testowalnym. Po Twoim "ok" odpalam iterację 1.
+## Cel
+Jedna spójna księgowość w `/admin/ksiegowosc`: wszystkie faktury sprzedaży i kosztowe z Fakturowo i KSeF (dla obu podmiotów: Finance You i Fundacja im. Pieczaka), z możliwością odświeżania, filtrowania i podglądu PDF/XML.
 
----
+## Zakres
 
-## Iteracja 1 — Fundament: kreator dokumentów (DOCX + PDF)
+### 1. Baza — jedna tabela `accounting_documents`
+Wspólny rejestr dla wszystkich dokumentów (zamiast tylko `sales_invoices`):
+- `id`, `entity_id` (FK do `accounting_entities`)
+- `direction` — `sales` | `purchase` (koszt)
+- `source` — `fakturowo` | `ksef` | `manual`
+- `external_id` (id w Fakturowo / numer KSeF), `invoice_number`
+- `issue_date`, `sale_date`, `due_date`
+- `counterparty_name`, `counterparty_nip`, `counterparty_address`
+- `currency`, `net_amount`, `vat_amount`, `gross_amount`, `vat_rate`
+- `items` (jsonb), `pdf_url`, `xml_content` (text, dla KSeF UPO/FA)
+- `ksef_reference_number`, `ksef_status`
+- `raw_payload` (jsonb — surowa odpowiedź API do debugu)
+- `imported_at`, `created_at`, `updated_at`
+- UNIQUE `(entity_id, source, direction, external_id)` — deduplikacja przy re-syncu
 
-**Co dostajesz:** w panelach `/admin`, `/inwestor`, `/operator` nowa zakładka **„Kreator dokumentów"** z listą 31 wzorów z pakietu B2B. Wybierasz wzór → formularz z polami → generujesz DOCX i PDF.
+RLS: tylko `has_role('administrator')` i `has_role('ksiegowosc')`. GRANT dla `authenticated` + `service_role`.
 
-**Backend:**
-- Upload wszystkich 31 `.docx` do bucketu `documents/templates/` (Storage).
-- Migracja: seed do `document_templates` (nazwa, kategoria: `windykacja` / `umowa` / `zalacznik`, lista placeholderów wyciągniętych z `[NAWIASÓW KWADRATOWYCH]`, ścieżka do pliku w Storage).
-- Nowa tabela `generated_documents` (lead_id?, loan_application_id?, template_id, dane formularza JSONB, ścieżki do docx/pdf w Storage, created_by, created_at). RLS: właściciel + administrator + operator + inwestor (dla swoich).
-- Server fn `generateDocumentFromTemplate({ templateId, data, leadId?, loanId? })`:
-  - pobiera szablon z Storage
-  - **DOCX:** `docxtemplater` — podmiana `[PLACEHOLDER]` na wartości (custom delimiter `[`/`]`)
-  - **PDF:** konwersja przez zewnętrzne API (CloudConvert / Docs2Pdf). LibreOffice nie działa w Cloudflare Worker, więc albo dodaję konektor zewnętrzny, albo na start zwracam tylko DOCX i PDF dorabiam w iteracji 1b. **Wymaga decyzji** — patrz pytanie niżej.
-  - zapisuje oba pliki w Storage, wpis do `generated_documents`.
+Migracja przenosi istniejące `sales_invoices` do nowej tabeli (jako `direction='sales'`, `source` z pola `provider`).
 
-**UI:**
-- `/admin/dokumenty`, `/inwestor/dokumenty`, `/operator/dokumenty` — wspólny komponent `DocumentCreator`.
-- Lewa kolumna: lista wzorów pogrupowana po kategorii.
-- Prawa: formularz auto-generowany z `placeholders` (pola: data, kwota, tekst, słownie). Wspólne pola (dane wierzyciela, dłużnika, umowy) pre-fill z wybranego leada/wniosku.
-- **Prowizja za pośrednictwo:** osobne pole „Prowizja pośrednika [PLN]" + checkbox „dolicz do kosztów pożyczki" — wartość trafia do `[KWOTA]` / `[KWOTA ŁĄCZNA]` w odpowiednich szablonach (Aneks 01, Umowa pożyczki U01-04, Tabela opłat 23).
-- Historia wygenerowanych dokumentów dla danego leada.
+### 2. Server functions do sync-u
 
----
+`src/lib/accounting/sync-fakturowo.functions.ts`:
+- `syncFakturowoForEntity({ entityId })` — dla podmiotu z konfiguracją Fakturowo pobiera listę dokumentów (sprzedaż + koszty) przez `api_zadanie=6` (lista) + `api_zadanie=5` (szczegóły), upsert do `accounting_documents`.
+- Paginacja po datach (ostatnie 24 mies. na start; potem inkrementalnie od `imported_at`).
 
-## Iteracja 2 — Panel operatora: leady + komunikacja
+`src/lib/accounting/sync-ksef.functions.ts`:
+- `syncKsefForEntity({ entityId, direction })` — używa `KSEF_TOKEN_*` z env (fallback per podmiot, tak jak w `ksef/client.ts`):
+  - `POST /api/online/Query/Invoice/Sync` (Subject1 = sprzedaż, Subject2 = koszty)
+  - iteracja stron, pobranie XML + metadanych każdej FV
+  - upsert do `accounting_documents`
+- Wykorzystuje autoryzację challenge → InitToken z `src/lib/ksef/client.ts`.
 
-**Co dostajesz:** `/operator` — operator widzi WSZYSTKIE leady (read-only na razie), klika lead → pełny widok 360°.
+`syncAllAccounting()` — orkiestrator wywoływany z UI: iteruje po aktywnych podmiotach, wywołuje oba sync-e równolegle. Middleware `requireSupabaseAuth` + check `has_role`.
 
-**UI:**
-- `/operator` — dashboard (liczniki: nowe / w pracy / do oddzwonienia).
-- `/operator/leady` — lista wszystkich leadów (filtry: status, źródło, audience, data). Wyszukiwarka po telefonie/emailu/PESEL/NIP.
-- `/operator/leady/$id` — widok leada w **maks. czytelnej formie**:
-  - dane kontaktowe + przyciski **„Zadzwoń"** (`tel:` — działa z mobila) i **„SMS"**, „Email"
-  - timeline `lead_communications` (wszystkie wysłane SMS-y, maile, calle, followupy z statusem dostarczenia/otwarcia/kliknięcia)
-  - transkrypty rozmów voicebota (ElevenLabs — z `lead_communications` gdzie `kind = voice_call`)
-  - powiązane wnioski (`loan_applications`)
-  - dokumenty (wszystko z `documents` + `generated_documents`)
-- **Ocena leada dla Mety (CAPI):** w widoku leada przycisk „Oznacz jakość: lead_quality (good/bad/spam)" → server fn wysyła `lead` event do Meta CAPI z `event_source_url` + `lead_id` + wynikiem oceny. Dodaję kolumnę `quality_rating` do `leads`.
+### 3. UI
 
----
+`/admin/ksiegowosc` (index) — dashboard:
+- Kafle: przychód netto / VAT należny / koszty netto / VAT naliczony / VAT do zapłaty (za wybrany miesiąc)
+- Wykres miesięczny (sprzedaż vs koszty, 12 mies.)
+- Przycisk **„Synchronizuj teraz"** (uruchamia `syncAllAccounting`) + status ostatniej synchronizacji per podmiot
 
-## Iteracja 3 — Operator: ręczny wniosek + dedup
+`/admin/ksiegowosc/dokumenty` (nowa) — jedna tabela wszystkich dokumentów:
+- Filtry: podmiot, kierunek (sprzedaż/koszt), źródło (Fakturowo/KSeF), okres, kontrahent, status KSeF
+- Kolumny: nr, data, kontrahent, netto, VAT, brutto, źródło, status, akcje (PDF, XML, szczegóły)
+- Export CSV
 
-**Co dostajesz:** operator może z `/operator/leady/$id` (albo z listy) dodać ręcznie wniosek pożyczkowy w imieniu klienta.
+Istniejące `/admin/ksiegowosc/faktury` → alias na filtr `direction=sales`.
+Nowa `/admin/ksiegowosc/koszty` → alias na filtr `direction=purchase`.
 
-**Backend:**
-- Server fn `manualCreateApplication({ leadId?, dane })`:
-  - Krok 1: dedup po `phone` + `email` + `pesel` + `nip` → zwraca propozycje dopasowania (istniejące leady / wnioski).
-  - Krok 2: po potwierdzeniu — jeśli matchujemy istniejący lead, podpinamy; jeśli nie — tworzymy nowy `lead` + `loan_application`.
-  - Auto-przypisanie `operator_id` (kto stworzył).
-- UI: wizard 3-krokowy (dane → potwierdzenie dopasowania → szczegóły wniosku).
+### 4. Cron
+`pg_cron` co godzinę wywołuje `/api/public/hooks/sync-accounting` (chronione `apikey`), który uruchamia `syncAllAccounting` dla wszystkich aktywnych podmiotów.
 
----
+## Uwagi techniczne
+- KSeF Query API zwraca metadane; XML pobierany osobno przez `GET /api/online/Invoice/Get/{ksefRef}`.
+- Fakturowo nie ma oficjalnego endpointu „lista faktur kosztowych" — używamy `api_zadanie=6` z `dokument_rodzaj=1` (koszt). Jeśli API zwróci błąd, oznaczamy sync jako częściowy i pokazujemy komunikat w UI.
+- Deduplikacja opiera się na `(source, external_id)`, więc powtórne pobranie nie tworzy duplikatów.
+- PDF-y dla KSeF generowane on-demand z XML przez `buildFaXml` odwrotnie (link do wizualizacji KSeF MF).
 
-## Iteracja 4 — Propozycje od inwestora + integracja z kreatorem
+## Poza zakresem (na później)
+- Automatyczne dekretowanie do JPK_V7
+- Powiązania FV → płatność (istnieje już `payment_id` w `sales_invoices`, przeniesiemy)
+- Załączniki (skany) do faktur kosztowych ręcznie dodawanych
 
-**Co dostajesz:** w `/inwestor` osobna sekcja „Propozycje dla klientów" — inwestor wybiera lead/wniosek i ręcznie wystawia ofertę. Operator widzi to w panelu leada.
-
-**Backend:**
-- Rozszerzenie `investor_offers` (jeśli brakuje pól): `loan_application_id`, `commission_amount`, `total_cost_with_commission`, `manual` (bool).
-- Powiązanie kreatora dokumentów z konkretną ofertą — przy generowaniu „Umowy pożyczki" pobieramy parametry z `investor_offers` + prowizję.
-
-**UI:**
-- `/inwestor/propozycje/nowa` — formularz: wybierz lead → kwota / okres / oprocentowanie / prowizja pośrednika → wystaw.
-- W `/operator/leady/$id` sekcja „Propozycje od inwestorów" z przyciskiem „Generuj komplet dokumentów" (umowa U01-04, oświadczenie 777 U05, klauzula RODO U08, KYC U09 — jednym strzałem).
-
----
-
-## Pytanie blokujące iterację 1
-
-**PDF — jak generujemy?** Cloudflare Worker nie ma LibreOffice. Opcje:
-1. **CloudConvert API** (płatne ~$0.01/konwersja) — najbardziej niezawodne, dorzucam jako secret.
-2. **Tylko DOCX teraz**, PDF dorobimy gdy podasz preferowane API.
-3. **Browser-side** — render DOCX → PDF w przeglądarce (lib `docx-preview` + `html2pdf`) — gorsza jakość, ale 0 kosztów i bez zewnętrznych API.
-
-Napisz **1 / 2 / 3**, a jak masz preferowane API (CloudConvert / inne) — to też powiedz. Zatwierdzasz plan?
+## Pytanie
+Czy iść z tym zakresem, czy najpierw MVP: **tylko pull z Fakturowo + KSeF → jedna tabela listująca wszystko, bez dashboardu i cronu** (żeby najszybciej zobaczyć dane w apce)?

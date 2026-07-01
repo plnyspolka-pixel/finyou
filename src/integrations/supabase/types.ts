@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_documents: {
+        Row: {
+          counterparty_address: string | null
+          counterparty_name: string | null
+          counterparty_nip: string | null
+          created_at: string
+          currency: string
+          direction: string
+          due_date: string | null
+          entity_id: string
+          external_id: string | null
+          gross_amount: number
+          id: string
+          imported_at: string
+          invoice_number: string | null
+          issue_date: string | null
+          items: Json
+          ksef_reference_number: string | null
+          ksef_status: string | null
+          net_amount: number
+          pdf_url: string | null
+          raw_payload: Json | null
+          sale_date: string | null
+          source: string
+          updated_at: string
+          vat_amount: number
+          vat_rate: string | null
+          xml_content: string | null
+        }
+        Insert: {
+          counterparty_address?: string | null
+          counterparty_name?: string | null
+          counterparty_nip?: string | null
+          created_at?: string
+          currency?: string
+          direction: string
+          due_date?: string | null
+          entity_id: string
+          external_id?: string | null
+          gross_amount?: number
+          id?: string
+          imported_at?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          items?: Json
+          ksef_reference_number?: string | null
+          ksef_status?: string | null
+          net_amount?: number
+          pdf_url?: string | null
+          raw_payload?: Json | null
+          sale_date?: string | null
+          source: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: string | null
+          xml_content?: string | null
+        }
+        Update: {
+          counterparty_address?: string | null
+          counterparty_name?: string | null
+          counterparty_nip?: string | null
+          created_at?: string
+          currency?: string
+          direction?: string
+          due_date?: string | null
+          entity_id?: string
+          external_id?: string | null
+          gross_amount?: number
+          id?: string
+          imported_at?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          items?: Json
+          ksef_reference_number?: string | null
+          ksef_status?: string | null
+          net_amount?: number
+          pdf_url?: string | null
+          raw_payload?: Json | null
+          sale_date?: string | null
+          source?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: string | null
+          xml_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_documents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounting_entities: {
         Row: {
           active: boolean
@@ -97,6 +192,53 @@ export type Database = {
           vat_payer?: boolean
         }
         Relationships: []
+      }
+      accounting_sync_status: {
+        Row: {
+          created_at: string
+          direction: string
+          documents_synced: number
+          entity_id: string
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          last_success_at: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          documents_synced?: number
+          entity_id: string
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_success_at?: string | null
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          documents_synced?: number
+          entity_id?: string
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_success_at?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_sync_status_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       affiliate_audit_logs: {
         Row: {
