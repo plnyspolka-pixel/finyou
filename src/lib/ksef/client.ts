@@ -7,7 +7,7 @@
 //    WYMAGA klucza publicznego MF (KSEF_MF_PUBLIC_KEY, PEM) do zaszyfrowania tokenu
 //    autoryzacyjnego oraz weryfikacji względem aktualnej wersji API. Przed produkcją
 //    potwierdź endpointy i format żądań dla wersji FA(2)/FA(3) / KSeF 2.0.
-import { createHash, publicEncrypt, constants } from "node:crypto";
+import { createHash } from "node:crypto";
 import { decryptSensitive } from "@/lib/affiliate/crypto";
 
 export type KsefEnvironment = "disabled" | "test" | "demo" | "prod";
