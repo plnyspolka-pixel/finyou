@@ -87,7 +87,7 @@ function Landing() {
           <HeroVideo />
 
           <div className="mt-8">
-            <SinglePageApplicationForm />
+            <LandingWizardForm />
           </div>
         </div>
       </section>
