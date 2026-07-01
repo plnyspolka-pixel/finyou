@@ -328,7 +328,7 @@ export function LandingWizardForm() {
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-              style={{ width: `${(Object.values(stepDone).filter(Boolean).length / 4) * 100}%` }}
+              style={{ width: `${(Object.values(stepDone).filter(Boolean).length / 5) * 100}%` }}
             />
           </div>
         </div>
