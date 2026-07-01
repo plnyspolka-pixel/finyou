@@ -317,7 +317,7 @@ Podgląd w panelu: ${adminUrl}`;
       }
     })();
 
-    return { ok: true as const, id: loan.id, token_hash: null as string | null, email: data.email };
+    return { ok: true as const, id: loan.id, token_hash: tokenHash, email: data.email };
   });
 
 export type RecentLoanApplicationItem = {
