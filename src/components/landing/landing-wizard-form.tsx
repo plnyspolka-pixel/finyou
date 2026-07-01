@@ -68,13 +68,14 @@ async function handleSocialLogin(provider: "google" | "apple") {
 }
 
 const STEPS = [
-  { id: 1, label: "Typ + miejscowość", icon: Home },
-  { id: 2, label: "Twoje pliki", icon: Upload },
-  { id: 3, label: "Numer KW", icon: BookText },
-  { id: 4, label: "Rejestracja", icon: UserRound },
+  { id: 1, label: "Typ nieruchomości", icon: Home },
+  { id: 2, label: "Miejscowość", icon: MapPin },
+  { id: 3, label: "Twoje pliki", icon: Upload },
+  { id: 4, label: "Numer KW", icon: BookText },
+  { id: 5, label: "Rejestracja", icon: UserRound },
 ] as const;
 
-type StepId = 1 | 2 | 3 | 4;
+type StepId = 1 | 2 | 3 | 4 | 5;
 
 export function LandingWizardForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
