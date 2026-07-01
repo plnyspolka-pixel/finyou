@@ -83,6 +83,60 @@ export function FancyShell({
     );
   }
 
+  if (variant === "gold") {
+    return (
+      <div
+        className={`relative w-full overflow-hidden rounded-3xl p-[3px] shadow-[0_18px_60px_-15px_oklch(0.55_0.18_75/0.55)] ${className}`}
+      >
+        <span
+          aria-hidden
+          className="absolute left-1/2 top-1/2 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2"
+          style={{
+            background:
+              "conic-gradient(from 0deg, oklch(0.85 0.16 90), oklch(0.62 0.15 55), oklch(0.78 0.18 80), oklch(0.55 0.14 50), oklch(0.90 0.14 95), oklch(0.85 0.16 90))",
+            animation: motion ? "fy-kw-spin 7s linear infinite" : undefined,
+          }}
+        />
+        <div className={`relative overflow-hidden rounded-[20px] p-5 text-white md:p-6 ${innerClassName}`}>
+          <span
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(120% 140% at 0% 0%, oklch(0.28 0.05 265) 0%, oklch(0.18 0.04 265) 55%, oklch(0.12 0.03 265) 100%)",
+            }}
+          />
+          {motion && (
+            <>
+              <span
+                aria-hidden
+                className="absolute -left-10 -top-10 h-40 w-40 rounded-full blur-2xl"
+                style={{
+                  background: "radial-gradient(circle, oklch(0.80 0.18 85 / 0.55), transparent 70%)",
+                  animation: "fy-kw-drift-a 9s ease-in-out infinite alternate",
+                }}
+              />
+              <span
+                aria-hidden
+                className="absolute -right-12 top-2 h-44 w-44 rounded-full blur-2xl"
+                style={{
+                  background: "radial-gradient(circle, oklch(0.70 0.16 65 / 0.55), transparent 70%)",
+                  animation: "fy-kw-drift-b 11s ease-in-out infinite alternate",
+                }}
+              />
+            </>
+          )}
+          <div className="relative">{children}</div>
+        </div>
+        <style>{`
+          @keyframes fy-kw-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+          @keyframes fy-kw-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
+          @keyframes fy-kw-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] ${className}`}
