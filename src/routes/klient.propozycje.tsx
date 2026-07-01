@@ -62,13 +62,13 @@ function KlientPropozycje() {
         <div className="space-y-3">
           <div className="px-1">
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-              Obniż koszt swojej pożyczki
+              Zwiększ swoje szanse na lepsze warunki
             </div>
             <h2 className="text-lg font-black uppercase tracking-wider sm:text-xl">
-              Dodatkowe weryfikacje — każda obniża oprocentowanie o 0,5% / rok
+              Dodatkowe weryfikacje — możesz ubiegać się o niższe koszty pożyczki
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Im więcej informacji potwierdzisz, tym lepsze warunki zaproponują inwestorzy.
+              Im więcej informacji potwierdzisz, tym śmielej możesz wnioskować o niższe koszty w naszym kalkulatorze — decyzję podejmują inwestorzy.
             </p>
           </div>
           <VerificationTilesSection clientRow={clientRow} loanId={loanRow.id} />
