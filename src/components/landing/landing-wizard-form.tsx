@@ -275,7 +275,7 @@ export function LandingWizardForm() {
       {/* Stepper */}
       <FancyShell>
         <div className="space-y-4">
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {STEPS.map((s) => {
               const done = stepDone[s.id as StepId];
               const active = step === s.id;
