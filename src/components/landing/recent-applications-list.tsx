@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCircle2, MapPin, ArrowRight, ChevronRight, Home, Building2, Trees, Store, Search, X } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, Home, Building2, Trees, Store, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPLN, monthlyPayment } from "@/lib/loan-math";
