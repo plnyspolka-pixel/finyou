@@ -861,18 +861,18 @@ export function VerificationTilesSection({ clientRow, loanId }: { clientRow: any
               </span>
               <div className="leading-tight">
                 <div className="text-base font-black uppercase tracking-[0.16em] text-white sm:text-lg">
-                  Obniż koszt pożyczki — każda weryfikacja −0,5% / rok
+                  Zwiększ szanse na niższe koszty pożyczki
                 </div>
                 <div className="mt-1 text-xs text-white/75 sm:text-sm">
-                  Krok po kroku. Im więcej zielonych odznak, tym niższe oprocentowanie w kalkulatorze.
+                  Każda weryfikacja pozwala Ci ubiegać się o niższe koszty w naszym kalkulatorze. Ostateczne warunki ustala inwestor.
                 </div>
               </div>
             </div>
             <div className="text-right">
               <div className="text-4xl font-black tabular-nums text-emerald-300 drop-shadow-[0_2px_8px_rgba(16,185,129,0.45)]">
-                −{discount.toFixed(1).replace(".", ",")}%
+                {doneCount}/{totalSteps}
               </div>
-              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">rocznie · {doneCount}/{totalSteps}</div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-white/65">weryfikacji ukończonych</div>
             </div>
           </div>
 
@@ -948,7 +948,7 @@ export function VerificationTilesSection({ clientRow, loanId }: { clientRow: any
                 </Badge>
               ) : (
                 <Badge className="shrink-0 border-amber-400/40 bg-amber-500/20 font-bold text-amber-200 hover:bg-amber-500/25">
-                  −0,5%/rok
+                  Do uzupełnienia
                 </Badge>
               )}
             </div>
