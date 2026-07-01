@@ -33,6 +33,8 @@ import {
 } from "@/lib/document-generator.functions";
 import { extractOrderedFields } from "@/lib/document-fields";
 import { buildWindTemplateValues } from "@/lib/windykacja-docfill";
+import { SmartScanField } from "@/components/inwestor/wind-smart-scan";
+import type { WindOcrResult } from "@/lib/windykacja-ocr.functions";
 import {
   PATH_LABELS,
   PATH_BADGE,
@@ -94,7 +96,6 @@ import {
   GitBranch,
   Loader2,
   Send,
-  Upload,
   Lightbulb,
   Gavel,
   Building2,
@@ -109,6 +110,7 @@ import {
   Scale,
   CheckCircle2,
   Settings2,
+  ScanLine,
 } from "lucide-react";
 
 export const Route = createFileRoute("/inwestor/windykacja/$caseId")({
@@ -128,6 +130,7 @@ type ActionKind =
   | "wplata"
   | "notatka"
   | "etap"
+  | "skan"
   | null;
 
 const EVENT_ICON: Record<string, typeof FileText> = {
@@ -391,6 +394,7 @@ function WindykacjaCaseCard() {
         onNext={nextStage ? () => goToStage(nextStage.key) : undefined}
         onSetTermination={onSetTermination}
         onWplata={() => setAction("wplata")}
+        onScan={() => setAction("skan")}
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -658,6 +662,11 @@ function WindykacjaCaseCard() {
                   label="Dodaj notatkę"
                   onClick={() => setAction("notatka")}
                 />
+                <ActBtn
+                  icon={ScanLine}
+                  label="Zrób zdjęcie dokumentu"
+                  onClick={() => setAction("skan")}
+                />
               </CardContent>
             </Card>
           )}
@@ -869,6 +878,7 @@ function WizardCard({
   onNext,
   onSetTermination,
   onWplata,
+  onScan,
 }: {
   guide: StepGuide;
   stageIdx: number;
@@ -887,6 +897,7 @@ function WizardCard({
   onNext?: () => void;
   onSetTermination: (terminated: boolean, date?: string) => void;
   onWplata: () => void;
+  onScan: () => void;
 }) {
   const [askDate, setAskDate] = useState(false);
   const [date, setDate] = useState(todayISO());
@@ -1040,9 +1051,19 @@ function WizardCard({
               </div>
             </div>
 
-            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onWplata}>
-              <Wallet className="h-4 w-4 mr-1" /> Klient zapłacił? Odnotuj wpłatę
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={onScan}>
+                <ScanLine className="h-4 w-4 mr-1" /> Zrób zdjęcie dokumentu
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={onWplata}
+              >
+                <Wallet className="h-4 w-4 mr-1" /> Klient zapłacił? Odnotuj wpłatę
+              </Button>
+            </div>
           </>
         )}
       </CardContent>
@@ -1140,6 +1161,75 @@ function ActionDialog({
           toast.error("Wysyłka nie powiodła się — zdarzenie zapisane.");
         else toast.success("Zapisano zdarzenie");
         onDone(ev);
+      } else if (kind === "skan") {
+        // Zdjęcie dokumentu → automatyczne rozpoznanie i zapis właściwego zdarzenia.
+        if (!file) {
+          toast.error("Najpierw zrób zdjęcie lub wgraj dokument.");
+          setBusy(false);
+          return;
+        }
+        const scan = await uploadScan();
+        const detected = v.detectedType as WindOcrResult["documentType"] | undefined;
+        if (detected === "wplata" && Number(v.kwota) > 0) {
+          const res = await fns.doWplata({
+            data: {
+              caseId,
+              loanId: loan.id,
+              kwota: Number(v.kwota) || 0,
+              data: v.data || todayISO(),
+              sposob: "przelew (odczyt ze zdjęcia)",
+            },
+          });
+          toast.success("Odnotowano wpłatę z potwierdzenia");
+          onDone(res.event);
+        } else if (
+          detected === "pismo_doreczone" ||
+          detected === "pismo_awizo" ||
+          detected === "pismo_zwrot"
+        ) {
+          const statusMap: Record<
+            string,
+            {
+              typ: "pismo_doreczone" | "pismo_awizo" | "pismo_zwrot";
+              status: "doreczone" | "awizowane" | "termin_uplynal" | "zwrot";
+            }
+          > = {
+            doreczone: { typ: "pismo_doreczone", status: "doreczone" },
+            awizowane: { typ: "pismo_awizo", status: "awizowane" },
+            termin_uplynal: { typ: "pismo_zwrot", status: "termin_uplynal" },
+            zwrot: { typ: "pismo_zwrot", status: "zwrot" },
+          };
+          const m = statusMap[v.status_doreczenia] ?? {
+            typ: detected,
+            status: detected === "pismo_awizo" ? "awizowane" : "doreczone",
+          };
+          const ev = await fns.doDelivery({
+            data: {
+              caseId,
+              typ: m.typ,
+              status_doreczenia: m.status,
+              data: v.data || todayISO(),
+              zalacznik_url: scan,
+              note: v.tytul || null,
+            },
+          });
+          toast.success("Zapisano doręczenie ze zdjęcia");
+          onDone(ev);
+        } else {
+          // pismo_nadane / wezwanie / umowa / inne → pismo w aktach.
+          const ev = await fns.doPismo({
+            data: {
+              caseId,
+              tytul: v.tytul || "Dokument (zdjęcie)",
+              data_nadania: v.data || todayISO(),
+              numer_nadania: v.numer_nadania || null,
+              zalacznik_url: scan,
+              tresc: v.podsumowanie || null,
+            },
+          });
+          toast.success("Dodano dokument do akt");
+          onDone(ev);
+        }
       } else if (kind === "pismo") {
         const scan = await uploadScan();
         const ev = await fns.doPismo({
@@ -1296,8 +1386,46 @@ function ActionDialog({
             </Fld>
           )}
 
+          {kind === "skan" && (
+            <>
+              <SmartScanField
+                required
+                hint="Sfotografuj dowolne pismo (dowód nadania, zwrotkę, awizo, zwrot, potwierdzenie wpłaty). System sam rozpozna typ i uzupełni dane — Ty tylko zapisujesz."
+                onFile={setFile}
+                onExtract={(r) => applyOcrToSkan(r, set)}
+              />
+              {v.detectedType && (
+                <div className="rounded-md border p-3 text-sm space-y-1">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Zapiszemy jako
+                  </div>
+                  <div className="font-medium">{OCR_TYPE_LABEL[v.detectedType] ?? "Dokument"}</div>
+                  {v.data && <div className="text-xs text-muted-foreground">Data: {v.data}</div>}
+                  {v.numer_nadania && (
+                    <div className="text-xs text-muted-foreground">
+                      Nr nadania: {v.numer_nadania}
+                    </div>
+                  )}
+                  {v.kwota && v.detectedType === "wplata" && (
+                    <div className="text-xs text-muted-foreground">Kwota: {v.kwota} zł</div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           {kind === "pismo" && (
             <>
+              <SmartScanField
+                required
+                hint="Zrób zdjęcie dowodu nadania — odczytamy numer nadania i datę."
+                onFile={setFile}
+                onExtract={(r) => {
+                  if (r.tytul) set("tytul", r.tytul);
+                  if (r.dataISO) set("data_nadania", r.dataISO);
+                  if (r.numer_nadania) set("numer_nadania", r.numer_nadania);
+                }}
+              />
               <Fld label="Tytuł pisma">
                 <Input
                   value={v.tytul ?? ""}
@@ -1320,12 +1448,26 @@ function ActionDialog({
                   />
                 </Fld>
               </div>
-              <ScanField file={file} setFile={setFile} required />
             </>
           )}
 
           {kind === "doreczenie" && (
             <>
+              <SmartScanField
+                hint="Zrób zdjęcie zwrotki / awizo / zwrotu — rozpoznamy rodzaj i datę doręczenia."
+                onFile={setFile}
+                onExtract={(r) => {
+                  const map: Record<string, string> = {
+                    doreczone: "doreczone",
+                    awizowane: "awizo",
+                    termin_uplynal: "termin",
+                    zwrot: "zwrot",
+                  };
+                  if (r.status_doreczenia && map[r.status_doreczenia])
+                    set("rodzaj", map[r.status_doreczenia]);
+                  if (r.dataISO) set("data", r.dataISO);
+                }}
+              />
               <Fld label="Rodzaj zdarzenia">
                 <Select value={v.rodzaj} onValueChange={(val) => set("rodzaj", val)}>
                   <SelectTrigger>
@@ -1348,7 +1490,6 @@ function ActionDialog({
                   onChange={(e) => set("data", e.target.value)}
                 />
               </Fld>
-              <ScanField file={file} setFile={setFile} />
             </>
           )}
 
@@ -1493,32 +1634,27 @@ function ActionDialog({
   );
 }
 
-function ScanField({
-  file,
-  setFile,
-  required,
-}: {
-  file: File | null;
-  setFile: (f: File | null) => void;
-  required?: boolean;
-}) {
-  return (
-    <Fld label={`Skan ${required ? "(dowód — zalecany)" : "(opcjonalnie)"}`}>
-      <label className="inline-flex">
-        <input
-          type="file"
-          className="hidden"
-          accept=".pdf,.jpg,.jpeg,.png"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
-        <Button asChild variant="secondary" size="sm">
-          <span>
-            <Upload className="h-4 w-4 mr-1" /> {file ? file.name : "Wybierz plik"}
-          </span>
-        </Button>
-      </label>
-    </Fld>
-  );
+// Etykiety typów rozpoznanych ze zdjęcia (do potwierdzenia w dialogu „skan").
+const OCR_TYPE_LABEL: Record<string, string> = {
+  pismo_nadane: "Pismo nadane (dowód nadania)",
+  pismo_doreczone: "Doręczenie — zwrotka",
+  pismo_awizo: "Doręczenie — awizo",
+  pismo_zwrot: "Doręczenie — zwrot / nieodebrane",
+  wplata: "Wpłata (z potwierdzenia)",
+  wezwanie: "Wezwanie do zapłaty",
+  umowa: "Umowa pożyczki",
+  inne: "Dokument do akt",
+};
+
+/** Przenosi dane rozpoznane ze zdjęcia do stanu formularza „skan". */
+function applyOcrToSkan(r: WindOcrResult, set: (k: string, v: string) => void) {
+  set("detectedType", r.documentType);
+  if (r.tytul) set("tytul", r.tytul);
+  if (r.dataISO) set("data", r.dataISO);
+  if (r.numer_nadania) set("numer_nadania", r.numer_nadania);
+  if (r.status_doreczenia) set("status_doreczenia", r.status_doreczenia);
+  if (r.kwota != null) set("kwota", String(r.kwota));
+  if (r.podsumowanie) set("podsumowanie", r.podsumowanie);
 }
 
 const TITLES: Record<Exclude<ActionKind, null>, string> = {
@@ -1531,6 +1667,7 @@ const TITLES: Record<Exclude<ActionKind, null>, string> = {
   wplata: "Dodaj wpłatę",
   notatka: "Dodaj notatkę",
   etap: "Zmień etap / ścieżkę",
+  skan: "Zrób zdjęcie dokumentu",
 };
 
 function initialValues(
