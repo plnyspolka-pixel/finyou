@@ -1,27 +1,50 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Suspense, lazy } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
-import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FilePlus2 } from "lucide-react";
+
+// Lazy — formularz jest ciężki (819 linii), więc ładujemy go dopiero po wejściu na stronę.
+const SinglePageApplicationForm = lazy(() =>
+  import("@/components/landing/single-page-application-form").then((m) => ({
+    default: m.SinglePageApplicationForm,
+  })),
+);
 
 export const Route = createFileRoute("/posrednik/wniosek")({
   component: BrokerNewApplication,
 });
 
+function FormSkeleton() {
+  return (
+    <div className="space-y-3 max-w-3xl">
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-32 w-full rounded-lg" />
+    </div>
+  );
+}
+
 function BrokerNewApplication() {
   const { user, loading } = useAuth();
 
   return (
-    <div className="space-y-6">
-      <FancyPageHeader
-        eyebrow="Nowy wniosek"
-        title="Wprowadź wniosek klienta"
-        subtitle="Wypełnij dane klienta i parametry oferty — wniosek zostanie przypisany do Ciebie jako pośrednika."
-      />
+    <div className="space-y-4 max-w-3xl">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <FilePlus2 className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold leading-tight">Nowy wniosek klienta</h1>
+          <p className="text-xs text-muted-foreground">Wniosek zostanie przypisany do Ciebie.</p>
+        </div>
+      </div>
+
       {loading || !user ? (
-        <Skeleton className="h-96 w-full max-w-5xl rounded-2xl" />
+        <FormSkeleton />
       ) : (
-        <div className="max-w-5xl">
+        <Suspense fallback={<FormSkeleton />}>
           <SinglePageApplicationForm
             brokerMode={{
               assignedOperatorId: user.id,
@@ -29,7 +52,7 @@ function BrokerNewApplication() {
               sourceLabel: "posrednik_panel",
             }}
           />
-        </div>
+        </Suspense>
       )}
     </div>
   );

@@ -18,10 +18,27 @@ export const listLeads = createServerFn({ method: "GET" })
       search: z.string().optional().default(""),
       source: z.string().optional().default(""),
       status: z.string().optional().default(""),
+      assignedToMe: z.boolean().optional().default(false),
     }).parse(i ?? {})
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+
+    // "Moje leady" = leady, do których ja (jako pośrednik) kliknąłem ikonkę telefonu.
+    let assignedLeadIds: string[] | null = null;
+    if (data.assignedToMe) {
+      const { data: myCalls, error: callsErr } = await context.supabase
+        .from("lead_communications")
+        .select("lead_id")
+        .eq("created_by", context.userId)
+        .eq("channel", "call")
+        .eq("direction", "outbound")
+        .not("lead_id", "is", null);
+      if (callsErr) throw new Error(callsErr.message);
+      assignedLeadIds = Array.from(new Set((myCalls ?? []).map((r: any) => r.lead_id).filter(Boolean)));
+      if (assignedLeadIds.length === 0) return [];
+    }
+
     let q = context.supabase
       .from("leads")
       .select(`
@@ -34,6 +51,7 @@ export const listLeads = createServerFn({ method: "GET" })
       `)
       .order("created_at", { ascending: false })
       .limit(500);
+    if (assignedLeadIds) q = q.in("id", assignedLeadIds);
     if (data.type !== "all") q = q.eq("type", data.type);
     if (data.source) q = q.eq("source", data.source);
     if (data.status) q = q.eq("status", data.status);
@@ -44,6 +62,7 @@ export const listLeads = createServerFn({ method: "GET" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const list = (rows ?? []) as any[];
+
 
     const ids = list.map((l) => l.id);
     const phones = Array.from(new Set(list.map((l) => l.phone_normalized).filter(Boolean))) as string[];
