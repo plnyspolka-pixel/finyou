@@ -111,8 +111,20 @@ export const Route = createFileRoute("/blog/$slug")({
 
 function ArticlePage() {
   const { article } = Route.useLoaderData();
-  const cta = "https://financeyou.pl";
   const shareUrl = `https://financeyou.pl/blog/${article.slug}`;
+  const isInvestor = article.audience === "investor";
+  const ctaHref = isInvestor ? "/inwestor" : "/klient";
+  const ctaHeading = isInvestor
+    ? "Zainwestuj w pożyczki pod zastaw nieruchomości"
+    : "Potrzebujesz pożyczki pod zastaw?";
+  const ctaSub = isInvestor
+    ? "Zabezpieczenie hipoteczne, prognozowana stopa zwrotu, pełna transparentność ofert."
+    : "Sprawdź warunki w 2 minuty — bez BIK, decyzja w 24h.";
+  const ctaLabel = article.cta_label || (isInvestor ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę");
+  const ctaMicro = isInvestor
+    ? "Dostęp do panelu inwestora • realne oferty • wypłata w 24h"
+    : "Bez BIK • decyzja w 24h • wypłata tego samego dnia";
+
   return (
     <div className="min-h-screen bg-background">
       <BrandHeader />
@@ -132,10 +144,33 @@ function ArticlePage() {
         <article className="prose prose-neutral dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-a:text-primary">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content_md}</ReactMarkdown>
         </article>
-        <div className="mt-12 rounded-xl border bg-card p-6 text-center space-y-3">
-          <h3 className="text-xl font-semibold">Potrzebujesz pożyczki pod zastaw?</h3>
-          <p className="text-sm text-muted-foreground">Sprawdź warunki w 2 minuty — bez BIK, decyzja w 24h.</p>
-          <Button asChild size="lg"><a href={cta} target="_blank" rel="noopener">{article.cta_label || "Złóż wniosek"}</a></Button>
+        <div
+          className="relative mt-14 overflow-hidden rounded-2xl border border-white/10 p-8 md:p-10 text-center text-white shadow-[0_30px_80px_-30px_rgba(9,14,40,0.65)]"
+          style={{
+            background:
+              "radial-gradient(120% 140% at 0% 0%, rgba(56,120,255,0.35) 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, rgba(201,168,76,0.28) 0%, transparent 60%), linear-gradient(135deg, #0b1330 0%, #101a4a 100%)",
+          }}
+        >
+          <div className="pointer-events-none absolute inset-0 opacity-40" style={{
+            background: "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
+          }} />
+          <div className="relative space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/80">
+              {isInvestor ? "Dla inwestora" : "Dla pożyczkobiorcy"}
+            </div>
+            <h3 className="text-2xl md:text-3xl font-bold leading-tight">{ctaHeading}</h3>
+            <p className="text-sm md:text-base text-white/75 max-w-xl mx-auto">{ctaSub}</p>
+            <div className="pt-2">
+              <Link
+                to={ctaHref}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#c9a84c] to-[#f0d78c] px-8 py-3.5 text-sm font-semibold text-[#0b1330] shadow-lg shadow-black/20 transition-transform hover:-translate-y-0.5 hover:shadow-xl"
+              >
+                {ctaLabel}
+                <span aria-hidden>→</span>
+              </Link>
+            </div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-white/55">{ctaMicro}</div>
+          </div>
         </div>
         <div className="mt-8 flex justify-center">
           <ShareBar url={shareUrl} title={article.title} />
