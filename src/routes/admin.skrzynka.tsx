@@ -14,6 +14,7 @@ import { pl } from "date-fns/locale";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
+import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 
 export const Route = createFileRoute("/admin/skrzynka")({
   component: SkrzynkaPage,
@@ -248,29 +249,7 @@ function SkrzynkaPage() {
               </div>
 
               {Array.isArray(selected.attachments) && selected.attachments.length > 0 && (
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Załączniki ({selected.attachments.length})
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(selected.attachments as any[]).map((a, i) => {
-                      const url = a?.url ?? a?.public_url ?? a?.signed_url ?? a?.path;
-                      const name = a?.name ?? a?.filename ?? `załącznik-${i + 1}`;
-                      if (!url) return (
-                        <Badge key={i} variant="secondary">
-                          <Paperclip className="h-3 w-3 mr-1" />{name}
-                        </Badge>
-                      );
-                      return (
-                        <Button key={i} asChild variant="outline" size="sm">
-                          <a href={url} target="_blank" rel="noreferrer">
-                            <Paperclip className="h-3 w-3 mr-2" />{name}
-                          </a>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <AttachmentPreview attachments={selected.attachments as any[]} />
               )}
 
               {(() => {
