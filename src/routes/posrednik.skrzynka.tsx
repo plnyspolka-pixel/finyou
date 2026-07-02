@@ -339,6 +339,13 @@ function SkrzynkaPosrednika() {
           )}
         </Card>
       </div>
+
+      <ComposeEmailDialog
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        initial={composeInitial}
+        onSent={() => { setTab("outbound"); refetch(); }}
+      />
     </div>
   );
 }
