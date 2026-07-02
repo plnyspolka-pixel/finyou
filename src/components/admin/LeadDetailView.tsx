@@ -175,7 +175,8 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
 
         <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>
 
-        <TabsContent value="dane">
+        <TabsContent value="dane" className="space-y-3">
+          <ExtractedFactsCard lead={lead} />
           <Card className="p-4 grid gap-3 md:grid-cols-2">
             <Field label="Imię" value={lead.first_name} onSave={(v) => mUpdate.mutate({ first_name: v })} />
             <Field label="Nazwisko" value={lead.last_name} onSave={(v) => mUpdate.mutate({ last_name: v })} />
