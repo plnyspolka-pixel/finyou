@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
 import { sendResendEmail } from "@/lib/resend-send.server";
+import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -203,6 +204,15 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
         try {
           const origin = getOrigin(request);
           const body = await request.json();
+
+          // Facebook dostarcza WSZYSTKIE zdarzenia (leadgen, wiadomości Messenger/IG,
+          // komentarze) na jeden skonfigurowany URL webhooka. Obsłuż tu również
+          // wiadomości i komentarze, aby bot działał niezależnie od tego, który
+          // z endpointów Meta jest ustawiony w konfiguracji aplikacji Facebook.
+          await handleMetaMessagingBody(body).catch((e) =>
+            console.error("[meta-leads-webhook] messaging dispatch", e),
+          );
+
           for (const entry of body.entry ?? []) {
             for (const change of entry.changes ?? []) {
               if (change.field !== "leadgen") continue;
