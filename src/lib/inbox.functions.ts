@@ -1,5 +1,90 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+/** Wysyła maila ze skrzynki (nowy lub odpowiedź). Dostępne dla admin / operator. */
+export const sendInboxEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      to: z.string().email(),
+      subject: z.string().min(1).max(300),
+      body: z.string().min(1).max(50000),
+      replyToCommunicationId: z.string().uuid().optional().nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "administrator" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operator" }),
+    ]);
+    if (!isAdmin && !isOperator) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Pobierz kontekst wątku (jeśli odpowiedź)
+    let leadId: string | null = null;
+    let threadId: string | null = null;
+    let inReplyTo: string | null = null;
+    let references: string | null = null;
+    if (data.replyToCommunicationId) {
+      const { data: parent } = await supabaseAdmin
+        .from("lead_communications")
+        .select("id, lead_id, thread_external_id, external_id, metadata")
+        .eq("id", data.replyToCommunicationId)
+        .maybeSingle();
+      if (parent) {
+        leadId = parent.lead_id ?? null;
+        threadId = parent.thread_external_id ?? null;
+        const meta = (parent.metadata ?? {}) as Record<string, any>;
+        inReplyTo = meta.message_id_header ?? parent.external_id ?? null;
+        references = meta.references ?? inReplyTo;
+      }
+    }
+
+    const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;white-space:pre-wrap">${
+      data.body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }</div>`;
+
+    const { sendResendEmail } = await import("./resend-send.server");
+    const res = await sendResendEmail({
+      to: data.to,
+      subject: data.subject,
+      text: data.body,
+      html,
+      inReplyTo,
+      references,
+      replyTo: "kontakt@financeyou.pl",
+      showReplyHint: true,
+    });
+    if (!res.ok) throw new Error(res.error ?? "send_failed");
+
+    // Zaloguj wychodzącą wiadomość
+    try {
+      const { logLeadCommunication } = await import("./lead-comms.server");
+      await logLeadCommunication({
+        leadId,
+        email: data.to,
+        channel: "email",
+        direction: "outbound",
+        status: "sent",
+        subject: data.subject,
+        content: data.body,
+        externalId: res.id ?? null,
+        metadata: {
+          source: "inbox_manual",
+          sent_by: context.userId,
+          thread_id: threadId,
+          in_reply_to: inReplyTo,
+        },
+      });
+    } catch (e) {
+      console.error("[sendInboxEmail] log comm error", e);
+    }
+
+    return { ok: true, id: res.id };
+  });
+
 
 /** Zwraca tymczasowy podpisany URL do pliku w buckecie `documents`. */
 export const getCommAttachmentUrl = createServerFn({ method: "POST" })
