@@ -192,14 +192,14 @@ async function writeArticleFromNews(
 
   let audienceBrief: string;
   if (kind === "investor_review") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl/inwestor)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
   } else if (audience === "investor") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[poznaj ofertę dla inwestorów](https://financeyou.pl)" wpleć 1 raz.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań inwestorem Finance You](https://financeyou.pl/inwestor)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[sprawdź warunki na financeyou.pl](https://financeyou.pl)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż wniosek o pożyczkę pod zastaw](https://financeyou.pl/klient)" wpleć 1-2 razy.`;
   }
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}`;
+  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
   const briefLabel = kind === "investor_review"
     ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
@@ -217,25 +217,58 @@ ${externalList || "(brak)"}
 LINKI WEWNĘTRZNE do wplecenia w treść (2-3 z poniższych, naturalnie w kontekście):
 ${internalList || "(brak — pomiń linki wewnętrzne)"}
 
-${taskLabel}`;
+${taskLabel}
 
-  const res = await fetch(AI_URL, {
+WYMAGANY OPIS POLA content_md: ${structureHint}
+Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords" (array of strings), "content_md", "cover_prompt", "cover_alt" }.`;
+
+  const jsonSchema = {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      meta_title: { type: "string" },
+      meta_description: { type: "string" },
+      excerpt: { type: "string" },
+      primary_keyword: { type: "string" },
+      keywords: { type: "array", items: { type: "string" } },
+      content_md: { type: "string" },
+      cover_prompt: { type: "string" },
+      cover_alt: { type: "string" },
+    },
+    required: ["title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords", "content_md", "cover_prompt", "cover_alt"],
+  };
+
+  const pplxKey = process.env.PERPLEXITY_API_KEY;
+  if (!pplxKey) throw new Error("PERPLEXITY_API_KEY missing");
+  const res = await fetch(PPLX_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${pplxKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model: "sonar-pro",
+      search_recency_filter: kind === "investor_review" ? "month" : "week",
       messages: [
         { role: "system", content: sys },
         { role: "user", content: userMsg },
       ],
-      tools,
-      tool_choice: { type: "function", function: { name: "write_daily_post" } },
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "blog_post", schema: jsonSchema },
+      },
     }),
   });
-  if (!res.ok) throw new Error(`AI ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!res.ok) throw new Error(`Perplexity writer ${res.status}: ${await res.text().catch(() => "")}`);
   const json: any = await res.json();
-  const args = JSON.parse(json.choices[0].message.tool_calls[0].function.arguments);
-  return args as ArticleDraft;
+  const raw: string = json.choices?.[0]?.message?.content ?? "";
+  const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "");
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const m = cleaned.match(/\{[\s\S]*\}$/);
+    if (!m) throw new Error("Perplexity writer returned non-JSON");
+    parsed = JSON.parse(m[0]);
+  }
+  return parsed as ArticleDraft;
 }
 
 import { pickStockPhoto } from "./blog-stock-photos";
