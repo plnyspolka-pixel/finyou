@@ -11,7 +11,7 @@ function KlientProfil() {
       <div>
         <h1 className="text-2xl font-bold">Dane osobowe i kontaktowe</h1>
         <p className="text-sm text-muted-foreground">
-          Zaktualizuj swoje dane — imię, nazwisko, PESEL, e-mail, telefon i adres.
+          Zaktualizuj swoje dane — imię, nazwisko, e-mail, telefon i adres.
         </p>
       </div>
       <ClientProfileSections onlyPersonal includePersonal showPasswordCard={false} />
