@@ -41,6 +41,7 @@ import { Route as PosrednikStrukturaRouteImport } from './routes/posrednik.struk
 import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.rozliczenia'
 import { Route as PosrednikProwizjeRouteImport } from './routes/posrednik.prowizje'
 import { Route as PosrednikProgramRouteImport } from './routes/posrednik.program'
+import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-leady'
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
@@ -312,6 +313,11 @@ const PosrednikProwizjeRoute = PosrednikProwizjeRouteImport.update({
 const PosrednikProgramRoute = PosrednikProgramRouteImport.update({
   id: '/program',
   path: '/program',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikMojeLeadyRoute = PosrednikMojeLeadyRouteImport.update({
+  id: '/moje-leady',
+  path: '/moje-leady',
   getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikMarketingRoute = PosrednikMarketingRouteImport.update({
@@ -983,6 +989,7 @@ export interface FileRoutesByFullPath {
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
@@ -1124,6 +1131,7 @@ export interface FileRoutesByTo {
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
@@ -1271,6 +1279,7 @@ export interface FileRoutesById {
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
+  '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
@@ -1419,6 +1428,7 @@ export interface FileRouteTypes {
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
+    | '/posrednik/moje-leady'
     | '/posrednik/program'
     | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
@@ -1560,6 +1570,7 @@ export interface FileRouteTypes {
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
+    | '/posrednik/moje-leady'
     | '/posrednik/program'
     | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
@@ -1706,6 +1717,7 @@ export interface FileRouteTypes {
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
+    | '/posrednik/moje-leady'
     | '/posrednik/program'
     | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
@@ -2072,6 +2084,13 @@ declare module '@tanstack/react-router' {
       path: '/program'
       fullPath: '/posrednik/program'
       preLoaderRoute: typeof PosrednikProgramRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/moje-leady': {
+      id: '/posrednik/moje-leady'
+      path: '/moje-leady'
+      fullPath: '/posrednik/moje-leady'
+      preLoaderRoute: typeof PosrednikMojeLeadyRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/marketing': {
@@ -3094,6 +3113,7 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
+  PosrednikMojeLeadyRoute: typeof PosrednikMojeLeadyRoute
   PosrednikProgramRoute: typeof PosrednikProgramRoute
   PosrednikProwizjeRoute: typeof PosrednikProwizjeRoute
   PosrednikRozliczeniaRoute: typeof PosrednikRozliczeniaRoute
@@ -3106,6 +3126,7 @@ interface PosrednikRouteChildren {
 const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
   PosrednikMarketingRoute: PosrednikMarketingRoute,
+  PosrednikMojeLeadyRoute: PosrednikMojeLeadyRoute,
   PosrednikProgramRoute: PosrednikProgramRoute,
   PosrednikProwizjeRoute: PosrednikProwizjeRoute,
   PosrednikRozliczeniaRoute: PosrednikRozliczeniaRoute,
