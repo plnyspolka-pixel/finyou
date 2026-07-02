@@ -259,7 +259,7 @@ export function InwestorProfil() {
       investor_type: investorType,
       first_name: f.first_name.trim() || null,
       last_name: f.last_name.trim() || null,
-      pesel: f.entity_type === "osoba_fizyczna" ? (f.pesel.replace(/\D/g, "") || null) : null,
+      pesel: null,
       company_name: f.entity_type === "firma" ? (f.company_name.trim() || null) : null,
       nip: f.entity_type === "firma" ? (f.nip.replace(/\D/g, "") || null) : null,
       krs: f.entity_type === "firma" ? (f.krs.trim() || null) : null,
