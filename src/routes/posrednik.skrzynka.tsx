@@ -218,14 +218,34 @@ function SkrzynkaPosrednika() {
                     {new Date(selected.created_at).toLocaleString("pl-PL")}
                   </div>
                 </div>
-                {selected.lead_id && (
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Otwórz lead
-                    </Link>
-                  </Button>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {tab === "inbound" && selected.email && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const subj = selected.subject ?? "";
+                        setComposeInitial({
+                          to: selected.email ?? "",
+                          subject: subj.toLowerCase().startsWith("re:") ? subj : `Re: ${subj}`,
+                          body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(selected.content ?? "").split("\n").map((l) => "> " + l).join("\n")}`,
+                          replyToCommunicationId: selected.id,
+                        });
+                        setComposeOpen(true);
+                      }}
+                    >
+                      <Reply className="h-4 w-4 mr-2" />
+                      Odpowiedz
+                    </Button>
+                  )}
+                  {selected.lead_id && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Otwórz lead
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {Array.isArray(selected.attachments) && selected.attachments.length > 0 && (
