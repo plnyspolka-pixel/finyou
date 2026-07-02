@@ -373,7 +373,7 @@ export function InwestorProfil() {
           <CardContent className="grid gap-3 md:grid-cols-2">
             <div><Label>Imię</Label><Input maxLength={100} value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></div>
             <div><Label>Nazwisko</Label><Input maxLength={100} value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></div>
-            <div className="md:col-span-2"><Label>PESEL</Label><Input maxLength={11} value={f.pesel} onChange={(e) => setF({ ...f, pesel: e.target.value })} placeholder="11 cyfr" /></div>
+            
           </CardContent>
         </Card>
       ) : null}
