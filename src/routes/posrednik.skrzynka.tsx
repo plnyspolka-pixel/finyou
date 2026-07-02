@@ -12,6 +12,7 @@ import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
+import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 
