@@ -138,10 +138,11 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           // 6) Wyślij właściwym kanałem.
           let sendOk = false; let sendId: string | null = null; let sendErr: string | null = null;
+          const emailSubject = `Wracam do Ciebie — Finance You (przypomnienie ${step})`;
           if (g.channel === "email") {
             const to = lead.email;
             if (!to) continue;
-            const r = await sendResendEmail({ to, subject: "Wracam do Ciebie — Finance You", text: replyText });
+            const r = await sendResendEmail({ to, subject: emailSubject, text: replyText });
             sendOk = r.ok; sendId = r.id ?? null; sendErr = r.error ?? null;
           } else if (g.channel === "messenger") {
             const psid = lead.messenger_psid;
@@ -160,6 +161,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             channel: g.channel as "email" | "messenger",
             direction: "outbound",
             content: replyText,
+            subject: g.channel === "email" ? emailSubject : null,
             externalId: sendId,
             email: g.channel === "email" ? lead.email : null,
             status: sendOk ? "sent" : "error",
