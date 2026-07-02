@@ -25,8 +25,12 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
         const mode = url.searchParams.get("hub.mode");
         const token = url.searchParams.get("hub.verify_token");
         const challenge = url.searchParams.get("hub.challenge");
-        const expected = process.env.META_WEBHOOK_VERIFY_TOKEN ?? process.env.META_APP_SECRET;
-        if (mode === "subscribe" && token === expected && challenge) {
+        const accepted = [
+          process.env.META_WEBHOOK_VERIFY_TOKEN,
+          process.env.META_IG_WEBHOOK_VERIFY_TOKEN,
+          process.env.META_APP_SECRET,
+        ].filter(Boolean);
+        if (mode === "subscribe" && token && accepted.includes(token) && challenge) {
           return new Response(challenge, { status: 200 });
         }
         return new Response("Forbidden", { status: 403 });
