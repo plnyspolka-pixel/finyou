@@ -121,6 +121,12 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           } catch (e) { console.error("[mailgun-inbound] attach to client docs", e); }
         }
 
+        // Wyciągnij KW/kwotę z treści maila i (jeśli komplet) awansuj do wniosku
+        try {
+          const enrichText = [subject, text].filter(Boolean).join("\n");
+          await enrichLeadFromInbound({ leadId, text: enrichText, hasAttachments: stored.length > 0 });
+        } catch (e) { console.error("[mailgun-inbound] enrichment error", e); }
+
         // OCHRONA PRZED PĘTLAMI — sprawdź nagłówki/suppression/rate-limit/pętle
         const mgHeaders: Record<string, string> = {
           "auto-submitted": String(form.get("Auto-Submitted") ?? form.get("auto-submitted") ?? ""),
