@@ -62,7 +62,7 @@ export async function sendResendEmail(opts: {
   const body: Record<string, any> = {
     from: `${opts.fromName ?? "Finance You"} <${FROM_ADDR}>`,
     to: [opts.to],
-    subject: opts.subject,
+    subject,
     text: opts.text,
     html: finalHtml,
   };
