@@ -142,7 +142,7 @@ interface ArticleDraft {
 }
 
 async function writeArticleFromNews(
-  lovableKey: string,
+  _lovableKey: string,
   brief: NewsBrief,
   internal: RelatedArticle[],
   kind: PostKind,
@@ -158,37 +158,6 @@ async function writeArticleFromNews(
     ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
     : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
 
-  const tools = [
-    {
-      type: "function",
-      function: {
-        name: "write_daily_post",
-        description: "Post blogowy SEO z linkami",
-        parameters: {
-          type: "object",
-          properties: {
-            title: { type: "string", description: "max 70 znaków, atrakcyjny H1, po polsku" },
-            meta_title: { type: "string", description: "max 60 znaków" },
-            meta_description: { type: "string", description: "max 160 znaków, z keywordem" },
-            excerpt: { type: "string", description: "1-2 zdania zajawki" },
-            primary_keyword: { type: "string" },
-            keywords: { type: "array", items: { type: "string" } },
-            content_md: { type: "string", description: structureHint },
-            cover_prompt: {
-              type: "string",
-              description: "Krótki opis okładki po angielsku, edytorial finansowy, bez tekstu na obrazku",
-            },
-            cover_alt: { type: "string", description: "Alt po polsku, 5-10 słów" },
-          },
-          required: [
-            "title", "meta_title", "meta_description", "excerpt",
-            "primary_keyword", "content_md", "cover_prompt", "cover_alt",
-          ],
-          additionalProperties: false,
-        },
-      },
-    },
-  ];
 
   let audienceBrief: string;
   if (kind === "investor_review") {
