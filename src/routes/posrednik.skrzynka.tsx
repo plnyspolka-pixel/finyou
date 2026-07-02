@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download } from "lucide-react";
+import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download, Reply, PenSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 
