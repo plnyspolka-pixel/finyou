@@ -89,8 +89,10 @@ export const listLeads = createServerFn({ method: "GET" })
         const matching = Array.from(matched);
         for (const l of matching) {
           const s = ensure(l.id);
+          const isInbound = ev.direction === "inbound";
           if (ev.channel === "voicebot_call" || ev.channel === "call") {
             s.calls++;
+            if (isInbound) s.inboundCalls++;
             // Tylko ręczne telefony pośrednika (channel='call') zliczamy jako "Ostatni telefon"
             if (ev.channel === "call") {
               if (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt)) {
@@ -105,10 +107,16 @@ export const listLeads = createServerFn({ method: "GET" })
               }
             }
           }
-          else if (ev.channel === "sms") s.sms++;
+          else if (ev.channel === "sms") {
+            s.sms++;
+            if (isInbound) s.inboundSms++;
+          }
+          else if (ev.channel === "messenger" || ev.channel === "instagram" || ev.channel === "whatsapp") {
+            if (isInbound) s.inboundMessenger++;
+          }
           else if (ev.channel === "email") {
             s.emails++;
-            if (ev.direction === "inbound") {
+            if (isInbound) {
               s.inboundEmails++;
               if (!s.lastInboundEmailAt || new Date(ev.created_at) > new Date(s.lastInboundEmailAt)) {
                 s.lastInboundEmailAt = ev.created_at;
@@ -139,6 +147,9 @@ export const listLeads = createServerFn({ method: "GET" })
           if (!s.lastAt || new Date(ev.created_at) > new Date(s.lastAt)) {
             s.lastAt = ev.created_at;
             s.lastChannel = ev.channel;
+          }
+          if (isInbound && (!s.lastInboundAt || new Date(ev.created_at) > new Date(s.lastInboundAt))) {
+            s.lastInboundAt = ev.created_at;
           }
         }
       }
