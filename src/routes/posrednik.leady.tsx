@@ -108,6 +108,17 @@ function OperatorLeadsList() {
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
+                  <div className="text-[11px] mt-1 flex gap-3 text-emerald-700">
+                    <span className="inline-flex items-center gap-1" title="Połączenia przychodzące z numeru leada">
+                      <Phone className="h-3 w-3" /> ← {r.comms.inboundCalls ?? 0}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Wiadomości przychodzące (Messenger/IG/WA)">
+                      <MessageSquare className="h-3 w-3" /> ← {r.comms.inboundMessenger ?? 0}
+                    </span>
+                    <span className="inline-flex items-center gap-1" title="Maile przychodzące od leada">
+                      <Mail className="h-3 w-3" /> ← {r.comms.inboundEmails ?? 0}
+                    </span>
+                  </div>
                   {r.comms.lastCallAt && (
                     <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
                       <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Nieznany pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
