@@ -65,45 +65,119 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!data) throw notFound();
     return { article: data };
   },
-  head: ({ params, loaderData }) => ({
-    meta: loaderData?.article ? [
-      { title: loaderData.article.meta_title || loaderData.article.title },
-      { name: "description", content: loaderData.article.meta_description || loaderData.article.excerpt || "" },
-      { property: "og:title", content: loaderData.article.meta_title || loaderData.article.title },
-      { property: "og:description", content: loaderData.article.meta_description || loaderData.article.excerpt || "" },
-      { property: "og:type", content: "article" },
-      { property: "og:url", content: `https://financeyou.pl/blog/${params.slug}` },
-      ...(loaderData.article.cover_image_url ? [
-        { property: "og:image", content: loaderData.article.cover_image_url },
-        { name: "twitter:image", content: loaderData.article.cover_image_url },
-        { name: "twitter:card", content: "summary_large_image" },
-      ] : []),
-    ] : [],
+  head: ({ params, loaderData }) => {
+    const a: any = loaderData?.article;
+    if (!a) return { meta: [], links: [], scripts: [] };
+    const url = `https://financeyou.pl/blog/${params.slug}`;
+    const isInvestor = a.audience === "investor";
+    const ctaUrl = isInvestor ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
+    const audienceType = isInvestor ? "Investor" : "Borrower";
+    const section = isInvestor ? "Inwestowanie" : "Pożyczki pod zastaw";
+    const title = a.meta_title || a.title;
+    const description = a.meta_description || a.excerpt || "";
+    const keywords: string[] = Array.isArray(a.keywords) ? a.keywords : [];
 
-    links: loaderData?.article ? [
-      { rel: "canonical", href: `https://financeyou.pl/blog/${params.slug}` },
-    ] : [],
-    scripts: loaderData?.article ? [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Article",
-          headline: loaderData.article.title,
-          description: loaderData.article.excerpt || loaderData.article.meta_description || "",
-          datePublished: loaderData.article.published_at ?? undefined,
-          dateModified: loaderData.article.updated_at ?? loaderData.article.published_at ?? undefined,
-          author: { "@type": "Organization", name: "Finance You" },
-          publisher: {
-            "@type": "Organization",
-            name: "Finance You",
-            logo: { "@type": "ImageObject", url: "https://financeyou.pl/favicon.png" },
-          },
-          mainEntityOfPage: `https://financeyou.pl/blog/${params.slug}`,
-        }),
-      },
-    ] : [],
-  }),
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        ...(keywords.length ? [{ name: "keywords", content: keywords.join(", ") }] : []),
+        ...(a.primary_keyword ? [{ name: "news_keywords", content: a.primary_keyword }] : []),
+        { name: "author", content: "Finance You" },
+        { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+        { name: "article:section", content: section },
+        { name: "article:published_time", content: a.published_at ?? "" },
+        { name: "article:modified_time", content: a.updated_at ?? a.published_at ?? "" },
+        { name: "article:author", content: "Finance You" },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: url },
+        { property: "og:site_name", content: "Finance You" },
+        { property: "og:locale", content: "pl_PL" },
+        { property: "article:publisher", content: "https://financeyou.pl" },
+        { property: "article:section", content: section },
+        ...(a.published_at ? [{ property: "article:published_time", content: a.published_at }] : []),
+        ...(a.updated_at || a.published_at ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }] : []),
+        ...keywords.map((k) => ({ property: "article:tag", content: k })),
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:site", content: "@financeyou_pl" },
+        ...(a.cover_image_url ? [
+          { property: "og:image", content: a.cover_image_url },
+          { property: "og:image:alt", content: a.cover_image_alt || title },
+          { name: "twitter:image", content: a.cover_image_url },
+          { name: "twitter:image:alt", content: a.cover_image_alt || title },
+        ] : []),
+        { name: "audience", content: audienceType },
+      ],
+      links: [
+        { rel: "canonical", href: url },
+        { rel: "alternate", hrefLang: "pl", href: url },
+      ],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            headline: a.title,
+            alternativeHeadline: a.meta_title || undefined,
+            description,
+            image: a.cover_image_url ? [a.cover_image_url] : undefined,
+            datePublished: a.published_at ?? undefined,
+            dateModified: a.updated_at ?? a.published_at ?? undefined,
+            inLanguage: "pl-PL",
+            articleSection: section,
+            keywords: keywords.length ? keywords.join(", ") : (a.primary_keyword ?? undefined),
+            wordCount: a.word_count ?? undefined,
+            timeRequired: a.reading_minutes ? `PT${a.reading_minutes}M` : undefined,
+            author: {
+              "@type": "Organization",
+              name: "Finance You",
+              url: "https://financeyou.pl",
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "Finance You",
+              url: "https://financeyou.pl",
+              logo: {
+                "@type": "ImageObject",
+                url: "https://financeyou.pl/favicon.png",
+              },
+            },
+            mainEntityOfPage: { "@type": "WebPage", "@id": url },
+            audience: {
+              "@type": "Audience",
+              audienceType,
+            },
+            about: {
+              "@type": "FinancialProduct",
+              name: isInvestor
+                ? "Inwestowanie w pożyczki pod zastaw nieruchomości"
+                : "Pożyczka pod zastaw nieruchomości",
+              url: ctaUrl,
+              provider: { "@type": "Organization", name: "Finance You", url: "https://financeyou.pl" },
+            },
+            isAccessibleForFree: true,
+          }),
+        },
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Finance You", item: "https://financeyou.pl" },
+              { "@type": "ListItem", position: 2, name: "Blog", item: "https://financeyou.pl/blog" },
+              { "@type": "ListItem", position: 3, name: a.title, item: url },
+            ],
+          }),
+        },
+      ],
+    };
+  },
   component: ArticlePage,
   notFoundComponent: () => <div className="grid min-h-screen place-items-center text-muted-foreground">Artykuł nie istnieje.</div>,
   errorComponent: ({ error }) => <div className="grid min-h-screen place-items-center text-destructive">{error.message}</div>,
