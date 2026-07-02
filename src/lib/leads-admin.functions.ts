@@ -51,10 +51,10 @@ export const listLeads = createServerFn({ method: "GET" })
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
     type InboundAttachment = { name: string; mime?: string; size?: number; path?: string; at: string };
-    type Comm = { calls: number; sms: number; emails: number; notes: number; inboundEmails: number; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
+    type Comm = { calls: number; sms: number; emails: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
     const commsByLead: Record<string, Comm> = {};
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundEmails: 0, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundCalls: 0, inboundSms: 0, inboundMessenger: 0, inboundEmails: 0, lastInboundAt: null, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
     const leadsByEmailLower: Record<string, any[]> = {};
@@ -89,8 +89,10 @@ export const listLeads = createServerFn({ method: "GET" })
         const matching = Array.from(matched);
         for (const l of matching) {
           const s = ensure(l.id);
+          const isInbound = ev.direction === "inbound";
           if (ev.channel === "voicebot_call" || ev.channel === "call") {
             s.calls++;
+            if (isInbound) s.inboundCalls++;
             // Tylko ręczne telefony pośrednika (channel='call') zliczamy jako "Ostatni telefon"
             if (ev.channel === "call") {
               if (!s.lastCallAt || new Date(ev.created_at) > new Date(s.lastCallAt)) {
@@ -105,10 +107,16 @@ export const listLeads = createServerFn({ method: "GET" })
               }
             }
           }
-          else if (ev.channel === "sms") s.sms++;
+          else if (ev.channel === "sms") {
+            s.sms++;
+            if (isInbound) s.inboundSms++;
+          }
+          else if (ev.channel === "messenger" || ev.channel === "instagram" || ev.channel === "whatsapp") {
+            if (isInbound) s.inboundMessenger++;
+          }
           else if (ev.channel === "email") {
             s.emails++;
-            if (ev.direction === "inbound") {
+            if (isInbound) {
               s.inboundEmails++;
               if (!s.lastInboundEmailAt || new Date(ev.created_at) > new Date(s.lastInboundEmailAt)) {
                 s.lastInboundEmailAt = ev.created_at;
@@ -139,6 +147,9 @@ export const listLeads = createServerFn({ method: "GET" })
           if (!s.lastAt || new Date(ev.created_at) > new Date(s.lastAt)) {
             s.lastAt = ev.created_at;
             s.lastChannel = ev.channel;
+          }
+          if (isInbound && (!s.lastInboundAt || new Date(ev.created_at) > new Date(s.lastInboundAt))) {
+            s.lastInboundAt = ev.created_at;
           }
         }
       }
@@ -184,8 +195,10 @@ export const listLeads = createServerFn({ method: "GET" })
     }
 
     const enriched = list.map((l) => {
-      const comms = commsByLead[l.id] ?? { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null };
-      const times = [comms.lastAt, l.updated_at, l.created_at]
+      const comms = commsByLead[l.id] ?? ({ calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastInboundAt: null } as any);
+      // Sort key = tylko aktywność ze strony leada (inbound) lub utworzenie leada.
+      // Ignorujemy outbound (nasze maile/telefony) i updated_at (edycje po naszej stronie).
+      const times = [comms.lastInboundAt, l.created_at]
         .filter(Boolean)
         .map((t: string) => new Date(t).getTime());
       const lastActivityAt = times.length ? Math.max(...times) : 0;
