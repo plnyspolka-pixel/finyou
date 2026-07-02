@@ -10,6 +10,7 @@ import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/le
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
+import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
@@ -174,6 +175,11 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
             await attachStoredToClientDocuments({ leadId, stored, sourceLabel: "email" });
           } catch (e) { console.error("[resend-inbound] attach to client docs", e); }
         }
+
+        try {
+          const enrichText = [subject, finalText].filter(Boolean).join("\n");
+          await enrichLeadFromInbound({ leadId, text: enrichText, hasAttachments: stored.length > 0 });
+        } catch (e) { console.error("[resend-inbound] enrichment error", e); }
 
         // OCHRONA PRZED PĘTLAMI — sprawdź zanim auto-agent odpowie
         const inboundHeaders = normalizeHeaders(data.headers ?? data.Headers);

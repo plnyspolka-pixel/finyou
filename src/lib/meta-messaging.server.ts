@@ -8,6 +8,7 @@ import { upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.ser
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
+import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
 
 async function findOrCreateLeadByPsid(opts: {
@@ -107,6 +108,9 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
       await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
     } catch (e) { console.error("[messenger] attach to client docs", e); }
   }
+  try {
+    await enrichLeadFromInbound({ leadId, text: userText, hasAttachments: stored.length > 0 });
+  } catch (e) { console.error("[messenger] enrichment error", e); }
 
   if (!userText && !stored.length) return;
 

@@ -175,7 +175,8 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
 
         <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>
 
-        <TabsContent value="dane">
+        <TabsContent value="dane" className="space-y-3">
+          <ExtractedFactsCard lead={lead} />
           <Card className="p-4 grid gap-3 md:grid-cols-2">
             <Field label="Imię" value={lead.first_name} onSave={(v) => mUpdate.mutate({ first_name: v })} />
             <Field label="Nazwisko" value={lead.last_name} onSave={(v) => mUpdate.mutate({ last_name: v })} />
@@ -399,6 +400,49 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="font-semibold">{value}</div>
     </div>
+  );
+}
+
+function ExtractedFactsCard({ lead }: { lead: any }) {
+  const ad = (lead.application_data ?? {}) as Record<string, any>;
+  const kw: string[] = Array.isArray(ad.kw_numbers) ? ad.kw_numbers : [];
+  const amount = typeof ad.loan_amount === "number" ? ad.loan_amount : null;
+  const city = typeof ad.city === "string" ? ad.city : null;
+  const promoted = !!lead.loan_application_id;
+  const anything = kw.length > 0 || amount != null || city || promoted;
+  if (!anything) return null;
+  return (
+    <Card className="p-4 space-y-2 border-primary/40 bg-primary/5">
+      <div className="text-sm font-semibold">Dane wykryte z wiadomości</div>
+      <div className="grid gap-2 md:grid-cols-2 text-sm">
+        {kw.length > 0 && (
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Numery KW</div>
+            <div className="font-mono">{kw.join(", ")}</div>
+          </div>
+        )}
+        {amount != null && (
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Kwota pożyczki</div>
+            <div className="font-semibold">{amount.toLocaleString("pl-PL")} zł</div>
+          </div>
+        )}
+        {city && (
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Miasto</div>
+            <div>{city}</div>
+          </div>
+        )}
+        {promoted && (
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Wniosek</div>
+            <a className="text-primary underline text-xs font-mono" href={`/admin/wnioski/${lead.loan_application_id}`}>
+              {lead.loan_application_id}
+            </a>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
