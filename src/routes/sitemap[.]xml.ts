@@ -15,10 +15,13 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const today = new Date().toISOString().slice(0, 10);
         const entries: SitemapEntry[] = [
-          { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/klient", changefreq: "weekly", priority: "0.9" },
-          { path: "/blog", changefreq: "weekly", priority: "0.7" },
+          { path: "/", lastmod: today, changefreq: "weekly", priority: "1.0" },
+          { path: "/klient", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          { path: "/inwestor", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          { path: "/posrednik", lastmod: today, changefreq: "weekly", priority: "0.8" },
+          { path: "/blog", lastmod: today, changefreq: "daily", priority: "0.7" },
           { path: "/logowanie", changefreq: "yearly", priority: "0.3" },
           { path: "/rejestracja", changefreq: "yearly", priority: "0.4" },
         ];
@@ -34,9 +37,10 @@ export const Route = createFileRoute("/sitemap.xml")({
               .select("slug, updated_at, published_at")
               .eq("status", "published");
             for (const row of data ?? []) {
+              const lastmod = (row.updated_at ?? row.published_at ?? "").slice(0, 10) || undefined;
               entries.push({
                 path: `/blog/${row.slug}`,
-                lastmod: (row.updated_at ?? row.published_at ?? "").slice(0, 10) || undefined,
+                lastmod,
                 changefreq: "monthly",
                 priority: "0.6",
               });
@@ -45,6 +49,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         } catch {
           // jeśli baza niedostępna — zwracamy resztę sitemapy
         }
+
 
         const urls = entries.map((e) =>
           [
