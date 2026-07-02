@@ -275,19 +275,35 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
 
 
 
+        // Wykryj kierunek — INBOUND: klient dzwoni do nas.
+        const dynVars = body?.conversation_initiation_client_data?.dynamic_variables ?? {};
+        const phoneCallMeta = body?.metadata?.phone_call ?? {};
+        const isInbound =
+          String(dynVars?.inbound ?? "").toLowerCase() === "true" ||
+          String(phoneCallMeta?.direction ?? "").toLowerCase() === "inbound" ||
+          String(body?.direction ?? "").toLowerCase() === "inbound" ||
+          (!queueRow && !!phone); // brak wpisu w kolejce + jest numer = inbound
+
+        const callerPhone: string | null =
+          (isInbound
+            ? phoneCallMeta?.external_number ?? dynVars?.caller_phone ?? phone
+            : phone) ?? null;
+
         // Zapis do zunifikowanego logu komunikacji widocznego w panelu admina
         try {
           const { logLeadCommunication } = await import("@/lib/lead-comms.server");
           const recordingUrl = body?.recording_url || body?.audio_url || body?.metadata?.recording_url || null;
           await logLeadCommunication({
-            loanApplicationId: queueRow?.loan_application_id ?? null,
-            clientId: queueRow?.client_id ?? null,
+            loanApplicationId: queueRow?.loan_application_id ?? (dynVars?.loan_application_id as string) ?? null,
+            clientId: queueRow?.client_id ?? (dynVars?.client_id as string) ?? null,
             metaLeadId: queueRow?.meta_lead_id ?? null,
-            phoneNormalized: queueRow?.phone_normalized ?? phone ?? null,
+            phoneNormalized: queueRow?.phone_normalized ?? callerPhone ?? null,
             channel: "voicebot_call",
-            direction: "outbound",
+            direction: isInbound ? "inbound" : "outbound",
             status: outcomeLabel,
-            subject: summary ? "Rozmowa voicebota" : `Próba połączenia — ${outcomeLabel}`,
+            subject: isInbound
+              ? (summary ? "Połączenie przychodzące" : "Połączenie przychodzące — nieodebrane")
+              : (summary ? "Rozmowa voicebota" : `Próba połączenia — ${outcomeLabel}`),
             content: summary || transcript || null,
             transcript: body?.transcript || body?.transcript_segments || body?.turns || body?.messages || (transcript ? { text: transcript } : null),
             recordingUrl,
@@ -296,6 +312,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
             agentId: body?.agent_id ?? queueRow?.agent_id ?? null,
             metadata: {
               source: "elevenlabs_webhook",
+              inbound: isInbound,
               call_outcome: outcome,
               call_outcome_label: outcomeLabel,
               call_successful: callSuccessful ?? null,
@@ -315,6 +332,33 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           });
         } catch (e) {
           console.error("[elevenlabs-webhook] log lead comm failed", e);
+        }
+
+        // INBOUND: upewnij się, że istnieje lead + enrichment z transkrypcji
+        if (isInbound && callerPhone) {
+          try {
+            const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
+            const leadId = await upsertLeadFromSource({
+              type: "pozyczkowy",
+              source: "inbound_call",
+              phoneRaw: callerPhone,
+              phoneNormalized: callerPhone,
+              firstName: (dynVars?.first_name as string) || null,
+              lastName: (dynVars?.last_name as string) || null,
+              clientId: (dynVars?.client_id as string) || null,
+              loanApplicationId: (dynVars?.loan_application_id as string) || null,
+            });
+            if (leadId) {
+              const { enrichLeadFromInbound } = await import("@/lib/lead-enrichment.server");
+              await enrichLeadFromInbound({
+                leadId,
+                text: [summary, transcript].filter(Boolean).join("\n\n") || null,
+                hasAttachments: false,
+              });
+            }
+          } catch (e) {
+            console.error("[elevenlabs-webhook] inbound lead upsert/enrich failed", e);
+          }
         }
 
         await supabase.from("automation_events").insert({
