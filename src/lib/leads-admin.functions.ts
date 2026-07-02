@@ -183,11 +183,21 @@ export const listLeads = createServerFn({ method: "GET" })
       }
     }
 
-    return list.map((l) => ({
-      ...l,
-      comms: commsByLead[l.id] ?? { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null },
-      docCount: l.loan?.id ? (docCountByLoan[l.loan.id] ?? 0) : 0,
-    }));
+    const enriched = list.map((l) => {
+      const comms = commsByLead[l.id] ?? { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null };
+      const times = [comms.lastAt, l.updated_at, l.created_at]
+        .filter(Boolean)
+        .map((t: string) => new Date(t).getTime());
+      const lastActivityAt = times.length ? Math.max(...times) : 0;
+      return {
+        ...l,
+        comms,
+        docCount: l.loan?.id ? (docCountByLoan[l.loan.id] ?? 0) : 0,
+        lastActivityAt,
+      };
+    });
+    enriched.sort((a, b) => b.lastActivityAt - a.lastActivityAt);
+    return enriched;
   });
 
 export const getLead = createServerFn({ method: "GET" })
