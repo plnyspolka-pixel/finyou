@@ -109,10 +109,19 @@ function SkrzynkaPosrednika() {
           <Mail className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">Skrzynka mailowa</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Odśwież
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+          >
+            <PenSquare className="h-4 w-4 mr-2" />
+            Nowa wiadomość
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            Odśwież
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2">
