@@ -238,9 +238,6 @@ export function InwestorProfil() {
     if (f.entity_type === "firma" && f.nip && !/^\d{10}$/.test(f.nip.replace(/\D/g, ""))) {
       toast.error("NIP musi mieć 10 cyfr"); return;
     }
-    if (f.entity_type === "osoba_fizyczna" && f.pesel && !/^\d{11}$/.test(f.pesel.replace(/\D/g, ""))) {
-      toast.error("PESEL musi mieć 11 cyfr"); return;
-    }
     // Walidacja rachunku przed zapisem — wymagaj potwierdzenia jeśli niepoprawny.
     if (f.bank_account.trim()) {
       const check = detectPolishBankAccount(f.bank_account);
