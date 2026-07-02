@@ -37,6 +37,8 @@ function SkrzynkaPage() {
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
   const qc = useQueryClient();
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
