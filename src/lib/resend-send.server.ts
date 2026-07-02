@@ -26,6 +26,12 @@ export async function sendResendEmail(opts: {
   if (!lovableKey || !connKey) {
     return { ok: false, error: "Resend env missing (LOVABLE_API_KEY / RESEND_API_KEY)" };
   }
+  const subject = (opts.subject ?? "").trim();
+  if (!subject) {
+    console.warn("[resend-send] refuse to send email without subject", { to: opts.to });
+    return { ok: false, error: "missing_subject" };
+  }
+
 
   // Ochrona przed pętlami: nie wysyłaj do adresów na liście suppressed_emails
   try {
@@ -56,7 +62,7 @@ export async function sendResendEmail(opts: {
   const body: Record<string, any> = {
     from: `${opts.fromName ?? "Finance You"} <${FROM_ADDR}>`,
     to: [opts.to],
-    subject: opts.subject,
+    subject,
     text: opts.text,
     html: finalHtml,
   };

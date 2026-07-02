@@ -16,10 +16,15 @@ export async function sendMailgunEmail(opts: {
   if (!lovableKey || !connKey || !domain) {
     return { ok: false, error: "Mailgun env missing (LOVABLE_API_KEY / MAILGUN_API_KEY / MAILGUN_DOMAIN)" };
   }
+  const subject = (opts.subject ?? "").trim();
+  if (!subject) {
+    console.warn("[mailgun-send] refuse to send email without subject", { to: opts.to });
+    return { ok: false, error: "missing_subject" };
+  }
   const form = new URLSearchParams();
   form.set("from", `${opts.fromName ?? "Finance You"} <kontakt@${domain}>`);
   form.set("to", opts.to);
-  form.set("subject", opts.subject);
+  form.set("subject", subject);
   form.set("text", opts.text);
   if (opts.html) form.set("html", opts.html);
   if (opts.inReplyTo) form.set("h:In-Reply-To", opts.inReplyTo);
