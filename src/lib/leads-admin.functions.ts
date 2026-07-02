@@ -195,8 +195,10 @@ export const listLeads = createServerFn({ method: "GET" })
     }
 
     const enriched = list.map((l) => {
-      const comms = commsByLead[l.id] ?? { calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null };
-      const times = [comms.lastAt, l.updated_at, l.created_at]
+      const comms = commsByLead[l.id] ?? ({ calls: 0, sms: 0, emails: 0, notes: 0, lastAt: null, lastChannel: null, lastInboundAt: null } as any);
+      // Sort key = tylko aktywność ze strony leada (inbound) lub utworzenie leada.
+      // Ignorujemy outbound (nasze maile/telefony) i updated_at (edycje po naszej stronie).
+      const times = [comms.lastInboundAt, l.created_at]
         .filter(Boolean)
         .map((t: string) => new Date(t).getTime());
       const lastActivityAt = times.length ? Math.max(...times) : 0;
