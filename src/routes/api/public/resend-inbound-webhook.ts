@@ -176,6 +176,11 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           } catch (e) { console.error("[resend-inbound] attach to client docs", e); }
         }
 
+        try {
+          const enrichText = [subject, finalText].filter(Boolean).join("\n");
+          await enrichLeadFromInbound({ leadId, text: enrichText, hasAttachments: stored.length > 0 });
+        } catch (e) { console.error("[resend-inbound] enrichment error", e); }
+
         // OCHRONA PRZED PĘTLAMI — sprawdź zanim auto-agent odpowie
         const inboundHeaders = normalizeHeaders(data.headers ?? data.Headers);
         const skip = await shouldSkipAutoReply({
