@@ -134,15 +134,7 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
   const hasCommAtts = (commsWithAtts ?? []).some((c: any) =>
     Array.isArray(c.attachments) && c.attachments.length > 0,
   );
-  let hasDocs = hasCommAtts;
-  if (!hasDocs && lead.client_id) {
-    const { count } = await s
-      .from("documents")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", lead.client_id as any);
-    if ((count ?? 0) > 0) hasDocs = true;
-  }
-  if (!hasDocs) return null;
+  if (!hasCommAtts) return null;
 
   // 1) Klient — użyj istniejącego lub utwórz minimalnego
   let clientId = lead.client_id as string | null;
