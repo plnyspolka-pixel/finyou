@@ -62,7 +62,7 @@ export function wrapBrandedEmail(opts: BrandOptions): string {
   <p style="font-size:12px;color:#888;text-align:center;margin:0 0 6px">
     <a href="https://financeyou.pl" style="color:#888;text-decoration:none">financeyou.pl</a> ·
     <a href="https://financeyou.pl/blog" style="color:#888;text-decoration:none">blog</a> ·
-    <a href="mailto:kontakt@app.financeyou.pl" style="color:#888;text-decoration:none">kontakt@app.financeyou.pl</a>
+    <a href="mailto:kontakt@financeyou.pl" style="color:#888;text-decoration:none">kontakt@financeyou.pl</a>
   </p>
   <p style="font-size:11px;color:#aaa;text-align:center;margin:0">
     ${unsub}Finance You — pożyczki pod zastaw nieruchomości.
