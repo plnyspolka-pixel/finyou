@@ -4,9 +4,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const PPLX_URL = "https://api.perplexity.ai/chat/completions";
-const IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
 
 function slugify(s: string): string {
   return s
