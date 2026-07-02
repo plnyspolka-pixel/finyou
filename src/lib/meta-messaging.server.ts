@@ -108,6 +108,9 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
       await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
     } catch (e) { console.error("[messenger] attach to client docs", e); }
   }
+  try {
+    await enrichLeadFromInbound({ leadId, text: userText, hasAttachments: stored.length > 0 });
+  } catch (e) { console.error("[messenger] enrichment error", e); }
 
   if (!userText && !stored.length) return;
 
