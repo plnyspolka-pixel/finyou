@@ -6,8 +6,11 @@ export async function sendMetaMessage(opts: {
   text: string;
   platform: "messenger" | "instagram";
 }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  const token = process.env.META_PAGE_ACCESS_TOKEN;
-  if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN missing" };
+  // Send API wymaga tokenu Page. Preferuj dedykowany META_PAGE_ACCESS_TOKEN,
+  // ale gdy nie ustawiony — użyj wspólnego META_ACCESS_TOKEN (którym skonfigurowana
+  // jest reszta integracji Meta), żeby wysyłka działała bez dodatkowej zmiennej.
+  const token = process.env.META_PAGE_ACCESS_TOKEN ?? process.env.META_ACCESS_TOKEN;
+  if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN / META_ACCESS_TOKEN missing" };
   const res = await fetch(`${GRAPH}/me/messages?access_token=${encodeURIComponent(token)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
