@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download } from "lucide-react";
+import { Mail, Search, Paperclip, RefreshCw, ExternalLink, Inbox, Send, Download, Reply, PenSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 
@@ -36,6 +37,8 @@ function SkrzynkaPosrednika() {
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"html" | "text">("html");
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
   const qc = useQueryClient();
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
@@ -106,10 +109,19 @@ function SkrzynkaPosrednika() {
           <Mail className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">Skrzynka mailowa</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Odśwież
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+          >
+            <PenSquare className="h-4 w-4 mr-2" />
+            Nowa wiadomość
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            Odśwież
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -206,14 +218,34 @@ function SkrzynkaPosrednika() {
                     {new Date(selected.created_at).toLocaleString("pl-PL")}
                   </div>
                 </div>
-                {selected.lead_id && (
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Otwórz lead
-                    </Link>
-                  </Button>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {tab === "inbound" && selected.email && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const subj = selected.subject ?? "";
+                        setComposeInitial({
+                          to: selected.email ?? "",
+                          subject: subj.toLowerCase().startsWith("re:") ? subj : `Re: ${subj}`,
+                          body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(selected.content ?? "").split("\n").map((l) => "> " + l).join("\n")}`,
+                          replyToCommunicationId: selected.id,
+                        });
+                        setComposeOpen(true);
+                      }}
+                    >
+                      <Reply className="h-4 w-4 mr-2" />
+                      Odpowiedz
+                    </Button>
+                  )}
+                  {selected.lead_id && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Otwórz lead
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {Array.isArray(selected.attachments) && selected.attachments.length > 0 && (
@@ -307,6 +339,13 @@ function SkrzynkaPosrednika() {
           )}
         </Card>
       </div>
+
+      <ComposeEmailDialog
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        initial={composeInitial}
+        onSent={() => { setTab("outbound"); refetch(); }}
+      />
     </div>
   );
 }
