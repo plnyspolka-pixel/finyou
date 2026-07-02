@@ -113,9 +113,12 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           // 5) Wygeneruj treść przez Anię.
           const nudgePrompt =
             `[SYSTEM FOLLOW-UP nr ${step} z ${MAX_OUTBOUND - 1}] Klient nie odpisał od ostatniej Twojej wiadomości ` +
-            `(${Math.round((now - g.lastOutboundAt) / 3600_000)} h temu). Napisz KRÓTKĄ, ciepłą, naturalną wiadomość follow-up po polsku ` +
-            `(2-3 zdania, bez nachalności), zachęcającą do kontynuacji rozmowy / dokończenia wniosku. ` +
-            `Dostosuj ton: pierwsze follow-upy lekkie i pomocne, kolejne coraz bardziej "ostatnia szansa, ale bez presji". ` +
+            `(${Math.round((now - g.lastOutboundAt) / 3600_000)} h temu). Napisz KRÓTKĄ, ciepłą wiadomość follow-up po polsku ` +
+            `(2-3 zdania, bez nachalności). CEL: skłonić klienta, żeby KLIKNĄŁ link i DOKOŃCZYŁ wniosek na stronie ` +
+            `financeyou.pl — NIE proś o odpowiedź na maila, nie zadawaj pytań. Podkreśl konkretną korzyść (np. długi okres spłaty, ` +
+            `niska rata, wybór z wielu inwestorów, indywidualne warunki) i zaproś do wejścia na wniosek. ` +
+            `Dostosuj ton: pierwsze follow-upy lekkie i pomocne, kolejne bardziej "ostatnia szansa, ale bez presji". ` +
+            `Zawsze wywołaj narzędzie send_application_link, żeby wkleić link do wniosku. ` +
             `Nie powtarzaj dosłownie poprzednich wiadomości. Nie używaj emoji.`;
 
           let replyText = "";
@@ -128,7 +131,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             replyText = (agent.reply ?? "").trim();
             const linkCall = agent.toolCalls.find((c) => c.name === "send_application_link");
             if (linkCall?.result?.link && !replyText.includes(linkCall.result.link)) {
-              replyText += `\n\nLink do dokończenia wniosku: ${linkCall.result.link}`;
+              replyText += `\n\nDokończ wniosek tutaj: ${linkCall.result.link}`;
             }
           } catch (e: any) {
             console.error("[follow-up-tick] agent error", g.leadId, e?.message);
@@ -138,12 +141,23 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           // 6) Wyślij właściwym kanałem.
           let sendOk = false; let sendId: string | null = null; let sendErr: string | null = null;
-          const emailSubject = `Wracam do Ciebie — Finance You (przypomnienie ${step})`;
+          const EMAIL_SUBJECTS = [
+            "Dokończ swój wniosek — Finance You",
+            "Twój wniosek czeka — 24h na decyzję",
+            "Zajmie Ci to 2 minuty — dokończ wniosek",
+            "Sprawdź, ile możesz pożyczyć pod zastaw",
+            "Twoja pożyczka pod zastaw — ostatni krok",
+            "Wróć do wniosku — indywidualne warunki czekają",
+            "Kilka pól dzieli Cię od oferty inwestorów",
+            "Ostatnia szansa, żeby dokończyć wniosek",
+          ];
+          const emailSubject = EMAIL_SUBJECTS[(step - 1) % EMAIL_SUBJECTS.length];
           if (g.channel === "email") {
             const to = lead.email;
             if (!to) continue;
             const r = await sendResendEmail({ to, subject: emailSubject, text: replyText });
             sendOk = r.ok; sendId = r.id ?? null; sendErr = r.error ?? null;
+
           } else if (g.channel === "messenger") {
             const psid = lead.messenger_psid;
             if (!psid) continue;
