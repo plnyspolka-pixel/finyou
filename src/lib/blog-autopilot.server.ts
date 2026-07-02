@@ -325,8 +325,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
 
-  const ctaUrl = "https://financeyou.pl";
-  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Sprawdź na financeyou.pl";
+  const ctaUrl = audience === "investor" ? "https://financeyou.pl/inwestor" : "https://financeyou.pl/klient";
+  const ctaLabel = audience === "investor" ? "Zostań inwestorem" : "Złóż wniosek o pożyczkę";
 
   const { data: inserted, error } = await supabaseAdmin
     .from("ai_seo_articles")
