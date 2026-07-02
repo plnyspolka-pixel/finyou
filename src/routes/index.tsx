@@ -124,8 +124,8 @@ function Landing() {
       </section>
 
 
-      {/* Ostatnie wnioski */}
-      <RecentApplicationsList />
+
+
 
       {/* Footer */}
       <footer className="border-t border-border bg-card">
