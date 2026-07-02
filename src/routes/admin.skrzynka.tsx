@@ -14,6 +14,7 @@ import { pl } from "date-fns/locale";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox/compose-email";
+import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 
 export const Route = createFileRoute("/admin/skrzynka")({
   component: SkrzynkaPage,
