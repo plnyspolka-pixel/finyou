@@ -241,6 +241,11 @@ export async function runMetaLeadsSync(): Promise<{
             summary.errors.push(`schedule follow-ups ${leadgenId}: ${e?.message}`);
           }
 
+          // Telefon Ani OD RAZU po wejściu leada z Meta (to jedyny kanał z natychmiastowym
+          // telefonem — formularz web go nie ma). placeOutboundCallInternal sam pilnuje
+          // godzin ludzkich (8:00–22:00, bez niedziel → poza oknem kolejkuje na 8:00) oraz
+          // throttle 24h/numer. Warunki: globalny auto-tryb (call_trigger != "manual") i
+          // per-formularz voicebot_enabled (domyślnie true dla wszystkich formularzy).
           if (phone && autoCall && form.voicebot_enabled) {
             await placeOutboundCallInternal({
               phone, source: "meta_lead",
