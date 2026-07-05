@@ -355,7 +355,7 @@ function SkrzynkaPosrednika() {
               })()}
             </div>
           )}
-        </Card>
+        </FancyShell>
       </div>
 
       <ComposeEmailDialog
