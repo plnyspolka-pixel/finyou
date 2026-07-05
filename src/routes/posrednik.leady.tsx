@@ -226,10 +226,10 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
   return (
     <div className="mt-2 space-y-1">
       {last && (
-        <div className="text-xs rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-2 py-1">
+        <div className="text-xs rounded-md bg-amber-500/20 border border-amber-300/40 text-amber-100 px-2 py-1">
           <div className="flex items-center gap-1 font-medium">
             <StickyNote className="h-3 w-3" /> {lastBy ?? "Pośrednik"} · {formatRelative(lastAt!)}
-            {count > 1 && <span className="text-amber-700/70">· +{count - 1} wcześniej</span>}
+            {count > 1 && <span className="text-amber-200/70">· +{count - 1} wcześniej</span>}
           </div>
           <div className="whitespace-pre-wrap line-clamp-2">{last}</div>
         </div>
@@ -240,13 +240,14 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
           onChange={(e) => setValue(e.target.value)}
           placeholder="Dodaj notatkę widoczną dla wszystkich pośredników…"
           rows={2}
-          className="text-sm"
+          className="text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/40"
         />
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
+          <Button size="sm" className="bg-white text-slate-900 hover:bg-white/90" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
             {m.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : (<><Plus className="h-3 w-3 mr-1" />Zapisz notatkę</>)}
           </Button>
         </div>
+
       </div>
     </div>
   );
