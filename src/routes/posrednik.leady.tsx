@@ -86,20 +86,23 @@ function OperatorLeadsList() {
       {q.isLoading && <p className="text-sm text-muted-foreground">Ładowanie…</p>}
       {q.error && <p className="text-sm text-destructive">Błąd: {(q.error as Error).message}</p>}
 
-      <div className="grid gap-2">
-        {rows.map((r) => {
-          const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "Bez nazwy";
-          const phone = r.phone_normalized;
-          return (
-            <Card key={r.id} className="group relative overflow-hidden border-primary/10 bg-gradient-to-br from-background via-background to-primary/5 transition hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/30">
-              <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-500 via-sky-500 to-emerald-500 opacity-70 group-hover:opacity-100" />
-              <CardContent className="p-4 flex items-center gap-3">
+      <FancyShell motion={false} innerClassName="!p-3 md:!p-4">
+        <div className="grid gap-2 [&_.text-muted-foreground]:text-white/70">
+          {rows.map((r) => {
+            const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "Bez nazwy";
+            const phone = r.phone_normalized;
+            return (
+              <div
+                key={r.id}
+                className="group relative overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] backdrop-blur-sm p-3 sm:p-4 flex items-center gap-3 transition hover:bg-white/[0.10] hover:border-white/30"
+              >
+                <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-400 via-sky-400 to-emerald-400 opacity-80" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="font-medium truncate">{name}</div>
-                    <Badge variant="outline">{leadStatusLabels[r.status] ?? r.status}</Badge>
-                    {r.source && <Badge variant="secondary">{r.source}</Badge>}
-                    {r.quality_tier && <Badge className="bg-blue-600 text-white">Tier {r.quality_tier}</Badge>}
+                    <div className="font-semibold truncate text-white">{name}</div>
+                    <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">{leadStatusLabels[r.status] ?? r.status}</Badge>
+                    {r.source && <Badge className="bg-sky-500/25 text-sky-100 border-sky-300/30">{r.source}</Badge>}
+                    {r.quality_tier && <Badge className="bg-blue-500 text-white">Tier {r.quality_tier}</Badge>}
                   </div>
                   {r.loan && (
                     <PropertyKeyFacts
@@ -113,16 +116,16 @@ function OperatorLeadsList() {
                       periodMonths={r.loan.preferred_period_months}
                     />
                   )}
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  <div className="text-xs text-white/70 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms.lastAt && <span>· ostatni kontakt {formatRelative(r.comms.lastAt)}</span>}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 flex gap-3">
+                  <div className="text-xs text-white/70 mt-1 flex gap-3">
                     <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {r.comms.calls}</span>
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
-                  <div className="text-[11px] mt-1 flex gap-3 text-emerald-700">
+                  <div className="text-[11px] mt-1 flex gap-3 text-emerald-300">
                     <span className="inline-flex items-center gap-1" title="Połączenia przychodzące z numeru leada">
                       <Phone className="h-3 w-3" /> ← {r.comms.inboundCalls ?? 0}
                     </span>
@@ -134,25 +137,25 @@ function OperatorLeadsList() {
                     </span>
                   </div>
                   {r.comms.lastCallAt && (
-                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
+                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-emerald-500/20 text-emerald-100 px-2 py-1 border border-emerald-300/30">
                       <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Nieznany pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
                     </div>
                   )}
                   {r.comms.inboundEmails > 0 && (
-                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-sky-50 text-sky-800 px-2 py-1 border border-sky-200">
+                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-sky-500/20 text-sky-100 px-2 py-1 border border-sky-300/30">
                       <Mail className="h-3 w-3" /> Mail od leada na kontakt@: <strong>{r.comms.inboundEmails}</strong>
                       {r.comms.lastInboundEmailAt && <> · {formatRelative(r.comms.lastInboundEmailAt)}</>}
                       {r.comms.lastInboundEmailSubject && <span className="opacity-70">· „{r.comms.lastInboundEmailSubject}"</span>}
                     </div>
                   )}
                   {Array.isArray(r.comms.inboundAttachments) && r.comms.inboundAttachments.length > 0 && (
-                    <div className="text-xs mt-1 rounded-md bg-violet-50 text-violet-900 px-2 py-1 border border-violet-200">
+                    <div className="text-xs mt-1 rounded-md bg-violet-500/20 text-violet-100 px-2 py-1 border border-violet-300/30">
                       <div className="inline-flex items-center gap-1 font-medium">
                         <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{r.comms.inboundAttachments.length}</strong>
                       </div>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {r.comms.inboundAttachments.slice(0, 6).map((a: any, i: number) => (
-                          <span key={i} className="inline-flex items-center gap-1 rounded bg-white/70 border border-violet-200 px-1.5 py-0.5 text-[11px]">
+                          <span key={i} className="inline-flex items-center gap-1 rounded bg-white/10 border border-violet-300/30 px-1.5 py-0.5 text-[11px]">
                             <Paperclip className="h-2.5 w-2.5" />
                             <span className="truncate max-w-[160px]">{a.name}</span>
                             {typeof a.size === "number" && <span className="opacity-60">· {Math.max(1, Math.round(a.size / 1024))} KB</span>}
@@ -167,7 +170,7 @@ function OperatorLeadsList() {
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
                     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
                       {r.comms.brokerCalls.map((b: any) => (
-                        <span key={b.id} className="inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-2 py-0.5 border border-slate-200">
+                        <span key={b.id} className="inline-flex items-center gap-1 rounded-md bg-white/10 text-white/80 px-2 py-0.5 border border-white/15">
                           <Phone className="h-3 w-3" /> {b.name ?? "Pośrednik"} · {b.count}× · {formatRelative(b.lastAt)}
                         </span>
                       ))}
@@ -180,19 +183,19 @@ function OperatorLeadsList() {
                     <a
                       href={`tel:${phone}`}
                       onClick={() => logCall.mutate({ leadId: r.id, phone })}
-                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-500 text-white hover:bg-emerald-600"
                       aria-label={`Zadzwoń ${phone}`}
                     >
                       <Phone className="h-4 w-4" />
                     </a>
                   )}
                   <Link to="/posrednik/leady/$id" params={{ id: r.id }}>
-                    <Button size="sm" variant="default">Otwórz <ChevronRight className="ml-1 h-4 w-4" /></Button>
+                    <Button size="sm" className="bg-white text-slate-900 hover:bg-white/90">Otwórz <ChevronRight className="ml-1 h-4 w-4" /></Button>
                   </Link>
                 </div>
-              </CardContent>
-            </Card>
-          );
+              </div>
+            );
+
         })}
         {!q.isLoading && rows.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Brak leadów spełniających filtry.</p>}
       </div>
