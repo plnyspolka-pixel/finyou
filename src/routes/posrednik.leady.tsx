@@ -89,8 +89,8 @@ function OperatorLeadsList() {
           const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "Bez nazwy";
           const phone = r.phone_normalized;
           return (
-            <Card key={r.id} className="hover:bg-accent/40 transition">
-              <CardContent className="p-4 flex items-center gap-3">
+            <Card key={r.id} className="group relative overflow-hidden border-primary/10 bg-gradient-to-br from-background via-background to-primary/5 transition hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/30">
+              <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-500 via-sky-500 to-emerald-500 opacity-70 group-hover:opacity-100" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-medium truncate">{name}</div>
