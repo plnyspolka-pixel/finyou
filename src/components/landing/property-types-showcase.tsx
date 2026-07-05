@@ -79,17 +79,44 @@ export function PropertyTypesShowcase({
         const isSelected = selectMode && selectedKey === p.key;
         const highlight = isOpen || isSelected;
         const Icon = p.Icon;
+
+        if (selectMode) {
+          return (
+            <BlurFade key={p.key} delay={0.04 + i * 0.03}>
+              <button
+                type="button"
+                onClick={() => onSelect!(p.key)}
+                aria-pressed={isSelected}
+                className={[
+                  "group flex h-full min-h-[92px] w-full flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-center transition-all",
+                  isSelected
+                    ? "border-primary/60 bg-gradient-to-br from-primary/25 to-primary/10 text-white shadow-lg shadow-primary/20 ring-1 ring-primary/50"
+                    : "border-white/15 bg-white/[0.06] text-white/85 hover:bg-white/[0.1] hover:border-white/25",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors",
+                    isSelected ? "bg-white/20 text-white" : "bg-white/10 text-white/80 group-hover:text-white",
+                  ].join(" ")}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-[11px] font-semibold leading-tight sm:text-xs">
+                  {p.title}
+                </span>
+              </button>
+            </BlurFade>
+          );
+        }
+
         return (
           <BlurFade key={p.key} delay={0.04 + i * 0.03}>
             <div className="rounded-xl border bg-card overflow-hidden">
               <button
                 type="button"
-                onClick={() => {
-                  if (selectMode) onSelect!(p.key);
-                  else setOpenKey(isOpen ? null : p.key);
-                }}
+                onClick={() => setOpenKey(isOpen ? null : p.key)}
                 aria-expanded={isOpen}
-                aria-pressed={isSelected}
                 className={[
                   "flex w-full items-center gap-3 px-3 py-3 text-left transition-colors",
                   highlight ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted/50",
@@ -106,34 +133,30 @@ export function PropertyTypesShowcase({
                 <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">
                   {p.title}
                 </span>
-                {!selectMode && (
-                  <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`} />
-                )}
+                <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {!selectMode && (
-                <div className={`grid transition-all duration-200 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-                  <div className="overflow-hidden">
-                    <div className="border-t p-4">
-                      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Co przygotować
-                      </p>
-                      <ul className="mt-2 space-y-1.5">
-                        {p.docs.map((d) => (
-                          <li key={d} className="flex items-start gap-2 text-sm">
-                            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                            <span>{d}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Każdą sprawę analizujemy indywidualnie — listę dopasujemy do Twojej nieruchomości.
-                      </p>
-                    </div>
+              <div className={`grid transition-all duration-200 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  <div className="border-t p-4">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Co przygotować
+                    </p>
+                    <ul className="mt-2 space-y-1.5">
+                      {p.docs.map((d) => (
+                        <li key={d} className="flex items-start gap-2 text-sm">
+                          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span>{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Każdą sprawę analizujemy indywidualnie — listę dopasujemy do Twojej nieruchomości.
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </BlurFade>
         );
@@ -141,6 +164,7 @@ export function PropertyTypesShowcase({
     </div>
   );
 }
+
 
 export const PROPERTY_SHOWCASE_KEY_TO_SECURITY: Record<string, string> = {
   mieszkanie: "mieszkanie",
