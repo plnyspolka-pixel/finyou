@@ -54,28 +54,34 @@ function OperatorLeadsList() {
 
 
 
-      <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-4">
+      <FancyShell motion={false} innerClassName="!p-3 md:!p-4">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="md:col-span-2 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Szukaj: imię, nazwisko, e-mail, telefon…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Input
+              className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/40"
+              placeholder="Szukaj: imię, nazwisko, e-mail, telefon…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie statusy</SelectItem>
               {Object.entries(leadStatusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={source} onValueChange={setSource}>
-            <SelectTrigger><SelectValue placeholder="Źródło" /></SelectTrigger>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white"><SelectValue placeholder="Źródło" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie źródła</SelectItem>
               {sources.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
-        </CardContent>
-      </Card>
+        </div>
+      </FancyShell>
+
 
       {q.isLoading && <p className="text-sm text-muted-foreground">Ładowanie…</p>}
       {q.error && <p className="text-sm text-destructive">Błąd: {(q.error as Error).message}</p>}
