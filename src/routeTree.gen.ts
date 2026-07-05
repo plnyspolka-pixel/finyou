@@ -134,6 +134,7 @@ import { Route as AdminInwestorzyIdRouteImport } from './routes/admin.inwestorzy
 import { Route as AdminGoogleAdsKreatorRouteImport } from './routes/admin.google-ads.kreator'
 import { Route as AdminFbAdsKreatorRouteImport } from './routes/admin.fb-ads.kreator'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -808,6 +809,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -1043,6 +1049,7 @@ export interface FileRoutesByFullPath {
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
@@ -1190,6 +1197,7 @@ export interface FileRoutesByTo {
   '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
@@ -1343,6 +1351,7 @@ export interface FileRoutesById {
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/fb-ads/kreator': typeof AdminFbAdsKreatorRoute
   '/admin/google-ads/kreator': typeof AdminGoogleAdsKreatorRoute
@@ -1497,6 +1506,7 @@ export interface FileRouteTypes {
     | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
@@ -1644,6 +1654,7 @@ export interface FileRouteTypes {
     | '/posrednicy'
     | '/posrednik'
     | '/propozycje'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
@@ -1796,6 +1807,7 @@ export interface FileRouteTypes {
     | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/fb-ads/kreator'
     | '/admin/google-ads/kreator'
@@ -1891,6 +1903,7 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   PosrednicyIndexRoute: typeof PosrednicyIndexRoute
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
@@ -2804,6 +2817,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -3276,6 +3296,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   PosrednicyIndexRoute: PosrednicyIndexRoute,
   PropozycjeIndexRoute: PropozycjeIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
