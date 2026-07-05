@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { sendSmsInternal } from "@/lib/voicebot.functions";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "@/lib/loan-progress.server";
+import { smsForStep, renderFollowUp, buildFollowUpVars } from "@/lib/follow-up-templates";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -29,9 +30,10 @@ async function runBatch() {
 
   const s = admin();
   // SMS-y startują dopiero 7+ dni po złożeniu wniosku (wcześniej działają tylko maile + telefony).
-  // Górne ograniczenie: 30 dni, max 2 SMS-y na wniosek (raz na 7 dni).
+  // BEZ górnego limitu wieku wniosku i BEZ limitu liczby SMS — cotygodniowa,
+  // nieprzerwana przypominajka z ROTACYJNĄ, klikbaitową treścią (patrz smsForStep).
+  // Sekwencję przerywają wyłącznie: status terminalny, do_not_sms, ukończony wniosek.
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
   const sixDaysAgo = new Date(Date.now() - 6 * 86400_000).toISOString();
 
   const { data: loans } = await s
@@ -42,8 +44,7 @@ async function runBatch() {
     `)
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .lte("created_at", sevenDaysAgo)
-    .gte("created_at", thirtyDaysAgo)
-    .lt("reminder_sms_count", 2)
+    .order("reminder_sms_last_sent_at", { ascending: true, nullsFirst: true })
     .limit(500);
 
 
@@ -62,8 +63,10 @@ async function runBatch() {
   for (const loan of candidates as any[]) {
     const phone = loan.client.phone_normalized || loan.client.phone;
     const name = (loan.client.first_name ?? "").trim();
-    const greet = name ? ` ${name}` : "";
-    const body = `Finance You: Cześć${greet}! Twój wniosek o pożyczkę czeka na dokończenie. Wejdź na https://financeyou.pl i dokończ go w 3 minuty.`;
+    // Rotacyjny, klikbaitowy SMS — numer w rotacji = ile SMS-ów już poszło.
+    const step = Number(loan.reminder_sms_count ?? 0) + 1;
+    const vars = buildFollowUpVars({ firstName: name, link: "https://financeyou.pl" });
+    const body = renderFollowUp(smsForStep(step), vars);
     const r = await sendSmsInternal({ phone, body, source: "saturday_reminder" });
     if (r.ok) {
       sent++;

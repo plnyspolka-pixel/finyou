@@ -284,14 +284,27 @@ export const getLead = createServerFn({ method: "GET" })
         .eq("loan_application_id", lead.loan_application_id)
         .order("sent_at", { ascending: false });
 
-      const nextIndex = (loanRow?.reminder_email_count ?? 0) + 1;
+      // Ile aktywnych szablonów jest w sekwencji (np. 120). Sekwencja cyklu­je,
+      // więc „następny" numer zawijamy modulo — nurture nigdy się nie kończy.
+      const { data: seqRows } = await context.supabase
+        .from("loan_reminder_email_variants")
+        .select("sequence_index")
+        .eq("active", true)
+        .not("sequence_index", "is", null)
+        .order("sequence_index", { ascending: true });
+      const seqList = (seqRows ?? []).map((r: any) => Number(r.sequence_index));
+      const totalVariants = seqList.length || 150;
+      const sentSoFar = loanRow?.reminder_email_count ?? 0;
+      const wrappedIndex = seqList.length
+        ? seqList[sentSoFar % seqList.length]
+        : sentSoFar + 1;
       const { data: nextVariant } = await context.supabase
         .from("loan_reminder_email_variants")
         .select("id, subject, preview_text, body_html, sequence_index, day_index, slot, phase")
-        .eq("sequence_index", nextIndex)
+        .eq("sequence_index", wrappedIndex)
         .maybeSingle();
 
-      emailSequence = { loan: loanRow, sends: sends ?? [], nextVariant, totalVariants: 150 };
+      emailSequence = { loan: loanRow, sends: sends ?? [], nextVariant, totalVariants, cycle: seqList.length ? Math.floor(sentSoFar / seqList.length) + 1 : 1 };
     }
     return { lead, communications: commsWithAuthor, documents, emailSequence };
   });

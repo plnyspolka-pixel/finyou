@@ -5210,6 +5210,7 @@ export type Database = {
           recipient_email: string
           sent_at: string
           sent_hour_warsaw: number
+          sequence_number: number | null
           subject: string
           variant_id: string | null
         }
@@ -5226,6 +5227,7 @@ export type Database = {
           recipient_email: string
           sent_at?: string
           sent_hour_warsaw: number
+          sequence_number?: number | null
           subject: string
           variant_id?: string | null
         }
@@ -5242,6 +5244,7 @@ export type Database = {
           recipient_email?: string
           sent_at?: string
           sent_hour_warsaw?: number
+          sequence_number?: number | null
           subject?: string
           variant_id?: string | null
         }

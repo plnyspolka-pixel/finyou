@@ -8,6 +8,7 @@ import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { logLeadCommunication } from "@/lib/lead-comms.server";
+import { emailForStep } from "@/lib/follow-up-templates";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
 const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
@@ -141,17 +142,10 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           // 6) Wyślij właściwym kanałem.
           let sendOk = false; let sendId: string | null = null; let sendErr: string | null = null;
-          const EMAIL_SUBJECTS = [
-            "Dokończ swój wniosek — Finance You",
-            "Twój wniosek czeka — 24h na decyzję",
-            "Zajmie Ci to 2 minuty — dokończ wniosek",
-            "Sprawdź, ile możesz pożyczyć pod zastaw",
-            "Twoja pożyczka pod zastaw — ostatni krok",
-            "Wróć do wniosku — indywidualne warunki czekają",
-            "Kilka pól dzieli Cię od oferty inwestorów",
-            "Ostatnia szansa, żeby dokończyć wniosek",
-          ];
-          const emailSubject = EMAIL_SUBJECTS[(step - 1) % EMAIL_SUBJECTS.length];
+          // Temat z tej samej, stałej puli 120 szablonów (rotacja) — bez „Przypomnienie N".
+          // Usuwamy ewentualne tokeny {{…}} (tu nie mamy kontekstu do ich podstawienia).
+          const emailSubject = emailForStep(step).subject
+            .replace(/\{\{[^}]+\}\}/g, "").replace(/\s{2,}/g, " ").trim();
           if (g.channel === "email") {
             const to = lead.email;
             if (!to) continue;

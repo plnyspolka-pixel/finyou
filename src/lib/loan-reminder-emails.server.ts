@@ -162,6 +162,16 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   }
   const variantBySeq = new Map<number, any>();
   for (const v of variants as any[]) variantBySeq.set(Number(v.sequence_index), v);
+  // Liczba dostępnych szablonów w sekwencji (np. 120). Po jej przekroczeniu
+  // sekwencja zawija się modulo, więc kontakt nigdy się nie kończy.
+  const seqIndices = (variants as any[]).map((v) => Number(v.sequence_index)).sort((a, b) => a - b);
+  const seqCount = seqIndices.length;
+  /** Zwraca wariant dla n-tej wysyłki (1-indexed) z zawijaniem po całej puli. */
+  const variantForSeq = (n: number): any => {
+    if (seqCount === 0) return null;
+    const pos = ((n - 1) % seqCount + seqCount) % seqCount; // 0-based, bezpieczne dla n<=0
+    return variantBySeq.get(seqIndices[pos]) ?? null;
+  };
 
   let q = s
     .from("loan_applications")
@@ -173,7 +183,8 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
     `)
     .in("status", ELIGIBLE_STATUSES_FOR_REMINDERS)
     .eq("reminder_email_unsubscribed", false)
-    .lt("reminder_email_count", 150)
+    // BEZ górnego limitu wysłanych maili — sekwencja cyklu­je w nieskończoność
+    // (patrz `variantForSeq` niżej), żeby nurture nigdy nie ucichł sam z siebie.
     .order("reminder_email_last_sent_at", { ascending: true, nullsFirst: true })
     .limit(12);
 
@@ -207,12 +218,10 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
   for (const loan of candidates as any[]) {
     const sentCount = Number(loan.reminder_email_count ?? 0);
     const nextSeq = sentCount + 1;
-    if (nextSeq > 150) {
-      results.push({ ok: false, skipped: "sequence_complete" });
-      continue;
-    }
 
-    // Faza 1: 1..60 — 2 razy dziennie (8 i 20). Faza 2: 61..150 — raz dziennie o 8:00, co 2 dni.
+    // Faza 1: pierwsze 60 wysyłek — 2 razy dziennie (8 i 20) — intensywny start.
+    // Faza 2: od 61. wysyłki w górę — raz dziennie o 8:00, co ~2 dni — spokojny,
+    // nieskończony rytm podtrzymujący (treść cyklu­je przez `variantForSeq`).
     const inPhase2 = nextSeq > 60;
     if (!force) {
       if (inPhase2) {
@@ -264,7 +273,7 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       continue;
     }
 
-    const variant = variantBySeq.get(nextSeq);
+    const variant = variantForSeq(nextSeq);
     if (!variant) {
       results.push({ ok: false, skipped: `no_variant_for_seq_${nextSeq}` });
       continue;
@@ -283,13 +292,16 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
         recipient_email: loan.client.email,
         subject: "",
         sent_hour_warsaw: hour,
+        sequence_number: nextSeq,
       })
       .select("id")
       .single();
     if (insErr || !pending) {
-      // 23505 = unique_violation → ten wariant został już wysłany do tego wniosku przez równoległy tick.
+      // 23505 = unique_violation → ta n-ta wysyłka (loan, sequence_number) została
+      // już wykonana przez równoległy tick. Wariant może się powtarzać (cykl), ale
+      // konkretny numer w kolejce — nie.
       if ((insErr as any)?.code === "23505") {
-        results.push({ ok: false, skipped: "duplicate_variant_for_loan" });
+        results.push({ ok: false, skipped: "duplicate_send_seq_for_loan" });
         continue;
       }
       errors++;
@@ -304,8 +316,10 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
       ? progress.missing_documents.join(", ")
       : (progress.current_step <= 2 ? "uzupełnienie danych kontaktowych" : "kilka informacji");
 
+    const fname = (loan.client.first_name ?? "").trim();
     const vars = {
-      first_name: (loan.client.first_name ?? "").trim() || "Witaj",
+      first_name: fname || "Witaj",
+      greeting: fname ? `Cześć ${fname}` : "Cześć",
       missing,
       link: wniosekLink,
       loan_amount: fmtPLN(loan.loan_amount),

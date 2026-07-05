@@ -148,11 +148,16 @@ export function pickAlternatingCallSlot(opts: {
 }
 
 /** Wylicza kolejny termin przypomnienia.
- *  Cadence (godziny od teraz): 0→+5h, 1→+8h, 2→+24h, 3→+48h, 4+→+72h,
- *  a wynik jest „snapowany" do losowego slotu w przeciwnej połowie dnia niż teraz
+ *  Kadencja WYGASAJĄCA, ale BEZ TWARDEGO STOPU — automat nigdy nie milknie sam
+ *  z siebie (żeby nie było „martwych" leadów jak wcześniej, gdy po 10 próbach /
+ *  30 dniach `next_reminder_at` szło na null i telefon przestawał dzwonić).
+ *  Cadence (godziny od teraz):
+ *    0→+5h, 1→+8h, 2→+24h, 3→+48h, 4–7→+72h (3 dni),
+ *    8–14→+168h (tydzień), 15–25→+336h (2 tyg.), 26+→+504h (3 tyg. — steady state).
+ *  Wynik jest „snapowany" do losowego slotu w przeciwnej połowie dnia niż teraz
  *  (rano/wieczór), z opcjonalnym wagowaniem godzin wg historycznej odbieralności.
- *  Dzięki temu kolejne próby nie wpadają wciąż o tej samej godzinie następnego dnia.
- *  Stop: po 30 dniach od first_reminder_at lub po 10 próbach. */
+ *  Sekwencję przerywają WYŁĄCZNIE zdarzenia zewnętrzne (status terminalny,
+ *  do_not_call, ukończony wniosek, ręczna pauza) — obsługiwane wyżej. */
 export function computeNextReminder(opts: {
   attempts: number;
   firstReminderAt: Date | null;
@@ -161,16 +166,15 @@ export function computeNextReminder(opts: {
 }): { nextAt: Date | null; stop: boolean } {
   const now = opts.now ?? new Date();
   const a = opts.attempts;
-  if (a >= 10) return { nextAt: null, stop: true };
-  if (opts.firstReminderAt && now.getTime() - opts.firstReminderAt.getTime() > 30 * 24 * 3600_000) {
-    return { nextAt: null, stop: true };
-  }
   let deltaH: number;
   if (a === 0) deltaH = 5;
   else if (a === 1) deltaH = 8;
   else if (a === 2) deltaH = 24;
   else if (a === 3) deltaH = 48;
-  else deltaH = 72;
+  else if (a <= 7) deltaH = 72;        // 3 dni
+  else if (a <= 14) deltaH = 168;      // tydzień
+  else if (a <= 25) deltaH = 336;      // 2 tygodnie
+  else deltaH = 504;                   // 3 tygodnie — kadencja podtrzymująca w nieskończoność
   const earliest = new Date(now.getTime() + deltaH * 3600_000);
   const slot = pickAlternatingCallSlot({
     lastCallAt: now,

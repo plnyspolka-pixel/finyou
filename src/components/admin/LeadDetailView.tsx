@@ -329,7 +329,7 @@ function Field({ label, value, onSave }: { label: string; value: any; onSave: (v
 
 function EmailSequenceTab({ data }: { data: any }) {
   if (!data) return <Card className="p-4 text-sm text-muted-foreground">Ten lead nie ma jeszcze wniosku pożyczkowego — sekwencja maili startuje po utworzeniu wniosku.</Card>;
-  const { loan, sends, nextVariant, totalVariants } = data;
+  const { loan, sends, nextVariant, totalVariants, cycle } = data;
   const sent = sends.length;
   const opened = sends.filter((s: any) => s.opened_at).length;
   const clicked = sends.filter((s: any) => s.clicked_at).length;
@@ -344,7 +344,7 @@ function EmailSequenceTab({ data }: { data: any }) {
         <Stat label="Status" value={
           loan?.reminder_email_unsubscribed ? "Wypisany" :
           (loan?.completeness_percent ?? 0) >= 100 ? "Wniosek kompletny — stop" :
-          sent >= totalVariants ? "Zakończona (150/150)" : "Aktywna"
+          (cycle ?? 1) > 1 ? `Aktywna (cykl ${cycle})` : "Aktywna"
         } />
       </Card>
       {!stopped && nextVariant && (
