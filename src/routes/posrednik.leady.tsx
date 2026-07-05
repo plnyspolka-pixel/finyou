@@ -196,9 +196,11 @@ function OperatorLeadsList() {
               </div>
             );
 
-        })}
-        {!q.isLoading && rows.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Brak leadów spełniających filtry.</p>}
-      </div>
+          })}
+          {!q.isLoading && rows.length === 0 && <p className="text-sm text-white/70 text-center py-8">Brak leadów spełniających filtry.</p>}
+        </div>
+      </FancyShell>
+
     </div>
   );
 }
