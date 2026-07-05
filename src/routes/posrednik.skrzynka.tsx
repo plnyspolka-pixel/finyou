@@ -15,7 +15,6 @@ import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
-import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
   component: SkrzynkaPosrednika,
@@ -105,56 +104,57 @@ function SkrzynkaPosrednika() {
   }, [data, tab, selected, refetchBody]);
 
   return (
-    <div className="space-y-4">
-      <FancyPageHeader
-        eyebrow="Komunikacja"
-        title="Skrzynka mailowa"
-        subtitle="Odbieraj, filtruj i odpowiadaj klientom w jednym miejscu."
-        actions={
-          <>
-            <Button
-              size="sm"
-              className="bg-white text-slate-900 hover:bg-white/90"
-              onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-            >
-              <PenSquare className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Nowa wiadomość</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCw className={`h-4 w-4 sm:mr-2 ${isFetching ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Odśwież</span>
-            </Button>
-          </>
-        }
-      />
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Mail className="h-4 w-4 shrink-0 text-primary" />
+          <h1 className="text-base font-semibold truncate">Skrzynka mailowa</h1>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            size="sm"
+            className="h-8 px-2.5"
+            onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+          >
+            <PenSquare className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Nowa</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2.5"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         <Button
           variant={tab === "inbound" ? "default" : "outline"}
           size="sm"
+          className="h-8 text-xs"
           onClick={() => { setTab("inbound"); setSelectedId(null); }}
         >
-          <Inbox className="h-4 w-4 mr-2" />
+          <Inbox className="h-3.5 w-3.5 mr-1.5" />
           Odebrane
         </Button>
         <Button
           variant={tab === "outbound" ? "default" : "outline"}
           size="sm"
+          className="h-8 text-xs"
           onClick={() => { setTab("outbound"); setSelectedId(null); }}
         >
-          <Send className="h-4 w-4 mr-2" />
+          <Send className="h-3.5 w-3.5 mr-1.5" />
           Wysłane
         </Button>
       </div>
 
-      <div className="grid grid-rows-[38vh_1fr] gap-3 lg:grid-cols-[380px_1fr] lg:grid-rows-1 lg:gap-4">
-        <Card className="p-3 min-h-0 flex flex-col overflow-hidden border-primary/10 bg-gradient-to-b from-background to-muted/30">
+      <div className="grid grid-rows-[44vh_1fr] gap-3 lg:grid-cols-[380px_1fr] lg:grid-rows-1 lg:gap-4">
+        <Card className="p-2 min-h-0 flex flex-col overflow-hidden border-primary/10 bg-gradient-to-b from-background to-muted/30">
+
 
           <div className="relative mb-3">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -178,31 +178,50 @@ function SkrzynkaPosrednika() {
                   <button
                     key={m.id}
                     onClick={() => setSelectedId(m.id)}
-                    className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
-                      isActive ? "bg-muted border-primary" : "hover:bg-muted/50"
+                    className={`group relative w-full text-left rounded-lg border pl-3 pr-2.5 py-2 transition-all overflow-hidden ${
+                      isActive
+                        ? "border-primary/60 bg-gradient-to-r from-primary/10 via-sky-500/5 to-transparent shadow-sm"
+                        : "border-transparent hover:border-primary/20 hover:bg-muted/60"
                     }`}
                   >
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                      <div className="text-xs font-medium truncate min-w-0">{m.email ?? "—"}</div>
-                      <div className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
-                        {formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: pl })}
+                    <span
+                      aria-hidden
+                      className={`absolute left-0 top-0 h-full w-[3px] rounded-r ${
+                        isActive
+                          ? "bg-gradient-to-b from-indigo-500 via-sky-500 to-emerald-500"
+                          : "bg-transparent group-hover:bg-primary/30"
+                      }`}
+                    />
+                    <div className="flex items-center gap-2">
+                      <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 text-[10px] font-bold text-white shadow-sm">
+                        {(m.email ?? "?").slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                          <div className="text-[11px] font-semibold truncate min-w-0">{m.email ?? "—"}</div>
+                          <div className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                            {formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: pl })}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-sm truncate mt-0.5">{m.subject || "(bez tematu)"}</div>
-                    <div className="text-xs text-muted-foreground truncate">
+                    <div className="text-[13px] font-medium truncate mt-1 text-foreground/90">{m.subject || "(bez tematu)"}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
                       {(m.content ?? "").slice(0, 80)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      {hasAtt && (
-                        <Badge variant="secondary" className="text-[10px] h-4">
-                          <Paperclip className="h-2.5 w-2.5 mr-1" />
-                          {(m.attachments as any[]).length}
-                        </Badge>
-                      )}
-                      {m.lead_id && (
-                        <Badge variant="outline" className="text-[10px] h-4">lead</Badge>
-                      )}
-                    </div>
+                    {(hasAtt || m.lead_id) && (
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        {hasAtt && (
+                          <Badge variant="secondary" className="text-[10px] h-4 bg-violet-100 text-violet-700 border-violet-200">
+                            <Paperclip className="h-2.5 w-2.5 mr-1" />
+                            {(m.attachments as any[]).length}
+                          </Badge>
+                        )}
+                        {m.lead_id && (
+                          <Badge variant="outline" className="text-[10px] h-4 border-emerald-300 text-emerald-700">lead</Badge>
+                        )}
+                      </div>
+                    )}
                   </button>
                 );
               })}
