@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://jqvepxhulxdnbwbogkhe.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "finance-you-mcp",
+      "version": "0.1.0",
+      "title": "Finance You"
+    },
+    "tools": [
+      {
+        "name": "get_my_profile",
+        "title": "Get my Finance You profile",
+        "description": "Zwraca podstawowe informacje o zalogowanym użytkowniku Finance You: id, email, przypisane role (administrator / operator / inwestor / posrednik / klient).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_leads",
+        "title": "List my leads",
+        "description": "Zwraca leady przypisane do zalogowanego pośrednika/operatora (Finance You). Sortowane najnowsze na górze. Widoczność ograniczona przez RLS.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maksymalna liczba leadów do zwrócenia (domyślnie 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_blog",
+        "title": "Search Finance You blog",
+        "description": "Wyszukuje opublikowane artykuły na blogu Finance You po tytule lub fragmencie treści. Zwraca tytuł, slug, audience i URL.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Fraza do wyszukania w tytule/treści."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
