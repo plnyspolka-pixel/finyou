@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, FileText, Sparkles } from "lucide-react";
+import { ChevronDown, FileText, Sparkles, Building2, Home, Store, Trees, Map, type LucideIcon } from "lucide-react";
 import { BlurFade } from "@/components/ui/blur-fade";
-import imgApartment from "@/assets/prop-apartment.jpg";
-import imgHouse from "@/assets/prop-house.jpg";
-import imgCommercial from "@/assets/prop-commercial.jpg";
-import imgLandAgri from "@/assets/prop-land-agri.jpg";
-import imgLandBuild from "@/assets/prop-land-build.jpg";
 
 type PropType = {
   key: string;
   title: string;
-  img: string;
+  Icon: LucideIcon;
   docs: string[];
 };
 
@@ -18,7 +13,7 @@ const TYPES: PropType[] = [
   {
     key: "mieszkanie",
     title: "Mieszkanie",
-    img: imgApartment,
+    Icon: Building2,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia każdego pomieszczenia",
@@ -28,7 +23,7 @@ const TYPES: PropType[] = [
   {
     key: "dom",
     title: "Dom / dom w budowie",
-    img: imgHouse,
+    Icon: Home,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia z zewnątrz całego budynku",
@@ -39,7 +34,7 @@ const TYPES: PropType[] = [
   {
     key: "lokal",
     title: "Lokal użytkowy / usługowy",
-    img: imgCommercial,
+    Icon: Store,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia każdego pomieszczenia",
@@ -50,7 +45,7 @@ const TYPES: PropType[] = [
   {
     key: "rolna",
     title: "Grunt rolny",
-    img: imgLandAgri,
+    Icon: Trees,
     docs: [
       "Wypis z rejestru gruntów",
       "Numer księgi wieczystej (jeżeli nie ma go na wypisie)",
@@ -59,7 +54,7 @@ const TYPES: PropType[] = [
   {
     key: "budowlana",
     title: "Działka budowlana",
-    img: imgLandBuild,
+    Icon: Map,
     docs: [
       "Numer księgi wieczystej",
       "MPZP albo warunki zabudowy",
@@ -78,141 +73,67 @@ export function PropertyTypesShowcase({
   const selectMode = typeof onSelect === "function";
 
   return (
-    <div className={selectMode ? "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5 sm:gap-3" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}>
-
-
+    <div className={selectMode ? "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
       {TYPES.map((p, i) => {
         const isOpen = !selectMode && openKey === p.key;
         const isSelected = selectMode && selectedKey === p.key;
         const highlight = isOpen || isSelected;
+        const Icon = p.Icon;
         return (
-          <BlurFade key={p.key} delay={0.06 + i * 0.05}>
-            <div
-              className={[
-                "group relative overflow-hidden rounded-2xl p-[1.5px] transition-all duration-300",
-                highlight
-                  ? "shadow-[0_18px_55px_-15px_oklch(0.40_0.25_268/0.55)]"
-                  : "shadow-[0_10px_30px_-15px_oklch(0.20_0.08_265/0.45)] hover:-translate-y-0.5 hover:shadow-[0_18px_55px_-15px_oklch(0.40_0.25_268/0.55)]",
-              ].join(" ")}
-              style={{
-                background: highlight
-                  ? "conic-gradient(from 140deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))"
-                  : "linear-gradient(135deg, oklch(0.40 0.25 268 / 0.55), oklch(0.65 0.18 240 / 0.35), oklch(0.30 0.15 265 / 0.55))",
-              }}
-            >
-              <div className="relative overflow-hidden rounded-[14px] bg-card">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectMode) {
-                      onSelect!(p.key);
-                    } else {
-                      setOpenKey(isOpen ? null : p.key);
-                    }
-                  }}
-                  aria-expanded={isOpen}
-                  aria-pressed={isSelected}
-                  className="relative block w-full text-left"
+          <BlurFade key={p.key} delay={0.04 + i * 0.03}>
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectMode) onSelect!(p.key);
+                  else setOpenKey(isOpen ? null : p.key);
+                }}
+                aria-expanded={isOpen}
+                aria-pressed={isSelected}
+                className={[
+                  "flex w-full items-center gap-3 px-3 py-3 text-left transition-colors",
+                  highlight ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted/50",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
+                    highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                  ].join(" ")}
                 >
-                  <div className={selectMode ? "relative h-24 w-full overflow-hidden @container sm:aspect-square sm:h-32" : "relative h-44 w-full overflow-hidden"}>
-                    <img
-                      src={p.img}
-                      alt={p.title}
-                      loading="lazy"
-                      width={800}
-                      height={800}
-                      className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110"
-                    />
-                    <div
-                      aria-hidden
-                      className="absolute inset-0"
-                      style={{
-                        background:
-                          "linear-gradient(180deg, oklch(0.13 0.04 265 / 0.15) 0%, oklch(0.18 0.06 265 / 0.55) 55%, oklch(0.13 0.04 265 / 0.95) 100%)",
-                      }}
-                    />
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full blur-2xl opacity-70 transition group-hover:opacity-90"
-                      style={{
-                        background:
-                          "radial-gradient(circle, oklch(0.68 0.16 235 / 0.75), transparent 70%)",
-                      }}
-                    />
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute -bottom-12 -left-6 h-36 w-36 rounded-full blur-2xl opacity-60 transition group-hover:opacity-80"
-                      style={{
-                        background:
-                          "radial-gradient(circle, oklch(0.50 0.22 285 / 0.7), transparent 70%)",
-                      }}
-                    />
-
-                    <div className={selectMode ? "absolute inset-0 flex flex-col items-center justify-end gap-1 p-1.5 text-center sm:p-2 md:p-2.5 lg:p-3" : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"}>
-                      <h3
-                        className={selectMode ? "w-full break-words text-center font-extrabold uppercase leading-tight tracking-[0.02em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] sm:tracking-[0.03em] md:tracking-[0.05em]" : "text-sm font-extrabold uppercase tracking-[0.14em] text-white drop-shadow-[0_2px_8px_oklch(0.13_0.04_265/0.9)] md:text-base"}
-                        style={selectMode ? { fontSize: "clamp(9px, 2.2cqw + 6px, 14px)" } : undefined}
-                      >
-                        {p.title}
-                      </h3>
-                      {!selectMode && (
-                        <span
-                          className={[
-                            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white ring-1 backdrop-blur transition",
-                            highlight
-                              ? "bg-white/25 ring-white/40"
-                              : "bg-white/12 ring-white/25 group-hover:bg-white/20",
-                          ].join(" ")}
-                        >
-                          Dokumenty
-                          <ChevronDown
-                            className={`h-3 w-3 transition ${isOpen ? "rotate-180" : ""}`}
-                          />
-                        </span>
-                      )}
-                    </div>
-
-                  </div>
-                </button>
-
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">
+                  {p.title}
+                </span>
                 {!selectMode && (
-                  <div
-                    className={`grid transition-all duration-300 ease-out ${
-                      isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div
-                        className="relative border-t border-white/10 p-5 text-white"
-                        style={{
-                          background:
-                            "linear-gradient(160deg, oklch(0.20 0.08 265) 0%, oklch(0.15 0.05 265) 100%)",
-                        }}
-                      >
-                        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Co przygotować
-                        </p>
-                        <ul className="mt-3 space-y-2">
-                          {p.docs.map((d) => (
-                            <li
-                              key={d}
-                              className="flex items-start gap-2 text-sm text-white/90"
-                            >
-                              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[oklch(0.78_0.14_235)]" />
-                              <span>{d}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="mt-3 text-xs text-white/55">
-                          Każdą sprawę analizujemy indywidualnie — listę dopasujemy do
-                          Twojej nieruchomości.
-                        </p>
-                      </div>
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`} />
+                )}
+              </button>
+
+              {!selectMode && (
+                <div className={`grid transition-all duration-200 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                  <div className="overflow-hidden">
+                    <div className="border-t p-4">
+                      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Co przygotować
+                      </p>
+                      <ul className="mt-2 space-y-1.5">
+                        {p.docs.map((d) => (
+                          <li key={d} className="flex items-start gap-2 text-sm">
+                            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                            <span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Każdą sprawę analizujemy indywidualnie — listę dopasujemy do Twojej nieruchomości.
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </BlurFade>
         );
@@ -236,5 +157,3 @@ export const PROPERTY_DOCS_BY_SECURITY: Record<string, { title: string; docs: st
   grunt_rolny: { title: TYPES[3].title, docs: TYPES[3].docs },
   dzialka_budowlana: { title: TYPES[4].title, docs: TYPES[4].docs },
 };
-
-
