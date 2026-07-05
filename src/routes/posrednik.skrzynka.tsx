@@ -79,7 +79,7 @@ function SkrzynkaPosrednika() {
     );
   }, [data, q]);
 
-  const selected = filtered.find((m) => m.id === selectedId) ?? filtered[0] ?? null;
+  const selected = selectedId ? filtered.find((m) => m.id === selectedId) ?? null : null;
 
   const autoFetched = useRef<Set<string>>(new Set());
   useEffect(() => {
