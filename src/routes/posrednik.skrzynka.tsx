@@ -210,17 +210,18 @@ function SkrzynkaPosrednika() {
           </ScrollArea>
         </Card>
 
-        <Card className={`p-3 sm:p-4 ${selected ? "block" : "hidden lg:block"} min-w-0`}>
+        <Card className="p-3 sm:p-4 min-w-0 min-h-0 flex flex-col overflow-hidden border-primary/10">
           {!selected && (
-            <div className="text-sm text-muted-foreground">Wybierz wiadomość po lewej.</div>
+            <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground p-6">
+              <div>
+                <Mail className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                Wybierz wiadomość z listy powyżej.
+              </div>
+            </div>
           )}
           {selected && (
-            <div className="space-y-4 min-w-0">
-              <div className="lg:hidden">
-                <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="-ml-2">
-                  ← Wróć do listy
-                </Button>
-              </div>
+            <div className="space-y-4 min-w-0 flex-1 overflow-y-auto">
+
               <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="text-base sm:text-lg font-semibold break-words">
