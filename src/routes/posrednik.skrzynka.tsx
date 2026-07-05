@@ -316,7 +316,7 @@ function SkrzynkaPosrednika() {
                       </div>
                     )}
                     {html && viewMode === "html" ? (
-                      <div className="w-full overflow-x-auto rounded-md border bg-white">
+                      <div className="w-full overflow-x-auto rounded-md border border-white/20 bg-white">
                         <iframe
                           title="email-body"
                           sandbox=""
@@ -325,18 +325,18 @@ function SkrzynkaPosrednika() {
                         />
                       </div>
                     ) : hasContent ? (
-                      <div className="prose prose-sm max-w-none whitespace-pre-wrap break-words text-sm">
+                      <div className="rounded-md bg-white/95 text-slate-900 p-3 prose prose-sm max-w-none whitespace-pre-wrap break-words text-sm">
                         {selected.content}
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-white/70">
                           (brak treści — wiadomość zapisana bez body)
                         </div>
                         {canRefetch ? (
                           <Button
                             size="sm"
-                            variant="outline"
+                            className="bg-white text-slate-900 hover:bg-white/90"
                             onClick={() => refetchBody.mutate(selected.id)}
                             disabled={refetchBody.isPending}
                           >
@@ -344,11 +344,12 @@ function SkrzynkaPosrednika() {
                             Pobierz treść
                           </Button>
                         ) : tab === "inbound" ? (
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-white/60">
                             Stara wiadomość bez identyfikatora — nie da się pobrać treści. Nowe wiadomości będą zapisywane z pełną treścią.
                           </div>
                         ) : null}
                       </div>
+
                     )}
                   </div>
                 );
