@@ -13,6 +13,7 @@ import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
+import { FancyShell } from "@/components/landing/fancy-shell";
 
 export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
