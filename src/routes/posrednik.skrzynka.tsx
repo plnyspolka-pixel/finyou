@@ -229,28 +229,27 @@ function SkrzynkaPosrednika() {
         </FancyShell>
 
 
-        <Card className="p-3 sm:p-4 min-w-0 min-h-0 flex flex-col overflow-hidden border-primary/10">
+        <FancyShell motion={false} innerClassName="!p-3 sm:!p-4 h-full flex flex-col min-w-0">
           {!selected && (
-            <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground p-6">
+            <div className="flex-1 flex items-center justify-center text-center text-sm text-white/70 p-6">
               <div>
-                <Mail className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <Mail className="h-8 w-8 mx-auto mb-2 opacity-60" />
                 Wybierz wiadomość z listy powyżej.
               </div>
             </div>
           )}
           {selected && (
             <div className="space-y-4 min-w-0 flex-1 overflow-y-auto">
-
-              <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-3 border-b border-white/15 pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="text-base sm:text-lg font-semibold break-words">
+                  <div className="text-base sm:text-lg font-semibold break-words text-white">
                     {selected.subject || "(bez tematu)"}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1 break-all">
-                    <span className="font-medium">{tab === "inbound" ? "Od:" : "Do:"}</span>{" "}
+                  <div className="text-sm text-white/70 mt-1 break-all">
+                    <span className="font-medium text-white/90">{tab === "inbound" ? "Od:" : "Do:"}</span>{" "}
                     {selected.email ?? "—"}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-white/60">
                     {new Date(selected.created_at).toLocaleString("pl-PL")}
                   </div>
                 </div>
@@ -258,6 +257,7 @@ function SkrzynkaPosrednika() {
                   {tab === "inbound" && selected.email && (
                     <Button
                       size="sm"
+                      className="bg-white text-slate-900 hover:bg-white/90"
                       onClick={() => {
                         const subj = selected.subject ?? "";
                         setComposeInitial({
@@ -274,7 +274,7 @@ function SkrzynkaPosrednika() {
                     </Button>
                   )}
                   {selected.lead_id && (
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="sm" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
                       <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Otwórz lead
@@ -283,6 +283,7 @@ function SkrzynkaPosrednika() {
                   )}
                 </div>
               </div>
+
 
               {Array.isArray(selected.attachments) && selected.attachments.length > 0 && (
                 <AttachmentPreview attachments={selected.attachments as any[]} />
