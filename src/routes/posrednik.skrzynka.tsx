@@ -154,23 +154,21 @@ function SkrzynkaPosrednika() {
       </div>
 
       <div className="grid grid-rows-[44vh_1fr] gap-3 lg:grid-cols-[380px_1fr] lg:grid-rows-1 lg:gap-4">
-        <Card className="p-2 min-h-0 flex flex-col overflow-hidden border-primary/10 bg-gradient-to-b from-background to-muted/30">
-
-
-          <div className="relative mb-3">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <FancyShell motion={false} innerClassName="!p-2 h-full flex flex-col">
+          <div className="relative mb-3 shrink-0">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/60" />
             <Input
               placeholder="Szukaj (temat, email, treść)..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="pl-8"
+              className="pl-8 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/40"
             />
           </div>
           <ScrollArea className="flex-1 min-h-0 lg:h-[calc(100vh-260px)]">
-            <div className="space-y-1">
-              {isLoading && <div className="p-4 text-sm text-muted-foreground">Ładuję…</div>}
+            <div className="space-y-1 pr-1">
+              {isLoading && <div className="p-4 text-sm text-white/70">Ładuję…</div>}
               {!isLoading && filtered.length === 0 && (
-                <div className="p-4 text-sm text-muted-foreground">Brak wiadomości.</div>
+                <div className="p-4 text-sm text-white/70">Brak wiadomości.</div>
               )}
               {filtered.map((m) => {
                 const isActive = (selected?.id ?? null) === m.id;
@@ -181,45 +179,45 @@ function SkrzynkaPosrednika() {
                     onClick={() => setSelectedId(m.id)}
                     className={`group relative w-full text-left rounded-lg border pl-3 pr-2.5 py-2 transition-all overflow-hidden ${
                       isActive
-                        ? "border-primary/60 bg-gradient-to-r from-primary/10 via-sky-500/5 to-transparent shadow-sm"
-                        : "border-transparent hover:border-primary/20 hover:bg-muted/60"
+                        ? "border-white/40 bg-white/15 shadow-sm"
+                        : "border-white/10 bg-white/[0.04] hover:bg-white/10 hover:border-white/25"
                     }`}
                   >
                     <span
                       aria-hidden
                       className={`absolute left-0 top-0 h-full w-[3px] rounded-r ${
                         isActive
-                          ? "bg-gradient-to-b from-indigo-500 via-sky-500 to-emerald-500"
-                          : "bg-transparent group-hover:bg-primary/30"
+                          ? "bg-gradient-to-b from-indigo-400 via-sky-400 to-emerald-400"
+                          : "bg-transparent group-hover:bg-white/40"
                       }`}
                     />
                     <div className="flex items-center gap-2">
-                      <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 text-[10px] font-bold text-white shadow-sm">
+                      <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 text-[10px] font-bold text-white shadow-sm">
                         {(m.email ?? "?").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                          <div className="text-[11px] font-semibold truncate min-w-0">{m.email ?? "—"}</div>
-                          <div className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                          <div className="text-[11px] font-semibold truncate min-w-0 text-white">{m.email ?? "—"}</div>
+                          <div className="text-[10px] text-white/60 whitespace-nowrap shrink-0">
                             {formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: pl })}
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-[13px] font-medium truncate mt-1 text-foreground/90">{m.subject || "(bez tematu)"}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
+                    <div className="text-[13px] font-medium truncate mt-1 text-white/95">{m.subject || "(bez tematu)"}</div>
+                    <div className="text-[11px] text-white/60 truncate">
                       {(m.content ?? "").slice(0, 80)}
                     </div>
                     {(hasAtt || m.lead_id) && (
                       <div className="flex items-center gap-1 mt-1 flex-wrap">
                         {hasAtt && (
-                          <Badge variant="secondary" className="text-[10px] h-4 bg-violet-100 text-violet-700 border-violet-200">
+                          <Badge className="text-[10px] h-4 bg-violet-500/25 text-violet-100 border-violet-300/30">
                             <Paperclip className="h-2.5 w-2.5 mr-1" />
                             {(m.attachments as any[]).length}
                           </Badge>
                         )}
                         {m.lead_id && (
-                          <Badge variant="outline" className="text-[10px] h-4 border-emerald-300 text-emerald-700">lead</Badge>
+                          <Badge className="text-[10px] h-4 border-emerald-300/40 bg-emerald-500/20 text-emerald-100">lead</Badge>
                         )}
                       </div>
                     )}
@@ -228,7 +226,8 @@ function SkrzynkaPosrednika() {
               })}
             </div>
           </ScrollArea>
-        </Card>
+        </FancyShell>
+
 
         <Card className="p-3 sm:p-4 min-w-0 min-h-0 flex flex-col overflow-hidden border-primary/10">
           {!selected && (
