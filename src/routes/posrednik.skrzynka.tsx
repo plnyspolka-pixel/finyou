@@ -15,6 +15,7 @@ import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
   component: SkrzynkaPosrednika,
@@ -105,25 +106,33 @@ function SkrzynkaPosrednika() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
-        <div className="flex min-w-0 items-center gap-2">
-          <Mail className="h-5 w-5 shrink-0" />
-          <h1 className="truncate text-xl font-semibold sm:text-2xl">Skrzynka mailowa</h1>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            size="sm"
-            onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-          >
-            <PenSquare className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Nowa wiadomość</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Odśwież</span>
-          </Button>
-        </div>
-      </div>
+      <FancyPageHeader
+        eyebrow="Komunikacja"
+        title="Skrzynka mailowa"
+        subtitle="Odbieraj, filtruj i odpowiadaj klientom w jednym miejscu."
+        actions={
+          <>
+            <Button
+              size="sm"
+              className="bg-white text-slate-900 hover:bg-white/90"
+              onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+            >
+              <PenSquare className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nowa wiadomość</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 sm:mr-2 ${isFetching ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Odśwież</span>
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex gap-2">
         <Button
@@ -144,8 +153,9 @@ function SkrzynkaPosrednika() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
-        <Card className={`p-3 ${selected ? "hidden lg:block" : "block"}`}>
+      <div className="grid grid-rows-[38vh_1fr] gap-3 lg:grid-cols-[380px_1fr] lg:grid-rows-1 lg:gap-4">
+        <Card className="p-3 min-h-0 flex flex-col overflow-hidden border-primary/10 bg-gradient-to-b from-background to-muted/30">
+
           <div className="relative mb-3">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -155,7 +165,7 @@ function SkrzynkaPosrednika() {
               className="pl-8"
             />
           </div>
-          <ScrollArea className="h-[calc(100vh-260px)]">
+          <ScrollArea className="flex-1 min-h-0 lg:h-[calc(100vh-260px)]">
             <div className="space-y-1">
               {isLoading && <div className="p-4 text-sm text-muted-foreground">Ładuję…</div>}
               {!isLoading && filtered.length === 0 && (
@@ -200,17 +210,18 @@ function SkrzynkaPosrednika() {
           </ScrollArea>
         </Card>
 
-        <Card className={`p-3 sm:p-4 ${selected ? "block" : "hidden lg:block"} min-w-0`}>
+        <Card className="p-3 sm:p-4 min-w-0 min-h-0 flex flex-col overflow-hidden border-primary/10">
           {!selected && (
-            <div className="text-sm text-muted-foreground">Wybierz wiadomość po lewej.</div>
+            <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground p-6">
+              <div>
+                <Mail className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                Wybierz wiadomość z listy powyżej.
+              </div>
+            </div>
           )}
           {selected && (
-            <div className="space-y-4 min-w-0">
-              <div className="lg:hidden">
-                <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="-ml-2">
-                  ← Wróć do listy
-                </Button>
-              </div>
+            <div className="space-y-4 min-w-0 flex-1 overflow-y-auto">
+
               <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="text-base sm:text-lg font-semibold break-words">

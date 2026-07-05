@@ -13,6 +13,7 @@ import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
+import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
 export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
@@ -40,12 +41,22 @@ function OperatorLeadsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Leady (wszystkie)</h1>
-        <Button variant="outline" size="sm" onClick={() => q.refetch()}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Odśwież
-        </Button>
-      </div>
+      <FancyPageHeader
+        eyebrow={`${rows.length} ${rows.length === 1 ? "lead" : "leadów"}`}
+        title="Leady (wszystkie)"
+        subtitle="Filtruj, dzwoń, notuj i szybko przejmuj kontakt z klientami."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            onClick={() => q.refetch()}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" /> Odśwież
+          </Button>
+        }
+      />
+
 
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-4">
@@ -78,7 +89,8 @@ function OperatorLeadsList() {
           const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "Bez nazwy";
           const phone = r.phone_normalized;
           return (
-            <Card key={r.id} className="hover:bg-accent/40 transition">
+            <Card key={r.id} className="group relative overflow-hidden border-primary/10 bg-gradient-to-br from-background via-background to-primary/5 transition hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/30">
+              <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-500 via-sky-500 to-emerald-500 opacity-70 group-hover:opacity-100" />
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
