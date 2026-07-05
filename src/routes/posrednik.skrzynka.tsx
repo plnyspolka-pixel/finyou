@@ -105,56 +105,57 @@ function SkrzynkaPosrednika() {
   }, [data, tab, selected, refetchBody]);
 
   return (
-    <div className="space-y-4">
-      <FancyPageHeader
-        eyebrow="Komunikacja"
-        title="Skrzynka mailowa"
-        subtitle="Odbieraj, filtruj i odpowiadaj klientom w jednym miejscu."
-        actions={
-          <>
-            <Button
-              size="sm"
-              className="bg-white text-slate-900 hover:bg-white/90"
-              onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
-            >
-              <PenSquare className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Nowa wiadomość</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCw className={`h-4 w-4 sm:mr-2 ${isFetching ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Odśwież</span>
-            </Button>
-          </>
-        }
-      />
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Mail className="h-4 w-4 shrink-0 text-primary" />
+          <h1 className="text-base font-semibold truncate">Skrzynka mailowa</h1>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            size="sm"
+            className="h-8 px-2.5"
+            onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
+          >
+            <PenSquare className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Nowa</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-2.5"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         <Button
           variant={tab === "inbound" ? "default" : "outline"}
           size="sm"
+          className="h-8 text-xs"
           onClick={() => { setTab("inbound"); setSelectedId(null); }}
         >
-          <Inbox className="h-4 w-4 mr-2" />
+          <Inbox className="h-3.5 w-3.5 mr-1.5" />
           Odebrane
         </Button>
         <Button
           variant={tab === "outbound" ? "default" : "outline"}
           size="sm"
+          className="h-8 text-xs"
           onClick={() => { setTab("outbound"); setSelectedId(null); }}
         >
-          <Send className="h-4 w-4 mr-2" />
+          <Send className="h-3.5 w-3.5 mr-1.5" />
           Wysłane
         </Button>
       </div>
 
-      <div className="grid grid-rows-[38vh_1fr] gap-3 lg:grid-cols-[380px_1fr] lg:grid-rows-1 lg:gap-4">
-        <Card className="p-3 min-h-0 flex flex-col overflow-hidden border-primary/10 bg-gradient-to-b from-background to-muted/30">
+      <div className="grid grid-rows-[44vh_1fr] gap-3 lg:grid-cols-[380px_1fr] lg:grid-rows-1 lg:gap-4">
+        <Card className="p-2 min-h-0 flex flex-col overflow-hidden border-primary/10 bg-gradient-to-b from-background to-muted/30">
+
 
           <div className="relative mb-3">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
