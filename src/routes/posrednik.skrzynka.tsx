@@ -165,7 +165,7 @@ function SkrzynkaPosrednika() {
               className="pl-8"
             />
           </div>
-          <ScrollArea className="h-[calc(100vh-260px)]">
+          <ScrollArea className="flex-1 min-h-0 lg:h-[calc(100vh-260px)]">
             <div className="space-y-1">
               {isLoading && <div className="p-4 text-sm text-muted-foreground">Ładuję…</div>}
               {!isLoading && filtered.length === 0 && (
