@@ -79,7 +79,7 @@ function SkrzynkaPosrednika() {
     );
   }, [data, q]);
 
-  const selected = filtered.find((m) => m.id === selectedId) ?? filtered[0] ?? null;
+  const selected = selectedId ? filtered.find((m) => m.id === selectedId) ?? null : null;
 
   const autoFetched = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -105,22 +105,22 @@ function SkrzynkaPosrednika() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Skrzynka mailowa</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <Mail className="h-5 w-5 shrink-0" />
+          <h1 className="truncate text-xl font-semibold sm:text-2xl">Skrzynka mailowa</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
           >
-            <PenSquare className="h-4 w-4 mr-2" />
-            Nowa wiadomość
+            <PenSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Nowa wiadomość</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            Odśwież
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Odśwież</span>
           </Button>
         </div>
       </div>
@@ -145,7 +145,7 @@ function SkrzynkaPosrednika() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
-        <Card className="p-3">
+        <Card className={`p-3 ${selected ? "hidden lg:block" : "block"}`}>
           <div className="relative mb-3">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -172,9 +172,9 @@ function SkrzynkaPosrednika() {
                       isActive ? "bg-muted border-primary" : "hover:bg-muted/50"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs font-medium truncate">{m.email ?? "—"}</div>
-                      <div className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                      <div className="text-xs font-medium truncate min-w-0">{m.email ?? "—"}</div>
+                      <div className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
                         {formatDistanceToNow(new Date(m.created_at), { addSuffix: true, locale: pl })}
                       </div>
                     </div>
@@ -182,7 +182,7 @@ function SkrzynkaPosrednika() {
                     <div className="text-xs text-muted-foreground truncate">
                       {(m.content ?? "").slice(0, 80)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {hasAtt && (
                         <Badge variant="secondary" className="text-[10px] h-4">
                           <Paperclip className="h-2.5 w-2.5 mr-1" />
@@ -200,18 +200,23 @@ function SkrzynkaPosrednika() {
           </ScrollArea>
         </Card>
 
-        <Card className="p-4">
+        <Card className={`p-3 sm:p-4 ${selected ? "block" : "hidden lg:block"} min-w-0`}>
           {!selected && (
             <div className="text-sm text-muted-foreground">Wybierz wiadomość po lewej.</div>
           )}
           {selected && (
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-3 border-b pb-3">
+            <div className="space-y-4 min-w-0">
+              <div className="lg:hidden">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedId(null)} className="-ml-2">
+                  ← Wróć do listy
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <div className="text-lg font-semibold break-words">
+                  <div className="text-base sm:text-lg font-semibold break-words">
                     {selected.subject || "(bez tematu)"}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">
+                  <div className="text-sm text-muted-foreground mt-1 break-all">
                     <span className="font-medium">{tab === "inbound" ? "Od:" : "Do:"}</span>{" "}
                     {selected.email ?? "—"}
                   </div>
@@ -219,7 +224,7 @@ function SkrzynkaPosrednika() {
                     {new Date(selected.created_at).toLocaleString("pl-PL")}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
                   {tab === "inbound" && selected.email && (
                     <Button
                       size="sm"
@@ -260,7 +265,7 @@ function SkrzynkaPosrednika() {
                 const hasContent = !!(selected.content && selected.content.trim().length > 0);
                 const canRefetch = tab === "inbound" && !!meta.email_id;
                 return (
-                  <div className="space-y-3">
+                  <div className="space-y-3 min-w-0">
                     {html && (
                       <div className="flex items-center gap-2">
                         <Button
@@ -280,12 +285,14 @@ function SkrzynkaPosrednika() {
                       </div>
                     )}
                     {html && viewMode === "html" ? (
-                      <iframe
-                        title="email-body"
-                        sandbox=""
-                        srcDoc={html}
-                        className="w-full min-h-[500px] rounded-md border bg-white"
-                      />
+                      <div className="w-full overflow-x-auto rounded-md border bg-white">
+                        <iframe
+                          title="email-body"
+                          sandbox=""
+                          srcDoc={html}
+                          className="w-full min-h-[500px] bg-white"
+                        />
+                      </div>
                     ) : hasContent ? (
                       <div className="prose prose-sm max-w-none whitespace-pre-wrap break-words text-sm">
                         {selected.content}
