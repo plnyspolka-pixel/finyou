@@ -105,22 +105,22 @@ function SkrzynkaPosrednika() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          <h1 className="text-2xl font-semibold">Skrzynka mailowa</h1>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <Mail className="h-5 w-5 shrink-0" />
+          <h1 className="truncate text-xl font-semibold sm:text-2xl">Skrzynka mailowa</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
             onClick={() => { setComposeInitial(undefined); setComposeOpen(true); }}
           >
-            <PenSquare className="h-4 w-4 mr-2" />
-            Nowa wiadomość
+            <PenSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Nowa wiadomość</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            Odśwież
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Odśwież</span>
           </Button>
         </div>
       </div>
