@@ -30,11 +30,12 @@ async function runBatch() {
 
   const s = admin();
   // SMS-y startują dopiero 7+ dni po złożeniu wniosku (wcześniej działają tylko maile + telefony).
-  // BEZ górnego limitu wieku wniosku i BEZ limitu liczby SMS — cotygodniowa,
-  // nieprzerwana przypominajka z ROTACYJNĄ, klikbaitową treścią (patrz smsForStep).
-  // Sekwencję przerywają wyłącznie: status terminalny, do_not_sms, ukończony wniosek.
+  // Kadencja: RAZ NA MIESIĄC (nie częściej niż co ~28 dni), rotacyjna klikbaitowa treść.
+  // SMS jest kanałem SAMODZIELNYM — NIE wysyłamy go wokół rozmów telefonicznych:
+  // ani przed (rozmowa zaplanowana/w toku), ani po (rozmowa w ostatnich 7 dniach).
+  // Sekwencję przerywają też: status terminalny, do_not_sms, ukończony wniosek.
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const sixDaysAgo = new Date(Date.now() - 6 * 86400_000).toISOString();
+  const monthAgo = new Date(Date.now() - 28 * 86400_000).toISOString();
 
   const { data: loans } = await s
     .from("loan_applications")
@@ -48,14 +49,40 @@ async function runBatch() {
     .limit(500);
 
 
-  const candidates = (loans ?? []).filter((l: any) => {
+  let candidates = (loans ?? []).filter((l: any) => {
     if (l.client?.do_not_sms === true) return false;
     const phone = l.client?.phone_normalized || l.client?.phone;
     if (!phone) return false;
-    // Nie częściej niż raz na 6 dni
-    if (l.reminder_sms_last_sent_at && l.reminder_sms_last_sent_at > sixDaysAgo) return false;
+    // Raz na miesiąc — pomiń, jeśli SMS poszedł w ostatnich ~28 dniach.
+    if (l.reminder_sms_last_sent_at && l.reminder_sms_last_sent_at > monthAgo) return false;
     return true;
   });
+
+  // Wyklucz numery „wokół rozmowy": z zaplanowaną/trwającą rozmową (przed)
+  // albo z rozmową z ostatnich 7 dni (po). Źródłem prawdy jest call_queue.
+  const phones = Array.from(
+    new Set(candidates.map((l: any) => l.client?.phone_normalized || l.client?.phone).filter(Boolean)),
+  ) as string[];
+  if (phones.length) {
+    const callWeekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+    const { data: calls } = await s
+      .from("call_queue")
+      .select("phone_normalized, status, created_at, scheduled_at")
+      .in("phone_normalized", phones);
+    const blocked = new Set<string>();
+    for (const c of (calls ?? []) as any[]) {
+      const st = String(c.status ?? "");
+      const upcoming = st === "oczekuje" || st === "w_trakcie";           // przed rozmową
+      const recent = (c.created_at && c.created_at >= callWeekAgo)         // po rozmowie
+        || (c.scheduled_at && c.scheduled_at >= callWeekAgo);
+      if (upcoming || recent) blocked.add(c.phone_normalized);
+    }
+    if (blocked.size) {
+      candidates = candidates.filter(
+        (l: any) => !blocked.has(l.client?.phone_normalized || l.client?.phone),
+      );
+    }
+  }
 
 
   let sent = 0, errors = 0;

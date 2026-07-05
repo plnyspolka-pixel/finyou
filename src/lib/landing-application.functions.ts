@@ -199,6 +199,41 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       console.error("[landing-application] collateral analysis failed", err);
     });
 
+    // === Telefon Ani OD RAZU po wejściu leada (o ile w godzinach ludzkich) ===
+    // W oknie 8:00–22:00 (pon–sob) dzwonimy natychmiast; poza nim kolejkujemy na
+    // najbliższą 8:00. Kolejkę odpala cron process-scheduled-calls (co minutę).
+    void (async () => {
+      try {
+        if (!normalized || !valid) return;
+        const { normalizePhoneForVoicebot, getCallingWindow } = await import("@/lib/voicebot.functions");
+        const phone = normalizePhoneForVoicebot(data.phone);
+        // Dedup: jeśli do tego numeru jest już telefon z ostatnich 24 h (dowolne
+        // źródło poza testem) — nie dubluj (placeOutboundCallInternal też ma throttle).
+        const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
+        const { data: recent } = await supabaseAdmin
+          .from("call_queue")
+          .select("id")
+          .eq("phone_normalized", phone)
+          .gte("created_at", cutoff)
+          .neq("source", "test")
+          .limit(1);
+        if (recent && recent.length > 0) return;
+        const win = getCallingWindow();
+        const scheduledAt = (win.allowed ? new Date() : win.nextAllowedAt).toISOString();
+        await supabaseAdmin.from("call_queue").insert({
+          phone_normalized: phone,
+          client_id: client.id,
+          loan_application_id: loan.id,
+          source: "lead-entry",
+          status: "oczekuje",
+          scheduled_at: scheduledAt,
+          attempts: 0,
+        });
+      } catch (err) {
+        console.error("[landing-application] immediate lead-entry call enqueue failed", err);
+      }
+    })();
+
     // Powiadomienia mailowe (fire-and-forget)
     void (async () => {
       try {
