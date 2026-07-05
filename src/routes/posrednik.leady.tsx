@@ -41,12 +41,22 @@ function OperatorLeadsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Leady (wszystkie)</h1>
-        <Button variant="outline" size="sm" onClick={() => q.refetch()}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Odśwież
-        </Button>
-      </div>
+      <FancyPageHeader
+        eyebrow={`${rows.length} ${rows.length === 1 ? "lead" : "leadów"}`}
+        title="Leady (wszystkie)"
+        subtitle="Filtruj, dzwoń, notuj i szybko przejmuj kontakt z klientami."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            onClick={() => q.refetch()}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" /> Odśwież
+          </Button>
+        }
+      />
+
 
       <Card>
         <CardContent className="grid gap-3 p-4 md:grid-cols-4">
