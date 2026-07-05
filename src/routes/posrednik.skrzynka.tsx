@@ -15,6 +15,7 @@ import { ComposeEmailDialog, type ComposeEmailInitial } from "@/components/inbox
 import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
+import { FancyShell } from "@/components/landing/fancy-shell";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
   component: SkrzynkaPosrednika,
