@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 
 
 export const Route = createFileRoute("/posrednik/leady")({
@@ -27,6 +28,7 @@ function OperatorLeadsList() {
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
+  const [outcome, setOutcome] = useState<{ leadId: string; name: string } | null>(null);
 
   const q = useQuery({
     queryKey: ["operator-leads", status, source, search],
@@ -168,7 +170,10 @@ function OperatorLeadsList() {
                   <div className="flex items-center gap-2 shrink-0">
                     <a
                       href={`tel:${phone}`}
-                      onClick={() => logCall.mutate({ leadId: r.id, phone })}
+                      onClick={() => {
+                        logCall.mutate({ leadId: r.id, phone });
+                        setOutcome({ leadId: r.id, name });
+                      }}
                       className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-500 text-white hover:bg-emerald-600"
                       aria-label={`Zadzwoń ${phone}`}
                     >
@@ -185,6 +190,13 @@ function OperatorLeadsList() {
         </div>
       </FancyShell>
 
+      <CallOutcomeDialog
+        open={!!outcome}
+        onOpenChange={(v) => !v && setOutcome(null)}
+        leadId={outcome?.leadId ?? ""}
+        leadName={outcome?.name}
+        onSaved={() => q.refetch()}
+      />
     </div>
   );
 }

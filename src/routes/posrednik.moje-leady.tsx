@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, UserCheck } from "lucide-react";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
+import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 
 export const Route = createFileRoute("/posrednik/moje-leady")({
   component: MyBrokerLeads,
@@ -20,6 +21,7 @@ function MyBrokerLeads() {
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [outcome, setOutcome] = useState<{ leadId: string; name: string } | null>(null);
 
   const q = useQuery({
     queryKey: ["my-broker-leads", status, search],
@@ -118,7 +120,10 @@ function MyBrokerLeads() {
                   {phone && (
                     <a
                       href={`tel:${phone}`}
-                      onClick={() => logCall.mutate({ leadId: r.id, phone })}
+                      onClick={() => {
+                        logCall.mutate({ leadId: r.id, phone });
+                        setOutcome({ leadId: r.id, name });
+                      }}
                       className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
                       aria-label={`Zadzwoń ${phone}`}
                     >
@@ -141,6 +146,14 @@ function MyBrokerLeads() {
           </p>
         )}
       </div>
+
+      <CallOutcomeDialog
+        open={!!outcome}
+        onOpenChange={(v) => !v && setOutcome(null)}
+        leadId={outcome?.leadId ?? ""}
+        leadName={outcome?.name}
+        onSaved={() => q.refetch()}
+      />
     </div>
   );
 }
