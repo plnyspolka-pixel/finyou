@@ -129,9 +129,7 @@ function BrokerProfile() {
         first_name: form.first_name.trim() || null,
         last_name: form.last_name.trim() || null,
         phone: form.phone.trim() || null,
-        job_title: form.job_title.trim() || null,
-        city: form.city.trim() || null,
-        bio: form.bio.trim() || null,
+        phone: form.phone.trim() || null,
       })
       .eq("user_id", user.id);
     setSaving(false);
