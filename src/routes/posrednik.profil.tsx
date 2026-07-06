@@ -129,7 +129,6 @@ function BrokerProfile() {
         first_name: form.first_name.trim() || null,
         last_name: form.last_name.trim() || null,
         phone: form.phone.trim() || null,
-        phone: form.phone.trim() || null,
       })
       .eq("user_id", user.id);
     setSaving(false);
