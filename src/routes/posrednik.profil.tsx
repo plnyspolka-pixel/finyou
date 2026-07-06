@@ -48,7 +48,7 @@ function BrokerProfile() {
       setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
-        .select("first_name,last_name,email,phone,job_title,city,bio,avatar_url")
+        .select("first_name,last_name,email,phone,avatar_url")
         .eq("user_id", user.id)
         .maybeSingle();
       if (cancelled) return;
