@@ -236,3 +236,73 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
     </div>
   );
 }
+
+type InboundAtt = { name: string; mime?: string; size?: number; path?: string; at: string };
+
+function InboundAttachmentsThumbs({ attachments }: { attachments: InboundAtt[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const visible = attachments.slice(0, 8);
+
+  useEffect(() => {
+    let cancelled = false;
+    const paths = visible.map((a) => a.path).filter(Boolean) as string[];
+    if (!paths.length) return;
+    (async () => {
+      const { data } = await supabase.storage.from("documents").createSignedUrls(paths, 60 * 60);
+      if (cancelled || !data) return;
+      const next: Record<string, string> = {};
+      data.forEach((d, i) => { if (d.signedUrl) next[paths[i]] = d.signedUrl; });
+      setUrls((prev) => ({ ...prev, ...next }));
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible.map((a) => a.path).join("|")]);
+
+  return (
+    <div className="mt-2 rounded-md bg-violet-500/15 border border-violet-300/30 p-2">
+      <div className="inline-flex items-center gap-1 text-xs font-medium text-violet-100 mb-2">
+        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{attachments.length}</strong>
+      </div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        {visible.map((a, i) => {
+          const ext = (a.name.split(".").pop() ?? "").toLowerCase();
+          const isImage = (a.mime ?? "").startsWith("image/") || ["png","jpg","jpeg","webp","gif","avif","heic"].includes(ext);
+          const isPdf = a.mime === "application/pdf" || ext === "pdf";
+          const url = a.path ? urls[a.path] : undefined;
+          const Inner = (
+            <div className="relative aspect-square w-full overflow-hidden rounded-md border border-white/20 bg-white/10 flex items-center justify-center">
+              {isImage && url ? (
+                <img src={url} alt={a.name} loading="lazy" className="h-full w-full object-cover" />
+              ) : isPdf ? (
+                <div className="flex flex-col items-center gap-0.5 text-white/80">
+                  <FileText className="h-6 w-6" />
+                  <span className="text-[9px] font-semibold">PDF</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5 text-white/80">
+                  <FileIcon className="h-6 w-6" />
+                  <span className="text-[9px] font-semibold uppercase">{ext || "PLIK"}</span>
+                </div>
+              )}
+            </div>
+          );
+          return url ? (
+            <a key={i} href={url} target="_blank" rel="noreferrer" title={a.name} className="block group">
+              {Inner}
+              <div className="mt-1 text-[10px] text-white/70 truncate">{a.name}</div>
+            </a>
+          ) : (
+            <div key={i} title={a.name}>
+              {Inner}
+              <div className="mt-1 text-[10px] text-white/70 truncate">{a.name}</div>
+            </div>
+          );
+        })}
+      </div>
+      {attachments.length > visible.length && (
+        <div className="text-[11px] text-white/70 mt-1">+{attachments.length - visible.length} więcej</div>
+      )}
+    </div>
+  );
+}
+
