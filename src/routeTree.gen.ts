@@ -83,6 +83,7 @@ import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
+import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
@@ -532,6 +533,11 @@ const AdminIntegracjeRoute = AdminIntegracjeRouteImport.update({
 const AdminFakturowoRoute = AdminFakturowoRouteImport.update({
   id: '/fakturowo',
   path: '/fakturowo',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFacebookConnectRoute = AdminFacebookConnectRouteImport.update({
+  id: '/facebook-connect',
+  path: '/facebook-connect',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminEmbedRoute = AdminEmbedRouteImport.update({
@@ -999,6 +1005,7 @@ export interface FileRoutesByFullPath {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -1149,6 +1156,7 @@ export interface FileRoutesByTo {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -1303,6 +1311,7 @@ export interface FileRoutesById {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -1459,6 +1468,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/facebook-connect'
     | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -1609,6 +1619,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/facebook-connect'
     | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -1762,6 +1773,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/facebook-connect'
     | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -2472,6 +2484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFakturowoRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/facebook-connect': {
+      id: '/admin/facebook-connect'
+      path: '/facebook-connect'
+      fullPath: '/admin/facebook-connect'
+      preLoaderRoute: typeof AdminFacebookConnectRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/embed': {
       id: '/admin/embed'
       path: '/embed'
@@ -3059,6 +3078,7 @@ interface AdminRouteChildren {
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
+  AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
   AdminFakturowoRoute: typeof AdminFakturowoRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
@@ -3116,6 +3136,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
+  AdminFacebookConnectRoute: AdminFacebookConnectRoute,
   AdminFakturowoRoute: AdminFakturowoRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
