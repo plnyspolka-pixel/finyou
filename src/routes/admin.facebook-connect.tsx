@@ -28,6 +28,14 @@ export const Route = createFileRoute("/admin/facebook-connect")({
 
 type FbPage = { id: string; name: string; category?: string; access_token?: string; tasks?: string[] };
 
+const KNOWN_TARGET_PAGE_ID = "6618933007005604";
+
+function mergePages(base: FbPage[], extra?: FbPage | null) {
+  if (!extra) return base;
+  if (base.some((page) => page.id === extra.id)) return base;
+  return [extra, ...base];
+}
+
 function loadSdk(appId: string) {
   return new Promise<void>((resolve) => {
     if (typeof window === "undefined") return resolve();
@@ -55,6 +63,7 @@ function FacebookConnectPage() {
   const [pages, setPages] = useState<FbPage[] | null>(null);
   const [selected, setSelected] = useState<FbPage | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [directLookupMessage, setDirectLookupMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!APP_ID) return;
@@ -66,6 +75,7 @@ function FacebookConnectPage() {
     setBusy(true);
     setSelected(null);
     setPages(null);
+    setDirectLookupMessage(null);
     window.FB.login(
       (resp: any) => {
         if (!resp.authResponse) {
@@ -75,14 +85,38 @@ function FacebookConnectPage() {
         }
         window.FB.api(
           "/me/accounts",
-          { fields: "id,name,category,tasks", limit: 100 },
+          { fields: "id,name,category,tasks,access_token", limit: 100 },
           (r: any) => {
-            setBusy(false);
             if (!r || r.error) {
+              setBusy(false);
               toast.error(r?.error?.message ?? "Błąd Graph API");
               return;
             }
-            setPages(r.data ?? []);
+
+            const returnedPages = r.data ?? [];
+            window.FB.api(
+              `/${KNOWN_TARGET_PAGE_ID}`,
+              { fields: "id,name,category,access_token" },
+              (direct: any) => {
+                setBusy(false);
+                if (direct && !direct.error) {
+                  setPages(mergePages(returnedPages, direct));
+                  if (!returnedPages.some((page: FbPage) => page.id === direct.id)) {
+                    setDirectLookupMessage(
+                      `Facebook nie zwrócił tej strony w standardowej liście, ale bezpośredni dostęp po ID zadziałał: ${direct.name}.`,
+                    );
+                  }
+                  return;
+                }
+
+                setPages(returnedPages);
+                setDirectLookupMessage(
+                  direct?.error?.message
+                    ? `Bezpośrednie sprawdzenie strony Filip Bielak Consulting po ID nie zadziałało: ${direct.error.message}`
+                    : null,
+                );
+              },
+            );
           },
         );
       },
@@ -102,6 +136,7 @@ function FacebookConnectPage() {
       setPages(null);
       setSelected(null);
       setTestResult(null);
+      setDirectLookupMessage(null);
       toast.success("Uprawnienia zresetowane. Połącz ponownie i wybierz właściwą stronę.");
     });
   };
@@ -184,6 +219,11 @@ function FacebookConnectPage() {
               If the Page you want is missing here, Facebook did not return it to the app. Reset permissions,
               connect again, then choose access to all current and future Pages or explicitly select the target Page.
             </div>
+            {directLookupMessage && (
+              <div className="mb-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+                {directLookupMessage}
+              </div>
+            )}
             {pages.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No Pages found on this Facebook account.
