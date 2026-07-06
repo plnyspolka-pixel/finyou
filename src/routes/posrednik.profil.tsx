@@ -60,9 +60,6 @@ function BrokerProfile() {
           last_name: data.last_name ?? "",
           email: data.email ?? user.email ?? "",
           phone: data.phone ?? "",
-          job_title: (data as any).job_title ?? "",
-          city: (data as any).city ?? "",
-          bio: (data as any).bio ?? "",
           avatar_url: (data as any).avatar_url ?? null,
         });
       } else {
