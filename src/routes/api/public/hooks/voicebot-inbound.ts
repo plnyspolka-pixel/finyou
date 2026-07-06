@@ -80,14 +80,50 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-inbound")({
 
         // Utwórz/odśwież leada od razu, żeby pośrednik widział przychodzący numer
         // nawet gdy klient się rozłączy przed post-call webhookiem.
+        // Antyduplikacja: (1) jeśli mamy conversation_id i lead z tym samym
+        // id już istnieje → pomijamy; (2) jeśli w ciągu ostatnich 30 min był
+        // już lead z tego numeru → aktualizujemy go zamiast tworzyć nowy.
+        const conversationId: string | null =
+          body?.conversation_id ?? body?.conversationId ?? body?.call_id ?? null;
         try {
-          const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
-          await upsertLeadFromSource({
-            type: "pozyczkowy",
-            source: "inbound_call",
-            phoneRaw: phone,
-            phoneNormalized: phone,
-          });
+          let alreadyExists = false;
+          if (conversationId) {
+            const { data: byConv } = await supabase
+              .from("leads")
+              .select("id")
+              .eq("application_data->>elevenlabs_conversation_id", conversationId)
+              .limit(1)
+              .maybeSingle();
+            if (byConv?.id) alreadyExists = true;
+          }
+          if (!alreadyExists) {
+            const cutoff = new Date(Date.now() - 30 * 60_000).toISOString();
+            const { data: recent } = await supabase
+              .from("leads")
+              .select("id, application_data")
+              .eq("phone_normalized", phone)
+              .gte("created_at", cutoff)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (recent?.id) {
+              alreadyExists = true;
+              if (conversationId) {
+                const appData = { ...(recent.application_data as any || {}), elevenlabs_conversation_id: conversationId };
+                await supabase.from("leads").update({ application_data: appData }).eq("id", recent.id);
+              }
+            }
+          }
+          if (!alreadyExists) {
+            const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
+            await upsertLeadFromSource({
+              type: "pozyczkowy",
+              source: "inbound_call",
+              phoneRaw: phone,
+              phoneNormalized: phone,
+              applicationData: conversationId ? { elevenlabs_conversation_id: conversationId } : {},
+            });
+          }
         } catch (e) {
           console.error("[voicebot-inbound] upsert lead failed", e);
         }
