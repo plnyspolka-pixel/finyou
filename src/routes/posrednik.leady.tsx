@@ -190,6 +190,13 @@ function OperatorLeadsList() {
         </div>
       </FancyShell>
 
+      <CallOutcomeDialog
+        open={!!outcome}
+        onOpenChange={(v) => !v && setOutcome(null)}
+        leadId={outcome?.leadId ?? ""}
+        leadName={outcome?.name}
+        onSaved={() => q.refetch()}
+      />
     </div>
   );
 }
