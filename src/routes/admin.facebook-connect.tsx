@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getMetaAppId } from "@/lib/meta-app-id.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +28,6 @@ export const Route = createFileRoute("/admin/facebook-connect")({
 
 type FbPage = { id: string; name: string; category?: string; access_token?: string; tasks?: string[] };
 
-const APP_ID = (import.meta as any).env?.VITE_META_APP_ID as string | undefined;
-
 function loadSdk(appId: string) {
   return new Promise<void>((resolve) => {
     if (typeof window === "undefined") return resolve();
@@ -45,6 +46,9 @@ function loadSdk(appId: string) {
 }
 
 function FacebookConnectPage() {
+  const fetchAppId = useServerFn(getMetaAppId);
+  const { data: appIdData } = useQuery({ queryKey: ["meta-app-id"], queryFn: () => fetchAppId() });
+  const APP_ID = appIdData?.appId ?? undefined;
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pages, setPages] = useState<FbPage[] | null>(null);
@@ -54,7 +58,7 @@ function FacebookConnectPage() {
   useEffect(() => {
     if (!APP_ID) return;
     loadSdk(APP_ID).then(() => setReady(true));
-  }, []);
+  }, [APP_ID]);
 
   const connect = () => {
     if (!window.FB) return;
