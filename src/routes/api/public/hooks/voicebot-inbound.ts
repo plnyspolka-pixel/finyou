@@ -78,6 +78,20 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-inbound")({
           return Response.json({ dynamic_variables: baseVars });
         }
 
+        // Utwórz/odśwież leada od razu, żeby pośrednik widział przychodzący numer
+        // nawet gdy klient się rozłączy przed post-call webhookiem.
+        try {
+          const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
+          await upsertLeadFromSource({
+            type: "pozyczkowy",
+            source: "inbound_call",
+            phoneRaw: phone,
+            phoneNormalized: phone,
+          });
+        } catch (e) {
+          console.error("[voicebot-inbound] upsert lead failed", e);
+        }
+
         // 1. Znajdź klienta po numerze.
         const { data: clients } = await supabase
           .from("clients")
