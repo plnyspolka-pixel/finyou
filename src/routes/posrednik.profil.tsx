@@ -197,7 +197,7 @@ function BrokerProfile() {
                     ? `${form.first_name} ${form.last_name}`.trim()
                     : "Twoje imię i nazwisko"}
                 </p>
-                <p className="text-xs text-white/60">{form.job_title || "Pośrednik Finance You"}</p>
+                <p className="text-xs text-white/60">Pośrednik Finance You</p>
                 <p className="mt-1 text-xs text-white/50">PNG lub JPG, max 5 MB.</p>
               </div>
             </div>
@@ -208,19 +208,6 @@ function BrokerProfile() {
               <Field label="Nazwisko" value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} />
               <Field label="E-mail" value={form.email} onChange={() => {}} disabled />
               <Field label="Telefon" placeholder="+48 500 000 000" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-              <Field label="Stanowisko" placeholder="np. Doradca finansowy" value={form.job_title} onChange={(v) => setForm({ ...form, job_title: v })} />
-              <Field label="Miasto" placeholder="np. Warszawa" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-white/70">O mnie</Label>
-              <Textarea
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                placeholder="Krótko o Tobie — doświadczenie, region, w czym pomagasz klientom."
-                rows={4}
-                className="border-white/15 bg-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/30"
-              />
             </div>
 
             <div className="flex justify-end">
