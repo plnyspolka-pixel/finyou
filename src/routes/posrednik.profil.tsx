@@ -21,9 +21,6 @@ type ProfileForm = {
   last_name: string;
   email: string;
   phone: string;
-  job_title: string;
-  city: string;
-  bio: string;
   avatar_url: string | null;
 };
 
@@ -32,9 +29,6 @@ const EMPTY: ProfileForm = {
   last_name: "",
   email: "",
   phone: "",
-  job_title: "",
-  city: "",
-  bio: "",
   avatar_url: null,
 };
 
