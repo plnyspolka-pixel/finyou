@@ -120,7 +120,10 @@ function MyBrokerLeads() {
                   {phone && (
                     <a
                       href={`tel:${phone}`}
-                      onClick={() => logCall.mutate({ leadId: r.id, phone })}
+                      onClick={() => {
+                        logCall.mutate({ leadId: r.id, phone });
+                        setOutcome({ leadId: r.id, name });
+                      }}
                       className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
                       aria-label={`Zadzwoń ${phone}`}
                     >
