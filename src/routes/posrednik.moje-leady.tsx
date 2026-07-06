@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, UserCheck } from "lucide-react";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
+import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 
 export const Route = createFileRoute("/posrednik/moje-leady")({
   component: MyBrokerLeads,
