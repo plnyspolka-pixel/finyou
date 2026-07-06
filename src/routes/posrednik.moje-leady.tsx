@@ -21,6 +21,7 @@ function MyBrokerLeads() {
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [outcome, setOutcome] = useState<{ leadId: string; name: string } | null>(null);
 
   const q = useQuery({
     queryKey: ["my-broker-leads", status, search],
