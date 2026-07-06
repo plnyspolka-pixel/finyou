@@ -6,7 +6,7 @@ import { getMetaAppId } from "@/lib/meta-app-id.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { Facebook, CheckCircle2, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -51,6 +51,7 @@ function FacebookConnectPage() {
   const APP_ID = appIdData?.appId ?? undefined;
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
   const [pages, setPages] = useState<FbPage[] | null>(null);
   const [selected, setSelected] = useState<FbPage | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -87,6 +88,22 @@ function FacebookConnectPage() {
       },
       { scope: "pages_show_list,pages_messaging,pages_manage_metadata", return_scopes: true, auth_type: "reauthorize" },
     );
+  };
+
+  const resetFacebookAuthorization = () => {
+    if (!window.FB) return;
+    setResetBusy(true);
+    window.FB.api("/me/permissions", "delete", (r: any) => {
+      setResetBusy(false);
+      if (!r || r.error || r.success === false) {
+        toast.error(r?.error?.message ?? "Nie udało się zresetować uprawnień Facebooka");
+        return;
+      }
+      setPages(null);
+      setSelected(null);
+      setTestResult(null);
+      toast.success("Uprawnienia zresetowane. Połącz ponownie i wybierz właściwą stronę.");
+    });
   };
 
   const pickPage = (p: FbPage) => {
@@ -141,6 +158,16 @@ function FacebookConnectPage() {
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Facebook className="mr-2 h-4 w-4" />}
             Connect Facebook Page
           </Button>
+          <Button
+            onClick={resetFacebookAuthorization}
+            disabled={!ready || resetBusy || !APP_ID}
+            variant="outline"
+            size="lg"
+            className="ml-2"
+          >
+            {resetBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />}
+            Reset Facebook permissions
+          </Button>
         </CardContent>
       </Card>
 
@@ -153,6 +180,10 @@ function FacebookConnectPage() {
             </Button>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+              If the Page you want is missing here, Facebook did not return it to the app. Reset permissions,
+              connect again, then choose access to all current and future Pages or explicitly select the target Page.
+            </div>
             {pages.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No Pages found on this Facebook account.
