@@ -1,19 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listLeads, logBrokerCall, addManualNote } from "@/lib/leads-admin.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon } from "lucide-react";
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
+
 
 export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
@@ -149,23 +151,7 @@ function OperatorLeadsList() {
                     </div>
                   )}
                   {Array.isArray(r.comms.inboundAttachments) && r.comms.inboundAttachments.length > 0 && (
-                    <div className="text-xs mt-1 rounded-md bg-violet-500/20 text-violet-100 px-2 py-1 border border-violet-300/30">
-                      <div className="inline-flex items-center gap-1 font-medium">
-                        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{r.comms.inboundAttachments.length}</strong>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {r.comms.inboundAttachments.slice(0, 6).map((a: any, i: number) => (
-                          <span key={i} className="inline-flex items-center gap-1 rounded bg-white/10 border border-violet-300/30 px-1.5 py-0.5 text-[11px]">
-                            <Paperclip className="h-2.5 w-2.5" />
-                            <span className="truncate max-w-[160px]">{a.name}</span>
-                            {typeof a.size === "number" && <span className="opacity-60">· {Math.max(1, Math.round(a.size / 1024))} KB</span>}
-                          </span>
-                        ))}
-                        {r.comms.inboundAttachments.length > 6 && (
-                          <span className="text-[11px] opacity-70">+{r.comms.inboundAttachments.length - 6} więcej</span>
-                        )}
-                      </div>
-                    </div>
+                    <InboundAttachmentsThumbs attachments={r.comms.inboundAttachments} />
                   )}
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
                     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
@@ -178,8 +164,8 @@ function OperatorLeadsList() {
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {phone && (
+                {phone && (
+                  <div className="flex items-center gap-2 shrink-0">
                     <a
                       href={`tel:${phone}`}
                       onClick={() => logCall.mutate({ leadId: r.id, phone })}
@@ -188,11 +174,9 @@ function OperatorLeadsList() {
                     >
                       <Phone className="h-4 w-4" />
                     </a>
-                  )}
-                  <Link to="/posrednik/leady/$id" params={{ id: r.id }}>
-                    <Button size="sm" className="bg-white text-slate-900 hover:bg-white/90">Otwórz <ChevronRight className="ml-1 h-4 w-4" /></Button>
-                  </Link>
-                </div>
+                  </div>
+                )}
+
               </div>
             );
 
@@ -252,3 +236,73 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
     </div>
   );
 }
+
+type InboundAtt = { name: string; mime?: string; size?: number; path?: string; at: string };
+
+function InboundAttachmentsThumbs({ attachments }: { attachments: InboundAtt[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const visible = attachments.slice(0, 8);
+
+  useEffect(() => {
+    let cancelled = false;
+    const paths = visible.map((a) => a.path).filter(Boolean) as string[];
+    if (!paths.length) return;
+    (async () => {
+      const { data } = await supabase.storage.from("documents").createSignedUrls(paths, 60 * 60);
+      if (cancelled || !data) return;
+      const next: Record<string, string> = {};
+      data.forEach((d, i) => { if (d.signedUrl) next[paths[i]] = d.signedUrl; });
+      setUrls((prev) => ({ ...prev, ...next }));
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible.map((a) => a.path).join("|")]);
+
+  return (
+    <div className="mt-2 rounded-md bg-violet-500/15 border border-violet-300/30 p-2">
+      <div className="inline-flex items-center gap-1 text-xs font-medium text-violet-100 mb-2">
+        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{attachments.length}</strong>
+      </div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        {visible.map((a, i) => {
+          const ext = (a.name.split(".").pop() ?? "").toLowerCase();
+          const isImage = (a.mime ?? "").startsWith("image/") || ["png","jpg","jpeg","webp","gif","avif","heic"].includes(ext);
+          const isPdf = a.mime === "application/pdf" || ext === "pdf";
+          const url = a.path ? urls[a.path] : undefined;
+          const Inner = (
+            <div className="relative aspect-square w-full overflow-hidden rounded-md border border-white/20 bg-white/10 flex items-center justify-center">
+              {isImage && url ? (
+                <img src={url} alt={a.name} loading="lazy" className="h-full w-full object-cover" />
+              ) : isPdf ? (
+                <div className="flex flex-col items-center gap-0.5 text-white/80">
+                  <FileText className="h-6 w-6" />
+                  <span className="text-[9px] font-semibold">PDF</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5 text-white/80">
+                  <FileIcon className="h-6 w-6" />
+                  <span className="text-[9px] font-semibold uppercase">{ext || "PLIK"}</span>
+                </div>
+              )}
+            </div>
+          );
+          return url ? (
+            <a key={i} href={url} target="_blank" rel="noreferrer" title={a.name} className="block group">
+              {Inner}
+              <div className="mt-1 text-[10px] text-white/70 truncate">{a.name}</div>
+            </a>
+          ) : (
+            <div key={i} title={a.name}>
+              {Inner}
+              <div className="mt-1 text-[10px] text-white/70 truncate">{a.name}</div>
+            </div>
+          );
+        })}
+      </div>
+      {attachments.length > visible.length && (
+        <div className="text-[11px] text-white/70 mt-1">+{attachments.length - visible.length} więcej</div>
+      )}
+    </div>
+  );
+}
+
