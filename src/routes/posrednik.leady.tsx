@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 
 
 export const Route = createFileRoute("/posrednik/leady")({
