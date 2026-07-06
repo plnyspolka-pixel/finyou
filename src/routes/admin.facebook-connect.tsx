@@ -85,7 +85,7 @@ function FacebookConnectPage() {
           },
         );
       },
-      { scope: "pages_show_list,pages_messaging,pages_manage_metadata", return_scopes: true },
+      { scope: "pages_show_list,pages_messaging,pages_manage_metadata", return_scopes: true, auth_type: "reauthorize" },
     );
   };
 
