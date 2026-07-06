@@ -149,23 +149,7 @@ function OperatorLeadsList() {
                     </div>
                   )}
                   {Array.isArray(r.comms.inboundAttachments) && r.comms.inboundAttachments.length > 0 && (
-                    <div className="text-xs mt-1 rounded-md bg-violet-500/20 text-violet-100 px-2 py-1 border border-violet-300/30">
-                      <div className="inline-flex items-center gap-1 font-medium">
-                        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{r.comms.inboundAttachments.length}</strong>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {r.comms.inboundAttachments.slice(0, 6).map((a: any, i: number) => (
-                          <span key={i} className="inline-flex items-center gap-1 rounded bg-white/10 border border-violet-300/30 px-1.5 py-0.5 text-[11px]">
-                            <Paperclip className="h-2.5 w-2.5" />
-                            <span className="truncate max-w-[160px]">{a.name}</span>
-                            {typeof a.size === "number" && <span className="opacity-60">· {Math.max(1, Math.round(a.size / 1024))} KB</span>}
-                          </span>
-                        ))}
-                        {r.comms.inboundAttachments.length > 6 && (
-                          <span className="text-[11px] opacity-70">+{r.comms.inboundAttachments.length - 6} więcej</span>
-                        )}
-                      </div>
-                    </div>
+                    <InboundAttachmentsThumbs attachments={r.comms.inboundAttachments} />
                   )}
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
                     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
@@ -178,8 +162,8 @@ function OperatorLeadsList() {
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {phone && (
+                {phone && (
+                  <div className="flex items-center gap-2 shrink-0">
                     <a
                       href={`tel:${phone}`}
                       onClick={() => logCall.mutate({ leadId: r.id, phone })}
@@ -188,11 +172,9 @@ function OperatorLeadsList() {
                     >
                       <Phone className="h-4 w-4" />
                     </a>
-                  )}
-                  <Link to="/posrednik/leady/$id" params={{ id: r.id }}>
-                    <Button size="sm" className="bg-white text-slate-900 hover:bg-white/90">Otwórz <ChevronRight className="ml-1 h-4 w-4" /></Button>
-                  </Link>
-                </div>
+                  </div>
+                )}
+
               </div>
             );
 
