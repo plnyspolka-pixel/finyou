@@ -1,19 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listLeads, logBrokerCall, addManualNote } from "@/lib/leads-admin.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon } from "lucide-react";
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
+
 
 export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
