@@ -28,6 +28,7 @@ function OperatorLeadsList() {
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
+  const [outcome, setOutcome] = useState<{ leadId: string; name: string } | null>(null);
 
   const q = useQuery({
     queryKey: ["operator-leads", status, source, search],
