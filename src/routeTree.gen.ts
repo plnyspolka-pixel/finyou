@@ -107,6 +107,8 @@ import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
+import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
+import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
 import { Route as ApiPublicResendInboundWebhookRouteImport } from './routes/api/public/resend-inbound-webhook'
 import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/public/meta-messenger-webhook'
@@ -659,6 +661,17 @@ const EmbedLSlugRoute = EmbedLSlugRouteImport.update({
   path: '/embed/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
+  id: '/api/public/twilio-voice',
+  path: '/api/public/twilio-voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTwilioRecordingRoute =
+  ApiPublicTwilioRecordingRouteImport.update({
+    id: '/api/public/twilio-recording',
+    path: '/api/public/twilio-recording',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicResendWebhookRoute = ApiPublicResendWebhookRouteImport.update({
   id: '/api/public/resend-webhook',
   path: '/api/public/resend-webhook',
@@ -1093,6 +1106,8 @@ export interface FileRoutesByFullPath {
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
+  '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
@@ -1243,6 +1258,8 @@ export interface FileRoutesByTo {
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
+  '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
@@ -1399,6 +1416,8 @@ export interface FileRoutesById {
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
+  '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
@@ -1556,6 +1575,8 @@ export interface FileRouteTypes {
     | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
+    | '/api/public/twilio-recording'
+    | '/api/public/twilio-voice'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
@@ -1706,6 +1727,8 @@ export interface FileRouteTypes {
     | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
+    | '/api/public/twilio-recording'
+    | '/api/public/twilio-voice'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
@@ -1861,6 +1884,8 @@ export interface FileRouteTypes {
     | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
+    | '/api/public/twilio-recording'
+    | '/api/public/twilio-voice'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
@@ -1937,6 +1962,8 @@ export interface RootRouteChildren {
   ApiPublicMetaMessengerWebhookRoute: typeof ApiPublicMetaMessengerWebhookRoute
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
+  ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
+  ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
@@ -2652,6 +2679,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmbedLSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio-voice': {
+      id: '/api/public/twilio-voice'
+      path: '/api/public/twilio-voice'
+      fullPath: '/api/public/twilio-voice'
+      preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio-recording': {
+      id: '/api/public/twilio-recording'
+      path: '/api/public/twilio-recording'
+      fullPath: '/api/public/twilio-recording'
+      preLoaderRoute: typeof ApiPublicTwilioRecordingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/resend-webhook': {
       id: '/api/public/resend-webhook'
       path: '/api/public/resend-webhook'
@@ -3348,6 +3389,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMetaMessengerWebhookRoute: ApiPublicMetaMessengerWebhookRoute,
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
+  ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
+  ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
