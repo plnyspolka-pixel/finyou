@@ -28,7 +28,7 @@ export const Route = createFileRoute("/admin/facebook-connect")({
 
 type FbPage = { id: string; name: string; category?: string; access_token?: string; tasks?: string[] };
 
-const KNOWN_TARGET_PAGE_ID = "6618933007005604";
+const KNOWN_TARGET_PAGE_ID = "661893307005604";
 
 function mergePages(base: FbPage[], extra?: FbPage | null) {
   if (!extra) return base;
