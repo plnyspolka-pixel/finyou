@@ -31,28 +31,38 @@ async function upsertSyncStatus(entityId: string, direction: "sales" | "purchase
   );
 }
 
-/** Parsuje odpowiedź tekstową z Fakturowo. Linia 0 = "1" (ok) lub "0" (błąd), reszta w formacie klucz=wartość, dokumenty rozdzielone linią "---". */
-function parseFakturowoList(raw: string): { ok: boolean; documents: Record<string, string>[]; error?: string } {
+/**
+ * Parsuje listę dokumentów Fakturowo (api_zadanie=3).
+ * Linia 0 = "1" (ok) / "0" (błąd), linia 1 = liczba stron, kolejne linie = dokumenty
+ * rozdzielone średnikami: api_numer;rodzaj;numer;data_wyst;data_sprz;waluta;netto;vat;brutto;
+ * sprzedawca_nazwa;adres_sprzedawcy;sprzedawca_nip;nabywca_nazwa;adres_nabywcy;nabywca_nip;status;zaplata;termin
+ */
+function parseFakturowoList(raw: string): { ok: boolean; totalPages: number; documents: Record<string, string>[]; error?: string } {
   const lines = raw.split(/\r?\n/).map((l) => l.trim());
-  if (lines[0] !== "1") return { ok: false, documents: [], error: raw.slice(0, 400) };
-  const docs: Record<string, string>[] = [];
-  let current: Record<string, string> = {};
-  for (const line of lines.slice(1)) {
+  if (lines[0] !== "1") return { ok: false, totalPages: 0, documents: [], error: raw.slice(0, 400) || "Nieznany błąd Fakturowo" };
+  const totalPages = Number(lines[1]) || 1;
+  const documents: Record<string, string>[] = [];
+  for (const line of lines.slice(2)) {
     if (!line) continue;
-    if (line === "---") {
-      if (Object.keys(current).length) docs.push(current);
-      current = {};
-      continue;
-    }
-    const eq = line.indexOf("=");
-    if (eq > 0) {
-      const k = line.slice(0, eq).trim();
-      const v = line.slice(eq + 1).trim();
-      current[k] = v;
-    }
+    const c = line.split(";");
+    documents.push({
+      dokument_id: c[0] ?? "",
+      dokument_rodzaj: c[1] ?? "",
+      dokument_numer: c[2] ?? "",
+      dokument_data_wystawienia: c[3] ?? "",
+      dokument_data_sprzedazy: c[4] ?? "",
+      dokument_waluta: c[5] ?? "",
+      dokument_wartosc_netto: c[6] ?? "",
+      dokument_wartosc_brutto: c[8] ?? "",
+      sprzedawca_nazwa: c[9] ?? "",
+      sprzedawca_ulica: c[10] ?? "",
+      sprzedawca_nip: c[11] ?? "",
+      nabywca_nazwa: c[12] ?? "",
+      nabywca_ulica: c[13] ?? "",
+      nabywca_nip: c[14] ?? "",
+    });
   }
-  if (Object.keys(current).length) docs.push(current);
-  return { ok: true, documents: docs };
+  return { ok: true, totalPages, documents };
 }
 
 function toNum(v: string | undefined): number {
@@ -67,32 +77,37 @@ function toDate(v: string | undefined): string | null {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
-async function fetchFakturowoList(apiId: string, direction: "sales" | "purchase", monthsBack: number) {
-  const from = new Date();
-  from.setMonth(from.getMonth() - monthsBack);
-  // UWAGA: Fakturowo API nie akceptuje `dokument_rodzaj=1` (koszt) na tym endpoincie
-  // — parametr filtruje tylko typy sprzedaży. Dla sprzedaży pobieramy wszystko
-  // bez filtra rodzaju; dla kosztów używamy alternatywnego zadania (7).
-  const body = form({
-    api_id: apiId,
-    api_zadanie: direction === "sales" ? 6 : 7,
-    dokument_data_wystawienia_od: from.toISOString().slice(0, 10),
-    dokument_data_wystawienia_do: new Date().toISOString().slice(0, 10),
-  });
-  const res = await fetch("https://www.fakturowo.pl/api", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  const text = await res.text();
-  return parseFakturowoList(text);
+// Pobiera WSZYSTKIE wystawione dokumenty z Fakturowo (api_zadanie=3, stronicowane po 100).
+async function fetchFakturowoDocuments(apiId: string): Promise<{ ok: boolean; documents: Record<string, string>[]; error?: string }> {
+  const all: Record<string, string>[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const res = await fetch("https://www.fakturowo.pl/api", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form({ api_id: apiId, api_zadanie: 3, p: page }),
+    });
+    const parsed = parseFakturowoList(await res.text());
+    if (!parsed.ok) return { ok: false, documents: [], error: parsed.error };
+    all.push(...parsed.documents);
+    totalPages = parsed.totalPages;
+    page += 1;
+  } while (page <= totalPages && page <= 50);
+  return { ok: true, documents: all };
 }
 
 async function syncOne(entity: any, direction: "sales" | "purchase"): Promise<{ ok: boolean; count: number; message: string | null }> {
   const apiId = decryptSensitive(entity.fakturowo_api_id_encrypted) ?? process.env.FAKTUROWO_API_ID;
   if (!apiId) return { ok: false, count: 0, message: "Brak konfiguracji Fakturowo dla podmiotu." };
 
-  const listed = await fetchFakturowoList(apiId, direction, 24);
+  // Fakturowo przechowuje tylko dokumenty WYSTAWIONE (sprzedaż). Kosztów nie udostępnia
+  // przez API — pobieramy je z KSeF (kierunek „purchase").
+  if (direction === "purchase") {
+    return { ok: true, count: 0, message: "Fakturowo nie udostępnia kosztów przez API — koszty pobierane z KSeF." };
+  }
+
+  const listed = await fetchFakturowoDocuments(apiId);
   if (!listed.ok) return { ok: false, count: 0, message: `Fakturowo: ${listed.error}` };
 
   let inserted = 0;
