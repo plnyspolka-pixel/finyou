@@ -46,6 +46,33 @@ export const getReminderSchedule = createServerFn({ method: "GET" })
     return { schedule: data, nextRuns, sentToday: sentToday ?? 0 };
   });
 
+/** Ręczne, natychmiastowe odpalenie batcha maili (force — omija okno 8:00/20:00).
+ *  Zwraca wynik + diagnostykę (ile aktywnych szablonów jest w bazie), żeby od razu
+ *  było widać, czy seed 120 szablonów się zastosował i czy maile wychodzą. */
+export const triggerReminderEmailsNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context);
+
+    // Diagnostyka: liczba aktywnych szablonów w sekwencji.
+    const { count: activeVariants } = await context.supabase
+      .from("loan_reminder_email_variants")
+      .select("id", { count: "exact", head: true })
+      .eq("active", true)
+      .not("sequence_index", "is", null);
+
+    const { runDailyReminderEmailsBatch } = await import("@/lib/loan-reminder-emails.server");
+    const result = await runDailyReminderEmailsBatch({ force: true });
+
+    // Zapisz też do harmonogramu (żeby „ostatni wynik" w karcie się odświeżył).
+    await context.supabase
+      .from("reminder_email_schedule")
+      .update({ last_run_at: new Date().toISOString(), last_result: result as any })
+      .eq("id", 1);
+
+    return { activeVariants: activeVariants ?? 0, result };
+  });
+
 const updateSchema = z.object({
   enabled: z.boolean().optional(),
   cron_expression: z.string().min(5).max(120).optional(),
