@@ -102,6 +102,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.windykacja.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
+import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
@@ -635,6 +636,11 @@ const AdminKsiegowoscIndexRoute = AdminKsiegowoscIndexRouteImport.update({
   path: '/ksiegowosc/',
   getParentRoute: () => AdminRoute,
 } as any)
+const PosrednikWnioskiIdRoute = PosrednikWnioskiIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PosrednikWnioskiRoute,
+} as any)
 const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -1065,7 +1071,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
-  '/posrednik/wnioski': typeof PosrednikWnioskiRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1113,6 +1119,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
+  '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
@@ -1217,7 +1224,7 @@ export interface FileRoutesByTo {
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
-  '/posrednik/wnioski': typeof PosrednikWnioskiRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1265,6 +1272,7 @@ export interface FileRoutesByTo {
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
+  '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaIndexRoute
@@ -1375,7 +1383,7 @@ export interface FileRoutesById {
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
-  '/posrednik/wnioski': typeof PosrednikWnioskiRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1423,6 +1431,7 @@ export interface FileRoutesById {
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
+  '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
@@ -1582,6 +1591,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
+    | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/windykacja/'
@@ -1734,6 +1744,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
+    | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc'
     | '/admin/program-posrednikow'
     | '/inwestor/windykacja'
@@ -1891,6 +1902,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/posrednik/leady/$id'
+    | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/windykacja/'
@@ -2644,6 +2656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKsiegowoscIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/posrednik/wnioski/$id': {
+      id: '/posrednik/wnioski/$id'
+      path: '/$id'
+      fullPath: '/posrednik/wnioski/$id'
+      preLoaderRoute: typeof PosrednikWnioskiIdRouteImport
+      parentRoute: typeof PosrednikWnioskiRoute
+    }
     '/posrednik/leady/$id': {
       id: '/posrednik/leady/$id'
       path: '/$id'
@@ -3313,6 +3332,17 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
   PosrednikLeadyRouteChildren,
 )
 
+interface PosrednikWnioskiRouteChildren {
+  PosrednikWnioskiIdRoute: typeof PosrednikWnioskiIdRoute
+}
+
+const PosrednikWnioskiRouteChildren: PosrednikWnioskiRouteChildren = {
+  PosrednikWnioskiIdRoute: PosrednikWnioskiIdRoute,
+}
+
+const PosrednikWnioskiRouteWithChildren =
+  PosrednikWnioskiRoute._addFileChildren(PosrednikWnioskiRouteChildren)
+
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
@@ -3324,7 +3354,7 @@ interface PosrednikRouteChildren {
   PosrednikSkrzynkaRoute: typeof PosrednikSkrzynkaRoute
   PosrednikStrukturaRoute: typeof PosrednikStrukturaRoute
   PosrednikWniosekRoute: typeof PosrednikWniosekRoute
-  PosrednikWnioskiRoute: typeof PosrednikWnioskiRoute
+  PosrednikWnioskiRoute: typeof PosrednikWnioskiRouteWithChildren
   PosrednikIndexRoute: typeof PosrednikIndexRoute
 }
 
@@ -3339,7 +3369,7 @@ const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikSkrzynkaRoute: PosrednikSkrzynkaRoute,
   PosrednikStrukturaRoute: PosrednikStrukturaRoute,
   PosrednikWniosekRoute: PosrednikWniosekRoute,
-  PosrednikWnioskiRoute: PosrednikWnioskiRoute,
+  PosrednikWnioskiRoute: PosrednikWnioskiRouteWithChildren,
   PosrednikIndexRoute: PosrednikIndexRoute,
 }
 
