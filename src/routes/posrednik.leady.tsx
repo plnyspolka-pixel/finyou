@@ -1,18 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listLeads, logBrokerCall, addManualNote } from "@/lib/leads-admin.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon } from "lucide-react";
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
+import { FancyShell } from "@/components/landing/fancy-shell";
+import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
+
 
 export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
@@ -24,6 +28,7 @@ function OperatorLeadsList() {
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [search, setSearch] = useState("");
+  const [outcome, setOutcome] = useState<{ leadId: string; name: string } | null>(null);
 
   const q = useQuery({
     queryKey: ["operator-leads", status, source, search],
@@ -40,52 +45,68 @@ function OperatorLeadsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Leady (wszystkie)</h1>
-        <Button variant="outline" size="sm" onClick={() => q.refetch()}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Odśwież
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-base font-semibold truncate">Leady</h1>
+          <Badge variant="secondary" className="h-5 text-[10px] shrink-0">{rows.length}</Badge>
+        </div>
+        <Button variant="outline" size="sm" className="h-8 px-2.5" onClick={() => q.refetch()}>
+          <RefreshCw className="h-3.5 w-3.5 sm:mr-1.5" />
+          <span className="hidden sm:inline">Odśwież</span>
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-4">
+
+
+      <FancyShell motion={false} innerClassName="!p-3 md:!p-4">
+        <div className="grid gap-3 md:grid-cols-4">
           <div className="md:col-span-2 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Szukaj: imię, nazwisko, e-mail, telefon…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Input
+              className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/40"
+              placeholder="Szukaj: imię, nazwisko, e-mail, telefon…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie statusy</SelectItem>
               {Object.entries(leadStatusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={source} onValueChange={setSource}>
-            <SelectTrigger><SelectValue placeholder="Źródło" /></SelectTrigger>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white"><SelectValue placeholder="Źródło" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie źródła</SelectItem>
               {sources.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
-        </CardContent>
-      </Card>
+        </div>
+      </FancyShell>
+
 
       {q.isLoading && <p className="text-sm text-muted-foreground">Ładowanie…</p>}
       {q.error && <p className="text-sm text-destructive">Błąd: {(q.error as Error).message}</p>}
 
-      <div className="grid gap-2">
-        {rows.map((r) => {
-          const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "Bez nazwy";
-          const phone = r.phone_normalized;
-          return (
-            <Card key={r.id} className="hover:bg-accent/40 transition">
-              <CardContent className="p-4 flex items-center gap-3">
+      <FancyShell motion={false} innerClassName="!p-3 md:!p-4">
+        <div className="grid gap-2 [&_.text-muted-foreground]:text-white/70">
+          {rows.map((r) => {
+            const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "Bez nazwy";
+            const phone = r.phone_normalized;
+            return (
+              <div
+                key={r.id}
+                className="group relative overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] backdrop-blur-sm p-3 sm:p-4 flex items-center gap-3 transition hover:bg-white/[0.10] hover:border-white/30"
+              >
+                <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-400 via-sky-400 to-emerald-400 opacity-80" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="font-medium truncate">{name}</div>
-                    <Badge variant="outline">{leadStatusLabels[r.status] ?? r.status}</Badge>
-                    {r.source && <Badge variant="secondary">{r.source}</Badge>}
-                    {r.quality_tier && <Badge className="bg-blue-600 text-white">Tier {r.quality_tier}</Badge>}
+                    <div className="font-semibold truncate text-white">{name}</div>
+                    <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">{leadStatusLabels[r.status] ?? r.status}</Badge>
+                    {r.source && <Badge className="bg-sky-500/25 text-sky-100 border-sky-300/30">{r.source}</Badge>}
+                    {r.quality_tier && <Badge className="bg-blue-500 text-white">Tier {r.quality_tier}</Badge>}
                   </div>
                   {r.loan && (
                     <PropertyKeyFacts
@@ -99,16 +120,16 @@ function OperatorLeadsList() {
                       periodMonths={r.loan.preferred_period_months}
                     />
                   )}
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  <div className="text-xs text-white/70 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms.lastAt && <span>· ostatni kontakt {formatRelative(r.comms.lastAt)}</span>}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 flex gap-3">
+                  <div className="text-xs text-white/70 mt-1 flex gap-3">
                     <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {r.comms.calls}</span>
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
-                  <div className="text-[11px] mt-1 flex gap-3 text-emerald-700">
+                  <div className="text-[11px] mt-1 flex gap-3 text-emerald-300">
                     <span className="inline-flex items-center gap-1" title="Połączenia przychodzące z numeru leada">
                       <Phone className="h-3 w-3" /> ← {r.comms.inboundCalls ?? 0}
                     </span>
@@ -120,40 +141,24 @@ function OperatorLeadsList() {
                     </span>
                   </div>
                   {r.comms.lastCallAt && (
-                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-emerald-50 text-emerald-800 px-2 py-1 border border-emerald-200">
+                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-emerald-500/20 text-emerald-100 px-2 py-1 border border-emerald-300/30">
                       <Phone className="h-3 w-3" /> Ostatni telefon: <strong>{r.comms.lastCallByName ?? "Nieznany pośrednik"}</strong> · {formatRelative(r.comms.lastCallAt)}
                     </div>
                   )}
                   {r.comms.inboundEmails > 0 && (
-                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-sky-50 text-sky-800 px-2 py-1 border border-sky-200">
+                    <div className="text-xs mt-1 inline-flex flex-wrap items-center gap-1 rounded-md bg-sky-500/20 text-sky-100 px-2 py-1 border border-sky-300/30">
                       <Mail className="h-3 w-3" /> Mail od leada na kontakt@: <strong>{r.comms.inboundEmails}</strong>
                       {r.comms.lastInboundEmailAt && <> · {formatRelative(r.comms.lastInboundEmailAt)}</>}
                       {r.comms.lastInboundEmailSubject && <span className="opacity-70">· „{r.comms.lastInboundEmailSubject}"</span>}
                     </div>
                   )}
                   {Array.isArray(r.comms.inboundAttachments) && r.comms.inboundAttachments.length > 0 && (
-                    <div className="text-xs mt-1 rounded-md bg-violet-50 text-violet-900 px-2 py-1 border border-violet-200">
-                      <div className="inline-flex items-center gap-1 font-medium">
-                        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{r.comms.inboundAttachments.length}</strong>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {r.comms.inboundAttachments.slice(0, 6).map((a: any, i: number) => (
-                          <span key={i} className="inline-flex items-center gap-1 rounded bg-white/70 border border-violet-200 px-1.5 py-0.5 text-[11px]">
-                            <Paperclip className="h-2.5 w-2.5" />
-                            <span className="truncate max-w-[160px]">{a.name}</span>
-                            {typeof a.size === "number" && <span className="opacity-60">· {Math.max(1, Math.round(a.size / 1024))} KB</span>}
-                          </span>
-                        ))}
-                        {r.comms.inboundAttachments.length > 6 && (
-                          <span className="text-[11px] opacity-70">+{r.comms.inboundAttachments.length - 6} więcej</span>
-                        )}
-                      </div>
-                    </div>
+                    <InboundAttachmentsThumbs attachments={r.comms.inboundAttachments} />
                   )}
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
                     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
                       {r.comms.brokerCalls.map((b: any) => (
-                        <span key={b.id} className="inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-2 py-0.5 border border-slate-200">
+                        <span key={b.id} className="inline-flex items-center gap-1 rounded-md bg-white/10 text-white/80 px-2 py-0.5 border border-white/15">
                           <Phone className="h-3 w-3" /> {b.name ?? "Pośrednik"} · {b.count}× · {formatRelative(b.lastAt)}
                         </span>
                       ))}
@@ -161,27 +166,37 @@ function OperatorLeadsList() {
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {phone && (
+                {phone && (
+                  <div className="flex items-center gap-2 shrink-0">
                     <a
                       href={`tel:${phone}`}
-                      onClick={() => logCall.mutate({ leadId: r.id, phone })}
-                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                      onClick={() => {
+                        logCall.mutate({ leadId: r.id, phone });
+                        setOutcome({ leadId: r.id, name });
+                      }}
+                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-500 text-white hover:bg-emerald-600"
                       aria-label={`Zadzwoń ${phone}`}
                     >
                       <Phone className="h-4 w-4" />
                     </a>
-                  )}
-                  <Link to="/posrednik/leady/$id" params={{ id: r.id }}>
-                    <Button size="sm" variant="default">Otwórz <ChevronRight className="ml-1 h-4 w-4" /></Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {!q.isLoading && rows.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Brak leadów spełniających filtry.</p>}
-      </div>
+                  </div>
+                )}
+
+              </div>
+            );
+
+          })}
+          {!q.isLoading && rows.length === 0 && <p className="text-sm text-white/70 text-center py-8">Brak leadów spełniających filtry.</p>}
+        </div>
+      </FancyShell>
+
+      <CallOutcomeDialog
+        open={!!outcome}
+        onOpenChange={(v) => !v && setOutcome(null)}
+        leadId={outcome?.leadId ?? ""}
+        leadName={outcome?.name}
+        onSaved={() => q.refetch()}
+      />
     </div>
   );
 }
@@ -207,10 +222,10 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
   return (
     <div className="mt-2 space-y-1">
       {last && (
-        <div className="text-xs rounded-md bg-amber-50 border border-amber-200 text-amber-900 px-2 py-1">
+        <div className="text-xs rounded-md bg-amber-500/20 border border-amber-300/40 text-amber-100 px-2 py-1">
           <div className="flex items-center gap-1 font-medium">
             <StickyNote className="h-3 w-3" /> {lastBy ?? "Pośrednik"} · {formatRelative(lastAt!)}
-            {count > 1 && <span className="text-amber-700/70">· +{count - 1} wcześniej</span>}
+            {count > 1 && <span className="text-amber-200/70">· +{count - 1} wcześniej</span>}
           </div>
           <div className="whitespace-pre-wrap line-clamp-2">{last}</div>
         </div>
@@ -221,14 +236,85 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
           onChange={(e) => setValue(e.target.value)}
           placeholder="Dodaj notatkę widoczną dla wszystkich pośredników…"
           rows={2}
-          className="text-sm"
+          className="text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/40"
         />
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
+          <Button size="sm" className="bg-white text-slate-900 hover:bg-white/90" onClick={() => m.mutate()} disabled={!value.trim() || m.isPending}>
             {m.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : (<><Plus className="h-3 w-3 mr-1" />Zapisz notatkę</>)}
           </Button>
         </div>
+
       </div>
     </div>
   );
 }
+
+type InboundAtt = { name: string; mime?: string; size?: number; path?: string; at: string };
+
+function InboundAttachmentsThumbs({ attachments }: { attachments: InboundAtt[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const visible = attachments.slice(0, 8);
+
+  useEffect(() => {
+    let cancelled = false;
+    const paths = visible.map((a) => a.path).filter(Boolean) as string[];
+    if (!paths.length) return;
+    (async () => {
+      const { data } = await supabase.storage.from("documents").createSignedUrls(paths, 60 * 60);
+      if (cancelled || !data) return;
+      const next: Record<string, string> = {};
+      data.forEach((d, i) => { if (d.signedUrl) next[paths[i]] = d.signedUrl; });
+      setUrls((prev) => ({ ...prev, ...next }));
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible.map((a) => a.path).join("|")]);
+
+  return (
+    <div className="mt-2 rounded-md bg-violet-500/15 border border-violet-300/30 p-2">
+      <div className="inline-flex items-center gap-1 text-xs font-medium text-violet-100 mb-2">
+        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{attachments.length}</strong>
+      </div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+        {visible.map((a, i) => {
+          const ext = (a.name.split(".").pop() ?? "").toLowerCase();
+          const isImage = (a.mime ?? "").startsWith("image/") || ["png","jpg","jpeg","webp","gif","avif","heic"].includes(ext);
+          const isPdf = a.mime === "application/pdf" || ext === "pdf";
+          const url = a.path ? urls[a.path] : undefined;
+          const Inner = (
+            <div className="relative aspect-square w-full overflow-hidden rounded-md border border-white/20 bg-white/10 flex items-center justify-center">
+              {isImage && url ? (
+                <img src={url} alt={a.name} loading="lazy" className="h-full w-full object-cover" />
+              ) : isPdf ? (
+                <div className="flex flex-col items-center gap-0.5 text-white/80">
+                  <FileText className="h-6 w-6" />
+                  <span className="text-[9px] font-semibold">PDF</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-0.5 text-white/80">
+                  <FileIcon className="h-6 w-6" />
+                  <span className="text-[9px] font-semibold uppercase">{ext || "PLIK"}</span>
+                </div>
+              )}
+            </div>
+          );
+          return url ? (
+            <a key={i} href={url} target="_blank" rel="noreferrer" title={a.name} className="block group">
+              {Inner}
+              <div className="mt-1 text-[10px] text-white/70 truncate">{a.name}</div>
+            </a>
+          ) : (
+            <div key={i} title={a.name}>
+              {Inner}
+              <div className="mt-1 text-[10px] text-white/70 truncate">{a.name}</div>
+            </div>
+          );
+        })}
+      </div>
+      {attachments.length > visible.length && (
+        <div className="text-[11px] text-white/70 mt-1">+{attachments.length - visible.length} więcej</div>
+      )}
+    </div>
+  );
+}
+

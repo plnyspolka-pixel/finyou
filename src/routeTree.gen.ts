@@ -43,6 +43,7 @@ import { Route as PosrednikSkrzynkaRouteImport } from './routes/posrednik.skrzyn
 import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.rozliczenia'
 import { Route as PosrednikProwizjeRouteImport } from './routes/posrednik.prowizje'
 import { Route as PosrednikProgramRouteImport } from './routes/posrednik.program'
+import { Route as PosrednikProfilRouteImport } from './routes/posrednik.profil'
 import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-leady'
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
@@ -82,6 +83,7 @@ import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
+import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
 import { Route as AdminDokumentyRouteImport } from './routes/admin.dokumenty'
@@ -105,6 +107,8 @@ import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
+import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
+import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
 import { Route as ApiPublicResendWebhookRouteImport } from './routes/api/public/resend-webhook'
 import { Route as ApiPublicResendInboundWebhookRouteImport } from './routes/api/public/resend-inbound-webhook'
 import { Route as ApiPublicMetaMessengerWebhookRouteImport } from './routes/api/public/meta-messenger-webhook'
@@ -331,6 +335,11 @@ const PosrednikProgramRoute = PosrednikProgramRouteImport.update({
   path: '/program',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const PosrednikProfilRoute = PosrednikProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => PosrednikRoute,
+} as any)
 const PosrednikMojeLeadyRoute = PosrednikMojeLeadyRouteImport.update({
   id: '/moje-leady',
   path: '/moje-leady',
@@ -528,6 +537,11 @@ const AdminFakturowoRoute = AdminFakturowoRouteImport.update({
   path: '/fakturowo',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFacebookConnectRoute = AdminFacebookConnectRouteImport.update({
+  id: '/facebook-connect',
+  path: '/facebook-connect',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEmbedRoute = AdminEmbedRouteImport.update({
   id: '/embed',
   path: '/embed',
@@ -647,6 +661,17 @@ const EmbedLSlugRoute = EmbedLSlugRouteImport.update({
   path: '/embed/l/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
+  id: '/api/public/twilio-voice',
+  path: '/api/public/twilio-voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTwilioRecordingRoute =
+  ApiPublicTwilioRecordingRouteImport.update({
+    id: '/api/public/twilio-recording',
+    path: '/api/public/twilio-recording',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicResendWebhookRoute = ApiPublicResendWebhookRouteImport.update({
   id: '/api/public/resend-webhook',
   path: '/api/public/resend-webhook',
@@ -993,6 +1018,7 @@ export interface FileRoutesByFullPath {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -1032,6 +1058,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
@@ -1079,6 +1106,8 @@ export interface FileRoutesByFullPath {
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
+  '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
@@ -1142,6 +1171,7 @@ export interface FileRoutesByTo {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -1180,6 +1210,7 @@ export interface FileRoutesByTo {
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
@@ -1227,6 +1258,8 @@ export interface FileRoutesByTo {
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
+  '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
@@ -1295,6 +1328,7 @@ export interface FileRoutesById {
   '/admin/dokumenty': typeof AdminDokumentyRoute
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
+  '/admin/facebook-connect': typeof AdminFacebookConnectRoute
   '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
@@ -1334,6 +1368,7 @@ export interface FileRoutesById {
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
@@ -1381,6 +1416,8 @@ export interface FileRoutesById {
   '/api/public/meta-messenger-webhook': typeof ApiPublicMetaMessengerWebhookRoute
   '/api/public/resend-inbound-webhook': typeof ApiPublicResendInboundWebhookRoute
   '/api/public/resend-webhook': typeof ApiPublicResendWebhookRoute
+  '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
+  '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
@@ -1450,6 +1487,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/facebook-connect'
     | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -1489,6 +1527,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
@@ -1536,6 +1575,8 @@ export interface FileRouteTypes {
     | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
+    | '/api/public/twilio-recording'
+    | '/api/public/twilio-voice'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
@@ -1599,6 +1640,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/facebook-connect'
     | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -1637,6 +1679,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
@@ -1684,6 +1727,8 @@ export interface FileRouteTypes {
     | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
+    | '/api/public/twilio-recording'
+    | '/api/public/twilio-voice'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
@@ -1751,6 +1796,7 @@ export interface FileRouteTypes {
     | '/admin/dokumenty'
     | '/admin/dystrybucja'
     | '/admin/embed'
+    | '/admin/facebook-connect'
     | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
@@ -1790,6 +1836,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
     | '/posrednik/rozliczenia'
@@ -1837,6 +1884,8 @@ export interface FileRouteTypes {
     | '/api/public/meta-messenger-webhook'
     | '/api/public/resend-inbound-webhook'
     | '/api/public/resend-webhook'
+    | '/api/public/twilio-recording'
+    | '/api/public/twilio-voice'
     | '/embed/l/$slug'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
@@ -1913,6 +1962,8 @@ export interface RootRouteChildren {
   ApiPublicMetaMessengerWebhookRoute: typeof ApiPublicMetaMessengerWebhookRoute
   ApiPublicResendInboundWebhookRoute: typeof ApiPublicResendInboundWebhookRoute
   ApiPublicResendWebhookRoute: typeof ApiPublicResendWebhookRoute
+  ApiPublicTwilioRecordingRoute: typeof ApiPublicTwilioRecordingRoute
+  ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
@@ -2178,6 +2229,13 @@ declare module '@tanstack/react-router' {
       path: '/program'
       fullPath: '/posrednik/program'
       preLoaderRoute: typeof PosrednikProgramRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/profil': {
+      id: '/posrednik/profil'
+      path: '/profil'
+      fullPath: '/posrednik/profil'
+      preLoaderRoute: typeof PosrednikProfilRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/moje-leady': {
@@ -2453,6 +2511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFakturowoRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/facebook-connect': {
+      id: '/admin/facebook-connect'
+      path: '/facebook-connect'
+      fullPath: '/admin/facebook-connect'
+      preLoaderRoute: typeof AdminFacebookConnectRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/embed': {
       id: '/admin/embed'
       path: '/embed'
@@ -2612,6 +2677,20 @@ declare module '@tanstack/react-router' {
       path: '/embed/l/$slug'
       fullPath: '/embed/l/$slug'
       preLoaderRoute: typeof EmbedLSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio-voice': {
+      id: '/api/public/twilio-voice'
+      path: '/api/public/twilio-voice'
+      fullPath: '/api/public/twilio-voice'
+      preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio-recording': {
+      id: '/api/public/twilio-recording'
+      path: '/api/public/twilio-recording'
+      fullPath: '/api/public/twilio-recording'
+      preLoaderRoute: typeof ApiPublicTwilioRecordingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/resend-webhook': {
@@ -3040,6 +3119,7 @@ interface AdminRouteChildren {
   AdminDokumentyRoute: typeof AdminDokumentyRoute
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
+  AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
   AdminFakturowoRoute: typeof AdminFakturowoRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
@@ -3097,6 +3177,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDokumentyRoute: AdminDokumentyRoute,
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
+  AdminFacebookConnectRoute: AdminFacebookConnectRoute,
   AdminFakturowoRoute: AdminFakturowoRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
@@ -3236,6 +3317,7 @@ interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
   PosrednikMojeLeadyRoute: typeof PosrednikMojeLeadyRoute
+  PosrednikProfilRoute: typeof PosrednikProfilRoute
   PosrednikProgramRoute: typeof PosrednikProgramRoute
   PosrednikProwizjeRoute: typeof PosrednikProwizjeRoute
   PosrednikRozliczeniaRoute: typeof PosrednikRozliczeniaRoute
@@ -3250,6 +3332,7 @@ const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
   PosrednikMarketingRoute: PosrednikMarketingRoute,
   PosrednikMojeLeadyRoute: PosrednikMojeLeadyRoute,
+  PosrednikProfilRoute: PosrednikProfilRoute,
   PosrednikProgramRoute: PosrednikProgramRoute,
   PosrednikProwizjeRoute: PosrednikProwizjeRoute,
   PosrednikRozliczeniaRoute: PosrednikRozliczeniaRoute,
@@ -3306,6 +3389,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMetaMessengerWebhookRoute: ApiPublicMetaMessengerWebhookRoute,
   ApiPublicResendInboundWebhookRoute: ApiPublicResendInboundWebhookRoute,
   ApiPublicResendWebhookRoute: ApiPublicResendWebhookRoute,
+  ApiPublicTwilioRecordingRoute: ApiPublicTwilioRecordingRoute,
+  ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,

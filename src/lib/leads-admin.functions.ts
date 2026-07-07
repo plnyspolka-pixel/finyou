@@ -24,18 +24,19 @@ export const listLeads = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
 
-    // "Moje leady" = leady, do których ja (jako pośrednik) kliknąłem ikonkę telefonu.
+    // "Moje leady" = leady, do których ja (jako pośrednik) dzwoniłem albo zapisałem notatkę.
     let assignedLeadIds: string[] | null = null;
     if (data.assignedToMe) {
-      const { data: myCalls, error: callsErr } = await context.supabase
+      const { data: myActivity, error: callsErr } = await context.supabase
         .from("lead_communications")
-        .select("lead_id")
+        .select("lead_id, channel, direction")
         .eq("created_by", context.userId)
-        .eq("channel", "call")
-        .eq("direction", "outbound")
         .not("lead_id", "is", null);
       if (callsErr) throw new Error(callsErr.message);
-      assignedLeadIds = Array.from(new Set((myCalls ?? []).map((r: any) => r.lead_id).filter(Boolean)));
+      const mine = (myActivity ?? []).filter((r: any) =>
+        (r.channel === "call" && r.direction === "outbound") || r.channel === "manual_note"
+      );
+      assignedLeadIds = Array.from(new Set(mine.map((r: any) => r.lead_id).filter(Boolean)));
       if (assignedLeadIds.length === 0) return [];
     }
 

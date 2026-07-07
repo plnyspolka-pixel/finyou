@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LayoutDashboard, Users, UserCheck, FileText, FilePlus2, Mail, Megaphone, Wallet, Network, Share2, Coins } from "lucide-react";
+import { LayoutDashboard, Users, UserCheck, FileText, FilePlus2, Mail, UserCircle } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
 export const Route = createFileRoute("/posrednik")({
@@ -15,19 +15,11 @@ const groups: NavGroup[] = [
       { to: "/posrednik/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
       { to: "/posrednik/skrzynka", label: "Skrzynka mailowa", icon: Mail },
+      { to: "/posrednik/profil", label: "Mój profil", icon: UserCircle },
     ],
   },
 
-  {
-    label: "Program pośredników",
-    items: [
-      { to: "/posrednik/program", label: "Program pośredników", icon: Network, exact: true },
-      { to: "/posrednik/struktura", label: "Struktura partnerska", icon: Share2 },
-      { to: "/posrednik/prowizje", label: "Prowizje sieciowe", icon: Coins },
-      { to: "/posrednik/rozliczenia", label: "Rozliczenia i wypłaty", icon: Wallet },
-      { to: "/posrednik/marketing", label: "Materiały marketingowe", icon: Megaphone },
-    ],
-  },
+
 ];
 
 function OperatorLayout() {

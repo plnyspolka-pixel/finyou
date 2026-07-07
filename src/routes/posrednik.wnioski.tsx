@@ -25,7 +25,7 @@ function MojeWnioski() {
       setLoading(true);
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(full_name, city), properties(city, property_type)")
+        .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type)")
         .eq("assigned_operator", user.id)
         .order("created_at", { ascending: false });
       setRows(data ?? []);
@@ -64,7 +64,7 @@ function MojeWnioski() {
                 <Card className="transition hover:border-primary">
                   <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
                     <div className="space-y-1">
-                      <div className="font-medium">{r.client?.full_name ?? "Klient"} · {formatPLN(Number(r.loan_amount) || 0)}</div>
+                      <div className="font-medium">{[r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient"} · {formatPLN(Number(r.loan_amount) || 0)}</div>
                       <div className="text-xs text-muted-foreground">
                         {city} · {r.preferred_period_months ?? "—"} mies. · {new Date(r.created_at).toLocaleDateString("pl-PL")}
                       </div>
