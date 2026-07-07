@@ -60,7 +60,7 @@ function MojeWnioski() {
             const p = Array.isArray(r.properties) ? r.properties[0] : r.properties;
             const city = p?.city ?? r.client?.city ?? "—";
             return (
-              <Link key={r.id} to="/admin/wnioski/$id" params={{ id: r.id }} className="block">
+              <Link key={r.id} to="/posrednik/wnioski/$id" params={{ id: r.id }} className="block">
                 <Card className="transition hover:border-primary">
                   <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
                     <div className="space-y-1">
