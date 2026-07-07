@@ -10,7 +10,7 @@ import { ChevronRight, FilePlus2, ImageOff } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 
-export const Route = createFileRoute("/posrednik/wnioski")({
+export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
 });
 
