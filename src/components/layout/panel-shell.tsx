@@ -143,14 +143,12 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2 font-semibold text-sm">
-            <span className="relative grid h-7 w-7 place-items-center overflow-hidden rounded-lg text-[10px] font-extrabold text-white">
-              <span
-                aria-hidden
-                className="absolute inset-0"
-                style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }}
-              />
-              <span className="relative">FY</span>
-            </span>
+            <img
+              src={brandMark.url}
+              alt="Finance You"
+              className="h-7 w-7 shrink-0 select-none object-contain"
+              draggable={false}
+            />
             {title}
           </div>
         </header>
