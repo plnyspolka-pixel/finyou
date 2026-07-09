@@ -67,9 +67,10 @@ export function ComposeEmailDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="compose-to">Do</Label>
-            <Input id="compose-to" type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="klient@example.com" />
+            <Label htmlFor="compose-to">Do (można wiele, oddzielone przecinkiem)</Label>
+            <Input id="compose-to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="klient@example.com, drugi@example.com" />
           </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="compose-subject">Temat</Label>
             <Input id="compose-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Temat wiadomości" />
