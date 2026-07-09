@@ -16,9 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Search, Send, Users } from "lucide-react";
+import { Search, PenSquare, Users } from "lucide-react";
 import { toast } from "sonner";
-import { sendApplicationToInvestors } from "@/lib/broker-distribution.functions";
+import { buildInvestorDistributionDraft } from "@/lib/broker-distribution.functions";
 
 type Audience = "instytucjonalny" | "indywidualny";
 type Investor = { id: string; company_name: string | null; first_name: string | null; last_name: string | null; email: string | null; city: string | null };
@@ -79,35 +79,40 @@ export function SendToInvestorsDialog({
   };
   const allSelected = filtered.length > 0 && filtered.every((i) => selected.has(i.id));
   const toggleAll = () => {
-    if (allSelected) {
-      const next = new Set(selected);
-      filtered.forEach((i) => next.delete(i.id));
-      setSelected(next);
-    } else {
-      const next = new Set(selected);
-      filtered.forEach((i) => next.add(i.id));
-      setSelected(next);
-    }
+    const next = new Set(selected);
+    if (allSelected) filtered.forEach((i) => next.delete(i.id));
+    else filtered.forEach((i) => next.add(i.id));
+    setSelected(next);
   };
 
-  const sendFn = useServerFn(sendApplicationToInvestors);
+  const buildFn = useServerFn(buildInvestorDistributionDraft);
   const mut = useMutation({
     mutationFn: async (emails: string[]) =>
-      sendFn({ data: { applicationId, recipients: emails, audience } }),
-    onSuccess: (res) => {
-      toast.success(`Wysłano ${res.sent}/${res.total} wiadomości`);
+      buildFn({ data: { applicationId, recipients: emails, audience } }),
+    onSuccess: (draft) => {
+      try {
+        sessionStorage.setItem(
+          "inbox:draft",
+          JSON.stringify({
+            to: draft.recipients.join(", "),
+            subject: draft.subject,
+            body: draft.bodyText,
+          }),
+        );
+      } catch {}
+      toast.success(`Szablon gotowy dla ${draft.recipients.length} odbiorców`);
       onOpenChange(false);
-      navigate({ to: "/posrednik/skrzynka" });
+      navigate({ to: "/posrednik/skrzynka", search: { compose: 1 } as any });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Nie udało się wysłać"),
+    onError: (e: any) => toast.error(e?.message ?? "Nie udało się utworzyć draftu"),
   });
 
-  const sendSelected = () => {
+  const buildForSelected = () => {
     const emails = investors.filter((i) => selected.has(i.id)).map((i) => i.email!).filter(Boolean);
     if (!emails.length) return;
     mut.mutate(emails);
   };
-  const sendAll = () => {
+  const buildForAll = () => {
     const emails = investors.map((i) => i.email!).filter(Boolean);
     if (!emails.length) return;
     mut.mutate(emails);
@@ -121,10 +126,10 @@ export function SendToInvestorsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            Wyślij do inwestorów {label}
+            Draft do inwestorów {label}
           </DialogTitle>
           <DialogDescription>
-            Zaznacz odbiorców lub wyślij do wszystkich. Wiadomość zawiera KW, kwotę, zdjęcia, dokumenty i Twoją stopkę.
+            Zaznacz odbiorców — utworzę draft w skrzynce (KW, kwota, zdjęcia, dokumenty, Twoja stopka). Nic nie wyślę bez Twojego kliknięcia.
           </DialogDescription>
         </DialogHeader>
 
@@ -172,12 +177,12 @@ export function SendToInvestorsDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mut.isPending}>
             Anuluj
           </Button>
-          <Button variant="secondary" onClick={sendAll} disabled={mut.isPending || investors.length === 0}>
-            Wyślij do wszystkich ({investors.length})
+          <Button variant="secondary" onClick={buildForAll} disabled={mut.isPending || investors.length === 0}>
+            Draft dla wszystkich ({investors.length})
           </Button>
-          <Button onClick={sendSelected} disabled={mut.isPending || selected.size === 0}>
-            <Send className="mr-2 h-4 w-4" />
-            {mut.isPending ? "Wysyłam…" : `Wyślij (${selected.size})`}
+          <Button onClick={buildForSelected} disabled={mut.isPending || selected.size === 0}>
+            <PenSquare className="mr-2 h-4 w-4" />
+            {mut.isPending ? "Tworzę…" : `Utwórz draft (${selected.size})`}
           </Button>
         </DialogFooter>
       </DialogContent>
