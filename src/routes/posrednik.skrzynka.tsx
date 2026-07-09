@@ -37,6 +37,8 @@ type Msg = {
 };
 
 function SkrzynkaPosrednika() {
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,6 +46,21 @@ function SkrzynkaPosrednika() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!search.compose) return;
+    try {
+      const raw = sessionStorage.getItem("inbox:draft");
+      if (raw) {
+        const d = JSON.parse(raw);
+        setComposeInitial({ to: d.to ?? "", subject: d.subject ?? "", body: d.body ?? "" });
+        setComposeOpen(true);
+        sessionStorage.removeItem("inbox:draft");
+      }
+    } catch {}
+    navigate({ search: {} as any, replace: true });
+  }, [search.compose, navigate]);
+
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
     mutationFn: (id: string) => refetchBodyFn({ data: { id } }),
