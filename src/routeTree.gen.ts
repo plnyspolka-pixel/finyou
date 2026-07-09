@@ -23,6 +23,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -234,6 +235,11 @@ const KlientRoute = KlientRouteImport.update({
 const InwestorRoute = InwestorRouteImport.update({
   id: '/inwestor',
   path: '/inwestor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -995,6 +1001,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1152,6 +1159,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
@@ -1307,6 +1315,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1467,6 +1476,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/connect'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1624,6 +1634,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/connect'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
@@ -1778,6 +1789,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/connect'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1937,6 +1949,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ConnectRoute: typeof ConnectRoute
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -2101,6 +2114,13 @@ declare module '@tanstack/react-router' {
       path: '/inwestor'
       fullPath: '/inwestor'
       preLoaderRoute: typeof InwestorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -3372,6 +3392,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  ConnectRoute: ConnectRoute,
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
