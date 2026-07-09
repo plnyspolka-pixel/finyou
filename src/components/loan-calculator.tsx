@@ -470,8 +470,8 @@ export function LoanCalculator({
               <Label>Okres (miesiące)</Label>
               <span className="text-sm tabular-nums">{months} mies.</span>
             </div>
-            <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
+            <Slider min={internalOperatorMode ? 12 : 3} max={72} step={1} value={[Math.max(internalOperatorMode ? 12 : 3, months)]} onValueChange={(v) => setMonths(v[0])} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>{internalOperatorMode ? "12 mies." : "3 mies."}</span><span>72 mies.</span></div>
             {investorGuidance && periodWarn && (
               <Alert className="py-2 border-amber-300 bg-amber-50 text-amber-900">
                 <Info className="h-4 w-4 !text-amber-600" />
