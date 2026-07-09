@@ -14,13 +14,42 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
         const s = admin();
         const { data: cfg } = await s
           .from("reminder_email_schedule")
-          .select("enabled, cron_expression, timezone, last_tick_at")
+          .select("enabled, cron_expression, timezone, last_tick_at, sample_sent_at")
           .eq("id", 1)
           .maybeSingle();
 
         const nowIso = new Date().toISOString();
         // Zawsze odświeżamy last_tick_at — wiadomo, że cron działa.
         await s.from("reminder_email_schedule").update({ last_tick_at: nowIso }).eq("id", 1);
+
+        // JEDNORAZOWO po deployu: wyślij próbkę pierwszych 10 szablonów na adres testowy,
+        // żeby od razu potwierdzić, że cała ścieżka cron→endpoint→poczta działa.
+        // Flagę ustawiamy PRZED wysyłką (anty-duplikat przy równoległych tickach).
+        if (cfg && !(cfg as any).sample_sent_at) {
+          await s.from("reminder_email_schedule").update({ sample_sent_at: nowIso }).eq("id", 1);
+          try {
+            const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } = await import("@/lib/follow-up-templates");
+            const { sendResendEmail } = await import("@/lib/resend-send.server");
+            const to = process.env.FOLLOWUP_SAMPLE_RECIPIENT || "plnyspolka@gmail.com";
+            const vars = buildFollowUpVars({ firstName: "Test", link: "https://financeyou.pl", loanAmount: "150 000 zł" });
+            const n = Math.min(10, EMAIL_FOLLOW_UPS.length);
+            const sample: Array<{ i: number; ok: boolean; error?: string }> = [];
+            for (let i = 0; i < n; i++) {
+              const tpl = EMAIL_FOLLOW_UPS[i];
+              const subject = `[${i + 1}/${n}] ${renderFollowUp(tpl.subject, vars)}`
+                .replace(/\{\{[^}]+\}\}/g, "").replace(/\s{2,}/g, " ").trim();
+              const html = renderFollowUp(tpl.body, vars);
+              const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+              const r = await sendResendEmail({ to, subject, text, html, fromName: "Ania z Finance You" });
+              sample.push({ i: i + 1, ok: r.ok, error: r.error });
+            }
+            await s.from("reminder_email_schedule")
+              .update({ last_result: { deploy_sample: { to, sent: sample.filter((x) => x.ok).length, sample } } as any })
+              .eq("id", 1);
+          } catch (e: any) {
+            console.error("[loan-reminder-emails-tick] deploy sample error", e?.message);
+          }
+        }
 
         if (!cfg) {
           return Response.json({ ok: false, skipped: "no_config" });
