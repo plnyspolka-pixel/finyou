@@ -146,12 +146,12 @@ function ApplicationsPage() {
       if (toPromote.length > 0) {
         await supabase
           .from("loan_applications")
-          .update({ status: "wniosek_kompletny", completeness_percent: 100, updated_at: new Date().toISOString() })
+          .update({ status: "szukamy_inwestora", completeness_percent: 100, updated_at: new Date().toISOString() })
           .in("id", toPromote.map((r) => r.id));
         // Update local list
         for (const p of toPromote) {
           const r = list.find((x) => x.id === p.id);
-          if (r) { r.status = "wniosek_kompletny"; r.completeness_percent = 100; }
+          if (r) { r.status = "szukamy_inwestora"; r.completeness_percent = 100; }
         }
       }
       // Bulk fetch document counts per loan_application
