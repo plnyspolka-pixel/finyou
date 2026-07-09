@@ -263,6 +263,15 @@ export function LoanCalculator({
   const periodWarn = months > 24;
   const anyWarning = interestExceeds || nonInterestExceeds;
 
+  // Ograniczenia trybu oferty wewnętrznej pośrednika.
+  const internalCashOutExceeds = internalOperatorMode && investorCashOut > 100_000 + 1e-9;
+  const internalYieldTooLow = internalOperatorMode && investorRoiAnnualPct < 36 - 1e-9;
+  const internalPeriodTooShort = internalOperatorMode && months < 12;
+
+  useEffect(() => {
+    if (internalOperatorMode && months < 12) setMonths(12);
+  }, [internalOperatorMode, months]);
+
   useEffect(() => {
     if (!rateTouched.current) {
       const rounded = Math.floor(MAX_INTEREST_RATE * 10) / 10;
