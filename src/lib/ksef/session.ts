@@ -30,7 +30,9 @@ export type KsefSession = {
 
 type CertEntry = { certificate: string; usage: string[] | string };
 
-async function fetchEncryptionPublicKey(baseUrl: string): Promise<import("node:crypto").KeyObject> {
+// Zwraca klucz publiczny MF jako PEM (string). PEM jest wymagany, bo część runtime'ów
+// (workerd/Cloudflare) nie przyjmuje obiektu KeyObject w publicEncrypt({ key }).
+async function fetchEncryptionPublicKey(baseUrl: string): Promise<string> {
   const res = await fetch(`${baseUrl}/api/v2/security/public-key-certificates`, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error(`Nie udało się pobrać certyfikatów KSeF (${res.status}).`);
   const items = (await res.json()) as CertEntry[];
@@ -41,7 +43,7 @@ async function fetchEncryptionPublicKey(baseUrl: string): Promise<import("node:c
   if (!pick?.certificate) throw new Error("Brak certyfikatu KsefTokenEncryption w odpowiedzi KSeF.");
   const der = Buffer.from(pick.certificate, "base64");
   const cert = new X509Certificate(der);
-  return cert.publicKey;
+  return cert.publicKey.export({ type: "spki", format: "pem" }) as string;
 }
 
 async function pollAuthStatus(baseUrl: string, referenceNumber: string, authToken: string): Promise<void> {
@@ -73,8 +75,8 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
   const base = ksefBaseUrl(environment);
   if (!base) throw new Error("Nieznane środowisko KSeF.");
 
-  // 1) klucz publiczny z API KSeF
-  const publicKey = await fetchEncryptionPublicKey(base);
+  // 1) klucz publiczny z API KSeF (PEM)
+  const publicKeyPem = await fetchEncryptionPublicKey(base);
 
   // 2) challenge
   const chRes = await fetch(`${base}/api/v2/auth/challenge`, {
@@ -88,7 +90,7 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
 
   // 3) szyfrowanie tokenu (RSA-OAEP SHA-256)
   const encryptedToken = publicEncrypt(
-    { key: publicKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
+    { key: publicKeyPem, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
     Buffer.from(`${token}|${tsMs}`, "utf8"),
   ).toString("base64");
 
