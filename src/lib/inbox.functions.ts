@@ -7,11 +7,12 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z.object({
-      to: z.string().email(),
+      to: z.string().min(3),
       subject: z.string().min(1).max(300),
       body: z.string().min(1).max(50000),
       replyToCommunicationId: z.string().uuid().optional().nullable(),
     }).parse(input),
+
   )
   .handler(async ({ data, context }) => {
     const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
