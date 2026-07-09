@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User } from "lucide-react";
+import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
+import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
   component: BrokerApplicationDetail,
