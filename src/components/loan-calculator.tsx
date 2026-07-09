@@ -372,8 +372,9 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(disbursedOnHand)}</p>
               <p className="mt-1 text-xs text-amber-100/80">
-                kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b> − prowizja FY <b className="text-white">{formatPLN(financeYouFeePln)}</b>
+                kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> − prowizja FY <b className="text-white">{formatPLN(financeYouFeePln)}</b></>}
               </p>
+
             </div>
           </div>
 
