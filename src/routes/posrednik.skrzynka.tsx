@@ -18,8 +18,10 @@ import { toast } from "sonner";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
+  validateSearch: (s: Record<string, unknown>) => ({ compose: s.compose ? 1 : undefined }),
   component: SkrzynkaPosrednika,
 });
+
 
 type Msg = {
   id: string;
