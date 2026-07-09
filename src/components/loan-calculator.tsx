@@ -544,6 +544,30 @@ export function LoanCalculator({
                   </AlertDescription>
                 </Alert>
               )}
+              {internalCashOutExceeds && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Wkład inwestora <b>{formatPLN(investorCashOut)}</b> przekracza limit <b>100 000 zł</b> dla oferty wewnętrznej. Zmniejsz kwotę pożyczki lub zwiększ prowizję inwestora.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {internalYieldTooLow && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Realny roczny zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> jest poniżej minimum <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora lub skróć okres.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {internalPeriodTooShort && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Minimalny okres pożyczki dla oferty wewnętrznej to <b>12 miesięcy</b>.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
 
