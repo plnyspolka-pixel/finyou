@@ -6,10 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
-import { loanStatusLabels } from "@/lib/labels";
+import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel } from "@/lib/loan-status";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
+import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
   component: BrokerApplicationDetail,
