@@ -62,7 +62,7 @@ function BrokerApplicationDetail() {
         supabase
           .from("loan_applications")
           .select(
-            "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
+            "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
           )
           .eq("id", id)
           .maybeSingle(),
@@ -72,11 +72,39 @@ function BrokerApplicationDetail() {
           .eq("loan_application_id", id)
           .order("created_at", { ascending: false }),
       ]);
-      setRow((app as any) ?? null);
+      const appRow = (app as any) ?? null;
+      setRow(appRow);
+      setNotes(appRow?.broker_notes ?? "");
       setDocs((d as any) ?? []);
       setLoading(false);
     })();
   }, [id]);
+
+  const saveNotes = async () => {
+    if (!row) return;
+    setSavingNotes(true);
+    const { error } = await supabase
+      .from("loan_applications")
+      .update({ broker_notes: notes } as any)
+      .eq("id", row.id);
+    setSavingNotes(false);
+    if (error) toast.error("Nie udało się zapisać notatek", { description: error.message });
+    else toast.success("Notatki zapisane");
+  };
+
+  const changeStatus = async (newStatus: string) => {
+    if (!row) return;
+    setSavingStatus(true);
+    const { error } = await supabase
+      .from("loan_applications")
+      .update({ status: newStatus as any })
+      .eq("id", row.id);
+    setSavingStatus(false);
+    if (error) return toast.error("Nie udało się zmienić statusu", { description: error.message });
+    setRow({ ...row, status: newStatus });
+    toast.success("Status zaktualizowany");
+  };
+
 
   if (loading) {
     return (
