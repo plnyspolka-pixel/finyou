@@ -20,6 +20,7 @@ import { Search, Send, Users } from "lucide-react";
 import { toast } from "sonner";
 import { sendApplicationToInvestors } from "@/lib/broker-distribution.functions";
 
+type Audience = "instytucjonalny" | "indywidualny";
 type Investor = { id: string; company_name: string | null; first_name: string | null; last_name: string | null; email: string | null; city: string | null };
 
 export function SendToInvestorsDialog({
