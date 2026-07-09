@@ -682,7 +682,16 @@ export function LoanCalculator({
           <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
 
           <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-white/60">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
-          <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+          {internalOperatorMode && (
+            <>
+              <div className="flex justify-between"><span className="pl-3">↳ prowizja operatora ({operatorCommissionPctClamped.toFixed(1)}%)</span><b className="tabular-nums text-amber-200">{formatPLN(operatorCommissionPln)}</b></div>
+              <div className="flex justify-between"><span className="pl-3">↳ prowizja netto inwestora</span><b className="tabular-nums text-emerald-200">{formatPLN(investorNetCommissionPln)}</b></div>
+            </>
+          )}
+          {!hideFinanceYouFee && (
+            <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+          )}
+
           {investorGuidance && (
             <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
