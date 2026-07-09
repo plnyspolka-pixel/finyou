@@ -1,71 +1,43 @@
-
 ## Cel
-Jedna spójna księgowość w `/admin/ksiegowosc`: wszystkie faktury sprzedaży i kosztowe z Fakturowo i KSeF (dla obu podmiotów: Finance You i Fundacja im. Pieczaka), z możliwością odświeżania, filtrowania i podglądu PDF/XML.
+Przygotowa\u0107 gotowe do wklejenia teksty w formularzu **Meta App Review \u2192 Testing instructions for Web** dla uprawnie\u0144 `pages_messaging`, `pages_manage_metadata`, `instagram_manage_messages`. Bez zmian w kodzie \u2014 sam content do skopiowania.
 
-## Zakres
+## Co dostarcz\u0119 w odpowiedzi (po zatwierdzeniu planu)
 
-### 1. Baza — jedna tabela `accounting_documents`
-Wspólny rejestr dla wszystkich dokumentów (zamiast tylko `sales_invoices`):
-- `id`, `entity_id` (FK do `accounting_entities`)
-- `direction` — `sales` | `purchase` (koszt)
-- `source` — `fakturowo` | `ksef` | `manual`
-- `external_id` (id w Fakturowo / numer KSeF), `invoice_number`
-- `issue_date`, `sale_date`, `due_date`
-- `counterparty_name`, `counterparty_nip`, `counterparty_address`
-- `currency`, `net_amount`, `vat_amount`, `gross_amount`, `vat_rate`
-- `items` (jsonb), `pdf_url`, `xml_content` (text, dla KSeF UPO/FA)
-- `ksef_reference_number`, `ksef_status`
-- `raw_payload` (jsonb — surowa odpowiedź API do debugu)
-- `imported_at`, `created_at`, `updated_at`
-- UNIQUE `(entity_id, source, direction, external_id)` — deduplikacja przy re-syncu
+Pi\u0119\u0107 blok\u00f3w tekstu, jeden na jedno pole formularza, po angielsku (Meta wymaga EN):
 
-RLS: tylko `has_role('administrator')` i `has_role('ksiegowosc')`. GRANT dla `authenticated` + `service_role`.
+### 1. \u201cWhere can we find the app?\u201d
+Jeden URL:
+```
+https://financeyou.pl/admin/facebook-connect
+```
 
-Migracja przenosi istniejące `sales_invoices` do nowej tabeli (jako `direction='sales'`, `source` z pola `provider`).
+### 2. \u201cProvide instructions for accessing the app\u2026\u201d
+Kr\u00f3tka instrukcja krok po kroku:
+- otw\u00f3rz URL powy\u017cej,
+- zaloguj si\u0119 podanym kontem admina (email + has\u0142o \u2014 pola do uzupe\u0142nienia przez Ciebie),
+- panel `/admin/facebook-connect` uruchamia Facebook Login z `pages_show_list`, `pages_messaging`, `pages_manage_metadata`, `instagram_basic`, `instagram_manage_messages`,
+- po po\u0142\u0105czeniu strony **Filip Bielak Consulting** (ID 661893307005604) reviewer widzi subskrypcj\u0119 webhooka Messengera,
+- reviewer wysy\u0142a wiadomo\u015b\u0107 na fanpage \u2192 bot odpowiada automatycznie,
+- konwersacja pojawia si\u0119 w `/admin/messenger` (split-screen inbox),
+- reviewer wysy\u0142a r\u0119czn\u0105 odpowied\u017a z inbox\u2019a \u2192 wiadomo\u015b\u0107 dochodzi do Messengera jako wys\u0142ana przez Stron\u0119,
+- to samo dzia\u0142a dla Instagram DM (`instagram_manage_messages`).
 
-### 2. Server functions do sync-u
+Blok b\u0119dzie zawiera\u0142 miejsce na `Email: __` i `Password: __`.
 
-`src/lib/accounting/sync-fakturowo.functions.ts`:
-- `syncFakturowoForEntity({ entityId })` — dla podmiotu z konfiguracją Fakturowo pobiera listę dokumentów (sprzedaż + koszty) przez `api_zadanie=6` (lista) + `api_zadanie=5` (szczegóły), upsert do `accounting_documents`.
-- Paginacja po datach (ostatnie 24 mies. na start; potem inkrementalnie od `imported_at`).
+### 3. \u201cIf payment or membership is required\u2026\u201d
+```
+No payment or membership is required to test this integration. Full access is provided by the admin credentials above.
+```
 
-`src/lib/accounting/sync-ksef.functions.ts`:
-- `syncKsefForEntity({ entityId, direction })` — używa `KSEF_TOKEN_*` z env (fallback per podmiot, tak jak w `ksef/client.ts`):
-  - `POST /api/online/Query/Invoice/Sync` (Subject1 = sprzedaż, Subject2 = koszty)
-  - iteracja stron, pobranie XML + metadanych każdej FV
-  - upsert do `accounting_documents`
-- Wykorzystuje autoryzację challenge → InitToken z `src/lib/ksef/client.ts`.
+### 4. \u201cIf payment is required to download this app\u2026\u201d
+```
+Not applicable. This is a web application, no download or in-app purchase is required.
+```
 
-`syncAllAccounting()` — orkiestrator wywoływany z UI: iteruje po aktywnych podmiotach, wywołuje oba sync-e równolegle. Middleware `requireSupabaseAuth` + check `has_role`.
+### 5. \u201cIf access to this app\u2026 is limited to users within a specific geographic location\u2026\u201d
+```
+Not applicable. The application is accessible worldwide; no geo-blocking or geo-fencing is in place for the reviewer flow.
+```
 
-### 3. UI
-
-`/admin/ksiegowosc` (index) — dashboard:
-- Kafle: przychód netto / VAT należny / koszty netto / VAT naliczony / VAT do zapłaty (za wybrany miesiąc)
-- Wykres miesięczny (sprzedaż vs koszty, 12 mies.)
-- Przycisk **„Synchronizuj teraz"** (uruchamia `syncAllAccounting`) + status ostatniej synchronizacji per podmiot
-
-`/admin/ksiegowosc/dokumenty` (nowa) — jedna tabela wszystkich dokumentów:
-- Filtry: podmiot, kierunek (sprzedaż/koszt), źródło (Fakturowo/KSeF), okres, kontrahent, status KSeF
-- Kolumny: nr, data, kontrahent, netto, VAT, brutto, źródło, status, akcje (PDF, XML, szczegóły)
-- Export CSV
-
-Istniejące `/admin/ksiegowosc/faktury` → alias na filtr `direction=sales`.
-Nowa `/admin/ksiegowosc/koszty` → alias na filtr `direction=purchase`.
-
-### 4. Cron
-`pg_cron` co godzinę wywołuje `/api/public/hooks/sync-accounting` (chronione `apikey`), który uruchamia `syncAllAccounting` dla wszystkich aktywnych podmiotów.
-
-## Uwagi techniczne
-- KSeF Query API zwraca metadane; XML pobierany osobno przez `GET /api/online/Invoice/Get/{ksefRef}`.
-- Fakturowo nie ma oficjalnego endpointu „lista faktur kosztowych" — używamy `api_zadanie=6` z `dokument_rodzaj=1` (koszt). Jeśli API zwróci błąd, oznaczamy sync jako częściowy i pokazujemy komunikat w UI.
-- Deduplikacja opiera się na `(source, external_id)`, więc powtórne pobranie nie tworzy duplikatów.
-- PDF-y dla KSeF generowane on-demand z XML przez `buildFaXml` odwrotnie (link do wizualizacji KSeF MF).
-
-## Poza zakresem (na później)
-- Automatyczne dekretowanie do JPK_V7
-- Powiązania FV → płatność (istnieje już `payment_id` w `sales_invoices`, przeniesiemy)
-- Załączniki (skany) do faktur kosztowych ręcznie dodawanych
-
-## Pytanie
-Czy iść z tym zakresem, czy najpierw MVP: **tylko pull z Fakturowo + KSeF → jedna tabela listująca wszystko, bez dashboardu i cronu** (żeby najszybciej zobaczyć dane w apce)?
+## Czego potrzebuj\u0119 od Ciebie po planie
+Login i has\u0142o konta admina do wpisania w polu 2 (mog\u0119 te\u017c pom\u00f3c za\u0142o\u017cy\u0107 dedykowane konto reviewer\u2019a przez `supabase--insert` z rol\u0105 `administrator` \u2014 daj zna\u0107, je\u015bli ma to by\u0107 cz\u0119\u015bci\u0105 zadania).
