@@ -10,7 +10,7 @@ export const sendApplicationToInvestors = createServerFn({ method: "POST" })
       .object({
         applicationId: z.string().uuid(),
         recipients: z.array(z.string().email()).min(1).max(100),
-        audience: z.enum(["instytucjonalny", "prywatny"]),
+        audience: z.enum(["instytucjonalny", "indywidualny"]),
       })
       .parse(input),
   )
