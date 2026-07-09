@@ -451,6 +451,31 @@ export async function recordEmailClick(sendId: string): Promise<string | null> {
       },
     );
   }
-  // Wszystkie linki w mailingu kierują na stronę główną financeyou.pl
-  return "https://financeyou.pl";
+
+  // MAGIC LINK: klik w mailu auto-loguje klienta i wrzuca go prosto do panelu/wniosku
+  // (/klient), zamiast lądować na stronie głównej. Link generujemy świeżo przy kliknięciu
+  // (ważny ~1h). Fallback: financeyou.pl, jeśli nie uda się wygenerować.
+  const fallback = "https://financeyou.pl";
+  if (!row.loan_application_id) return fallback;
+  try {
+    const { data: loan } = await s
+      .from("loan_applications")
+      .select("client:clients!inner(email, first_name, last_name)")
+      .eq("id", row.loan_application_id)
+      .maybeSingle();
+    const client: any = (loan as any)?.client;
+    const email: string | null = client?.email ?? null;
+    if (!email) return fallback;
+    const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
+    const r = await ensureKlientAccountAndMagicLink(email, {
+      firstName: client?.first_name ?? null,
+      lastName: client?.last_name ?? null,
+      source: "reminder_email",
+      role: "klient",
+    });
+    return r.magicLink || fallback;
+  } catch (e) {
+    console.error("[loan-reminder-emails] magic link on click failed", e);
+    return fallback;
+  }
 }
