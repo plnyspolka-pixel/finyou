@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { getReminderSchedule, updateReminderSchedule, triggerReminderEmailsNow } from "@/lib/reminder-schedule.functions";
+import { getReminderSchedule, updateReminderSchedule, triggerReminderEmailsNow, sendFollowupSample } from "@/lib/reminder-schedule.functions";
 
 const PRESETS: Array<{ label: string; expr: string }> = [
   { label: "2× dziennie (8:00 i 20:00, pn–sob)", expr: "0 8,20 * * 1-6" },
@@ -44,6 +44,23 @@ export function ReminderScheduleCard() {
       qc.invalidateQueries({ queryKey: ["reminder-schedule"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Błąd ticka"),
+  });
+
+  const sampleFn = useServerFn(sendFollowupSample);
+  const [sampleTo, setSampleTo] = useState("plnyspolka@gmail.com");
+  const sample = useMutation({
+    mutationFn: () => sampleFn({ data: { to: sampleTo.trim(), count: 10 } }),
+    onSuccess: (res: any) => {
+      const errs = (res?.results ?? []).filter((x: any) => !x.ok);
+      if (res?.sent > 0 && errs.length === 0) {
+        toast.success(`Wysłano ${res.sent}/${res.total} szablonów na ${res.to}.`);
+      } else if (res?.sent > 0) {
+        toast.warning(`Wysłano ${res.sent}/${res.total}. Błędy: ${errs.map((e: any) => e.error).join("; ").slice(0, 200)}`);
+      } else {
+        toast.error(`Nie wysłano nic. Błąd: ${errs[0]?.error ?? "nieznany"} (najczęściej brak kluczy Resend na środowisku).`);
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Błąd wysyłki próbki"),
   });
 
   const q = useQuery({
@@ -98,6 +115,22 @@ export function ReminderScheduleCard() {
             disabled={mut.isPending}
           />
           <span className="text-sm">{enabled ? "Włączony" : "Wyłączony"}</span>
+        </div>
+      </div>
+
+      <div className="rounded border p-3 space-y-2 bg-muted/20">
+        <div className="text-xs text-muted-foreground">Podgląd na e-mail — wyślij pierwsze 10 szablonów z bazy przypomnień na wskazany adres</div>
+        <div className="flex gap-2 flex-wrap">
+          <Input
+            type="email"
+            value={sampleTo}
+            onChange={(e) => setSampleTo(e.target.value)}
+            placeholder="adres@e-mail.pl"
+            className="max-w-xs"
+          />
+          <Button onClick={() => sample.mutate()} disabled={sample.isPending || !sampleTo.trim()}>
+            {sample.isPending ? "Wysyłam…" : "Wyślij 10 szablonów"}
+          </Button>
         </div>
       </div>
 

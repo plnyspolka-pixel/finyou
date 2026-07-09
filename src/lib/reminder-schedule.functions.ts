@@ -73,6 +73,42 @@ export const triggerReminderEmailsNow = createServerFn({ method: "POST" })
     return { activeVariants: activeVariants ?? 0, result };
   });
 
+/** Wysyła PIERWSZE N szablonów z bazy przypomnień na wskazany adres (podgląd/test).
+ *  Renderuje realne treści (temat + HTML + CTA) tak, jak zobaczy je klient. Admin-only. */
+export const sendFollowupSample = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      to: z.string().email(),
+      count: z.number().int().min(1).max(20).default(10),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context);
+
+    const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } = await import("@/lib/follow-up-templates");
+    const { sendResendEmail } = await import("@/lib/resend-send.server");
+
+    const vars = buildFollowUpVars({
+      firstName: "Test",
+      link: "https://financeyou.pl",
+      loanAmount: "150 000 zł",
+    });
+
+    const n = Math.min(data.count, EMAIL_FOLLOW_UPS.length);
+    const results: Array<{ i: number; subject: string; ok: boolean; error?: string }> = [];
+    for (let i = 0; i < n; i++) {
+      const tpl = EMAIL_FOLLOW_UPS[i];
+      const subject = `[${i + 1}/${n}] ${renderFollowUp(tpl.subject, vars)}`.replace(/\{\{[^}]+\}\}/g, "").replace(/\s{2,}/g, " ").trim();
+      const html = renderFollowUp(tpl.body, vars);
+      const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const r = await sendResendEmail({ to: data.to, subject, text, html, fromName: "Ania z Finance You" });
+      results.push({ i: i + 1, subject, ok: r.ok, error: r.error });
+    }
+    const sent = results.filter((r) => r.ok).length;
+    return { to: data.to, sent, total: n, results };
+  });
+
 const updateSchema = z.object({
   enabled: z.boolean().optional(),
   cron_expression: z.string().min(5).max(120).optional(),
