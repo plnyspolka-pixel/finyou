@@ -115,9 +115,10 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
         <div style="font-weight:600">${brokerName}</div>
         <div>Pośrednik Finance You</div>
         ${brokerPhone ? `<div>tel. ${brokerPhone}</div>` : ""}
-        ${brokerEmail ? `<div>${brokerEmail}</div>` : ""}
+        <div>kontakt@financeyou.pl</div>
       </div>
     `;
+
 
     const bodyHtml = `
       <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#0f172a;max-width:640px">
@@ -140,7 +141,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       (docs && docs.length
         ? `Dokumenty:\n${docs.map((d: any) => `- ${d.file_name ?? d.document_type ?? "Dokument"}: ${d.file_url ?? ""}`).join("\n")}\n\n`
         : "") +
-      `Pozdrawiam,\n${brokerName}${brokerPhone ? `\ntel. ${brokerPhone}` : ""}${brokerEmail ? `\n${brokerEmail}` : ""}`;
+      `Pozdrawiam,\n${brokerName}${brokerPhone ? `\ntel. ${brokerPhone}` : ""}\nkontakt@financeyou.pl`;
 
     return {
       subject,
