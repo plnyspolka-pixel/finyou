@@ -56,14 +56,16 @@ function WniosekDetail() {
     toast.success("Zmieniono status"); void load();
   };
 
-  const setDecision = async (decision: "rokuje" | "nie_rokuje" | "do_analizy") => {
+  const setDecision = async (decision: "szukamy_inwestora" | "zamkniete" | "kompletowanie_danych") => {
+    const legacyDecision = decision === "szukamy_inwestora" ? "rokuje" : decision === "zamkniete" ? "nie_rokuje" : "do_analizy";
     const { error } = await supabase.from("loan_applications").update({
-      status: decision, admin_decision: decision, decision_reason: reason || null, decision_at: new Date().toISOString(),
-      available_to_investors: decision === "rokuje",
+      status: decision, admin_decision: legacyDecision, decision_reason: reason || null, decision_at: new Date().toISOString(),
+      available_to_investors: decision === "szukamy_inwestora",
     }).eq("id", id);
     if (error) { toast.error("Błąd", { description: error.message }); return; }
     toast.success("Zapisano decyzję"); setReason(""); void load();
   };
+
 
   const addContact = async () => {
     if (!contact.content) { toast.error("Wpisz treść"); return; }
