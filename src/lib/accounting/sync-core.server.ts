@@ -102,9 +102,6 @@ async function syncFakturowoOne(entity: any, direction: "sales" | "purchase"): P
 
 type InvoiceMeta = Record<string, unknown>;
 
-// DIAGNOSTYKA (tymczasowo): surowa próbka odpowiedzi KSeF, do ustalenia kształtu.
-let ksefDiagSample = "";
-
 function pickStr(o: InvoiceMeta, ...keys: string[]): string | null {
   for (const k of keys) {
     const v = o[k];
@@ -170,8 +167,8 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
     if (windowTo > end) windowTo.setTime(end.getTime());
     const dateFrom = windowFrom.toISOString();
     const dateTo = windowTo.toISOString();
-    for (let pageOffset = 0, page = 0; page < 3; page += 1, pageOffset += pageSize) {
-      if (!firstReq) await sleep(700); // throttling między zapytaniami metadanych
+    for (let pageOffset = 0, page = 0; page < 20; page += 1, pageOffset += pageSize) {
+      if (!firstReq) await sleep(300); // throttling między zapytaniami metadanych
       firstReq = false;
       const res = await ksefFetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
         method: "POST",
@@ -190,7 +187,6 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
         throw new Error(`POST /invoices/query/metadata ${res.status}: ${txt.slice(0, 200)}`);
       }
       const j = (await res.json()) as { invoices?: InvoiceMeta[]; items?: InvoiceMeta[]; hasMore?: boolean };
-      if (!ksefDiagSample) ksefDiagSample = JSON.stringify(j).slice(0, 1200);
       const list = j.invoices ?? j.items ?? [];
       for (const it of list) out.push(it);
       if (list.length < pageSize || j.hasMore === false) break;
@@ -204,45 +200,46 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
 async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null }> {
   try {
     const asObj = (v: unknown): InvoiceMeta => (v && typeof v === "object" && !Array.isArray(v) ? (v as InvoiceMeta) : {});
-    const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 3);
-    let saved = 0;
-    let sampleKeys: string | null = null;
+    const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
+    const isSales = direction === "sales";
+    const rows: Record<string, unknown>[] = [];
     for (const it of list) {
-      if (!sampleKeys) sampleKeys = Object.keys(it).join(",");
-      const isSales = direction === "sales";
-      // KSeF 2.0: numer identyfikujący fakturę to „ksefNumber" (starsze/inne: ksefReferenceNumber).
+      // KSeF 2.0: numer identyfikujący fakturę to „ksefNumber".
       const ref = pickStr(it, "ksefNumber", "ksefReferenceNumber", "referenceNumber");
       const num = pickStr(it, "invoiceNumber", "number");
       const externalId = ref ?? num;
       if (!externalId) continue;
-      // Kontrahent: obiekty seller/buyer (lub subjectBy/subjectTo), albo pola płaskie.
-      const cp = isSales ? asObj(it.buyer ?? it.subjectTo ?? it.recipient) : asObj(it.seller ?? it.subjectBy ?? it.issuer);
-      const counterparty_name = pickStr(it, isSales ? "buyerName" : "sellerName") ?? pickStr(cp, "name", "fullName", "nazwa", "issuedToName", "issuedByName");
-      const counterparty_nip = pickStr(it, isSales ? "buyerNip" : "sellerNip", isSales ? "buyerIdentifier" : "sellerIdentifier") ?? pickStr(cp, "nip", "identifier", "value", "taxId");
-      const row = {
+      // Kontrahent to obiekt seller/buyer (dla sprzedaży = buyer, dla kosztów = seller).
+      const cp = isSales ? asObj(it.buyer ?? it.subjectTo) : asObj(it.seller ?? it.subjectBy);
+      const counterparty_name = pickStr(cp, "name", "fullName", "nazwa", "issuedToName", "issuedByName") ?? pickStr(it, isSales ? "buyerName" : "sellerName");
+      const counterparty_nip = pickStr(cp, "nip", "identifier", "value", "taxId", "identifierValue") ?? pickStr(it, isSales ? "buyerNip" : "sellerNip");
+      rows.push({
         entity_id: entity.id,
         direction,
-        source: "ksef" as const,
+        source: "ksef",
         external_id: externalId,
         invoice_number: num,
-        issue_date: pickDate(it, "invoicingDate", "issuingDate", "issueDate", "acquisitionDate"),
-        sale_date: pickDate(it, "invoicingDate", "issueDate", "issuingDate"),
+        issue_date: pickDate(it, "issueDate", "invoicingDate", "acquisitionDate"),
+        sale_date: pickDate(it, "invoicingDate", "issueDate"),
         counterparty_name,
         counterparty_nip,
         currency: pickStr(it, "currency", "currencyCode") ?? "PLN",
-        net_amount: pickNum(it, "net", "netAmount", "totalNetAmount", "totalAmountNet"),
-        vat_amount: pickNum(it, "vat", "vatAmount", "totalVatAmount", "totalAmountVat"),
-        gross_amount: pickNum(it, "gross", "grossAmount", "totalGrossAmount", "totalAmountGross"),
+        net_amount: pickNum(it, "netAmount", "net"),
+        vat_amount: pickNum(it, "vatAmount", "vat"),
+        gross_amount: pickNum(it, "grossAmount", "gross"),
         ksef_reference_number: ref,
         ksef_status: "accepted",
         raw_payload: it as Record<string, unknown>,
-      };
-      const { error } = await accountingDb.from("accounting_documents").upsert(row, { onConflict: "entity_id,source,direction,external_id" });
-      if (!error) saved += 1;
+      });
     }
-    // DIAGNOSTYKA (tymczasowo): zawsze zwróć próbkę odpowiedzi, by ustalić kształt.
-    const diag = `DIAG pobrano=${list.length} zapisano=${saved} keys=[${sampleKeys ?? "-"}] raw=${ksefDiagSample}`.slice(0, 1400);
-    return { ok: false, count: saved, message: diag };
+    let saved = 0;
+    if (rows.length) {
+      // Zapis wsadowy — jeden upsert zamiast N (unika przekroczenia limitu czasu funkcji).
+      const { error } = await accountingDb.from("accounting_documents").upsert(rows, { onConflict: "entity_id,source,direction,external_id" });
+      if (error) return { ok: false, count: 0, message: `Zapis do bazy: ${error.message}` };
+      saved = rows.length;
+    }
+    return { ok: true, count: saved, message: null };
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
   }
