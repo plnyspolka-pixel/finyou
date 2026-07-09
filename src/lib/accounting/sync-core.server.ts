@@ -199,28 +199,36 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
 // Sync jednego kierunku przy WSPÓŁDZIELONEJ sesji (jedna sesja na podmiot → mniej 429).
 async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null }> {
   try {
+    const asObj = (v: unknown): InvoiceMeta => (v && typeof v === "object" && !Array.isArray(v) ? (v as InvoiceMeta) : {});
     const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
     let saved = 0;
+    let sampleKeys: string | null = null;
     for (const it of list) {
-      const ref = pickStr(it, "ksefReferenceNumber", "referenceNumber");
-      if (!ref) continue;
+      if (!sampleKeys) sampleKeys = Object.keys(it).join(",");
       const isSales = direction === "sales";
-      const cpNameKey = isSales ? ["buyerName", "buyer"] : ["sellerName", "seller"];
-      const cpNipKey = isSales ? ["buyerNip", "buyerIdentifier"] : ["sellerNip", "sellerIdentifier"];
+      // KSeF 2.0: numer identyfikujący fakturę to „ksefNumber" (starsze/inne: ksefReferenceNumber).
+      const ref = pickStr(it, "ksefNumber", "ksefReferenceNumber", "referenceNumber");
+      const num = pickStr(it, "invoiceNumber", "number");
+      const externalId = ref ?? num;
+      if (!externalId) continue;
+      // Kontrahent: obiekty seller/buyer (lub subjectBy/subjectTo), albo pola płaskie.
+      const cp = isSales ? asObj(it.buyer ?? it.subjectTo ?? it.recipient) : asObj(it.seller ?? it.subjectBy ?? it.issuer);
+      const counterparty_name = pickStr(it, isSales ? "buyerName" : "sellerName") ?? pickStr(cp, "name", "fullName", "nazwa", "issuedToName", "issuedByName");
+      const counterparty_nip = pickStr(it, isSales ? "buyerNip" : "sellerNip", isSales ? "buyerIdentifier" : "sellerIdentifier") ?? pickStr(cp, "nip", "identifier", "value", "taxId");
       const row = {
         entity_id: entity.id,
         direction,
         source: "ksef" as const,
-        external_id: ref,
-        invoice_number: pickStr(it, "invoiceNumber", "number"),
-        issue_date: pickDate(it, "issueDate", "issuingDate", "invoicingDate"),
+        external_id: externalId,
+        invoice_number: num,
+        issue_date: pickDate(it, "invoicingDate", "issuingDate", "issueDate", "acquisitionDate"),
         sale_date: pickDate(it, "invoicingDate", "issueDate", "issuingDate"),
-        counterparty_name: pickStr(it, ...cpNameKey),
-        counterparty_nip: pickStr(it, ...cpNipKey),
+        counterparty_name,
+        counterparty_nip,
         currency: pickStr(it, "currency", "currencyCode") ?? "PLN",
-        net_amount: pickNum(it, "netAmount", "net"),
-        vat_amount: pickNum(it, "vatAmount", "vat"),
-        gross_amount: pickNum(it, "grossAmount", "gross"),
+        net_amount: pickNum(it, "net", "netAmount", "totalNetAmount", "totalAmountNet"),
+        vat_amount: pickNum(it, "vat", "vatAmount", "totalVatAmount", "totalAmountVat"),
+        gross_amount: pickNum(it, "gross", "grossAmount", "totalGrossAmount", "totalAmountGross"),
         ksef_reference_number: ref,
         ksef_status: "accepted",
         raw_payload: it as Record<string, unknown>,
@@ -228,7 +236,9 @@ async function syncKsefWithSession(entity: any, direction: "sales" | "purchase",
       const { error } = await accountingDb.from("accounting_documents").upsert(row, { onConflict: "entity_id,source,direction,external_id" });
       if (!error) saved += 1;
     }
-    return { ok: true, count: saved, message: null };
+    // Diagnostyka: gdy pobrano faktury, ale nic nie zapisano — pokaż realne klucze odpowiedzi.
+    const message = list.length > 0 && saved === 0 && sampleKeys ? `diag: pobrano ${list.length}, zapisano 0 — klucze: ${sampleKeys}`.slice(0, 280) : null;
+    return { ok: true, count: saved, message };
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
   }
