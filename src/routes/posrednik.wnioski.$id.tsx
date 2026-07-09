@@ -240,6 +240,15 @@ function BrokerApplicationDetail() {
           <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">{p.description}</CardContent>
         </Card>
       )}
+
+      {sendOpen && (
+        <SendToInvestorsDialog
+          open={!!sendOpen}
+          onOpenChange={(o) => !o && setSendOpen(null)}
+          applicationId={row.id}
+          audience={sendOpen}
+        />
+      )}
     </div>
   );
 }
