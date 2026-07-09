@@ -31,27 +31,42 @@ function KsiegowoscIndex() {
 
   return (
     <div className="space-y-6">
+      {/* Professional Header */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Receipt className="h-6 w-6" /> Księgowość</h1>
-        <p className="text-sm text-muted-foreground">Faktury sprzedaży, dwa podmioty gospodarcze i integracja z KSeF. Faktury wystawiane automatycznie po wpłatach.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3 mb-2">
+          <Receipt className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          Księgowość
+        </h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
+          Faktury sprzedaży, dwa podmioty gospodarcze i integracja z KSeF. Faktury wystawiane automatycznie po wpłatach. Synchronizacja ciągła z systemami księgowości.
+        </p>
       </div>
 
-      <Alert>
-        <ShieldCheck className="h-4 w-4" />
-        <AlertDescription className="text-sm">
-          Faktury są wystawiane automatycznie po zaksięgowanej wpłacie z domyślnego podmiotu. Podmiot dla konkretnej faktury możesz zmienić w zakładce <b>Faktury</b> (dopóki faktura jest robocza).
+      {/* Info Alert */}
+      <Alert className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30">
+        <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <AlertDescription className="text-sm text-blue-700 dark:text-blue-300">
+          Faktury są wystawiane automatycznie po zaksięgowanej wpłacie z <b>domyślnego podmiotu</b>. Podmiot dla konkretnej faktury możesz zmienić w zakładce <b>Faktury</b> (dopóki faktura jest robocza).
         </AlertDescription>
       </Alert>
 
+      {/* KPI Tiles — Professional Grid */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         {q.isLoading
-          ? <p className="text-muted-foreground col-span-full">Ładowanie…</p>
+          ? <p className="text-slate-600 dark:text-slate-400 col-span-full text-center py-8">⏳ Ładowanie statystyk…</p>
           : tiles.map((t) => (
-              <Card key={t.label}>
+              <Card key={t.label} className="border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">{t.label}</span><t.icon className={`h-4 w-4 ${t.color}`} /></div>
-                  <div className={`text-xl font-bold mt-1 ${t.color}`}>{t.value}</div>
-                  {t.sub && <div className="text-xs text-muted-foreground">{t.sub}</div>}
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">{t.label}</span>
+                    <t.icon className={`h-5 w-5 ${t.color} flex-shrink-0`} />
+                  </div>
+                  <div className={`text-2xl font-bold ${t.color} dark:${t.color.replace('text-', 'dark:text-')}`}>
+                    {t.value}
+                  </div>
+                  {t.sub && (
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">{t.sub}</div>
+                  )}
                 </CardContent>
               </Card>
             ))}
