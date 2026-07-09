@@ -23,6 +23,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -43,6 +44,7 @@ import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.roz
 import { Route as PosrednikProwizjeRouteImport } from './routes/posrednik.prowizje'
 import { Route as PosrednikProgramRouteImport } from './routes/posrednik.program'
 import { Route as PosrednikProfilRouteImport } from './routes/posrednik.profil'
+import { Route as PosrednikOfertaWewnetrznaRouteImport } from './routes/posrednik.oferta-wewnetrzna'
 import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-leady'
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
@@ -236,6 +238,11 @@ const InwestorRoute = InwestorRouteImport.update({
   path: '/inwestor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -336,6 +343,12 @@ const PosrednikProfilRoute = PosrednikProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const PosrednikOfertaWewnetrznaRoute =
+  PosrednikOfertaWewnetrznaRouteImport.update({
+    id: '/oferta-wewnetrzna',
+    path: '/oferta-wewnetrzna',
+    getParentRoute: () => PosrednikRoute,
+  } as any)
 const PosrednikMojeLeadyRoute = PosrednikMojeLeadyRouteImport.update({
   id: '/moje-leady',
   path: '/moje-leady',
@@ -995,6 +1008,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1064,6 +1078,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/oferta-wewnetrzna': typeof PosrednikOfertaWewnetrznaRoute
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
@@ -1152,6 +1167,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
@@ -1217,6 +1233,7 @@ export interface FileRoutesByTo {
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/oferta-wewnetrzna': typeof PosrednikOfertaWewnetrznaRoute
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
@@ -1307,6 +1324,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1376,6 +1394,7 @@ export interface FileRoutesById {
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/oferta-wewnetrzna': typeof PosrednikOfertaWewnetrznaRoute
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
@@ -1467,6 +1486,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/connect'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1536,6 +1556,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/oferta-wewnetrzna'
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
@@ -1624,6 +1645,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/connect'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
@@ -1689,6 +1711,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/oferta-wewnetrzna'
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
@@ -1778,6 +1801,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/connect'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1847,6 +1871,7 @@ export interface FileRouteTypes {
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/oferta-wewnetrzna'
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
@@ -1937,6 +1962,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ConnectRoute: typeof ConnectRoute
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -2103,6 +2129,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -2241,6 +2274,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/posrednik/profil'
       preLoaderRoute: typeof PosrednikProfilRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/oferta-wewnetrzna': {
+      id: '/posrednik/oferta-wewnetrzna'
+      path: '/oferta-wewnetrzna'
+      fullPath: '/posrednik/oferta-wewnetrzna'
+      preLoaderRoute: typeof PosrednikOfertaWewnetrznaRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/moje-leady': {
@@ -3336,6 +3376,7 @@ interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
   PosrednikMojeLeadyRoute: typeof PosrednikMojeLeadyRoute
+  PosrednikOfertaWewnetrznaRoute: typeof PosrednikOfertaWewnetrznaRoute
   PosrednikProfilRoute: typeof PosrednikProfilRoute
   PosrednikProgramRoute: typeof PosrednikProgramRoute
   PosrednikProwizjeRoute: typeof PosrednikProwizjeRoute
@@ -3352,6 +3393,7 @@ const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
   PosrednikMarketingRoute: PosrednikMarketingRoute,
   PosrednikMojeLeadyRoute: PosrednikMojeLeadyRoute,
+  PosrednikOfertaWewnetrznaRoute: PosrednikOfertaWewnetrznaRoute,
   PosrednikProfilRoute: PosrednikProfilRoute,
   PosrednikProgramRoute: PosrednikProgramRoute,
   PosrednikProwizjeRoute: PosrednikProwizjeRoute,
@@ -3372,6 +3414,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
+  ConnectRoute: ConnectRoute,
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,

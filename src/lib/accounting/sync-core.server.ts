@@ -130,10 +130,34 @@ function pickDate(o: InvoiceMeta, ...keys: string[]): string | null {
   return s ? /^(\d{4})-(\d{2})-(\d{2})/.exec(s)?.[0] ?? null : null;
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Fetch z obsługą limitu zapytań KSeF (429/503): ponawia z backoffem, szanuje Retry-After.
+async function ksefFetch(url: string, init: RequestInit, attempts = 6): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status !== 429 && res.status !== 503) return res;
+      const retryAfter = Number(res.headers.get("Retry-After"));
+      const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : Math.min(2000 * 2 ** attempt, 20000);
+      await res.text().catch(() => "");
+      await sleep(wait + Math.floor(Math.random() * 400));
+    } catch (e) {
+      lastErr = e;
+      await sleep(Math.min(2000 * 2 ** attempt, 20000));
+    }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error("KSeF: przekroczono limit prób (429 Too Many Requests).");
+}
+
 async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subject2", monthsBack: number): Promise<InvoiceMeta[]> {
-  // KSeF 2.0 wymaga zakresu dat max 3 miesiące — pobieramy w oknach 3-miesięcznych.
+  // KSeF 2.0 wymaga zakresu dat max 3 miesiące — pobieramy w oknach 3-miesięcznych,
+  // z odstępami między zapytaniami, aby nie wpaść w limit (429 Too Many Requests).
   const out: InvoiceMeta[] = [];
   const pageSize = 100;
+  let firstReq = true;
   const end = new Date();
   const start = new Date(); start.setMonth(start.getMonth() - monthsBack);
   let windowFrom = new Date(start);
@@ -143,8 +167,10 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
     if (windowTo > end) windowTo.setTime(end.getTime());
     const dateFrom = windowFrom.toISOString();
     const dateTo = windowTo.toISOString();
-    for (let pageOffset = 0, page = 0; page < 100; page += 1, pageOffset += pageSize) {
-      const res = await fetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
+    for (let pageOffset = 0, page = 0; page < 20; page += 1, pageOffset += pageSize) {
+      if (!firstReq) await sleep(300); // throttling między zapytaniami metadanych
+      firstReq = false;
+      const res = await ksefFetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,35 +189,40 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
       const j = (await res.json()) as { invoices?: InvoiceMeta[]; items?: InvoiceMeta[]; hasMore?: boolean };
       const list = j.invoices ?? j.items ?? [];
       for (const it of list) out.push(it);
-      if (list.length < pageSize) break;
+      if (list.length < pageSize || j.hasMore === false) break;
     }
     windowFrom = windowTo;
   }
   return out;
 }
 
-async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promise<{ ok: boolean; count: number; message: string | null }> {
-  let s: KsefSession | null = null;
+// Sync jednego kierunku przy WSPÓŁDZIELONEJ sesji (jedna sesja na podmiot → mniej 429).
+async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null }> {
   try {
-    s = await openKsefSession(entity as KsefEntity);
+    const asObj = (v: unknown): InvoiceMeta => (v && typeof v === "object" && !Array.isArray(v) ? (v as InvoiceMeta) : {});
     const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
-    let saved = 0;
+    const isSales = direction === "sales";
+    const rows: Record<string, unknown>[] = [];
     for (const it of list) {
-      const ref = pickStr(it, "ksefReferenceNumber", "referenceNumber");
-      if (!ref) continue;
-      const isSales = direction === "sales";
-      const cpNameKey = isSales ? ["buyerName", "buyer"] : ["sellerName", "seller"];
-      const cpNipKey = isSales ? ["buyerNip", "buyerIdentifier"] : ["sellerNip", "sellerIdentifier"];
-      const row = {
+      // KSeF 2.0: numer identyfikujący fakturę to „ksefNumber".
+      const ref = pickStr(it, "ksefNumber", "ksefReferenceNumber", "referenceNumber");
+      const num = pickStr(it, "invoiceNumber", "number");
+      const externalId = ref ?? num;
+      if (!externalId) continue;
+      // Kontrahent to obiekt seller/buyer (dla sprzedaży = buyer, dla kosztów = seller).
+      const cp = isSales ? asObj(it.buyer ?? it.subjectTo) : asObj(it.seller ?? it.subjectBy);
+      const counterparty_name = pickStr(cp, "name", "fullName", "nazwa", "issuedToName", "issuedByName") ?? pickStr(it, isSales ? "buyerName" : "sellerName");
+      const counterparty_nip = pickStr(cp, "nip", "identifier", "value", "taxId", "identifierValue") ?? pickStr(it, isSales ? "buyerNip" : "sellerNip");
+      rows.push({
         entity_id: entity.id,
         direction,
-        source: "ksef" as const,
-        external_id: ref,
-        invoice_number: pickStr(it, "invoiceNumber", "number"),
-        issue_date: pickDate(it, "issueDate", "issuingDate", "invoicingDate"),
-        sale_date: pickDate(it, "invoicingDate", "issueDate", "issuingDate"),
-        counterparty_name: pickStr(it, ...cpNameKey),
-        counterparty_nip: pickStr(it, ...cpNipKey),
+        source: "ksef",
+        external_id: externalId,
+        invoice_number: num,
+        issue_date: pickDate(it, "issueDate", "invoicingDate", "acquisitionDate"),
+        sale_date: pickDate(it, "invoicingDate", "issueDate"),
+        counterparty_name,
+        counterparty_nip,
         currency: pickStr(it, "currency", "currencyCode") ?? "PLN",
         net_amount: pickNum(it, "netAmount", "net"),
         vat_amount: pickNum(it, "vatAmount", "vat"),
@@ -199,15 +230,18 @@ async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promis
         ksef_reference_number: ref,
         ksef_status: "accepted",
         raw_payload: it as Record<string, unknown>,
-      };
-      const { error } = await accountingDb.from("accounting_documents").upsert(row, { onConflict: "entity_id,source,direction,external_id" });
-      if (!error) saved += 1;
+      });
+    }
+    let saved = 0;
+    if (rows.length) {
+      // Zapis wsadowy — jeden upsert zamiast N (unika przekroczenia limitu czasu funkcji).
+      const { error } = await accountingDb.from("accounting_documents").upsert(rows, { onConflict: "entity_id,source,direction,external_id" });
+      if (error) return { ok: false, count: 0, message: `Zapis do bazy: ${error.message}` };
+      saved = rows.length;
     }
     return { ok: true, count: saved, message: null };
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
-  } finally {
-    if (s) await closeKsefSession(s);
   }
 }
 
@@ -220,11 +254,29 @@ export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
   const { data: entities } = await accountingDb.from("accounting_entities").select("*").eq("active", true).order("created_at", { ascending: true });
   const results: SyncResult[] = [];
   for (const e of ((entities ?? []) as any[])) {
-    for (const dir of ["sales", "purchase"] as const) {
-      const rKsef = await syncKsefOne(e, dir);
-      await upsertSyncStatus(e.id, "ksef", dir, rKsef.ok, rKsef.message, rKsef.count);
-      results.push({ entity: e.name, direction: dir, ...rKsef });
+    // Jedna sesja KSeF na podmiot dla obu kierunków (mniej wywołań auth → mniej 429).
+    let session: KsefSession | null = null;
+    try {
+      session = await openKsefSession(e as KsefEntity);
+    } catch (err) {
+      for (const dir of ["sales", "purchase"] as const) {
+        await upsertSyncStatus(e.id, "ksef", dir, false, (err as Error).message, 0);
+        results.push({ entity: e.name, direction: dir, ok: false, count: 0, message: (err as Error).message });
+      }
+      await sleep(1500);
+      continue;
     }
+    try {
+      for (const dir of ["sales", "purchase"] as const) {
+        const rKsef = await syncKsefWithSession(e, dir, session);
+        await upsertSyncStatus(e.id, "ksef", dir, rKsef.ok, rKsef.message, rKsef.count);
+        results.push({ entity: e.name, direction: dir, ...rKsef });
+        await sleep(700); // odstęp między kierunkami
+      }
+    } finally {
+      await closeKsefSession(session);
+    }
+    await sleep(1500); // odstęp między podmiotami
   }
   return { results };
 }
