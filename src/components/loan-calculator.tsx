@@ -509,10 +509,42 @@ export function LoanCalculator({
             </div>
           </div>
 
-          <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-            <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
-          </div>
+          {internalOperatorMode && (
+            <div className="space-y-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-white">
+                  Prowizja wewnętrzna operatora (część prowizji inwestora)
+                  <InfoTip text="Wydzielona część prowizji inwestora, która trafia do operatora prowadzącego temat. Nie jest doliczana do kosztów pożyczki — stanowi wewnętrzny podział prowizji inwestora." />
+                </Label>
+                <div className="flex items-center gap-2">
+                  <NumberField step="0.1" value={operatorCommissionPctClamped} onCommit={(n) => setOperatorCommissionPct(Math.min(5, Math.max(2, n || 0)))} className="w-20" />
+                  <span className="text-sm text-white">% ({formatPLN(operatorCommissionPln)})</span>
+                </div>
+              </div>
+              <Slider min={2} max={5} step={0.1} value={[operatorCommissionPctClamped]} onValueChange={(v) => setOperatorCommissionPct(v[0])} />
+              <div className="flex justify-between text-xs text-white/70"><span>2%</span><span>5%</span></div>
+              <div className="grid gap-1.5 border-t border-white/15 pt-2 text-sm sm:grid-cols-2">
+                <div className="flex justify-between text-white/80"><span>Prowizja operatora</span><b className="tabular-nums text-amber-200">{formatPLN(operatorCommissionPln)}</b></div>
+                <div className="flex justify-between text-white/80"><span>Prowizja netto dla inwestora</span><b className="tabular-nums text-emerald-200">{formatPLN(investorNetCommissionPln)}</b></div>
+              </div>
+              {operatorCommissionPln > commissionPln && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Prowizja operatora przekracza prowizję inwestora — zwiększ prowizję inwestora lub zmniejsz udział operatora.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          {!hideFinanceYouFee && (
+            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
+            </div>
+          )}
+
 
 
 
