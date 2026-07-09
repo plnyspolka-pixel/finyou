@@ -31,20 +31,27 @@ type Row = {
   docCount?: number;
 };
 
-const INCOMPLETE_STATUSES = ["nowy_lead", "w_trakcie_uzupelniania"];
-const COMPLETE_STATUSES = ["wniosek_kompletny", "do_analizy", "wyslany_do_inwestorow", "zaakceptowany", "odrzucony", "wyplacony", "zakonczony"];
+const INCOMPLETE_STATUSES = ["nowy_lead", "brak_kontaktu", "kontakt", "kompletowanie_danych"];
+const COMPLETE_STATUSES = [
+  "szukamy_inwestora",
+  "warunki_zaakceptowane",
+  "dokumenty_przygotowanie_umowy",
+  "notariusz",
+  "zamkniete",
+];
 
 const STATUS_LABEL: Record<string, string> = {
   nowy_lead: "Nowy lead",
-  w_trakcie_uzupelniania: "W trakcie uzupełniania",
-  wniosek_kompletny: "Kompletny",
-  do_analizy: "Do analizy",
-  wyslany_do_inwestorow: "Wysłany do inwestorów",
-  zaakceptowany: "Zaakceptowany",
-  odrzucony: "Odrzucony",
-  wyplacony: "Wypłacony",
-  zakonczony: "Zakończony",
+  brak_kontaktu: "Brak kontaktu",
+  kontakt: "Kontakt",
+  kompletowanie_danych: "Kompletowanie danych",
+  szukamy_inwestora: "Szukamy inwestora / oferta",
+  warunki_zaakceptowane: "Warunki zaakceptowane",
+  dokumenty_przygotowanie_umowy: "Dokumenty / przygotowanie umowy",
+  notariusz: "Notariusz",
+  zamkniete: "Zamknięte",
 };
+
 
 function fmtPLN(n: number | null) {
   if (n == null) return "—";
