@@ -5216,6 +5216,7 @@ export type Database = {
           recipient_email: string
           sent_at: string
           sent_hour_warsaw: number
+          sequence_number: number | null
           subject: string
           variant_id: string | null
         }
@@ -5232,6 +5233,7 @@ export type Database = {
           recipient_email: string
           sent_at?: string
           sent_hour_warsaw: number
+          sequence_number?: number | null
           subject: string
           variant_id?: string | null
         }
@@ -5248,6 +5250,7 @@ export type Database = {
           recipient_email?: string
           sent_at?: string
           sent_hour_warsaw?: number
+          sequence_number?: number | null
           subject?: string
           variant_id?: string | null
         }
@@ -5280,6 +5283,7 @@ export type Database = {
           opened_count: number
           phase: string | null
           preview_text: string | null
+          seed_tag: string | null
           sent_count: number
           sequence_index: number | null
           slot: string | null
@@ -5298,6 +5302,7 @@ export type Database = {
           opened_count?: number
           phase?: string | null
           preview_text?: string | null
+          seed_tag?: string | null
           sent_count?: number
           sequence_index?: number | null
           slot?: string | null
@@ -5316,6 +5321,7 @@ export type Database = {
           opened_count?: number
           phase?: string | null
           preview_text?: string | null
+          seed_tag?: string | null
           sent_count?: number
           sequence_index?: number | null
           slot?: string | null
@@ -6273,6 +6279,7 @@ export type Database = {
           last_result: Json | null
           last_run_at: string | null
           last_tick_at: string | null
+          sample_sent_at: string | null
           timezone: string
           updated_at: string
         }
@@ -6283,6 +6290,7 @@ export type Database = {
           last_result?: Json | null
           last_run_at?: string | null
           last_tick_at?: string | null
+          sample_sent_at?: string | null
           timezone?: string
           updated_at?: string
         }
@@ -6293,6 +6301,7 @@ export type Database = {
           last_result?: Json | null
           last_run_at?: string | null
           last_tick_at?: string | null
+          sample_sent_at?: string | null
           timezone?: string
           updated_at?: string
         }

@@ -263,6 +263,15 @@ export function LoanCalculator({
   const periodWarn = months > 24;
   const anyWarning = interestExceeds || nonInterestExceeds;
 
+  // Ograniczenia trybu oferty wewnętrznej pośrednika.
+  const internalCashOutExceeds = internalOperatorMode && investorCashOut > 100_000 + 1e-9;
+  const internalYieldTooLow = internalOperatorMode && investorRoiAnnualPct < 36 - 1e-9;
+  const internalPeriodTooShort = internalOperatorMode && months < 12;
+
+  useEffect(() => {
+    if (internalOperatorMode && months < 12) setMonths(12);
+  }, [internalOperatorMode, months]);
+
   useEffect(() => {
     if (!rateTouched.current) {
       const rounded = Math.floor(MAX_INTEREST_RATE * 10) / 10;
@@ -461,8 +470,8 @@ export function LoanCalculator({
               <Label>Okres (miesiące)</Label>
               <span className="text-sm tabular-nums">{months} mies.</span>
             </div>
-            <Slider min={3} max={72} step={1} value={[months]} onValueChange={(v) => setMonths(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>3 mies.</span><span>72 mies.</span></div>
+            <Slider min={internalOperatorMode ? 12 : 3} max={72} step={1} value={[Math.max(internalOperatorMode ? 12 : 3, months)]} onValueChange={(v) => setMonths(v[0])} />
+            <div className="flex justify-between text-xs text-muted-foreground"><span>{internalOperatorMode ? "12 mies." : "3 mies."}</span><span>72 mies.</span></div>
             {investorGuidance && periodWarn && (
               <Alert className="py-2 border-amber-300 bg-amber-50 text-amber-900">
                 <Info className="h-4 w-4 !text-amber-600" />
@@ -532,6 +541,30 @@ export function LoanCalculator({
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
                     Prowizja operatora przekracza prowizję inwestora — zwiększ prowizję inwestora lub zmniejsz udział operatora.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {internalCashOutExceeds && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Wkład inwestora <b>{formatPLN(investorCashOut)}</b> przekracza limit <b>100 000 zł</b> dla oferty wewnętrznej. Zmniejsz kwotę pożyczki lub zwiększ prowizję inwestora.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {internalYieldTooLow && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Realny roczny zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> jest poniżej minimum <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora lub skróć okres.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {internalPeriodTooShort && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Minimalny okres pożyczki dla oferty wewnętrznej to <b>12 miesięcy</b>.
                   </AlertDescription>
                 </Alert>
               )}
