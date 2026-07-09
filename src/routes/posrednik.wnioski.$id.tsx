@@ -149,12 +149,41 @@ function BrokerApplicationDetail() {
         />
       </div>
 
+      {/* Status + notatki pośrednika */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Status wniosku</CardTitle></CardHeader>
+          <CardContent>
+            <Select value={row.status} onValueChange={changeStatus} disabled={savingStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {LOAN_STATUS_ORDER.map((s) => (
+                  <SelectItem key={s} value={s}>{LOAN_STATUS_SHORT_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold"><StickyNote className="h-4 w-4 text-primary" />Notatki pośrednika</CardTitle>
+            <Button size="sm" variant="ghost" onClick={saveNotes} disabled={savingNotes}>
+              <Save className="mr-1 h-4 w-4" />Zapisz
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notatki widoczne dla Ciebie i zespołu (nie dla klienta)." />
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Kluczowe parametry */}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard icon={<Wallet className="h-5 w-5" />} label="Wnioskowana kwota" value={row.loan_amount ? formatPLN(Number(row.loan_amount)) : "—"} accent />
         <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Okres" value={row.preferred_period_months ? `${row.preferred_period_months} mies.` : "—"} />
         <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value={p?.property_type ?? "—"} />
       </div>
+
 
       {/* Dystrybucja tematu */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
