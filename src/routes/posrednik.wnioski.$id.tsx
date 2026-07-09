@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User } from "lucide-react";
+import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
+import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
   component: BrokerApplicationDetail,
@@ -43,6 +44,7 @@ function BrokerApplicationDetail() {
   const [row, setRow] = useState<Row | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
 
   useEffect(() => {
     void (async () => {
@@ -116,6 +118,26 @@ function BrokerApplicationDetail() {
         <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Okres" value={row.preferred_period_months ? `${row.preferred_period_months} mies.` : "—"} />
         <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value={p?.property_type ?? "—"} />
       </div>
+
+      {/* Dystrybucja tematu */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Wyślij ofertę do inwestorów</div>
+            <p className="text-xs text-muted-foreground">
+              Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => setSendOpen("instytucjonalny")}>
+              <Building2 className="mr-2 h-4 w-4" />Inwestorzy instytucjonalni
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setSendOpen("indywidualny")}>
+              <UserRound className="mr-2 h-4 w-4" />Inwestorzy prywatni
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Nieruchomość */}
@@ -217,6 +239,15 @@ function BrokerApplicationDetail() {
           <CardHeader><CardTitle className="text-base">Opis</CardTitle></CardHeader>
           <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">{p.description}</CardContent>
         </Card>
+      )}
+
+      {sendOpen && (
+        <SendToInvestorsDialog
+          open={!!sendOpen}
+          onOpenChange={(o) => !o && setSendOpen(null)}
+          applicationId={row.id}
+          audience={sendOpen}
+        />
       )}
     </div>
   );

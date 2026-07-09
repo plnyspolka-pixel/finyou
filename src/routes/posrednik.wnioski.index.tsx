@@ -36,8 +36,8 @@ function MojeWnioski() {
       setLoading(true);
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number)")
-        .eq("assigned_operator", user.id)
+        .select("id, status, loan_amount, preferred_period_months, created_at, assigned_operator, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number)")
+        .or(`assigned_operator.eq.${user.id},assigned_operator.is.null`)
         .order("created_at", { ascending: false });
       setRows(((data as any) as Row[]) ?? []);
       setLoading(false);
