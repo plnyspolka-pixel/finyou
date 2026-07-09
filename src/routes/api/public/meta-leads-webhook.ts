@@ -296,7 +296,44 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 console.error("[meta-leads-webhook] unified lead upsert", e);
               }
 
-              // 3) SMS z linkiem do dokończenia wniosku
+              const formId = v.form_id ?? details.form_id;
+
+              // 3) TELEFON Ani OD RAZU — jako PIERWSZA akcja po utworzeniu leada, żeby żaden
+              //    późniejszy krok (SMS/mail/upsert formularza) nie mógł go zablokować wyjątkiem.
+              //    placeOutboundCallInternal sam pilnuje godzin (8–22) i throttle 24h.
+              //    Gdy telefon jest pomijany — logujemy DLACZEGO do automation_events (diagnostyka).
+              try {
+                const { data: settings } = await supabaseAdmin
+                  .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
+                let formAllowsCall = true;
+                if (formId) {
+                  const { data: form } = await supabaseAdmin
+                    .from("meta_lead_forms").select("voicebot_enabled").eq("meta_form_id", String(formId)).maybeSingle();
+                  formAllowsCall = form?.voicebot_enabled !== false;
+                }
+                const canCall = !!phone && !!settings && settings.call_trigger !== "manual" && formAllowsCall;
+                if (canCall) {
+                  await placeOutboundCallInternal({
+                    phone: phone!,
+                    source: "meta_lead",
+                    metaLeadId: inserted?.id ?? null,
+                    clientId: capture.clientId,
+                    loanApplicationId: capture.loanApplicationId,
+                    firstName: capture.firstName,
+                  }).catch((e) => console.error("[meta-leads-webhook] call trigger", e));
+                } else {
+                  await supabaseAdmin.from("automation_events").insert({
+                    automation_type: "meta_lead_capture",
+                    status: "skipped",
+                    error_message: `call skipped — phone=${!!phone} call_trigger=${settings?.call_trigger ?? "brak_ustawień"} form_voicebot_enabled=${formAllowsCall}`,
+                    sent_payload: { leadgenId, formId: formId ?? null, phone },
+                  }).then(() => {}, () => {});
+                }
+              } catch (e) {
+                console.error("[meta-leads-webhook] call block error", e);
+              }
+
+              // 4) SMS z linkiem do dokończenia wniosku
               if (phone && capture.returnLink) {
                 const smsBody = `Cześć ${capture.firstName ?? ""}! Dziękujemy za zainteresowanie pożyczką. Dokończ wniosek tutaj: ${capture.returnLink} — Finance You`.replace(/\s+/g, " ").trim();
                 await sendSmsInternal({
@@ -306,7 +343,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 }).catch((e) => console.error("[meta-leads-webhook] sms", e));
               }
 
-              // 3b) E-mail z linkiem do dokończenia wniosku
+              // 4b) E-mail z linkiem do dokończenia wniosku
               if (email && capture.returnLink) {
                 const greeting = capture.firstName ? `Cześć ${capture.firstName}!` : "Cześć!";
                 const text = `${greeting}\n\nDziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w Finance You.\n\nDokończ wniosek tutaj: ${capture.returnLink}\n\nZajmie Ci to ok. 3 minut. W razie pytań — zadzwonimy lub odpisz na tego maila.\n\nZespół Finance You`;
@@ -320,41 +357,23 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 }).catch((e) => console.error("[meta-leads-webhook] email", e));
               }
 
-              // 3c) Upsert formularza Meta (źródło prawdy dla przełączników w panelu Voicebot)
-              const formId = v.form_id ?? details.form_id;
+              // 4c) Upsert formularza Meta (źródło prawdy dla przełączników w panelu Voicebot)
               if (formId) {
-                let formName: string | null = null;
                 try {
-                  const fr = await fetch(`${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN}&fields=name`);
-                  if (fr.ok) formName = (await fr.json())?.name ?? null;
-                } catch { /* noop */ }
-                await supabaseAdmin.from("meta_lead_forms").upsert({
-                  meta_form_id: String(formId),
-                  meta_page_id: v.page_id ?? entry.id ?? null,
-                  form_name: formName,
-                  last_lead_at: new Date().toISOString(),
-                }, { onConflict: "meta_form_id", ignoreDuplicates: false });
-              }
-
-
-              // 4) Auto-trigger połączenia (jeśli włączone globalnie i dla tego formularza)
-              const { data: settings } = await supabaseAdmin
-                .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
-              let formAllowsCall = true;
-              if (formId) {
-                const { data: form } = await supabaseAdmin
-                  .from("meta_lead_forms").select("voicebot_enabled").eq("meta_form_id", String(formId)).maybeSingle();
-                formAllowsCall = form?.voicebot_enabled !== false;
-              }
-              if (phone && settings && settings.call_trigger !== "manual" && formAllowsCall) {
-                await placeOutboundCallInternal({
-                  phone,
-                  source: "meta_lead",
-                  metaLeadId: inserted?.id ?? null,
-                  clientId: capture.clientId,
-                  loanApplicationId: capture.loanApplicationId,
-                  firstName: capture.firstName,
-                }).catch((e) => console.error("[meta-leads-webhook] call trigger", e));
+                  let formName: string | null = null;
+                  try {
+                    const fr = await fetch(`${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN}&fields=name`);
+                    if (fr.ok) formName = (await fr.json())?.name ?? null;
+                  } catch { /* noop */ }
+                  await supabaseAdmin.from("meta_lead_forms").upsert({
+                    meta_form_id: String(formId),
+                    meta_page_id: v.page_id ?? entry.id ?? null,
+                    form_name: formName,
+                    last_lead_at: new Date().toISOString(),
+                  }, { onConflict: "meta_form_id", ignoreDuplicates: false });
+                } catch (e) {
+                  console.error("[meta-leads-webhook] form upsert", e);
+                }
               }
 
             }
