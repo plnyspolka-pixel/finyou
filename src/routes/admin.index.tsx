@@ -25,50 +25,25 @@ export const Route = createFileRoute("/admin/")({
 
 // Lejek pogrupowany w fazy — żeby od razu było widać, gdzie są sprawy.
 const PHASES: { label: string; statuses: string[] }[] = [
+  { label: "Pozyskanie", statuses: ["nowy_lead", "brak_kontaktu", "kontakt"] },
+  { label: "Wniosek", statuses: ["kompletowanie_danych"] },
+  { label: "U inwestorów", statuses: ["szukamy_inwestora"] },
   {
-    label: "Pozyskanie",
-    statuses: [
-      "nowy_lead",
-      "w_trakcie_uzupelniania",
-      "braki_w_dokumentach",
-      "do_kontaktu",
-      "w_follow_upie",
-    ],
+    label: "Umowa",
+    statuses: ["warunki_zaakceptowane", "dokumenty_przygotowanie_umowy", "notariusz"],
   },
-  { label: "Analiza", statuses: ["wniosek_kompletny", "do_analizy", "rokuje", "nie_rokuje"] },
-  {
-    label: "U inwestorów",
-    statuses: ["wyslany_do_inwestorow", "oferta_od_inwestora", "oferta_przekazana_klientowi"],
-  },
-  {
-    label: "Umowa i wypłata",
-    statuses: [
-      "zaakceptowany_przez_klienta",
-      "do_umowy",
-      "oczekuje_podpisania_umowy",
-      "umowa_podpisana",
-      "oczekuje_ustanowienia_zabezpieczen",
-      "zabezpieczenia_ustanowione",
-      "dokumenty_dostarczone_do_inwestora",
-      "oczekuje_wyplaty",
-      "wyplacony",
-    ],
-  },
-  { label: "Zamknięte", statuses: ["wniosek_odrzucony", "zamkniety", "archiwalny"] },
+  { label: "Zamknięte", statuses: ["zamkniete"] },
 ];
 
 // Najważniejsze liczby — to, na co admin patrzy najpierw.
 const HEADLINE: { key: string; label: string; href: string }[] = [
   { key: "nowy_lead", label: "Nowe leady", href: "/admin/klienci" },
-  {
-    key: "w_trakcie_uzupelniania",
-    label: "Wnioski niekompletne",
-    href: "/admin/wnioski-niekompletne",
-  },
-  { key: "do_analizy", label: "Do analizy", href: "/admin/wnioski-niekompletne" },
-  { key: "wyslany_do_inwestorow", label: "U inwestorów", href: "/admin/dystrybucja" },
-  { key: "oferta_przekazana_klientowi", label: "Oferty u klientów", href: "/admin/klienci" },
+  { key: "brak_kontaktu", label: "Brak kontaktu", href: "/admin/klienci" },
+  { key: "kompletowanie_danych", label: "Kompletowanie danych", href: "/admin/wnioski-niekompletne" },
+  { key: "szukamy_inwestora", label: "Szukamy inwestora", href: "/admin/dystrybucja" },
+  { key: "warunki_zaakceptowane", label: "Warunki zaakceptowane", href: "/admin/klienci" },
 ];
+
 
 const QUICK_LINKS: { to: string; label: string; icon: typeof Users }[] = [
   { to: "/admin/klienci", label: "Klienci", icon: Users },

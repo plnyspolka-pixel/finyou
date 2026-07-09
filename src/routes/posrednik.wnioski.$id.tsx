@@ -6,10 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
-import { loanStatusLabels } from "@/lib/labels";
+import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel } from "@/lib/loan-status";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
+import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
   component: BrokerApplicationDetail,
@@ -18,6 +22,7 @@ export const Route = createFileRoute("/posrednik/wnioski/$id")({
 type Row = {
   id: string;
   status: string;
+  broker_notes?: string | null;
   loan_amount: number | null;
   preferred_period_months: number | null;
   created_at: string;
@@ -45,6 +50,10 @@ function BrokerApplicationDetail() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
+  const [notes, setNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
+
 
   useEffect(() => {
     void (async () => {
@@ -53,7 +62,7 @@ function BrokerApplicationDetail() {
         supabase
           .from("loan_applications")
           .select(
-            "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
+            "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
           )
           .eq("id", id)
           .maybeSingle(),
@@ -63,11 +72,39 @@ function BrokerApplicationDetail() {
           .eq("loan_application_id", id)
           .order("created_at", { ascending: false }),
       ]);
-      setRow((app as any) ?? null);
+      const appRow = (app as any) ?? null;
+      setRow(appRow);
+      setNotes(appRow?.broker_notes ?? "");
       setDocs((d as any) ?? []);
       setLoading(false);
     })();
   }, [id]);
+
+  const saveNotes = async () => {
+    if (!row) return;
+    setSavingNotes(true);
+    const { error } = await supabase
+      .from("loan_applications")
+      .update({ broker_notes: notes } as any)
+      .eq("id", row.id);
+    setSavingNotes(false);
+    if (error) toast.error("Nie udało się zapisać notatek", { description: error.message });
+    else toast.success("Notatki zapisane");
+  };
+
+  const changeStatus = async (newStatus: string) => {
+    if (!row) return;
+    setSavingStatus(true);
+    const { error } = await supabase
+      .from("loan_applications")
+      .update({ status: newStatus as any })
+      .eq("id", row.id);
+    setSavingStatus(false);
+    if (error) return toast.error("Nie udało się zmienić statusu", { description: error.message });
+    setRow({ ...row, status: newStatus });
+    toast.success("Status zaktualizowany");
+  };
+
 
   if (loading) {
     return (
@@ -108,8 +145,36 @@ function BrokerApplicationDetail() {
           eyebrow="Wniosek pożyczkowy"
           title={clientName}
           subtitle={new Date(row.created_at).toLocaleDateString("pl-PL", { day: "2-digit", month: "long", year: "numeric" })}
-          actions={<Badge variant="secondary" className="text-sm">{loanStatusLabels[row.status as keyof typeof loanStatusLabels] ?? row.status}</Badge>}
+          actions={<Badge variant="secondary" className="text-sm">{loanStatusLabel(row.status)}</Badge>}
         />
+      </div>
+
+      {/* Status + notatki pośrednika */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Status wniosku</CardTitle></CardHeader>
+          <CardContent>
+            <Select value={row.status} onValueChange={changeStatus} disabled={savingStatus}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {LOAN_STATUS_ORDER.map((s) => (
+                  <SelectItem key={s} value={s}>{LOAN_STATUS_SHORT_LABELS[s]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold"><StickyNote className="h-4 w-4 text-primary" />Notatki pośrednika</CardTitle>
+            <Button size="sm" variant="ghost" onClick={saveNotes} disabled={savingNotes}>
+              <Save className="mr-1 h-4 w-4" />Zapisz
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notatki widoczne dla Ciebie i zespołu (nie dla klienta)." />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Kluczowe parametry */}
@@ -118,6 +183,7 @@ function BrokerApplicationDetail() {
         <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Okres" value={row.preferred_period_months ? `${row.preferred_period_months} mies.` : "—"} />
         <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value={p?.property_type ?? "—"} />
       </div>
+
 
       {/* Dystrybucja tematu */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">

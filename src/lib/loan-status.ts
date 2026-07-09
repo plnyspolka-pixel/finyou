@@ -1,102 +1,89 @@
 // JEDYNE źródło prawdy dla cyklu życia wniosku pożyczkowego.
-// Klucze są zsynchronizowane 1:1 z enumem `public.loan_status` w bazie
-// (migracje 20260518124329 + 20260608082656).
-//
-// Dwie mapy o różnym przeznaczeniu:
-//  - LOAN_STATUS_SHORT_LABELS — krótkie etykiety do badge'ów, list, dropdownów w UI.
-//  - LOAN_STATUS_LABELS        — pełne, opisowe komunikaty dla klienta (voicebot, panel klienta).
+// Ujednolicony zestaw 9 statusów — używany w całym systemie (pośrednik/admin/klient/voicebot).
+// Enum `public.loan_status` w bazie zawiera dodatkowo starsze wartości (dla wstecznej
+// kompatybilności), ale wszystkie dane są zmapowane do nowych, a UI pokazuje tylko nowe.
 
-/** Kolejność chronologiczna cyklu życia wniosku — używana do dropdownów i sortowania. */
+/** Kanoniczna, chronologiczna kolejność statusów. */
 export const LOAN_STATUS_ORDER = [
   "nowy_lead",
-  "w_trakcie_uzupelniania",
-  "braki_w_dokumentach",
-  "do_kontaktu",
-  "w_follow_upie",
-  "wniosek_kompletny",
-  "do_analizy",
-  "rokuje",
-  "nie_rokuje",
-  "wyslany_do_inwestorow",
-  "oferta_od_inwestora",
-  "oferta_przekazana_klientowi",
-  "zaakceptowany_przez_klienta",
-  "do_umowy",
-  "oczekuje_podpisania_umowy",
-  "umowa_podpisana",
-  "oczekuje_ustanowienia_zabezpieczen",
-  "zabezpieczenia_ustanowione",
-  "dokumenty_dostarczone_do_inwestora",
-  "oczekuje_wyplaty",
-  "wyplacony",
-  "wniosek_odrzucony",
-  "zamkniety",
-  "archiwalny",
+  "brak_kontaktu",
+  "kontakt",
+  "kompletowanie_danych",
+  "szukamy_inwestora",
+  "warunki_zaakceptowane",
+  "dokumenty_przygotowanie_umowy",
+  "notariusz",
+  "zamkniete",
 ] as const;
 
 export type LoanStatus = (typeof LOAN_STATUS_ORDER)[number];
 
-/** Krótkie etykiety do UI (badge, lista, dropdown zmiany statusu). */
+/** Krótkie etykiety do UI (badge, lista, dropdown). */
 export const LOAN_STATUS_SHORT_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead",
-  w_trakcie_uzupelniania: "W trakcie uzupełniania",
-  braki_w_dokumentach: "Braki w dokumentach",
-  do_kontaktu: "Do kontaktu",
-  w_follow_upie: "W follow-upie",
-  wniosek_kompletny: "Wniosek kompletny",
-  do_analizy: "Do analizy",
-  rokuje: "Rokuje",
-  nie_rokuje: "Nie rokuje",
-  wyslany_do_inwestorow: "Wysłany do inwestorów",
-  oferta_od_inwestora: "Oferta od inwestora",
-  oferta_przekazana_klientowi: "Oferta przekazana klientowi",
-  zaakceptowany_przez_klienta: "Zaakceptowany przez klienta",
-  do_umowy: "Do umowy",
-  oczekuje_podpisania_umowy: "Oczekuje podpisania umowy",
-  umowa_podpisana: "Umowa podpisana",
-  oczekuje_ustanowienia_zabezpieczen: "Oczekuje ustanowienia zabezpieczeń",
-  zabezpieczenia_ustanowione: "Zabezpieczenia ustanowione",
-  dokumenty_dostarczone_do_inwestora: "Dokumenty dostarczone do inwestora",
-  oczekuje_wyplaty: "Oczekuje wypłaty",
-  wyplacony: "Wypłacony",
-  wniosek_odrzucony: "Wniosek odrzucony",
-  zamkniety: "Zamknięty",
-  archiwalny: "Archiwalny",
+  brak_kontaktu: "Brak kontaktu",
+  kontakt: "Kontakt",
+  kompletowanie_danych: "Kompletowanie danych",
+  szukamy_inwestora: "Szukamy inwestora / oferta",
+  warunki_zaakceptowane: "Warunki zaakceptowane",
+  dokumenty_przygotowanie_umowy: "Dokumenty / przygotowanie umowy",
+  notariusz: "Notariusz",
+  zamkniete: "Zamknięte",
 };
+
+/** Mapowanie starszych wartości enuma na nowe (na wypadek gdyby jakieś się przecisnęły). */
+export const LEGACY_STATUS_MAP: Record<string, LoanStatus> = {
+  w_trakcie_uzupelniania: "kompletowanie_danych",
+  braki_w_dokumentach: "kompletowanie_danych",
+  do_kontaktu: "kontakt",
+  w_follow_upie: "kontakt",
+  wniosek_kompletny: "szukamy_inwestora",
+  do_analizy: "szukamy_inwestora",
+  rokuje: "szukamy_inwestora",
+  wyslany_do_inwestorow: "szukamy_inwestora",
+  oferta_od_inwestora: "szukamy_inwestora",
+  oferta_przekazana_klientowi: "szukamy_inwestora",
+  zaakceptowany_przez_klienta: "warunki_zaakceptowane",
+  do_umowy: "dokumenty_przygotowanie_umowy",
+  oczekuje_podpisania_umowy: "dokumenty_przygotowanie_umowy",
+  umowa_podpisana: "notariusz",
+  oczekuje_ustanowienia_zabezpieczen: "notariusz",
+  zabezpieczenia_ustanowione: "zamkniete",
+  dokumenty_dostarczone_do_inwestora: "zamkniete",
+  oczekuje_wyplaty: "zamkniete",
+  wyplacony: "zamkniete",
+  wniosek_odrzucony: "zamkniete",
+  nie_rokuje: "zamkniete",
+  zamkniety: "zamkniete",
+  archiwalny: "zamkniete",
+};
+
+/** Normalizacja dowolnego kodu statusu do jednego z 9 kanonicznych. */
+export function normalizeLoanStatus(status: string | null | undefined): LoanStatus {
+  if (!status) return "nowy_lead";
+  if ((LOAN_STATUS_ORDER as readonly string[]).includes(status)) return status as LoanStatus;
+  return LEGACY_STATUS_MAP[status] ?? "nowy_lead";
+}
+
+/** Etykieta gotowa do wyświetlenia (dowolny kod → tekst). */
+export function loanStatusLabel(status: string | null | undefined): string {
+  return LOAN_STATUS_SHORT_LABELS[normalizeLoanStatus(status)];
+}
 
 /** Pełne, opisowe komunikaty (voicebot / panel klienta). */
 export const LOAN_STATUS_LABELS: Record<string, string> = {
-  // przed analizą
-  nowy_lead: "Nowy lead",
-  w_trakcie_uzupelniania: "W trakcie uzupełniania",
-  braki_w_dokumentach: "Braki w dokumentach",
-  do_kontaktu: "Do kontaktu",
-  w_follow_upie: "W follow-upie",
-  wniosek_kompletny: "Wniosek kompletny",
-  do_analizy: "Wniosek złożony, czeka na analizę",
-  rokuje: "W analizie — rokuje pozytywnie",
-  nie_rokuje: "W analizie — nie rokuje",
-  // u inwestorów
-  wyslany_do_inwestorow: "Wniosek wysłany do inwestorów — oczekujemy na decyzję",
-  oferta_od_inwestora: "Otrzymaliśmy decyzję od inwestora",
-  oferta_przekazana_klientowi: "Decyzja inwestora dostępna w panelu klienta",
-  // klient zaakceptował
-  zaakceptowany_przez_klienta: "Klient zaakceptował ofertę inwestora",
-  do_umowy: "Przygotowujemy dokumenty do umowy",
-  oczekuje_podpisania_umowy: "Umowa oczekuje na podpisanie",
-  umowa_podpisana: "Umowa podpisana",
-  oczekuje_ustanowienia_zabezpieczen: "Oczekujemy na ustanowienie zabezpieczeń",
-  zabezpieczenia_ustanowione: "Zabezpieczenia ustanowione",
-  dokumenty_dostarczone_do_inwestora: "Dokumenty dostarczone do inwestora — czekamy na wypłatę",
-  oczekuje_wyplaty: "Oczekujemy na wypłatę pożyczki od inwestora",
-  wyplacony: "Pożyczka wypłacona",
-  // końcowe
-  wniosek_odrzucony: "Wniosek odrzucony",
-  zamkniety: "Zamknięty",
-  archiwalny: "Archiwalny — wniosek nie przeszedł",
+  nowy_lead: "Nowy lead — czekamy na pierwszy kontakt",
+  brak_kontaktu: "Brak kontaktu — nie udało się dodzwonić",
+  kontakt: "W kontakcie — pośrednik prowadzi rozmowę",
+  kompletowanie_danych: "Kompletowanie danych i dokumentów",
+  szukamy_inwestora: "Szukamy inwestora — wniosek w dystrybucji / oczekujemy na ofertę",
+  warunki_zaakceptowane: "Warunki zaakceptowane przez klienta",
+  dokumenty_przygotowanie_umowy: "Przygotowujemy dokumenty i umowę",
+  notariusz: "Umowa u notariusza — podpis i ustanowienie zabezpieczeń",
+  zamkniete: "Sprawa zamknięta",
 };
 
-/** Pełna wiadomość dla agenta voicebot — co powiedzieć klientowi przy zapytaniu o status. */
+/** Wiadomość dla voicebota — co powiedzieć klientowi. */
 export function describeLoanStatusForAgent(status: string): {
   status_label: string;
   status_message: string;
@@ -105,122 +92,78 @@ export function describeLoanStatusForAgent(status: string): {
   is_completed: boolean;
   is_rejected: boolean;
 } {
-  const label = LOAN_STATUS_LABELS[status] ?? status;
-  switch (status) {
+  const s = normalizeLoanStatus(status);
+  const label = LOAN_STATUS_SHORT_LABELS[s];
+  switch (s) {
     case "nowy_lead":
-    case "w_trakcie_uzupelniania":
-    case "braki_w_dokumentach":
-    case "do_kontaktu":
-    case "w_follow_upie":
+    case "brak_kontaktu":
       return {
         status_label: label,
         status_message:
-          "Wniosek nie jest jeszcze kompletny. Aby ruszyć dalej, musisz uzupełnić brakujące dane i dokumenty w swoim panelu klienta.",
-        client_action: "Uzupełnij brakujące dane w panelu klienta.",
+          "Twój wniosek jest u nas — pośrednik wkrótce się skontaktuje, aby omówić szczegóły.",
+        client_action: "Odbierz telefon od naszego pośrednika.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
       };
-    case "wniosek_kompletny":
-    case "do_analizy":
-    case "rokuje":
+    case "kontakt":
       return {
         status_label: label,
-        status_message:
-          "Wniosek został złożony i jest w trakcie analizy. Niedługo wyślemy go do inwestorów.",
-        client_action: "Czekaj — analiza zwykle trwa do kilku dni roboczych.",
+        status_message: "Jesteś w kontakcie z naszym pośrednikiem, który prowadzi Twój temat.",
+        client_action: "Odpowiadaj na pytania pośrednika i przygotuj potrzebne dokumenty.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
       };
-    case "wyslany_do_inwestorow":
+    case "kompletowanie_danych":
       return {
         status_label: label,
         status_message:
-          "Wniosek został wysłany do inwestorów. W dalszym ciągu oczekujemy na ich decyzję.",
-        client_action:
-          "Czekaj na decyzję inwestora — poinformujemy cię natychmiast, gdy ją dostaniemy.",
+          "Kompletujemy dane i dokumenty do wniosku. Bez kompletu nie ruszymy dalej z inwestorami.",
+        client_action: "Uzupełnij brakujące dane i dokumenty w panelu klienta.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
       };
-    case "oferta_od_inwestora":
-    case "oferta_przekazana_klientowi":
+    case "szukamy_inwestora":
       return {
         status_label: label,
         status_message:
-          "Dostaliśmy decyzję inwestora. Możesz ją zobaczyć i zaakceptować lub odrzucić w swoim panelu klienta.",
-        client_action: "Zaloguj się do panelu klienta i zaakceptuj lub odrzuć ofertę inwestora.",
-        is_decision_available: true,
-        is_completed: false,
-        is_rejected: false,
-      };
-    case "zaakceptowany_przez_klienta":
-    case "do_umowy":
-    case "oczekuje_podpisania_umowy":
-      return {
-        status_label: label,
-        status_message:
-          "Zaakceptowałeś ofertę inwestora. Umowa jest gotowa lub w przygotowaniu i oczekuje na podpisanie.",
-        client_action:
-          "Podpisz umowę — instrukcję znajdziesz w panelu klienta lub w wiadomości od nas.",
-        is_decision_available: true,
-        is_completed: false,
-        is_rejected: false,
-      };
-    case "umowa_podpisana":
-    case "oczekuje_ustanowienia_zabezpieczen":
-      return {
-        status_label: label,
-        status_message: "Umowa została podpisana. Oczekujemy teraz na ustanowienie zabezpieczeń.",
-        client_action: "Postępuj zgodnie z instrukcją ustanowienia zabezpieczeń.",
-        is_decision_available: true,
-        is_completed: false,
-        is_rejected: false,
-      };
-    case "zabezpieczenia_ustanowione":
-      return {
-        status_label: label,
-        status_message:
-          "Zabezpieczenia zostały ustanowione. Teraz dostarczamy komplet dokumentów do inwestora.",
-        client_action: "Nic nie musisz robić — pracujemy nad dostarczeniem dokumentów.",
-        is_decision_available: true,
-        is_completed: false,
-        is_rejected: false,
-      };
-    case "dokumenty_dostarczone_do_inwestora":
-    case "oczekuje_wyplaty":
-      return {
-        status_label: label,
-        status_message:
-          "Inwestor potwierdził otrzymanie dokumentów. Oczekujemy na wypłatę pożyczki.",
-        client_action: "Czekaj na przelew od inwestora.",
-        is_decision_available: true,
-        is_completed: false,
-        is_rejected: false,
-      };
-    case "wyplacony":
-      return {
-        status_label: label,
-        status_message: "Pożyczka została wypłacona przez inwestora.",
-        client_action: "Pożyczka wypłacona — gotowe.",
-        is_decision_available: true,
-        is_completed: true,
-        is_rejected: false,
-      };
-    case "nie_rokuje":
-    case "wniosek_odrzucony":
-    case "archiwalny":
-      return {
-        status_label: label,
-        status_message:
-          "Niestety wniosek nie przeszedł — nie udało nam się znaleźć inwestora dla tego wniosku.",
-        client_action: "Możesz złożyć nowy wniosek z dodatkowym/innym zabezpieczeniem.",
+          "Szukamy inwestora dla Twojego wniosku i oczekujemy na oferty finansowania.",
+        client_action: "Czekaj na decyzję — poinformujemy Cię natychmiast, gdy ją otrzymamy.",
         is_decision_available: false,
         is_completed: false,
-        is_rejected: true,
+        is_rejected: false,
       };
-    case "zamkniety":
+    case "warunki_zaakceptowane":
+      return {
+        status_label: label,
+        status_message: "Zaakceptowałeś warunki oferty. Przystępujemy do dokumentów.",
+        client_action: "Czekaj na kontakt w sprawie umowy.",
+        is_decision_available: true,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "dokumenty_przygotowanie_umowy":
+      return {
+        status_label: label,
+        status_message: "Przygotowujemy dokumenty i treść umowy.",
+        client_action: "Bądź gotów na termin u notariusza — damy znać z wyprzedzeniem.",
+        is_decision_available: true,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "notariusz":
+      return {
+        status_label: label,
+        status_message:
+          "Umowa jest u notariusza — trwa podpisanie i ustanowienie zabezpieczeń.",
+        client_action: "Stawić się u notariusza w umówionym terminie.",
+        is_decision_available: true,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "zamkniete":
       return {
         status_label: label,
         status_message: "Sprawa została zamknięta.",
@@ -232,7 +175,7 @@ export function describeLoanStatusForAgent(status: string): {
     default:
       return {
         status_label: label,
-        status_message: "Status wniosku: " + label + ". Skontaktujemy się z tobą wkrótce.",
+        status_message: "Status wniosku: " + label + ".",
         client_action: "Czekaj na kontakt z naszej strony.",
         is_decision_available: false,
         is_completed: false,
