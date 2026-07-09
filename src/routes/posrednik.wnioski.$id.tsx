@@ -44,6 +44,7 @@ function BrokerApplicationDetail() {
   const [row, setRow] = useState<Row | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
 
   useEffect(() => {
     void (async () => {
