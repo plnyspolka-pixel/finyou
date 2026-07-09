@@ -73,8 +73,14 @@ function toNum(v: string | undefined): number {
 
 function toDate(v: string | undefined): string | null {
   if (!v) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+  const s = v.trim();
+  // YYYY-MM-DD lub YYYY.MM.DD / YYYY/MM/DD
+  let m = /^(\d{4})[-./](\d{2})[-./](\d{2})/.exec(s);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // DD-MM-YYYY (format zwracany przez Fakturowo) / DD.MM.YYYY / DD/MM/YYYY
+  m = /^(\d{2})[-./](\d{2})[-./](\d{4})/.exec(s);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return null;
 }
 
 // Pobiera WSZYSTKIE wystawione dokumenty z Fakturowo (api_zadanie=3, stronicowane po 100).
