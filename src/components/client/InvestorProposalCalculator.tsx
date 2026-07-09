@@ -208,7 +208,7 @@ export function InvestorProposalCalculator({
         accepted_period_months: months,
         accepted_annual_rate: annualRate,
         accepted_max_monthly_payment: maxPayment || null,
-        status: "wyslany_do_inwestorow",
+        status: "szukamy_inwestora",
       }).eq("id", loan.id);
       if (error) throw error;
       toast.success("Warunki zaakceptowane i zapisane. Wniosek trafił do inwestorów.");

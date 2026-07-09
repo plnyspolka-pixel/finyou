@@ -183,7 +183,7 @@ async function upsertClientAndApplication(opts: {
       .from("loan_applications")
       .insert({
         client_id: clientId,
-        status: "w_trakcie_uzupelniania",
+        status: "kompletowanie_danych",
         source: "meta_ads",
         current_form_step: 1,
         return_link_token: returnToken,
