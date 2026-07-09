@@ -142,43 +142,13 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
         : "") +
       `Pozdrawiam,\n${brokerName}${brokerPhone ? `\ntel. ${brokerPhone}` : ""}${brokerEmail ? `\n${brokerEmail}` : ""}`;
 
-    const { sendResendEmail } = await import("./resend-send.server");
-    const { logLeadCommunication } = await import("./lead-comms.server");
-
-    const results: Array<{ email: string; ok: boolean; error?: string }> = [];
-    for (const to of data.recipients) {
-      const res = await sendResendEmail({
-        to,
-        subject,
-        text: bodyText,
-        html: bodyHtml,
-        fromName: brokerName,
-        replyTo: brokerEmail || undefined,
-        showReplyHint: true,
-      });
-      results.push({ email: to, ok: res.ok, error: res.error });
-      try {
-        await logLeadCommunication({
-          leadId: null,
-          email: to,
-          channel: "email",
-          direction: "outbound",
-          status: res.ok ? "sent" : "failed",
-          subject,
-          content: bodyText,
-          externalId: res.id ?? null,
-          metadata: {
-            source: "broker_distribution",
-            audience: data.audience,
-            application_id: data.applicationId,
-            sent_by: context.userId,
-          },
-        });
-      } catch (e) {
-        console.error("[broker-distribution] log error", e);
-      }
-    }
-
-    const okCount = results.filter((r) => r.ok).length;
-    return { ok: okCount > 0, sent: okCount, total: results.length, results };
+    return {
+      subject,
+      bodyText,
+      bodyHtml,
+      recipients: data.recipients,
+      brokerName,
+      brokerEmail,
+    };
   });
+
