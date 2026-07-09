@@ -141,7 +141,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       (docs && docs.length
         ? `Dokumenty:\n${docs.map((d: any) => `- ${d.file_name ?? d.document_type ?? "Dokument"}: ${d.file_url ?? ""}`).join("\n")}\n\n`
         : "") +
-      `Pozdrawiam,\n${brokerName}${brokerPhone ? `\ntel. ${brokerPhone}` : ""}${brokerEmail ? `\n${brokerEmail}` : ""}`;
+      `Pozdrawiam,\n${brokerName}${brokerPhone ? `\ntel. ${brokerPhone}` : ""}\nkontakt@financeyou.pl`;
 
     return {
       subject,
