@@ -102,6 +102,9 @@ async function syncFakturowoOne(entity: any, direction: "sales" | "purchase"): P
 
 type InvoiceMeta = Record<string, unknown>;
 
+// DIAGNOSTYKA (tymczasowo): surowa próbka odpowiedzi KSeF, do ustalenia kształtu.
+let ksefDiagSample = "";
+
 function pickStr(o: InvoiceMeta, ...keys: string[]): string | null {
   for (const k of keys) {
     const v = o[k];
@@ -167,7 +170,7 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
     if (windowTo > end) windowTo.setTime(end.getTime());
     const dateFrom = windowFrom.toISOString();
     const dateTo = windowTo.toISOString();
-    for (let pageOffset = 0, page = 0; page < 100; page += 1, pageOffset += pageSize) {
+    for (let pageOffset = 0, page = 0; page < 3; page += 1, pageOffset += pageSize) {
       if (!firstReq) await sleep(700); // throttling między zapytaniami metadanych
       firstReq = false;
       const res = await ksefFetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
@@ -187,9 +190,10 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
         throw new Error(`POST /invoices/query/metadata ${res.status}: ${txt.slice(0, 200)}`);
       }
       const j = (await res.json()) as { invoices?: InvoiceMeta[]; items?: InvoiceMeta[]; hasMore?: boolean };
+      if (!ksefDiagSample) ksefDiagSample = JSON.stringify(j).slice(0, 1200);
       const list = j.invoices ?? j.items ?? [];
       for (const it of list) out.push(it);
-      if (list.length < pageSize) break;
+      if (list.length < pageSize || j.hasMore === false) break;
     }
     windowFrom = windowTo;
   }
@@ -200,7 +204,7 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
 async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null }> {
   try {
     const asObj = (v: unknown): InvoiceMeta => (v && typeof v === "object" && !Array.isArray(v) ? (v as InvoiceMeta) : {});
-    const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
+    const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 3);
     let saved = 0;
     let sampleKeys: string | null = null;
     for (const it of list) {
@@ -236,9 +240,9 @@ async function syncKsefWithSession(entity: any, direction: "sales" | "purchase",
       const { error } = await accountingDb.from("accounting_documents").upsert(row, { onConflict: "entity_id,source,direction,external_id" });
       if (!error) saved += 1;
     }
-    // Diagnostyka: gdy pobrano faktury, ale nic nie zapisano — pokaż realne klucze odpowiedzi.
-    const message = list.length > 0 && saved === 0 && sampleKeys ? `diag: pobrano ${list.length}, zapisano 0 — klucze: ${sampleKeys}`.slice(0, 280) : null;
-    return { ok: true, count: saved, message };
+    // DIAGNOSTYKA (tymczasowo): zawsze zwróć próbkę odpowiedzi, by ustalić kształt.
+    const diag = `DIAG pobrano=${list.length} zapisano=${saved} keys=[${sampleKeys ?? "-"}] raw=${ksefDiagSample}`.slice(0, 1400);
+    return { ok: false, count: saved, message: diag };
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
   }
