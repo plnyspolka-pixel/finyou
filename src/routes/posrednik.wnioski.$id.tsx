@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock, MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock,
+  MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save,
+  ImageOff, Calculator, Send, ArrowRight,
+} from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel } from "@/lib/loan-status";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
+import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
-
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
   component: BrokerApplicationDetail,
@@ -44,16 +49,30 @@ type Row = {
 
 type Doc = { id: string; document_type: string | null; file_name: string | null; file_url: string | null; created_at: string };
 
+function SmartImg({ src, alt, className }: { src: string; alt?: string; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken || !src) {
+    return (
+      <div className={`flex items-center justify-center bg-muted text-muted-foreground ${className ?? ""}`}>
+        <ImageOff className="h-8 w-8" />
+      </div>
+    );
+  }
+  return <img src={src} alt={alt ?? ""} loading="lazy" className={className} onError={() => setBroken(true)} />;
+}
+
 function BrokerApplicationDetail() {
   const { id } = useParams({ from: "/posrednik/wnioski/$id" });
   const [row, setRow] = useState<Row | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [lightbox, setLightbox] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
-
 
   useEffect(() => {
     void (async () => {
@@ -76,6 +95,21 @@ function BrokerApplicationDetail() {
       setRow(appRow);
       setNotes(appRow?.broker_notes ?? "");
       setDocs((d as any) ?? []);
+
+      // Sign photo URLs
+      const p = Array.isArray(appRow?.properties) ? appRow.properties[0] : (appRow?.properties as any);
+      const raw: string[] = Array.isArray(p?.photos) ? p.photos.filter(Boolean) : [];
+      const toSign = raw.filter((u) => !/^https?:\/\//i.test(u));
+      const resolved: string[] = [...raw];
+      if (toSign.length > 0) {
+        const { data: signed } = await supabase.storage.from("property-photos").createSignedUrls(toSign, 60 * 60);
+        const map = new Map<string, string>();
+        (signed ?? []).forEach((s: any) => { if (s?.path && s?.signedUrl) map.set(s.path, s.signedUrl); });
+        for (let i = 0; i < resolved.length; i++) {
+          if (!/^https?:\/\//i.test(resolved[i])) resolved[i] = map.get(resolved[i]) ?? resolved[i];
+        }
+      }
+      setPhotos(resolved);
       setLoading(false);
     })();
   }, [id]);
@@ -83,10 +117,7 @@ function BrokerApplicationDetail() {
   const saveNotes = async () => {
     if (!row) return;
     setSavingNotes(true);
-    const { error } = await supabase
-      .from("loan_applications")
-      .update({ broker_notes: notes } as any)
-      .eq("id", row.id);
+    const { error } = await supabase.from("loan_applications").update({ broker_notes: notes } as any).eq("id", row.id);
     setSavingNotes(false);
     if (error) toast.error("Nie udało się zapisać notatek", { description: error.message });
     else toast.success("Notatki zapisane");
@@ -95,25 +126,20 @@ function BrokerApplicationDetail() {
   const changeStatus = async (newStatus: string) => {
     if (!row) return;
     setSavingStatus(true);
-    const { error } = await supabase
-      .from("loan_applications")
-      .update({ status: newStatus as any })
-      .eq("id", row.id);
+    const { error } = await supabase.from("loan_applications").update({ status: newStatus as any }).eq("id", row.id);
     setSavingStatus(false);
     if (error) return toast.error("Nie udało się zmienić statusu", { description: error.message });
     setRow({ ...row, status: newStatus });
     toast.success("Status zaktualizowany");
   };
 
+  const p = useMemo(() => (row ? (Array.isArray(row.properties) ? row.properties[0] : (row.properties as any)) : null), [row]);
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
+        <Skeleton className="h-24 w-full rounded-3xl" />
+        <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-64 rounded-3xl" /><Skeleton className="h-64 rounded-3xl" /></div>
       </div>
     );
   }
@@ -121,16 +147,12 @@ function BrokerApplicationDetail() {
   if (!row) {
     return (
       <div className="space-y-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/posrednik/wnioski"><ArrowLeft className="mr-2 h-4 w-4" />Wróć</Link>
-        </Button>
+        <Button asChild variant="ghost" size="sm"><Link to="/posrednik/wnioski"><ArrowLeft className="mr-2 h-4 w-4" />Wróć</Link></Button>
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nie znaleziono wniosku.</CardContent></Card>
       </div>
     );
   }
 
-  const p = Array.isArray(row.properties) ? row.properties[0] : (row.properties as any);
-  const photos: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
   const clientName = [row.client?.first_name, row.client?.last_name].filter(Boolean).join(" ") || "Klient";
   const fullAddress = [p?.street ?? p?.address, p?.city, p?.voivodeship].filter(Boolean).join(", ");
   const additionalKw = Array.isArray(p?.additional_land_register_numbers) ? p!.additional_land_register_numbers!.filter(Boolean) : [];
@@ -149,186 +171,271 @@ function BrokerApplicationDetail() {
         />
       </div>
 
-      {/* Status + notatki pośrednika */}
-      <div className="grid gap-3 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold">Status wniosku</CardTitle></CardHeader>
-          <CardContent>
-            <Select value={row.status} onValueChange={changeStatus} disabled={savingStatus}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {LOAN_STATUS_ORDER.map((s) => (
-                  <SelectItem key={s} value={s}>{LOAN_STATUS_SHORT_LABELS[s]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold"><StickyNote className="h-4 w-4 text-primary" />Notatki pośrednika</CardTitle>
-            <Button size="sm" variant="ghost" onClick={saveNotes} disabled={savingNotes}>
-              <Save className="mr-1 h-4 w-4" />Zapisz
+      {/* Status + notatki */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <FancyCard tone="slate">
+          <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-white/70">Status wniosku</div>
+          <Select value={row.status} onValueChange={changeStatus} disabled={savingStatus}>
+            <SelectTrigger className="border-white/20 bg-white/10 text-white backdrop-blur"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {LOAN_STATUS_ORDER.map((s) => (<SelectItem key={s} value={s}>{LOAN_STATUS_SHORT_LABELS[s]}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </FancyCard>
+        <FancyCard tone="slate">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
+              <StickyNote className="h-3.5 w-3.5" />Notatki pośrednika
+            </div>
+            <Button size="sm" variant="secondary" onClick={saveNotes} disabled={savingNotes} className="h-7">
+              <Save className="mr-1 h-3.5 w-3.5" />Zapisz
             </Button>
-          </CardHeader>
-          <CardContent>
-            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notatki widoczne dla Ciebie i zespołu (nie dla klienta)." />
-          </CardContent>
-        </Card>
+          </div>
+          <Textarea
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notatki widoczne dla Ciebie i zespołu (nie dla klienta)."
+            className="resize-none border-white/20 bg-white/10 text-white placeholder:text-white/40 backdrop-blur"
+          />
+        </FancyCard>
       </div>
 
       {/* Kluczowe parametry */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard icon={<Wallet className="h-5 w-5" />} label="Wnioskowana kwota" value={row.loan_amount ? formatPLN(Number(row.loan_amount)) : "—"} accent />
         <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Okres" value={row.preferred_period_months ? `${row.preferred_period_months} mies.` : "—"} />
         <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value={p?.property_type ?? "—"} />
       </div>
 
-
-      {/* Dystrybucja tematu */}
-      <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold">Wyślij ofertę do inwestorów</div>
-            <p className="text-xs text-muted-foreground">
+      {/* MEGA CTA — dystrybucja + oferta wewnętrzna */}
+      <div className="relative overflow-hidden rounded-3xl p-[2px] shadow-[0_20px_60px_-20px_oklch(0.40_0.25_268/0.7)]">
+        <span aria-hidden className="absolute inset-0" style={{ background: "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))", animation: "fy-cta-spin 10s linear infinite" }} />
+        <div className="relative rounded-[22px] p-6 md:p-8" style={{ background: "radial-gradient(120% 140% at 100% 0%, oklch(0.32 0.16 265) 0%, oklch(0.15 0.05 265) 60%, oklch(0.10 0.03 265) 100%)" }}>
+          <div className="mb-5 flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
+              <Send className="h-3.5 w-3.5" />Dystrybucja oferty
+            </div>
+            <h2 className="text-xl font-extrabold text-white md:text-2xl">Wyślij ofertę do inwestorów</h2>
+            <p className="text-sm text-white/70 md:text-[15px]">
               Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
+              Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => setSendOpen("instytucjonalny")}>
-              <Building2 className="mr-2 h-4 w-4" />Inwestorzy instytucjonalni
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setSendOpen("indywidualny")}>
-              <UserRound className="mr-2 h-4 w-4" />Inwestorzy prywatni
-            </Button>
+          <div className="grid gap-3 md:grid-cols-3">
+            <CtaButton onClick={() => setSendOpen("instytucjonalny")} tone="primary" icon={<Building2 className="h-6 w-6" />} title="Inwestorzy instytucjonalni" hint="Fundusze, spółki, partnerzy strategiczni" />
+            <CtaButton onClick={() => setSendOpen("indywidualny")} tone="secondary" icon={<UserRound className="h-6 w-6" />} title="Inwestorzy prywatni" hint="Baza aktywnych inwestorów indywidualnych" />
+            <CtaButton onClick={() => setCalcOpen(true)} tone="ghost" icon={<Calculator className="h-6 w-6" />} title="Oferta wewnętrzna" hint="Kalkulator z Twoją prowizją operatora 2–5%" />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
 
+      {/* Zdjęcia — hero grid */}
+      <FancyCard tone="light">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><ImageIcon className="h-4 w-4" /></div>
+            <div>
+              <div className="text-sm font-bold">Zdjęcia nieruchomości</div>
+              <div className="text-xs text-muted-foreground">Kliknij, aby powiększyć</div>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-sm">{photos.length}</Badge>
+        </div>
+        {photos.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-14 text-center text-sm text-muted-foreground">Brak zdjęć.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {photos.map((url, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setLightbox(i)}
+                className="group relative aspect-[4/3] overflow-hidden rounded-xl border bg-muted transition hover:shadow-lg"
+              >
+                <SmartImg src={url} alt={`Zdjęcie ${i + 1}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                  Zdjęcie {i + 1} / {photos.length}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </FancyCard>
+
+      {/* Nieruchomość + klient */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Nieruchomość */}
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-            <CardTitle className="flex items-center gap-2 text-base"><Landmark className="h-4 w-4 text-primary" />Nieruchomość i KW</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-4 text-sm">
+        <FancyCard tone="light" title="Nieruchomość i KW" icon={<Landmark className="h-4 w-4" />}>
+          <div className="space-y-3 text-sm">
             <InfoRow icon={<MapPin className="h-4 w-4" />} label="Adres" value={fullAddress || "—"} />
             <InfoRow icon={<FileText className="h-4 w-4" />} label="Numer KW" value={p?.land_register_number || "—"} mono />
-            {additionalKw.length > 0 && (
-              <InfoRow icon={<FileText className="h-4 w-4" />} label="Dodatkowe KW" value={additionalKw.join(", ")} mono />
-            )}
+            {additionalKw.length > 0 && (<InfoRow icon={<FileText className="h-4 w-4" />} label="Dodatkowe KW" value={additionalKw.join(", ")} mono />)}
             <InfoRow icon={<Ruler className="h-4 w-4" />} label="Powierzchnia" value={p?.area_sqm ? `${p.area_sqm} m²` : "—"} />
             <InfoRow icon={<Wallet className="h-4 w-4" />} label="Szacowana wartość" value={p?.estimated_value ? formatPLN(Number(p.estimated_value)) : "—"} />
-          </CardContent>
-        </Card>
-
-        {/* Klient */}
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-            <CardTitle className="flex items-center gap-2 text-base"><User className="h-4 w-4 text-primary" />Klient</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-4 text-sm">
+          </div>
+        </FancyCard>
+        <FancyCard tone="light" title="Klient" icon={<User className="h-4 w-4" />}>
+          <div className="space-y-3 text-sm">
             <InfoRow label="Imię i nazwisko" value={clientName} />
             <InfoRow label="Miasto" value={row.client?.city || "—"} />
             <InfoRow label="Telefon" value={row.client?.phone || "—"} />
             <InfoRow label="E-mail" value={row.client?.email || "—"} />
-          </CardContent>
-        </Card>
+          </div>
+        </FancyCard>
       </div>
 
-      {/* Zdjęcia */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ImageIcon className="h-4 w-4 text-primary" />Zdjęcia nieruchomości
-            <Badge variant="outline" className="ml-2">{photos.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {photos.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-              Brak zdjęć.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {photos.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
-                  <img src={url} alt={`Zdjęcie ${i + 1}`} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
-                </a>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Dokumenty */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4 text-primary" />Dokumenty
-            <Badge variant="outline" className="ml-2">{docs.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {docs.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-              Brak dokumentów.
-            </div>
-          ) : (
-            <div className="divide-y rounded-lg border">
-              {docs.map((doc) => (
-                <a
-                  key={doc.id}
-                  href={doc.file_url ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 transition hover:bg-muted/50"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{doc.file_name || doc.document_type || "Dokument"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {doc.document_type ?? "—"} · {new Date(doc.created_at).toLocaleDateString("pl-PL")}
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <FancyCard tone="light" title="Dokumenty" icon={<FileText className="h-4 w-4" />} rightSlot={<Badge variant="outline">{docs.length}</Badge>}>
+        {docs.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">Brak dokumentów.</div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {docs.map((doc) => (
+              <a key={doc.id} href={doc.file_url ?? "#"} target="_blank" rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><FileText className="h-4 w-4" /></div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{doc.file_name || doc.document_type || "Dokument"}</div>
+                  <div className="text-xs text-muted-foreground">{doc.document_type ?? "—"} · {new Date(doc.created_at).toLocaleDateString("pl-PL")}</div>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
+              </a>
+            ))}
+          </div>
+        )}
+      </FancyCard>
 
       {p?.description && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Opis</CardTitle></CardHeader>
-          <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">{p.description}</CardContent>
-        </Card>
+        <FancyCard tone="light" title="Opis">
+          <div className="whitespace-pre-wrap text-sm text-muted-foreground">{p.description}</div>
+        </FancyCard>
       )}
 
       {sendOpen && (
-        <SendToInvestorsDialog
-          open={!!sendOpen}
-          onOpenChange={(o) => !o && setSendOpen(null)}
-          applicationId={row.id}
-          audience={sendOpen}
-        />
+        <SendToInvestorsDialog open={!!sendOpen} onOpenChange={(o) => !o && setSendOpen(null)} applicationId={row.id} audience={sendOpen} />
       )}
+
+      {/* Oferta wewnętrzna — dialog z kalkulatorem */}
+      <Dialog open={calcOpen} onOpenChange={setCalcOpen}>
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-primary" />
+              Oferta wewnętrzna — {clientName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <LoanCalculator
+              investorGuidance
+              hideFinanceYouFee
+              internalOperatorMode
+              initialAmount={row.loan_amount ? Number(row.loan_amount) : undefined}
+              initialMonths={row.preferred_period_months ?? undefined}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lightbox */}
+      <Dialog open={lightbox !== null} onOpenChange={(o) => !o && setLightbox(null)}>
+        <DialogContent className="max-w-5xl border-0 bg-black/95 p-2">
+          {lightbox !== null && photos[lightbox] && (
+            <div className="flex items-center justify-center">
+              <img src={photos[lightbox]} alt={`Zdjęcie ${lightbox + 1}`} className="max-h-[85vh] w-auto rounded-lg object-contain" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+/* ————— Building blocks ————— */
+
+function FancyCard({
+  children, tone, title, icon, rightSlot,
+}: {
+  children: React.ReactNode;
+  tone: "light" | "slate";
+  title?: string;
+  icon?: React.ReactNode;
+  rightSlot?: React.ReactNode;
+}) {
+  if (tone === "slate") {
+    return (
+      <div className="relative overflow-hidden rounded-2xl p-[1.5px] shadow-[0_10px_35px_-15px_oklch(0.30_0.15_265/0.6)]">
+        <span aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(135deg, oklch(0.45 0.20 268), oklch(0.30 0.10 265) 60%, oklch(0.50 0.18 240))" }} />
+        <div className="relative rounded-[15px] p-4 text-white" style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.25 0.10 265) 0%, oklch(0.13 0.04 265) 70%)" }}>
+          {title && (
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-white">{icon}<span>{title}</span></div>
+              {rightSlot}
+            </div>
+          )}
+          {children}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <Card className="overflow-hidden border-primary/10 shadow-sm">
+      {title && (
+        <CardHeader className="bg-gradient-to-br from-primary/5 via-primary/[0.03] to-transparent pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {icon && <span className="text-primary">{icon}</span>}{title}
+            </CardTitle>
+            {rightSlot}
+          </div>
+        </CardHeader>
+      )}
+      <CardContent className={title ? "pt-4" : "p-5"}>{children}</CardContent>
+    </Card>
+  );
+}
+
+function CtaButton({
+  onClick, tone, icon, title, hint,
+}: {
+  onClick: () => void;
+  tone: "primary" | "secondary" | "ghost";
+  icon: React.ReactNode;
+  title: string;
+  hint: string;
+}) {
+  const bg =
+    tone === "primary"
+      ? "bg-white text-slate-900 hover:bg-white/90"
+      : tone === "secondary"
+      ? "bg-white/15 text-white ring-1 ring-white/25 backdrop-blur hover:bg-white/25"
+      : "bg-amber-400/95 text-slate-950 hover:bg-amber-400";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex items-center gap-4 rounded-2xl px-5 py-4 text-left transition hover:-translate-y-0.5 hover:shadow-xl ${bg}`}
+    >
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tone === "primary" ? "bg-slate-900/10" : tone === "secondary" ? "bg-white/20" : "bg-slate-900/10"}`}>
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[15px] font-extrabold leading-tight">{title}</div>
+        <div className={`mt-0.5 text-xs ${tone === "secondary" ? "text-white/70" : "opacity-70"}`}>{hint}</div>
+      </div>
+      <ArrowRight className="h-5 w-5 shrink-0 opacity-60 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+    </button>
   );
 }
 
 function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent?: boolean }) {
   return (
-    <Card className={accent ? "border-primary/40 bg-gradient-to-br from-primary/10 to-transparent" : undefined}>
+    <Card className={accent ? "border-primary/40 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" : "border-primary/10"}>
       <CardContent className="flex items-center gap-3 py-4">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${accent ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
-          {icon}
-        </div>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent ? "bg-primary text-primary-foreground shadow-md" : "bg-primary/10 text-primary"}`}>{icon}</div>
         <div className="min-w-0">
-          <div className="text-xs text-muted-foreground">{label}</div>
-          <div className="truncate text-base font-semibold">{value}</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+          <div className="truncate text-base font-bold">{value}</div>
         </div>
       </CardContent>
     </Card>
@@ -338,10 +445,7 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
 function InfoRow({ icon, label, value, mono }: { icon?: React.ReactNode; label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span>{label}</span>
-      </div>
+      <div className="flex items-center gap-2 text-muted-foreground">{icon}<span>{label}</span></div>
       <div className={`text-right font-medium ${mono ? "font-mono text-xs" : ""}`}>{value}</div>
     </div>
   );
