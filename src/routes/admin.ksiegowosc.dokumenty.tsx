@@ -158,34 +158,39 @@ function KsiegowoscDokumenty() {
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">VAT naliczony</div><div className="text-xl font-bold">{formatPLN(totals.purchaseVat)}</div></CardContent></Card>
       </div>
 
-      {/* Filtry */}
+      {/* Przełącznik podmiotu (prosty segment) + filtry */}
       <Card>
-        <CardContent className="p-4 grid gap-3 md:grid-cols-5">
-          <Select value={direction} onValueChange={(v) => setDirection(v as any)}>
-            <SelectTrigger><SelectValue placeholder="Kierunek" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Wszystkie</SelectItem>
-              <SelectItem value="sales">Sprzedaż</SelectItem>
-              <SelectItem value="purchase">Koszty</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={source} onValueChange={(v) => setSource(v as any)}>
-            <SelectTrigger><SelectValue placeholder="Źródło" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Wszystkie źródła</SelectItem>
-              <SelectItem value="fakturowo">Fakturowo</SelectItem>
-              <SelectItem value="ksef">KSeF</SelectItem>
-              <SelectItem value="manual">Ręcznie</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={entityId} onValueChange={setEntityId}>
-            <SelectTrigger><SelectValue placeholder="Podmiot" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Wszystkie podmioty</SelectItem>
-              {entities.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}
-            </SelectContent>
-          </Select>
-          <Input placeholder="Szukaj po numerze / kontrahencie / NIP" value={search} onChange={(e) => setSearch(e.target.value)} className="md:col-span-2" />
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground w-20">Podmiot</span>
+            <div className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">
+              <Button size="sm" variant={entityId === "all" ? "default" : "ghost"} className="rounded-md" onClick={() => setEntityId("all")}>Wszystkie</Button>
+              {entities.map((e) => (
+                <Button key={e.id} size="sm" variant={entityId === e.id ? "default" : "ghost"} className="rounded-md" onClick={() => setEntityId(e.id)}>{e.name}</Button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground w-20">Rodzaj</span>
+            <div className="inline-flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">
+              {([["all", "Wszystko"], ["sales", "Sprzedaż"], ["purchase", "Koszty"]] as const).map(([v, label]) => (
+                <Button key={v} size="sm" variant={direction === v ? "default" : "ghost"} className="rounded-md" onClick={() => setDirection(v)}>{label}</Button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground w-20">Źródło</span>
+            <Select value={source} onValueChange={(v) => setSource(v as any)}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Źródło" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie źródła</SelectItem>
+                <SelectItem value="fakturowo">Fakturowo</SelectItem>
+                <SelectItem value="ksef">KSeF</SelectItem>
+                <SelectItem value="manual">Ręcznie</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input placeholder="Szukaj po numerze / kliencie / NIP" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 min-w-[200px]" />
+          </div>
         </CardContent>
       </Card>
 
@@ -204,11 +209,11 @@ function KsiegowoscDokumenty() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2">Kierunek</th>
+                    <th className="text-left p-2">Rodzaj</th>
                     <th className="text-left p-2">Numer</th>
-                    <th className="text-left p-2">Data</th>
+                    <th className="text-left p-2">Data wystawienia</th>
                     <th className="text-left p-2">Podmiot</th>
-                    <th className="text-left p-2">Kontrahent</th>
+                    <th className="text-left p-2">Klient</th>
                     <th className="text-right p-2">Netto</th>
                     <th className="text-right p-2">VAT</th>
                     <th className="text-right p-2">Brutto</th>
