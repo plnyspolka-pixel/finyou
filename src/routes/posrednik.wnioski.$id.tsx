@@ -119,6 +119,26 @@ function BrokerApplicationDetail() {
         <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value={p?.property_type ?? "—"} />
       </div>
 
+      {/* Dystrybucja tematu */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Wyślij ofertę do inwestorów</div>
+            <p className="text-xs text-muted-foreground">
+              Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => setSendOpen("instytucjonalny")}>
+              <Building2 className="mr-2 h-4 w-4" />Inwestorzy instytucjonalni
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setSendOpen("indywidualny")}>
+              <UserRound className="mr-2 h-4 w-4" />Inwestorzy prywatni
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Nieruchomość */}
         <Card className="overflow-hidden">
