@@ -43,7 +43,7 @@ function DystrybucjaPage() {
     const { error } = await supabase.from("offer_distributions").insert(rows);
     if (error) { toast.error(error.message); return; }
     if (status === "wyslane") {
-      await supabase.from("loan_applications").update({ status: "wyslany_do_inwestorow" as any }).eq("id", selectedApp);
+      await supabase.from("loan_applications").update({ status: "szukamy_inwestora" as any }).eq("id", selectedApp);
       await supabase.from("automation_events").insert({ automation_type: "offer_distribution_make", loan_application_id: selectedApp, status: "queued" });
     }
     toast.success(`Utworzono ${rows.length} wpis(ów) — status: ${distributionStatusLabels[status]}`);

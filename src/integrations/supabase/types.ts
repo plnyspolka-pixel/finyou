@@ -4683,6 +4683,7 @@ export type Database = {
         Row: {
           application_data: Json
           assigned_to: string | null
+          broker_notes: string | null
           client_id: string | null
           consent_email: boolean
           consent_marketing: boolean
@@ -4728,6 +4729,7 @@ export type Database = {
         Insert: {
           application_data?: Json
           assigned_to?: string | null
+          broker_notes?: string | null
           client_id?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
@@ -4773,6 +4775,7 @@ export type Database = {
         Update: {
           application_data?: Json
           assigned_to?: string | null
+          broker_notes?: string | null
           client_id?: string | null
           consent_email?: boolean
           consent_marketing?: boolean
@@ -4862,6 +4865,7 @@ export type Database = {
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors: boolean
+          broker_notes: string | null
           business_legal_form: string | null
           business_nip_verified_at: string | null
           business_status: string | null
@@ -4943,6 +4947,7 @@ export type Database = {
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors?: boolean
+          broker_notes?: string | null
           business_legal_form?: string | null
           business_nip_verified_at?: string | null
           business_status?: string | null
@@ -5024,6 +5029,7 @@ export type Database = {
             | Database["public"]["Enums"]["automation_status"]
             | null
           available_to_investors?: boolean
+          broker_notes?: string | null
           business_legal_form?: string | null
           business_nip_verified_at?: string | null
           business_status?: string | null
@@ -7333,6 +7339,14 @@ export type Database = {
         | "oczekuje_wyplaty"
         | "wyplacony"
         | "wniosek_odrzucony"
+        | "brak_kontaktu"
+        | "kontakt"
+        | "kompletowanie_danych"
+        | "szukamy_inwestora"
+        | "warunki_zaakceptowane"
+        | "dokumenty_przygotowanie_umowy"
+        | "notariusz"
+        | "zamkniete"
       marketing_audience: "klient" | "inwestor" | "posrednik"
       marketing_media_type: "image" | "video"
       offer_status:
@@ -7595,6 +7609,14 @@ export const Constants = {
         "oczekuje_wyplaty",
         "wyplacony",
         "wniosek_odrzucony",
+        "brak_kontaktu",
+        "kontakt",
+        "kompletowanie_danych",
+        "szukamy_inwestora",
+        "warunki_zaakceptowane",
+        "dokumenty_przygotowanie_umowy",
+        "notariusz",
+        "zamkniete",
       ],
       marketing_audience: ["klient", "inwestor", "posrednik"],
       marketing_media_type: ["image", "video"],

@@ -10,7 +10,7 @@ import { ChevronRight, FilePlus2, ImageOff } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 
-export const Route = createFileRoute("/posrednik/wnioski")({
+export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
 });
 
@@ -22,6 +22,7 @@ type Row = {
   created_at: string;
   client: { first_name?: string; last_name?: string; city?: string } | null;
   properties: Array<{ city?: string; property_type?: string; photos?: string[] | null; land_register_number?: string | null }>;
+  documents: Array<{ id: string }>;
 };
 
 function MojeWnioski() {
@@ -36,13 +37,52 @@ function MojeWnioski() {
       setLoading(true);
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number)")
-        .eq("assigned_operator", user.id)
+        .select("id, status, loan_amount, preferred_period_months, created_at, assigned_operator, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id)")
+        .or(`assigned_operator.eq.${user.id},assigned_operator.is.null`)
         .order("created_at", { ascending: false });
-      setRows(((data as any) as Row[]) ?? []);
+      const all = ((data as any) as Row[]) ?? [];
+      const filtered = all.filter((r) => {
+        const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
+        const hasKw = !!p?.land_register_number;
+        const hasPhotos = Array.isArray(p?.photos) && p!.photos!.filter(Boolean).length > 0;
+        const hasDocs = Array.isArray(r.documents) && r.documents.length > 0;
+        return hasKw && hasPhotos && hasDocs;
+      });
+
+      // Podpisz storage-paths dla zdjęć (bucket: property-photos)
+      const allPaths = Array.from(
+        new Set(
+          filtered.flatMap((r) => {
+            const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
+            const photos: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
+            return photos.slice(0, 5).filter((u) => !/^https?:\/\//i.test(u));
+          }),
+        ),
+      );
+      if (allPaths.length > 0) {
+        const { data: signed } = await supabase.storage
+          .from("property-photos")
+          .createSignedUrls(allPaths, 60 * 60);
+        const map = new Map<string, string>();
+        (signed ?? []).forEach((s: any) => {
+          if (s?.path && s?.signedUrl) map.set(s.path, s.signedUrl);
+        });
+        for (const r of filtered) {
+          const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
+          if (p && Array.isArray(p.photos)) {
+            p.photos = p.photos.map((u: string) =>
+              /^https?:\/\//i.test(u) ? u : (map.get(u) ?? u),
+            );
+          }
+        }
+      }
+
+      setRows(filtered);
       setLoading(false);
     })();
   }, [user]);
+
+
 
   return (
     <div className="space-y-6">

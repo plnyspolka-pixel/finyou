@@ -36,7 +36,6 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
-import { Route as PosrednikWnioskiRouteImport } from './routes/posrednik.wnioski'
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
 import { Route as PosrednikStrukturaRouteImport } from './routes/posrednik.struktura'
 import { Route as PosrednikSkrzynkaRouteImport } from './routes/posrednik.skrzynka'
@@ -99,6 +98,7 @@ import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-compet
 import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as PosrednikWnioskiIndexRouteImport } from './routes/posrednik.wnioski.index'
 import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.windykacja.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
@@ -300,11 +300,6 @@ const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
   id: '/propozycje/$id',
   path: '/propozycje/$id',
   getParentRoute: () => rootRouteImport,
-} as any)
-const PosrednikWnioskiRoute = PosrednikWnioskiRouteImport.update({
-  id: '/wnioski',
-  path: '/wnioski',
-  getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikWniosekRoute = PosrednikWniosekRouteImport.update({
   id: '/wniosek',
@@ -620,6 +615,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const PosrednikWnioskiIndexRoute = PosrednikWnioskiIndexRouteImport.update({
+  id: '/wnioski/',
+  path: '/wnioski/',
+  getParentRoute: () => PosrednikRoute,
+} as any)
 const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -637,9 +637,9 @@ const AdminKsiegowoscIndexRoute = AdminKsiegowoscIndexRouteImport.update({
   getParentRoute: () => AdminRoute,
 } as any)
 const PosrednikWnioskiIdRoute = PosrednikWnioskiIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => PosrednikWnioskiRoute,
+  id: '/wnioski/$id',
+  path: '/wnioski/$id',
+  getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   id: '/$id',
@@ -1071,7 +1071,6 @@ export interface FileRoutesByFullPath {
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
-  '/posrednik/wnioski': typeof PosrednikWnioskiRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1123,6 +1122,7 @@ export interface FileRoutesByFullPath {
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
+  '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
@@ -1224,7 +1224,6 @@ export interface FileRoutesByTo {
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
-  '/posrednik/wnioski': typeof PosrednikWnioskiRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1276,6 +1275,7 @@ export interface FileRoutesByTo {
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaIndexRoute
+  '/posrednik/wnioski': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
@@ -1383,7 +1383,6 @@ export interface FileRoutesById {
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
-  '/posrednik/wnioski': typeof PosrednikWnioskiRouteWithChildren
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -1435,6 +1434,7 @@ export interface FileRoutesById {
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
+  '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
@@ -1543,7 +1543,6 @@ export interface FileRouteTypes {
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
     | '/posrednik/wniosek'
-    | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1595,6 +1594,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/windykacja/'
+    | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/affiliate-events-tick'
@@ -1696,7 +1696,6 @@ export interface FileRouteTypes {
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
     | '/posrednik/wniosek'
-    | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1748,6 +1747,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc'
     | '/admin/program-posrednikow'
     | '/inwestor/windykacja'
+    | '/posrednik/wnioski'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/affiliate-events-tick'
@@ -1854,7 +1854,6 @@ export interface FileRouteTypes {
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
     | '/posrednik/wniosek'
-    | '/posrednik/wnioski'
     | '/propozycje/$id'
     | '/r/$code'
     | '/wniosek/$token'
@@ -1906,6 +1905,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/windykacja/'
+    | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
     | '/api/public/hooks/affiliate-events-tick'
@@ -2193,13 +2193,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/propozycje/$id'
       preLoaderRoute: typeof PropozycjeIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/posrednik/wnioski': {
-      id: '/posrednik/wnioski'
-      path: '/wnioski'
-      fullPath: '/posrednik/wnioski'
-      preLoaderRoute: typeof PosrednikWnioskiRouteImport
-      parentRoute: typeof PosrednikRoute
     }
     '/posrednik/wniosek': {
       id: '/posrednik/wniosek'
@@ -2635,6 +2628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/posrednik/wnioski/': {
+      id: '/posrednik/wnioski/'
+      path: '/wnioski'
+      fullPath: '/posrednik/wnioski/'
+      preLoaderRoute: typeof PosrednikWnioskiIndexRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
     '/inwestor/windykacja/': {
       id: '/inwestor/windykacja/'
       path: '/'
@@ -2658,10 +2658,10 @@ declare module '@tanstack/react-router' {
     }
     '/posrednik/wnioski/$id': {
       id: '/posrednik/wnioski/$id'
-      path: '/$id'
+      path: '/wnioski/$id'
       fullPath: '/posrednik/wnioski/$id'
       preLoaderRoute: typeof PosrednikWnioskiIdRouteImport
-      parentRoute: typeof PosrednikWnioskiRoute
+      parentRoute: typeof PosrednikRoute
     }
     '/posrednik/leady/$id': {
       id: '/posrednik/leady/$id'
@@ -3332,17 +3332,6 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
   PosrednikLeadyRouteChildren,
 )
 
-interface PosrednikWnioskiRouteChildren {
-  PosrednikWnioskiIdRoute: typeof PosrednikWnioskiIdRoute
-}
-
-const PosrednikWnioskiRouteChildren: PosrednikWnioskiRouteChildren = {
-  PosrednikWnioskiIdRoute: PosrednikWnioskiIdRoute,
-}
-
-const PosrednikWnioskiRouteWithChildren =
-  PosrednikWnioskiRoute._addFileChildren(PosrednikWnioskiRouteChildren)
-
 interface PosrednikRouteChildren {
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
@@ -3354,8 +3343,9 @@ interface PosrednikRouteChildren {
   PosrednikSkrzynkaRoute: typeof PosrednikSkrzynkaRoute
   PosrednikStrukturaRoute: typeof PosrednikStrukturaRoute
   PosrednikWniosekRoute: typeof PosrednikWniosekRoute
-  PosrednikWnioskiRoute: typeof PosrednikWnioskiRouteWithChildren
   PosrednikIndexRoute: typeof PosrednikIndexRoute
+  PosrednikWnioskiIdRoute: typeof PosrednikWnioskiIdRoute
+  PosrednikWnioskiIndexRoute: typeof PosrednikWnioskiIndexRoute
 }
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
@@ -3369,8 +3359,9 @@ const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikSkrzynkaRoute: PosrednikSkrzynkaRoute,
   PosrednikStrukturaRoute: PosrednikStrukturaRoute,
   PosrednikWniosekRoute: PosrednikWniosekRoute,
-  PosrednikWnioskiRoute: PosrednikWnioskiRouteWithChildren,
   PosrednikIndexRoute: PosrednikIndexRoute,
+  PosrednikWnioskiIdRoute: PosrednikWnioskiIdRoute,
+  PosrednikWnioskiIndexRoute: PosrednikWnioskiIndexRoute,
 }
 
 const PosrednikRouteWithChildren = PosrednikRoute._addFileChildren(

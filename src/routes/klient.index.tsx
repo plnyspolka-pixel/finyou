@@ -114,7 +114,7 @@ function KlientDashboard() {
     setMarkingComplete(true);
     try {
       const { error } = await supabase.from("loan_applications")
-        .update({ status: "wniosek_kompletny", available_to_investors: true })
+        .update({ status: "szukamy_inwestora", available_to_investors: true })
         .eq("id", loanRow.id);
       if (error) throw error;
       setForceUnlock(true);
