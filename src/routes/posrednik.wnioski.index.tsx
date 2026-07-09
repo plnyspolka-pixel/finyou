@@ -41,7 +41,6 @@ function MojeWnioski() {
         .or(`assigned_operator.eq.${user.id},assigned_operator.is.null`)
         .order("created_at", { ascending: false });
       const all = ((data as any) as Row[]) ?? [];
-      // Pokazuj tylko wnioski z numerem KW, zdjęciami i dokumentami
       const filtered = all.filter((r) => {
         const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
         const hasKw = !!p?.land_register_number;
@@ -49,10 +48,40 @@ function MojeWnioski() {
         const hasDocs = Array.isArray(r.documents) && r.documents.length > 0;
         return hasKw && hasPhotos && hasDocs;
       });
+
+      // Podpisz storage-paths dla zdjęć (bucket: property-photos)
+      const allPaths = Array.from(
+        new Set(
+          filtered.flatMap((r) => {
+            const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
+            const photos: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
+            return photos.slice(0, 5).filter((u) => !/^https?:\/\//i.test(u));
+          }),
+        ),
+      );
+      if (allPaths.length > 0) {
+        const { data: signed } = await supabase.storage
+          .from("property-photos")
+          .createSignedUrls(allPaths, 60 * 60);
+        const map = new Map<string, string>();
+        (signed ?? []).forEach((s: any) => {
+          if (s?.path && s?.signedUrl) map.set(s.path, s.signedUrl);
+        });
+        for (const r of filtered) {
+          const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
+          if (p && Array.isArray(p.photos)) {
+            p.photos = p.photos.map((u: string) =>
+              /^https?:\/\//i.test(u) ? u : (map.get(u) ?? u),
+            );
+          }
+        }
+      }
+
       setRows(filtered);
       setLoading(false);
     })();
   }, [user]);
+
 
 
   return (
