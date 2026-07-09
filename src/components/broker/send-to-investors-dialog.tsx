@@ -32,7 +32,7 @@ export function SendToInvestorsDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   applicationId: string;
-  audience: "instytucjonalny" | "prywatny";
+  audience: Audience;
 }) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
