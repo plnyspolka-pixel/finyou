@@ -22,6 +22,7 @@ export const Route = createFileRoute("/posrednik/wnioski/$id")({
 type Row = {
   id: string;
   status: string;
+  broker_notes?: string | null;
   loan_amount: number | null;
   preferred_period_months: number | null;
   created_at: string;
@@ -49,6 +50,10 @@ function BrokerApplicationDetail() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
+  const [notes, setNotes] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
+
 
   useEffect(() => {
     void (async () => {
