@@ -145,7 +145,7 @@ function BrokerApplicationDetail() {
           eyebrow="Wniosek pożyczkowy"
           title={clientName}
           subtitle={new Date(row.created_at).toLocaleDateString("pl-PL", { day: "2-digit", month: "long", year: "numeric" })}
-          actions={<Badge variant="secondary" className="text-sm">{loanStatusLabels[row.status as keyof typeof loanStatusLabels] ?? row.status}</Badge>}
+          actions={<Badge variant="secondary" className="text-sm">{loanStatusLabel(row.status)}</Badge>}
         />
       </div>
 
