@@ -4,6 +4,7 @@ import { LogOut, Menu, type LucideIcon } from "lucide-react";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import brandMark from "@/assets/financeyou-mark-v2.png.asset.json";
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boolean };
 export type NavGroup = { label?: string; items: NavItem[] };
