@@ -130,10 +130,34 @@ function pickDate(o: InvoiceMeta, ...keys: string[]): string | null {
   return s ? /^(\d{4})-(\d{2})-(\d{2})/.exec(s)?.[0] ?? null : null;
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+// Fetch z obsługą limitu zapytań KSeF (429/503): ponawia z backoffem, szanuje Retry-After.
+async function ksefFetch(url: string, init: RequestInit, attempts = 6): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status !== 429 && res.status !== 503) return res;
+      const retryAfter = Number(res.headers.get("Retry-After"));
+      const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : Math.min(2000 * 2 ** attempt, 20000);
+      await res.text().catch(() => "");
+      await sleep(wait + Math.floor(Math.random() * 400));
+    } catch (e) {
+      lastErr = e;
+      await sleep(Math.min(2000 * 2 ** attempt, 20000));
+    }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error("KSeF: przekroczono limit prób (429 Too Many Requests).");
+}
+
 async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subject2", monthsBack: number): Promise<InvoiceMeta[]> {
-  // KSeF 2.0 wymaga zakresu dat max 3 miesiące — pobieramy w oknach 3-miesięcznych.
+  // KSeF 2.0 wymaga zakresu dat max 3 miesiące — pobieramy w oknach 3-miesięcznych,
+  // z odstępami między zapytaniami, aby nie wpaść w limit (429 Too Many Requests).
   const out: InvoiceMeta[] = [];
   const pageSize = 100;
+  let firstReq = true;
   const end = new Date();
   const start = new Date(); start.setMonth(start.getMonth() - monthsBack);
   let windowFrom = new Date(start);
@@ -144,7 +168,9 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
     const dateFrom = windowFrom.toISOString();
     const dateTo = windowTo.toISOString();
     for (let pageOffset = 0, page = 0; page < 100; page += 1, pageOffset += pageSize) {
-      const res = await fetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
+      if (!firstReq) await sleep(700); // throttling między zapytaniami metadanych
+      firstReq = false;
+      const res = await ksefFetch(`${s.baseUrl}/api/v2/invoices/query/metadata?pageOffset=${pageOffset}&pageSize=${pageSize}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,10 +196,9 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
   return out;
 }
 
-async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promise<{ ok: boolean; count: number; message: string | null }> {
-  let s: KsefSession | null = null;
+// Sync jednego kierunku przy WSPÓŁDZIELONEJ sesji (jedna sesja na podmiot → mniej 429).
+async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null }> {
   try {
-    s = await openKsefSession(entity as KsefEntity);
     const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
     let saved = 0;
     for (const it of list) {
@@ -206,8 +231,6 @@ async function syncKsefOne(entity: any, direction: "sales" | "purchase"): Promis
     return { ok: true, count: saved, message: null };
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
-  } finally {
-    if (s) await closeKsefSession(s);
   }
 }
 
@@ -220,11 +243,29 @@ export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
   const { data: entities } = await accountingDb.from("accounting_entities").select("*").eq("active", true).order("created_at", { ascending: true });
   const results: SyncResult[] = [];
   for (const e of ((entities ?? []) as any[])) {
-    for (const dir of ["sales", "purchase"] as const) {
-      const rKsef = await syncKsefOne(e, dir);
-      await upsertSyncStatus(e.id, "ksef", dir, rKsef.ok, rKsef.message, rKsef.count);
-      results.push({ entity: e.name, direction: dir, ...rKsef });
+    // Jedna sesja KSeF na podmiot dla obu kierunków (mniej wywołań auth → mniej 429).
+    let session: KsefSession | null = null;
+    try {
+      session = await openKsefSession(e as KsefEntity);
+    } catch (err) {
+      for (const dir of ["sales", "purchase"] as const) {
+        await upsertSyncStatus(e.id, "ksef", dir, false, (err as Error).message, 0);
+        results.push({ entity: e.name, direction: dir, ok: false, count: 0, message: (err as Error).message });
+      }
+      await sleep(1500);
+      continue;
     }
+    try {
+      for (const dir of ["sales", "purchase"] as const) {
+        const rKsef = await syncKsefWithSession(e, dir, session);
+        await upsertSyncStatus(e.id, "ksef", dir, rKsef.ok, rKsef.message, rKsef.count);
+        results.push({ entity: e.name, direction: dir, ...rKsef });
+        await sleep(700); // odstęp między kierunkami
+      }
+    } finally {
+      await closeKsefSession(session);
+    }
+    await sleep(1500); // odstęp między podmiotami
   }
   return { results };
 }
