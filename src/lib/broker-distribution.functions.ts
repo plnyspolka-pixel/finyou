@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Wysyła temat pożyczkowy (KW + zdjęcia + dokumenty + kwota) do wybranych inwestorów. */
-export const sendApplicationToInvestors = createServerFn({ method: "POST" })
+/** Buduje draft maila (temat + treść) do inwestorów — NIE wysyła. */
+export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z
