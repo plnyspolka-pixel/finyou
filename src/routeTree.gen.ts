@@ -76,6 +76,7 @@ import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomni
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
+import { Route as AdminMessengerRouteImport } from './routes/admin.messenger'
 import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
@@ -504,6 +505,11 @@ const AdminOfertyRoute = AdminOfertyRouteImport.update({
 const AdminMetaRoute = AdminMetaRouteImport.update({
   id: '/meta',
   path: '/meta',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMessengerRoute = AdminMessengerRouteImport.update({
+  id: '/messenger',
+  path: '/messenger',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMaterialyRoute = AdminMaterialyRouteImport.update({
@@ -1047,6 +1053,7 @@ export interface FileRoutesByFullPath {
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
+  '/admin/messenger': typeof AdminMessengerRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
@@ -1203,6 +1210,7 @@ export interface FileRoutesByTo {
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
+  '/admin/messenger': typeof AdminMessengerRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
@@ -1363,6 +1371,7 @@ export interface FileRoutesById {
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
+  '/admin/messenger': typeof AdminMessengerRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/pixele': typeof AdminPixeleRoute
@@ -1525,6 +1534,7 @@ export interface FileRouteTypes {
     | '/admin/kreator-pozyczki'
     | '/admin/mailing'
     | '/admin/materialy'
+    | '/admin/messenger'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
@@ -1681,6 +1691,7 @@ export interface FileRouteTypes {
     | '/admin/kreator-pozyczki'
     | '/admin/mailing'
     | '/admin/materialy'
+    | '/admin/messenger'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
@@ -1840,6 +1851,7 @@ export interface FileRouteTypes {
     | '/admin/kreator-pozyczki'
     | '/admin/mailing'
     | '/admin/materialy'
+    | '/admin/messenger'
     | '/admin/meta'
     | '/admin/oferty'
     | '/admin/pixele'
@@ -2498,6 +2510,13 @@ declare module '@tanstack/react-router' {
       path: '/meta'
       fullPath: '/admin/meta'
       preLoaderRoute: typeof AdminMetaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/messenger': {
+      id: '/admin/messenger'
+      path: '/messenger'
+      fullPath: '/admin/messenger'
+      preLoaderRoute: typeof AdminMessengerRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/materialy': {
@@ -3187,6 +3206,7 @@ interface AdminRouteChildren {
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
+  AdminMessengerRoute: typeof AdminMessengerRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
@@ -3245,6 +3265,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
+  AdminMessengerRoute: AdminMessengerRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
