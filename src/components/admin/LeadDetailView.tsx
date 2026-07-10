@@ -32,7 +32,7 @@ const channelIcon: Record<string, any> = {
   manual_note: StickyNote,
 };
 
-export function LeadDetailView({ id, compact = false }: { id: string; compact?: boolean }) {
+export function LeadDetailView({ id, compact = false, hideAdvancedTabs = false }: { id: string; compact?: boolean; hideAdvancedTabs?: boolean }) {
   const qc = useQueryClient();
   const getFn = useServerFn(getLead);
   const updateFn = useServerFn(updateLead);
@@ -86,9 +86,9 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
-          {!compact && <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>}
-          {!compact && <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>}
-          {!compact && <TabsTrigger value="raw">Surowe dane</TabsTrigger>}
+          {!compact && !hideAdvancedTabs && <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>}
+          {!compact && !hideAdvancedTabs && <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>}
+          {!compact && !hideAdvancedTabs && <TabsTrigger value="raw">Surowe dane</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="komunikacja" className="space-y-3">
@@ -173,7 +173,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           </div>
         </TabsContent>
 
-        {!compact && <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>}
+        {!compact && !hideAdvancedTabs && <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>}
 
         <TabsContent value="dane" className="space-y-3">
           <ExtractedFactsCard lead={lead} />
@@ -210,7 +210,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           </Card>
         </TabsContent>
 
-        {!compact && <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>}
+        {!compact && !hideAdvancedTabs && <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>}
 
         {!compact && (
           <TabsContent value="raw">
