@@ -114,6 +114,7 @@ import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
+import { Route as OperatorWnioskiIdRouteImport } from './routes/operator.wnioski.$id'
 import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
@@ -708,6 +709,11 @@ const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => PosrednikLeadyRoute,
 } as any)
+const OperatorWnioskiIdRoute = OperatorWnioskiIdRouteImport.update({
+  id: '/wnioski/$id',
+  path: '/wnioski/$id',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorLeadyIdRoute = OperatorLeadyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -1194,6 +1200,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1357,6 +1364,7 @@ export interface FileRoutesByTo {
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
@@ -1527,6 +1535,7 @@ export interface FileRoutesById {
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
   '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1698,6 +1707,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/operator/leady/$id'
+    | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
@@ -1861,6 +1871,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/operator/leady/$id'
+    | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc'
@@ -2030,6 +2041,7 @@ export interface FileRouteTypes {
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
     | '/operator/leady/$id'
+    | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
@@ -2873,6 +2885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikLeadyIdRouteImport
       parentRoute: typeof PosrednikLeadyRoute
     }
+    '/operator/wnioski/$id': {
+      id: '/operator/wnioski/$id'
+      path: '/wnioski/$id'
+      fullPath: '/operator/wnioski/$id'
+      preLoaderRoute: typeof OperatorWnioskiIdRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/leady/$id': {
       id: '/operator/leady/$id'
       path: '/$id'
@@ -3551,6 +3570,7 @@ interface OperatorRouteChildren {
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorWniosekRoute: typeof OperatorWniosekRoute
   OperatorIndexRoute: typeof OperatorIndexRoute
+  OperatorWnioskiIdRoute: typeof OperatorWnioskiIdRoute
   OperatorWnioskiIndexRoute: typeof OperatorWnioskiIndexRoute
 }
 
@@ -3559,6 +3579,7 @@ const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorWniosekRoute: OperatorWniosekRoute,
   OperatorIndexRoute: OperatorIndexRoute,
+  OperatorWnioskiIdRoute: OperatorWnioskiIdRoute,
   OperatorWnioskiIndexRoute: OperatorWnioskiIndexRoute,
 }
 
