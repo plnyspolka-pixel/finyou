@@ -52,7 +52,6 @@ function InvoicePrintPage() {
 
   const inv = data.invoice as any;
   const ent = data.entity as any;
-  const deal = data.deal as any;
   const currency = inv.currency || "PLN";
   const items: any[] = Array.isArray(inv.items) && inv.items.length ? inv.items : [
     { name: "Usługa", quantity: 1, unit: "szt.", unitNet: inv.net_amount, vatRate: inv.vat_rate },
@@ -110,18 +109,6 @@ function InvoicePrintPage() {
             {inv.buyer_email && <div className="text-slate-500">{inv.buyer_email}</div>}
           </div>
         </div>
-
-        {deal && (deal.city || deal.security || deal.loanAmount || deal.investorProfitAnnual) && (
-          <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Dane transakcji</div>
-            <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
-              <DealField label="Miasto" value={deal.city} />
-              <DealField label="Zabezpieczenie" value={deal.security} />
-              <DealField label="Kwota pożyczki" value={deal.loanAmount} />
-              <DealField label="Zysk inwestora / rok" value={deal.investorProfitAnnual} />
-            </div>
-          </div>
-        )}
 
         <table className="mt-5 w-full border-collapse text-[12px]">
           <thead>
@@ -191,15 +178,6 @@ function InvoicePrintPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function DealField({ label, value }: { label: string; value?: string }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="font-medium">{value || "—"}</div>
     </div>
   );
 }

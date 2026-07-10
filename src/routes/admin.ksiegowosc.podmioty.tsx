@@ -18,7 +18,7 @@ export const Route = createFileRoute("/admin/ksiegowosc/podmioty")({
   component: PodmiotyPage,
 });
 
-const PROVIDER_LABELS: Record<string, string> = { manual: "Ręcznie (bez integracji)", fakturowo: "Fakturowo", ksef: "KSeF" };
+const PROVIDER_LABELS: Record<string, string> = { manual: "Ręcznie (bez integracji)", ksef: "KSeF" };
 const KSEF_LABELS: Record<string, string> = { disabled: "Wyłączony", test: "Testowy", demo: "Demo", prod: "Produkcyjny" };
 
 type EntityForm = {
@@ -27,15 +27,14 @@ type EntityForm = {
   address_street: string; address_postal_code: string; address_city: string;
   bank_account: string; email: string; phone: string;
   active: boolean; invoice_prefix: string; vat_payer: boolean; default_vat_rate: string;
-  provider: "manual" | "fakturowo" | "ksef";
-  fakturowo_api_id: string;
+  provider: "manual" | "ksef";
   ksef_environment: "disabled" | "test" | "demo" | "prod"; ksef_nip: string; ksef_token: string;
 };
 
 const EMPTY: EntityForm = {
   name: "", legal_name: "", nip: "", regon: "", address_street: "", address_postal_code: "", address_city: "",
   bank_account: "", email: "", phone: "", active: true, invoice_prefix: "FV", vat_payer: true, default_vat_rate: "23",
-  provider: "manual", fakturowo_api_id: "", ksef_environment: "disabled", ksef_nip: "", ksef_token: "",
+  provider: "manual", ksef_environment: "disabled", ksef_nip: "", ksef_token: "",
 };
 
 function PodmiotyPage() {
@@ -58,7 +57,7 @@ function PodmiotyPage() {
       address_street: e.address_street ?? "", address_postal_code: e.address_postal_code ?? "", address_city: e.address_city ?? "",
       bank_account: e.bank_account ?? "", email: e.email ?? "", phone: e.phone ?? "", active: e.active ?? true,
       invoice_prefix: e.invoice_prefix ?? "FV", vat_payer: e.vat_payer ?? true, default_vat_rate: e.default_vat_rate ?? "23",
-      provider: e.provider ?? "manual", fakturowo_api_id: "", ksef_environment: e.ksef_environment ?? "disabled", ksef_nip: e.ksef_nip ?? "", ksef_token: "",
+      provider: e.provider ?? "manual", ksef_environment: e.ksef_environment ?? "disabled", ksef_nip: e.ksef_nip ?? "", ksef_token: "",
     });
     setOpen(true);
   }
@@ -72,7 +71,7 @@ function PodmiotyPage() {
         address_street: form.address_street || null, address_postal_code: form.address_postal_code || null, address_city: form.address_city || null,
         bank_account: form.bank_account || null, email: form.email || null, phone: form.phone || null,
         active: form.active, invoice_prefix: form.invoice_prefix, vat_payer: form.vat_payer, default_vat_rate: form.default_vat_rate,
-        provider: form.provider, fakturowo_api_id: form.fakturowo_api_id || undefined,
+        provider: form.provider,
         ksef_environment: form.ksef_environment, ksef_nip: form.ksef_nip || null, ksef_token: form.ksef_token || undefined,
       } });
       toast.success("Podmiot zapisany");
@@ -150,9 +149,6 @@ function PodmiotyPage() {
                 <SelectContent>{Object.entries(PROVIDER_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            {form.provider === "fakturowo" && (
-              <div className="space-y-1 sm:col-span-2"><Label>Fakturowo API ID (zostanie zaszyfrowane)</Label><Input type="password" value={form.fakturowo_api_id} onChange={(e) => set("fakturowo_api_id")(e.target.value)} placeholder="wpisz, aby ustawić/zmienić" /></div>
-            )}
             {form.provider === "ksef" && (
               <>
                 <div className="space-y-1"><Label>Środowisko KSeF</Label>

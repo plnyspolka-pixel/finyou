@@ -1,6 +1,8 @@
-// Wystawianie faktur sprzedaży przez operatora — w całości w aplikacji (bez Fakturowo).
+// Wystawianie faktur sprzedaży przez operatora — w całości w aplikacji.
 // Numeracja i wystawienie realizowane natywnie; numer rachunku do zapłaty pobierany
 // z podmiotu (accounting_entities.bank_account) i możliwy do potwierdzenia na formularzu.
+// Dane transakcji (miasto/zabezpieczenie/kwota/zysk), typ nabywcy oraz prowizje
+// zapisujemy TYLKO informacyjnie w items[0].meta — nie trafiają do opisu faktury.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -19,7 +21,7 @@ function round2(n: number): number {
 }
 
 function stripEntity(e: any) {
-  const { ksef_token_encrypted, fakturowo_api_id_encrypted, ...rest } = e ?? {};
+  const { ksef_token_encrypted, ...rest } = e ?? {};
   return rest;
 }
 
@@ -47,6 +49,9 @@ const DealContext = z.object({
 
 const CreateInput = z.object({
   entityId: z.string().uuid(),
+  // instytucja = FV na dane instytucji; klient_indywidualny = FV na dane klienta
+  // pożyczkowego (inwestor wypłaca to jako część pożyczki na konto Finance You).
+  buyerType: z.enum(["instytucja", "klient_indywidualny"]).default("instytucja"),
   buyerName: z.string().min(1),
   buyerNip: z.string().optional().default(""),
   buyerEmail: z.string().optional().default(""),
@@ -60,6 +65,8 @@ const CreateInput = z.object({
   bankAccount: z.string().optional().default(""),
   dueDate: z.string().optional().default(""),
   deal: DealContext.optional(),
+  // Prowizja wewnętrzna operatora (wypłacana, jeśli pożyczka zostanie wypłacona).
+  operatorCommission: z.number().nonnegative().optional(),
 });
 
 // Tworzy i od razu wystawia fakturę natywnie (nadaje numer, status "issued").
@@ -89,6 +96,7 @@ export const createOperatorInvoice = createServerFn({ method: "POST" })
     const next = Number(entity.invoice_next_number || 1);
     const invoiceNumber = `${entity.invoice_prefix || "FV"}/${year}/${pad(next)}`;
 
+    // Dane wewnętrzne (informacyjne) — NIE pokazujemy ich w opisie faktury.
     const items = [
       {
         name: data.description,
@@ -98,7 +106,12 @@ export const createOperatorInvoice = createServerFn({ method: "POST" })
         vatRate: data.vatRate,
         meta: {
           bankAccount,
+          buyerType: data.buyerType,
           deal: data.deal ?? null,
+          realized: true, // zrealizowane — rejestr wewnętrzny
+          dealCommission: data.grossAmount, // kwota prowizji dociągnięta z faktury
+          operatorCommission: data.operatorCommission ?? 0,
+          loanPaidOut: false, // ustawiane, gdy wypłacimy pożyczkę
         },
       },
     ];
@@ -160,7 +173,7 @@ export const listMyOperatorInvoices = createServerFn({ method: "GET" })
     const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
     let q = accountingDb
       .from("sales_invoices")
-      .select("id, invoice_number, buyer_name, buyer_nip, gross_amount, currency, status, issue_date, entity_id, created_by")
+      .select("id, invoice_number, buyer_name, buyer_nip, gross_amount, currency, status, issue_date, entity_id, created_by, items")
       .order("created_at", { ascending: false })
       .limit(500);
     if (!seeAll) q = q.eq("created_by", context.userId);
@@ -172,7 +185,44 @@ export const listMyOperatorInvoices = createServerFn({ method: "GET" })
       const { data: ents } = await accountingDb.from("accounting_entities").select("id,name").in("id", entityIds);
       for (const e of ents ?? []) names[(e as any).id] = (e as any).name;
     }
-    return (data ?? []).map((i: any) => ({ ...i, entity_name: names[i.entity_id] ?? "—" }));
+    return (data ?? []).map((i: any) => {
+      const meta = (i.items?.[0]?.meta ?? {}) as Record<string, any>;
+      return {
+        id: i.id,
+        invoice_number: i.invoice_number,
+        buyer_name: i.buyer_name,
+        buyer_nip: i.buyer_nip,
+        gross_amount: i.gross_amount,
+        currency: i.currency,
+        status: i.status,
+        issue_date: i.issue_date,
+        entity_name: names[i.entity_id] ?? "—",
+        buyer_type: meta.buyerType ?? "instytucja",
+        deal: meta.deal ?? null,
+        deal_commission: Number(meta.dealCommission ?? i.gross_amount ?? 0),
+        operator_commission: Number(meta.operatorCommission ?? 0),
+        loan_paid_out: Boolean(meta.loanPaidOut),
+      };
+    });
+  });
+
+// Oznacza, że pożyczka została wypłacona — aktywuje prowizję wewnętrzną operatora.
+export const setLoanPaidOut = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ id: z.string().uuid(), paidOut: z.boolean().default(true) }).parse(i))
+  .handler(async ({ data, context }) => {
+    const roles = await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
+    const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
+
+    const { data: invRow } = await accountingDb.from("sales_invoices").select("items, created_by").eq("id", data.id).maybeSingle();
+    if (!invRow) throw new Error("Nie znaleziono faktury.");
+    const inv = invRow as any;
+    if (!seeAll && inv.created_by !== context.userId) throw new Error("Brak dostępu do tej faktury.");
+
+    const items = Array.isArray(inv.items) && inv.items.length ? inv.items : [{ meta: {} }];
+    items[0] = { ...items[0], meta: { ...(items[0]?.meta ?? {}), loanPaidOut: data.paidOut } };
+    await accountingDb.from("sales_invoices").update({ items }).eq("id", data.id);
+    return { ok: true };
   });
 
 // Pełne dane faktury do wydruku (faktura + sprzedawca). Operator widzi tylko własne.

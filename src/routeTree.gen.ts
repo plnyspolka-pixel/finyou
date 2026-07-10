@@ -97,7 +97,6 @@ import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreat
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
-import { Route as AdminFakturowoRouteImport } from './routes/admin.fakturowo'
 import { Route as AdminFacebookConnectRouteImport } from './routes/admin.facebook-connect'
 import { Route as AdminEmbedRouteImport } from './routes/admin.embed'
 import { Route as AdminDystrybucjaRouteImport } from './routes/admin.dystrybucja'
@@ -629,11 +628,6 @@ const AdminIntegracjeRoute = AdminIntegracjeRouteImport.update({
   path: '/integracje',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminFakturowoRoute = AdminFakturowoRouteImport.update({
-  id: '/fakturowo',
-  path: '/fakturowo',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminFacebookConnectRoute = AdminFacebookConnectRouteImport.update({
   id: '/facebook-connect',
   path: '/facebook-connect',
@@ -1144,7 +1138,6 @@ export interface FileRoutesByFullPath {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
-  '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
@@ -1316,7 +1309,6 @@ export interface FileRoutesByTo {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
-  '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
@@ -1493,7 +1485,6 @@ export interface FileRoutesById {
   '/admin/dystrybucja': typeof AdminDystrybucjaRoute
   '/admin/embed': typeof AdminEmbedRoute
   '/admin/facebook-connect': typeof AdminFacebookConnectRoute
-  '/admin/fakturowo': typeof AdminFakturowoRoute
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
@@ -1672,7 +1663,6 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
-    | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
@@ -1708,11 +1698,14 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
+    | '/faktura/$id'
     | '/l/$slug'
     | '/operator/leady'
     | '/operator/moje-leady'
     | '/operator/oferta-wewnetrzna'
     | '/operator/profil'
+    | '/operator/faktury'
+    | '/operator/messenger'
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
@@ -1841,7 +1834,6 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
-    | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
@@ -1876,11 +1868,14 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
+    | '/faktura/$id'
     | '/l/$slug'
     | '/operator/leady'
     | '/operator/moje-leady'
     | '/operator/oferta-wewnetrzna'
     | '/operator/profil'
+    | '/operator/faktury'
+    | '/operator/messenger'
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
@@ -2014,7 +2009,6 @@ export interface FileRouteTypes {
     | '/admin/dystrybucja'
     | '/admin/embed'
     | '/admin/facebook-connect'
-    | '/admin/fakturowo'
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/klienci'
@@ -2050,11 +2044,14 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
+    | '/faktura/$id'
     | '/l/$slug'
     | '/operator/leady'
     | '/operator/moje-leady'
     | '/operator/oferta-wewnetrzna'
     | '/operator/profil'
+    | '/operator/faktury'
+    | '/operator/messenger'
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
@@ -2844,13 +2841,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIntegracjeRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/fakturowo': {
-      id: '/admin/fakturowo'
-      path: '/fakturowo'
-      fullPath: '/admin/fakturowo'
-      preLoaderRoute: typeof AdminFakturowoRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/facebook-connect': {
       id: '/admin/facebook-connect'
       path: '/facebook-connect'
@@ -3495,7 +3485,6 @@ interface AdminRouteChildren {
   AdminDystrybucjaRoute: typeof AdminDystrybucjaRoute
   AdminEmbedRoute: typeof AdminEmbedRoute
   AdminFacebookConnectRoute: typeof AdminFacebookConnectRoute
-  AdminFakturowoRoute: typeof AdminFakturowoRoute
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
@@ -3555,7 +3544,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDystrybucjaRoute: AdminDystrybucjaRoute,
   AdminEmbedRoute: AdminEmbedRoute,
   AdminFacebookConnectRoute: AdminFacebookConnectRoute,
-  AdminFakturowoRoute: AdminFakturowoRoute,
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,

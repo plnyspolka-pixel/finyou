@@ -1,4 +1,4 @@
-// Odczyty dla widoku "Dokumenty księgowe" (jeden rejestr FV — sprzedaż i koszty, Fakturowo + KSeF).
+// Odczyty dla widoku "Dokumenty księgowe" (jeden rejestr FV — sprzedaż i koszty, KSeF).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -11,7 +11,7 @@ export const listAccountingDocuments = createServerFn({ method: "GET" })
       .object({
         entityId: z.string().uuid().optional(),
         direction: z.enum(["sales", "purchase"]).optional(),
-        source: z.enum(["fakturowo", "ksef", "manual"]).optional(),
+        source: z.enum(["ksef", "manual"]).optional(),
         from: z.string().optional(),
         to: z.string().optional(),
         search: z.string().optional(),

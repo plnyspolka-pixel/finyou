@@ -1,13 +1,12 @@
-// Wspólny rdzeń synchronizacji Fakturowo + KSeF (2.0), wywoływany zarówno z
+// Wspólny rdzeń synchronizacji KSeF (2.0), wywoływany zarówno z
 // createServerFn (UI "Synchronizuj teraz"), jak i z hooka cron /api/public/hooks/sync-accounting.
 import { accountingDb } from "./db";
-import { decryptSensitive } from "@/lib/affiliate/crypto";
 import type { KsefEntity } from "@/lib/ksef/client";
 import { openKsefSession, closeKsefSession, type KsefSession } from "@/lib/ksef/session";
 
 type SyncResult = { entity: string; direction: "sales" | "purchase"; ok: boolean; count: number; message: string | null };
 
-async function upsertSyncStatus(entityId: string, source: "fakturowo" | "ksef", direction: "sales" | "purchase", ok: boolean, message: string | null, count: number) {
+async function upsertSyncStatus(entityId: string, source: "ksef", direction: "sales" | "purchase", ok: boolean, message: string | null, count: number) {
   const now = new Date().toISOString();
   await accountingDb.from("accounting_sync_status").upsert(
     {
@@ -22,80 +21,6 @@ async function upsertSyncStatus(entityId: string, source: "fakturowo" | "ksef", 
     },
     { onConflict: "entity_id,source,direction" },
   );
-}
-
-// ---------------- FAKTUROWO ----------------
-
-function form(params: Record<string, string | number | undefined | null>): string {
-  const usp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== "") usp.append(k, String(v));
-  return usp.toString();
-}
-
-function parseFakturowoList(raw: string): { ok: boolean; documents: Record<string, string>[]; error?: string } {
-  const lines = raw.split(/\r?\n/).map((l) => l.trim());
-  if (lines[0] !== "1") return { ok: false, documents: [], error: raw.slice(0, 400) };
-  const docs: Record<string, string>[] = [];
-  let current: Record<string, string> = {};
-  for (const line of lines.slice(1)) {
-    if (!line) continue;
-    if (line === "---") { if (Object.keys(current).length) docs.push(current); current = {}; continue; }
-    const eq = line.indexOf("=");
-    if (eq > 0) current[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
-  }
-  if (Object.keys(current).length) docs.push(current);
-  return { ok: true, documents: docs };
-}
-
-const toNum = (v: string | undefined) => (v ? Number(String(v).replace(/\s/g, "").replace(",", ".")) || 0 : 0);
-const toDate = (v: string | undefined) => (v ? /^(\d{4})-(\d{2})-(\d{2})/.exec(v)?.[0] ?? null : null);
-
-async function fetchFakturowoList(apiId: string, direction: "sales" | "purchase", monthsBack: number) {
-  const from = new Date(); from.setMonth(from.getMonth() - monthsBack);
-  const body = form({
-    api_id: apiId, api_zadanie: 6,
-    dokument_rodzaj: direction === "sales" ? 0 : 1,
-    dokument_data_wystawienia_od: from.toISOString().slice(0, 10),
-    dokument_data_wystawienia_do: new Date().toISOString().slice(0, 10),
-  });
-  const res = await fetch("https://www.fakturowo.pl/api", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
-  return parseFakturowoList(await res.text());
-}
-
-async function syncFakturowoOne(entity: any, direction: "sales" | "purchase"): Promise<{ ok: boolean; count: number; message: string | null }> {
-  const apiId = decryptSensitive(entity.fakturowo_api_id_encrypted) ?? process.env.FAKTUROWO_API_ID;
-  if (!apiId) return { ok: false, count: 0, message: "Brak konfiguracji Fakturowo." };
-  const listed = await fetchFakturowoList(apiId, direction, 24);
-  if (!listed.ok) return { ok: false, count: 0, message: `Fakturowo: ${listed.error}` };
-  let inserted = 0;
-  for (const d of listed.documents) {
-    const externalId = d["dokument_id"] ?? d["id"] ?? d["dokument_numer"];
-    if (!externalId) continue;
-    const gross = toNum(d["dokument_wartosc_brutto"] ?? d["produkt_wartosc_brutto"]);
-    const net = toNum(d["dokument_wartosc_netto"] ?? d["produkt_wartosc_netto"]);
-    const vat = Math.round((gross - net) * 100) / 100;
-    const row = {
-      entity_id: entity.id, direction, source: "fakturowo" as const,
-      external_id: String(externalId), invoice_number: d["dokument_numer"] ?? null,
-      issue_date: toDate(d["dokument_data_wystawienia"]),
-      sale_date: toDate(d["dokument_data_sprzedazy"]) ?? toDate(d["dokument_data_wystawienia"]),
-      due_date: toDate(d["dokument_data_platnosci"]),
-      counterparty_name: (direction === "sales" ? d["nabywca_nazwa"] : d["sprzedawca_nazwa"]) ?? null,
-      counterparty_nip: (direction === "sales" ? d["nabywca_nip"] : d["sprzedawca_nip"]) ?? null,
-      counterparty_address: [
-        direction === "sales" ? d["nabywca_ulica"] : d["sprzedawca_ulica"],
-        direction === "sales" ? d["nabywca_kod"] : d["sprzedawca_kod"],
-        direction === "sales" ? d["nabywca_miasto"] : d["sprzedawca_miasto"],
-      ].filter(Boolean).join(", ") || null,
-      currency: d["dokument_waluta"] || "PLN",
-      net_amount: net, vat_amount: vat >= 0 ? vat : 0, gross_amount: gross,
-      vat_rate: d["produkt_stawka_vat"] ?? null, pdf_url: d["dokument_pdf"] ?? null,
-      raw_payload: d as Record<string, unknown>,
-    };
-    const { error } = await accountingDb.from("accounting_documents").upsert(row, { onConflict: "entity_id,source,direction,external_id" });
-    if (!error) inserted += 1;
-  }
-  return { ok: true, count: inserted, message: null };
 }
 
 // ---------------- KSeF 2.0 ----------------
@@ -248,9 +173,7 @@ async function syncKsefWithSession(entity: any, direction: "sales" | "purchase",
 // ---------------- Orkiestrator ----------------
 
 export async function syncAllAccounting(): Promise<{ results: SyncResult[] }> {
-  // Fakturowo wyłączone z cyklicznego syncu — jest tylko jednorazowy import
-  // z UI (przycisk „Import Fakturowo"). Cała bieżąca księgowość idzie przez KSeF.
-  void syncFakturowoOne;
+  // Cała bieżąca księgowość idzie przez KSeF.
   const { data: entities } = await accountingDb.from("accounting_entities").select("*").eq("active", true).order("created_at", { ascending: true });
   const results: SyncResult[] = [];
   for (const e of ((entities ?? []) as any[])) {
