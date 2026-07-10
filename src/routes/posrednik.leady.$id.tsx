@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Phone, MessageSquare, Mail, FileText } from "lucide-react";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { getLead } from "@/lib/leads-admin.functions";
+import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/leady/$id")({
   component: OperatorLeadDetail,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/posrednik/leady/$id")({
 
 export function OperatorLeadDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
+  const base = usePanelBase();
   const fn = useServerFn(getLead);
   const q = useQuery({ queryKey: ["operator-lead-quickactions", id], queryFn: () => fn({ data: { id } }) });
   const lead = (q.data as any)?.lead;
@@ -22,7 +24,7 @@ export function OperatorLeadDetail() {
 
   return (
     <div className="space-y-4">
-      <Link to="/posrednik/leady" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link to={`${base}/leady` as any} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> Wróć do listy
       </Link>
 
@@ -52,13 +54,13 @@ export function OperatorLeadDetail() {
               </a>
             )}
             {loanId && (
-              <Link to="/admin/wnioski/$id" params={{ id: loanId }}>
+              <Link to={`${base}/wnioski/${loanId}` as any}>
                 <Button size="sm" variant="outline">
                   <FileText className="mr-2 h-4 w-4" /> Wniosek
                 </Button>
               </Link>
             )}
-            <Link to="/posrednik/kreator-dokumentow">
+            <Link to={`${base}/kreator-dokumentow` as any}>
               <Button size="sm" variant="secondary">
                 <FileText className="mr-2 h-4 w-4" /> Wygeneruj dokument
               </Button>

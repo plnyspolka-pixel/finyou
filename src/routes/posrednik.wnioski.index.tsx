@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePanelBase } from "@/lib/panel-base";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ function SmartImg({ src, alt, className }: { src: string; alt?: string; classNam
 export function MojeWnioski() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const base = usePanelBase();
   const [rows, setRows] = useState<Row[]>([]);
   const [heroByApp, setHeroByApp] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -118,7 +120,7 @@ export function MojeWnioski() {
         subtitle="Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
         actions={
           <Button asChild>
-            <Link to="/posrednik/wniosek"><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
+            <Link to={`${base}/wniosek` as any}><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
           </Button>
         }
       />
@@ -160,7 +162,7 @@ export function MojeWnioski() {
               <button
                 key={r.id}
                 type="button"
-                onClick={() => navigate({ to: "/posrednik/wnioski/$id", params: { id: r.id } })}
+                onClick={() => navigate({ to: `${base}/wnioski/${r.id}` as any })}
                 className="group flex flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition hover:border-primary hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">

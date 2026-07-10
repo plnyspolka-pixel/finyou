@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, PenSquare, Users } from "lucide-react";
 import { toast } from "sonner";
 import { buildInvestorDistributionDraft } from "@/lib/broker-distribution.functions";
+import { usePanelBase } from "@/lib/panel-base";
 
 type Audience = "instytucjonalny" | "indywidualny";
 type Investor = { id: string; company_name: string | null; first_name: string | null; last_name: string | null; email: string | null; city: string | null };
@@ -35,6 +36,7 @@ export function SendToInvestorsDialog({
   audience: Audience;
 }) {
   const navigate = useNavigate();
+  const base = usePanelBase();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
 
@@ -102,7 +104,7 @@ export function SendToInvestorsDialog({
       } catch {}
       toast.success(`Szablon gotowy dla ${draft.recipients.length} odbiorców`);
       onOpenChange(false);
-      navigate({ to: "/posrednik/skrzynka", search: { compose: 1 } as any });
+      navigate({ to: `${base}/skrzynka` as any, search: { compose: 1 } as any });
     },
     onError: (e: any) => toast.error(e?.message ?? "Nie udało się utworzyć draftu"),
   });

@@ -11,12 +11,14 @@ import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, UserCheck 
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/moje-leady")({
   component: MyBrokerLeads,
 });
 
 export function MyBrokerLeads() {
+  const base = usePanelBase();
   const fn = useServerFn(listLeads);
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
@@ -131,7 +133,7 @@ export function MyBrokerLeads() {
                       <Phone className="h-4 w-4" />
                     </a>
                   )}
-                  <Link to="/posrednik/leady/$id" params={{ id: r.id }}>
+                  <Link to={`${base}/leady/${r.id}` as any}>
                     <Button size="sm" className="bg-white/15 text-white border border-white/20 hover:bg-white/25">
                       Otwórz <ChevronRight className="ml-1 h-4 w-4" />
                     </Button>

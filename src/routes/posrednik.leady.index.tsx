@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { listLeads, logBrokerCall, addManualNote } from "@/lib/leads-admin.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { usePanelBase } from "@/lib/panel-base";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/posrednik/leady/")({
 });
 
 export function OperatorLeadsList() {
+  const base = usePanelBase();
   const fn = useServerFn(listLeads);
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
@@ -130,8 +132,7 @@ export function OperatorLeadsList() {
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
                   <Link
-                    to="/posrednik/leady/$id"
-                    params={{ id: r.id }}
+                    to={`${base}/leady/${r.id}` as any}
                     className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-indigo-500/25 text-indigo-50 px-2.5 py-1 text-xs font-medium border border-indigo-300/30 hover:bg-indigo-500/40 transition"
                   >
                     <FileText className="h-3.5 w-3.5" /> Podgląd treści: rozmowy voicebota, maile i SMS

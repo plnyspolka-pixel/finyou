@@ -16,6 +16,7 @@ import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
   validateSearch: (s: Record<string, unknown>) => ({ compose: s.compose ? 1 : undefined }),
@@ -37,6 +38,7 @@ type Msg = {
 };
 
 export function SkrzynkaPosrednika() {
+  const base = usePanelBase();
   const search = useSearch({ strict: false }) as { compose?: number };
   const navigate = useNavigate();
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
@@ -294,7 +296,7 @@ export function SkrzynkaPosrednika() {
                   )}
                   {selected.lead_id && (
                     <Button asChild variant="outline" size="sm" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
-                      <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
+                      <Link to={`${base}/leady/${selected.lead_id}` as any}>
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Otwórz lead
                       </Link>

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePanelBase } from "@/lib/panel-base";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
-  component: BrokerApplicationDetail,
+  component: () => <BrokerApplicationDetail />,
 });
 
 type Row = {
@@ -62,8 +63,9 @@ function SmartImg({ src, alt, className }: { src: string; alt?: string; classNam
   return <img src={src} alt={alt ?? ""} loading="lazy" className={className} onError={() => setBroken(true)} />;
 }
 
-export function BrokerApplicationDetail() {
-  const { id } = useParams({ from: "/posrednik/wnioski/$id" });
+export function BrokerApplicationDetail({ showInternalOffer = false }: { showInternalOffer?: boolean } = {}) {
+  const { id } = useParams({ strict: false }) as { id: string };
+  const base = usePanelBase();
   const [row, setRow] = useState<Row | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -139,7 +141,7 @@ export function BrokerApplicationDetail() {
   if (!row) {
     return (
       <div className="space-y-4">
-        <Button asChild variant="ghost" size="sm"><Link to="/posrednik/wnioski"><ArrowLeft className="mr-2 h-4 w-4" />Wróć</Link></Button>
+        <Button asChild variant="ghost" size="sm"><Link to={`${base}/wnioski` as any}><ArrowLeft className="mr-2 h-4 w-4" />Wróć</Link></Button>
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nie znaleziono wniosku.</CardContent></Card>
       </div>
     );
@@ -153,7 +155,7 @@ export function BrokerApplicationDetail() {
     <div className="space-y-6">
       <div>
         <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2">
-          <Link to="/posrednik/wnioski"><ArrowLeft className="mr-2 h-4 w-4" />Moje wnioski</Link>
+          <Link to={`${base}/wnioski` as any}><ArrowLeft className="mr-2 h-4 w-4" />Moje wnioski</Link>
         </Button>
         <FancyPageHeader
           eyebrow="Wniosek pożyczkowy"
@@ -211,13 +213,15 @@ export function BrokerApplicationDetail() {
             <h2 className="text-xl font-extrabold text-white md:text-2xl">Wyślij ofertę do inwestorów</h2>
             <p className="text-sm text-white/70 md:text-[15px]">
               Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
-              Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora.
+              {showInternalOffer && " Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora."}
             </p>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className={`grid gap-3 ${showInternalOffer ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
             <CtaButton onClick={() => setSendOpen("instytucjonalny")} tone="primary" icon={<Building2 className="h-6 w-6" />} title="Inwestorzy instytucjonalni" hint="Fundusze, spółki, partnerzy strategiczni" />
             <CtaButton onClick={() => setSendOpen("indywidualny")} tone="secondary" icon={<UserRound className="h-6 w-6" />} title="Inwestorzy prywatni" hint="Baza aktywnych inwestorów indywidualnych" />
-            <CtaButton onClick={() => setCalcOpen(true)} tone="ghost" icon={<Calculator className="h-6 w-6" />} title="Oferta wewnętrzna" hint="Kalkulator z Twoją prowizją operatora 2–5%" />
+            {showInternalOffer && (
+              <CtaButton onClick={() => setCalcOpen(true)} tone="ghost" icon={<Calculator className="h-6 w-6" />} title="Oferta wewnętrzna" hint="Kalkulator z Twoją prowizją operatora 2–5%" />
+            )}
           </div>
         </div>
         <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
@@ -308,28 +312,30 @@ export function BrokerApplicationDetail() {
         <SendToInvestorsDialog open={!!sendOpen} onOpenChange={(o) => !o && setSendOpen(null)} applicationId={row.id} audience={sendOpen} />
       )}
 
-      {/* Oferta wewnętrzna — dialog z kalkulatorem */}
-      <Dialog open={calcOpen} onOpenChange={setCalcOpen}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              Oferta wewnętrzna — {clientName}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="pt-2">
-            <LoanCalculator
-              investorGuidance
-              hideFinanceYouFee
-              internalOperatorMode
-              initialOnHand={row.loan_amount ? Number(row.loan_amount) : undefined}
-              initialMonths={row.preferred_period_months ?? undefined}
-              clientEmail={row.client?.email ?? null}
-              clientName={clientName}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Oferta wewnętrzna — dialog z kalkulatorem (tylko dla operatora) */}
+      {showInternalOffer && (
+        <Dialog open={calcOpen} onOpenChange={setCalcOpen}>
+          <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-primary" />
+                Oferta wewnętrzna — {clientName}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="pt-2">
+              <LoanCalculator
+                investorGuidance
+                hideFinanceYouFee
+                internalOperatorMode
+                initialOnHand={row.loan_amount ? Number(row.loan_amount) : undefined}
+                initialMonths={row.preferred_period_months ?? undefined}
+                clientEmail={row.client?.email ?? null}
+                clientName={clientName}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Lightbox */}
       <Dialog open={lightbox !== null} onOpenChange={(o) => !o && setLightbox(null)}>
