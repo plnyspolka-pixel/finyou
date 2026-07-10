@@ -69,7 +69,7 @@ export function OperatorLeadDetail() {
         </Card>
       )}
 
-      <LeadDetailView id={id} />
+      <LeadDetailView id={id} compact />
     </div>
   );
 }
