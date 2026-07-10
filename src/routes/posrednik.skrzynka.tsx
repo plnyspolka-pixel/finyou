@@ -16,6 +16,7 @@ import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 import { refetchInboundEmailBody } from "@/lib/inbox.functions";
 import { toast } from "sonner";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
   validateSearch: (s: Record<string, unknown>) => ({ compose: s.compose ? 1 : undefined }),
