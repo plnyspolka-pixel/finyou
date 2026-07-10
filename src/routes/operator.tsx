@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, UserCheck, FileText, FilePlus2, Mail, UserCircle, Receipt, MessageCircle } from "lucide-react";
+import { Users, UserCheck, FileText, FilePlus2, Mail, UserCircle, Receipt, MessageCircle, Sparkles } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
 export const Route = createFileRoute("/operator")({
@@ -12,6 +12,7 @@ const groups: NavGroup[] = [
       { to: "/operator/leady", label: "Leady (wszystkie)", icon: Users },
       { to: "/operator/moje-leady", label: "Moje leady", icon: UserCheck },
       { to: "/operator/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
+      { to: "/operator/kreator-udzielenia", label: "Kreator pożyczki (AI)", icon: Sparkles },
       { to: "/operator/wnioski", label: "Moje wnioski", icon: FileText },
       { to: "/operator/faktury", label: "Wystaw fakturę", icon: Receipt },
       { to: "/operator/skrzynka", label: "Skrzynka mailowa", icon: Mail },
