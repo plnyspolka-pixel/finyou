@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, UserCheck } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, UserCheck, MessageCircle } from "lucide-react";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
+import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { usePanelBase } from "@/lib/panel-base";
 
