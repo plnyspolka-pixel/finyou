@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Download, RefreshCw, ExternalLink, FileText, ShoppingCart, Building2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Download, RefreshCw, ExternalLink, FileText, ShoppingCart, Building2, AlertTriangle, CheckCircle2, FileCode2, Archive } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
-import { listAccountingDocuments, getAccountingSyncStatus, exportAccountingDocumentsCsv } from "@/lib/accounting/documents.functions";
+import { listAccountingDocuments, getAccountingSyncStatus, exportAccountingDocumentsCsv, getAccountingDocumentXml, exportAccountingXmlZip } from "@/lib/accounting/documents.functions";
 import { listAccountingEntities } from "@/lib/accounting/functions";
 import { syncKsef } from "@/lib/accounting/sync-ksef.functions";
 
@@ -25,6 +25,8 @@ function KsiegowoscDokumenty() {
   const entitiesFn = useServerFn(listAccountingEntities);
   const statusFn = useServerFn(getAccountingSyncStatus);
   const exportFn = useServerFn(exportAccountingDocumentsCsv);
+  const xmlFn = useServerFn(getAccountingDocumentXml);
+  const zipFn = useServerFn(exportAccountingXmlZip);
   const syncKsefFn = useServerFn(syncKsef);
 
   const [direction, setDirection] = useState<"all" | "sales" | "purchase">("all");
@@ -82,6 +84,34 @@ function KsiegowoscDokumenty() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadXml = async (id: string) => {
+    try {
+      const r = await xmlFn({ data: { id } });
+      const blob = new Blob([r.xml], { type: "application/xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
+  const downloadXmlZip = async () => {
+    try {
+      toast.info("Przygotowuję paczkę XML…");
+      const r = await zipFn({ data: {
+        direction: direction === "all" ? undefined : direction,
+        entityId: entityId === "all" ? undefined : entityId,
+      }});
+      const bin = atob(r.base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Pobrano ${r.count} XML (${Math.round(r.byteSize / 1024)} KB)${r.skipped ? `, pominięto ${r.skipped} (limit rozmiaru)` : ""}.`);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
   const entities = (entitiesQ.data as any[]) ?? [];
   const docs = (docsQ.data as any[]) ?? [];
   const statuses = (statusQ.data as any[]) ?? [];
@@ -95,6 +125,7 @@ function KsiegowoscDokumenty() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadCsv}><Download className="h-4 w-4 mr-1" /> Eksport CSV</Button>
+          <Button variant="outline" onClick={downloadXmlZip}><Archive className="h-4 w-4 mr-1" /> Eksport XML (ZIP)</Button>
           <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
             <RefreshCw className={`h-4 w-4 mr-1 ${syncMut.isPending ? "animate-spin" : ""}`} />
             {syncMut.isPending ? "Synchronizuję…" : "Synchronizuj KSeF"}
@@ -212,7 +243,12 @@ function KsiegowoscDokumenty() {
                       <td className="p-2 text-right whitespace-nowrap">{formatPLN(d.vat_amount)}</td>
                       <td className="p-2 text-right whitespace-nowrap font-medium">{formatPLN(d.gross_amount)}</td>
                       <td className="p-2"><Badge variant="secondary" className="capitalize">{d.source}</Badge></td>
-                      <td className="p-2">{d.pdf_url && (<a href={d.pdf_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><ExternalLink className="h-3 w-3" /> PDF</a>)}</td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-2">
+                          {d.pdf_url && (<a href={d.pdf_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><ExternalLink className="h-3 w-3" /> PDF</a>)}
+                          {d.has_xml && (<button type="button" onClick={() => downloadXml(d.id)} className="inline-flex items-center gap-1 text-emerald-700 hover:underline text-xs"><FileCode2 className="h-3 w-3" /> XML</button>)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
