@@ -120,7 +120,7 @@ export function MojeWnioski() {
         subtitle="Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
         actions={
           <Button asChild>
-            <Link to="/posrednik/wniosek"><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
+            <Link to={`${base}/wniosek` as any}><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
           </Button>
         }
       />
