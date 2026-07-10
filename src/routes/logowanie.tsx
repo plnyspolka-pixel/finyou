@@ -12,7 +12,7 @@ import { z } from "zod";
 const searchSchema = z.object({
   claim: z.string().optional(),
   next: z.string().optional(),
-  role: z.enum(["klient", "inwestor", "posrednik"]).optional(),
+  role: z.enum(["klient", "inwestor", "posrednik", "operator"]).optional(),
 });
 
 export const Route = createFileRoute("/logowanie")({
@@ -51,7 +51,13 @@ function LoginPage() {
   }
 
   const roleTarget =
-    role === "inwestor" ? "/inwestor" : role === "posrednik" ? "/posrednik" : "/klient";
+    role === "inwestor"
+      ? "/inwestor"
+      : role === "operator"
+      ? "/admin"
+      : role === "posrednik"
+      ? "/posrednik"
+      : "/klient";
   const target = next && next.startsWith("/") ? next : roleTarget;
 
 

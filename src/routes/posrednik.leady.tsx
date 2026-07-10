@@ -22,7 +22,7 @@ export const Route = createFileRoute("/posrednik/leady")({
   component: OperatorLeadsList,
 });
 
-function OperatorLeadsList() {
+export function OperatorLeadsList() {
   const fn = useServerFn(listLeads);
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");

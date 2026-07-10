@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -36,9 +36,9 @@ type Msg = {
   thread_external_id: string | null;
 };
 
-function SkrzynkaPosrednika() {
-  const search = Route.useSearch();
-  const navigate = Route.useNavigate();
+export function SkrzynkaPosrednika() {
+  const search = useSearch({ strict: false }) as { compose?: number };
+  const navigate = useNavigate();
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);

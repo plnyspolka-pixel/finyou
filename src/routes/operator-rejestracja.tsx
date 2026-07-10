@@ -15,7 +15,7 @@ const searchSchema = z.object({
   welcome: z.coerce.number().optional(),
 });
 
-export const Route = createFileRoute("/operator/rejestracja")({
+export const Route = createFileRoute("/operator-rejestracja")({
   validateSearch: (s) => searchSchema.parse(s),
   head: () => ({
     meta: [
@@ -32,7 +32,7 @@ type InviteStatus =
   | { state: "valid"; email: string | null; expiresAt: string };
 
 function OperatorRegisterPage() {
-  const { token, welcome } = useSearch({ from: "/operator/rejestracja" });
+  const { token, welcome } = useSearch({ from: "/operator-rejestracja" });
   const navigate = useNavigate();
   const { user, refreshRoles } = useAuth();
   const [status, setStatus] = useState<InviteStatus>({ state: "loading" });
@@ -43,7 +43,6 @@ function OperatorRegisterPage() {
   const [sent, setSent] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
 
-  // 1. Walidacja tokenu
   useEffect(() => {
     if (!token) {
       setStatus({ state: "invalid", reason: "Brakuje tokenu zaproszenia w linku." });
@@ -73,7 +72,6 @@ function OperatorRegisterPage() {
     })();
   }, [token, email]);
 
-  // 2. Po powrocie z magic linka (welcome=1) i istniejącej sesji — wykorzystaj token
   useEffect(() => {
     if (!token || !user || status.state !== "valid" || redeeming) return;
     if (!welcome) return;
@@ -90,7 +88,7 @@ function OperatorRegisterPage() {
         window.localStorage.removeItem("pending_role_selection");
       } catch {}
       toast.success("Konto operatora aktywne");
-      navigate({ to: "/posrednik/leady" });
+      navigate({ to: "/operator/leady" });
     })();
   }, [user, token, welcome, status, redeeming, refreshRoles, navigate]);
 
@@ -101,7 +99,7 @@ function OperatorRegisterPage() {
       return;
     }
     setSending(true);
-    const redirectUrl = `${window.location.origin}/operator/rejestracja?token=${token}&welcome=1`;
+    const redirectUrl = `${window.location.origin}/operator-rejestracja?token=${token}&welcome=1`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
@@ -110,7 +108,7 @@ function OperatorRegisterPage() {
         data: {
           first_name: firstName,
           last_name: lastName,
-          signup_role: "klient", // otrzyma operator przez redeem
+          signup_role: "klient",
         },
       },
     });
@@ -197,7 +195,7 @@ function OperatorRegisterPage() {
                 Masz już konto?{" "}
                 <Link
                   to="/logowanie"
-                  search={{ next: `/operator/rejestracja?token=${token}&welcome=1` } as never}
+                  search={{ next: `/operator-rejestracja?token=${token}&welcome=1` } as never}
                   className="font-medium text-accent hover:underline"
                 >
                   Zaloguj się
@@ -233,7 +231,7 @@ function OperatorRegisterPage() {
                   }
                   await refreshRoles();
                   toast.success("Konto operatora aktywne");
-                  navigate({ to: "/posrednik/leady" });
+                  navigate({ to: "/operator/leady" });
                 }}
               >
                 Aktywuj konto operatora

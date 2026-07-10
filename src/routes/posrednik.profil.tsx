@@ -32,7 +32,7 @@ const EMPTY: ProfileForm = {
   avatar_url: null,
 };
 
-function BrokerProfile() {
+export function BrokerProfile() {
   const { user, loading: authLoading } = useAuth();
   const [form, setForm] = useState<ProfileForm>(EMPTY);
   const [loading, setLoading] = useState(true);

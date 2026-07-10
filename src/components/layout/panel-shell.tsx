@@ -34,9 +34,17 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      const role = allow?.includes("inwestor")
+      // Efekt potrafi odpalić się jeszcze raz, gdy jesteśmy już w drodze na /logowanie —
+      // nie nadpisuj wtedy `next` adresem /logowanie, bo po zalogowaniu użytkownik (np. recenzent
+      // Meta) wróciłby na ekran logowania zamiast na docelową stronę panelu.
+      if (pathname === "/logowanie") return;
+      // Rolę wyliczamy ze ścieżki panelu (jednoznacznie), a nie z `allow` — panel admina zawiera
+      // rolę "operator", przez co wcześniej logowanie prowadziło do /posrednik zamiast /admin.
+      const role = pathname.startsWith("/inwestor")
         ? "inwestor"
-        : allow?.includes("operator")
+        : pathname.startsWith("/admin")
+        ? "operator"
+        : pathname.startsWith("/posrednik")
         ? "posrednik"
         : "klient";
       void navigate({ to: "/logowanie", search: { role, next: pathname } as never });

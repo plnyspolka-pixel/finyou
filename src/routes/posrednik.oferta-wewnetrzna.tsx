@@ -6,7 +6,7 @@ export const Route = createFileRoute("/posrednik/oferta-wewnetrzna")({
   component: OfertaWewnetrzna,
 });
 
-function OfertaWewnetrzna() {
+export function OfertaWewnetrzna() {
   return (
     <div className="space-y-6 max-w-5xl">
       <FancyPageHeader

@@ -16,6 +16,7 @@ import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
@@ -31,6 +32,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
 import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
+import { Route as OperatorIndexRouteImport } from './routes/operator.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
@@ -50,7 +52,12 @@ import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
-import { Route as OperatorRejestracjaRouteImport } from './routes/operator.rejestracja'
+import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
+import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
+import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
+import { Route as OperatorOfertaWewnetrznaRouteImport } from './routes/operator.oferta-wewnetrzna'
+import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
+import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -105,11 +112,14 @@ import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-admi
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as PosrednikWnioskiIndexRouteImport } from './routes/posrednik.wnioski.index'
+import { Route as OperatorWnioskiIndexRouteImport } from './routes/operator.wnioski.index'
 import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.windykacja.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
+import { Route as OperatorWnioskiIdRouteImport } from './routes/operator.wnioski.$id'
+import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
@@ -207,6 +217,11 @@ const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   path: '/polityka-prywatnosci',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
+  id: '/operator-rejestracja',
+  path: '/operator-rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OperatorRoute = OperatorRouteImport.update({
   id: '/operator',
   path: '/operator',
@@ -281,6 +296,11 @@ const PosrednicyIndexRoute = PosrednicyIndexRouteImport.update({
   id: '/posrednicy/',
   path: '/posrednicy/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorIndexRoute = OperatorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OperatorRoute,
 } as any)
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
@@ -378,9 +398,35 @@ const PosrednicyRejestracjaRoute = PosrednicyRejestracjaRouteImport.update({
   path: '/posrednicy/rejestracja',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
-  id: '/rejestracja',
-  path: '/rejestracja',
+const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
+  id: '/wniosek',
+  path: '/wniosek',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorSkrzynkaRoute = OperatorSkrzynkaRouteImport.update({
+  id: '/skrzynka',
+  path: '/skrzynka',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorProfilRoute = OperatorProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorOfertaWewnetrznaRoute =
+  OperatorOfertaWewnetrznaRouteImport.update({
+    id: '/oferta-wewnetrzna',
+    path: '/oferta-wewnetrzna',
+    getParentRoute: () => OperatorRoute,
+  } as any)
+const OperatorMojeLeadyRoute = OperatorMojeLeadyRouteImport.update({
+  id: '/moje-leady',
+  path: '/moje-leady',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
+  id: '/leady',
+  path: '/leady',
   getParentRoute: () => OperatorRoute,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
@@ -657,6 +703,11 @@ const PosrednikWnioskiIndexRoute = PosrednikWnioskiIndexRouteImport.update({
   path: '/wnioski/',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const OperatorWnioskiIndexRoute = OperatorWnioskiIndexRouteImport.update({
+  id: '/wnioski/',
+  path: '/wnioski/',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -682,6 +733,16 @@ const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => PosrednikLeadyRoute,
+} as any)
+const OperatorWnioskiIdRoute = OperatorWnioskiIdRouteImport.update({
+  id: '/wnioski/$id',
+  path: '/wnioski/$id',
+  getParentRoute: () => OperatorRoute,
+} as any)
+const OperatorLeadyIdRoute = OperatorLeadyIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => OperatorLeadyRoute,
 } as any)
 const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   id: '/wniosek/$id',
@@ -1041,6 +1102,7 @@ export interface FileRoutesByFullPath {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
+  '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1101,7 +1163,12 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/rejestracja': typeof OperatorRejestracjaRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
+  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/oferta-wewnetrzna': typeof OperatorOfertaWewnetrznaRoute
+  '/operator/profil': typeof OperatorProfilRoute
+  '/operator/skrzynka': typeof OperatorSkrzynkaRoute
+  '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1121,6 +1188,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/operator/': typeof OperatorIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
@@ -1160,11 +1228,14 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
+  '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
@@ -1201,7 +1272,7 @@ export interface FileRoutesByTo {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRouteWithChildren
+  '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -1260,7 +1331,12 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/rejestracja': typeof OperatorRejestracjaRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
+  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/oferta-wewnetrzna': typeof OperatorOfertaWewnetrznaRoute
+  '/operator/profil': typeof OperatorProfilRoute
+  '/operator/skrzynka': typeof OperatorSkrzynkaRoute
+  '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1280,6 +1356,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/operator': typeof OperatorIndexRoute
   '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
@@ -1319,11 +1396,14 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaIndexRoute
+  '/operator/wnioski': typeof OperatorWnioskiIndexRoute
   '/posrednik/wnioski': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
@@ -1365,6 +1445,7 @@ export interface FileRoutesById {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
+  '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1425,7 +1506,12 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/rejestracja': typeof OperatorRejestracjaRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
+  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/oferta-wewnetrzna': typeof OperatorOfertaWewnetrznaRoute
+  '/operator/profil': typeof OperatorProfilRoute
+  '/operator/skrzynka': typeof OperatorSkrzynkaRoute
+  '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1445,6 +1531,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/operator/': typeof OperatorIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
@@ -1484,11 +1571,14 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
+  '/operator/wnioski/$id': typeof OperatorWnioskiIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
+  '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
@@ -1531,6 +1621,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator'
+    | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1591,7 +1682,12 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
-    | '/operator/rejestracja'
+    | '/operator/leady'
+    | '/operator/moje-leady'
+    | '/operator/oferta-wewnetrzna'
+    | '/operator/profil'
+    | '/operator/skrzynka'
+    | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1611,6 +1707,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/operator/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
@@ -1650,11 +1747,14 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
+    | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/windykacja/'
+    | '/operator/wnioski/'
     | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
@@ -1691,7 +1791,7 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
-    | '/operator'
+    | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1750,7 +1850,12 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
-    | '/operator/rejestracja'
+    | '/operator/leady'
+    | '/operator/moje-leady'
+    | '/operator/oferta-wewnetrzna'
+    | '/operator/profil'
+    | '/operator/skrzynka'
+    | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1770,6 +1875,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/inwestor'
     | '/klient'
+    | '/operator'
     | '/posrednicy'
     | '/posrednik'
     | '/propozycje'
@@ -1809,11 +1915,14 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
+    | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc'
     | '/admin/program-posrednikow'
     | '/inwestor/windykacja'
+    | '/operator/wnioski'
     | '/posrednik/wnioski'
     | '/api/public/email/click'
     | '/api/public/email/open'
@@ -1854,6 +1963,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator'
+    | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1914,7 +2024,12 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
-    | '/operator/rejestracja'
+    | '/operator/leady'
+    | '/operator/moje-leady'
+    | '/operator/oferta-wewnetrzna'
+    | '/operator/profil'
+    | '/operator/skrzynka'
+    | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1934,6 +2049,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/operator/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
@@ -1973,11 +2089,14 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
+    | '/operator/wnioski/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/windykacja/'
+    | '/operator/wnioski/'
     | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
@@ -2019,6 +2138,7 @@ export interface RootRouteChildren {
   NoweHasloRoute: typeof NoweHasloRoute
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
+  OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RegulaminRoute: typeof RegulaminRoute
@@ -2129,6 +2249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/operator-rejestracja': {
+      id: '/operator-rejestracja'
+      path: '/operator-rejestracja'
+      fullPath: '/operator-rejestracja'
+      preLoaderRoute: typeof OperatorRejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/operator': {
       id: '/operator'
       path: '/operator'
@@ -2233,6 +2360,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednicy/'
       preLoaderRoute: typeof PosrednicyIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/': {
+      id: '/operator/'
+      path: '/'
+      fullPath: '/operator/'
+      preLoaderRoute: typeof OperatorIndexRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/klient/': {
       id: '/klient/'
@@ -2367,11 +2501,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednicyRejestracjaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/operator/rejestracja': {
-      id: '/operator/rejestracja'
-      path: '/rejestracja'
-      fullPath: '/operator/rejestracja'
-      preLoaderRoute: typeof OperatorRejestracjaRouteImport
+    '/operator/wniosek': {
+      id: '/operator/wniosek'
+      path: '/wniosek'
+      fullPath: '/operator/wniosek'
+      preLoaderRoute: typeof OperatorWniosekRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/skrzynka': {
+      id: '/operator/skrzynka'
+      path: '/skrzynka'
+      fullPath: '/operator/skrzynka'
+      preLoaderRoute: typeof OperatorSkrzynkaRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/profil': {
+      id: '/operator/profil'
+      path: '/profil'
+      fullPath: '/operator/profil'
+      preLoaderRoute: typeof OperatorProfilRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/oferta-wewnetrzna': {
+      id: '/operator/oferta-wewnetrzna'
+      path: '/oferta-wewnetrzna'
+      fullPath: '/operator/oferta-wewnetrzna'
+      preLoaderRoute: typeof OperatorOfertaWewnetrznaRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/moje-leady': {
+      id: '/operator/moje-leady'
+      path: '/moje-leady'
+      fullPath: '/operator/moje-leady'
+      preLoaderRoute: typeof OperatorMojeLeadyRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/leady': {
+      id: '/operator/leady'
+      path: '/leady'
+      fullPath: '/operator/leady'
+      preLoaderRoute: typeof OperatorLeadyRouteImport
       parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
@@ -2752,6 +2921,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikWnioskiIndexRouteImport
       parentRoute: typeof PosrednikRoute
     }
+    '/operator/wnioski/': {
+      id: '/operator/wnioski/'
+      path: '/wnioski'
+      fullPath: '/operator/wnioski/'
+      preLoaderRoute: typeof OperatorWnioskiIndexRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/inwestor/windykacja/': {
       id: '/inwestor/windykacja/'
       path: '/'
@@ -2786,6 +2962,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednik/leady/$id'
       preLoaderRoute: typeof PosrednikLeadyIdRouteImport
       parentRoute: typeof PosrednikLeadyRoute
+    }
+    '/operator/wnioski/$id': {
+      id: '/operator/wnioski/$id'
+      path: '/wnioski/$id'
+      fullPath: '/operator/wnioski/$id'
+      preLoaderRoute: typeof OperatorWnioskiIdRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/leady/$id': {
+      id: '/operator/leady/$id'
+      path: '/$id'
+      fullPath: '/operator/leady/$id'
+      preLoaderRoute: typeof OperatorLeadyIdRouteImport
+      parentRoute: typeof OperatorLeadyRoute
     }
     '/inwestor/wniosek/$id': {
       id: '/inwestor/wniosek/$id'
@@ -3441,12 +3631,40 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
+interface OperatorLeadyRouteChildren {
+  OperatorLeadyIdRoute: typeof OperatorLeadyIdRoute
+}
+
+const OperatorLeadyRouteChildren: OperatorLeadyRouteChildren = {
+  OperatorLeadyIdRoute: OperatorLeadyIdRoute,
+}
+
+const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
+  OperatorLeadyRouteChildren,
+)
+
 interface OperatorRouteChildren {
-  OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
+  OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
+  OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
+  OperatorOfertaWewnetrznaRoute: typeof OperatorOfertaWewnetrznaRoute
+  OperatorProfilRoute: typeof OperatorProfilRoute
+  OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
+  OperatorWniosekRoute: typeof OperatorWniosekRoute
+  OperatorIndexRoute: typeof OperatorIndexRoute
+  OperatorWnioskiIdRoute: typeof OperatorWnioskiIdRoute
+  OperatorWnioskiIndexRoute: typeof OperatorWnioskiIndexRoute
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
-  OperatorRejestracjaRoute: OperatorRejestracjaRoute,
+  OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
+  OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
+  OperatorOfertaWewnetrznaRoute: OperatorOfertaWewnetrznaRoute,
+  OperatorProfilRoute: OperatorProfilRoute,
+  OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
+  OperatorWniosekRoute: OperatorWniosekRoute,
+  OperatorIndexRoute: OperatorIndexRoute,
+  OperatorWnioskiIdRoute: OperatorWnioskiIdRoute,
+  OperatorWnioskiIndexRoute: OperatorWnioskiIndexRoute,
 }
 
 const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
@@ -3516,6 +3734,7 @@ const rootRouteChildren: RootRouteChildren = {
   NoweHasloRoute: NoweHasloRoute,
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
+  OperatorRejestracjaRoute: OperatorRejestracjaRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RegulaminRoute: RegulaminRoute,
