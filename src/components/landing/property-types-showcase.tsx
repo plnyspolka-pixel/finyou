@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { ChevronDown, FileText, Sparkles, Building2, Home, Store, Trees, Map, type LucideIcon } from "lucide-react";
+import { ChevronDown, FileText, Sparkles } from "lucide-react";
 import { BlurFade } from "@/components/ui/blur-fade";
+import apartmentAsset from "@/assets/property-icons/apartment.png.asset.json";
+import houseAsset from "@/assets/property-icons/house.png.asset.json";
+import shopAsset from "@/assets/property-icons/shop.png.asset.json";
+import pinAsset from "@/assets/property-icons/pin.png.asset.json";
+import landAsset from "@/assets/property-icons/land.png.asset.json";
 
 type PropType = {
   key: string;
   title: string;
-  Icon: LucideIcon;
+  img: string;
   docs: string[];
 };
 
@@ -13,7 +18,7 @@ const TYPES: PropType[] = [
   {
     key: "mieszkanie",
     title: "Mieszkanie",
-    Icon: Building2,
+    img: apartmentAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia każdego pomieszczenia",
@@ -23,7 +28,7 @@ const TYPES: PropType[] = [
   {
     key: "dom",
     title: "Dom / dom w budowie",
-    Icon: Home,
+    img: houseAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia z zewnątrz całego budynku",
@@ -34,7 +39,7 @@ const TYPES: PropType[] = [
   {
     key: "lokal",
     title: "Lokal użytkowy / usługowy",
-    Icon: Store,
+    img: shopAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia każdego pomieszczenia",
@@ -45,7 +50,7 @@ const TYPES: PropType[] = [
   {
     key: "rolna",
     title: "Grunt rolny",
-    Icon: Trees,
+    img: landAsset.url,
     docs: [
       "Wypis z rejestru gruntów",
       "Numer księgi wieczystej (jeżeli nie ma go na wypisie)",
@@ -54,7 +59,7 @@ const TYPES: PropType[] = [
   {
     key: "budowlana",
     title: "Działka budowlana",
-    Icon: Map,
+    img: pinAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "MPZP albo warunki zabudowy",
