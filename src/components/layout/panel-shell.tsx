@@ -162,7 +162,7 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
             {title}
           </div>
         </header>
-        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main text-white" : ""}`}>
+        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main dark text-foreground" : ""}`}>
           {fancy && (
             <>
               <span
@@ -193,42 +193,23 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
                 @keyframes fy-panel-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(40px,24px) scale(1.15); } }
                 @keyframes fy-panel-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-44px,20px) scale(1.1); } }
 
-                /* Legibility: every heading gets a solid dark halo so it never washes out on aurora */
-                .fy-fancy-main h1, .fy-fancy-main h2, .fy-fancy-main h3 {
-                  color: rgb(248 250 252) !important;
-                  text-shadow: 0 1px 2px rgba(0,0,0,0.55), 0 2px 12px rgba(0,0,0,0.45);
+                /*
+                 * Legibility strategy: the whole panel runs on the app's real \`.dark\` design
+                 * tokens (set on <main>), so every shadcn primitive — Card, Table, Tabs, Input,
+                 * Select, Badge, Dialog — becomes dark-legible automatically, with proper
+                 * contrast, and no per-class \`!important\` whack-a-mole. Below is only the
+                 * premium polish that the tokens can't express on their own.
+                 */
+
+                /* Headings pop cleanly over the drifting aurora. */
+                .fy-fancy-main :is(h1, h2, h3) { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+
+                /* shadcn cards read as frosted glass floating on the aurora. */
+                .fy-fancy-main .bg-card {
+                  background-color: color-mix(in oklab, var(--card) 82%, transparent);
+                  -webkit-backdrop-filter: blur(12px);
+                  backdrop-filter: blur(12px);
                 }
-
-                /* Glassmorphism override for shadcn primitives inside fancy panel — dark glass for legibility */
-                .fy-fancy-main .bg-card { background-color: rgba(15, 23, 42, 0.78) !important; backdrop-filter: blur(12px); border-color: rgba(255,255,255,0.10) !important; }
-                .fy-fancy-main .text-card-foreground { color: rgb(248 250 252) !important; }
-                .fy-fancy-main .bg-background { background-color: rgba(15, 23, 42, 0.70) !important; }
-                .fy-fancy-main .bg-popover { background-color: rgb(15 23 42) !important; color: rgb(248 250 252) !important; }
-                .fy-fancy-main .bg-muted, .fy-fancy-main .bg-muted\\/40, .fy-fancy-main .bg-muted\\/50, .fy-fancy-main .bg-muted\\/30 { background-color: rgba(255,255,255,0.10) !important; }
-                .fy-fancy-main .bg-primary\\/5 { background-color: rgba(255,255,255,0.06) !important; }
-                .fy-fancy-main .border-primary\\/20, .fy-fancy-main .border-primary\\/40 { border-color: rgba(255,255,255,0.18) !important; }
-                .fy-fancy-main .text-muted-foreground { color: rgb(226 232 240 / 0.82) !important; }
-                .fy-fancy-main .text-foreground { color: rgb(248 250 252) !important; }
-                .fy-fancy-main .text-foreground\\/90, .fy-fancy-main .text-foreground\\/70 { color: rgb(248 250 252 / 0.90) !important; }
-                .fy-fancy-main .border, .fy-fancy-main .border-t, .fy-fancy-main .border-b, .fy-fancy-main .border-l, .fy-fancy-main .border-r { border-color: rgba(255,255,255,0.14) !important; }
-                .fy-fancy-main input:not([type=checkbox]):not([type=radio]),
-                .fy-fancy-main textarea,
-                .fy-fancy-main [role=combobox] {
-                  background-color: rgba(15,23,42,0.75) !important;
-                  color: rgb(248 250 252) !important;
-                  border-color: rgba(255,255,255,0.25) !important;
-                }
-                .fy-fancy-main input::placeholder, .fy-fancy-main textarea::placeholder { color: rgba(226,232,240,0.70) !important; }
-                .fy-fancy-main code, .fy-fancy-main pre { background-color: rgba(0,0,0,0.40) !important; color: rgb(248 250 252 / 0.92) !important; }
-                .fy-fancy-main a { color: rgb(147 197 253); }
-
-                /* Tabs: solid dark chip so labels remain legible over aurora */
-                .fy-fancy-main [role=tablist] { background-color: rgba(15,23,42,0.85) !important; border: 1px solid rgba(255,255,255,0.14) !important; }
-                .fy-fancy-main [role=tab] { color: rgb(226 232 240 / 0.80) !important; }
-                .fy-fancy-main [role=tab][data-state=active] { background-color: rgb(30 41 59) !important; color: rgb(248 250 252) !important; box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset; }
-
-                /* Preserve intentionally colored buttons/badges — don't wash them out */
-                .fy-fancy-main .bg-green-600, .fy-fancy-main .bg-emerald-600, .fy-fancy-main .bg-red-600, .fy-fancy-main .bg-blue-600, .fy-fancy-main .bg-amber-500, .fy-fancy-main .bg-gray-500 { color: white !important; }
               `}</style>
             </>
           )}
