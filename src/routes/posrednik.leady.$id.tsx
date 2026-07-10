@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Phone, MessageSquare, Mail, FileText } from "lucide-react";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { getLead } from "@/lib/leads-admin.functions";
+import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/leady/$id")({
   component: OperatorLeadDetail,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/posrednik/leady/$id")({
 
 export function OperatorLeadDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
+  const base = usePanelBase();
   const fn = useServerFn(getLead);
   const q = useQuery({ queryKey: ["operator-lead-quickactions", id], queryFn: () => fn({ data: { id } }) });
   const lead = (q.data as any)?.lead;
