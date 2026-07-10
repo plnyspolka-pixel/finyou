@@ -246,16 +246,22 @@ export const getLead = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!lead) throw new Error("Lead nie istnieje");
 
-    const { data: comms } = await context.supabase
+    // Treść komunikacji (transkrypcje voicebota, maile, SMS) czytamy SERVICE-ROLEM
+    // (endpoint jest za assertAdmin), żeby pośrednik/operator widział pełny podgląd
+    // niezależnie od RLS swojej sesji. Dopasowanie po lead_id + telefonie + mailu leada.
+    const orParts: string[] = [`lead_id.eq.${data.id}`];
+    if ((lead as any).phone_normalized) orParts.push(`phone_normalized.eq.${(lead as any).phone_normalized}`);
+    if ((lead as any).email) orParts.push(`email.ilike.${(lead as any).email}`);
+    const { data: comms } = await supabaseAdmin
       .from("lead_communications")
       .select("*")
-      .eq("lead_id", data.id)
+      .or(orParts.join(","))
       .order("created_at", { ascending: false });
 
     const commAuthorIds = Array.from(new Set(((comms ?? []) as any[]).map((c) => c.created_by).filter(Boolean))) as string[];
     const commAuthorNames: Record<string, string> = {};
     if (commAuthorIds.length) {
-      const { data: profs } = await context.supabase
+      const { data: profs } = await supabaseAdmin
         .from("profiles").select("user_id, first_name, last_name, email").in("user_id", commAuthorIds);
       for (const p of (profs ?? []) as any[]) {
         commAuthorNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";

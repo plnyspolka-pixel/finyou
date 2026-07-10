@@ -129,6 +129,14 @@ function OperatorLeadsList() {
                     <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
                   </div>
+                  <Link
+                    to="/posrednik/leady/$id"
+                    params={{ id: r.id }}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-indigo-500/25 text-indigo-50 px-2.5 py-1 text-xs font-medium border border-indigo-300/30 hover:bg-indigo-500/40 transition"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Podgląd treści: rozmowy voicebota, maile i SMS
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
                   <div className="text-[11px] mt-1 flex gap-3 text-emerald-300">
                     <span className="inline-flex items-center gap-1" title="Połączenia przychodzące z numeru leada">
                       <Phone className="h-3 w-3" /> ← {r.comms.inboundCalls ?? 0}

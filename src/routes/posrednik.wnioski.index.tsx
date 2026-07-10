@@ -115,7 +115,7 @@ function MojeWnioski() {
       <FancyPageHeader
         eyebrow="Szukamy inwestora"
         title="Wnioski szukające inwestora"
-        subtitle="Wszystkie kompletne wnioski ze statusem „szukamy inwestora" — gotowe do przedstawienia inwestorom."
+        subtitle="Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
         actions={
           <Button asChild>
             <Link to="/posrednik/wniosek"><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
