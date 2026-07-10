@@ -16,6 +16,7 @@ import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as NegocjujRouteImport } from './routes/negocjuj'
@@ -202,6 +203,11 @@ const PosrednikRoute = PosrednikRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorRoute = OperatorRouteImport.update({
+  id: '/operator',
+  path: '/operator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OfertyRoute = OfertyRouteImport.update({
@@ -1022,6 +1028,7 @@ export interface FileRoutesByFullPath {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
+  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1180,6 +1187,7 @@ export interface FileRoutesByTo {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
+  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -1340,6 +1348,7 @@ export interface FileRoutesById {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
+  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1503,6 +1512,7 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1661,6 +1671,7 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1820,6 +1831,7 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
+    | '/operator'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1982,6 +1994,7 @@ export interface RootRouteChildren {
   NegocjujRoute: typeof NegocjujRoute
   NoweHasloRoute: typeof NoweHasloRoute
   OfertyRoute: typeof OfertyRoute
+  OperatorRoute: typeof OperatorRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RegulaminRoute: typeof RegulaminRoute
@@ -2090,6 +2103,13 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operator': {
+      id: '/operator'
+      path: '/operator'
+      fullPath: '/operator'
+      preLoaderRoute: typeof OperatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oferty': {
@@ -3443,6 +3463,7 @@ const rootRouteChildren: RootRouteChildren = {
   NegocjujRoute: NegocjujRoute,
   NoweHasloRoute: NoweHasloRoute,
   OfertyRoute: OfertyRoute,
+  OperatorRoute: OperatorRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RegulaminRoute: RegulaminRoute,
