@@ -326,7 +326,8 @@ export function LandingWizardForm() {
             />
           </div>
         </div>
-      </FancyShell>
+      </div>
+
 
       {/* Step 1: Typ nieruchomości + miejscowość */}
       {step === 1 && (
