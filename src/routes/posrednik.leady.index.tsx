@@ -101,10 +101,10 @@ export function OperatorLeadsList() {
             return (
               <div
                 key={r.id}
-                className="group relative overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] backdrop-blur-sm p-3 sm:p-4 flex items-center gap-3 transition hover:bg-white/[0.10] hover:border-white/30"
+                className="group relative overflow-hidden rounded-xl border border-white/15 bg-white/[0.06] backdrop-blur-sm p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start gap-3 transition hover:bg-white/[0.10] hover:border-white/30"
               >
                 <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-400 via-sky-400 to-emerald-400 opacity-80" />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 w-full">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-semibold truncate text-white">{name}</div>
                     <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">{leadStatusLabels[r.status] ?? r.status}</Badge>
@@ -123,14 +123,14 @@ export function OperatorLeadsList() {
                       periodMonths={r.loan.preferred_period_months}
                     />
                   )}
-                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-x-3 gap-y-1 min-w-0">
                     {r.email && (
                       <a
                         href={`mailto:${r.email}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 hover:text-white underline-offset-2 hover:underline"
+                        className="inline-flex items-center gap-1 hover:text-white underline-offset-2 hover:underline max-w-full break-all"
                       >
-                        <Mail className="h-3 w-3" /> {r.email}
+                        <Mail className="h-3 w-3 shrink-0" /> <span className="break-all">{r.email}</span>
                       </a>
                     )}
                     {phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</span>}
@@ -139,7 +139,7 @@ export function OperatorLeadsList() {
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms.lastAt && <span>· ostatni kontakt {formatRelative(r.comms.lastAt)}</span>}
                   </div>
-                  <div className="text-xs text-white/70 mt-1 flex gap-3">
+                  <div className="text-xs text-white/70 mt-1 flex flex-wrap gap-3">
                     <span className="inline-flex items-center gap-1" title="Telefony (razem)"><Phone className="h-3 w-3" /> {r.comms.calls}</span>
                     <span className="inline-flex items-center gap-1" title="SMS (razem)"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
                     <span className="inline-flex items-center gap-1" title="E-maile (razem)"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
@@ -152,7 +152,7 @@ export function OperatorLeadsList() {
                     <FileText className="h-3.5 w-3.5" /> Podgląd treści: rozmowy voicebota, maile i SMS
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Link>
-                  <div className="text-[11px] mt-1 flex gap-3 text-emerald-300">
+                  <div className="text-[11px] mt-1 flex flex-wrap gap-3 text-emerald-300">
                     <span className="inline-flex items-center gap-1" title="Połączenia przychodzące z numeru leada">
                       <Phone className="h-3 w-3" /> ← {r.comms.inboundCalls ?? 0}
                     </span>
@@ -189,7 +189,7 @@ export function OperatorLeadsList() {
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="flex flex-row sm:flex-col items-stretch sm:items-end gap-2 shrink-0 w-full sm:w-auto">
                   {phone && (
                     <a
                       href={`tel:${phone}`}
@@ -197,12 +197,12 @@ export function OperatorLeadsList() {
                         logCall.mutate({ leadId: r.id, phone });
                         setOutcome({ leadId: r.id, name });
                       }}
-                      className="inline-flex items-center gap-2 rounded-md bg-emerald-500 text-white px-3 h-9 text-sm font-medium hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
+                      className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-md bg-emerald-500 text-white px-3 h-9 text-sm font-medium hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
                       aria-label={`Zadzwoń ${phone}`}
                       title={`Zadzwoń: ${phone}`}
                     >
                       <Phone className="h-4 w-4" />
-                      <span className="hidden sm:inline">Zadzwoń</span>
+                      <span>Zadzwoń</span>
                     </a>
                   )}
                   <MetaRateButtons
@@ -214,6 +214,7 @@ export function OperatorLeadsList() {
                 </div>
 
               </div>
+
             );
 
           })}
