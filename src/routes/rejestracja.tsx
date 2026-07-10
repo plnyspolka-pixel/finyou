@@ -151,6 +151,8 @@ function RegisterPage() {
                 })}
               </div>
 
+              <SocialSignIn labelPrefix="Zarejestruj się" />
+              <AuthDivider label="lub e-mailem" />
               <form className="space-y-4" onSubmit={submit}>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
