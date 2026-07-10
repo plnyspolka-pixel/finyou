@@ -37,8 +37,8 @@ type Msg = {
 };
 
 export function SkrzynkaPosrednika() {
-  const search = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const search = useSearch({ strict: false }) as { compose?: number };
+  const navigate = useNavigate();
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
