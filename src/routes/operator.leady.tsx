@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { OperatorLeadsList } from "./posrednik.leady";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/operator/leady")({
-  component: OperatorLeadsList,
+  component: () => <Outlet />,
 });
