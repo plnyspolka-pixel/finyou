@@ -216,10 +216,12 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
               Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora.
             </p>
           </div>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className={`grid gap-3 ${showInternalOffer ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
             <CtaButton onClick={() => setSendOpen("instytucjonalny")} tone="primary" icon={<Building2 className="h-6 w-6" />} title="Inwestorzy instytucjonalni" hint="Fundusze, spółki, partnerzy strategiczni" />
             <CtaButton onClick={() => setSendOpen("indywidualny")} tone="secondary" icon={<UserRound className="h-6 w-6" />} title="Inwestorzy prywatni" hint="Baza aktywnych inwestorów indywidualnych" />
-            <CtaButton onClick={() => setCalcOpen(true)} tone="ghost" icon={<Calculator className="h-6 w-6" />} title="Oferta wewnętrzna" hint="Kalkulator z Twoją prowizją operatora 2–5%" />
+            {showInternalOffer && (
+              <CtaButton onClick={() => setCalcOpen(true)} tone="ghost" icon={<Calculator className="h-6 w-6" />} title="Oferta wewnętrzna" hint="Kalkulator z Twoją prowizją operatora 2–5%" />
+            )}
           </div>
         </div>
         <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
