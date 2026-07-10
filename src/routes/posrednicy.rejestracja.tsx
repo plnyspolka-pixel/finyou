@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ComplianceNotice } from "@/components/affiliate/compliance-notice";
 import { registerAffiliatePartner } from "@/lib/affiliate/partner.functions";
 import { Building2, UserCircle } from "lucide-react";
+import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 
 export const Route = createFileRoute("/posrednicy/rejestracja")({
   validateSearch: (s: Record<string, unknown>) => ({ ref: typeof s.ref === "string" ? s.ref : "" }),
