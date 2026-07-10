@@ -36,6 +36,11 @@ async function signDocument(path: string): Promise<string | null> {
   return (await signOne("documents", path)) ?? (await signOne("property-photos", path));
 }
 
+// Zdjęcia z `properties.photos` mogą leżeć w obu bucketach — próbujemy oba (najpierw fotki).
+async function signPhoto(path: string): Promise<string | null> {
+  return (await signOne("property-photos", path)) ?? (await signOne("documents", path));
+}
+
 function inferKind(name: string): Kind {
   const n = name.toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
@@ -67,22 +72,21 @@ export function MediaPreviewDialog({
       setLoading(true);
       const all: MediaItem[] = [];
 
-      // Photos (property-photos bucket)
+      // Photos (property.photos — mogą być w buckecie property-photos lub documents)
       if (photoPaths.length > 0) {
-        const { data } = await supabase.storage
-          .from("property-photos")
-          .createSignedUrls(photoPaths, 60 * 60);
-        (data ?? []).forEach((d, i) => {
-          if (d.signedUrl) {
-            const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
-            all.push({
-              key: `photo:${photoPaths[i]}`,
-              name,
-              url: d.signedUrl,
-              kind: inferKind(name) === "other" ? "image" : inferKind(name),
-              source: "photo",
-            });
-          }
+        const signedPhotos = await Promise.all(
+          photoPaths.map(async (path, i) => ({ path, i, url: await signPhoto(path) })),
+        );
+        signedPhotos.forEach(({ path, i, url }) => {
+          if (!url) return;
+          const name = path.split("/").pop() ?? `zdjęcie-${i + 1}`;
+          all.push({
+            key: `photo:${path}`,
+            name,
+            url,
+            kind: inferKind(name) === "other" ? "image" : inferKind(name),
+            source: "photo",
+          });
         });
       }
 

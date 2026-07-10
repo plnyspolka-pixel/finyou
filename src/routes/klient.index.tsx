@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
+import { signStoragePath } from "@/lib/property-photos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,12 +190,11 @@ function KlientDashboard() {
     void (async () => {
       if (photoPaths.length === 0) { setThumbs([]); return; }
       const slice = photoPaths.slice(0, 6);
-      const { data } = await supabase.storage
-        .from("property-photos")
-        .createSignedUrls(slice, 60 * 60);
-      if (!cancelled && data) {
-        setThumbs(data.map((d, i) => ({ url: d.signedUrl ?? "", path: slice[i] })).filter(t => t.url));
-      }
+      // Ścieżki mogą leżeć w buckecie `property-photos` lub `documents` — podpisujemy próbując oba.
+      const pairs = await Promise.all(
+        slice.map(async (path) => ({ url: (await signStoragePath(path, 60 * 60)) ?? "", path })),
+      );
+      if (!cancelled) setThumbs(pairs.filter((t) => t.url));
     })();
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);

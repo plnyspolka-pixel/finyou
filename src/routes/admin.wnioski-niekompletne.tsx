@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
+import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -59,8 +60,9 @@ function MediaThumbs({ photoPaths, docCount, onOpen }: { photoPaths: string[]; d
     let cancelled = false;
     (async () => {
       if (photoPaths.length === 0) { setUrls([]); return; }
-      const { data } = await supabase.storage.from("property-photos").createSignedUrls(photoPaths.slice(0, 3), 60 * 60);
-      if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+      // Ścieżki mogą leżeć w buckecie `property-photos` lub `documents` — podpisujemy próbując oba.
+      const signed = await resolveShowablePhotoUrls(photoPaths.slice(0, 3), 60 * 60);
+      if (!cancelled) setUrls(signed);
     })();
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
-import { resolveShowablePhotoUrls } from "@/lib/property-photos";
+import { resolveApplicationPhotoUrls } from "@/lib/property-photos";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
@@ -48,7 +48,7 @@ type Row = {
   }>;
 };
 
-type Doc = { id: string; document_type: string | null; file_name: string | null; file_url: string | null; created_at: string };
+type Doc = { id: string; document_type: string | null; file_name: string | null; file_path: string | null; file_url: string | null; created_at: string };
 
 function SmartImg({ src, alt, className }: { src: string; alt?: string; className?: string }) {
   const [broken, setBroken] = useState(false);
@@ -88,7 +88,7 @@ export function BrokerApplicationDetail() {
           .maybeSingle(),
         supabase
           .from("documents")
-          .select("id, document_type, file_name, file_url, created_at")
+          .select("id, document_type, file_name, file_path, file_url, created_at")
           .eq("loan_application_id", id)
           .order("created_at", { ascending: false }),
       ]);
@@ -99,8 +99,10 @@ export function BrokerApplicationDetail() {
 
       // Zdjęcia nieruchomości: tylko faktyczne obrazki (bez skanów dokumentów/PDF),
       // podpisane w Storage (ścieżki mogą leżeć w `property-photos` lub `documents`).
+      // Wnioski z landingu mają zdjęcia wyłącznie w tabeli `documents`, dlatego łączymy
+      // `properties.photos` z dokumentami — inaczej galeria bywała pusta.
       const p = Array.isArray(appRow?.properties) ? appRow.properties[0] : (appRow?.properties as any);
-      const resolved = await resolveShowablePhotoUrls(p?.photos, 60 * 60);
+      const resolved = await resolveApplicationPhotoUrls(p?.photos, (d as any) ?? [], 60 * 60);
       setPhotos(resolved);
       setLoading(false);
     })();
