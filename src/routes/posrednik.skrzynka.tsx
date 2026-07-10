@@ -296,7 +296,7 @@ export function SkrzynkaPosrednika() {
                   )}
                   {selected.lead_id && (
                     <Button asChild variant="outline" size="sm" className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
-                      <Link to="/posrednik/leady/$id" params={{ id: selected.lead_id }}>
+                      <Link to={`${base}/leady/${selected.lead_id}` as any}>
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Otwórz lead
                       </Link>
