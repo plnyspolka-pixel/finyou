@@ -97,9 +97,15 @@ export function MediaPreviewDialog({
         .eq("loan_application_id", loanApplicationId)
         .order("created_at", { ascending: false });
 
+      const photoPathSet = new Set(photoPaths);
       for (const d of (docRows ?? []) as Doc[]) {
-        let url = d.file_url ?? null;
-        if (!url && d.file_path) url = await signDocument(d.file_path);
+        // Zdjęcie z `properties.photos` bywa też wierszem w `documents` — pokazujemy raz.
+        if (d.file_path && photoPathSet.has(d.file_path)) continue;
+        // `file_url` bywa surową ścieżką Storage (np. załączniki inbound), a nie gotowym
+        // URL-em — używamy go tylko gdy to http(s), w przeciwnym razie podpisujemy `file_path`.
+        const httpUrl = d.file_url && /^https?:\/\//i.test(d.file_url) ? d.file_url : null;
+        let url = httpUrl;
+        if (!url) url = await signDocument(d.file_path ?? d.file_url ?? "");
         if (!url) continue;
         const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
         all.push({

@@ -12,12 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock,
   MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save,
-  ImageOff, Calculator, Send, ArrowRight,
+  ImageOff, Calculator, Send, ArrowRight, Eye,
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
 import { resolveApplicationPhotoUrls } from "@/lib/property-photos";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
+import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
 
@@ -71,6 +72,7 @@ export function BrokerApplicationDetail() {
   const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
   const [calcOpen, setCalcOpen] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
@@ -280,21 +282,35 @@ export function BrokerApplicationDetail() {
       </div>
 
       {/* Dokumenty */}
-      <FancyCard tone="light" title="Dokumenty" icon={<FileText className="h-4 w-4" />} rightSlot={<Badge variant="outline">{docs.length}</Badge>}>
+      <FancyCard
+        tone="light"
+        title="Dokumenty"
+        icon={<FileText className="h-4 w-4" />}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            {docs.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
+                <Eye className="mr-1.5 h-3.5 w-3.5" /> Podgląd
+              </Button>
+            )}
+            <Badge variant="outline">{docs.length}</Badge>
+          </div>
+        }
+      >
         {docs.length === 0 ? (
           <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">Brak dokumentów.</div>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
             {docs.map((doc) => (
-              <a key={doc.id} href={doc.file_url ?? "#"} target="_blank" rel="noopener noreferrer"
-                className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm">
+              <button key={doc.id} type="button" onClick={() => setPreviewOpen(true)}
+                className="group flex items-center gap-3 rounded-xl border bg-card p-3 text-left transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><FileText className="h-4 w-4" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{doc.file_name || doc.document_type || "Dokument"}</div>
                   <div className="text-xs text-muted-foreground">{doc.document_type ?? "—"} · {new Date(doc.created_at).toLocaleDateString("pl-PL")}</div>
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
-              </a>
+              </button>
             ))}
           </div>
         )}
@@ -332,6 +348,15 @@ export function BrokerApplicationDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Podgląd zdjęć i dokumentów (obrazki + PDF w iframe) */}
+      <MediaPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        loanApplicationId={row.id}
+        photoPaths={Array.isArray(p?.photos) ? (p!.photos as string[]).filter(Boolean) : []}
+        title={`Dokumenty i zdjęcia — ${clientName}`}
+      />
 
       {/* Lightbox */}
       <Dialog open={lightbox !== null} onOpenChange={(o) => !o && setLightbox(null)}>
