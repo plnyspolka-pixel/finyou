@@ -10,13 +10,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
-import { PropertyTypeIcon, getPropertyVisual } from "@/lib/property-visuals";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
 });
 
-type Property = { id: string; land_register_number: string | null; photos: string[] | null; property_type: string | null };
+type Property = { id: string; land_register_number: string | null; photos: string[] | null };
 type Row = {
   id: string;
   status: string;
@@ -120,7 +119,7 @@ function ApplicationsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos,property_type)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos)")
       .order("updated_at", { ascending: false })
       .limit(1000);
     if (!error && data) {
@@ -251,7 +250,6 @@ function ApplicationsPage() {
             <TableHeader>
               <TableRow>
                 <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} />
-                <TableHead>Typ</TableHead>
                 <TableHead>Kontakt</TableHead>
                 <SortHeader label="Status" k="status" sort={sort} setSort={setSort} />
                 <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right" />
@@ -267,10 +265,10 @@ function ApplicationsPage() {
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
@@ -282,18 +280,6 @@ function ApplicationsPage() {
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
-                    <TableCell>
-                      {(() => {
-                        const t = (r.properties ?? []).map((p) => p.property_type).find((x): x is string => !!x);
-                        const v = getPropertyVisual(t);
-                        return (
-                          <div className="flex items-center gap-2" title={v.label}>
-                            <PropertyTypeIcon type={t} className="h-9 w-9 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]" />
-                            <span className="text-xs font-medium">{t ? v.label : "—"}</span>
-                          </div>
-                        );
-                      })()}
-                    </TableCell>
                     <TableCell className="text-xs">
                       <div>{r.client?.email ?? "—"}</div>
                       <div className="text-muted-foreground">{r.client?.phone ?? "—"}</div>

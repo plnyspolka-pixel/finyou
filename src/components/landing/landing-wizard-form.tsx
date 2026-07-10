@@ -57,17 +57,11 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 
-import applicationObjectAsset from "@/assets/application-flow/application-object.png.asset.json";
-import applicationPhotosAsset from "@/assets/application-flow/application-photos.png.asset.json";
-import applicationDataAsset from "@/assets/application-flow/application-data.png.asset.json";
-import applicationCalculatorAsset from "@/assets/application-flow/application-calculator.png.asset.json";
-import applicationCalculatorLockedAsset from "@/assets/application-flow/application-calculator-locked.png.asset.json";
-
 const STEPS = [
-  { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", img: applicationObjectAsset.url },
-  { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", img: applicationPhotosAsset.url },
-  { id: 3, shortLabel: "Dane", label: "Dane kontaktowe", img: applicationDataAsset.url },
-  { id: 4, shortLabel: "Oferta", label: "Kalkulator", img: applicationCalculatorAsset.url, lockedImg: applicationCalculatorLockedAsset.url },
+  { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", icon: Home },
+  { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", icon: Upload },
+  { id: 3, shortLabel: "Dane", label: "Dane kontaktowe", icon: UserRound },
+  { id: 4, shortLabel: "Oferta", label: "Kalkulator", icon: Send },
 ] as const;
 
 type StepId = 1 | 2 | 3 | 4;
@@ -279,43 +273,39 @@ export function LandingWizardForm() {
   return (
     <div id="landing-wizard-top" className="space-y-6">
       {/* Stepper */}
-      <div>
-
+      <FancyShell>
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-2">
             {STEPS.map((s) => {
               const done = stepDone[s.id as StepId];
               const active = step === s.id;
-              const lockedImg = "lockedImg" in s ? s.lockedImg : undefined;
-              const showLocked = s.id === 4 && !stepDone[3] && !done;
-              const img = showLocked && lockedImg ? lockedImg : s.img;
+              const Icon = s.icon;
               return (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => setStep(s.id as StepId)}
-                  className="group flex flex-col items-center justify-center bg-transparent border-0 p-0 transition-all"
+                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2 sm:p-3 text-center transition-all ${
+                    active
+                      ? "border-white/60 bg-white/15 ring-2 ring-white/40"
+                      : done
+                        ? "border-emerald-400/50 bg-emerald-500/10 hover:bg-emerald-500/15"
+                        : "border-white/15 bg-white/[0.04] hover:border-white/30"
+                  }`}
                 >
-                  <div className="relative w-full">
-                    <img
-                      src={img}
-                      alt={s.label}
-                      loading="lazy"
-                      className={`mx-auto aspect-square w-full max-w-[140px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)] transition-transform ${active ? "scale-105" : "group-hover:scale-[1.03]"} ${showLocked ? "saturate-75" : ""}`}
-                    />
-                    {done && (
-                      <span className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-emerald-200/60">
-                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                      </span>
-                    )}
-                    {showLocked && (
-                      <span className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white ring-1 ring-white/30">
-                        <Lock className="h-3 w-3" />
-                      </span>
-                    )}
-                  </div>
+                  <span className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full text-sm font-black ring-1 ${
+                    done
+                      ? "bg-emerald-500/30 text-emerald-100 ring-emerald-300/40"
+                      : active
+                        ? "bg-white text-slate-900 ring-white/60"
+                        : "bg-white/10 text-white/80 ring-white/20"
+                  }`}>
+                    {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <Icon className="h-4 w-4" />}
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white leading-tight whitespace-nowrap">
+                    {s.shortLabel}
+                  </span>
                 </button>
-
               );
             })}
           </div>
@@ -326,8 +316,7 @@ export function LandingWizardForm() {
             />
           </div>
         </div>
-      </div>
-
+      </FancyShell>
 
       {/* Step 1: Typ nieruchomości + miejscowość */}
       {step === 1 && (
