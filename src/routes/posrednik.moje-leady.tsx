@@ -11,12 +11,14 @@ import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, UserCheck 
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 import { FancyShell } from "@/components/landing/fancy-shell";
+import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/moje-leady")({
   component: MyBrokerLeads,
 });
 
 export function MyBrokerLeads() {
+  const base = usePanelBase();
   const fn = useServerFn(listLeads);
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
