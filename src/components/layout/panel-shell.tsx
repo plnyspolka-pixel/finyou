@@ -162,7 +162,7 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
             {title}
           </div>
         </header>
-        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main" : ""}`}>
+        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main text-white" : ""}`}>
           {fancy && (
             <>
               <span
@@ -170,14 +170,14 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
                 className="pointer-events-none absolute inset-0 -z-10"
                 style={{
                   background:
-                    "radial-gradient(120% 100% at 0% 0%, oklch(0.30 0.16 265 / 0.35) 0%, transparent 55%), radial-gradient(90% 80% at 100% 10%, oklch(0.55 0.20 240 / 0.22) 0%, transparent 60%), radial-gradient(80% 80% at 50% 100%, oklch(0.50 0.22 285 / 0.18) 0%, transparent 65%), linear-gradient(180deg, oklch(0.99 0.005 250) 0%, oklch(0.96 0.01 255) 100%)",
+                    "radial-gradient(120% 100% at 0% 0%, oklch(0.42 0.20 268 / 0.55) 0%, transparent 55%), radial-gradient(90% 80% at 100% 10%, oklch(0.55 0.20 240 / 0.35) 0%, transparent 60%), radial-gradient(80% 80% at 50% 100%, oklch(0.50 0.22 285 / 0.30) 0%, transparent 65%), linear-gradient(180deg, oklch(0.18 0.06 265) 0%, oklch(0.12 0.04 265) 100%)",
                 }}
               />
               <span
                 aria-hidden
                 className="pointer-events-none absolute -top-10 -left-10 -z-10 h-72 w-72 rounded-full blur-3xl"
                 style={{
-                  background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.35), transparent 70%)",
+                  background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.55), transparent 70%)",
                   animation: "fy-panel-drift-a 14s ease-in-out infinite alternate",
                 }}
               />
@@ -185,13 +185,33 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
                 aria-hidden
                 className="pointer-events-none absolute top-10 right-0 -z-10 h-80 w-80 rounded-full blur-3xl"
                 style={{
-                  background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.28), transparent 70%)",
+                  background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.45), transparent 70%)",
                   animation: "fy-panel-drift-b 17s ease-in-out infinite alternate",
                 }}
               />
               <style>{`
                 @keyframes fy-panel-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(40px,24px) scale(1.15); } }
                 @keyframes fy-panel-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-44px,20px) scale(1.1); } }
+
+                /* Glassmorphism override for shadcn primitives inside fancy panel */
+                .fy-fancy-main .bg-card { background-color: rgba(255,255,255,0.06) !important; backdrop-filter: blur(10px); }
+                .fy-fancy-main .text-card-foreground { color: rgb(255 255 255 / 0.95) !important; }
+                .fy-fancy-main .bg-background { background-color: rgba(255,255,255,0.05) !important; }
+                .fy-fancy-main .bg-muted, .fy-fancy-main .bg-muted\\/40, .fy-fancy-main .bg-muted\\/50 { background-color: rgba(255,255,255,0.08) !important; }
+                .fy-fancy-main .text-muted-foreground { color: rgb(255 255 255 / 0.72) !important; }
+                .fy-fancy-main .text-foreground { color: rgb(255 255 255 / 0.95) !important; }
+                .fy-fancy-main .text-foreground\\/90, .fy-fancy-main .text-foreground\\/70 { color: rgb(255 255 255 / 0.85) !important; }
+                .fy-fancy-main .border, .fy-fancy-main .border-t, .fy-fancy-main .border-b, .fy-fancy-main .border-l, .fy-fancy-main .border-r { border-color: rgba(255,255,255,0.15) !important; }
+                .fy-fancy-main input:not([type=checkbox]):not([type=radio]),
+                .fy-fancy-main textarea,
+                .fy-fancy-main [role=combobox] {
+                  background-color: rgba(255,255,255,0.08) !important;
+                  color: white !important;
+                  border-color: rgba(255,255,255,0.18) !important;
+                }
+                .fy-fancy-main input::placeholder, .fy-fancy-main textarea::placeholder { color: rgba(255,255,255,0.55) !important; }
+                .fy-fancy-main code, .fy-fancy-main pre { background-color: rgba(0,0,0,0.30) !important; color: rgb(255 255 255 / 0.90) !important; }
+                .fy-fancy-main a { color: rgb(147 197 253); }
               `}</style>
             </>
           )}
