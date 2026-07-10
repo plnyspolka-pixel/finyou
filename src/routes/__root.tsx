@@ -11,7 +11,7 @@ import {
 import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { getMetaAppId } from "@/lib/meta-app-id.functions";
-import faviconAsset from "@/assets/favicon-fy.png.asset.json";
+import faviconAsset from "@/assets/favicon.png.asset.json";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
