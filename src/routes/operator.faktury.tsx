@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   listInvoiceEntities,
+  listInstitutionalPartners,
   createOperatorInvoice,
   listMyOperatorInvoices,
   setLoanPaidOut,
