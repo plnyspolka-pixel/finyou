@@ -162,7 +162,7 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
             {title}
           </div>
         </header>
-        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main dark text-foreground" : ""}`}>
+        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main dark isolate text-foreground bg-[oklch(0.10_0.03_265)]" : ""}`}>
           {fancy && (
             <>
               <span
