@@ -243,7 +243,12 @@ function KsiegowoscDokumenty() {
                       <td className="p-2 text-right whitespace-nowrap">{formatPLN(d.vat_amount)}</td>
                       <td className="p-2 text-right whitespace-nowrap font-medium">{formatPLN(d.gross_amount)}</td>
                       <td className="p-2"><Badge variant="secondary" className="capitalize">{d.source}</Badge></td>
-                      <td className="p-2">{d.pdf_url && (<a href={d.pdf_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><ExternalLink className="h-3 w-3" /> PDF</a>)}</td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-2">
+                          {d.pdf_url && (<a href={d.pdf_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"><ExternalLink className="h-3 w-3" /> PDF</a>)}
+                          {d.has_xml && (<button type="button" onClick={() => downloadXml(d.id)} className="inline-flex items-center gap-1 text-emerald-700 hover:underline text-xs"><FileCode2 className="h-3 w-3" /> XML</button>)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
