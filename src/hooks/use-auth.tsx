@@ -57,12 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
+      // Po świeżym zalogowaniu role dociągają się asynchronicznie z bazy. Dopóki ich nie znamy,
+      // trzymamy `loading = true`, żeby strażnicy paneli nie uznali użytkownika za „bez roli"
+      // i nie wyrzucili go (np. z /admin do /klient), zanim role zdążą się wczytać.
+      if (event === "SIGNED_IN") setLoading(true);
       // Defer to avoid deadlock in onAuthStateChange
       setTimeout(() => {
-        void loadRoles(newSession?.user?.id);
+        void loadRoles(newSession?.user?.id).finally(() => {
+          if (event === "SIGNED_IN") setLoading(false);
+        });
       }, 0);
     });
 
