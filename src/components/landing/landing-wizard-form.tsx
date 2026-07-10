@@ -279,7 +279,8 @@ export function LandingWizardForm() {
   return (
     <div id="landing-wizard-top" className="space-y-6">
       {/* Stepper */}
-      <FancyShell>
+      <div>
+
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-2">
             {STEPS.map((s) => {
