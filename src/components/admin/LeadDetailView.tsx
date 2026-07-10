@@ -212,7 +212,7 @@ export function LeadDetailView({ id, compact = false, hideAdvancedTabs = false }
 
         {!compact && !hideAdvancedTabs && <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>}
 
-        {!compact && (
+        {!compact && !hideAdvancedTabs && (
           <TabsContent value="raw">
             <Card className="p-4">
               <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{JSON.stringify(lead, null, 2)}</pre>
