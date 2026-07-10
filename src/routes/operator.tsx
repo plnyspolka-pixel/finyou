@@ -13,7 +13,6 @@ const groups: NavGroup[] = [
       { to: "/operator/moje-leady", label: "Moje leady", icon: UserCheck },
       { to: "/operator/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/operator/wnioski", label: "Moje wnioski", icon: FileText },
-      { to: "/operator/oferta-wewnetrzna", label: "Oferta wewnętrzna", icon: Calculator },
       { to: "/operator/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/operator/profil", label: "Mój profil", icon: UserCircle },
     ],
