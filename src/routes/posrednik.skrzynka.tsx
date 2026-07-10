@@ -38,6 +38,7 @@ type Msg = {
 };
 
 export function SkrzynkaPosrednika() {
+  const base = usePanelBase();
   const search = useSearch({ strict: false }) as { compose?: number };
   const navigate = useNavigate();
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
