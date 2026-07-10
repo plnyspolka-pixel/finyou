@@ -321,38 +321,6 @@ export function SinglePageApplicationForm({
     });
   };
 
-  const goNext = () => {
-    if (step === 1) {
-      if (!contactValid) {
-        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
-        return;
-      }
-      if (!consentPrivacy || !consentTerms || !consentMarketing) {
-        toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
-        return;
-      }
-      fireLead();
-      setStep(isBroker ? 3 : 2);
-      return;
-    }
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
-  };
-  const goBack = () => {
-    if (step === 3) {
-      setStep(2);
-      return;
-    }
-    if (step === 2) {
-      setStep(1);
-      return;
-    }
-    setStep((s) => (Math.max(1, s - 1) as StepId));
-  };
-
-
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
     [photos],
@@ -362,22 +330,16 @@ export function SinglePageApplicationForm({
     [kwNumber, extraKwNumbers],
   );
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
-  const step4Valid = kwOrDeedOk;
 
-  // Allow external CTAs (e.g. hero button) to scroll/open the application
+  // Allow external CTAs (e.g. hero button) to scroll to the form
   useEffect(() => {
     const handler = () => {
-      const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-      if (!step1Done) {
-        toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
-        setStep(1);
-      } else {
-        setStep(3);
-      }
+      document.getElementById("financeyou-application-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
-  }, [contactValid, consentPrivacy, consentTerms, consentMarketing]);
+  }, []);
+
 
   const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
 
