@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 /**
  * Cron tick (co 1 min). Pobiera zaplanowane wpisy z call_queue (status='oczekuje',
