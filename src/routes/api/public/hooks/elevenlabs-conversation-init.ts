@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { loanStatusLabel } from "@/lib/loan-status";
 
 /**
  * Conversation Initiation Webhook dla ElevenLabs.
@@ -35,33 +36,6 @@ function normalizePhone(raw: string | null | undefined): string | null {
   if (d.length === 11 && d.startsWith("48")) return `+${d}`;
   return `+${d}`;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  nowy_lead: "Nowy lead",
-  w_trakcie_uzupelniania: "W trakcie uzupełniania wniosku",
-  braki_w_dokumentach: "Braki w dokumentach",
-  do_kontaktu: "Do kontaktu",
-  w_follow_upie: "W follow-upie",
-  wniosek_kompletny: "Wniosek kompletny",
-  do_analizy: "W trakcie analizy",
-  rokuje: "Wniosek rokuje",
-  nie_rokuje: "Wniosek nie rokuje",
-  wyslany_do_inwestorow: "Wysłany do inwestorów",
-  oferta_od_inwestora: "Oferta od inwestora",
-  oferta_przekazana_klientowi: "Oferta przekazana klientowi",
-  zaakceptowany_przez_klienta: "Zaakceptowany przez klienta",
-  do_umowy: "Do umowy",
-  zamkniety: "Sprawa zamknięta",
-  archiwalny: "Archiwalny",
-  oczekuje_podpisania_umowy: "Oczekuje podpisania umowy",
-  umowa_podpisana: "Umowa podpisana",
-  oczekuje_ustanowienia_zabezpieczen: "Oczekuje ustanowienia zabezpieczeń",
-  zabezpieczenia_ustanowione: "Zabezpieczenia ustanowione",
-  dokumenty_dostarczone_do_inwestora: "Dokumenty dostarczone do inwestora",
-  oczekuje_wyplaty: "Oczekuje wypłaty",
-  wyplacony: "Wypłacony",
-  wniosek_odrzucony: "Wniosek odrzucony",
-};
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   mieszkanie: "Mieszkanie",
@@ -184,7 +158,7 @@ async function handler({ request }: { request: Request }) {
         dyn.has_application = true;
         dyn.loan_application_id = app.id;
         dyn.status = String(app.status ?? "");
-        dyn.status_label = STATUS_LABELS[String(app.status ?? "")] ?? String(app.status ?? "");
+        dyn.status_label = loanStatusLabel(app.status);
         dyn.loan_amount = app.loan_amount ? Math.round(Number(app.loan_amount)) : 0;
         dyn.completion_percent = Number(app.completeness_percent ?? 0);
         dyn.is_complete = Number(app.completeness_percent ?? 0) >= 100;

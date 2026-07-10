@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { FilePlus2, ImageOff, Search, MapPin, FileText, Calendar, Hash } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
+import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
@@ -23,7 +24,7 @@ type Row = {
   created_at: string;
   client: { first_name?: string; last_name?: string; city?: string } | null;
   properties: Array<{ city?: string; property_type?: string; photos?: string[] | null; land_register_number?: string | null }>;
-  documents: Array<{ id: string }>;
+  documents: Array<{ id: string; file_path?: string | null; document_type?: string | null; file_name?: string | null }>;
 };
 
 function SmartImg({ src, alt, className }: { src: string; alt?: string; className?: string }) {
@@ -50,6 +51,7 @@ function MojeWnioski() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
+  const [heroByApp, setHeroByApp] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -57,49 +59,32 @@ function MojeWnioski() {
     if (!user) return;
     void (async () => {
       setLoading(true);
+      // Wszystkie wnioski „szukamy inwestora" — to jest pula do pracy pośrednika.
       const { data } = await supabase
         .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, created_at, assigned_operator, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id)")
-        .or(`assigned_operator.eq.${user.id},assigned_operator.is.null`)
+        .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, document_type, file_name)")
+        .eq("status", "szukamy_inwestora")
         .order("created_at", { ascending: false });
       const all = ((data as any) as Row[]) ?? [];
-      const filtered = all.filter((r) => {
-        const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
-        const hasKw = !!p?.land_register_number;
-        const hasPhotos = Array.isArray(p?.photos) && p!.photos!.filter(Boolean).length > 0;
-        const hasDocs = Array.isArray(r.documents) && r.documents.length > 0;
-        return hasKw && hasPhotos && hasDocs;
-      });
-
-      const allPaths = Array.from(
-        new Set(
-          filtered.flatMap((r) => {
-            const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
-            const photos: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
-            return photos.filter((u) => !/^https?:\/\//i.test(u));
-          }),
-        ),
-      );
-      if (allPaths.length > 0) {
-        const { data: signed } = await supabase.storage
-          .from("property-photos")
-          .createSignedUrls(allPaths, 60 * 60);
-        const map = new Map<string, string>();
-        (signed ?? []).forEach((s: any) => {
-          if (s?.path && s?.signedUrl) map.set(s.path, s.signedUrl);
-        });
-        for (const r of filtered) {
-          const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
-          if (p && Array.isArray(p.photos)) {
-            p.photos = p.photos.map((u: string) =>
-              /^https?:\/\//i.test(u) ? u : (map.get(u) ?? u),
-            );
-          }
-        }
-      }
-
-      setRows(filtered);
+      setRows(all);
       setLoading(false);
+
+      // Miniaturka (hero) per wniosek: pierwsze faktyczne zdjęcie nieruchomości,
+      // podpisane w Storage. Fallback: zdjęcie z tabeli `documents`.
+      const heroes: Record<string, string> = {};
+      await Promise.all(
+        all.map(async (r) => {
+          const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
+          const photoPaths: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
+          const firstPhoto = photoPaths.find(isShowablePropertyPhoto);
+          const fallbackDoc = (r.documents ?? []).find(isPropertyPhotoDocument)?.file_path ?? undefined;
+          const candidate = firstPhoto ?? fallbackDoc;
+          if (!candidate) return;
+          const url = await signStoragePath(candidate, 60 * 60);
+          if (url) heroes[r.id] = url;
+        }),
+      );
+      setHeroByApp(heroes);
     })();
   }, [user]);
 
@@ -128,9 +113,9 @@ function MojeWnioski() {
   return (
     <div className="space-y-6">
       <FancyPageHeader
-        eyebrow="Twoje wnioski"
-        title="Moje wnioski"
-        subtitle="Wnioski wprowadzone przez Ciebie lub przypisane do Twojej obsługi."
+        eyebrow="Szukamy inwestora"
+        title="Wnioski szukające inwestora"
+        subtitle="Wszystkie kompletne wnioski ze statusem „szukamy inwestora" — gotowe do przedstawienia inwestorom."
         actions={
           <Button asChild>
             <Link to="/posrednik/wniosek"><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
@@ -155,7 +140,7 @@ function MojeWnioski() {
 
       {!loading && rows.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
-          Nie masz jeszcze wniosków z KW, zdjęciami i dokumentami. Kliknij „Nowy wniosek", aby dodać.
+          Brak wniosków ze statusem „szukamy inwestora". Gdy wniosek skompletuje KW i zdjęcia/dokumenty, pojawi się tutaj automatycznie.
         </Card>
       ) : !loading && visible.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
@@ -166,9 +151,9 @@ function MojeWnioski() {
           {visible.map((r) => {
             const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
             const city = p?.city ?? r.client?.city ?? "—";
-            const photos: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
+            const photoCount = (Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : []).filter(isShowablePropertyPhoto).length;
             const clientName = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient";
-            const hero = photos[0];
+            const hero = heroByApp[r.id];
             const docCount = r.documents?.length ?? 0;
 
             return (
@@ -180,16 +165,16 @@ function MojeWnioski() {
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
                   <SmartImg
-                    src={hero}
+                    src={hero ?? ""}
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2">
                     <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
                       {loanStatusLabels[r.status as keyof typeof loanStatusLabels] ?? r.status}
                     </Badge>
-                    {photos.length > 1 && (
+                    {photoCount > 1 && (
                       <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
-                        +{photos.length - 1} zdj.
+                        +{photoCount - 1} zdj.
                       </Badge>
                     )}
                   </div>

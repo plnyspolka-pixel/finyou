@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from "lucide-react";
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
+import { isShowablePropertyPhoto, isPropertyPhotoDocument } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorList,
@@ -25,27 +26,6 @@ function maskKw(kw: string): string {
   const [court, num, _check] = parts;
   const masked = num.length > 2 ? num.slice(0, 2) + "•".repeat(Math.max(0, num.length - 2)) : "•".repeat(num.length);
   return `${court}/${masked}/•`;
-}
-
-const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i;
-const PROPERTY_PHOTO_TYPES = new Set([
-  "zdjecie_nieruchomosci",
-  "zdjecia_nieruchomosci",
-  "zdjecia_pomieszczen",
-  "zdjecia_bryly",
-  "zdjecia_lokalu",
-  "klient_upload",
-]);
-
-function isShowablePropertyPhoto(path: string) {
-  return IMAGE_EXT.test(path) && !/\/(ownership_deed|kw|documents?|dokumenty|akt|ksiega|księga)\//i.test(path);
-}
-
-function isPropertyPhotoDocument(doc: any) {
-  const filePath = String(doc?.file_path ?? "");
-  const fileName = String(doc?.file_name ?? filePath);
-  const docType = String(doc?.document_type ?? "");
-  return Boolean(filePath) && IMAGE_EXT.test(fileName) && PROPERTY_PHOTO_TYPES.has(docType);
 }
 
 function InwestorList() {

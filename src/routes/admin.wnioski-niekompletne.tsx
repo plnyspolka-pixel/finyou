@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
+import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -39,19 +40,6 @@ const COMPLETE_STATUSES = [
   "notariusz",
   "zamkniete",
 ];
-
-const STATUS_LABEL: Record<string, string> = {
-  nowy_lead: "Nowy lead",
-  brak_kontaktu: "Brak kontaktu",
-  kontakt: "Kontakt",
-  kompletowanie_danych: "Kompletowanie danych",
-  szukamy_inwestora: "Szukamy inwestora / oferta",
-  warunki_zaakceptowane: "Warunki zaakceptowane",
-  dokumenty_przygotowanie_umowy: "Dokumenty / przygotowanie umowy",
-  notariusz: "Notariusz",
-  zamkniete: "Zamknięte",
-};
-
 
 function fmtPLN(n: number | null) {
   if (n == null) return "—";
@@ -136,25 +124,8 @@ function ApplicationsPage() {
       .limit(1000);
     if (!error && data) {
       const list = data as any as Row[];
-      // Auto-promote: KW + photos => wniosek_kompletny
-      const toPromote = list.filter((r) => {
-        if (!INCOMPLETE_STATUSES.includes(r.status)) return false;
-        const hasKw = (r.properties ?? []).some((p) => !!p.land_register_number && p.land_register_number.trim().length > 0);
-        const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
-        return hasKw && hasPhotos;
-      });
-      if (toPromote.length > 0) {
-        await supabase
-          .from("loan_applications")
-          .update({ status: "szukamy_inwestora", completeness_percent: 100, updated_at: new Date().toISOString() })
-          .in("id", toPromote.map((r) => r.id));
-        // Update local list
-        for (const p of toPromote) {
-          const r = list.find((x) => x.id === p.id);
-          if (r) { r.status = "szukamy_inwestora"; r.completeness_percent = 100; }
-        }
-      }
-      // Bulk fetch document counts per loan_application
+
+      // Bulk fetch document counts per loan_application (potrzebne też do auto-promocji)
       const ids = list.map((r) => r.id);
       if (ids.length > 0) {
         const { data: docs } = await supabase
@@ -167,6 +138,27 @@ function ApplicationsPage() {
         }
         for (const r of list) r.docCount = counts[r.id] ?? 0;
       }
+
+      // Auto-promocja: numer KW + (zdjęcia nieruchomości ALBO dokumenty) => szukamy_inwestora.
+      // Taki wniosek nie jest już nowym leadem — mamy komplet do rozmowy z inwestorem.
+      const toPromote = list.filter((r) => {
+        if (!INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) return false;
+        const hasKw = (r.properties ?? []).some((p) => !!p.land_register_number && p.land_register_number.trim().length > 0);
+        const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
+        const hasDocs = (r.docCount ?? 0) > 0;
+        return hasKw && (hasPhotos || hasDocs);
+      });
+      if (toPromote.length > 0) {
+        await supabase
+          .from("loan_applications")
+          .update({ status: "szukamy_inwestora", available_to_investors: true, completeness_percent: 100, updated_at: new Date().toISOString() })
+          .in("id", toPromote.map((r) => r.id));
+        // Update local list
+        for (const p of toPromote) {
+          const r = list.find((x) => x.id === p.id);
+          if (r) { r.status = "szukamy_inwestora"; r.completeness_percent = 100; }
+        }
+      }
       setRows(list);
     }
     setLoading(false);
@@ -176,14 +168,14 @@ function ApplicationsPage() {
 
   const counts = useMemo(() => ({
     all: rows.length,
-    incomplete: rows.filter((r) => INCOMPLETE_STATUSES.includes(r.status)).length,
-    complete: rows.filter((r) => COMPLETE_STATUSES.includes(r.status)).length,
+    incomplete: rows.filter((r) => INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
+    complete: rows.filter((r) => COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
   }), [rows]);
 
   const filtered = useMemo(() => {
     const byTab = rows.filter((r) => {
-      if (tab === "incomplete") return INCOMPLETE_STATUSES.includes(r.status);
-      if (tab === "complete") return COMPLETE_STATUSES.includes(r.status);
+      if (tab === "incomplete") return INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status));
+      if (tab === "complete") return COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status));
       return true;
     });
     const out = byTab.filter((r) => {
@@ -201,7 +193,7 @@ function ApplicationsPage() {
     const getVal = (r: Row): string | number => {
       switch (sort.key) {
         case "name": return [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ").toLowerCase();
-        case "status": return r.status;
+        case "status": return normalizeLoanStatus(r.status);
         case "loan_amount": return r.loan_amount ?? -1;
         case "completeness_percent": return r.completeness_percent ?? -1;
         case "media": return (r.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0) + (r.docCount ?? 0);
@@ -283,7 +275,8 @@ function ApplicationsPage() {
                 const pct = r.completeness_percent ?? 0;
                 const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
                 const allPhotos = (r.properties ?? []).flatMap((p) => Array.isArray(p.photos) ? p.photos : []);
-                const isComplete = COMPLETE_STATUSES.includes(r.status);
+                const canonStatus = normalizeLoanStatus(r.status);
+                const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
@@ -292,8 +285,8 @@ function ApplicationsPage() {
                       <div className="text-muted-foreground">{r.client?.phone ?? "—"}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={isComplete ? "default" : r.status === "nowy_lead" ? "secondary" : "outline"}>
-                        {STATUS_LABEL[r.status] ?? r.status}
+                      <Badge variant={isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"}>
+                        {LOAN_STATUS_SHORT_LABELS[canonStatus]}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{fmtPLN(r.loan_amount as any)}</TableCell>
