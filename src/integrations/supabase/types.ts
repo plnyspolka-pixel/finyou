@@ -5925,6 +5925,45 @@ export type Database = {
           },
         ]
       }
+      operator_invites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string
+          id: string
+          note: string | null
+          token: string
+          updated_at: string
+          used_at: string | null
+          used_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+          used_by_user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -7173,6 +7212,15 @@ export type Database = {
       exec_admin_any: { Args: { _sql: string }; Returns: Json }
       exec_admin_select: { Args: { _sql: string }; Returns: Json }
       exec_admin_write: { Args: { _sql: string }; Returns: Json }
+      get_operator_invite: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          is_valid: boolean
+          used: boolean
+        }[]
+      }
       get_public_loan_proposal: {
         Args: { _id: string }
         Returns: {
@@ -7287,6 +7335,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      redeem_operator_invite: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
       app_role:
