@@ -125,6 +125,7 @@ function KsiegowoscDokumenty() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadCsv}><Download className="h-4 w-4 mr-1" /> Eksport CSV</Button>
+          <Button variant="outline" onClick={downloadXmlZip}><Archive className="h-4 w-4 mr-1" /> Eksport XML (ZIP)</Button>
           <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
             <RefreshCw className={`h-4 w-4 mr-1 ${syncMut.isPending ? "animate-spin" : ""}`} />
             {syncMut.isPending ? "Synchronizuję…" : "Synchronizuj KSeF"}
