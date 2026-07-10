@@ -208,7 +208,8 @@ function LoginPage() {
                   </p>
                 </form>
               </TabsContent>
-            </Tabs>
+              </Tabs>
+            </>
           )}
         </CardContent>
       </Card>
