@@ -84,11 +84,11 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
       <Tabs defaultValue="komunikacja">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
-          <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
-          <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>
-          <TabsTrigger value="raw">Surowe dane</TabsTrigger>
+          {!compact && <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>}
+          {!compact && <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>}
+          {!compact && <TabsTrigger value="raw">Surowe dane</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="komunikacja" className="space-y-3">
