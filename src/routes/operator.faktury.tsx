@@ -101,11 +101,12 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   const qc = useQueryClient();
   const entitiesFn = useServerFn(listInvoiceEntities);
   const createFn = useServerFn(createOperatorInvoice);
+  const setDealFn = useServerFn(setInvoiceDeal);
 
-  const [step, setStep] = useState<"context" | "invoice">("context");
-  const [deal, setDeal] = useState<DealContext>(EMPTY_DEAL);
-  const [confirmed, setConfirmed] = useState<DealContext | null>(null);
   const [busy, setBusy] = useState(false);
+  const [issued, setIssued] = useState<{ id: string; invoiceNumber: string } | null>(null);
+  const [deal, setDeal] = useState<DealContext>(EMPTY_DEAL);
+  const [savingDeal, setSavingDeal] = useState(false);
 
   const entitiesQ = useQuery({ queryKey: ["invoice-entities"], queryFn: () => entitiesFn() });
   const entities = (entitiesQ.data as any[]) ?? [];
@@ -151,21 +152,6 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
 
   const selectedEntity = entities.find((e) => e.id === form.entityId);
 
-  const canProceed =
-    deal.city.trim().length > 0 &&
-    resolvedSecurity(deal).length > 0 &&
-    deal.loanAmount.trim().length > 0 &&
-    deal.investorProfitAnnual.trim().length > 0;
-
-  const proceed = () => {
-    if (!canProceed) {
-      toast.error("Uzupełnij wszystkie dane transakcji, aby przejść dalej.");
-      return;
-    }
-    setConfirmed(deal);
-    setStep("invoice");
-  };
-
   const onEntityChange = (id: string) => {
     const e = entities.find((x) => x.id === id);
     setForm((s) => ({
@@ -200,26 +186,63 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
           bankAccount: form.bankAccount.trim() || undefined,
           dueDate: form.dueDate || undefined,
           operatorCommission: form.operatorCommission ? Number(form.operatorCommission) : undefined,
-          deal: confirmed
-            ? {
-                city: confirmed.city.trim(),
-                security: resolvedSecurity(confirmed),
-                loanAmount: confirmed.loanAmount.trim(),
-                investorProfitAnnual: confirmed.investorProfitAnnual.trim(),
-              }
-            : undefined,
         },
       });
       toast.success(`Faktura ${r.invoiceNumber} wystawiona`);
       void qc.invalidateQueries({ queryKey: ["my-operator-invoices"] });
-      onIssued();
-      void navigate({ to: "/faktura/$id", params: { id: r.id } });
+      setIssued({ id: r.id, invoiceNumber: r.invoiceNumber });
     } catch (e: any) {
       toast.error(e?.message || "Nie udało się wystawić faktury.");
     } finally {
       setBusy(false);
     }
   };
+
+  const canSaveDeal =
+    deal.city.trim().length > 0 &&
+    resolvedSecurity(deal).length > 0 &&
+    deal.loanAmount.trim().length > 0 &&
+    deal.investorProfitAnnual.trim().length > 0;
+
+  const saveDeal = async () => {
+    if (!issued) return;
+    if (!canSaveDeal) return toast.error("Uzupełnij wszystkie dane transakcji.");
+    setSavingDeal(true);
+    try {
+      await setDealFn({
+        data: {
+          id: issued.id,
+          deal: {
+            city: deal.city.trim(),
+            security: resolvedSecurity(deal),
+            loanAmount: deal.loanAmount.trim(),
+            investorProfitAnnual: deal.investorProfitAnnual.trim(),
+          },
+        },
+      });
+      toast.success("Dane transakcji zapisane");
+      void qc.invalidateQueries({ queryKey: ["my-operator-invoices"] });
+      const id = issued.id;
+      setIssued(null);
+      setDeal(EMPTY_DEAL);
+      onIssued();
+      void navigate({ to: "/faktura/$id", params: { id } });
+    } catch (e: any) {
+      toast.error(e?.message || "Nie udało się zapisać danych transakcji.");
+    } finally {
+      setSavingDeal(false);
+    }
+  };
+
+  const skipDeal = () => {
+    if (!issued) return;
+    const id = issued.id;
+    setIssued(null);
+    setDeal(EMPTY_DEAL);
+    onIssued();
+    void navigate({ to: "/faktura/$id", params: { id } });
+  };
+
 
   if (step === "context") {
     return (
