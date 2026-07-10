@@ -61,7 +61,6 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminders")({
           headers: { "content-type": "application/json" },
         });
       },
-      GET: async () => new Response(JSON.stringify({ ok: true, hint: "POST to trigger" })),
     },
   },
 });
