@@ -24,7 +24,7 @@ export function OperatorLeadDetail() {
 
   return (
     <div className="space-y-4">
-      <Link to="/posrednik/leady" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link to={`${base}/leady` as any} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="mr-1 h-4 w-4" /> Wróć do listy
       </Link>
 
