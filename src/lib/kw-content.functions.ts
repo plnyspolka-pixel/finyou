@@ -25,6 +25,25 @@ function baseUrl(): string {
   return raw.replace(/\/(docs|swagger|swagger-ui|openapi)(\/.*)?$/i, "");
 }
 
+function decodeMaybeBase64(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+  // If it already looks like HTML, return as-is.
+  if (/<\w+[\s>]/.test(s)) return s;
+  // Try base64 decode (CMD v3 zwraca HTML zakodowany w base64).
+  try {
+    const cleaned = s.replace(/\s+/g, "");
+    if (!/^[A-Za-z0-9+/=]+$/.test(cleaned)) return s;
+    const decoded = Buffer.from(cleaned, "base64").toString("utf-8");
+    if (/<\w+[\s>]/.test(decoded)) return decoded;
+    return decoded || s;
+  } catch {
+    return s;
+  }
+}
+
 async function resolveKwForApplication(loanApplicationId: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("properties")
