@@ -16,7 +16,7 @@ export const Route = createFileRoute("/posrednik/moje-leady")({
   component: MyBrokerLeads,
 });
 
-function MyBrokerLeads() {
+export function MyBrokerLeads() {
   const fn = useServerFn(listLeads);
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");

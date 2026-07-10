@@ -26,7 +26,7 @@ function FormSkeleton() {
   );
 }
 
-function BrokerNewApplication() {
+export function BrokerNewApplication() {
   const { user, loading } = useAuth();
 
   return (

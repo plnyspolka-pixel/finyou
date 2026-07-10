@@ -36,7 +36,7 @@ type Msg = {
   thread_external_id: string | null;
 };
 
-function SkrzynkaPosrednika() {
+export function SkrzynkaPosrednika() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
