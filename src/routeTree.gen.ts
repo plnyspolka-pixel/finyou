@@ -111,6 +111,7 @@ import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
 import { Route as PosrednikLeadyIdRouteImport } from './routes/posrednik.leady.$id'
+import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id'
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
@@ -689,6 +690,11 @@ const PosrednikLeadyIdRoute = PosrednikLeadyIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => PosrednikLeadyRoute,
 } as any)
+const OperatorLeadyIdRoute = OperatorLeadyIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => OperatorLeadyRoute,
+} as any)
 const InwestorWniosekIdRoute = InwestorWniosekIdRouteImport.update({
   id: '/wniosek/$id',
   path: '/wniosek/$id',
@@ -1107,7 +1113,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/leady': typeof OperatorLeadyRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1167,6 +1173,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1266,7 +1273,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/leady': typeof OperatorLeadyRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1326,6 +1333,7 @@ export interface FileRoutesByTo {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
@@ -1432,7 +1440,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/leady': typeof OperatorLeadyRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1492,6 +1500,7 @@ export interface FileRoutesById {
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
+  '/operator/leady/$id': typeof OperatorLeadyIdRoute
   '/posrednik/leady/$id': typeof PosrednikLeadyIdRoute
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
@@ -1659,6 +1668,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
@@ -1818,6 +1828,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc'
@@ -1983,6 +1994,7 @@ export interface FileRouteTypes {
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
+    | '/operator/leady/$id'
     | '/posrednik/leady/$id'
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
@@ -2804,6 +2816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikLeadyIdRouteImport
       parentRoute: typeof PosrednikLeadyRoute
     }
+    '/operator/leady/$id': {
+      id: '/operator/leady/$id'
+      path: '/$id'
+      fullPath: '/operator/leady/$id'
+      preLoaderRoute: typeof OperatorLeadyIdRouteImport
+      parentRoute: typeof OperatorLeadyRoute
+    }
     '/inwestor/wniosek/$id': {
       id: '/inwestor/wniosek/$id'
       path: '/wniosek/$id'
@@ -3458,13 +3477,25 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
+interface OperatorLeadyRouteChildren {
+  OperatorLeadyIdRoute: typeof OperatorLeadyIdRoute
+}
+
+const OperatorLeadyRouteChildren: OperatorLeadyRouteChildren = {
+  OperatorLeadyIdRoute: OperatorLeadyIdRoute,
+}
+
+const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
+  OperatorLeadyRouteChildren,
+)
+
 interface OperatorRouteChildren {
-  OperatorLeadyRoute: typeof OperatorLeadyRoute
+  OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorIndexRoute: typeof OperatorIndexRoute
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
-  OperatorLeadyRoute: OperatorLeadyRoute,
+  OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorIndexRoute: OperatorIndexRoute,
 }
 
