@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,8 @@ export const Route = createFileRoute("/posrednik/leady/$id")({
   component: OperatorLeadDetail,
 });
 
-function OperatorLeadDetail() {
-  const { id } = Route.useParams();
+export function OperatorLeadDetail() {
+  const { id } = useParams({ strict: false }) as { id: string };
   const fn = useServerFn(getLead);
   const q = useQuery({ queryKey: ["operator-lead-quickactions", id], queryFn: () => fn({ data: { id } }) });
   const lead = (q.data as any)?.lead;
