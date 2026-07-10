@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { dispatchScheduledCampaigns } from "@/lib/mailing.functions";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/dispatch-campaigns")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apikey = request.headers.get("apikey");
-        if (apikey !== process.env.SUPABASE_ANON_KEY && apikey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
         try {
           const r = await dispatchScheduledCampaigns(200);
           return Response.json({ ok: true, ...r });

@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { sendSmsInternal } from "@/lib/voicebot.functions";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "@/lib/loan-progress.server";
 import { smsForStep, renderFollowUp, buildFollowUpVars } from "@/lib/follow-up-templates";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -112,15 +113,9 @@ async function runBatch() {
 export const Route = createFileRoute("/api/public/hooks/saturday-sms-reminders")({
   server: {
     handlers: {
-      POST: async () => {
-        try {
-          const out = await runBatch();
-          return Response.json(out);
-        } catch (e: any) {
-          return Response.json({ ok: false, error: e?.message ?? "error" }, { status: 500 });
-        }
-      },
-      GET: async () => {
+      POST: async ({ request }) => {
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
         try {
           const out = await runBatch();
           return Response.json(out);

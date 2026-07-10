@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 /**
  * Cron tick (co 1 min). Pobiera zaplanowane wpisy z call_queue (status='oczekuje',
@@ -11,8 +12,11 @@ import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
 export const Route = createFileRoute("/api/public/hooks/process-scheduled-calls")({
   server: {
     handlers: {
-      POST: handler,
-      GET: handler,
+      POST: async ({ request }) => {
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
+        return handler();
+      },
     },
   },
 });

@@ -1,15 +1,47 @@
-// Resend webhook — odbiera zdarzenia delivered/opened/clicked/bounced/complained
-// W MVP bez weryfikacji svix-signature (do dodania jeśli włączysz secret).
+// Resend webhook — odbiera zdarzenia delivered/opened/clicked/bounced/complained.
+// Wymagana weryfikacja Svix (RESEND_WEBHOOK_SECRET, format whsec_...).
 import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "crypto";
+
+function verifySvix(req: Request, body: string): boolean {
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const id = req.headers.get("svix-id") ?? req.headers.get("webhook-id");
+  const ts = req.headers.get("svix-timestamp") ?? req.headers.get("webhook-timestamp");
+  const sigHeader = req.headers.get("svix-signature") ?? req.headers.get("webhook-signature");
+  if (!id || !ts || !sigHeader) return false;
+  const keyB64 = secret.startsWith("whsec_") ? secret.slice(6) : secret;
+  let keyBuf: Buffer;
+  try { keyBuf = Buffer.from(keyB64, "base64"); } catch { return false; }
+  const signed = `${id}.${ts}.${body}`;
+  const expected = createHmac("sha256", keyBuf).update(signed).digest("base64");
+  for (const part of sigHeader.split(" ")) {
+    const [, sig] = part.split(",");
+    if (!sig) continue;
+    try {
+      const a = Buffer.from(sig);
+      const b = Buffer.from(expected);
+      if (a.length === b.length && timingSafeEqual(a, b)) return true;
+    } catch { /* noop */ }
+  }
+  return false;
+}
 
 export const Route = createFileRoute("/api/public/resend-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const raw = await request.text();
+        if (!process.env.RESEND_WEBHOOK_SECRET) {
+          return new Response("Server misconfigured", { status: 500 });
+        }
+        if (!verifySvix(request, raw)) {
+          return new Response("Forbidden", { status: 403 });
+        }
         let payload: any;
         try {
-          payload = await request.json();
+          payload = JSON.parse(raw);
         } catch {
           return new Response("Bad JSON", { status: 400 });
         }

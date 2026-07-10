@@ -1,8 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
+
+function verifyMetaSig(body: string, signature: string | null, secret: string): boolean {
+  if (!signature) return false;
+  const expected = "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+  try {
+    const a = Buffer.from(signature);
+    const b = Buffer.from(expected);
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch { return false; }
+}
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -225,7 +236,18 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
       POST: async ({ request }) => {
         try {
           const origin = getOrigin(request);
-          const body = await request.json();
+          const raw = await request.text();
+          const sig = request.headers.get("x-hub-signature-256");
+          const appSecret = process.env.META_APP_SECRET;
+          if (!appSecret) {
+            return new Response("Server misconfigured", { status: 500 });
+          }
+          if (!verifyMetaSig(raw, sig, appSecret)) {
+            console.warn("[meta-leads-webhook] invalid X-Hub-Signature-256");
+            return new Response("Forbidden", { status: 403 });
+          }
+          let body: any;
+          try { body = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
 
           // Facebook dostarcza WSZYSTKIE zdarzenia (leadgen, wiadomości Messenger/IG,
           // komentarze) na jeden skonfigurowany URL webhooka. Obsłuż tu również

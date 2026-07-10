@@ -44,13 +44,17 @@ export const Route = createFileRoute("/api/public/elevenlabs-webhook")({
           request.headers.get("elevenlabs-signature") ||
           request.headers.get("ElevenLabs-Signature");
 
-        if (webhookSecret) {
-          if (!verifySignature(rawBody, sigHeader, webhookSecret)) {
-            return new Response(JSON.stringify({ ok: false, error: "invalid_signature" }), {
-              status: 401,
-              headers: { "content-type": "application/json" },
-            });
-          }
+        if (!webhookSecret) {
+          return new Response(JSON.stringify({ ok: false, error: "server_misconfigured" }), {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        if (!verifySignature(rawBody, sigHeader, webhookSecret)) {
+          return new Response(JSON.stringify({ ok: false, error: "invalid_signature" }), {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          });
         }
 
         const envelope = (() => {

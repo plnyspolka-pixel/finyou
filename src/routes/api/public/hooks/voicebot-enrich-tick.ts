@@ -1,11 +1,14 @@
 // Cron tick — co 2 minuty zaciąga niegotowe rozmowy voicebota z ElevenLabs.
-// Endpoint /api/public/* — chroniony przez Lovable na poziomie ścieżki.
+// Chroniony prywatnym CRON_SECRET.
 import { createFileRoute } from "@tanstack/react-router";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/voicebot-enrich-tick")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
         try {
           const { enrichPendingConversations } = await import("@/lib/voicebot-enrich.server");
           const result = await enrichPendingConversations(30);
@@ -19,7 +22,6 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-enrich-tick")({
           });
         }
       },
-      GET: async () => new Response("ok"),
     },
   },
 });

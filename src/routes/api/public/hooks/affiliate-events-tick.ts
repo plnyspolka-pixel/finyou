@@ -6,6 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { calculateNetworkCommissions } from "@/lib/affiliate/engine";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 async function run() {
   const db = supabaseAdmin as unknown as SupabaseClient;
@@ -37,8 +38,11 @@ async function run() {
 export const Route = createFileRoute("/api/public/hooks/affiliate-events-tick")({
   server: {
     handlers: {
-      POST: async () => Response.json(await run()),
-      GET: async () => Response.json(await run()),
+      POST: async ({ request }) => {
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
+        return Response.json(await run());
+      },
     },
   },
 });
