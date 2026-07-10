@@ -10,12 +10,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
+import { PropertyTypeIcon, getPropertyVisual } from "@/lib/property-visuals";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
 });
 
-type Property = { id: string; land_register_number: string | null; photos: string[] | null };
+type Property = { id: string; land_register_number: string | null; photos: string[] | null; property_type: string | null };
 type Row = {
   id: string;
   status: string;
