@@ -181,6 +181,11 @@ export function MojeWnioski() {
                       </Badge>
                     )}
                   </div>
+                  {p?.property_type && (
+                    <div className="absolute left-2 bottom-14">
+                      <PropertyTypeBadge type={p.property_type} size="sm" />
+                    </div>
+                  )}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-3">
                     <div className="text-xs text-white/80 truncate">{clientName}</div>
                     <div className="text-xl font-bold text-white truncate">
