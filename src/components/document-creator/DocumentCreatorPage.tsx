@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTime } from "@/lib/labels";
+import { extractLoanCalcPayload, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listDocxTemplates,
@@ -58,6 +59,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   CheckCircle2,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
@@ -159,6 +161,9 @@ export function DocumentCreatorPage() {
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
+  // Harmonogram wczytany z PDF kalkulatora → wstawiany jako tabela w [HARMONOGRAM].
+  const [importedSchedule, setImportedSchedule] = useState<LoanCalcPayload["schedule"] | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const [previewText, setPreviewText] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewMode, setPreviewMode] = useState<"template" | "filled">("template");
@@ -254,6 +259,7 @@ export function DocumentCreatorPage() {
     setValues({});
     setPreviewText("");
     setShowCalc(false);
+    setImportedSchedule(null);
     setPreviewLoading(true);
     _preview({ data: { templateId: selected.id } })
       .then((r) => setPreviewText(r.text))
@@ -324,6 +330,82 @@ export function DocumentCreatorPage() {
       return next;
     });
   };
+
+  // ─── Wczytanie danych z PDF kalkulatora (deterministycznie, bez AI)
+  const applyCalcPayload = useCallback(
+    (p: LoanCalcPayload) => {
+      const plNum = (n: number) =>
+        new Intl.NumberFormat("pl-PL", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(Math.round((n || 0) * 100) / 100);
+
+      const outputs: CalculatorOutputs = {
+        nominal: p.nominal,
+        net: p.onHand,
+        commission: p.commissionPln,
+        total: p.totalToRepay,
+        annualInterestPercent: p.annualRate,
+        months: p.months,
+        payoutDateDDMM: p.agreementDate ?? "",
+      };
+      setImportedSchedule(p.schedule ?? null);
+      setValues((v) => {
+        const next = { ...v };
+        let count = 0;
+        for (const f of fields) {
+          const k = f.key.toLowerCase();
+          let val: string | null = null;
+          if (f.semantic === "amount" || f.semantic === "amountWords") {
+            // Hipoteka i art. 777 mają własne kwoty — nie dobieraj ich z kwot pożyczki.
+            if (/hipotek/.test(k)) {
+              val = f.semantic === "amountWords" ? amountToWordsPLN(p.mortgageAmount) : plNum(p.mortgageAmount);
+            } else if (/777/.test(k)) {
+              val = f.semantic === "amountWords" ? amountToWordsPLN(p.art777Amount) : plNum(p.art777Amount);
+            } else {
+              val = calculatorValueForField(f, outputs);
+            }
+          } else if (f.semantic === "date") {
+            if (p.agreementDate && /umow|zawar|wypłat|wyplat/.test(k)) val = p.agreementDate;
+          } else {
+            val = calculatorValueForField(f, outputs);
+          }
+          if (val != null && val !== "") {
+            next[f.id] = val;
+            count++;
+          }
+        }
+        if (count === 0)
+          toast.message("Nie znalazłem pól finansowych do uzupełnienia w tym wzorze.");
+        else
+          toast.success(
+            `Wczytano dane z PDF do ${count} pól.` +
+              (p.schedule?.length ? ` Harmonogram (${p.schedule.length} rat) wstawię w [HARMONOGRAM].` : ""),
+          );
+        return next;
+      });
+    },
+    [fields],
+  );
+
+  const onPickCalcPdf = useCallback(
+    async (file: File) => {
+      const t = toast.loading("Odczytuję dane z PDF…");
+      try {
+        const buf = await file.arrayBuffer();
+        const payload = extractLoanCalcPayload(buf);
+        if (!payload) {
+          toast.error("To nie jest PDF z kalkulatora Finance You — brak danych do odczytu.", { id: t });
+          return;
+        }
+        applyCalcPayload(payload);
+        toast.dismiss(t);
+      } catch (e: any) {
+        toast.error(e?.message ?? "Nie udało się wczytać PDF.", { id: t });
+      }
+    },
+    [applyCalcPayload],
+  );
 
   // ─── Pobieranie danych firmowych
   const loadCompanyBundle = useCallback(
@@ -454,6 +536,7 @@ export function DocumentCreatorPage() {
           values,
           commissionAmount: showCalculator && commission > 0 ? commission : null,
           commissionAddedToCosts: false,
+          schedule: importedSchedule ?? undefined,
         },
       });
       toast.success("Dokument wygenerowany");
@@ -610,6 +693,42 @@ export function DocumentCreatorPage() {
                     jest zmieniana.
                   </p>
                 </CardHeader>
+              </Card>
+
+              {/* Wczytanie danych z PDF kalkulatora (deterministycznie) */}
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      <Upload className="h-4 w-4 text-primary" /> Wczytaj z PDF kalkulatora
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Pobierz PDF w kalkulatorze inwestora (przycisk „Pobierz PDF"), a tutaj
+                      uzupełnię z niego wszystkie dane finansowe i cały harmonogram —
+                      deterministycznie, bez AI.
+                    </p>
+                    {importedSchedule && (
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Wczytano harmonogram: {importedSchedule.length}{" "}
+                        rat — zostanie wstawiony w miejsce <code className="rounded bg-muted px-1">[HARMONOGRAM]</code>.
+                      </p>
+                    )}
+                  </div>
+                  <input
+                    ref={pdfInputRef}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onPickCalcPdf(f);
+                      if (pdfInputRef.current) pdfInputRef.current.value = "";
+                    }}
+                  />
+                  <Button variant="outline" onClick={() => pdfInputRef.current?.click()} className="shrink-0">
+                    <Upload className="mr-2 h-4 w-4" /> Wybierz PDF
+                  </Button>
+                </CardContent>
               </Card>
 
               {/* Kalkulator pożyczki — tylko przy Umowie pożyczki */}

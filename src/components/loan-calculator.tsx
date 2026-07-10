@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
+import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
 const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
@@ -200,6 +201,11 @@ export function LoanCalculator({
   const [exportOpen, setExportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Proponowane zabezpieczenia — domyślnie 2× łącznej należności inwestora (suma rat).
+  // null = trzymaj się domyślnej krotności; liczba = wartość nadpisana ręcznie.
+  const [mortgageOverride, setMortgageOverride] = useState<number | null>(null);
+  const [art777Override, setArt777Override] = useState<number | null>(null);
+
   // Wysyłka harmonogramu do klienta
   const sendSchedule = useServerFn(sendLoanScheduleToClient);
   const [sendOpen, setSendOpen] = useState(false);
@@ -294,6 +300,12 @@ export function LoanCalculator({
   const krotnoscBasis = Math.max(0, amount - commissionPln);
   const krotnoscRepay = totalToRepay - financeYouFeePln;
   const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
+
+  // Proponowane zabezpieczenia: domyślnie dwukrotność sumy wszystkich należności
+  // inwestora (łącznej kwoty do spłaty). Edytowalne — override ma pierwszeństwo.
+  const proposedSecurityDefault = Math.round(totalToRepay * 2);
+  const mortgageAmount = mortgageOverride ?? proposedSecurityDefault;
+  const art777Amount = art777Override ?? proposedSecurityDefault;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
@@ -397,6 +409,8 @@ export function LoanCalculator({
         ${!hideFinanceYouFee ? sum("Prowizja Finance You (kredytowana)", m(financeYouFeePln)) : ""}
         ${sum("Całkowity koszt pożyczki", m(totalCost))}
         ${sum("Łączna kwota do spłaty", m(totalToRepay), true)}
+        ${sum("Proponowana kwota hipoteki", m(mortgageAmount))}
+        ${sum("Kwota art. 777 k.p.c. (rygor egzekucji)", m(art777Amount))}
       </table>
       <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
         <thead><tr>${th("#")}${th("Termin")}${th("Rata", true)}${th("Kapitał", true)}${th("Odsetki", true)}${th("Saldo", true)}</tr></thead>
@@ -425,11 +439,57 @@ export function LoanCalculator({
       `Rata miesięczna: ${formatPLN(schedule.cappedRata)}`,
       schedule.balloon > 0 ? `Rata balonowa: ${formatPLN(schedule.balloon)}` : "",
       `Łączna kwota do spłaty: ${formatPLN(totalToRepay)}`,
+      `Proponowana kwota hipoteki: ${formatPLN(mortgageAmount)}`,
+      `Kwota art. 777 k.p.c.: ${formatPLN(art777Amount)}`,
       "",
       "Szczegółowy harmonogram w załączonej treści.",
     ]
       .filter(Boolean)
       .join("\n");
+  }
+
+  /** Buduje payload kalkulacji (dane finansowe + harmonogram) do PDF/kreatora. */
+  function buildCalcPayload(): LoanCalcPayload {
+    return {
+      v: 1,
+      generatedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+      onHand: Math.round(onHand),
+      nominal: Math.round(amount),
+      months,
+      annualRate,
+      commissionPct: effectiveCommissionPct,
+      commissionPln: Math.round(commissionPln),
+      financeYouFeePct,
+      financeYouFeePln: Math.round(financeYouFeePln),
+      monthlyPayment: Math.round(schedule.cappedRata * 100) / 100,
+      balloon: Math.round(schedule.balloon * 100) / 100,
+      totalInterest: Math.round(schedule.totalOds * 100) / 100,
+      totalCost: Math.round(totalCost * 100) / 100,
+      totalToRepay: Math.round(totalToRepay * 100) / 100,
+      mortgageAmount,
+      art777Amount,
+      agreementDate: agreementDate ? agreementDate.split("-").reverse().join(".") : undefined,
+      clientName: clientName ?? undefined,
+      schedule: schedule.rows.map((r: any) => ({
+        idx: r.idx,
+        date: r.date,
+        rata: Math.round(r.rata * 100) / 100,
+        kap: Math.round(r.kap * 100) / 100,
+        ods: Math.round(r.ods * 100) / 100,
+        saldo: Math.round(r.saldo * 100) / 100,
+      })),
+    };
+  }
+
+  /** Pobiera PDF z wbudowanym blokiem danych — Kreator dokumentów odczyta go deterministycznie. */
+  function downloadCalcPdf() {
+    const blob = buildLoanCalcPdfBlob(buildCalcPayload());
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kalkulacja-pozyczki-${Math.round(onHand)}-${months}m.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   /** Otwiera okno wydruku z harmonogramem — użytkownik zapisuje jako PDF. */
@@ -865,12 +925,44 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
       </Card></FancyShell>
 
 
+      {investorGuidance && schedule.rows.length > 0 && (
+        <FancyShell><Card className={FANCY_CARD_CLS}>
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2"><Scale className="h-4 w-4" /> Proponowane zabezpieczenia</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">Proponowana kwota hipoteki <InfoTip text="Kwota wpisu hipoteki umownej. Domyślnie dwukrotność sumy wszystkich należności inwestora (łącznej kwoty do spłaty). Wpisz własną wartość, aby nadpisać." /></Label>
+              <div className="flex items-center gap-2">
+                <NumberField value={mortgageAmount} onCommit={(n) => setMortgageOverride(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
+                {mortgageOverride != null && (
+                  <Button variant="ghost" size="icon" className="shrink-0 text-white/80 hover:text-white" title="Przywróć domyślną (2×)" onClick={() => setMortgageOverride(null)}><RefreshCw className="h-4 w-4" /></Button>
+                )}
+              </div>
+              <p className="text-xs text-white/60">Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}).</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">Kwota art. 777 k.p.c. (rygor egzekucji) <InfoTip text="Kwota, do której pożyczkobiorca poddaje się egzekucji wprost z aktu notarialnego (art. 777 § 1 pkt 5 k.p.c.). Domyślnie dwukrotność sumy wszystkich należności inwestora." /></Label>
+              <div className="flex items-center gap-2">
+                <NumberField value={art777Amount} onCommit={(n) => setArt777Override(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
+                {art777Override != null && (
+                  <Button variant="ghost" size="icon" className="shrink-0 text-white/80 hover:text-white" title="Przywróć domyślną (2×)" onClick={() => setArt777Override(null)}><RefreshCw className="h-4 w-4" /></Button>
+                )}
+              </div>
+              <p className="text-xs text-white/60">Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}).</p>
+            </div>
+          </CardContent>
+        </Card></FancyShell>
+      )}
+
+
       <FancyShell><Card className={FANCY_CARD_CLS}>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Harmonogram spłat</CardTitle>
           {investorGuidance && schedule.rows.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={printSchedulePdf} className="bg-white text-slate-900 hover:bg-white/90 border-white"><Printer className="mr-2 h-3.5 w-3.5" /> Pobierz PDF</Button>
+            <Button variant="outline" size="sm" onClick={downloadCalcPdf} className="bg-white text-slate-900 hover:bg-white/90 border-white" title="PDF z danymi kalkulacji — Kreator dokumentów odczyta je automatycznie"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz PDF</Button>
+            <Button variant="outline" size="sm" onClick={printSchedulePdf} className="bg-white text-slate-900 hover:bg-white/90 border-white"><Printer className="mr-2 h-3.5 w-3.5" /> Drukuj</Button>
             <Dialog open={sendOpen} onOpenChange={setSendOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Send className="mr-2 h-3.5 w-3.5" /> Wyślij do klienta</Button>
