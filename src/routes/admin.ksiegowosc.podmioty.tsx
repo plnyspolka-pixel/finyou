@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Building2, Star, Plus, Pencil, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { listAccountingEntities, upsertAccountingEntity, setDefaultAccountingEntity } from "@/lib/accounting/functions";
+import { CompanyLookupInline } from "@/components/company-lookup-inline";
 
 export const Route = createFileRoute("/admin/ksiegowosc/podmioty")({
   component: PodmiotyPage,
