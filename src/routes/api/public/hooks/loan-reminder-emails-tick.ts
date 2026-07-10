@@ -2,6 +2,7 @@
 // i wywołuje batch tylko jeśli aktualna minuta pasuje do wyrażenia cron.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
