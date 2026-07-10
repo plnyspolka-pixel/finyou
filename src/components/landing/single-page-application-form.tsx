@@ -448,15 +448,8 @@ export function SinglePageApplicationForm({
     }
   };
 
-  // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2 lub 3 w broker mode)
-  useEffect(() => {
-    const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-    if (step === 1 && step1Done) {
-      fireLead();
-      setStep(isBroker ? 3 : 2);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing, isBroker]);
+
+
 
 
   return (
