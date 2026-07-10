@@ -155,10 +155,11 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
       { onConflict: "kw_number" },
     );
 
-    // Try direct HTML first — might already be downloaded earlier
+    // Try direct HTML first — might already be downloaded earlier.
+    // NOTE: 404 z /v3/html oznacza "brak w cache CMD" (nie: brak w EKW),
+    // więc też zlecamy pobranie przez /v4/order.
     let res = await fetchKwHtml(kw);
-    if (!res.ok && res.status !== 404) {
-      // Order + poll then retry
+    if (!res.ok) {
       const ord = await orderKw(kw);
       if (ord.status === "NOT_ENQUEUED") {
         await supabaseAdmin
@@ -171,7 +172,7 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
       if (result === "not_found") {
         await supabaseAdmin
           .from("kw_documents")
-          .update({ status: "not_found", last_error: "Księga nie znaleziona" })
+          .update({ status: "not_found", last_error: "Księga nie znaleziona w EKW" })
           .eq("kw_number", kw);
         throw new Error("Księga wieczysta nie została odnaleziona w EKW.");
       }
@@ -183,7 +184,6 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
         throw new Error("Błąd przetwarzania KW po stronie CMD KW Engine.");
       }
       if (result === "timeout") {
-        // Stay in processing — user can refresh later
         return { ok: false, kwNumber: kw, status: "processing", cached: false };
       }
       res = await fetchKwHtml(kw);
