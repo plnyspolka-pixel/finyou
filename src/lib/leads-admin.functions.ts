@@ -136,6 +136,7 @@ export const listLeads = createServerFn({ method: "GET" })
             if (isInbound) s.inboundSms++;
           }
           else if (ev.channel === "messenger" || ev.channel === "instagram" || ev.channel === "whatsapp") {
+            s.messenger++;
             if (isInbound) s.inboundMessenger++;
           }
           else if (ev.channel === "email") {
