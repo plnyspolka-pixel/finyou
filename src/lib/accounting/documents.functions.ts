@@ -35,7 +35,7 @@ export const listAccountingDocuments = createServerFn({ method: "GET" })
     const nameMap: Record<string, string> = {};
     for (const e of (ents ?? []) as any[]) nameMap[e.id] = e.name;
 
-    return (docs ?? []).map((d: any) => ({ ...d, xml_content: undefined, entity_name: nameMap[d.entity_id] ?? "—" }));
+    return (docs ?? []).map((d: any) => ({ ...d, xml_content: undefined, has_xml: !!d.xml_content, entity_name: nameMap[d.entity_id] ?? "—" }));
   });
 
 export const getAccountingSyncStatus = createServerFn({ method: "GET" })
