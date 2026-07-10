@@ -97,7 +97,7 @@ async function handleCheckoutCompleted(session: any) {
 
   // Automatyczne wystawienie faktury sprzedaży po zaksięgowanej wpłacie.
   // Wybiera domyślny podmiot gospodarczy i wystawia fakturę zgodnie z jego
-  // konfiguracją (manual / Fakturowo / KSeF). Nie blokuje obsługi subskrypcji.
+  // konfiguracją (manual / KSeF). Nie blokuje obsługi subskrypcji.
   try {
     const grossAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
     if (grossAmount > 0) {

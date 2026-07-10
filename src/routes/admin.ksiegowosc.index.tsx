@@ -59,8 +59,8 @@ function KsiegowoscIndex() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-3 border-primary/30">
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Dokumenty księgowe (Fakturowo + KSeF)</CardTitle></CardHeader>
-          <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Jeden rejestr wszystkich faktur — sprzedaż i koszty, ze wszystkich podmiotów. Automatyczna synchronizacja z Fakturowo i KSeF.</p><Button asChild size="sm"><Link to="/admin/ksiegowosc/dokumenty">Otwórz rejestr FV</Link></Button></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Dokumenty księgowe (KSeF)</CardTitle></CardHeader>
+          <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Jeden rejestr wszystkich faktur — sprzedaż i koszty, ze wszystkich podmiotów. Automatyczna synchronizacja z KSeF.</p><Button asChild size="sm"><Link to="/admin/ksiegowosc/dokumenty">Otwórz rejestr FV</Link></Button></CardContent>
         </Card>
 
         <Card>
@@ -69,7 +69,7 @@ function KsiegowoscIndex() {
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" /> Podmioty gospodarcze</CardTitle></CardHeader>
-          <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Dwa podmioty, podmiot domyślny, konfiguracja KSeF/Fakturowo.</p><Button asChild variant="outline" size="sm"><Link to="/admin/ksiegowosc/podmioty">Zarządzaj podmiotami</Link></Button></CardContent>
+          <CardContent className="space-y-3"><p className="text-sm text-muted-foreground">Dwa podmioty, podmiot domyślny, konfiguracja KSeF.</p><Button asChild variant="outline" size="sm"><Link to="/admin/ksiegowosc/podmioty">Zarządzaj podmiotami</Link></Button></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Rejestr sprzedaży OF</CardTitle></CardHeader>

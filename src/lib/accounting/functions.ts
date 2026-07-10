@@ -7,8 +7,8 @@ import { encryptSensitive } from "@/lib/affiliate/crypto";
 import { issueSalesInvoice } from "./issue";
 
 function stripSecrets(e: any) {
-  const { ksef_token_encrypted, fakturowo_api_id_encrypted, ...rest } = e;
-  return { ...rest, has_ksef_token: Boolean(ksef_token_encrypted), has_fakturowo_api: Boolean(fakturowo_api_id_encrypted) };
+  const { ksef_token_encrypted, ...rest } = e;
+  return { ...rest, has_ksef_token: Boolean(ksef_token_encrypted) };
 }
 
 async function actorRole(userId: string): Promise<string> {
@@ -41,8 +41,7 @@ const EntityInput = z.object({
   invoice_prefix: z.string().default("FV"),
   vat_payer: z.boolean().default(true),
   default_vat_rate: z.string().default("23"),
-  provider: z.enum(["manual", "fakturowo", "ksef"]).default("manual"),
-  fakturowo_api_id: z.string().optional(), // jawny token — zaszyfrujemy
+  provider: z.enum(["manual", "ksef"]).default("manual"),
   ksef_environment: z.enum(["disabled", "test", "demo", "prod"]).default("disabled"),
   ksef_nip: z.string().optional().nullable(),
   ksef_token: z.string().optional(), // jawny token — zaszyfrujemy
@@ -60,7 +59,6 @@ export const upsertAccountingEntity = createServerFn({ method: "POST" })
       active: data.active, invoice_prefix: data.invoice_prefix, vat_payer: data.vat_payer, default_vat_rate: data.default_vat_rate,
       provider: data.provider, ksef_environment: data.ksef_environment, ksef_nip: data.ksef_nip ?? data.nip ?? null,
     };
-    if (data.fakturowo_api_id) row.fakturowo_api_id_encrypted = encryptSensitive(data.fakturowo_api_id);
     if (data.ksef_token) row.ksef_token_encrypted = encryptSensitive(data.ksef_token);
 
     let id = data.id;

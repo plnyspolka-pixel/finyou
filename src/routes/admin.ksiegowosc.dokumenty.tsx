@@ -13,7 +13,6 @@ import { Download, RefreshCw, ExternalLink, FileText, ShoppingCart, Building2, A
 import { formatPLN } from "@/lib/labels";
 import { listAccountingDocuments, getAccountingSyncStatus, exportAccountingDocumentsCsv } from "@/lib/accounting/documents.functions";
 import { listAccountingEntities } from "@/lib/accounting/functions";
-import { syncFakturowo } from "@/lib/accounting/sync-fakturowo.functions";
 import { syncKsef } from "@/lib/accounting/sync-ksef.functions";
 
 export const Route = createFileRoute("/admin/ksiegowosc/dokumenty")({
@@ -26,11 +25,10 @@ function KsiegowoscDokumenty() {
   const entitiesFn = useServerFn(listAccountingEntities);
   const statusFn = useServerFn(getAccountingSyncStatus);
   const exportFn = useServerFn(exportAccountingDocumentsCsv);
-  const syncFakFn = useServerFn(syncFakturowo);
   const syncKsefFn = useServerFn(syncKsef);
 
   const [direction, setDirection] = useState<"all" | "sales" | "purchase">("all");
-  const [source, setSource] = useState<"all" | "fakturowo" | "ksef" | "manual">("all");
+  const [source, setSource] = useState<"all" | "ksef" | "manual">("all");
   const [entityId, setEntityId] = useState<string>("all");
   const [search, setSearch] = useState("");
 
@@ -58,24 +56,6 @@ function KsiegowoscDokumenty() {
       qc.invalidateQueries({ queryKey: ["accounting-sync-status"] });
     },
     onError: (e: Error) => toast.error(`Sync KSeF nie powiódł się: ${e.message}`),
-  });
-
-  const importFakMut = useMutation({
-    mutationFn: async () => {
-      const list = (entitiesQ.data as any[] | undefined) ?? [];
-      const fy =
-        list.find((e) => String(e.nip || "").replace(/\D/g, "") === "7010611803") ||
-        list.find((e) => String(e.name || "").toLowerCase().includes("finance you"));
-      if (!fy) throw new Error('Nie znaleziono podmiotu Finance You (NIP 7010611803)');
-      return syncFakFn({ data: { entityId: fy.id } });
-    },
-    onSuccess: (r: any) => {
-      const total = (r?.results ?? []).reduce((s: number, x: any) => s + (x.count || 0), 0);
-      toast.success(`Fakturowo (jednorazowo): zaimportowano ${total} dokumentów`);
-      qc.invalidateQueries({ queryKey: ["accounting-documents"] });
-      qc.invalidateQueries({ queryKey: ["accounting-sync-status"] });
-    },
-    onError: (e: Error) => toast.error(`Import Fakturowo nie powiódł się: ${e.message}`),
   });
 
   const totals = useMemo(() => {
@@ -111,19 +91,10 @@ function KsiegowoscDokumenty() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="h-6 w-6" /> Dokumenty księgowe</h1>
-          <p className="text-sm text-muted-foreground">Jeden rejestr — faktury sprzedaży i kosztowe, z Fakturowo i KSeF, dla wszystkich podmiotów.</p>
+          <p className="text-sm text-muted-foreground">Jeden rejestr — faktury sprzedaży i kosztowe, z KSeF, dla wszystkich podmiotów.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadCsv}><Download className="h-4 w-4 mr-1" /> Eksport CSV</Button>
-          <Button
-            variant="outline"
-            onClick={() => importFakMut.mutate()}
-            disabled={importFakMut.isPending}
-            title="Jednorazowy import z Fakturowo dla Finance You. Bieżąca księgowość działa dalej przez KSeF."
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${importFakMut.isPending ? "animate-spin" : ""}`} />
-            {importFakMut.isPending ? "Importuję…" : "Import Fakturowo (jednorazowo)"}
-          </Button>
           <Button onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
             <RefreshCw className={`h-4 w-4 mr-1 ${syncMut.isPending ? "animate-spin" : ""}`} />
             {syncMut.isPending ? "Synchronizuję…" : "Synchronizuj KSeF"}
@@ -184,7 +155,6 @@ function KsiegowoscDokumenty() {
               <SelectTrigger className="w-44"><SelectValue placeholder="Źródło" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Wszystkie źródła</SelectItem>
-                <SelectItem value="fakturowo">Fakturowo</SelectItem>
                 <SelectItem value="ksef">KSeF</SelectItem>
                 <SelectItem value="manual">Ręcznie</SelectItem>
               </SelectContent>
@@ -202,7 +172,7 @@ function KsiegowoscDokumenty() {
             <p className="p-4 text-muted-foreground">Ładowanie…</p>
           ) : docs.length === 0 ? (
             <Alert className="m-4">
-              <AlertDescription>Brak dokumentów. Kliknij <b>„Synchronizuj teraz"</b>, aby pobrać faktury z Fakturowo i KSeF.</AlertDescription>
+              <AlertDescription>Brak dokumentów. Kliknij <b>„Synchronizuj KSeF"</b>, aby pobrać faktury z KSeF.</AlertDescription>
             </Alert>
           ) : (
             <div className="overflow-x-auto">

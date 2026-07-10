@@ -14,6 +14,5 @@ export const syncKsef = createServerFn({ method: "POST" })
     const filtered = data.entityId
       ? results.filter((r: { entity: string }) => true) // entity filter is applied at core-level in a future revision
       : results;
-    // Zwracamy tylko wpisy KSeF, żeby UI "syncKsef" nie mieszał się z Fakturowo.
     return { ok: true, results: filtered };
   });
