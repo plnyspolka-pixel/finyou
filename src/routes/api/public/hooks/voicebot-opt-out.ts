@@ -14,12 +14,14 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-opt-out")({
     handlers: {
       POST: async ({ request }) => {
         const secret = request.headers.get("x-webhook-secret");
-        const apiKey = request.headers.get("apikey");
         const expectedSecret = process.env.ELEVENLABS_WEBHOOK_SECRET;
-        const expectedAnon = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
-        const okSecret = expectedSecret && secret && secret === expectedSecret;
-        const okAnon = expectedAnon && apiKey && apiKey === expectedAnon;
-        if (!okSecret && !okAnon) {
+        if (!expectedSecret) {
+          return new Response(JSON.stringify({ ok: false, error: "server_misconfigured" }), {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        if (!secret || secret !== expectedSecret) {
           return new Response(JSON.stringify({ ok: false, error: "unauthorized" }), {
             status: 401,
             headers: { "content-type": "application/json" },
