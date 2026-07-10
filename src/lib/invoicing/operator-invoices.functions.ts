@@ -40,6 +40,20 @@ export const listInvoiceEntities = createServerFn({ method: "GET" })
     return (data ?? []).map(stripEntity);
   });
 
+// Lista partnerów instytucjonalnych (nabywców) do wyboru na fakturze.
+export const listInstitutionalPartners = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
+    const { data } = await accountingDb
+      .from("investors")
+      .select("id,company_name,first_name,last_name,nip,regon,krs,street,postal_code,city,email,phone,investor_type")
+      .eq("investor_type", "instytucjonalny")
+      .eq("is_active", true)
+      .order("company_name", { ascending: true });
+    return data ?? [];
+  });
+
 const DealContext = z.object({
   city: z.string().optional().default(""),
   security: z.string().optional().default(""),

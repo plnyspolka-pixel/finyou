@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   listInvoiceEntities,
+  listInstitutionalPartners,
   createOperatorInvoice,
   listMyOperatorInvoices,
   setLoanPaidOut,
@@ -101,6 +102,7 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const entitiesFn = useServerFn(listInvoiceEntities);
+  const partnersFn = useServerFn(listInstitutionalPartners);
   const createFn = useServerFn(createOperatorInvoice);
   const setDealFn = useServerFn(setInvoiceDeal);
 
@@ -111,6 +113,8 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
 
   const entitiesQ = useQuery({ queryKey: ["invoice-entities"], queryFn: () => entitiesFn() });
   const entities = (entitiesQ.data as any[]) ?? [];
+  const partnersQ = useQuery({ queryKey: ["institutional-partners"], queryFn: () => partnersFn() });
+  const partners = (partnersQ.data as any[]) ?? [];
 
   const [form, setForm] = useState({
     buyerType: "instytucja" as BuyerType,
@@ -323,6 +327,44 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
+          {!isIndividual && (
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <Label className="text-xs">Wybierz z naszych partnerów instytucjonalnych</Label>
+              <Select
+                value=""
+                onValueChange={(id) => {
+                  const p = partners.find((x) => x.id === id);
+                  if (!p) return;
+                  setForm((s) => ({
+                    ...s,
+                    buyerName: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || s.buyerName,
+                    buyerNip: p.nip || "",
+                    buyerRegon: p.regon || "",
+                    buyerKrs: p.krs || "",
+                    buyerStreet: p.street || "",
+                    buyerPostalCode: p.postal_code || "",
+                    buyerCity: p.city || "",
+                    buyerEmail: p.email || "",
+                    buyerVerified: !!p.nip,
+                  }));
+                  toast.success(`Wczytano dane: ${p.company_name ?? p.email ?? "partner"}`);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={partnersQ.isLoading ? "Ładowanie partnerów…" : `Wybierz partnera (${partners.length})`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {partners.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.company_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "—"}
+                      {p.nip ? ` · NIP ${p.nip}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Lub wpisz NIP/REGON/KRS poniżej, żeby zaciągnąć nowego nabywcę z GUS.</p>
+            </div>
+          )}
           <div className="rounded-md border border-dashed p-3">
             <p className="mb-2 text-xs text-muted-foreground">
               Wpisz {isIndividual ? "NIP (opcjonalnie)" : "NIP, REGON lub KRS"} i pobierz dane firmy z GUS/KRS — resztę pól uzupełnimy automatycznie.
