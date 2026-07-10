@@ -46,6 +46,7 @@ export const listLeads = createServerFn({ method: "GET" })
       .select(`
         id, type, status, source, first_name, last_name, email, phone_normalized,
         current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
+        quality_tier, quality_score, marked_bad_lead,
         loan:loan_applications(
           id, status, loan_amount, preferred_period_months, completeness_percent,
           properties(property_type, city, estimated_value, land_register_number, photos)
