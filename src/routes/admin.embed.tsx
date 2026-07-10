@@ -226,13 +226,3 @@ function RecentApplicationsMockup() {
   );
 }
 
-function _EmbedPageEnd() {
-  return null;
-}
-
-function __unusedTail() {
-  return (
-    <div>
-
-  );
-}
