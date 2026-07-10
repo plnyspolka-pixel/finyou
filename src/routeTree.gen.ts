@@ -31,6 +31,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PosrednikIndexRouteImport } from './routes/posrednik.index'
 import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
+import { Route as OperatorIndexRouteImport } from './routes/operator.index'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as InwestorIndexRouteImport } from './routes/inwestor.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
@@ -280,6 +281,11 @@ const PosrednicyIndexRoute = PosrednicyIndexRouteImport.update({
   id: '/posrednicy/',
   path: '/posrednicy/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorIndexRoute = OperatorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OperatorRoute,
 } as any)
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
@@ -1034,7 +1040,7 @@ export interface FileRoutesByFullPath {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRoute
+  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1114,6 +1120,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/operator/': typeof OperatorIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
@@ -1194,7 +1201,6 @@ export interface FileRoutesByTo {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -1272,6 +1278,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
+  '/operator': typeof OperatorIndexRoute
   '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
@@ -1356,7 +1363,7 @@ export interface FileRoutesById {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRoute
+  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1436,6 +1443,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
+  '/operator/': typeof OperatorIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
@@ -1601,6 +1609,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/operator/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
@@ -1681,7 +1690,6 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
-    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1759,6 +1767,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/inwestor'
     | '/klient'
+    | '/operator'
     | '/posrednicy'
     | '/posrednik'
     | '/propozycje'
@@ -1922,6 +1931,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/inwestor/'
     | '/klient/'
+    | '/operator/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/propozycje/'
@@ -2006,7 +2016,7 @@ export interface RootRouteChildren {
   NegocjujRoute: typeof NegocjujRoute
   NoweHasloRoute: typeof NoweHasloRoute
   OfertyRoute: typeof OfertyRoute
-  OperatorRoute: typeof OperatorRoute
+  OperatorRoute: typeof OperatorRouteWithChildren
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RegulaminRoute: typeof RegulaminRoute
@@ -2221,6 +2231,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednicy/'
       preLoaderRoute: typeof PosrednicyIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/': {
+      id: '/operator/'
+      path: '/'
+      fullPath: '/operator/'
+      preLoaderRoute: typeof OperatorIndexRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/klient/': {
       id: '/klient/'
@@ -3422,6 +3439,18 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
+interface OperatorRouteChildren {
+  OperatorIndexRoute: typeof OperatorIndexRoute
+}
+
+const OperatorRouteChildren: OperatorRouteChildren = {
+  OperatorIndexRoute: OperatorIndexRoute,
+}
+
+const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
+  OperatorRouteChildren,
+)
+
 interface PosrednikLeadyRouteChildren {
   PosrednikLeadyIdRoute: typeof PosrednikLeadyIdRoute
 }
@@ -3484,7 +3513,7 @@ const rootRouteChildren: RootRouteChildren = {
   NegocjujRoute: NegocjujRoute,
   NoweHasloRoute: NoweHasloRoute,
   OfertyRoute: OfertyRoute,
-  OperatorRoute: OperatorRoute,
+  OperatorRoute: OperatorRouteWithChildren,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RegulaminRoute: RegulaminRoute,
