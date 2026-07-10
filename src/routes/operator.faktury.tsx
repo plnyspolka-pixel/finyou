@@ -244,85 +244,13 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   };
 
 
-  if (step === "context") {
-    return (
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle>Dane transakcji</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Wymagane przed wystawieniem faktury. Zapisujemy je wewnętrznie (jako zrealizowane) — nie pojawiają się na fakturze.
-          </p>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Miasto</Label>
-            <Input value={deal.city} onChange={(e) => setDeal({ ...deal, city: e.target.value })} placeholder="np. Warszawa" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Rodzaj zabezpieczenia</Label>
-            <Select value={deal.security} onValueChange={(v) => setDeal({ ...deal, security: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SECURITY_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {deal.security === "Inne" && (
-              <Input
-                className="mt-2"
-                value={deal.securityOther}
-                onChange={(e) => setDeal({ ...deal, securityOther: e.target.value })}
-                placeholder="Wpisz rodzaj zabezpieczenia"
-              />
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Kwota pożyczki (PLN)</Label>
-            <Input type="number" step="0.01" min="0" value={deal.loanAmount} onChange={(e) => setDeal({ ...deal, loanAmount: e.target.value })} placeholder="np. 250000" />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Zysk inwestora rocznie</Label>
-            <Input value={deal.investorProfitAnnual} onChange={(e) => setDeal({ ...deal, investorProfitAnnual: e.target.value })} placeholder="np. 10% lub 25 000 PLN" />
-          </div>
-
-          <div className="md:col-span-2 flex justify-end pt-2">
-            <Button onClick={proceed} disabled={!canProceed}>
-              Przejdź do fakturowania
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const security = confirmed ? resolvedSecurity(confirmed) : "";
   const isIndividual = form.buyerType === "klient_indywidualny";
 
   return (
     <div className="space-y-4 max-w-3xl">
-      {/* Podsumowanie transakcji (wewnętrzne) */}
-      <Card className="border-primary/40 bg-primary/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle className="text-base">Dane transakcji (wewnętrzne)</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => setStep("context")}>
-              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Zmień
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-          <DealItem icon={<MapPin className="h-3.5 w-3.5" />} label="Miasto" value={confirmed?.city} />
-          <DealItem icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Zabezpieczenie" value={security} />
-          <DealItem icon={<Wallet className="h-3.5 w-3.5" />} label="Kwota pożyczki" value={confirmed?.loanAmount} />
-          <DealItem icon={<TrendingUp className="h-3.5 w-3.5" />} label="Zysk inwestora / rok" value={confirmed?.investorProfitAnnual} />
-        </CardContent>
-      </Card>
-
       {/* Typ faktury */}
       <Card>
+
         <CardHeader><CardTitle>Typ faktury</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
