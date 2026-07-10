@@ -65,6 +65,10 @@ function financeYouLender(): ResolvedLender {
     bundle: {
       name: FY_CREDITOR.name,
       legalForm: FY_CREDITOR.legalForm,
+      krs: "0000635207",
+      nip: "7010611803",
+      regon: "365350668",
+      addressFull: "ul. Nowogrodzka 31, 00-511 Warszawa",
       representativeName: (repName ?? "").trim() || undefined,
       representativeRole: (repRole ?? "").trim() || undefined,
     },
