@@ -141,7 +141,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
   if (!row) {
     return (
       <div className="space-y-4">
-        <Button asChild variant="ghost" size="sm"><Link to="/posrednik/wnioski"><ArrowLeft className="mr-2 h-4 w-4" />Wróć</Link></Button>
+        <Button asChild variant="ghost" size="sm"><Link to={`${base}/wnioski` as any}><ArrowLeft className="mr-2 h-4 w-4" />Wróć</Link></Button>
         <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nie znaleziono wniosku.</CardContent></Card>
       </div>
     );
