@@ -13,9 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins, Printer, Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
+import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
 const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
@@ -105,6 +107,8 @@ export type LoanCalculatorState = {
 
 type Props = {
   initialAmount?: number;
+  /** Kwota do wypłaty na rękę dla klienta (nadrzędna względem kwoty nominalnej). Jeśli podana, kalkulator dobiera kwotę nominalną tak, aby klient dostał na rękę tę wartość. */
+  initialOnHand?: number;
   initialMonths?: number;
   initialAnnualRate?: number;
   initialCommissionPct?: number;
@@ -116,6 +120,10 @@ type Props = {
   hideFinanceYouFee?: boolean;
   /** Włącza tryb prowizji wewnętrznej operatora (2–5% jako część prowizji inwestora). */
   internalOperatorMode?: boolean;
+  /** Domyślny e-mail klienta (do wysyłki harmonogramu). */
+  clientEmail?: string | null;
+  /** Nazwa/nazwisko klienta (nagłówek harmonogramu i maila). */
+  clientName?: string | null;
 };
 
 
@@ -137,6 +145,7 @@ function InfoTip({ text }: { text: string }) {
 
 export function LoanCalculator({
   initialAmount = 100_000,
+  initialOnHand,
   initialMonths = 12,
   initialAnnualRate = 10,
   initialCommissionPct = 5,
@@ -145,6 +154,8 @@ export function LoanCalculator({
   investorGuidance = false,
   hideFinanceYouFee = false,
   internalOperatorMode = false,
+  clientEmail = null,
+  clientName = null,
 }: Props) {
 
   const fetchRates = useServerFn(getNbpRates);
@@ -155,12 +166,23 @@ export function LoanCalculator({
   });
   const liveRefRate = ratesQ.data?.referenceRate ?? 3.75;
 
-  const [amount, setAmount] = useState(initialAmount);
   const [months, setMonths] = useState(initialMonths);
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
   const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
   const [operatorCommissionPct, setOperatorCommissionPct] = useState(3);
+
+  // ŹRÓDŁO PRAWDY: kwota do wypłaty na rękę dla klienta (to, o co wnioskuje).
+  // Kwota nominalna pożyczki jest z niej WYPROWADZANA: prowizja inwestora jest potrącana z góry,
+  // więc nominał = onHand / (1 − prowizja%). Prowizja Finance You jest kredytowana do kapitału
+  // (nie pomniejsza wypłaty), więc nie wchodzi do tego przeliczenia.
+  // Dzięki temu, co użytkownik wpisze w polu „na rękę", pozostaje nadrzędne i stabilne.
+  const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
+  const commissionFactor = Math.max(0.01, 1 - commissionPct / 100);
+  const amount = onHand / commissionFactor;
+  // Ustawienie kwoty nominalnej przelicza z powrotem na kwotę na rękę (na rękę pozostaje spójne).
+  const setAmount = (nominal: number) =>
+    setOnHand(Math.min(1_000_000, Math.max(20_000, nominal || 0)) * commissionFactor);
   const rateTouched = useRef(false);
   const commissionTouched = useRef(false);
   const setAnnualRateTouched = (v: number) => { rateTouched.current = true; setAnnualRate(v); };
@@ -177,6 +199,13 @@ export function LoanCalculator({
   const [checkKrotnosc, setCheckKrotnosc] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Wysyłka harmonogramu do klienta
+  const sendSchedule = useServerFn(sendLoanScheduleToClient);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [recipient, setRecipient] = useState<string>(clientEmail ?? "");
+  const [sending, setSending] = useState(false);
+  useEffect(() => { setRecipient(clientEmail ?? ""); }, [clientEmail]);
 
   const effectiveRefRate = investorGuidance && nbpOverride != null ? nbpOverride : liveRefRate;
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
@@ -239,13 +268,24 @@ export function LoanCalculator({
   // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You jest osobnym wynagrodzeniem operatora i nie jest kosztem pozaodsetkowym po stronie pożyczki.
   const nonInterestTotal = commissionPln;
   const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
-  const totalToRepay = schedule.totalRata + commissionPln + financeYouFeePln;
-  const disbursedOnHand = Math.max(0, amount - commissionPln - financeYouFeePln);
-  // Inwestor: wkład gotówkowy = kwota nominalna - prowizja (potrącana z góry).
-  // Inwestor otrzymuje: spłaty kapitału z części "amount" + odsetki + prowizja.
-  const investorCashOut = Math.max(0, amount - commissionPln);
-  const investorTotalIn = amount + schedule.totalOds + commissionPln; // brutto: zwrot kapitału + odsetki + prowizja
-  const investorProfit = schedule.totalOds + commissionPln;
+  // Na rękę = kwota nominalna − prowizja inwestora (potrącana z góry). Prowizja Finance You jest
+  // KREDYTOWANA do kapitału startowego (klient spłaca ją w ratach), więc NIE pomniejsza wypłaty.
+  // Z konstrukcji (nominał = onHand / (1 − prowizja%)) wartość ta jest równa onHand.
+  const disbursedOnHand = Math.max(0, onHand);
+
+  // Łączna kwota spłacana przez pożyczkobiorcę = raty z harmonogramu (zwrot kapitału startowego + odsetki).
+  // Prowizja inwestora jest potrącana z góry, a prowizja Finance You jest już zawarta w kapitale startowym,
+  // więc obu NIE dolicza się ponownie do spłaty (wcześniej były liczone podwójnie).
+  const totalToRepay = schedule.totalRata;
+
+  // Inwestor: realny wkład gotówkowy = środki wychodzące z jego konta.
+  // W ofercie wewnętrznej prowizja operatora jest wypłacana z własnych środków inwestora — powiększa wkład
+  // i pomniejsza zysk (inwestor zatrzymuje tylko prowizję NETTO po odjęciu udziału operatora).
+  // Inwestor odbiera: zwrot kapitału + odsetki (= raty z harmonogramu pomniejszone o prowizję FY,
+  // która stanowi wynagrodzenie Finance You). W trybie wewnętrznym FY = 0.
+  const investorCashOut = Math.max(0, amount - commissionPln + operatorCommissionPln);
+  const investorProfit = schedule.totalOds + investorNetCommissionPln;
+  const investorTotalIn = investorCashOut + investorProfit; // = zwrot kapitału + odsetki (bez FY)
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
@@ -321,10 +361,118 @@ export function LoanCalculator({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `harmonogram-${amount}-${months}m.csv`;
+    a.download = `harmonogram-${Math.round(amount)}-${months}m.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setExportOpen(false);
+  }
+
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  /** Fragment HTML harmonogramu (tabela + podsumowanie) — używany do wydruku PDF i do maila. */
+  function buildScheduleInnerHtml(): string {
+    const m = (n: number) => formatPLN(n);
+    const th = (t: string, right = false) =>
+      `<th style="padding:8px;text-align:${right ? "right" : "left"};border-bottom:2px solid #333;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#555;">${t}</th>`;
+    const sum = (label: string, val: string, strong = false) =>
+      `<tr><td style="padding:5px 0;color:#444;">${label}</td><td style="padding:5px 0;text-align:right;${strong ? "font-weight:700;" : ""}">${val}</td></tr>`;
+    const rows = schedule.rows
+      .map(
+        (r) =>
+          `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">${r.idx}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">${r.date}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.rata)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.kap)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.ods)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.saldo)}</td></tr>`,
+      )
+      .join("");
+    return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a2e;max-width:720px;">
+      <h1 style="font-size:20px;margin:0 0 4px;">Harmonogram spłat pożyczki</h1>
+      ${clientName ? `<p style="margin:0 0 12px;color:#555;">dla: <b>${escapeHtml(clientName)}</b></p>` : ""}
+      <table style="width:100%;border-collapse:collapse;margin:12px 0 4px;font-size:14px;">
+        ${sum("Kwota do wypłaty na rękę", m(onHand), true)}
+        ${sum("Kwota nominalna pożyczki", m(Math.round(amount)))}
+        ${sum("Okres", `${months} mies.`)}
+        ${sum("Oprocentowanie", `${annualRate.toFixed(2).replace(".", ",")}% / rok`)}
+        ${sum("Rata miesięczna", m(schedule.cappedRata))}
+        ${schedule.balloon > 0 ? sum("Rata balonowa (ostatnia)", m(schedule.balloon)) : ""}
+        ${sum("Prowizja inwestora", m(commissionPln))}
+        ${!hideFinanceYouFee ? sum("Prowizja Finance You (kredytowana)", m(financeYouFeePln)) : ""}
+        ${sum("Całkowity koszt pożyczki", m(totalCost))}
+        ${sum("Łączna kwota do spłaty", m(totalToRepay), true)}
+      </table>
+      <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
+        <thead><tr>${th("#")}${th("Termin")}${th("Rata", true)}${th("Kapitał", true)}${th("Odsetki", true)}${th("Saldo", true)}</tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="2" style="padding:8px;font-weight:700;border-top:2px solid #333;">RAZEM</td>
+          <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalRata)}</td>
+          <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalKap)}</td>
+          <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalOds)}</td>
+          <td style="border-top:2px solid #333;"></td>
+        </tr></tfoot>
+      </table>
+      <p style="margin-top:16px;font-size:11px;line-height:1.5;color:#666;">${escapeHtml(contractClause)}</p>
+      <p style="margin-top:8px;font-size:11px;color:#999;">Dokument informacyjny wygenerowany w kalkulatorze Finance You. Nie stanowi oferty w rozumieniu art. 66 KC.</p>
+    </div>`;
+  }
+
+  function buildScheduleText(): string {
+    return [
+      "Harmonogram spłat pożyczki",
+      clientName ? `dla: ${clientName}` : "",
+      `Kwota do wypłaty na rękę: ${formatPLN(onHand)}`,
+      `Kwota nominalna pożyczki: ${formatPLN(Math.round(amount))}`,
+      `Okres: ${months} mies.`,
+      `Oprocentowanie: ${annualRate.toFixed(2).replace(".", ",")}% / rok`,
+      `Rata miesięczna: ${formatPLN(schedule.cappedRata)}`,
+      schedule.balloon > 0 ? `Rata balonowa: ${formatPLN(schedule.balloon)}` : "",
+      `Łączna kwota do spłaty: ${formatPLN(totalToRepay)}`,
+      "",
+      "Szczegółowy harmonogram w załączonej treści.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  /** Otwiera okno wydruku z harmonogramem — użytkownik zapisuje jako PDF. */
+  function printSchedulePdf() {
+    const w = window.open("", "_blank", "width=840,height=1000");
+    if (!w) {
+      toast.error("Nie udało się otworzyć okna wydruku — odblokuj wyskakujące okienka.");
+      return;
+    }
+    w.document.write(
+      `<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Harmonogram spłat pożyczki</title>` +
+        `<style>@page{margin:16mm;} body{margin:24px;} tr{page-break-inside:avoid;}</style></head>` +
+        `<body>${buildScheduleInnerHtml()}</body></html>`,
+    );
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 350);
+  }
+
+  async function handleSendToClient() {
+    const to = recipient.trim();
+    if (!to) {
+      toast.error("Podaj adres e-mail klienta.");
+      return;
+    }
+    setSending(true);
+    try {
+      await sendSchedule({
+        data: {
+          to,
+          clientName: clientName ?? undefined,
+          subject: `Harmonogram spłat pożyczki${clientName ? ` — ${clientName}` : ""}`,
+          html: buildScheduleInnerHtml(),
+          text: buildScheduleText(),
+        },
+      });
+      toast.success(`Harmonogram wysłany do ${to}.`);
+      setSendOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się wysłać harmonogramu.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -358,7 +506,9 @@ export function LoanCalculator({
                 <span className="text-[11px] font-bold uppercase tracking-widest">Inwestor wkłada</span>
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorCashOut)}</p>
-              <p className="mt-1 text-xs text-white/65">gotówka wypłacana z konta inwestora (kwota nominalna − prowizja potrącona z góry)</p>
+              <p className="mt-1 text-xs text-white/65">{internalOperatorMode
+                ? "gotówka wypłacana z konta inwestora (wypłata dla klienta + prowizja operatora)"
+                : "gotówka wypłacana z konta inwestora (kwota nominalna − prowizja potrącona z góry)"}</p>
             </div>
 
             {/* Investor cash in */}
@@ -381,7 +531,7 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(disbursedOnHand)}</p>
               <p className="mt-1 text-xs text-amber-100/80">
-                kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> − prowizja FY <b className="text-white">{formatPLN(financeYouFeePln)}</b></>}
+kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> (prowizja FY {formatPLN(financeYouFeePln)} kredytowana — nie pomniejsza wypłaty)</>}
               </p>
 
             </div>
@@ -405,7 +555,7 @@ export function LoanCalculator({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o prowizję inwestora; odsetki liczone są od kapitału startowego (kwota nominalna + kredytowana prowizja Finance You)." />}</Label>
-              <NumberField value={amount} onCommit={(n) => setAmount(n || 0)} className="w-40" />
+              <NumberField value={Math.round(amount)} onCommit={(n) => setAmount(n || 0)} className="w-40" />
             </div>
             <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
@@ -419,25 +569,16 @@ export function LoanCalculator({
             )}
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(disbursedOnHand)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora{internalOperatorMode && " (z prowizją operatora)"}</span><b className="tabular-nums text-primary">{formatPLN(investorCashOut)}</b></div>
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi po potrąceniu prowizji inwestora i prowizji Finance You. Ustawienie tego suwaka dobiera kwotę nominalną pożyczki tak, aby na rękę wyszła wskazana wartość." />}</Label>
+              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora jest potrącana z góry; prowizja Finance You jest kredytowana do kapitału i nie pomniejsza wypłaty." />}</Label>
               <NumberField
-                value={Math.round(disbursedOnHand)}
-                onCommit={(target) => {
-                  let a = target / Math.max(0.01, 1 - commissionPct / 100 - 0.07);
-                  for (let i = 0; i < 25; i++) {
-                    const t = Math.min(1, Math.max(0, (a - 20_000) / (1_000_000 - 20_000)));
-                    const feePct = 10 - t * 6;
-                    const onHand = a * (1 - commissionPct / 100 - feePct / 100);
-                    a = a + (target - onHand);
-                  }
-                  setAmount(Math.min(1_000_000, Math.max(20_000, Math.round(a / 100) * 100)));
-                }}
+                value={Math.round(onHand)}
+                onCommit={(target) => setOnHand(Math.min(1_000_000, Math.max(1_000, target || 0)))}
                 className="w-40"
               />
             </div>
@@ -445,18 +586,8 @@ export function LoanCalculator({
               min={10_000}
               max={1_000_000}
               step={500}
-              value={[Math.min(1_000_000, Math.max(10_000, Math.round(disbursedOnHand)))]}
-              onValueChange={(v) => {
-                const target = v[0];
-                let a = target / Math.max(0.01, 1 - commissionPct / 100 - 0.07);
-                for (let i = 0; i < 25; i++) {
-                  const t = Math.min(1, Math.max(0, (a - 20_000) / (1_000_000 - 20_000)));
-                  const feePct = 10 - t * 6;
-                  const onHand = a * (1 - commissionPct / 100 - feePct / 100);
-                  a = a + (target - onHand);
-                }
-                setAmount(Math.min(1_000_000, Math.max(20_000, Math.round(a / 100) * 100)));
-              }}
+              value={[Math.min(1_000_000, Math.max(10_000, Math.round(onHand)))]}
+              onValueChange={(v) => setOnHand(v[0])}
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>10 000 zł</span>
@@ -729,7 +860,7 @@ export function LoanCalculator({
             <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
           <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
-          <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2"><span>Łączna kwota do spłaty (raty + prowizja inwestora)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
+          <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2"><span>Łączna kwota do spłaty (raty z harmonogramu)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
       </Card></FancyShell>
 
@@ -738,6 +869,37 @@ export function LoanCalculator({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-white">Harmonogram spłat</CardTitle>
           {investorGuidance && schedule.rows.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={printSchedulePdf} className="bg-white text-slate-900 hover:bg-white/90 border-white"><Printer className="mr-2 h-3.5 w-3.5" /> Pobierz PDF</Button>
+            <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Send className="mr-2 h-3.5 w-3.5" /> Wyślij do klienta</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Wyślij harmonogram do klienta</DialogTitle>
+                  <DialogDescription>Klient otrzyma e-mail z podsumowaniem oferty i pełnym harmonogramem spłat.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Adres e-mail klienta</Label>
+                    <Input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="klient@example.com" />
+                  </div>
+                  <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty na rękę</span><b className="tabular-nums">{formatPLN(onHand)}</b></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Rata miesięczna</span><b className="tabular-nums">{formatPLN(schedule.cappedRata)}</b></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Okres</span><b className="tabular-nums">{months} mies.</b></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-2">
+                  <Button variant="outline" onClick={printSchedulePdf}><Printer className="mr-2 h-4 w-4" /> Podgląd / PDF</Button>
+                  <Button onClick={handleSendToClient} disabled={sending || !recipient.trim()}>
+                    {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…</> : <><Send className="mr-2 h-4 w-4" /> Wyślij e-mail</>}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Dialog open={exportOpen} onOpenChange={setExportOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV</Button>
@@ -772,6 +934,7 @@ export function LoanCalculator({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           )}
         </CardHeader>
         <CardContent>

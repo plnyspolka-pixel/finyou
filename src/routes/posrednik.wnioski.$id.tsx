@@ -322,8 +322,10 @@ export function BrokerApplicationDetail() {
               investorGuidance
               hideFinanceYouFee
               internalOperatorMode
-              initialAmount={row.loan_amount ? Number(row.loan_amount) : undefined}
+              initialOnHand={row.loan_amount ? Number(row.loan_amount) : undefined}
               initialMonths={row.preferred_period_months ?? undefined}
+              clientEmail={row.client?.email ?? null}
+              clientName={clientName}
             />
           </div>
         </DialogContent>
