@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
 import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
-import wordmark from "@/assets/financeyou-wordmark.png.asset.json";
+import houseMark from "@/assets/financeyou-house-mark.png.asset.json";
 
 const searchSchema = z.object({
   token: z.string().uuid().optional(),
@@ -135,21 +135,14 @@ function OperatorRegisterPage() {
         <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.35),transparent_60%)] blur-3xl" />
         <div className="absolute -bottom-40 -right-40 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(129,140,248,0.4),transparent_60%)] blur-3xl" />
         <div className="absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(236,72,153,0.18),transparent_60%)] blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.08]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
+        {/* watermark grid removed */}
       </div>
 
       <div className="relative mx-auto grid min-h-screen max-w-6xl place-items-center px-4 py-10">
         <div className="w-full">
           <div className="mb-8 flex justify-center lg:justify-start">
             <Link to="/">
-              <img src={wordmark.url} alt="Finance You" className="h-8 w-auto opacity-90 md:h-10" draggable={false} />
+              <img src={houseMark.url} alt="Finance You" className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(56,189,248,0.35)] md:h-24" draggable={false} />
             </Link>
           </div>
         <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
