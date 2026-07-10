@@ -387,17 +387,64 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => setStep("context")}>
-          <Pencil className="h-4 w-4 mr-2" /> Wróć do danych transakcji
-        </Button>
+      <div className="flex items-center justify-end">
         <Button onClick={submit} disabled={busy}>
           {busy ? "Wystawianie…" : "Wystaw fakturę"}
         </Button>
       </div>
+
+      <Dialog open={!!issued} onOpenChange={(open) => { if (!open) skipDeal(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Dane transakcji {issued ? `— ${issued.invoiceNumber}` : ""}</DialogTitle>
+            <DialogDescription>
+              Zapisujemy je wewnętrznie (jako zrealizowane) — nie pojawiają się na fakturze.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Miasto</Label>
+              <Input value={deal.city} onChange={(e) => setDeal({ ...deal, city: e.target.value })} placeholder="np. Warszawa" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Rodzaj zabezpieczenia</Label>
+              <Select value={deal.security} onValueChange={(v) => setDeal({ ...deal, security: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SECURITY_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {deal.security === "Inne" && (
+                <Input
+                  className="mt-2"
+                  value={deal.securityOther}
+                  onChange={(e) => setDeal({ ...deal, securityOther: e.target.value })}
+                  placeholder="Wpisz rodzaj zabezpieczenia"
+                />
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Kwota pożyczki (PLN)</Label>
+              <Input type="number" step="0.01" min="0" value={deal.loanAmount} onChange={(e) => setDeal({ ...deal, loanAmount: e.target.value })} placeholder="np. 250000" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Zysk inwestora rocznie</Label>
+              <Input value={deal.investorProfitAnnual} onChange={(e) => setDeal({ ...deal, investorProfitAnnual: e.target.value })} placeholder="np. 10% lub 25 000 PLN" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={skipDeal} disabled={savingDeal}>Uzupełnię później</Button>
+            <Button onClick={saveDeal} disabled={savingDeal || !canSaveDeal}>
+              {savingDeal ? "Zapisywanie…" : "Zapisz dane transakcji"}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 
 function BuyerTypeButton({ active, onClick, icon, title, desc }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; desc: string }) {
   return (
