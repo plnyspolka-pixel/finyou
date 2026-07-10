@@ -585,13 +585,3 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
   );
 }
 
-function DealItem({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string }) {
-  return (
-    <div className="space-y-0.5">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-        {icon}{label}
-      </div>
-      <div className="font-medium break-words">{value || "—"}</div>
-    </div>
-  );
-}
