@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  ArrowRight, Pencil, MapPin, ShieldCheck, Wallet, TrendingUp, Landmark, FileText, ExternalLink,
+  ArrowRight, MapPin, ShieldCheck, Wallet, TrendingUp, Landmark, FileText, ExternalLink,
   Building2, User, CheckCircle2, Clock, Coins,
 } from "lucide-react";
 import { toast } from "sonner";
