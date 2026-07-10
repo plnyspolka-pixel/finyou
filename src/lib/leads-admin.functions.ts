@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 async function assertAdmin(supabase: any, userId: string) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r: any) => r.role);
-  if (!roles.some((r: string) => ["administrator", "operator", "operator_wewnetrzny"].includes(r))) {
+  if (!roles.some((r: string) => ["administrator", "operator"].includes(r))) {
     throw new Error("Brak uprawnień");
   }
 }

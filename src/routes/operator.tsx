@@ -25,7 +25,7 @@ function OperatorLayout() {
   return (
     <PanelShell
       title="Panel operatora"
-      allow={["operator", "operator_wewnetrzny", "administrator"]}
+      allow={["operator", "administrator"]}
       groups={groups}
       fancy
     />

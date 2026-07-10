@@ -26,7 +26,7 @@ function OperatorLayout() {
   return (
     <PanelShell
       title="Panel pośrednika"
-      allow={["operator", "operator_wewnetrzny", "administrator"]}
+      allow={["operator", "administrator"]}
       groups={groups}
     />
   );

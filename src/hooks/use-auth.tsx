@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 export type AppRole =
   | "administrator"
   | "operator"
-  | "operator_wewnetrzny"
   | "klient"
   | "inwestor"
   | "ksiegowosc";
@@ -103,8 +102,7 @@ export function useAuth() {
 
 export function defaultPathForRoles(roles: AppRole[]): string {
   if (roles.includes("administrator")) return "/admin";
-  if (roles.includes("operator_wewnetrzny")) return "/operator/leady";
-  if (roles.includes("operator")) return "/admin";
+  if (roles.includes("operator")) return "/operator/leady";
   if (roles.includes("ksiegowosc")) return "/admin/ksiegowosc";
   if (roles.includes("inwestor")) return "/inwestor";
   return "/klient";
