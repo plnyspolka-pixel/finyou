@@ -111,10 +111,14 @@ function RejestracjaPartnera() {
               {magicSent ? (
                 <p className="text-sm">Sprawdź skrzynkę <b>{email}</b> i kliknij link logujący, aby kontynuować.</p>
               ) : (
-                <form onSubmit={sendMagic} className="flex flex-col sm:flex-row gap-2">
-                  <Input type="email" placeholder="twoj@email.pl" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <Button type="submit">Wyślij link</Button>
-                </form>
+                <div className="space-y-4">
+                  <SocialSignIn labelPrefix="Zarejestruj się" />
+                  <AuthDivider label="lub e-mailem" />
+                  <form onSubmit={sendMagic} className="flex flex-col sm:flex-row gap-2">
+                    <Input type="email" placeholder="twoj@email.pl" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Button type="submit">Wyślij link</Button>
+                  </form>
+                </div>
               )}
               <p className="text-xs text-muted-foreground mt-3">Masz konto? <Link to="/logowanie" className="text-primary hover:underline">Zaloguj się</Link></p>
             </CardContent>
