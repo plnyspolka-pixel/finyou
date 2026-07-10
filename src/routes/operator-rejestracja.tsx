@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
 import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
+import wordmark from "@/assets/financeyou-wordmark.png.asset.json";
 
 const searchSchema = z.object({
   token: z.string().uuid().optional(),
@@ -145,6 +146,12 @@ function OperatorRegisterPage() {
       </div>
 
       <div className="relative mx-auto grid min-h-screen max-w-6xl place-items-center px-4 py-10">
+        <div className="w-full">
+          <div className="mb-8 flex justify-center lg:justify-start">
+            <Link to="/">
+              <img src={wordmark.url} alt="Finance You" className="h-8 w-auto opacity-90 md:h-10" draggable={false} />
+            </Link>
+          </div>
         <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
           {/* Left — hype panel */}
           <div className="hidden space-y-6 lg:block">
@@ -296,6 +303,7 @@ function OperatorRegisterPage() {
               Konto operatora wewnętrznego można założyć wyłącznie z linku zapraszającego od administratora.
             </p>
           </div>
+        </div>
         </div>
       </div>
     </div>
