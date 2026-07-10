@@ -251,6 +251,7 @@ function ApplicationsPage() {
             <TableHeader>
               <TableRow>
                 <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} />
+                <TableHead>Typ</TableHead>
                 <TableHead>Kontakt</TableHead>
                 <SortHeader label="Status" k="status" sort={sort} setSort={setSort} />
                 <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right" />
