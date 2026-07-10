@@ -173,7 +173,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           </div>
         </TabsContent>
 
-        <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>
+        {!compact && <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>}
 
         <TabsContent value="dane" className="space-y-3">
           <ExtractedFactsCard lead={lead} />
