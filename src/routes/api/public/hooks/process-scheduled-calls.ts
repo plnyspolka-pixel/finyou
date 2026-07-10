@@ -12,8 +12,11 @@ import { requireCronSecret } from "@/lib/cron-auth.server";
 export const Route = createFileRoute("/api/public/hooks/process-scheduled-calls")({
   server: {
     handlers: {
-      POST: handler,
-      GET: handler,
+      POST: async ({ request }) => {
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
+        return handler();
+      },
     },
   },
 });
