@@ -125,3 +125,107 @@ export const exportAccountingDocumentsCsv = createServerFn({ method: "GET" })
     }
     return { filename: `ksiegowosc-${new Date().toISOString().slice(0, 10)}.csv`, csv: "\uFEFF" + lines.join("\r\n") };
   });
+
+// ---- KSeF XML: pojedyncze pobranie oraz eksport ZIP dla wybranego zakresu ----
+
+const MAX_XML_ZIP_DOCS = 500;
+const MAX_XML_ZIP_BYTES = 60 * 1024 * 1024; // 60 MB
+const safeName = (s: string) => (s || "").replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
+
+export const getAccountingDocumentXml = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    await assertAccounting(accountingDb, context.userId);
+    const { data: doc } = await accountingDb
+      .from("accounting_documents")
+      .select("id, invoice_number, ksef_reference_number, xml_content")
+      .eq("id", data.id)
+      .maybeSingle();
+    const d = doc as any;
+    if (!d || !d.xml_content) throw new Error("Brak zapisanego XML dla tej faktury.");
+    const base = safeName(d.ksef_reference_number || d.invoice_number || d.id);
+    return { filename: `${base}.xml`, xml: d.xml_content as string };
+  });
+
+export const exportAccountingXmlZip = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z
+      .object({
+        entityId: z.string().uuid().optional(),
+        direction: z.enum(["sales", "purchase"]).optional(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+      .parse(i ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccounting(accountingDb, context.userId);
+    let q = accountingDb
+      .from("accounting_documents")
+      .select("id, entity_id, direction, invoice_number, issue_date, counterparty_name, counterparty_nip, net_amount, vat_amount, gross_amount, currency, ksef_reference_number, xml_content")
+      .eq("source", "ksef")
+      .not("xml_content", "is", null)
+      .order("issue_date", { ascending: false })
+      .limit(MAX_XML_ZIP_DOCS);
+    if (data.entityId) q = q.eq("entity_id", data.entityId);
+    if (data.direction) q = q.eq("direction", data.direction);
+    if (data.from) q = q.gte("issue_date", data.from);
+    if (data.to) q = q.lte("issue_date", data.to);
+    const { data: docs } = await q;
+    const rows = (docs ?? []) as any[];
+    if (!rows.length) throw new Error("Brak faktur z zapisanym XML w wybranym zakresie.");
+
+    const { data: ents } = await accountingDb.from("accounting_entities").select("id,name");
+    const nameMap: Record<string, string> = {};
+    for (const e of (ents ?? []) as any[]) nameMap[e.id] = e.name;
+
+    const files: Record<string, Uint8Array> = {};
+    const csvCell = (v: unknown) => { const s = v == null ? "" : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const manifest = ["Plik;Podmiot;Kierunek;Numer;Data;Kontrahent;NIP;Netto;VAT;Brutto;Waluta;NrKSeF"];
+    let total = 0;
+    let skipped = 0;
+    for (const r of rows) {
+      const xml: string = r.xml_content;
+      const bytes = strToU8(xml);
+      if (total + bytes.byteLength > MAX_XML_ZIP_BYTES) { skipped += 1; continue; }
+      total += bytes.byteLength;
+      const base = safeName(r.ksef_reference_number || r.invoice_number || r.id);
+      const dir = r.direction === "sales" ? "sprzedaz" : "koszty";
+      const path = `${dir}/${base}.xml`;
+      files[path] = bytes;
+      manifest.push([
+        path,
+        nameMap[r.entity_id] ?? "",
+        r.direction === "sales" ? "Sprzedaż" : "Koszt",
+        r.invoice_number ?? "",
+        r.issue_date ?? "",
+        r.counterparty_name ?? "",
+        r.counterparty_nip ?? "",
+        String(r.net_amount ?? "").replace(".", ","),
+        String(r.vat_amount ?? "").replace(".", ","),
+        String(r.gross_amount ?? "").replace(".", ","),
+        r.currency ?? "",
+        r.ksef_reference_number ?? "",
+      ].map(csvCell).join(";"));
+    }
+    files["manifest.csv"] = strToU8("\uFEFF" + manifest.join("\r\n"));
+
+    const zipped = zipSync(files, { level: 6 });
+    // Base64 (Worker-safe, bez alokacji dużego stringa naraz).
+    let bin = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < zipped.length; i += chunk) {
+      bin += String.fromCharCode(...zipped.subarray(i, Math.min(i + chunk, zipped.length)));
+    }
+    const base64 = typeof btoa === "function" ? btoa(bin) : Buffer.from(bin, "binary").toString("base64");
+    const stamp = new Date().toISOString().slice(0, 10);
+    return {
+      filename: `ksef-xml-${stamp}.zip`,
+      base64,
+      count: Object.keys(files).length - 1,
+      skipped,
+      byteSize: zipped.length,
+    };
+  });
