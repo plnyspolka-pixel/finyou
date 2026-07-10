@@ -76,6 +76,7 @@ import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
+import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
 import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMessengerRouteImport } from './routes/admin.messenger'
@@ -507,6 +508,11 @@ const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
 const AdminPixeleRoute = AdminPixeleRouteImport.update({
   id: '/pixele',
   path: '/pixele',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOperatorzyRoute = AdminOperatorzyRouteImport.update({
+  id: '/operatorzy',
+  path: '/operatorzy',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminOfertyRoute = AdminOfertyRouteImport.update({
@@ -1069,6 +1075,7 @@ export interface FileRoutesByFullPath {
   '/admin/messenger': typeof AdminMessengerRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
+  '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1228,6 +1235,7 @@ export interface FileRoutesByTo {
   '/admin/messenger': typeof AdminMessengerRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
+  '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1391,6 +1399,7 @@ export interface FileRoutesById {
   '/admin/messenger': typeof AdminMessengerRoute
   '/admin/meta': typeof AdminMetaRoute
   '/admin/oferty': typeof AdminOfertyRoute
+  '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1556,6 +1565,7 @@ export interface FileRouteTypes {
     | '/admin/messenger'
     | '/admin/meta'
     | '/admin/oferty'
+    | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -1715,6 +1725,7 @@ export interface FileRouteTypes {
     | '/admin/messenger'
     | '/admin/meta'
     | '/admin/oferty'
+    | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -1877,6 +1888,7 @@ export interface FileRouteTypes {
     | '/admin/messenger'
     | '/admin/meta'
     | '/admin/oferty'
+    | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2535,6 +2547,13 @@ declare module '@tanstack/react-router' {
       path: '/pixele'
       fullPath: '/admin/pixele'
       preLoaderRoute: typeof AdminPixeleRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/operatorzy': {
+      id: '/admin/operatorzy'
+      path: '/operatorzy'
+      fullPath: '/admin/operatorzy'
+      preLoaderRoute: typeof AdminOperatorzyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/oferty': {
@@ -3248,6 +3267,7 @@ interface AdminRouteChildren {
   AdminMessengerRoute: typeof AdminMessengerRoute
   AdminMetaRoute: typeof AdminMetaRoute
   AdminOfertyRoute: typeof AdminOfertyRoute
+  AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -3307,6 +3327,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMessengerRoute: AdminMessengerRoute,
   AdminMetaRoute: AdminMetaRoute,
   AdminOfertyRoute: AdminOfertyRoute,
+  AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
