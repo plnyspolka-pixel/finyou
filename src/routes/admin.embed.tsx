@@ -101,6 +101,8 @@ function EmbedPage() {
         </CardContent>
       </Card>
 
+      <RecentApplicationsMockup />
+
       <Card>
         <CardHeader>
           <CardTitle>Podgląd</CardTitle>
@@ -116,5 +118,121 @@ function EmbedPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+type MockupRow = {
+  id: string;
+  created_at: string;
+  loan_amount: number | null;
+  property_type: string | null;
+  land_register_number: string | null;
+};
+
+function RecentApplicationsMockup() {
+  const [rows, setRows] = useState<MockupRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("loan_applications")
+        .select("id,created_at,loan_amount,properties(property_type,land_register_number)")
+        .order("created_at", { ascending: false })
+        .limit(60);
+      if (cancelled) return;
+      const list: MockupRow[] = ((data ?? []) as any[])
+        .map((r) => {
+          const props = Array.isArray(r.properties) ? r.properties : [];
+          const withType = props.find((p: any) => p?.property_type) ?? props[0] ?? {};
+          return {
+            id: r.id,
+            created_at: r.created_at,
+            loan_amount: r.loan_amount,
+            property_type: withType?.property_type ?? null,
+            land_register_number: withType?.land_register_number ?? null,
+          };
+        })
+        .filter((r) => r.property_type || r.land_register_number || r.loan_amount)
+        .slice(0, 12);
+      setRows(list);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Podgląd ostatnich wniosków (mockup)</CardTitle>
+        <CardDescription>
+          Zanonimizowane dane — typ nieruchomości, ukryty numer KW, kwota i data. Możesz użyć jako inspiracji do własnej sekcji na stronie.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Ładowanie…</div>
+        ) : rows.length === 0 ? (
+          <div className="text-sm text-muted-foreground">Brak wniosków do wyświetlenia.</div>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {rows.map((r) => {
+              const v = getPropertyVisual(r.property_type);
+              return (
+                <li
+                  key={r.id}
+                  className="relative overflow-hidden rounded-2xl border border-white/10 p-4 text-white shadow-lg"
+                  style={{
+                    background:
+                      "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)",
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <PropertyTypeIcon
+                      type={r.property_type}
+                      className="h-16 w-16 shrink-0 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.5)]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <Badge className="bg-white/90 text-foreground border-0">{v.label}</Badge>
+                      <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 font-mono text-[11px] font-semibold text-white/90">
+                        <Hash className="h-3 w-3" />
+                        {anonymizeKw(r.land_register_number)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-white/60">Kwota</div>
+                      <div className="text-xl font-bold tabular-nums text-white inline-flex items-center gap-1">
+                        <Wallet className="h-4 w-4 text-white/70" />
+                        {r.loan_amount ? formatPLN(Number(r.loan_amount)) : "—"}
+                      </div>
+                    </div>
+                    <div className="text-right text-[11px] text-white/70 inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(r.created_at).toLocaleDateString("pl-PL")}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function _EmbedPageEnd() {
+  return null;
+}
+
+function __unusedTail() {
+  return (
+    <div>
+
   );
 }
