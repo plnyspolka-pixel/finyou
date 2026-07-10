@@ -155,7 +155,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
     <div className="space-y-6">
       <div>
         <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2">
-          <Link to="/posrednik/wnioski"><ArrowLeft className="mr-2 h-4 w-4" />Moje wnioski</Link>
+          <Link to={`${base}/wnioski` as any}><ArrowLeft className="mr-2 h-4 w-4" />Moje wnioski</Link>
         </Button>
         <FancyPageHeader
           eyebrow="Wniosek pożyczkowy"
