@@ -57,11 +57,17 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 
+import applicationObjectAsset from "@/assets/application-flow/application-object.png.asset.json";
+import applicationPhotosAsset from "@/assets/application-flow/application-photos.png.asset.json";
+import applicationDataAsset from "@/assets/application-flow/application-data.png.asset.json";
+import applicationCalculatorAsset from "@/assets/application-flow/application-calculator.png.asset.json";
+import applicationCalculatorLockedAsset from "@/assets/application-flow/application-calculator-locked.png.asset.json";
+
 const STEPS = [
-  { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", icon: Home },
-  { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", icon: Upload },
-  { id: 3, shortLabel: "Dane", label: "Dane kontaktowe", icon: UserRound },
-  { id: 4, shortLabel: "Oferta", label: "Kalkulator", icon: Send },
+  { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", img: applicationObjectAsset.url },
+  { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", img: applicationPhotosAsset.url },
+  { id: 3, shortLabel: "Dane", label: "Dane kontaktowe", img: applicationDataAsset.url },
+  { id: 4, shortLabel: "Oferta", label: "Kalkulator", img: applicationCalculatorAsset.url, lockedImg: applicationCalculatorLockedAsset.url },
 ] as const;
 
 type StepId = 1 | 2 | 3 | 4;
