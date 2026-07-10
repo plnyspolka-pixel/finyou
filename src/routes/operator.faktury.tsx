@@ -396,8 +396,8 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs">Prowizja wewnętrzna operatora (PLN)</Label>
-            <Input type="number" step="0.01" min="0" value={form.operatorCommission} onChange={(e) => setForm({ ...form, operatorCommission: e.target.value })} placeholder="np. 1500" />
-            <p className="text-[11px] text-muted-foreground">Wypłacana, jeśli pożyczka zostanie wypłacona.</p>
+            <Input type="number" value={form.operatorCommission} readOnly className="bg-muted/40" />
+            <p className="text-[11px] text-muted-foreground">Wyliczana automatycznie: 50% kwoty brutto faktury. Wypłacana po wypłacie pożyczki.</p>
           </div>
         </CardContent>
       </Card>
