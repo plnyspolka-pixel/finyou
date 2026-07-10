@@ -82,11 +82,11 @@ function OperatorFakturyPage() {
           <TabsTrigger value="lista">Moje faktury</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="wystaw" className="mt-4">
+        <TabsContent value="wystaw" className="mt-4" forceMount hidden={tab !== "wystaw"}>
           <IssueFlow onIssued={() => setTab("lista")} />
         </TabsContent>
 
-        <TabsContent value="lista" className="mt-4">
+        <TabsContent value="lista" className="mt-4" forceMount hidden={tab !== "lista"}>
           <MyInvoices />
         </TabsContent>
       </Tabs>
