@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
+import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
 
 
 export const Route = createFileRoute("/posrednik/leady/")({
@@ -122,14 +123,27 @@ export function OperatorLeadsList() {
                       periodMonths={r.loan.preferred_period_months}
                     />
                   )}
+                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                    {r.email && (
+                      <a
+                        href={`mailto:${r.email}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 hover:text-white underline-offset-2 hover:underline"
+                      >
+                        <Mail className="h-3 w-3" /> {r.email}
+                      </a>
+                    )}
+                    {phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</span>}
+                  </div>
                   <div className="text-xs text-white/70 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms.lastAt && <span>· ostatni kontakt {formatRelative(r.comms.lastAt)}</span>}
                   </div>
                   <div className="text-xs text-white/70 mt-1 flex gap-3">
-                    <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {r.comms.calls}</span>
-                    <span className="inline-flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
-                    <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
+                    <span className="inline-flex items-center gap-1" title="Telefony (razem)"><Phone className="h-3 w-3" /> {r.comms.calls}</span>
+                    <span className="inline-flex items-center gap-1" title="SMS (razem)"><MessageSquare className="h-3 w-3" /> {r.comms.sms}</span>
+                    <span className="inline-flex items-center gap-1" title="E-maile (razem)"><Mail className="h-3 w-3" /> {r.comms.emails}</span>
+                    <span className="inline-flex items-center gap-1" title="Messenger / IG / WhatsApp"><MessageCircle className="h-3 w-3" /> {r.comms.messenger ?? 0}</span>
                   </div>
                   <Link
                     to={`${base}/leady/${r.id}` as any}
@@ -175,21 +189,29 @@ export function OperatorLeadsList() {
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
-                {phone && (
-                  <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  {phone && (
                     <a
                       href={`tel:${phone}`}
                       onClick={() => {
                         logCall.mutate({ leadId: r.id, phone });
                         setOutcome({ leadId: r.id, name });
                       }}
-                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-500 text-white hover:bg-emerald-600"
+                      className="inline-flex items-center gap-2 rounded-md bg-emerald-500 text-white px-3 h-9 text-sm font-medium hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
                       aria-label={`Zadzwoń ${phone}`}
+                      title={`Zadzwoń: ${phone}`}
                     >
                       <Phone className="h-4 w-4" />
+                      <span className="hidden sm:inline">Zadzwoń</span>
                     </a>
-                  </div>
-                )}
+                  )}
+                  <MetaRateButtons
+                    leadId={r.id}
+                    markedBad={r.marked_bad_lead}
+                    qualityTier={r.quality_tier}
+                    onChanged={() => q.refetch()}
+                  />
+                </div>
 
               </div>
             );

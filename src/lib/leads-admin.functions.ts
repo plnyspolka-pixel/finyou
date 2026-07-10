@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 async function assertAdmin(supabase: any, userId: string) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r: any) => r.role);
-  if (!roles.includes("administrator") && !roles.includes("operator")) {
+  if (!roles.some((r: string) => ["administrator", "operator", "operator_wewnetrzny"].includes(r))) {
     throw new Error("Brak uprawnień");
   }
 }
@@ -46,6 +46,7 @@ export const listLeads = createServerFn({ method: "GET" })
       .select(`
         id, type, status, source, first_name, last_name, email, phone_normalized,
         current_form_step, created_at, updated_at, loan_application_id, investor_id, meta_lead_id,
+        quality_tier, quality_score, marked_bad_lead,
         loan:loan_applications(
           id, status, loan_amount, preferred_period_months, completeness_percent,
           properties(property_type, city, estimated_value, land_register_number, photos)
@@ -72,10 +73,10 @@ export const listLeads = createServerFn({ method: "GET" })
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
     type InboundAttachment = { name: string; mime?: string; size?: number; path?: string; at: string };
-    type Comm = { calls: number; sms: number; emails: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
+    type Comm = { calls: number; sms: number; emails: number; messenger: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
     const commsByLead: Record<string, Comm> = {};
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
-    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, notes: 0, inboundCalls: 0, inboundSms: 0, inboundMessenger: 0, inboundEmails: 0, lastInboundAt: null, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
+    const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, messenger: 0, notes: 0, inboundCalls: 0, inboundSms: 0, inboundMessenger: 0, inboundEmails: 0, lastInboundAt: null, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
     const leadsByEmailLower: Record<string, any[]> = {};
@@ -90,12 +91,13 @@ export const listLeads = createServerFn({ method: "GET" })
     // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
     // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
     const queries: Promise<any>[] = [];
-    if (ids.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", ids)));
-    if (phones.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", phones)));
+    // Podnosimy limit z domyślnych 1000 — inaczej licznik gubi maile/SMS przy większych leadach.
+    if (ids.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", ids).limit(20000)));
+    if (phones.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", phones).limit(20000)));
     if (emailsLower.length) {
       // ilike.any() = case-insensitive email match, catches inbound emails filed against a different (auto-created) lead row.
       const orExpr = emailsLower.map((e) => `email.ilike.${e}`).join(",");
-      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).or(orExpr)));
+      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).or(orExpr).limit(20000)));
     }
     const results = await Promise.all(queries);
 
@@ -136,6 +138,7 @@ export const listLeads = createServerFn({ method: "GET" })
             if (isInbound) s.inboundSms++;
           }
           else if (ev.channel === "messenger" || ev.channel === "instagram" || ev.channel === "whatsapp") {
+            s.messenger++;
             if (isInbound) s.inboundMessenger++;
           }
           else if (ev.channel === "email") {
