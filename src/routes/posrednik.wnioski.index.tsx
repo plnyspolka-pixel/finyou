@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePanelBase } from "@/lib/panel-base";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
