@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTime } from "@/lib/labels";
 import { extractLoanCalcPayload, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
+import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
+import { readCalcHandoff, clearCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listDocxTemplates,
@@ -163,7 +165,15 @@ export function DocumentCreatorPage() {
   const [generating, setGenerating] = useState(false);
   // Harmonogram wczytany z PDF kalkulatora → wstawiany jako tabela w [HARMONOGRAM].
   const [importedSchedule, setImportedSchedule] = useState<LoanCalcPayload["schedule"] | null>(null);
+  const [handoffReady, setHandoffReady] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  // Nasłuchuj kalkulacji przekazanej z kalkulatora (w aplikacji).
+  useEffect(() => {
+    const sync = () => setHandoffReady(!!readCalcHandoff());
+    sync();
+    return onCalcHandoffChange(sync);
+  }, []);
   const [previewText, setPreviewText] = useState<string>("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewMode, setPreviewMode] = useState<"template" | "filled">("template");
@@ -331,62 +341,34 @@ export function DocumentCreatorPage() {
     });
   };
 
-  // ─── Wczytanie danych z PDF kalkulatora (deterministycznie, bez AI)
+  // ─── Wczytanie danych z kalkulatora (deterministycznie, bez AI)
   const applyCalcPayload = useCallback(
-    (p: LoanCalcPayload) => {
-      const plNum = (n: number) =>
-        new Intl.NumberFormat("pl-PL", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(Math.round((n || 0) * 100) / 100);
-
-      const outputs: CalculatorOutputs = {
-        nominal: p.nominal,
-        net: p.onHand,
-        commission: p.commissionPln,
-        total: p.totalToRepay,
-        annualInterestPercent: p.annualRate,
-        months: p.months,
-        payoutDateDDMM: p.agreementDate ?? "",
-      };
+    (p: LoanCalcPayload, source: "app" | "pdf") => {
       setImportedSchedule(p.schedule ?? null);
       setValues((v) => {
-        const next = { ...v };
-        let count = 0;
-        for (const f of fields) {
-          const k = f.key.toLowerCase();
-          let val: string | null = null;
-          if (f.semantic === "amount" || f.semantic === "amountWords") {
-            // Hipoteka i art. 777 mają własne kwoty — nie dobieraj ich z kwot pożyczki.
-            if (/hipotek/.test(k)) {
-              val = f.semantic === "amountWords" ? amountToWordsPLN(p.mortgageAmount) : plNum(p.mortgageAmount);
-            } else if (/777/.test(k)) {
-              val = f.semantic === "amountWords" ? amountToWordsPLN(p.art777Amount) : plNum(p.art777Amount);
-            } else {
-              val = calculatorValueForField(f, outputs);
-            }
-          } else if (f.semantic === "date") {
-            if (p.agreementDate && /umow|zawar|wypłat|wyplat/.test(k)) val = p.agreementDate;
-          } else {
-            val = calculatorValueForField(f, outputs);
-          }
-          if (val != null && val !== "") {
-            next[f.id] = val;
-            count++;
-          }
-        }
+        const mapped = buildCalcFieldValues(fields, p);
+        const count = Object.keys(mapped).length;
         if (count === 0)
           toast.message("Nie znalazłem pól finansowych do uzupełnienia w tym wzorze.");
         else
           toast.success(
-            `Wczytano dane z PDF do ${count} pól.` +
+            `Wczytano dane z ${source === "app" ? "kalkulatora" : "PDF"} do ${count} pól.` +
               (p.schedule?.length ? ` Harmonogram (${p.schedule.length} rat) wstawię w [HARMONOGRAM].` : ""),
           );
-        return next;
+        return { ...v, ...mapped };
       });
     },
     [fields],
   );
+
+  const loadFromCalculator = useCallback(() => {
+    const h = readCalcHandoff();
+    if (!h) {
+      toast.error("Brak kalkulacji. W kalkulatorze inwestora kliknij „Wyślij do kreatora”.");
+      return;
+    }
+    applyCalcPayload(h.payload, "app");
+  }, [applyCalcPayload]);
 
   const onPickCalcPdf = useCallback(
     async (file: File) => {
@@ -398,7 +380,7 @@ export function DocumentCreatorPage() {
           toast.error("To nie jest PDF z kalkulatora Finance You — brak danych do odczytu.", { id: t });
           return;
         }
-        applyCalcPayload(payload);
+        applyCalcPayload(payload, "pdf");
         toast.dismiss(t);
       } catch (e: any) {
         toast.error(e?.message ?? "Nie udało się wczytać PDF.", { id: t });
@@ -695,18 +677,23 @@ export function DocumentCreatorPage() {
                 </CardHeader>
               </Card>
 
-              {/* Wczytanie danych z PDF kalkulatora (deterministycznie) */}
+              {/* Wczytanie danych z kalkulatora (deterministycznie, bez AI) */}
               <Card className="border-primary/30 bg-primary/5">
                 <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
                   <div className="min-w-0">
                     <div className="text-sm font-medium flex items-center gap-2">
-                      <Upload className="h-4 w-4 text-primary" /> Wczytaj z PDF kalkulatora
+                      <Calculator className="h-4 w-4 text-primary" /> Wczytaj dane z kalkulatora
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      Pobierz PDF w kalkulatorze inwestora (przycisk „Pobierz PDF"), a tutaj
-                      uzupełnię z niego wszystkie dane finansowe i cały harmonogram —
-                      deterministycznie, bez AI.
+                      W kalkulatorze inwestora kliknij „Wyślij do kreatora” — tu uzupełnię wszystkie
+                      dane finansowe i cały harmonogram, deterministycznie (bez AI). Możesz też
+                      wczytać z pobranego PDF.
                     </p>
+                    {handoffReady && !importedSchedule && (
+                      <p className="text-[11px] text-primary mt-0.5 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Wykryto kalkulację z kalkulatora — kliknij „Wczytaj z kalkulatora”.
+                      </p>
+                    )}
                     {importedSchedule && (
                       <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5 flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3" /> Wczytano harmonogram: {importedSchedule.length}{" "}
@@ -714,20 +701,25 @@ export function DocumentCreatorPage() {
                       </p>
                     )}
                   </div>
-                  <input
-                    ref={pdfInputRef}
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void onPickCalcPdf(f);
-                      if (pdfInputRef.current) pdfInputRef.current.value = "";
-                    }}
-                  />
-                  <Button variant="outline" onClick={() => pdfInputRef.current?.click()} className="shrink-0">
-                    <Upload className="mr-2 h-4 w-4" /> Wybierz PDF
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void onPickCalcPdf(f);
+                        if (pdfInputRef.current) pdfInputRef.current.value = "";
+                      }}
+                    />
+                    <Button variant="outline" size="sm" onClick={() => pdfInputRef.current?.click()}>
+                      <Upload className="mr-2 h-4 w-4" /> Z PDF
+                    </Button>
+                    <Button onClick={loadFromCalculator} disabled={!handoffReady} className="shrink-0">
+                      <Calculator className="mr-2 h-4 w-4" /> Wczytaj z kalkulatora
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 

@@ -27,6 +27,8 @@ import {
 } from "@/lib/document-fields";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
 import { FY_CREDITOR } from "@/lib/windykacja-docfill";
+import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
+import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 // Kreator jawnie korzysta z Gemini Pro (mocniejszy model do wnioskowania z rozmowy).
@@ -309,6 +311,8 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
       templateId: string;
       lenderId: string;
       messages: ChatMsg[];
+      /** Kalkulacja z kalkulatora — dane finansowe uzupełniane DETERMINISTYCZNIE (bez AI). */
+      calc?: LoanCalcPayload | null;
     }) => d,
   )
   .handler(async ({ data, context }): Promise<WizardChatResult> => {
@@ -323,9 +327,9 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
 
     const history = (data.messages ?? []).filter((m) => m && m.content && m.content.trim());
 
-    // Bez rozmowy — tylko wstrzyknięte dane finansującego + powitanie (bez AI).
+    // Bez rozmowy — dane finansującego + (opcjonalnie) kalkulacja + powitanie (bez AI).
     if (history.length === 0) {
-      const values = { ...seed };
+      const values = { ...(data.calc ? buildCalcFieldValues(fields, data.calc) : {}), ...seed };
       fillAmountWords(fields, values);
       return {
         reply: greeting(lender, templateName),
@@ -425,7 +429,9 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
         }
       }
     }
-    // Dane finansującego mają pierwszeństwo — chronią tożsamość pożyczkodawcy.
+    // Dane finansowe z kalkulatora (deterministyczne) mają pierwszeństwo przed AI,
+    // a dane finansującego przed wszystkim — chronią tożsamość pożyczkodawcy.
+    if (data.calc) Object.assign(values, buildCalcFieldValues(fields, data.calc));
     Object.assign(values, seed);
     fillAmountWords(fields, values);
 

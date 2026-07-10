@@ -13,6 +13,8 @@ import {
   type DocTemplate,
 } from "@/lib/document-generator.functions";
 import { previewSegments, extractOrderedFields } from "@/lib/document-fields";
+import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
+import { readCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +40,7 @@ import {
   Eye,
   Bot,
   CheckCircle2,
+  Calculator,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -79,7 +82,17 @@ export function LoanDocWizardPage() {
   const [thinking, setThinking] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  // Kalkulacja przekazana z kalkulatora (dane finansowe + harmonogram, bez AI).
+  const [calc, setCalc] = useState<LoanCalcPayload | null>(null);
+  const [handoffReady, setHandoffReady] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sync = () => setHandoffReady(!!readCalcHandoff());
+    sync();
+    return onCalcHandoffChange(sync);
+  }, []);
 
   const financeYou = useMemo(() => lenders.find((l) => l.id === FINANCE_YOU_ID), [lenders]);
   const investors = useMemo(() => lenders.filter((l) => l.kind === "investor"), [lenders]);
@@ -140,7 +153,7 @@ export function LoanDocWizardPage() {
       try {
         const [prev, res] = await Promise.all([
           _preview({ data: { templateId: template.id } }),
-          _wizard({ data: { templateId: template.id, lenderId, messages: [] } }),
+          _wizard({ data: { templateId: template.id, lenderId, messages: [], calc } }),
         ]);
         if (!alive) return;
         setPreviewText(prev.text);
@@ -168,7 +181,7 @@ export function LoanDocWizardPage() {
     setThinking(true);
     try {
       const res = await _wizard({
-        data: { templateId: template.id, lenderId, messages: nextMessages },
+        data: { templateId: template.id, lenderId, messages: nextMessages, calc },
       });
       setValues(res.values);
       setMissing(res.missing);
@@ -189,7 +202,9 @@ export function LoanDocWizardPage() {
     if (!template) return;
     setGenerating(true);
     try {
-      const res = await _generate({ data: { templateId: template.id, values } });
+      const res = await _generate({
+        data: { templateId: template.id, values, schedule: calc?.schedule ?? undefined },
+      });
       const url = await _signedUrl({ data: { path: res.docxPath } });
       window.open(url.url, "_blank");
       toast.success("Dokument wygenerowany");
@@ -197,6 +212,38 @@ export function LoanDocWizardPage() {
       toast.error(e?.message ?? "Błąd generowania");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // Wczytanie kalkulacji z kalkulatora (w aplikacji) — dane finansowe bez AI.
+  const loadFromCalculator = async () => {
+    if (!template) return;
+    const h = readCalcHandoff();
+    if (!h) {
+      toast.error("Brak kalkulacji. W kalkulatorze inwestora kliknij „Wyślij do kreatora”.");
+      return;
+    }
+    setCalc(h.payload);
+    const hasUserTurn = messages.some((m) => m.role === "user");
+    setThinking(true);
+    try {
+      const res = await _wizard({
+        data: {
+          templateId: template.id,
+          lenderId,
+          messages: hasUserTurn ? messages : [],
+          calc: h.payload,
+        },
+      });
+      setValues(res.values);
+      setMissing(res.missing);
+      setDone(res.done);
+      if (!hasUserTurn) setMessages([{ role: "assistant", content: res.reply }]);
+      toast.success(`Wczytano dane z kalkulatora (${h.payload.schedule.length} rat).`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd wczytywania kalkulacji");
+    } finally {
+      setThinking(false);
     }
   };
 
@@ -278,6 +325,24 @@ export function LoanDocWizardPage() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <div className="min-w-0 text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <Calculator className="h-3.5 w-3.5 text-primary" />
+              {calc ? (
+                <span className="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" /> Wczytano kalkulację ({calc.schedule.length} rat) — dane finansowe i harmonogram uzupełniane bez AI.
+                </span>
+              ) : handoffReady ? (
+                <span className="text-primary">Wykryto kalkulację z kalkulatora — wczytaj dane finansowe i harmonogram.</span>
+              ) : (
+                <span>W kalkulatorze inwestora kliknij „Wyślij do kreatora”, aby zaciągnąć dane finansowe.</span>
+              )}
+            </div>
+            <Button size="sm" variant={calc ? "outline" : "default"} onClick={() => void loadFromCalculator()} disabled={!handoffReady || thinking || bootLoading}>
+              <Calculator className="mr-2 h-4 w-4" /> {calc ? "Wczytaj ponownie" : "Wczytaj z kalkulatora"}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -19,6 +19,7 @@ import { formatPLN } from "@/lib/labels";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
+import { saveCalcHandoff } from "@/lib/loan-calc-handoff";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
 const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
@@ -479,6 +480,14 @@ export function LoanCalculator({
         saldo: Math.round(r.saldo * 100) / 100,
       })),
     };
+  }
+
+  /** Przekazuje kalkulację do Kreatora dokumentów w aplikacji (bez pliku). */
+  function sendCalcToCreator() {
+    saveCalcHandoff(buildCalcPayload());
+    toast.success("Kalkulacja przekazana do kreatorów", {
+      description: "Otwórz Kreator dokumentów i kliknij „Wczytaj z kalkulatora”.",
+    });
   }
 
   /** Pobiera PDF z wbudowanym blokiem danych — Kreator dokumentów odczyta go deterministycznie. */
@@ -961,6 +970,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
           <CardTitle className="text-white">Harmonogram spłat</CardTitle>
           {investorGuidance && schedule.rows.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={sendCalcToCreator} className="bg-white text-slate-900 hover:bg-white/90 border-white" title="Przekaż dane kalkulacji do kreatorów w aplikacji"><Send className="mr-2 h-3.5 w-3.5" /> Wyślij do kreatora</Button>
             <Button variant="outline" size="sm" onClick={downloadCalcPdf} className="bg-white text-slate-900 hover:bg-white/90 border-white" title="PDF z danymi kalkulacji — Kreator dokumentów odczyta je automatycznie"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz PDF</Button>
             <Button variant="outline" size="sm" onClick={printSchedulePdf} className="bg-white text-slate-900 hover:bg-white/90 border-white"><Printer className="mr-2 h-3.5 w-3.5" /> Drukuj</Button>
             <Dialog open={sendOpen} onOpenChange={setSendOpen}>
