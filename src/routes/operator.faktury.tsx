@@ -144,7 +144,6 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
       ...s,
       entityId: def.id,
       bankAccount: s.bankAccount || def.bank_account || "",
-      vatRate: def.default_vat_rate || s.vatRate,
     }));
   }, [entities, form.entityId]);
 
