@@ -69,7 +69,7 @@ export function OperatorLeadDetail() {
         </Card>
       )}
 
-      <LeadDetailView id={id} compact />
+      <LeadDetailView id={id} hideAdvancedTabs />
     </div>
   );
 }
