@@ -51,6 +51,7 @@ import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
+import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
@@ -385,6 +386,11 @@ const PosrednicyRejestracjaRoute = PosrednicyRejestracjaRouteImport.update({
   id: '/posrednicy/rejestracja',
   path: '/posrednicy/rejestracja',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
+  id: '/wniosek',
+  path: '/wniosek',
+  getParentRoute: () => OperatorRoute,
 } as any)
 const OperatorMojeLeadyRoute = OperatorMojeLeadyRouteImport.update({
   id: '/moje-leady',
@@ -1121,6 +1127,7 @@ export interface FileRoutesByFullPath {
   '/l/$slug': typeof LSlugRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1282,6 +1289,7 @@ export interface FileRoutesByTo {
   '/l/$slug': typeof LSlugRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1450,6 +1458,7 @@ export interface FileRoutesById {
   '/l/$slug': typeof LSlugRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
+  '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1619,6 +1628,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/leady'
     | '/operator/moje-leady'
+    | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1780,6 +1790,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/leady'
     | '/operator/moje-leady'
+    | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1947,6 +1958,7 @@ export interface FileRouteTypes {
     | '/l/$slug'
     | '/operator/leady'
     | '/operator/moje-leady'
+    | '/operator/wniosek'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -2407,6 +2419,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednicy/rejestracja'
       preLoaderRoute: typeof PosrednicyRejestracjaRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/wniosek': {
+      id: '/operator/wniosek'
+      path: '/wniosek'
+      fullPath: '/operator/wniosek'
+      preLoaderRoute: typeof OperatorWniosekRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/operator/moje-leady': {
       id: '/operator/moje-leady'
@@ -3511,12 +3530,14 @@ const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
 interface OperatorRouteChildren {
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
+  OperatorWniosekRoute: typeof OperatorWniosekRoute
   OperatorIndexRoute: typeof OperatorIndexRoute
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
+  OperatorWniosekRoute: OperatorWniosekRoute,
   OperatorIndexRoute: OperatorIndexRoute,
 }
 
