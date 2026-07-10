@@ -18,6 +18,8 @@ type PanelShellProps = {
   allow?: AppRole[];
   /** Dodatkowy element w obrębie shella (np. pływający czat AI administratora). */
   footer?: ReactNode;
+  /** Włącz „fancy" navy aurora backdrop w obszarze głównym. */
+  fancy?: boolean;
 };
 
 /**
