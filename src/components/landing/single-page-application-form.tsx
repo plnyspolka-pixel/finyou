@@ -498,8 +498,8 @@ export function SinglePageApplicationForm({
 
 
 
-      {/* Step 1 — dane kontaktowe */}
-      {step === 1 && (
+      {/* Dane kontaktowe */}
+      {!skipContact && (
         <FancyShell>
           <div className="space-y-5">
             
