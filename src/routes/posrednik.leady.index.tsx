@@ -189,21 +189,29 @@ export function OperatorLeadsList() {
                   )}
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
-                {phone && (
-                  <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  {phone && (
                     <a
                       href={`tel:${phone}`}
                       onClick={() => {
                         logCall.mutate({ leadId: r.id, phone });
                         setOutcome({ leadId: r.id, name });
                       }}
-                      className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md bg-emerald-500 text-white hover:bg-emerald-600"
+                      className="inline-flex items-center gap-2 rounded-md bg-emerald-500 text-white px-3 h-9 text-sm font-medium hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
                       aria-label={`Zadzwoń ${phone}`}
+                      title={`Zadzwoń: ${phone}`}
                     >
                       <Phone className="h-4 w-4" />
+                      <span className="hidden sm:inline">Zadzwoń</span>
                     </a>
-                  </div>
-                )}
+                  )}
+                  <MetaRateButtons
+                    leadId={r.id}
+                    markedBad={r.marked_bad_lead}
+                    qualityTier={r.quality_tier}
+                    onChanged={() => q.refetch()}
+                  />
+                </div>
 
               </div>
             );
