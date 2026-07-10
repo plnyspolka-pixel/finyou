@@ -57,7 +57,7 @@ function OperatorInvitesPage() {
       setEmail("");
       setNote("");
       qc.invalidateQueries({ queryKey: ["operator-invites"] });
-      const url = `${window.location.origin}/operator/rejestracja?token=${row.token}`;
+      const url = `${window.location.origin}/operator-rejestracja?token=${row.token}`;
       navigator.clipboard.writeText(url).catch(() => {});
       toast.success("Link wygenerowany i skopiowany", { description: url });
     },
@@ -73,7 +73,7 @@ function OperatorInvitesPage() {
   const rows = (q.data ?? []) as Row[];
 
   const linkFor = (token: string) =>
-    `${window.location.origin}/operator/rejestracja?token=${token}`;
+    `${window.location.origin}/operator-rejestracja?token=${token}`;
 
   const copy = (token: string) => {
     const url = linkFor(token);
