@@ -25,6 +25,8 @@ function KsiegowoscDokumenty() {
   const entitiesFn = useServerFn(listAccountingEntities);
   const statusFn = useServerFn(getAccountingSyncStatus);
   const exportFn = useServerFn(exportAccountingDocumentsCsv);
+  const xmlFn = useServerFn(getAccountingDocumentXml);
+  const zipFn = useServerFn(exportAccountingXmlZip);
   const syncKsefFn = useServerFn(syncKsef);
 
   const [direction, setDirection] = useState<"all" | "sales" | "purchase">("all");
