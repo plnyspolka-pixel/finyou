@@ -183,6 +183,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
             <Field label="E-mail" value={lead.email} onSave={(v) => mUpdate.mutate({ email: v })} />
             <Field label="Telefon" value={lead.phone_normalized} onSave={(v) => mUpdate.mutate({ phone_normalized: v })} />
             <Field label="Status" value={lead.status} onSave={(v) => mUpdate.mutate({ status: v })} />
+            <Field label="Numer KW" value={lead.kw_number} onSave={(v) => mUpdate.mutate({ kw_number: v })} />
             <div className="md:col-span-2">
               <label className="text-xs text-muted-foreground">Notatki wewnętrzne</label>
               <Textarea defaultValue={lead.notes ?? ""} rows={3} onBlur={(e) => mUpdate.mutate({ notes: e.target.value })} />
