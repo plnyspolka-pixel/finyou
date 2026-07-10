@@ -54,14 +54,13 @@ import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
-import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
-import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
 import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorOfertaWewnetrznaRouteImport } from './routes/operator.oferta-wewnetrzna'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
+import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
+import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
-import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -73,6 +72,7 @@ import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
+import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -412,16 +412,6 @@ const OperatorSkrzynkaRoute = OperatorSkrzynkaRouteImport.update({
   path: '/skrzynka',
   getParentRoute: () => OperatorRoute,
 } as any)
-const OperatorMessengerRoute = OperatorMessengerRouteImport.update({
-  id: '/messenger',
-  path: '/messenger',
-  getParentRoute: () => OperatorRoute,
-} as any)
-const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
-  id: '/faktury',
-  path: '/faktury',
-  getParentRoute: () => OperatorRoute,
-} as any)
 const OperatorProfilRoute = OperatorProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -438,19 +428,24 @@ const OperatorMojeLeadyRoute = OperatorMojeLeadyRouteImport.update({
   path: '/moje-leady',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorMessengerRoute = OperatorMessengerRouteImport.update({
+  id: '/messenger',
+  path: '/messenger',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
+  id: '/faktury',
+  path: '/faktury',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FakturaIdRoute = FakturaIdRouteImport.update({
-  id: '/faktura/$id',
-  path: '/faktura/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KlientPropozycjeRoute = KlientPropozycjeRouteImport.update({
@@ -508,6 +503,11 @@ const InwestorAbonamentRoute = InwestorAbonamentRouteImport.update({
   id: '/abonament',
   path: '/abonament',
   getParentRoute: () => InwestorRoute,
+} as any)
+const FakturaIdRoute = FakturaIdRouteImport.update({
+  id: '/faktura/$id',
+  path: '/faktura/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmbedWniosekRoute = EmbedWniosekRouteImport.update({
   id: '/embed/wniosek',
@@ -1174,6 +1174,7 @@ export interface FileRoutesByFullPath {
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
+  '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
@@ -1185,12 +1186,11 @@ export interface FileRoutesByFullPath {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
-  '/faktura/$id': typeof FakturaIdRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/leady': typeof OperatorLeadyRouteWithChildren
-  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferta-wewnetrzna': typeof OperatorOfertaWewnetrznaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1347,6 +1347,7 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
+  '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
@@ -1357,11 +1358,10 @@ export interface FileRoutesByTo {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
-  '/faktura/$id': typeof FakturaIdRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferta-wewnetrzna': typeof OperatorOfertaWewnetrznaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1523,6 +1523,7 @@ export interface FileRoutesById {
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
+  '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
@@ -1534,12 +1535,11 @@ export interface FileRoutesById {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
-  '/faktura/$id': typeof FakturaIdRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/leady': typeof OperatorLeadyRouteWithChildren
-  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
+  '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/oferta-wewnetrzna': typeof OperatorOfertaWewnetrznaRoute
   '/operator/profil': typeof OperatorProfilRoute
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
@@ -1703,6 +1703,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/wniosek'
+    | '/faktura/$id'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
@@ -1714,14 +1715,13 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
-    | '/faktura/$id'
     | '/l/$slug'
+    | '/operator/faktury'
     | '/operator/leady'
+    | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferta-wewnetrzna'
     | '/operator/profil'
-    | '/operator/faktury'
-    | '/operator/messenger'
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
@@ -1876,6 +1876,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/wniosek'
+    | '/faktura/$id'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
@@ -1886,13 +1887,12 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
-    | '/faktura/$id'
     | '/l/$slug'
+    | '/operator/faktury'
+    | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferta-wewnetrzna'
     | '/operator/profil'
-    | '/operator/faktury'
-    | '/operator/messenger'
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
@@ -2051,6 +2051,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/wniosek'
+    | '/faktura/$id'
     | '/inwestor/abonament'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
@@ -2062,14 +2063,13 @@ export interface FileRouteTypes {
     | '/klient/powiadomienia'
     | '/klient/profil'
     | '/klient/propozycje'
-    | '/faktura/$id'
     | '/l/$slug'
+    | '/operator/faktury'
     | '/operator/leady'
+    | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/oferta-wewnetrzna'
     | '/operator/profil'
-    | '/operator/faktury'
-    | '/operator/messenger'
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
@@ -2560,20 +2560,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorSkrzynkaRouteImport
       parentRoute: typeof OperatorRoute
     }
-    '/operator/messenger': {
-      id: '/operator/messenger'
-      path: '/messenger'
-      fullPath: '/operator/messenger'
-      preLoaderRoute: typeof OperatorMessengerRouteImport
-      parentRoute: typeof OperatorRoute
-    }
-    '/operator/faktury': {
-      id: '/operator/faktury'
-      path: '/faktury'
-      fullPath: '/operator/faktury'
-      preLoaderRoute: typeof OperatorFakturyRouteImport
-      parentRoute: typeof OperatorRoute
-    }
     '/operator/profil': {
       id: '/operator/profil'
       path: '/profil'
@@ -2595,6 +2581,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorMojeLeadyRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/messenger': {
+      id: '/operator/messenger'
+      path: '/messenger'
+      fullPath: '/operator/messenger'
+      preLoaderRoute: typeof OperatorMessengerRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/operator/leady': {
       id: '/operator/leady'
       path: '/leady'
@@ -2602,18 +2595,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorLeadyRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/operator/faktury': {
+      id: '/operator/faktury'
+      path: '/faktury'
+      fullPath: '/operator/faktury'
+      preLoaderRoute: typeof OperatorFakturyRouteImport
+      parentRoute: typeof OperatorRoute
+    }
     '/l/$slug': {
       id: '/l/$slug'
       path: '/l/$slug'
       fullPath: '/l/$slug'
       preLoaderRoute: typeof LSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/faktura/$id': {
-      id: '/faktura/$id'
-      path: '/faktura/$id'
-      fullPath: '/faktura/$id'
-      preLoaderRoute: typeof FakturaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/klient/propozycje': {
@@ -2692,6 +2685,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/abonament'
       preLoaderRoute: typeof InwestorAbonamentRouteImport
       parentRoute: typeof InwestorRoute
+    }
+    '/faktura/$id': {
+      id: '/faktura/$id'
+      path: '/faktura/$id'
+      fullPath: '/faktura/$id'
+      preLoaderRoute: typeof FakturaIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/embed/wniosek': {
       id: '/embed/wniosek'
@@ -3717,10 +3717,10 @@ const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
 )
 
 interface OperatorRouteChildren {
-  OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
-  OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorFakturyRoute: typeof OperatorFakturyRoute
+  OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
+  OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
   OperatorOfertaWewnetrznaRoute: typeof OperatorOfertaWewnetrznaRoute
   OperatorProfilRoute: typeof OperatorProfilRoute
   OperatorSkrzynkaRoute: typeof OperatorSkrzynkaRoute
@@ -3731,10 +3731,10 @@ interface OperatorRouteChildren {
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
-  OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
-  OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorFakturyRoute: OperatorFakturyRoute,
+  OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,
+  OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,
   OperatorOfertaWewnetrznaRoute: OperatorOfertaWewnetrznaRoute,
   OperatorProfilRoute: OperatorProfilRoute,
   OperatorSkrzynkaRoute: OperatorSkrzynkaRoute,
