@@ -4698,6 +4698,7 @@ export type Database = {
           id: string
           instagram_igsid: string | null
           investor_id: string | null
+          kw_number: string | null
           last_name: string | null
           loan_application_id: string | null
           marked_bad_lead: boolean | null
@@ -4744,6 +4745,7 @@ export type Database = {
           id?: string
           instagram_igsid?: string | null
           investor_id?: string | null
+          kw_number?: string | null
           last_name?: string | null
           loan_application_id?: string | null
           marked_bad_lead?: boolean | null
@@ -4790,6 +4792,7 @@ export type Database = {
           id?: string
           instagram_igsid?: string | null
           investor_id?: string | null
+          kw_number?: string | null
           last_name?: string | null
           loan_application_id?: string | null
           marked_bad_lead?: boolean | null

@@ -32,7 +32,7 @@ const channelIcon: Record<string, any> = {
   manual_note: StickyNote,
 };
 
-export function LeadDetailView({ id, compact = false }: { id: string; compact?: boolean }) {
+export function LeadDetailView({ id, compact = false, hideAdvancedTabs = false }: { id: string; compact?: boolean; hideAdvancedTabs?: boolean }) {
   const qc = useQueryClient();
   const getFn = useServerFn(getLead);
   const updateFn = useServerFn(updateLead);
@@ -84,11 +84,11 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
       <Tabs defaultValue="komunikacja">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
-          <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
-          <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>
-          <TabsTrigger value="raw">Surowe dane</TabsTrigger>
+          {!compact && !hideAdvancedTabs && <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>}
+          {!compact && !hideAdvancedTabs && <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>}
+          {!compact && !hideAdvancedTabs && <TabsTrigger value="raw">Surowe dane</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="komunikacja" className="space-y-3">
@@ -173,7 +173,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           </div>
         </TabsContent>
 
-        <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>
+        {!compact && !hideAdvancedTabs && <TabsContent value="sekwencja"><EmailSequenceTab data={emailSequence} /></TabsContent>}
 
         <TabsContent value="dane" className="space-y-3">
           <ExtractedFactsCard lead={lead} />
@@ -183,6 +183,7 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
             <Field label="E-mail" value={lead.email} onSave={(v) => mUpdate.mutate({ email: v })} />
             <Field label="Telefon" value={lead.phone_normalized} onSave={(v) => mUpdate.mutate({ phone_normalized: v })} />
             <Field label="Status" value={lead.status} onSave={(v) => mUpdate.mutate({ status: v })} />
+            <Field label="Numer KW" value={lead.kw_number} onSave={(v) => mUpdate.mutate({ kw_number: v })} />
             <div className="md:col-span-2">
               <label className="text-xs text-muted-foreground">Notatki wewnętrzne</label>
               <Textarea defaultValue={lead.notes ?? ""} rows={3} onBlur={(e) => mUpdate.mutate({ notes: e.target.value })} />
@@ -209,13 +210,15 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           </Card>
         </TabsContent>
 
-        <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>
+        {!compact && !hideAdvancedTabs && <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>}
 
-        <TabsContent value="raw">
-          <Card className="p-4">
-            <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{JSON.stringify(lead, null, 2)}</pre>
-          </Card>
-        </TabsContent>
+        {!compact && !hideAdvancedTabs && (
+          <TabsContent value="raw">
+            <Card className="p-4">
+              <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{JSON.stringify(lead, null, 2)}</pre>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
