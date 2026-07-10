@@ -91,12 +91,13 @@ export const listLeads = createServerFn({ method: "GET" })
     // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
     // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
     const queries: Promise<any>[] = [];
-    if (ids.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", ids)));
-    if (phones.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", phones)));
+    // Podnosimy limit z domyślnych 1000 — inaczej licznik gubi maile/SMS przy większych leadach.
+    if (ids.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", ids).limit(20000)));
+    if (phones.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", phones).limit(20000)));
     if (emailsLower.length) {
       // ilike.any() = case-insensitive email match, catches inbound emails filed against a different (auto-created) lead row.
       const orExpr = emailsLower.map((e) => `email.ilike.${e}`).join(",");
-      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).or(orExpr)));
+      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).or(orExpr).limit(20000)));
     }
     const results = await Promise.all(queries);
 
