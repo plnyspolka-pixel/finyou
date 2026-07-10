@@ -25,7 +25,11 @@ const groups: NavGroup[] = [
 
 function OperatorLayout() {
   return (
-    <PanelShell title="Panel pośrednika" allow={["operator", "administrator"]} groups={groups} />
+    <PanelShell
+      title="Panel pośrednika"
+      allow={["operator", "operator_wewnetrzny", "administrator"]}
+      groups={groups}
+    />
   );
 }
 

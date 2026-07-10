@@ -10,4 +10,18 @@ Disallow: /api/
 Disallow: /lovable/
 Disallow: /embed/
 
+# Meta (Facebook/Instagram) link preview scraper — allow everything so
+# App Review debugger can fetch admin URLs used in submission.
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: facebookexternalhit/1.1
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Facebot
+Allow: /
+
 Sitemap: https://financeyou.pl/sitemap.xml

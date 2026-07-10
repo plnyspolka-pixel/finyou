@@ -22,6 +22,7 @@ const groups: Group[] = [
     items: [
       { to: "/admin/klienci", label: "Klienci (leady + przypomnienia)", icon: Users },
       { to: "/admin/skrzynka", label: "Skrzynka mailowa", icon: Mail },
+      { to: "/admin/messenger", label: "Messenger / Instagram DM", icon: Mail },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
@@ -92,6 +93,7 @@ const groups: Group[] = [
       { to: "/admin/fakturowo", label: "Fakturowo", icon: Receipt },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
+      { to: "/admin/operatorzy", label: "Operatorzy wewnętrzni", icon: ShieldCheck },
       { to: "/admin/zgody", label: "Treści zgód", icon: FileCheck },
       { to: "/admin/ustawienia", label: "Ustawienia", icon: Settings },
     ],

@@ -1,71 +1,31 @@
-
 ## Cel
-Jedna spójna księgowość w `/admin/ksiegowosc`: wszystkie faktury sprzedaży i kosztowe z Fakturowo i KSeF (dla obu podmiotów: Finance You i Fundacja im. Pieczaka), z możliwością odświeżania, filtrowania i podglądu PDF/XML.
+Nowa rola i panel `/operator` — identyczny funkcjonalnie jak `/posrednik`, ale bez publicznej rejestracji. Konta zakładane wyłącznie z jednorazowego linku wygenerowanego przez administratora. Istniejący `/posrednik` (rola `operator`) zostaje dla partnerów zewnętrznych z publiczną rejestracją.
 
-## Zakres
+## Krok 1 — Backend: nowa rola + tabela zaproszeń
+Migracja:
+- Dodać wartość `operator_wewnetrzny` do enuma `app_role`.
+- Nowa tabela `public.operator_invites`: `token` (uuid unique), `email` (nullable), `created_by`, `expires_at` (domyślnie `now() + 7 days`), `used_at`, `used_by_user_id`, timestamps.
+- GRANT + RLS: administrator może SELECT/INSERT/UPDATE/DELETE; zaproszenie odczytywane publicznie tylko po tokenie przez SECURITY DEFINER funkcję `get_operator_invite(_token uuid)` (zwraca tylko status + email, bez wrażliwych danych).
+- Funkcja `redeem_operator_invite(_token uuid)` SECURITY DEFINER: sprawdza że token istnieje, nie wygasł, nie wykorzystany, wywołujący ma sesję → wpisuje rolę `operator_wewnetrzny` do `user_roles`, znaczy invite jako użyty.
+- Rozszerzyć `defaultPathForRoles` i `handle_new_user` (nie autonadaje operator_wewnetrzny — zawsze klient dopóki nie zredeemuje tokenu).
 
-### 1. Baza — jedna tabela `accounting_documents`
-Wspólny rejestr dla wszystkich dokumentów (zamiast tylko `sales_invoices`):
-- `id`, `entity_id` (FK do `accounting_entities`)
-- `direction` — `sales` | `purchase` (koszt)
-- `source` — `fakturowo` | `ksef` | `manual`
-- `external_id` (id w Fakturowo / numer KSeF), `invoice_number`
-- `issue_date`, `sale_date`, `due_date`
-- `counterparty_name`, `counterparty_nip`, `counterparty_address`
-- `currency`, `net_amount`, `vat_amount`, `gross_amount`, `vat_rate`
-- `items` (jsonb), `pdf_url`, `xml_content` (text, dla KSeF UPO/FA)
-- `ksef_reference_number`, `ksef_status`
-- `raw_payload` (jsonb — surowa odpowiedź API do debugu)
-- `imported_at`, `created_at`, `updated_at`
-- UNIQUE `(entity_id, source, direction, external_id)` — deduplikacja przy re-syncu
+## Krok 2 — Panel `/operator`
+- Nowy plik `src/routes/operator.tsx` — kopia `src/routes/posrednik.tsx`, `PanelShell` z `title="Panel operatora"`, `allow={["operator_wewnetrzny","administrator"]}`, te same grupy nav ale z linkami do `/operator/*`.
+- Podstrony jako cienkie route’y re-eksportujące te same komponenty co `/posrednik/*` (leady, moje-leady, wniosek, wnioski, oferta-wewnetrzna, skrzynka, profil, wnioski.$id).
+- Rola operator_wewnetrzny widzi te same dane co operator (leady bez opiekuna + własne). Zmienić RLS `loan_applications`/`leads`/`clients`/etc. tak, żeby polityki dla `operator` obejmowały też `operator_wewnetrzny` — najczystsze przez helper `is_broker_role(uid)` w funkcji SQL.
 
-RLS: tylko `has_role('administrator')` i `has_role('ksiegowosc')`. GRANT dla `authenticated` + `service_role`.
+## Krok 3 — Zapraszanie
+- W panelu admina nowa podstrona `src/routes/admin.operatorzy.tsx`: lista aktywnych/wykorzystanych zaproszeń + przycisk „Wygeneruj link”. Po utworzeniu wyświetla pełny URL `https://<origin>/operator/rejestracja?token=<uuid>` z przyciskiem „Kopiuj”.
+- Server function `createOperatorInvite` (auth + role admin check).
+- Nowy publiczny route `src/routes/operator.rejestracja.tsx`: waliduje token przez `get_operator_invite`, pokazuje formularz email+hasło (lub Google), po sign-up wywołuje `redeem_operator_invite`, przekierowuje do `/operator`.
+- Rejestracja publiczna `posrednicy/rejestracja` **nie jest ruszana**.
 
-Migracja przenosi istniejące `sales_invoices` do nowej tabeli (jako `direction='sales'`, `source` z pola `provider`).
+## Krok 4 — Nawigacja i drobiazgi
+- Dodać wpis „Operatorzy wewnętrzni” w sidebarze admina (grupa Konfiguracja).
+- `defaultPathForRoles`: jeśli role zawiera `operator_wewnetrzny` (a nie ma admina) → `/operator`.
+- Zabezpieczyć /operator i /operator/rejestracja przed dostępem bez tokenu / bez roli (redirect na `/logowanie`).
 
-### 2. Server functions do sync-u
-
-`src/lib/accounting/sync-fakturowo.functions.ts`:
-- `syncFakturowoForEntity({ entityId })` — dla podmiotu z konfiguracją Fakturowo pobiera listę dokumentów (sprzedaż + koszty) przez `api_zadanie=6` (lista) + `api_zadanie=5` (szczegóły), upsert do `accounting_documents`.
-- Paginacja po datach (ostatnie 24 mies. na start; potem inkrementalnie od `imported_at`).
-
-`src/lib/accounting/sync-ksef.functions.ts`:
-- `syncKsefForEntity({ entityId, direction })` — używa `KSEF_TOKEN_*` z env (fallback per podmiot, tak jak w `ksef/client.ts`):
-  - `POST /api/online/Query/Invoice/Sync` (Subject1 = sprzedaż, Subject2 = koszty)
-  - iteracja stron, pobranie XML + metadanych każdej FV
-  - upsert do `accounting_documents`
-- Wykorzystuje autoryzację challenge → InitToken z `src/lib/ksef/client.ts`.
-
-`syncAllAccounting()` — orkiestrator wywoływany z UI: iteruje po aktywnych podmiotach, wywołuje oba sync-e równolegle. Middleware `requireSupabaseAuth` + check `has_role`.
-
-### 3. UI
-
-`/admin/ksiegowosc` (index) — dashboard:
-- Kafle: przychód netto / VAT należny / koszty netto / VAT naliczony / VAT do zapłaty (za wybrany miesiąc)
-- Wykres miesięczny (sprzedaż vs koszty, 12 mies.)
-- Przycisk **„Synchronizuj teraz"** (uruchamia `syncAllAccounting`) + status ostatniej synchronizacji per podmiot
-
-`/admin/ksiegowosc/dokumenty` (nowa) — jedna tabela wszystkich dokumentów:
-- Filtry: podmiot, kierunek (sprzedaż/koszt), źródło (Fakturowo/KSeF), okres, kontrahent, status KSeF
-- Kolumny: nr, data, kontrahent, netto, VAT, brutto, źródło, status, akcje (PDF, XML, szczegóły)
-- Export CSV
-
-Istniejące `/admin/ksiegowosc/faktury` → alias na filtr `direction=sales`.
-Nowa `/admin/ksiegowosc/koszty` → alias na filtr `direction=purchase`.
-
-### 4. Cron
-`pg_cron` co godzinę wywołuje `/api/public/hooks/sync-accounting` (chronione `apikey`), który uruchamia `syncAllAccounting` dla wszystkich aktywnych podmiotów.
-
-## Uwagi techniczne
-- KSeF Query API zwraca metadane; XML pobierany osobno przez `GET /api/online/Invoice/Get/{ksefRef}`.
-- Fakturowo nie ma oficjalnego endpointu „lista faktur kosztowych" — używamy `api_zadanie=6` z `dokument_rodzaj=1` (koszt). Jeśli API zwróci błąd, oznaczamy sync jako częściowy i pokazujemy komunikat w UI.
-- Deduplikacja opiera się na `(source, external_id)`, więc powtórne pobranie nie tworzy duplikatów.
-- PDF-y dla KSeF generowane on-demand z XML przez `buildFaXml` odwrotnie (link do wizualizacji KSeF MF).
-
-## Poza zakresem (na później)
-- Automatyczne dekretowanie do JPK_V7
-- Powiązania FV → płatność (istnieje już `payment_id` w `sales_invoices`, przeniesiemy)
-- Załączniki (skany) do faktur kosztowych ręcznie dodawanych
-
-## Pytanie
-Czy iść z tym zakresem, czy najpierw MVP: **tylko pull z Fakturowo + KSeF → jedna tabela listująca wszystko, bez dashboardu i cronu** (żeby najszybciej zobaczyć dane w apce)?
+## Notatki techniczne
+- Enum extension w Postgresie musi być w osobnym migration statement (nie w tej samej transakcji co użycie wartości) — split na dwie migracje lub `ALTER TYPE ... ADD VALUE` na początku.
+- Wszystkie istniejące polityki RLS z warunkiem `has_role(uid,'operator')` trzeba rozszerzyć o `has_role(uid,'operator_wewnetrzny')` — zrobię przez helper funkcyjny, żeby nie przepisywać dziesiątek policies. Sprawdzę które tabele tego wymagają przed migracją.
+- Zero zmian w komponentach `/posrednik` — nowe route’y reużywają dokładnie te same komponenty (import), więc utrzymanie jednego zestawu logiki.

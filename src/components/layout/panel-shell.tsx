@@ -4,6 +4,7 @@ import { LogOut, Menu, type LucideIcon } from "lucide-react";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import brandMark from "@/assets/financeyou-mark-v2.png.asset.json";
 
 export type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boolean };
 export type NavGroup = { label?: string; items: NavItem[] };
@@ -55,22 +56,16 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
 
   const brand = (
     <div className="flex items-center gap-2.5 font-semibold">
-      <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl text-sm font-extrabold text-white shadow-[0_8px_24px_-8px_oklch(0.40_0.25_268/0.7)]">
-        <span
-          aria-hidden
-          className="absolute inset-0"
-          style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }}
-        />
-        <span
-          aria-hidden
-          className="absolute -left-3 -top-3 h-10 w-10 rounded-full blur-md"
-          style={{ background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.85), transparent 70%)" }}
-        />
-        <span className="relative">FY</span>
-      </span>
+      <img
+        src={brandMark.url}
+        alt="Finance You"
+        className="h-9 w-9 shrink-0 select-none object-contain"
+        draggable={false}
+      />
       <span className="tracking-tight">{title}</span>
     </div>
   );
+
 
   const nav = (onNavigate?: () => void) => (
     <>
@@ -148,14 +143,12 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2 font-semibold text-sm">
-            <span className="relative grid h-7 w-7 place-items-center overflow-hidden rounded-lg text-[10px] font-extrabold text-white">
-              <span
-                aria-hidden
-                className="absolute inset-0"
-                style={{ background: "radial-gradient(120% 140% at 0% 0%, oklch(0.32 0.16 265) 0%, oklch(0.18 0.06 265) 55%, oklch(0.13 0.04 265) 100%)" }}
-              />
-              <span className="relative">FY</span>
-            </span>
+            <img
+              src={brandMark.url}
+              alt="Finance You"
+              className="h-7 w-7 shrink-0 select-none object-contain"
+              draggable={false}
+            />
             {title}
           </div>
         </header>

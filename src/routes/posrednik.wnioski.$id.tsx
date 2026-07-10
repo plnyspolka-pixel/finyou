@@ -15,7 +15,8 @@ import {
   ImageOff, Calculator, Send, ArrowRight,
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
-import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel } from "@/lib/loan-status";
+import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
+import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
@@ -96,19 +97,10 @@ function BrokerApplicationDetail() {
       setNotes(appRow?.broker_notes ?? "");
       setDocs((d as any) ?? []);
 
-      // Sign photo URLs
+      // Zdjęcia nieruchomości: tylko faktyczne obrazki (bez skanów dokumentów/PDF),
+      // podpisane w Storage (ścieżki mogą leżeć w `property-photos` lub `documents`).
       const p = Array.isArray(appRow?.properties) ? appRow.properties[0] : (appRow?.properties as any);
-      const raw: string[] = Array.isArray(p?.photos) ? p.photos.filter(Boolean) : [];
-      const toSign = raw.filter((u) => !/^https?:\/\//i.test(u));
-      const resolved: string[] = [...raw];
-      if (toSign.length > 0) {
-        const { data: signed } = await supabase.storage.from("property-photos").createSignedUrls(toSign, 60 * 60);
-        const map = new Map<string, string>();
-        (signed ?? []).forEach((s: any) => { if (s?.path && s?.signedUrl) map.set(s.path, s.signedUrl); });
-        for (let i = 0; i < resolved.length; i++) {
-          if (!/^https?:\/\//i.test(resolved[i])) resolved[i] = map.get(resolved[i]) ?? resolved[i];
-        }
-      }
+      const resolved = await resolveShowablePhotoUrls(p?.photos, 60 * 60);
       setPhotos(resolved);
       setLoading(false);
     })();
@@ -175,7 +167,7 @@ function BrokerApplicationDetail() {
       <div className="grid gap-4 md:grid-cols-2">
         <FancyCard tone="slate">
           <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-white/70">Status wniosku</div>
-          <Select value={row.status} onValueChange={changeStatus} disabled={savingStatus}>
+          <Select value={normalizeLoanStatus(row.status)} onValueChange={changeStatus} disabled={savingStatus}>
             <SelectTrigger className="border-white/20 bg-white/10 text-white backdrop-blur"><SelectValue /></SelectTrigger>
             <SelectContent>
               {LOAN_STATUS_ORDER.map((s) => (<SelectItem key={s} value={s}>{LOAN_STATUS_SHORT_LABELS[s]}</SelectItem>))}

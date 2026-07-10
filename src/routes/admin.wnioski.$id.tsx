@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
+import { normalizeLoanStatus } from "@/lib/loan-status";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { KwContentSection } from "@/components/kw-content-section";
@@ -91,7 +92,7 @@ function WniosekDetail() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{loanStatusLabels[app.status] ?? app.status}</Badge>
-          <Select value={app.status} onValueChange={changeStatus}>
+          <Select value={normalizeLoanStatus(app.status)} onValueChange={changeStatus}>
             <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(loanStatusLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
           </Select>
