@@ -18,6 +18,5 @@ const groups: NavGroup[] = [
 ];
 
 function KlientLayout() {
-  // Brak `allow` = wystarczy bycie zalogowanym (każdy uwierzytelniony użytkownik to klient).
-  return <PanelShell title="Panel klienta" groups={groups} />;
+  return <PanelShell title="Panel klienta" allow={["klient", "administrator"]} groups={groups} />;
 }
