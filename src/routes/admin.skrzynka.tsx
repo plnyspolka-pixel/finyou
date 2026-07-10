@@ -229,6 +229,8 @@ function SkrzynkaPage() {
                           subject: subj.toLowerCase().startsWith("re:") ? subj : `Re: ${subj}`,
                           body: `\n\n---\nW dniu ${new Date(selected.created_at).toLocaleString("pl-PL")} ${selected.email} napisał:\n${(selected.content ?? "").split("\n").map((l) => "> " + l).join("\n")}`,
                           replyToCommunicationId: selected.id,
+                          leadId: selected.lead_id,
+                          incomingText: selected.content ?? "",
                         });
                         setComposeOpen(true);
                       }}

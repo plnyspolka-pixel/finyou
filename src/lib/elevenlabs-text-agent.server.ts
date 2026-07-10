@@ -13,6 +13,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+// Model wewnętrznego bota do pisania/odpisywania (maile + DM). Gemini Pro.
+const AGENT_MODEL = "google/gemini-2.5-pro";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -190,7 +192,7 @@ export async function runAgentTurn(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: AGENT_MODEL,
         messages,
         tools: TOOLS,
         tool_choice: "auto",
@@ -226,6 +228,105 @@ export async function runAgentTurn(opts: {
   }
 
   return { reply: "Dziękuję! Wracam za chwilę.", toolCalls: toolResults };
+}
+
+export type DraftMode = "reply" | "compose";
+
+/**
+ * Generuje SZKIC wiadomości dla operatora (nie wysyła, nie wykonuje tools).
+ * Ten sam mózg co runAgentTurn: prompt systemowy z /admin/text-agent + RAG + kontekst leada,
+ * na modelu Gemini Pro. Używane przez przyciski "AI" w skrzynce mailowej i w messengerze.
+ */
+export async function runAgentDraft(opts: {
+  channel: "messenger" | "instagram" | "email";
+  mode: DraftMode;
+  leadId?: string | null;
+  incomingMessage?: string | null; // treść, na którą odpisujemy
+  instruction?: string | null; // wskazówka operatora
+  subject?: string | null; // temat maila (kontekst)
+}): Promise<{ text: string }> {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+  const s = admin();
+  const { prompt: systemPrompt } = await fetchAgentPrompt();
+
+  // Kontekst leada + historia rozmowy (jeśli znamy leada).
+  let leadContext = "";
+  let history: Array<{ direction: string; content: string | null }> = [];
+  if (opts.leadId) {
+    const { data: lead } = await s.from("leads").select("*").eq("id", opts.leadId).maybeSingle();
+    if (lead) {
+      leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
+    }
+    const { data: h } = await s
+      .from("lead_communications")
+      .select("direction, content, created_at")
+      .eq("lead_id", opts.leadId)
+      .in("channel", ["messenger", "instagram", "email"])
+      .order("created_at", { ascending: true })
+      .limit(40);
+    history = h ?? [];
+  }
+
+  // RAG na podstawie tego, na co odpisujemy / o czym piszemy.
+  const ragQuery = [opts.incomingMessage, opts.instruction, opts.subject].filter(Boolean).join("\n");
+  let knowledgeBlock = "";
+  try {
+    const { retrieveKnowledge } = await import("./text-agent-knowledge.server");
+    const chunks = await retrieveKnowledge(ragQuery || "oferta pożyczki", 4);
+    if (chunks.length > 0) {
+      knowledgeBlock =
+        "\n\n[BAZA WIEDZY — wykorzystaj te informacje gdy są trafne]\n" +
+        chunks.map((c, i) => `### ${i + 1}. ${c.title}\n${c.content}`).join("\n\n");
+    }
+  } catch (e) {
+    console.error("[el-text-agent] draft RAG failed", e);
+  }
+
+  const isEmail = opts.channel === "email";
+  const channelLabel = isEmail ? "e-mail" : "wiadomość Messenger/Instagram";
+  const draftDirective =
+    `\n\n[TRYB: SZKIC DLA OPERATORA]\nGenerujesz TREŚĆ (${channelLabel}) do wysłania klientowi. ` +
+    `Zwróć wyłącznie gotowy tekst wiadomości — bez nagłówków typu "Temat:", bez cudzysłowów, bez komentarzy od siebie i bez opisu co robisz. ` +
+    (isEmail
+      ? "Możesz użyć akapitów i grzecznościowego podpisu (Zespół Finance You). "
+      : "Krótko, 2-3 zdania, ton swobodnej rozmowy. ") +
+    "Nie wywołuj żadnych narzędzi — tylko napisz wiadomość.";
+
+  const messages: EmittedMessage[] = [
+    { role: "system", content: systemPrompt + leadContext + knowledgeBlock + draftDirective },
+  ];
+  for (const m of history) {
+    if (!m.content) continue;
+    messages.push({ role: m.direction === "inbound" ? "user" : "assistant", content: String(m.content) });
+  }
+
+  let task: string;
+  if (opts.mode === "reply") {
+    const incoming = (opts.incomingMessage ?? "").trim();
+    task = `Napisz odpowiedź na poniższą wiadomość klienta${opts.subject ? ` (temat: ${opts.subject})` : ""}:\n\n${incoming || "(treść niedostępna — odpowiedz na podstawie historii rozmowy powyżej)"}`;
+    if (opts.instruction?.trim()) task += `\n\nWskazówka operatora: ${opts.instruction.trim()}`;
+  } else {
+    task = `Napisz nową wiadomość do klienta${opts.subject ? ` (temat: ${opts.subject})` : ""}.`;
+    task += `\n\nWytyczne: ${opts.instruction?.trim() || "nawiąż kontakt i zaproponuj pomoc w uzyskaniu pożyczki pozabankowej lub inwestycji."}`;
+  }
+  messages.push({ role: "user", content: task });
+
+  const res = await fetch(GATEWAY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: AGENT_MODEL, messages }),
+  });
+  if (res.status === 429) throw new Error("Zbyt wiele zapytań do AI. Spróbuj za chwilę.");
+  if (res.status === 402) throw new Error("Wyczerpany limit AI. Doładuj środki w Lovable Cloud.");
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`AI gateway ${res.status}: ${t.slice(0, 200)}`);
+  }
+  const json: any = await res.json();
+  const text: string = json?.choices?.[0]?.message?.content ?? "";
+  return { text: text.trim() };
 }
 
 async function executeTool(leadId: string, channel: string, name: string, args: any): Promise<any> {

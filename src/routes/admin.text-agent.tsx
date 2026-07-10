@@ -24,7 +24,8 @@ function TextAgentSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Agent DM (Messenger / Instagram / Email)</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Prompt systemowy + baza wiedzy (RAG) dla agenta odpisującego 24/7.
+          Prompt systemowy + baza wiedzy (RAG) dla wewnętrznego bota (Gemini Pro) piszącego i odpisującego
+          24/7 na maile i DM. Ten sam prompt zasila auto-odpowiedzi oraz przyciski „AI" w skrzynce i messengerze.
         </p>
       </div>
       <Tabs defaultValue="prompt">

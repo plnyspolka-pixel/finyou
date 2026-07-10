@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon } from "lucide-react";
+import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { toast } from "sonner";
 import { sendMessengerReply } from "@/lib/messenger-inbox.functions";
+import { generateAgentDraft } from "@/lib/text-agent-draft.functions";
 
 type Msg = {
   id: string;
@@ -51,6 +52,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const sendFn = useServerFn(sendMessengerReply);
+  const draftFn = useServerFn(generateAgentDraft);
 
   const { data: messages, refetch, isFetching } = useQuery({
     queryKey: ["messenger-inbox"],
@@ -142,6 +144,36 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
       qc.invalidateQueries({ queryKey: ["messenger-inbox"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Nie udało się wysłać"),
+  });
+
+  // Ostatnia wiadomość klienta w wątku — na nią odpisze bot.
+  const lastInbound = useMemo(() => {
+    for (let i = thread.length - 1; i >= 0; i--) {
+      if (thread[i].direction === "inbound") return thread[i];
+    }
+    return null;
+  }, [thread]);
+
+  const draftMut = useMutation({
+    mutationFn: () =>
+      draftFn({
+        data: {
+          channel: selectedLead?.instagram_igsid ? "instagram" : "messenger",
+          mode: "reply",
+          leadId: selectedLeadId,
+          incomingMessage: lastInbound?.content ?? null,
+        },
+      }),
+    onSuccess: (res: { text: string }) => {
+      const text = (res?.text ?? "").trim();
+      if (!text) {
+        toast.error("Bot nie zwrócił treści");
+        return;
+      }
+      setReply(text);
+      toast.success("Szkic wygenerowany");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Nie udało się wygenerować"),
   });
 
   return (
@@ -267,14 +299,26 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                     />
                     <div className="flex items-center justify-between">
                       <div className="text-[10px] text-muted-foreground">Cmd/Ctrl + Enter — wyślij</div>
-                      <Button
-                        size="sm"
-                        onClick={() => sendMut.mutate(reply.trim())}
-                        disabled={!reply.trim() || sendMut.isPending}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        {sendMut.isPending ? "Wysyłam…" : "Wyślij"}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => draftMut.mutate()}
+                          disabled={draftMut.isPending || sendMut.isPending}
+                          title="Wygeneruj odpowiedź botem (Gemini Pro)"
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          {draftMut.isPending ? "Piszę…" : "Odpisz AI"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => sendMut.mutate(reply.trim())}
+                          disabled={!reply.trim() || sendMut.isPending}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {sendMut.isPending ? "Wysyłam…" : "Wyślij"}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
