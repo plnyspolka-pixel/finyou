@@ -1,17 +1,37 @@
 import { useState } from "react";
-import { Building2, Home, Trees, Map, Store, FileQuestion, Pencil, type LucideIcon } from "lucide-react";
+import { FileQuestion, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SecurityType } from "@/lib/loan-math";
 import { securityTypeLabels } from "@/lib/loan-math";
+import apartmentAsset from "@/assets/property-icons/apartment.png.asset.json";
+import houseAsset from "@/assets/property-icons/house.png.asset.json";
+import shopAsset from "@/assets/property-icons/shop.png.asset.json";
+import pinAsset from "@/assets/property-icons/pin.png.asset.json";
+import landAsset from "@/assets/property-icons/land.png.asset.json";
 
-const tiles: { type: SecurityType; icon: LucideIcon }[] = [
-  { type: "mieszkanie", icon: Building2 },
-  { type: "dom", icon: Home },
-  { type: "grunt_rolny", icon: Trees },
-  { type: "dzialka_budowlana", icon: Map },
-  { type: "lokal_uslugowy", icon: Store },
-  { type: "inna", icon: FileQuestion },
+type TileDef = {
+  type: SecurityType;
+  img?: string;
+  alt?: string;
+  fallback?: React.ComponentType<{ className?: string }>;
+};
+
+const tiles: TileDef[] = [
+  { type: "mieszkanie", img: apartmentAsset.url, alt: "Mieszkanie" },
+  { type: "dom", img: houseAsset.url, alt: "Dom" },
+  { type: "grunt_rolny", img: landAsset.url, alt: "Grunt rolny" },
+  { type: "dzialka_budowlana", img: pinAsset.url, alt: "Działka budowlana" },
+  { type: "lokal_uslugowy", img: shopAsset.url, alt: "Lokal usługowy" },
+  { type: "inna", fallback: FileQuestion },
 ];
+
+function TileIcon({ tile, className }: { tile: TileDef; className?: string }) {
+  if (tile.img) {
+    return <img src={tile.img} alt={tile.alt ?? ""} className={cn("object-contain", className)} loading="lazy" />;
+  }
+  const Fallback = tile.fallback!;
+  return <Fallback className={cn(className)} />;
+}
 
 export function SecurityTypePicker({
   value,
@@ -24,14 +44,13 @@ export function SecurityTypePicker({
   const selected = value ? tiles.find((t) => t.type === value) : null;
 
   if (!expanded && selected) {
-    const Icon = selected.icon;
     return (
       <button
         type="button"
         onClick={() => setExpanded(true)}
         className="flex w-full items-center gap-3 rounded-lg border-2 border-primary bg-primary/10 p-3 text-left transition hover:bg-primary/15"
       >
-        <Icon className="h-7 w-7 shrink-0 text-primary" />
+        <TileIcon tile={selected} className="h-10 w-10 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Zabezpieczenie
@@ -49,25 +68,31 @@ export function SecurityTypePicker({
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-      {tiles.map(({ type, icon: Icon }) => {
-        const active = value === type;
+      {tiles.map((tile) => {
+        const active = value === tile.type;
         return (
           <button
-            key={type}
+            key={tile.type}
             type="button"
             onClick={() => {
-              onChange(type);
+              onChange(tile.type);
               setExpanded(false);
             }}
             className={cn(
-              "flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center touch-manipulation select-none",
+              "flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center touch-manipulation select-none transition",
               active
                 ? "border-primary bg-primary/10 ring-2 ring-primary/30"
                 : "border-border hover:border-primary/60",
             )}
           >
-            <Icon className={cn("h-8 w-8", active ? "text-primary" : "text-muted-foreground")} />
-            <span className="text-sm font-medium">{securityTypeLabels[type]}</span>
+            <TileIcon
+              tile={tile}
+              className={cn(
+                "h-16 w-16",
+                !tile.img && (active ? "text-primary" : "text-muted-foreground"),
+              )}
+            />
+            <span className="text-sm font-medium">{securityTypeLabels[tile.type]}</span>
           </button>
         );
       })}
