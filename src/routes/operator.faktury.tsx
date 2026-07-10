@@ -327,6 +327,44 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
+          {!isIndividual && (
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <Label className="text-xs">Wybierz z naszych partnerów instytucjonalnych</Label>
+              <Select
+                value=""
+                onValueChange={(id) => {
+                  const p = partners.find((x) => x.id === id);
+                  if (!p) return;
+                  setForm((s) => ({
+                    ...s,
+                    buyerName: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || s.buyerName,
+                    buyerNip: p.nip || "",
+                    buyerRegon: p.regon || "",
+                    buyerKrs: p.krs || "",
+                    buyerStreet: p.street || "",
+                    buyerPostalCode: p.postal_code || "",
+                    buyerCity: p.city || "",
+                    buyerEmail: p.email || "",
+                    buyerVerified: !!p.nip,
+                  }));
+                  toast.success(`Wczytano dane: ${p.company_name ?? p.email ?? "partner"}`);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={partnersQ.isLoading ? "Ładowanie partnerów…" : `Wybierz partnera (${partners.length})`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {partners.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.company_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "—"}
+                      {p.nip ? ` · NIP ${p.nip}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Lub wpisz NIP/REGON/KRS poniżej, żeby zaciągnąć nowego nabywcę z GUS.</p>
+            </div>
+          )}
           <div className="rounded-md border border-dashed p-3">
             <p className="mb-2 text-xs text-muted-foreground">
               Wpisz {isIndividual ? "NIP (opcjonalnie)" : "NIP, REGON lub KRS"} i pobierz dane firmy z GUS/KRS — resztę pól uzupełnimy automatycznie.
