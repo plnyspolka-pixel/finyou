@@ -146,6 +146,12 @@ function OperatorRegisterPage() {
       </div>
 
       <div className="relative mx-auto grid min-h-screen max-w-6xl place-items-center px-4 py-10">
+        <div className="w-full">
+          <div className="mb-8 flex justify-center lg:justify-start">
+            <Link to="/">
+              <img src={wordmark.url} alt="Finance You" className="h-8 w-auto opacity-90 md:h-10" draggable={false} />
+            </Link>
+          </div>
         <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
           {/* Left — hype panel */}
           <div className="hidden space-y-6 lg:block">
