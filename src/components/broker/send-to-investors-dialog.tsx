@@ -104,7 +104,7 @@ export function SendToInvestorsDialog({
       } catch {}
       toast.success(`Szablon gotowy dla ${draft.recipients.length} odbiorców`);
       onOpenChange(false);
-      navigate({ to: "/posrednik/skrzynka", search: { compose: 1 } as any });
+      navigate({ to: `${base}/skrzynka` as any, search: { compose: 1 } as any });
     },
     onError: (e: any) => toast.error(e?.message ?? "Nie udało się utworzyć draftu"),
   });
