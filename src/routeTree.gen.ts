@@ -61,6 +61,7 @@ import { Route as OperatorOfertaWewnetrznaRouteImport } from './routes/operator.
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
+import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -444,6 +445,11 @@ const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FakturaIdRoute = FakturaIdRouteImport.update({
+  id: '/faktura/$id',
+  path: '/faktura/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KlientPropozycjeRoute = KlientPropozycjeRouteImport.update({
@@ -1174,6 +1180,7 @@ export interface FileRoutesByFullPath {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
+  '/faktura/$id': typeof FakturaIdRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -1344,6 +1351,7 @@ export interface FileRoutesByTo {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
+  '/faktura/$id': typeof FakturaIdRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -1521,6 +1529,7 @@ export interface FileRoutesById {
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
+  '/faktura/$id': typeof FakturaIdRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -2169,6 +2178,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
+  FakturaIdRoute: typeof FakturaIdRoute
   LSlugRoute: typeof LSlugRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
@@ -2580,6 +2590,13 @@ declare module '@tanstack/react-router' {
       path: '/l/$slug'
       fullPath: '/l/$slug'
       preLoaderRoute: typeof LSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faktura/$id': {
+      id: '/faktura/$id'
+      path: '/faktura/$id'
+      fullPath: '/faktura/$id'
+      preLoaderRoute: typeof FakturaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/klient/propozycje': {
@@ -3784,6 +3801,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
+  FakturaIdRoute: FakturaIdRoute,
   LSlugRoute: LSlugRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
