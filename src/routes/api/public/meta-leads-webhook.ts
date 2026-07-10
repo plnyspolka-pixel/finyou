@@ -236,7 +236,18 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
       POST: async ({ request }) => {
         try {
           const origin = getOrigin(request);
-          const body = await request.json();
+          const raw = await request.text();
+          const sig = request.headers.get("x-hub-signature-256");
+          const appSecret = process.env.META_APP_SECRET;
+          if (!appSecret) {
+            return new Response("Server misconfigured", { status: 500 });
+          }
+          if (!verifyMetaSig(raw, sig, appSecret)) {
+            console.warn("[meta-leads-webhook] invalid X-Hub-Signature-256");
+            return new Response("Forbidden", { status: 403 });
+          }
+          let body: any;
+          try { body = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
 
           // Facebook dostarcza WSZYSTKIE zdarzenia (leadgen, wiadomości Messenger/IG,
           // komentarze) na jeden skonfigurowany URL webhooka. Obsłuż tu również
