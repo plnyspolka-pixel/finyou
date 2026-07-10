@@ -134,7 +134,18 @@ export const getKwForApplication = createServerFn({ method: "POST" })
       .eq("kw_number", kw)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return { hasKw: true as const, document: row };
+    const document = row
+      ? {
+          ...row,
+          okladka: decodeMaybeBase64(row.okladka),
+          dzial_1o: decodeMaybeBase64(row.dzial_1o),
+          dzial_1s: decodeMaybeBase64(row.dzial_1s),
+          dzial_2: decodeMaybeBase64(row.dzial_2),
+          dzial_3: decodeMaybeBase64(row.dzial_3),
+          dzial_4: decodeMaybeBase64(row.dzial_4),
+        }
+      : row;
+    return { hasKw: true as const, document };
   });
 
 /** Admin/operator only. Orders KW download from CMD, polls, fetches HTML, stores in cache. */
