@@ -26,11 +26,7 @@ const tiles: TileDef[] = [
 ];
 
 function TileIcon({ tile, className }: { tile: TileDef; className?: string }) {
-  if (tile.img) {
-    return <img src={tile.img} alt={tile.alt ?? ""} className={cn("object-contain", className)} loading="lazy" />;
-  }
-  const Fallback = tile.fallback!;
-  return <Fallback className={cn(className)} />;
+  return <img src={tile.img} alt={tile.alt} className={cn("object-contain", className)} loading="lazy" />;
 }
 
 export function SecurityTypePicker({
