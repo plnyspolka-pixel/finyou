@@ -62,8 +62,8 @@ function SmartImg({ src, alt, className }: { src: string; alt?: string; classNam
   return <img src={src} alt={alt ?? ""} loading="lazy" className={className} onError={() => setBroken(true)} />;
 }
 
-export function BrokerApplicationDetail() {
-  const { id } = useParams({ from: "/posrednik/wnioski/$id" });
+export function BrokerApplicationDetail({ showInternalOffer = false }: { showInternalOffer?: boolean } = {}) {
+  const { id } = useParams({ strict: false }) as { id: string };
   const [row, setRow] = useState<Row | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
