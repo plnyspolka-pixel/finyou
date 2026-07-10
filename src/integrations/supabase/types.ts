@@ -5932,11 +5932,13 @@ export type Database = {
           email: string | null
           expires_at: string
           id: string
+          max_uses: number | null
           note: string | null
           token: string
           updated_at: string
           used_at: string | null
           used_by_user_id: string | null
+          uses_count: number
         }
         Insert: {
           created_at?: string
@@ -5944,11 +5946,13 @@ export type Database = {
           email?: string | null
           expires_at?: string
           id?: string
+          max_uses?: number | null
           note?: string | null
           token?: string
           updated_at?: string
           used_at?: string | null
           used_by_user_id?: string | null
+          uses_count?: number
         }
         Update: {
           created_at?: string
@@ -5956,11 +5960,13 @@ export type Database = {
           email?: string | null
           expires_at?: string
           id?: string
+          max_uses?: number | null
           note?: string | null
           token?: string
           updated_at?: string
           used_at?: string | null
           used_by_user_id?: string | null
+          uses_count?: number
         }
         Relationships: []
       }
