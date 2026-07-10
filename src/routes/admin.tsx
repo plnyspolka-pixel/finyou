@@ -119,7 +119,7 @@ function AdminLayout() {
   return (
     <PanelShell
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
-      allow={["administrator", "operator", "ksiegowosc"]}
+      allow={["administrator", "ksiegowosc"]}
       groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
       footer={roles.includes("administrator") ? <AiAdminChat /> : null}
     />
