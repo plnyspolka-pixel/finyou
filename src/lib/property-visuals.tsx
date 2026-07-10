@@ -4,6 +4,7 @@ import houseAsset from "@/assets/property-icons/house.png.asset.json";
 import shopAsset from "@/assets/property-icons/shop.png.asset.json";
 import pinAsset from "@/assets/property-icons/pin.png.asset.json";
 import landAsset from "@/assets/property-icons/land.png.asset.json";
+import otherAsset from "@/assets/property-icons/other.png.asset.json";
 
 export type PropertyTypeKey =
   | "mieszkanie"
@@ -28,7 +29,7 @@ const MAP: Record<string, { label: string; img?: string }> = {
   plot_building: { label: "Działka budowlana", img: pinAsset.url },
   lokal_uslugowy: { label: "Lokal usługowy", img: shopAsset.url },
   commercial: { label: "Lokal usługowy", img: shopAsset.url },
-  inna: { label: "Inna" },
+  inna: { label: "Inna nieruchomość", img: otherAsset.url },
 };
 
 export function getPropertyVisual(type?: string | null) {

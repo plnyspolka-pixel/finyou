@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileQuestion, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SecurityType } from "@/lib/loan-math";
 import { securityTypeLabels } from "@/lib/loan-math";
@@ -8,12 +8,12 @@ import houseAsset from "@/assets/property-icons/house.png.asset.json";
 import shopAsset from "@/assets/property-icons/shop.png.asset.json";
 import pinAsset from "@/assets/property-icons/pin.png.asset.json";
 import landAsset from "@/assets/property-icons/land.png.asset.json";
+import otherAsset from "@/assets/property-icons/other.png.asset.json";
 
 type TileDef = {
   type: SecurityType;
-  img?: string;
-  alt?: string;
-  fallback?: React.ComponentType<{ className?: string }>;
+  img: string;
+  alt: string;
 };
 
 const tiles: TileDef[] = [
@@ -22,15 +22,11 @@ const tiles: TileDef[] = [
   { type: "grunt_rolny", img: landAsset.url, alt: "Grunt rolny" },
   { type: "dzialka_budowlana", img: pinAsset.url, alt: "Działka budowlana" },
   { type: "lokal_uslugowy", img: shopAsset.url, alt: "Lokal usługowy" },
-  { type: "inna", fallback: FileQuestion },
+  { type: "inna", img: otherAsset.url, alt: "Inna nieruchomość" },
 ];
 
 function TileIcon({ tile, className }: { tile: TileDef; className?: string }) {
-  if (tile.img) {
-    return <img src={tile.img} alt={tile.alt ?? ""} className={cn("object-contain", className)} loading="lazy" />;
-  }
-  const Fallback = tile.fallback!;
-  return <Fallback className={cn(className)} />;
+  return <img src={tile.img} alt={tile.alt} className={cn("object-contain", className)} loading="lazy" />;
 }
 
 export function SecurityTypePicker({
@@ -85,13 +81,8 @@ export function SecurityTypePicker({
                 : "border-border hover:border-primary/60",
             )}
           >
-            <TileIcon
-              tile={tile}
-              className={cn(
-                "h-16 w-16",
-                !tile.img && (active ? "text-primary" : "text-muted-foreground"),
-              )}
-            />
+            <TileIcon tile={tile} className="h-16 w-16" />
+
             <span className="text-sm font-medium">{securityTypeLabels[tile.type]}</span>
           </button>
         );
