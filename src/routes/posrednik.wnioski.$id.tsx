@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
+import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
@@ -96,19 +97,10 @@ function BrokerApplicationDetail() {
       setNotes(appRow?.broker_notes ?? "");
       setDocs((d as any) ?? []);
 
-      // Sign photo URLs
+      // Zdjęcia nieruchomości: tylko faktyczne obrazki (bez skanów dokumentów/PDF),
+      // podpisane w Storage (ścieżki mogą leżeć w `property-photos` lub `documents`).
       const p = Array.isArray(appRow?.properties) ? appRow.properties[0] : (appRow?.properties as any);
-      const raw: string[] = Array.isArray(p?.photos) ? p.photos.filter(Boolean) : [];
-      const toSign = raw.filter((u) => !/^https?:\/\//i.test(u));
-      const resolved: string[] = [...raw];
-      if (toSign.length > 0) {
-        const { data: signed } = await supabase.storage.from("property-photos").createSignedUrls(toSign, 60 * 60);
-        const map = new Map<string, string>();
-        (signed ?? []).forEach((s: any) => { if (s?.path && s?.signedUrl) map.set(s.path, s.signedUrl); });
-        for (let i = 0; i < resolved.length; i++) {
-          if (!/^https?:\/\//i.test(resolved[i])) resolved[i] = map.get(resolved[i]) ?? resolved[i];
-        }
-      }
+      const resolved = await resolveShowablePhotoUrls(p?.photos, 60 * 60);
       setPhotos(resolved);
       setLoading(false);
     })();
