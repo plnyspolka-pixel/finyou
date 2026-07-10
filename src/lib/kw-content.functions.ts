@@ -218,12 +218,12 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
       .from("kw_documents")
       .update({
         status: "ready",
-        okladka: h.okladka ?? null,
-        dzial_1o: h.dzial1o ?? null,
-        dzial_1s: h.dzial1s ?? null,
-        dzial_2: h.dzial2 ?? null,
-        dzial_3: h.dzial3 ?? null,
-        dzial_4: h.dzial4 ?? null,
+        okladka: decodeMaybeBase64(h.okladka),
+        dzial_1o: decodeMaybeBase64(h.dzial1o),
+        dzial_1s: decodeMaybeBase64(h.dzial1s),
+        dzial_2: decodeMaybeBase64(h.dzial2),
+        dzial_3: decodeMaybeBase64(h.dzial3),
+        dzial_4: decodeMaybeBase64(h.dzial4),
         fetched_at: new Date().toISOString(),
         bill_in: res.billIn ?? null,
         bill_out: res.billOut ?? null,
