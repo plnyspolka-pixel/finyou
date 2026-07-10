@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
 import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
+import wordmark from "@/assets/financeyou-wordmark.png.asset.json";
 
 const searchSchema = z.object({
   token: z.string().uuid().optional(),
