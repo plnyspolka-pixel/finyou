@@ -1,10 +1,15 @@
 // Wspólny rdzeń synchronizacji KSeF (2.0), wywoływany zarówno z
 // createServerFn (UI "Synchronizuj teraz"), jak i z hooka cron /api/public/hooks/sync-accounting.
+import { createHash } from "node:crypto";
 import { accountingDb } from "./db";
 import type { KsefEntity } from "@/lib/ksef/client";
 import { openKsefSession, closeKsefSession, type KsefSession } from "@/lib/ksef/session";
 
-type SyncResult = { entity: string; direction: "sales" | "purchase"; ok: boolean; count: number; message: string | null };
+type SyncResult = { entity: string; direction: "sales" | "purchase"; ok: boolean; count: number; message: string | null; xml_fetched?: number };
+
+// Limity pobierania źródłowego XML na jeden przebieg (per kierunek).
+const XML_FETCH_LIMIT_PER_RUN = 40;
+const XML_FETCH_DELAY_MS = 250;
 
 async function upsertSyncStatus(entityId: string, source: "ksef", direction: "sales" | "purchase", ok: boolean, message: string | null, count: number) {
   const now = new Date().toISOString();
