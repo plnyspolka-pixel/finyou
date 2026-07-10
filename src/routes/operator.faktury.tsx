@@ -24,6 +24,7 @@ import {
   setInvoiceDeal,
 } from "@/lib/invoicing/operator-invoices.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { CompanyLookupInline, VerifiedBadge } from "@/components/company-lookup-inline";
 
 export const Route = createFileRoute("/operator/faktury")({
   component: OperatorFakturyPage,
