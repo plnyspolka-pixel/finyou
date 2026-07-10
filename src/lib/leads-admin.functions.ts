@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -85,13 +86,16 @@ export const listLeads = createServerFn({ method: "GET" })
     }
 
     const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments";
+    // Liczniki kontaktu czytamy SERVICE-ROLEM (endpoint jest już za assertAdmin) —
+    // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
+    // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
     const queries: Promise<any>[] = [];
-    if (ids.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("lead_id", ids)));
-    if (phones.length) queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).in("phone_normalized", phones)));
+    if (ids.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", ids)));
+    if (phones.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", phones)));
     if (emailsLower.length) {
       // ilike.any() = case-insensitive email match, catches inbound emails filed against a different (auto-created) lead row.
       const orExpr = emailsLower.map((e) => `email.ilike.${e}`).join(",");
-      queries.push(Promise.resolve(context.supabase.from("lead_communications").select(COLS).or(orExpr)));
+      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).or(orExpr)));
     }
     const results = await Promise.all(queries);
 
@@ -183,7 +187,7 @@ export const listLeads = createServerFn({ method: "GET" })
     ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
-      const { data: profs } = await context.supabase.from("profiles").select("user_id, first_name, last_name, email").in("user_id", callerIds);
+      const { data: profs } = await supabaseAdmin.from("profiles").select("user_id, first_name, last_name, email").in("user_id", callerIds);
       for (const p of (profs ?? []) as any[]) {
         callerNames[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pośrednik";
       }
@@ -203,7 +207,7 @@ export const listLeads = createServerFn({ method: "GET" })
     const loanIds = Array.from(new Set(list.map((l) => l.loan?.id).filter(Boolean))) as string[];
     const docCountByLoan: Record<string, number> = {};
     if (loanIds.length) {
-      const { data: docs } = await context.supabase
+      const { data: docs } = await supabaseAdmin
         .from("documents")
         .select("loan_application_id")
         .in("loan_application_id", loanIds);
