@@ -190,7 +190,7 @@ const STEPS = [
 ] as const;
 
 
-type StepId = 1 | 2 | 3;
+
 
 
 export type PrefilledContact = {
