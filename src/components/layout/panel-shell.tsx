@@ -18,6 +18,8 @@ type PanelShellProps = {
   allow?: AppRole[];
   /** Dodatkowy element w obrębie shella (np. pływający czat AI administratora). */
   footer?: ReactNode;
+  /** Włącz „fancy" navy aurora backdrop w obszarze głównym. */
+  fancy?: boolean;
 };
 
 /**
@@ -25,7 +27,7 @@ type PanelShellProps = {
  * Jedno źródło prawdy dla: nawigacji desktop + mobilnej (Sheet), brandingu,
  * strażnika ról i wylogowania. Dzięki temu każdy panel jest nawigowalny na telefonie.
  */
-export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
+export function PanelShell({ title, groups, allow, footer, fancy = false }: PanelShellProps) {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -160,7 +162,39 @@ export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
             {title}
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className={`relative flex-1 overflow-y-auto p-4 md:p-6 ${fancy ? "fy-fancy-main" : ""}`}>
+          {fancy && (
+            <>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -z-10"
+                style={{
+                  background:
+                    "radial-gradient(120% 100% at 0% 0%, oklch(0.30 0.16 265 / 0.35) 0%, transparent 55%), radial-gradient(90% 80% at 100% 10%, oklch(0.55 0.20 240 / 0.22) 0%, transparent 60%), radial-gradient(80% 80% at 50% 100%, oklch(0.50 0.22 285 / 0.18) 0%, transparent 65%), linear-gradient(180deg, oklch(0.99 0.005 250) 0%, oklch(0.96 0.01 255) 100%)",
+                }}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-10 -left-10 -z-10 h-72 w-72 rounded-full blur-3xl"
+                style={{
+                  background: "radial-gradient(circle, oklch(0.55 0.22 268 / 0.35), transparent 70%)",
+                  animation: "fy-panel-drift-a 14s ease-in-out infinite alternate",
+                }}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-10 right-0 -z-10 h-80 w-80 rounded-full blur-3xl"
+                style={{
+                  background: "radial-gradient(circle, oklch(0.68 0.16 235 / 0.28), transparent 70%)",
+                  animation: "fy-panel-drift-b 17s ease-in-out infinite alternate",
+                }}
+              />
+              <style>{`
+                @keyframes fy-panel-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(40px,24px) scale(1.15); } }
+                @keyframes fy-panel-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-44px,20px) scale(1.1); } }
+              `}</style>
+            </>
+          )}
           <Outlet />
         </main>
       </div>
