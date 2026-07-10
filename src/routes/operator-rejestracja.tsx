@@ -6,9 +6,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import { Loader2, ShieldCheck, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
+import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 
 const searchSchema = z.object({
   token: z.string().uuid().optional(),
@@ -74,7 +74,6 @@ function OperatorRegisterPage() {
 
   useEffect(() => {
     if (!token || !user || status.state !== "valid" || redeeming) return;
-    if (!welcome) return;
     setRedeeming(true);
     (async () => {
       const { error } = await supabase.rpc("redeem_operator_invite", { _token: token });
@@ -123,123 +122,182 @@ function OperatorRegisterPage() {
     });
   };
 
+  const oauthRedirect =
+    typeof window !== "undefined" && token
+      ? `${window.location.origin}/operator-rejestracja?token=${token}&welcome=1`
+      : undefined;
+
   return (
-    <div className="grid min-h-screen place-items-center bg-background p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-accent" />
-            <CardTitle>Rejestracja operatora Finance You</CardTitle>
+    <div className="relative min-h-screen overflow-hidden bg-[#050914] text-white">
+      {/* Fancy aurora background */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.35),transparent_60%)] blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(129,140,248,0.4),transparent_60%)] blur-3xl" />
+        <div className="absolute left-1/2 top-1/3 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(236,72,153,0.18),transparent_60%)] blur-3xl" />
+        <div
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+      </div>
+
+      <div className="relative mx-auto grid min-h-screen max-w-6xl place-items-center px-4 py-10">
+        <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+          {/* Left — hype panel */}
+          <div className="hidden space-y-6 lg:block">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-widest text-white/70 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+              Zaproszenie prywatne
+            </div>
+            <h1 className="bg-gradient-to-br from-white via-white to-cyan-200 bg-clip-text text-4xl font-bold leading-tight text-transparent md:text-5xl">
+              Witaj w zespole operatorów
+              <br />
+              Finance You.
+            </h1>
+            <p className="max-w-md text-base text-white/70">
+              Aktywuj swoje konto w kilka sekund. Po zalogowaniu trafisz od razu do panelu operatora — z leadami, wnioskami i wewnętrzną ofertą.
+            </p>
+            <ul className="space-y-3 text-sm text-white/80">
+              {[
+                "Pełny dostęp do leadów bez opiekuna",
+                "Wewnętrzna oferta pożyczkowa z prowizją operatora",
+                "Skrzynka mailowa i historia rozmów pod jednym dachem",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <CardDescription>
-            Konto operatora wewnętrznego można założyć wyłącznie z linku zapraszającego od administratora.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {status.state === "loading" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Sprawdzam zaproszenie…
-            </div>
-          )}
 
-          {status.state === "invalid" && (
-            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm">
-              <div className="flex items-center gap-2 font-medium text-destructive">
-                <AlertCircle className="h-4 w-4" /> Nie można użyć tego linku
-              </div>
-              <p className="mt-1 text-muted-foreground">{status.reason}</p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Poproś administratora o wygenerowanie nowego linku.
-              </p>
-            </div>
-          )}
-
-          {status.state === "valid" && redeeming && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Aktywuję konto operatora…
-            </div>
-          )}
-
-          {status.state === "valid" && !redeeming && !user && !sent && (
-            <form className="space-y-4" onSubmit={submit}>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="fn">Imię</Label>
-                  <Input id="fn" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          {/* Right — glass card */}
+          <div className="mx-auto w-full max-w-md">
+            <div className="relative rounded-2xl border border-white/15 bg-white/[0.06] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+              <div className="relative space-y-5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400/15 ring-1 ring-cyan-300/40">
+                    <ShieldCheck className="h-5 w-5 text-cyan-200" />
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-white/60">Finance You</div>
+                    <div className="text-lg font-semibold">Rejestracja operatora</div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ln">Nazwisko</Label>
-                  <Input id="ln" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  readOnly={!!status.email}
-                />
-                {status.email && (
-                  <p className="text-xs text-muted-foreground">
-                    Adres przypisany przez administratora — nie można go zmienić.
-                  </p>
+
+                {status.state === "loading" && (
+                  <div className="flex items-center gap-2 text-sm text-white/70">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Sprawdzam zaproszenie…
+                  </div>
+                )}
+
+                {status.state === "invalid" && (
+                  <div className="rounded-lg border border-red-400/40 bg-red-500/10 p-4 text-sm">
+                    <div className="flex items-center gap-2 font-medium text-red-200">
+                      <AlertCircle className="h-4 w-4" /> Nie można użyć tego linku
+                    </div>
+                    <p className="mt-1 text-white/70">{status.reason}</p>
+                    <p className="mt-3 text-xs text-white/50">
+                      Poproś administratora o wygenerowanie nowego linku.
+                    </p>
+                  </div>
+                )}
+
+                {status.state === "valid" && redeeming && (
+                  <div className="flex items-center gap-2 text-sm text-white/70">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Aktywuję konto operatora…
+                  </div>
+                )}
+
+                {status.state === "valid" && !redeeming && !user && !sent && (
+                  <>
+                    <SocialSignIn
+                      redirectUri={oauthRedirect}
+                      variant="dark"
+                      labelPrefix="Kontynuuj"
+                    />
+                    <AuthDivider label="lub e-mailem" variant="dark" />
+                    <form className="space-y-3" onSubmit={submit}>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="fn" className="text-white/80">Imię</Label>
+                          <Input
+                            id="fn"
+                            required
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="ln" className="text-white/80">Nazwisko</Label>
+                          <Input
+                            id="ln"
+                            required
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="email" className="text-white/80">E-mail</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          readOnly={!!status.email}
+                          className="border-white/15 bg-white/10 text-white placeholder:text-white/40 read-only:opacity-70"
+                        />
+                        {status.email && (
+                          <p className="text-xs text-white/50">
+                            Adres przypisany przez administratora — nie można go zmienić.
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="submit"
+                        className="h-11 w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 hover:opacity-90"
+                        disabled={sending}
+                      >
+                        {sending ? "Wysyłanie linku…" : "Wyślij link aktywacyjny"}
+                      </Button>
+                    </form>
+                    <p className="text-center text-xs text-white/60">
+                      Masz już konto?{" "}
+                      <Link
+                        to="/logowanie"
+                        search={{ next: `/operator-rejestracja?token=${token}&welcome=1` } as never}
+                        className="font-medium text-cyan-300 hover:underline"
+                      >
+                        Zaloguj się
+                      </Link>
+                    </p>
+                  </>
+                )}
+
+                {status.state === "valid" && sent && !user && (
+                  <div className="rounded-lg border border-white/15 bg-white/5 p-4 text-sm">
+                    <p className="font-medium text-white">Sprawdź skrzynkę {email}</p>
+                    <p className="mt-1 text-white/70">
+                      Kliknij w link — wrócisz tutaj i Twoje konto operatora zostanie aktywowane.
+                    </p>
+                  </div>
                 )}
               </div>
-              <Button type="submit" className="w-full" disabled={sending}>
-                {sending ? "Wysyłanie linku…" : "Załóż konto i wyślij link"}
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                Masz już konto?{" "}
-                <Link
-                  to="/logowanie"
-                  search={{ next: `/operator-rejestracja?token=${token}&welcome=1` } as never}
-                  className="font-medium text-accent hover:underline"
-                >
-                  Zaloguj się
-                </Link>
-              </p>
-            </form>
-          )}
-
-          {status.state === "valid" && sent && !user && (
-            <div className="rounded-md border bg-muted/40 p-4 text-sm">
-              <p className="font-medium">Sprawdź skrzynkę {email}</p>
-              <p className="mt-1 text-muted-foreground">
-                Kliknij w link — wrócisz tutaj i Twoje konto operatora zostanie aktywowane.
-              </p>
             </div>
-          )}
-
-          {status.state === "valid" && user && !welcome && !redeeming && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Jesteś zalogowany jako <strong>{user.email}</strong>. Kliknij poniżej, aby aktywować rolę operatora.
-              </p>
-              <Button
-                className="w-full"
-                onClick={async () => {
-                  if (!token) return;
-                  setRedeeming(true);
-                  const { error } = await supabase.rpc("redeem_operator_invite", { _token: token });
-                  if (error) {
-                    toast.error("Nie udało się aktywować", { description: error.message });
-                    setRedeeming(false);
-                    return;
-                  }
-                  await refreshRoles();
-                  toast.success("Konto operatora aktywne");
-                  navigate({ to: "/operator/leady" });
-                }}
-              >
-                Aktywuj konto operatora
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="mt-4 text-center text-xs text-white/40">
+              Konto operatora wewnętrznego można założyć wyłącznie z linku zapraszającego od administratora.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
