@@ -213,7 +213,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
             <h2 className="text-xl font-extrabold text-white md:text-2xl">Wyślij ofertę do inwestorów</h2>
             <p className="text-sm text-white/70 md:text-[15px]">
               Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
-              Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora.
+              {showInternalOffer && " Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora."}
             </p>
           </div>
           <div className={`grid gap-3 ${showInternalOffer ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
