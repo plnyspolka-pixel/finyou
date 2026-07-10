@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Download, RefreshCw, ExternalLink, FileText, ShoppingCart, Building2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Download, RefreshCw, ExternalLink, FileText, ShoppingCart, Building2, AlertTriangle, CheckCircle2, FileCode2, Archive } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
-import { listAccountingDocuments, getAccountingSyncStatus, exportAccountingDocumentsCsv } from "@/lib/accounting/documents.functions";
+import { listAccountingDocuments, getAccountingSyncStatus, exportAccountingDocumentsCsv, getAccountingDocumentXml, exportAccountingXmlZip } from "@/lib/accounting/documents.functions";
 import { listAccountingEntities } from "@/lib/accounting/functions";
 import { syncKsef } from "@/lib/accounting/sync-ksef.functions";
 
