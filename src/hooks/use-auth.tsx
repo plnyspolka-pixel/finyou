@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 export type AppRole =
   | "administrator"
   | "operator"
-  | "operator_wewnetrzny"
   | "klient"
   | "inwestor"
   | "ksiegowosc";
