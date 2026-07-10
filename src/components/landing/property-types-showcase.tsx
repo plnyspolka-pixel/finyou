@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { ChevronDown, FileText, Sparkles, Building2, Home, Store, Trees, Map, type LucideIcon } from "lucide-react";
+import { ChevronDown, FileText, Sparkles } from "lucide-react";
 import { BlurFade } from "@/components/ui/blur-fade";
+import apartmentAsset from "@/assets/property-icons/apartment.png.asset.json";
+import houseAsset from "@/assets/property-icons/house.png.asset.json";
+import shopAsset from "@/assets/property-icons/shop.png.asset.json";
+import pinAsset from "@/assets/property-icons/pin.png.asset.json";
+import landAsset from "@/assets/property-icons/land.png.asset.json";
 
 type PropType = {
   key: string;
   title: string;
-  Icon: LucideIcon;
+  img: string;
   docs: string[];
 };
 
@@ -13,7 +18,7 @@ const TYPES: PropType[] = [
   {
     key: "mieszkanie",
     title: "Mieszkanie",
-    Icon: Building2,
+    img: apartmentAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia każdego pomieszczenia",
@@ -23,7 +28,7 @@ const TYPES: PropType[] = [
   {
     key: "dom",
     title: "Dom / dom w budowie",
-    Icon: Home,
+    img: houseAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia z zewnątrz całego budynku",
@@ -34,7 +39,7 @@ const TYPES: PropType[] = [
   {
     key: "lokal",
     title: "Lokal użytkowy / usługowy",
-    Icon: Store,
+    img: shopAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "Zdjęcia każdego pomieszczenia",
@@ -45,7 +50,7 @@ const TYPES: PropType[] = [
   {
     key: "rolna",
     title: "Grunt rolny",
-    Icon: Trees,
+    img: landAsset.url,
     docs: [
       "Wypis z rejestru gruntów",
       "Numer księgi wieczystej (jeżeli nie ma go na wypisie)",
@@ -54,7 +59,7 @@ const TYPES: PropType[] = [
   {
     key: "budowlana",
     title: "Działka budowlana",
-    Icon: Map,
+    img: pinAsset.url,
     docs: [
       "Numer księgi wieczystej",
       "MPZP albo warunki zabudowy",
@@ -78,7 +83,6 @@ export function PropertyTypesShowcase({
         const isOpen = !selectMode && openKey === p.key;
         const isSelected = selectMode && selectedKey === p.key;
         const highlight = isOpen || isSelected;
-        const Icon = p.Icon;
 
         if (selectMode) {
           return (
@@ -88,20 +92,18 @@ export function PropertyTypesShowcase({
                 onClick={() => onSelect!(p.key)}
                 aria-pressed={isSelected}
                 className={[
-                  "group flex h-full min-h-[92px] w-full flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-center transition-all",
+                  "group flex h-full min-h-[120px] w-full flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-center transition-all",
                   isSelected
                     ? "border-primary/60 bg-gradient-to-br from-primary/25 to-primary/10 text-white shadow-lg shadow-primary/20 ring-1 ring-primary/50"
                     : "border-white/15 bg-white/[0.06] text-white/85 hover:bg-white/[0.1] hover:border-white/25",
                 ].join(" ")}
               >
-                <span
-                  className={[
-                    "grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors",
-                    isSelected ? "bg-white/20 text-white" : "bg-white/10 text-white/80 group-hover:text-white",
-                  ].join(" ")}
-                >
-                  <Icon className="h-5 w-5" />
-                </span>
+                <img
+                  src={p.img}
+                  alt={p.title}
+                  loading="lazy"
+                  className="h-16 w-16 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]"
+                />
                 <span className="text-[11px] font-semibold leading-tight sm:text-xs">
                   {p.title}
                 </span>
@@ -122,14 +124,12 @@ export function PropertyTypesShowcase({
                   highlight ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-muted/50",
                 ].join(" ")}
               >
-                <span
-                  className={[
-                    "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
-                    highlight ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
-                  ].join(" ")}
-                >
-                  <Icon className="h-5 w-5" />
-                </span>
+                <img
+                  src={p.img}
+                  alt={p.title}
+                  loading="lazy"
+                  className="h-12 w-12 shrink-0 object-contain"
+                />
                 <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">
                   {p.title}
                 </span>
