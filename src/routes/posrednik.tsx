@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, UserCheck, FileText, FilePlus2, Mail, UserCircle, Calculator } from "lucide-react";
+import { Users, UserCheck, FileText, FilePlus2, Mail, UserCircle } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 
 export const Route = createFileRoute("/posrednik")({
