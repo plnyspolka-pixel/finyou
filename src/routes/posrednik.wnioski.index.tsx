@@ -12,6 +12,7 @@ import { FilePlus2, ImageOff, Search, MapPin, FileText, Calendar, Hash } from "l
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
+import { PropertyTypeBadge } from "@/lib/property-visuals";
 
 export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
