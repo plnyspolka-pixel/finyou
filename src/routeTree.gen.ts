@@ -16,6 +16,7 @@ import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
+import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
@@ -214,6 +215,11 @@ const PosrednikRoute = PosrednikRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
+  id: '/operator-rejestracja',
+  path: '/operator-rejestracja',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperatorRoute = OperatorRouteImport.update({
@@ -1096,6 +1102,7 @@ export interface FileRoutesByFullPath {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
+  '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1265,6 +1272,7 @@ export interface FileRoutesByTo {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
+  '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -1437,6 +1445,7 @@ export interface FileRoutesById {
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
+  '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1612,6 +1621,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator'
+    | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1781,6 +1791,7 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
+    | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1952,6 +1963,7 @@ export interface FileRouteTypes {
     | '/nowe-haslo'
     | '/oferty'
     | '/operator'
+    | '/operator-rejestracja'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -2126,6 +2138,7 @@ export interface RootRouteChildren {
   NoweHasloRoute: typeof NoweHasloRoute
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
+  OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RegulaminRoute: typeof RegulaminRoute
@@ -2234,6 +2247,13 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operator-rejestracja': {
+      id: '/operator-rejestracja'
+      path: '/operator-rejestracja'
+      fullPath: '/operator-rejestracja'
+      preLoaderRoute: typeof OperatorRejestracjaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operator': {
@@ -3714,6 +3734,7 @@ const rootRouteChildren: RootRouteChildren = {
   NoweHasloRoute: NoweHasloRoute,
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
+  OperatorRejestracjaRoute: OperatorRejestracjaRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RegulaminRoute: RegulaminRoute,
