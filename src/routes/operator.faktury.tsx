@@ -102,6 +102,7 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const entitiesFn = useServerFn(listInvoiceEntities);
+  const partnersFn = useServerFn(listInstitutionalPartners);
   const createFn = useServerFn(createOperatorInvoice);
   const setDealFn = useServerFn(setInvoiceDeal);
 
@@ -112,6 +113,8 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
 
   const entitiesQ = useQuery({ queryKey: ["invoice-entities"], queryFn: () => entitiesFn() });
   const entities = (entitiesQ.data as any[]) ?? [];
+  const partnersQ = useQuery({ queryKey: ["institutional-partners"], queryFn: () => partnersFn() });
+  const partners = (partnersQ.data as any[]) ?? [];
 
   const [form, setForm] = useState({
     buyerType: "instytucja" as BuyerType,
