@@ -139,11 +139,14 @@ function LoginPage() {
             </div>
           ) : (
 
-            <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="password">Hasło</TabsTrigger>
-                <TabsTrigger value="magic">Link e-mail</TabsTrigger>
-              </TabsList>
+            <>
+              <SocialSignIn labelPrefix="Zaloguj się" />
+              <AuthDivider label="lub e-mailem" />
+              <Tabs defaultValue="password" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="password">Hasło</TabsTrigger>
+                  <TabsTrigger value="magic">Link e-mail</TabsTrigger>
+                </TabsList>
 
 
               <TabsContent value="password" className="mt-4">
