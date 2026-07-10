@@ -20,7 +20,9 @@ function authHeader(): string {
 }
 
 function baseUrl(): string {
-  return (process.env.CMD_KW_BASE_URL ?? "https://dev.monitoringdanych.io:4444").replace(/\/+$/, "");
+  const raw = (process.env.CMD_KW_BASE_URL ?? "https://dev.monitoringdanych.io:4444").replace(/\/+$/, "");
+  // Strip accidental Swagger/docs suffix — API root should not include /docs.
+  return raw.replace(/\/(docs|swagger|swagger-ui|openapi)(\/.*)?$/i, "");
 }
 
 async function resolveKwForApplication(loanApplicationId: string): Promise<string | null> {
