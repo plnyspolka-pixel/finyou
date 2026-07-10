@@ -225,6 +225,29 @@ export const setLoanPaidOut = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Zapisuje dane transakcji (miasto/zabezpieczenie/kwota/zysk) do wystawionej faktury.
+// Wywoływane z UI PO wystawieniu FV — user uzupełnia kontekst na końcu.
+export const setInvoiceDeal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z.object({
+      id: z.string().uuid(),
+      deal: DealContext,
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const roles = await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
+    const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
+    const { data: invRow } = await accountingDb.from("sales_invoices").select("items, created_by").eq("id", data.id).maybeSingle();
+    if (!invRow) throw new Error("Nie znaleziono faktury.");
+    const inv = invRow as any;
+    if (!seeAll && inv.created_by !== context.userId) throw new Error("Brak dostępu do tej faktury.");
+    const items = Array.isArray(inv.items) && inv.items.length ? inv.items : [{ meta: {} }];
+    items[0] = { ...items[0], meta: { ...(items[0]?.meta ?? {}), deal: data.deal } };
+    await accountingDb.from("sales_invoices").update({ items }).eq("id", data.id);
+    return { ok: true };
+  });
+
 // Pełne dane faktury do wydruku (faktura + sprzedawca). Operator widzi tylko własne.
 export const getInvoiceForPrint = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
