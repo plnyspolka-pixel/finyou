@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -138,11 +139,14 @@ function LoginPage() {
             </div>
           ) : (
 
-            <Tabs defaultValue="password" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="password">Hasło</TabsTrigger>
-                <TabsTrigger value="magic">Link e-mail</TabsTrigger>
-              </TabsList>
+            <>
+              <SocialSignIn labelPrefix="Zaloguj się" />
+              <AuthDivider label="lub e-mailem" />
+              <Tabs defaultValue="password" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="password">Hasło</TabsTrigger>
+                  <TabsTrigger value="magic">Link e-mail</TabsTrigger>
+                </TabsList>
 
 
               <TabsContent value="password" className="mt-4">
@@ -204,7 +208,8 @@ function LoginPage() {
                   </p>
                 </form>
               </TabsContent>
-            </Tabs>
+              </Tabs>
+            </>
           )}
         </CardContent>
       </Card>

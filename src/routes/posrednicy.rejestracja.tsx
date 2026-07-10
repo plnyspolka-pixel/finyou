@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ComplianceNotice } from "@/components/affiliate/compliance-notice";
 import { registerAffiliatePartner } from "@/lib/affiliate/partner.functions";
 import { Building2, UserCircle } from "lucide-react";
+import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 
 export const Route = createFileRoute("/posrednicy/rejestracja")({
   validateSearch: (s: Record<string, unknown>) => ({ ref: typeof s.ref === "string" ? s.ref : "" }),
@@ -110,10 +111,14 @@ function RejestracjaPartnera() {
               {magicSent ? (
                 <p className="text-sm">Sprawdź skrzynkę <b>{email}</b> i kliknij link logujący, aby kontynuować.</p>
               ) : (
-                <form onSubmit={sendMagic} className="flex flex-col sm:flex-row gap-2">
-                  <Input type="email" placeholder="twoj@email.pl" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <Button type="submit">Wyślij link</Button>
-                </form>
+                <div className="space-y-4">
+                  <SocialSignIn labelPrefix="Zarejestruj się" />
+                  <AuthDivider label="lub e-mailem" />
+                  <form onSubmit={sendMagic} className="flex flex-col sm:flex-row gap-2">
+                    <Input type="email" placeholder="twoj@email.pl" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Button type="submit">Wyślij link</Button>
+                  </form>
+                </div>
               )}
               <p className="text-xs text-muted-foreground mt-3">Masz konto? <Link to="/logowanie" className="text-primary hover:underline">Zaloguj się</Link></p>
             </CardContent>

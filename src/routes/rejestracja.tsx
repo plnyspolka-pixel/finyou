@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, LineChart, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 
 type SignupRole = "klient" | "inwestor" | "posrednik";
 
@@ -150,6 +151,8 @@ function RegisterPage() {
                 })}
               </div>
 
+              <SocialSignIn labelPrefix="Zarejestruj się" />
+              <AuthDivider label="lub e-mailem" />
               <form className="space-y-4" onSubmit={submit}>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
