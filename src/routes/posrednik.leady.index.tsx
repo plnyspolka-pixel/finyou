@@ -18,7 +18,7 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 
 
-export const Route = createFileRoute("/posrednik/leady")({
+export const Route = createFileRoute("/posrednik/leady/")({
   component: OperatorLeadsList,
 });
 
