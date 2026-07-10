@@ -162,7 +162,7 @@ export function MojeWnioski() {
               <button
                 key={r.id}
                 type="button"
-                onClick={() => navigate({ to: "/posrednik/wnioski/$id", params: { id: r.id } })}
+                onClick={() => navigate({ to: `${base}/wnioski/${r.id}` as any })}
                 className="group flex flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition hover:border-primary hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
