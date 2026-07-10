@@ -1,6 +1,7 @@
 // Odczyty dla widoku "Dokumenty księgowe" (jeden rejestr FV — sprzedaż i koszty, KSeF).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { zipSync, strToU8 } from "fflate";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { accountingDb, assertAccounting } from "./db";
 
