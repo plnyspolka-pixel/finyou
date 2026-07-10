@@ -47,7 +47,7 @@ function SmartImg({ src, alt, className }: { src: string; alt?: string; classNam
   );
 }
 
-function MojeWnioski() {
+export function MojeWnioski() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
