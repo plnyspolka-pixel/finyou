@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePanelBase } from "@/lib/panel-base";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
-  component: BrokerApplicationDetail,
+  component: () => <BrokerApplicationDetail />,
 });
 
 type Row = {
