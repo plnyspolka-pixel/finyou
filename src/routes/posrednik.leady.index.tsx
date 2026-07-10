@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { listLeads, logBrokerCall, addManualNote } from "@/lib/leads-admin.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { usePanelBase } from "@/lib/panel-base";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/posrednik/leady/")({
 });
 
 export function OperatorLeadsList() {
+  const base = usePanelBase();
   const fn = useServerFn(listLeads);
   const logCallFn = useServerFn(logBrokerCall);
   const [status, setStatus] = useState("all");
