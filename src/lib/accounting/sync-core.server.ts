@@ -20,7 +20,7 @@ async function upsertSyncStatus(entityId: string, source: "ksef", direction: "sa
       direction,
       last_run_at: now,
       last_success_at: ok ? now : null,
-      last_error: ok ? null : message,
+      last_error: message,
       documents_synced: count,
       updated_at: now,
     },
