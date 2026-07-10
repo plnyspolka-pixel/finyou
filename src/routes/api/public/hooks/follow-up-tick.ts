@@ -24,7 +24,9 @@ const TERMINAL_STATUSES = new Set([
 export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 
