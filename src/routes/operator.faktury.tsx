@@ -130,9 +130,9 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
     buyerVerified: false,
     description: "Usługa pośrednictwa finansowego",
     grossAmount: "",
-    vatRate: "23",
+    vatRate: "zw",
     bankAccount: "",
-    dueDate: "",
+    dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10),
     operatorCommission: "",
   });
 
@@ -144,7 +144,6 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
       ...s,
       entityId: def.id,
       bankAccount: s.bankAccount || def.bank_account || "",
-      vatRate: def.default_vat_rate || s.vatRate,
     }));
   }, [entities, form.entityId]);
 
