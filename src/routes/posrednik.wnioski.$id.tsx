@@ -22,7 +22,7 @@ import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
-  component: BrokerApplicationDetail,
+  component: () => <BrokerApplicationDetail />,
 });
 
 type Row = {
