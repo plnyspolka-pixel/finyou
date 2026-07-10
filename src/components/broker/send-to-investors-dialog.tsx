@@ -36,6 +36,7 @@ export function SendToInvestorsDialog({
   audience: Audience;
 }) {
   const navigate = useNavigate();
+  const base = usePanelBase();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
 
