@@ -51,6 +51,7 @@ import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
+import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -382,6 +383,11 @@ const PosrednicyRejestracjaRoute = PosrednicyRejestracjaRouteImport.update({
   id: '/posrednicy/rejestracja',
   path: '/posrednicy/rejestracja',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
+  id: '/leady',
+  path: '/leady',
+  getParentRoute: () => OperatorRoute,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
@@ -1101,6 +1107,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/leady': typeof OperatorLeadyRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1259,6 +1266,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/leady': typeof OperatorLeadyRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1424,6 +1432,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/operator/leady': typeof OperatorLeadyRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1590,6 +1599,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/operator/leady'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1748,6 +1758,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/operator/leady'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1912,6 +1923,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/operator/leady'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -2371,6 +2383,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednicy/rejestracja'
       preLoaderRoute: typeof PosrednicyRejestracjaRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/operator/leady': {
+      id: '/operator/leady'
+      path: '/leady'
+      fullPath: '/operator/leady'
+      preLoaderRoute: typeof OperatorLeadyRouteImport
+      parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -3440,10 +3459,12 @@ const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
 interface OperatorRouteChildren {
+  OperatorLeadyRoute: typeof OperatorLeadyRoute
   OperatorIndexRoute: typeof OperatorIndexRoute
 }
 
 const OperatorRouteChildren: OperatorRouteChildren = {
+  OperatorLeadyRoute: OperatorLeadyRoute,
   OperatorIndexRoute: OperatorIndexRoute,
 }
 
