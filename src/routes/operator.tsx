@@ -27,6 +27,7 @@ function OperatorLayout() {
       title="Panel operatora"
       allow={["operator", "operator_wewnetrzny", "administrator"]}
       groups={groups}
+      fancy
     />
   );
 }
