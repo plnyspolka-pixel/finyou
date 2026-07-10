@@ -289,7 +289,10 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
       const id = issued.id;
       setIssued(null);
       setDeal(EMPTY_DEAL);
+      setForm(defaultForm);
+      clearPersisted();
       onIssued();
+      void navigate({ to: "/faktura/$id", params: { id } });
       void navigate({ to: "/faktura/$id", params: { id } });
     } catch (e: any) {
       toast.error(e?.message || "Nie udało się zapisać danych transakcji.");
