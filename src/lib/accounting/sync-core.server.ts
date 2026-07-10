@@ -127,7 +127,7 @@ async function queryKsefMetadata(s: KsefSession, subjectType: "subject1" | "subj
 }
 
 // Sync jednego kierunku przy WSPÓŁDZIELONEJ sesji (jedna sesja na podmiot → mniej 429).
-async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null }> {
+async function syncKsefWithSession(entity: any, direction: "sales" | "purchase", s: KsefSession): Promise<{ ok: boolean; count: number; message: string | null; xml_fetched?: number }> {
   try {
     const asObj = (v: unknown): InvoiceMeta => (v && typeof v === "object" && !Array.isArray(v) ? (v as InvoiceMeta) : {});
     const list = await queryKsefMetadata(s, direction === "sales" ? "subject1" : "subject2", 24);
