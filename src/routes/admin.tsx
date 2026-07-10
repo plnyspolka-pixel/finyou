@@ -88,7 +88,7 @@ const groups: Group[] = [
   {
     label: "Konfiguracja",
     items: [
-      { to: "/admin/ai-administrator", label: "AI Administrator", icon: Bot },
+      
       { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },

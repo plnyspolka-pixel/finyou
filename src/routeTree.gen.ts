@@ -108,7 +108,6 @@ import { Route as AdminAiLinkbuildingRouteImport } from './routes/admin.ai-linkb
 import { Route as AdminAiGrowthEngineRouteImport } from './routes/admin.ai-growth-engine'
 import { Route as AdminAiFunnelRouteImport } from './routes/admin.ai-funnel'
 import { Route as AdminAiCompetitorsRouteImport } from './routes/admin.ai-competitors'
-import { Route as AdminAiAdministratorRouteImport } from './routes/admin.ai-administrator'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as PosrednikWnioskiIndexRouteImport } from './routes/posrednik.wnioski.index'
@@ -681,11 +680,6 @@ const AdminAiCompetitorsRoute = AdminAiCompetitorsRouteImport.update({
   path: '/ai-competitors',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAiAdministratorRoute = AdminAiAdministratorRouteImport.update({
-  id: '/ai-administrator',
-  path: '/ai-administrator',
-  getParentRoute: () => AdminRoute,
-} as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -1122,7 +1116,6 @@ export interface FileRoutesByFullPath {
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
@@ -1293,7 +1286,6 @@ export interface FileRoutesByTo {
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
@@ -1467,7 +1459,6 @@ export interface FileRoutesById {
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/admin/ai-administrator': typeof AdminAiAdministratorRoute
   '/admin/ai-competitors': typeof AdminAiCompetitorsRoute
   '/admin/ai-funnel': typeof AdminAiFunnelRoute
   '/admin/ai-growth-engine': typeof AdminAiGrowthEngineRoute
@@ -1645,7 +1636,6 @@ export interface FileRouteTypes {
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
     | '/admin/ai-growth-engine'
@@ -1816,7 +1806,6 @@ export interface FileRouteTypes {
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
     | '/admin/ai-growth-engine'
@@ -1989,7 +1978,6 @@ export interface FileRouteTypes {
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/admin/ai-administrator'
     | '/admin/ai-competitors'
     | '/admin/ai-funnel'
     | '/admin/ai-growth-engine'
@@ -2912,13 +2900,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiCompetitorsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/ai-administrator': {
-      id: '/admin/ai-administrator'
-      path: '/ai-administrator'
-      fullPath: '/admin/ai-administrator'
-      preLoaderRoute: typeof AdminAiAdministratorRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -3465,7 +3446,6 @@ const AdminKlienciRouteWithChildren = AdminKlienciRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
-  AdminAiAdministratorRoute: typeof AdminAiAdministratorRoute
   AdminAiCompetitorsRoute: typeof AdminAiCompetitorsRoute
   AdminAiFunnelRoute: typeof AdminAiFunnelRoute
   AdminAiGrowthEngineRoute: typeof AdminAiGrowthEngineRoute
@@ -3524,7 +3504,6 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminAiAdministratorRoute: AdminAiAdministratorRoute,
   AdminAiCompetitorsRoute: AdminAiCompetitorsRoute,
   AdminAiFunnelRoute: AdminAiFunnelRoute,
   AdminAiGrowthEngineRoute: AdminAiGrowthEngineRoute,
