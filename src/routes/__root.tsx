@@ -10,6 +10,7 @@ import {
 
 import { useEffect } from "react";
 import appCss from "../styles.css?url";
+import { getMetaAppId } from "@/lib/meta-app-id.functions";
 import faviconAsset from "@/assets/favicon.png.asset.json";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
@@ -65,11 +66,20 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  loader: async () => {
+    // Facebook App ID trzymamy w sekrecie serwera (META_APP_ID); wczytujemy go przy SSR,
+    // żeby wyrenderować <meta property="fb:app_id"> w <head> — inaczej scraper Meta go nie zobaczy.
+    const { appId } = await getMetaAppId();
+    return { fbAppId: appId };
+  },
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "google-site-verification", content: "d6rVA0W-j2dnMAaXoxXJbkOo71EwtTo6xvtHjfmjVGE" },
+      ...(loaderData?.fbAppId
+        ? [{ property: "fb:app_id", content: loaderData.fbAppId }]
+        : []),
       { title: "Finance You — pożyczki pod zastaw nieruchomości" },
       { name: "description", content: "Finance You pomaga uzyskać finansowanie pod zastaw nieruchomości z indywidualnymi warunkami i szybkim wnioskiem online." },
       { property: "og:title", content: "Finance You — pożyczki pod zastaw nieruchomości" },
