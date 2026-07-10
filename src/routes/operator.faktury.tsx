@@ -21,7 +21,9 @@ import {
   createOperatorInvoice,
   listMyOperatorInvoices,
   setLoanPaidOut,
+  setInvoiceDeal,
 } from "@/lib/invoicing/operator-invoices.functions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/operator/faktury")({
   component: OperatorFakturyPage,
