@@ -210,13 +210,15 @@ export function LeadDetailView({ id, compact = false }: { id: string; compact?: 
           </Card>
         </TabsContent>
 
-        <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>
+        {!compact && <TabsContent value="meta-capi"><CapiEventsList leadId={id} /></TabsContent>}
 
-        <TabsContent value="raw">
-          <Card className="p-4">
-            <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{JSON.stringify(lead, null, 2)}</pre>
-          </Card>
-        </TabsContent>
+        {!compact && (
+          <TabsContent value="raw">
+            <Card className="p-4">
+              <pre className="text-xs overflow-x-auto whitespace-pre-wrap">{JSON.stringify(lead, null, 2)}</pre>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
