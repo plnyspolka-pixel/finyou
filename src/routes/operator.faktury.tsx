@@ -399,8 +399,37 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs">Prowizja wewnętrzna operatora (PLN)</Label>
-            <Input type="number" value={form.operatorCommission} readOnly className="bg-muted/40" />
-            <p className="text-[11px] text-muted-foreground">Wyliczana automatycznie: 50% kwoty brutto faktury. Wypłacana po wypłacie pożyczki.</p>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.operatorCommission}
+              onChange={(e) => {
+                setCommissionTouched(true);
+                setForm({ ...form, operatorCommission: e.target.value });
+              }}
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-muted-foreground">
+                Domyślnie 50% kwoty brutto faktury. Możesz edytować. Wypłacana po wypłacie pożyczki.
+              </p>
+              {commissionTouched && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => {
+                    const gross = Number(form.grossAmount);
+                    const auto = Number.isFinite(gross) && gross > 0 ? (gross * 0.5).toFixed(2) : "";
+                    setCommissionTouched(false);
+                    setForm((s) => ({ ...s, operatorCommission: auto }));
+                  }}
+                >
+                  Przywróć 50%
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
