@@ -5,15 +5,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
-import { sendResendEmail } from "@/lib/resend-send.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { logLeadCommunication } from "@/lib/lead-comms.server";
-import { emailForStep } from "@/lib/follow-up-templates";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
 const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
 const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // initial + 8 follow-ups = 9
-const SUPPORTED_CHANNELS = ["email", "messenger", "instagram"] as const;
+// E-mail celowo POMINIĘTY — kanał mailowy prowadzi wyłącznie brandowany drip
+// (loan-reminder-emails, 120 szablonów). Tu tylko czaty (Messenger/Instagram).
+const SUPPORTED_CHANNELS = ["messenger", "instagram"] as const;
 type Channel = (typeof SUPPORTED_CHANNELS)[number];
 const TERMINAL_STATUSES = new Set([
   "zamkniety", "closed", "won", "lost", "odrzucony", "rezygnacja",
@@ -140,19 +140,11 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           }
           if (!replyText) continue;
 
-          // 6) Wyślij właściwym kanałem.
+          // 6) Wyślij właściwym kanałem (tylko Messenger/Instagram — e-mail obsługuje
+          //    wyłącznie brandowany drip loan-reminder-emails, żeby nie było dwóch
+          //    różnych „scenariuszy" mailowych do tego samego klienta).
           let sendOk = false; let sendId: string | null = null; let sendErr: string | null = null;
-          // Temat z tej samej, stałej puli 120 szablonów (rotacja) — bez „Przypomnienie N".
-          // Usuwamy ewentualne tokeny {{…}} (tu nie mamy kontekstu do ich podstawienia).
-          const emailSubject = emailForStep(step).subject
-            .replace(/\{\{[^}]+\}\}/g, "").replace(/\s{2,}/g, " ").trim();
-          if (g.channel === "email") {
-            const to = lead.email;
-            if (!to) continue;
-            const r = await sendResendEmail({ to, subject: emailSubject, text: replyText });
-            sendOk = r.ok; sendId = r.id ?? null; sendErr = r.error ?? null;
-
-          } else if (g.channel === "messenger") {
+          if (g.channel === "messenger") {
             const psid = lead.messenger_psid;
             if (!psid) continue;
             const r = await sendMetaMessage({ recipientId: psid, text: replyText, platform: "messenger" });
@@ -166,12 +158,10 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           await logLeadCommunication({
             leadId: g.leadId,
-            channel: g.channel as "email" | "messenger",
+            channel: g.channel as "messenger",
             direction: "outbound",
             content: replyText,
-            subject: g.channel === "email" ? emailSubject : null,
             externalId: sendId,
-            email: g.channel === "email" ? lead.email : null,
             status: sendOk ? "sent" : "error",
             errorMessage: sendOk ? null : sendErr,
             metadata: { follow_up_step: step, auto: true },
