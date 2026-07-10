@@ -54,13 +54,13 @@ export function OperatorLeadDetail() {
               </a>
             )}
             {loanId && (
-              <Link to="/admin/wnioski/$id" params={{ id: loanId }}>
+              <Link to={`${base}/wnioski/${loanId}` as any}>
                 <Button size="sm" variant="outline">
                   <FileText className="mr-2 h-4 w-4" /> Wniosek
                 </Button>
               </Link>
             )}
-            <Link to="/posrednik/kreator-dokumentow">
+            <Link to={`${base}/kreator-dokumentow` as any}>
               <Button size="sm" variant="secondary">
                 <FileText className="mr-2 h-4 w-4" /> Wygeneruj dokument
               </Button>
