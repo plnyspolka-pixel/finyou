@@ -169,10 +169,63 @@ async function syncKsefWithSession(entity: any, direction: "sales" | "purchase",
       if (error) return { ok: false, count: 0, message: `Zapis do bazy: ${error.message}` };
       saved = rows.length;
     }
-    return { ok: true, count: saved, message: null };
+    // Drugi przebieg: pobierz źródłowy XML dla faktur, które go jeszcze nie mają.
+    const xmlFetched = await fetchMissingInvoiceXml(entity.id, direction, s);
+    return { ok: true, count: saved, message: null, xml_fetched: xmlFetched };
   } catch (e) {
     return { ok: false, count: 0, message: (e as Error).message };
   }
+}
+
+// Pobiera źródłowy XML z KSeF (GET /api/v2/invoices/ksef/{ksefNumber}) dla faktur,
+// które jeszcze nie mają zapisanego xml_content. Zwraca liczbę pobranych XML-i.
+async function fetchMissingInvoiceXml(entityId: string, direction: "sales" | "purchase", s: KsefSession): Promise<number> {
+  const { data: pending } = await accountingDb
+    .from("accounting_documents")
+    .select("id, ksef_reference_number")
+    .eq("entity_id", entityId)
+    .eq("direction", direction)
+    .eq("source", "ksef")
+    .not("ksef_reference_number", "is", null)
+    .is("xml_content", null)
+    .order("issue_date", { ascending: false })
+    .limit(XML_FETCH_LIMIT_PER_RUN);
+  const list = (pending ?? []) as Array<{ id: string; ksef_reference_number: string }>;
+  let fetched = 0;
+  for (const row of list) {
+    if (!row.ksef_reference_number) continue;
+    try {
+      await sleep(XML_FETCH_DELAY_MS);
+      const res = await ksefFetch(`${s.baseUrl}/api/v2/invoices/ksef/${encodeURIComponent(row.ksef_reference_number)}`, {
+        method: "GET",
+        headers: { Accept: "application/xml, application/octet-stream, */*", Authorization: `Bearer ${s.accessToken}` },
+      });
+      if (!res.ok) {
+        // 404 = brak w KSeF; nie blokujemy dalszych.
+        await res.text().catch(() => "");
+        continue;
+      }
+      const xml = await res.text();
+      if (!xml || !xml.trim()) continue;
+      // Jeżeli KSeF zwrócił nagłówek integralności — zweryfikuj SHA-256 Base64.
+      const metaHash = res.headers.get("x-ms-meta-hash");
+      if (metaHash) {
+        const actual = createHash("sha256").update(xml, "utf8").digest("base64");
+        if (actual !== metaHash.trim()) {
+          // Nie zapisujemy uszkodzonego XML — pomijamy.
+          continue;
+        }
+      }
+      const { error: upErr } = await accountingDb
+        .from("accounting_documents")
+        .update({ xml_content: xml, updated_at: new Date().toISOString() })
+        .eq("id", row.id);
+      if (!upErr) fetched += 1;
+    } catch {
+      // best-effort — pojedyncze błędy nie przerywają całości.
+    }
+  }
+  return fetched;
 }
 
 // ---------------- Orkiestrator ----------------
