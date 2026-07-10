@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, LineChart, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 
 type SignupRole = "klient" | "inwestor" | "posrednik";
 
