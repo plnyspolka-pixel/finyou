@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Send, Upload, Camera, FileText, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Send, Upload, Camera, FileText, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -190,7 +190,7 @@ const STEPS = [
 ] as const;
 
 
-type StepId = 1 | 2 | 3;
+
 
 
 export type PrefilledContact = {
@@ -215,7 +215,7 @@ export function SinglePageApplicationForm({
 
   const skipContact = Boolean(prefilledContact?.email) && !brokerMode;
   const isBroker = Boolean(brokerMode);
-  const [step, setStep] = useState<StepId>(skipContact ? 3 : 1);
+  
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
 
@@ -321,38 +321,6 @@ export function SinglePageApplicationForm({
     });
   };
 
-  const goNext = () => {
-    if (step === 1) {
-      if (!contactValid) {
-        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
-        return;
-      }
-      if (!consentPrivacy || !consentTerms || !consentMarketing) {
-        toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
-        return;
-      }
-      fireLead();
-      setStep(isBroker ? 3 : 2);
-      return;
-    }
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
-  };
-  const goBack = () => {
-    if (step === 3) {
-      setStep(2);
-      return;
-    }
-    if (step === 2) {
-      setStep(1);
-      return;
-    }
-    setStep((s) => (Math.max(1, s - 1) as StepId));
-  };
-
-
   const hasOwnershipDeed = useMemo(
     () => photos.some((p) => p.bucket === "ownership_deed"),
     [photos],
@@ -362,36 +330,36 @@ export function SinglePageApplicationForm({
     [kwNumber, extraKwNumbers],
   );
   const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
-  const step4Valid = kwOrDeedOk;
 
-  // Allow external CTAs (e.g. hero button) to scroll/open the application
+  // Allow external CTAs (e.g. hero button) to scroll to the form
   useEffect(() => {
     const handler = () => {
-      const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-      if (!step1Done) {
-        toast.error("Najpierw uzupełnij dane kontaktowe i zaakceptuj zgody (Krok 1).");
-        setStep(1);
-      } else {
-        setStep(3);
-      }
+      document.getElementById("financeyou-application-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
-  }, [contactValid, consentPrivacy, consentTerms, consentMarketing]);
+  }, []);
+
 
   const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1) { goNext(); return; }
-    if (step === 2) { goNext(); return; }
+
+    if (!skipContact) {
+      if (!contactValid) {
+        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
+        return;
+      }
+      if (!isBroker && (!consentPrivacy || !consentTerms || !consentMarketing)) {
+        toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
+        return;
+      }
+      fireLead();
+    }
 
     if (!typeSelected) {
       toast.error("Wybierz typ nieruchomości.");
-      return;
-    }
-    if (!kwOrDeedOk) {
-      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
     }
     if (!kwOrDeedOk) {
@@ -402,6 +370,7 @@ export function SinglePageApplicationForm({
       toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
     }
+
 
     setSubmitting(true);
     try {
@@ -479,15 +448,8 @@ export function SinglePageApplicationForm({
     }
   };
 
-  // Auto-advance: contact + zgody complete → pokaż wniosek (Step 2 lub 3 w broker mode)
-  useEffect(() => {
-    const step1Done = contactValid && consentPrivacy && consentTerms && consentMarketing;
-    if (step === 1 && step1Done) {
-      fireLead();
-      setStep(isBroker ? 3 : 2);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, contactValid, consentPrivacy, consentTerms, consentMarketing, isBroker]);
+
+
 
 
   return (
@@ -498,8 +460,8 @@ export function SinglePageApplicationForm({
 
 
 
-      {/* Step 1 — dane kontaktowe */}
-      {step === 1 && (
+      {/* Dane kontaktowe */}
+      {!skipContact && (
         <FancyShell>
           <div className="space-y-5">
             
@@ -560,47 +522,9 @@ export function SinglePageApplicationForm({
         </FancyShell>
       )}
 
-      {/* Step 2 — wybór ścieżki */}
-      {step === 2 && (
-        <FancyShell>
-          <div className="space-y-5">
-            <div className="space-y-2 text-center">
-              <h2 className="text-xl font-bold text-white drop-shadow">Co Cię do nas sprowadza?</h2>
-              <p className="text-sm text-white/80">Wybierz ścieżkę, abyśmy mogli przygotować dla Ciebie odpowiednie kroki.</p>
-            </div>
-            <div className="grid gap-3">
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
-              >
-                <div className="text-lg font-bold">Pożyczam</div>
-                <div className="text-sm text-white/80">Potrzebuję finansowania pod zabezpieczenie nieruchomości.</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => { void navigate({ to: "/inwestor" }); }}
-                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
-              >
-                <div className="text-lg font-bold">Inwestuję</div>
-                <div className="text-sm text-white/80">Chcę lokować kapitał w pożyczki zabezpieczone hipoteką.</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => { void navigate({ to: "/posrednik" }); }}
-                className="rounded-2xl border-2 border-white/40 bg-white/15 p-5 text-left text-white backdrop-blur-sm transition hover:border-white/80 hover:bg-white/25"
-              >
-                <div className="text-lg font-bold">Pośredniczę</div>
-                <div className="text-sm text-white/80">Polecam klientów / inwestorów i prowadzę leady jako pośrednik.</div>
-              </button>
+      {/* Wniosek — typ → KW → dokumenty → kalkulator */}
+      {(() => {
 
-            </div>
-          </div>
-        </FancyShell>
-      )}
-
-      {/* Step 3 — wszystko w jednym: typ → KW → dokumenty → kalkulator */}
-      {step === 3 && (() => {
 
         const secToShowcase: Record<string, string> = {
           mieszkanie: "mieszkanie",
@@ -785,33 +709,20 @@ export function SinglePageApplicationForm({
 
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        {step > 1 && (
-          <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={submitting}>
-            <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
-          </Button>
-        )}
-        {step === 1 && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
-            Dalej <ChevronRight className="ml-1 h-5 w-5" />
-          </Button>
-        )}
-        {step === 3 && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting}
-            aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
-            className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
-            {submitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-            ) : (
-              <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
-            )}
-          </Button>
-        )}
+        <Button type="submit" variant="cta" size="lg" disabled={submitting}
+          aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
+          className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
+          {submitting ? (
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+          ) : (
+            <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
+          )}
+        </Button>
       </div>
-      {step === 3 && (
-        <p className="text-center text-[11px] text-muted-foreground">
-          Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
-        </p>
-      )}
+      <p className="text-center text-[11px] text-muted-foreground">
+        Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
+      </p>
+
 
     </form>
   );
