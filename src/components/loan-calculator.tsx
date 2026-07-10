@@ -239,13 +239,30 @@ export function LoanCalculator({
   // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You jest osobnym wynagrodzeniem operatora i nie jest kosztem pozaodsetkowym po stronie pożyczki.
   const nonInterestTotal = commissionPln;
   const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
-  const totalToRepay = schedule.totalRata + commissionPln + financeYouFeePln;
   const disbursedOnHand = Math.max(0, amount - commissionPln - financeYouFeePln);
-  // Inwestor: wkład gotówkowy = kwota nominalna - prowizja (potrącana z góry).
-  // Inwestor otrzymuje: spłaty kapitału z części "amount" + odsetki + prowizja.
-  const investorCashOut = Math.max(0, amount - commissionPln);
-  const investorTotalIn = amount + schedule.totalOds + commissionPln; // brutto: zwrot kapitału + odsetki + prowizja
-  const investorProfit = schedule.totalOds + commissionPln;
+
+  // Łączna kwota spłacana przez pożyczkobiorcę = raty z harmonogramu (zwrot kapitału startowego + odsetki).
+  // Prowizja inwestora i prowizja Finance You są potrącane z góry z wypłaty, więc pożyczkobiorca otrzymuje
+  // na rękę mniej, ale spłaca pełny kapitał startowy — prowizje są już zawarte w kapitale i NIE dolicza się
+  // ich ponownie do spłaty (w trybie oferty wewnętrznej korygujemy to podwójne liczenie; pozostałe kalkulatory
+  // zachowują dotychczasowy wzór, aby nie zmieniać ich wyników).
+  const totalToRepay = internalOperatorMode
+    ? schedule.totalRata
+    : schedule.totalRata + commissionPln + financeYouFeePln;
+
+  // Inwestor: realny wkład gotówkowy = środki wychodzące z jego konta.
+  // W ofercie wewnętrznej prowizja operatora jest wypłacana z własnych środków inwestora — powiększa wkład
+  // i pomniejsza zysk (inwestor zatrzymuje tylko prowizję NETTO po odjęciu udziału operatora).
+  // Inwestor odbiera: zwrot kapitału startowego + odsetki (= raty z harmonogramu) — tyle, ile spłaca pożyczkobiorca.
+  const investorCashOut = internalOperatorMode
+    ? Math.max(0, amount - commissionPln + operatorCommissionPln)
+    : Math.max(0, amount - commissionPln);
+  const investorProfit = internalOperatorMode
+    ? schedule.totalOds + investorNetCommissionPln
+    : schedule.totalOds + commissionPln;
+  const investorTotalIn = internalOperatorMode
+    ? investorCashOut + investorProfit // = amount + odsetki, spójnie z kwotą spłacaną przez pożyczkobiorcę
+    : amount + schedule.totalOds + commissionPln; // brutto: zwrot kapitału + odsetki + prowizja
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
@@ -358,7 +375,9 @@ export function LoanCalculator({
                 <span className="text-[11px] font-bold uppercase tracking-widest">Inwestor wkłada</span>
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorCashOut)}</p>
-              <p className="mt-1 text-xs text-white/65">gotówka wypłacana z konta inwestora (kwota nominalna − prowizja potrącona z góry)</p>
+              <p className="mt-1 text-xs text-white/65">{internalOperatorMode
+                ? "gotówka wypłacana z konta inwestora (wypłata dla klienta + prowizja operatora)"
+                : "gotówka wypłacana z konta inwestora (kwota nominalna − prowizja potrącona z góry)"}</p>
             </div>
 
             {/* Investor cash in */}
@@ -419,7 +438,7 @@ export function LoanCalculator({
             )}
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(disbursedOnHand)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora</span><b className="tabular-nums text-primary">{formatPLN(Math.max(0, amount - commissionPln))}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora{internalOperatorMode && " (z prowizją operatora)"}</span><b className="tabular-nums text-primary">{formatPLN(investorCashOut)}</b></div>
             </div>
           </div>
 
