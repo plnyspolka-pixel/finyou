@@ -27,7 +27,7 @@ type PanelShellProps = {
  * Jedno źródło prawdy dla: nawigacji desktop + mobilnej (Sheet), brandingu,
  * strażnika ról i wylogowania. Dzięki temu każdy panel jest nawigowalny na telefonie.
  */
-export function PanelShell({ title, groups, allow, footer }: PanelShellProps) {
+export function PanelShell({ title, groups, allow, footer, fancy = false }: PanelShellProps) {
   const { user, roles, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
