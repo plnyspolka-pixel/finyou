@@ -328,7 +328,7 @@ function Field({ label, value, onSave }: { label: string; value: any; onSave: (v
 }
 
 function EmailSequenceTab({ data }: { data: any }) {
-  if (!data) return <Card className="p-4 text-sm text-muted-foreground">Ten lead nie ma jeszcze wniosku pożyczkowego — sekwencja maili startuje po utworzeniu wniosku.</Card>;
+  if (!data) return <Card className="p-4 text-sm text-muted-foreground">Sekwencja maili startuje po wejściu leada — jeśli nic tu nie widać, upewnij się, że lead ma adres e-mail.</Card>;
   const { loan, sends, nextVariant, totalVariants, cycle } = data;
   const sent = sends.length;
   const opened = sends.filter((s: any) => s.opened_at).length;

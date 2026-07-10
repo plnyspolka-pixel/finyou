@@ -245,6 +245,12 @@ export const getLead = createServerFn({ method: "GET" })
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    // Auto-provision stub loan_application dla leada, żeby sekwencja maili
+    // startowała już od momentu pojawienia się leada (a nie dopiero po wniosku).
+    try {
+      const { ensureLoanApplicationForLead } = await import("./lead-comms.server");
+      await ensureLoanApplicationForLead(data.id);
+    } catch (e) { console.error("[getLead] ensureLoanApplicationForLead", e); }
     const { data: lead, error } = await context.supabase.from("leads").select("*").eq("id", data.id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!lead) throw new Error("Lead nie istnieje");
