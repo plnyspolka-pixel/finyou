@@ -84,6 +84,34 @@ function KsiegowoscDokumenty() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadXml = async (id: string) => {
+    try {
+      const r = await xmlFn({ data: { id } });
+      const blob = new Blob([r.xml], { type: "application/xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
+  const downloadXmlZip = async () => {
+    try {
+      toast.info("Przygotowuję paczkę XML…");
+      const r = await zipFn({ data: {
+        direction: direction === "all" ? undefined : direction,
+        entityId: entityId === "all" ? undefined : entityId,
+      }});
+      const bin = atob(r.base64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Pobrano ${r.count} XML (${Math.round(r.byteSize / 1024)} KB)${r.skipped ? `, pominięto ${r.skipped} (limit rozmiaru)` : ""}.`);
+    } catch (e) { toast.error((e as Error).message); }
+  };
+
   const entities = (entitiesQ.data as any[]) ?? [];
   const docs = (docsQ.data as any[]) ?? [];
   const statuses = (statusQ.data as any[]) ?? [];
