@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, PenSquare, Users } from "lucide-react";
 import { toast } from "sonner";
 import { buildInvestorDistributionDraft } from "@/lib/broker-distribution.functions";
+import { usePanelBase } from "@/lib/panel-base";
 
 type Audience = "instytucjonalny" | "indywidualny";
 type Investor = { id: string; company_name: string | null; first_name: string | null; last_name: string | null; email: string | null; city: string | null };
