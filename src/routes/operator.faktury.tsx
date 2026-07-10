@@ -24,6 +24,7 @@ import {
   setInvoiceDeal,
 } from "@/lib/invoicing/operator-invoices.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { CompanyLookupInline, VerifiedBadge } from "@/components/company-lookup-inline";
 
 export const Route = createFileRoute("/operator/faktury")({
   component: OperatorFakturyPage,
@@ -116,10 +117,13 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
     entityId: "",
     buyerName: "",
     buyerNip: "",
+    buyerRegon: "",
+    buyerKrs: "",
     buyerEmail: "",
     buyerStreet: "",
     buyerCity: "",
     buyerPostalCode: "",
+    buyerVerified: false,
     description: "Usługa pośrednictwa finansowego",
     grossAmount: "",
     vatRate: "23",
@@ -313,17 +317,47 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>{isIndividual ? "Nabywca — dane klienta pożyczkowego" : "Nabywca — instytucja"}</CardTitle>
+          <CardTitle className="flex items-center justify-between gap-2">
+            <span>{isIndividual ? "Nabywca — dane klienta pożyczkowego" : "Nabywca — instytucja"}</span>
+            <VerifiedBadge verified={form.buyerVerified} />
+          </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1.5"><Label className="text-xs">{isIndividual ? "Imię i nazwisko klienta" : "Nazwa nabywcy"}</Label><Input value={form.buyerName} onChange={(e) => setForm({ ...form, buyerName: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">NIP {isIndividual ? "(opcjonalnie)" : ""}</Label><Input value={form.buyerNip} onChange={(e) => setForm({ ...form, buyerNip: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Ulica i numer</Label><Input value={form.buyerStreet} onChange={(e) => setForm({ ...form, buyerStreet: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label className="text-xs">Kod pocztowy</Label><Input value={form.buyerPostalCode} onChange={(e) => setForm({ ...form, buyerPostalCode: e.target.value })} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Miasto</Label><Input value={form.buyerCity} onChange={(e) => setForm({ ...form, buyerCity: e.target.value })} /></div>
+        <CardContent className="grid gap-4">
+          <div className="rounded-md border border-dashed p-3">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Wpisz {isIndividual ? "NIP (opcjonalnie)" : "NIP, REGON lub KRS"} i pobierz dane firmy z GUS/KRS — resztę pól uzupełnimy automatycznie.
+            </p>
+            <CompanyLookupInline
+              compact
+              showRegon={!isIndividual}
+              showKrs={!isIndividual}
+              value={{ nip: form.buyerNip, regon: form.buyerRegon, krs: form.buyerKrs }}
+              onChange={(v) => setForm({ ...form, buyerNip: v.nip ?? "", buyerRegon: v.regon ?? "", buyerKrs: v.krs ?? "", buyerVerified: false })}
+              onResolved={(c) =>
+                setForm((s) => ({
+                  ...s,
+                  buyerName: c.name || s.buyerName,
+                  buyerNip: c.nip || s.buyerNip,
+                  buyerRegon: c.regon || s.buyerRegon,
+                  buyerKrs: c.krs || s.buyerKrs,
+                  buyerStreet: c.street || s.buyerStreet,
+                  buyerPostalCode: c.postalCode || s.buyerPostalCode,
+                  buyerCity: c.city || s.buyerCity,
+                  buyerEmail: c.email || s.buyerEmail,
+                  buyerVerified: true,
+                }))
+              }
+            />
           </div>
-          <div className="space-y-1.5 md:col-span-2"><Label className="text-xs">E-mail</Label><Input type="email" value={form.buyerEmail} onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })} /></div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5 md:col-span-2"><Label className="text-xs">{isIndividual ? "Imię i nazwisko klienta" : "Nazwa nabywcy"}</Label><Input value={form.buyerName} onChange={(e) => setForm({ ...form, buyerName: e.target.value, buyerVerified: false })} /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Ulica i numer</Label><Input value={form.buyerStreet} onChange={(e) => setForm({ ...form, buyerStreet: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label className="text-xs">Kod pocztowy</Label><Input value={form.buyerPostalCode} onChange={(e) => setForm({ ...form, buyerPostalCode: e.target.value })} /></div>
+              <div className="space-y-1.5"><Label className="text-xs">Miasto</Label><Input value={form.buyerCity} onChange={(e) => setForm({ ...form, buyerCity: e.target.value })} /></div>
+            </div>
+            <div className="space-y-1.5 md:col-span-2"><Label className="text-xs">E-mail</Label><Input type="email" value={form.buyerEmail} onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })} /></div>
+          </div>
         </CardContent>
       </Card>
 

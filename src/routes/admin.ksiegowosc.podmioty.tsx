@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Building2, Star, Plus, Pencil, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { listAccountingEntities, upsertAccountingEntity, setDefaultAccountingEntity } from "@/lib/accounting/functions";
+import { CompanyLookupInline } from "@/components/company-lookup-inline";
 
 export const Route = createFileRoute("/admin/ksiegowosc/podmioty")({
   component: PodmiotyPage,
@@ -127,6 +128,30 @@ function PodmiotyPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{form.id ? "Edytuj podmiot" : "Nowy podmiot"}</DialogTitle></DialogHeader>
+          <div className="mb-3 rounded-md border border-dashed p-3">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Zaciągnij dane z GUS/KRS — wypełnimy nazwę, NIP, REGON i adres.
+            </p>
+            <CompanyLookupInline
+              compact
+              value={{ nip: form.nip, regon: form.regon }}
+              onChange={(v) => setForm((f) => ({ ...f, nip: v.nip ?? f.nip, regon: v.regon ?? f.regon }))}
+              onResolved={(c) =>
+                setForm((f) => ({
+                  ...f,
+                  legal_name: c.name || f.legal_name,
+                  name: f.name || c.name,
+                  nip: c.nip || f.nip,
+                  regon: c.regon || f.regon,
+                  address_street: c.street || f.address_street,
+                  address_postal_code: c.postalCode || f.address_postal_code,
+                  address_city: c.city || f.address_city,
+                  email: f.email || c.email,
+                  phone: f.phone || c.phone,
+                }))
+              }
+            />
+          </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1"><Label>Nazwa (panel)</Label><Input value={form.name} onChange={(e) => set("name")(e.target.value)} /></div>
             <div className="space-y-1"><Label>Pełna nazwa (na fakturze)</Label><Input value={form.legal_name} onChange={(e) => set("legal_name")(e.target.value)} /></div>
