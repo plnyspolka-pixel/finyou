@@ -747,33 +747,20 @@ export function SinglePageApplicationForm({
 
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        {step > 1 && (
-          <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={submitting}>
-            <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
-          </Button>
-        )}
-        {step === 1 && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext} className="ml-auto flex-1 text-base md:flex-none">
-            Dalej <ChevronRight className="ml-1 h-5 w-5" />
-          </Button>
-        )}
-        {step === 3 && (
-          <Button type="submit" variant="cta" size="lg" disabled={submitting}
-            aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
-            className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
-            {submitting ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
-            ) : (
-              <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
-            )}
-          </Button>
-        )}
+        <Button type="submit" variant="cta" size="lg" disabled={submitting}
+          aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
+          className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
+          {submitting ? (
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+          ) : (
+            <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
+          )}
+        </Button>
       </div>
-      {step === 3 && (
-        <p className="text-center text-[11px] text-muted-foreground">
-          Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
-        </p>
-      )}
+      <p className="text-center text-[11px] text-muted-foreground">
+        Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
+      </p>
+
 
     </form>
   );
