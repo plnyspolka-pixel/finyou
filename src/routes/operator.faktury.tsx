@@ -137,12 +137,15 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
     }));
   }, [entities, form.entityId]);
 
-  // Prowizja wewnętrzna operatora = 50% kwoty brutto z faktury.
+  // Domyślna prowizja wewnętrzna operatora = 50% kwoty brutto (edytowalna).
+  const [commissionTouched, setCommissionTouched] = useState(false);
   useEffect(() => {
+    if (commissionTouched) return;
     const gross = Number(form.grossAmount);
     const auto = Number.isFinite(gross) && gross > 0 ? (gross * 0.5).toFixed(2) : "";
     setForm((s) => (s.operatorCommission === auto ? s : { ...s, operatorCommission: auto }));
-  }, [form.grossAmount]);
+  }, [form.grossAmount, commissionTouched]);
+
 
   const selectedEntity = entities.find((e) => e.id === form.entityId);
 
