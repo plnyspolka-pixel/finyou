@@ -1,8 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
+
+function verifyMetaSig(body: string, signature: string | null, secret: string): boolean {
+  if (!signature) return false;
+  const expected = "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+  try {
+    const a = Buffer.from(signature);
+    const b = Buffer.from(expected);
+    return a.length === b.length && timingSafeEqual(a, b);
+  } catch { return false; }
+}
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
