@@ -59,14 +59,20 @@ async function fetchKwHtml(kw: string): Promise<{
 }
 
 async function orderKw(kw: string): Promise<{ status: string; reason?: string }> {
-  const res = await fetch(`${baseUrl()}/v4/order?crawlingType=ONLY_CURRENT_VIEW`, {
+  const url = `${baseUrl()}/v4/order?crawlingType=ONLY_CURRENT_VIEW`;
+  const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: authHeader(), "Content-Type": "text/plain" },
+    headers: {
+      Authorization: authHeader(),
+      "Content-Type": "text/plain",
+      Accept: "application/json",
+    },
     body: kw,
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
-    return { status: "NOT_ENQUEUED", reason: t || `HTTP ${res.status}` };
+    console.error("[kw] orderKw failed", { url, status: res.status, body: t.slice(0, 300) });
+    return { status: "NOT_ENQUEUED", reason: `HTTP ${res.status}: ${t || res.statusText}` };
   }
   const json: any = await res.json();
   if (json?.notEnqueued?.length) {
@@ -74,6 +80,7 @@ async function orderKw(kw: string): Promise<{ status: string; reason?: string }>
   }
   return { status: json?.status ?? "ENQUEUED" };
 }
+
 
 async function pollResults(kw: string, maxMs = 45000): Promise<"processed" | "not_found" | "etl_error" | "timeout"> {
   const start = Date.now();
