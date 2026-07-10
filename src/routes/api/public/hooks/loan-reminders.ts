@@ -2,18 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "@/lib/loan-progress.server";
 import { placeReminderCall } from "@/lib/loan-reminders.functions";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 // Publiczny webhook dla pg_cron — uruchamia przypomnienia gotowe do wysłania.
-// Wymaga nagłówka `apikey` = SUPABASE anon key (sprawdzane miękko — Workers nie blokują).
+// Wymaga nagłówka `x-cron-secret` = CRON_SECRET (server-only).
 export const Route = createFileRoute("/api/public/hooks/loan-reminders")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = request.headers.get("apikey");
-        const expected = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
-        if (expected && apiKey && apiKey !== expected) {
-          return new Response(JSON.stringify({ error: "invalid apikey" }), { status: 401 });
-        }
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
         // Quiet hours: dzwonimy tylko 8:00–22:00 czasu Warszawa, poza niedzielami.
         const parts = new Intl.DateTimeFormat("en-GB", {
           timeZone: "Europe/Warsaw",
