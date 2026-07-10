@@ -282,6 +282,18 @@ function ApplicationsPage() {
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{name}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const t = (r.properties ?? []).map((p) => p.property_type).find((x): x is string => !!x);
+                        const v = getPropertyVisual(t);
+                        return (
+                          <div className="flex items-center gap-2" title={v.label}>
+                            <PropertyTypeIcon type={t} className="h-9 w-9 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]" />
+                            <span className="text-xs font-medium">{t ? v.label : "—"}</span>
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell className="text-xs">
                       <div>{r.client?.email ?? "—"}</div>
                       <div className="text-muted-foreground">{r.client?.phone ?? "—"}</div>
