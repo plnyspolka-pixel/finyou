@@ -279,7 +279,8 @@ export function LandingWizardForm() {
   return (
     <div id="landing-wizard-top" className="space-y-6">
       {/* Stepper */}
-      <FancyShell>
+      <div>
+
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-2">
             {STEPS.map((s) => {
@@ -293,20 +294,14 @@ export function LandingWizardForm() {
                   key={s.id}
                   type="button"
                   onClick={() => setStep(s.id as StepId)}
-                  className={`group flex flex-col items-center gap-2 rounded-2xl border p-2 sm:p-3 text-center transition-all ${
-                    active
-                      ? "border-white/60 bg-white/15 ring-2 ring-white/40 shadow-[0_20px_50px_-25px_rgba(96,165,250,0.6)]"
-                      : done
-                        ? "border-emerald-400/50 bg-emerald-500/10 hover:bg-emerald-500/15"
-                        : "border-white/15 bg-white/[0.04] hover:border-white/30"
-                  }`}
+                  className="group flex flex-col items-center justify-center bg-transparent border-0 p-0 transition-all"
                 >
                   <div className="relative w-full">
                     <img
                       src={img}
                       alt={s.label}
                       loading="lazy"
-                      className={`mx-auto aspect-square w-full max-w-[120px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)] transition-transform ${active ? "scale-105" : "group-hover:scale-[1.03]"} ${showLocked ? "saturate-75" : ""}`}
+                      className={`mx-auto aspect-square w-full max-w-[140px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)] transition-transform ${active ? "scale-105" : "group-hover:scale-[1.03]"} ${showLocked ? "saturate-75" : ""}`}
                     />
                     {done && (
                       <span className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-emerald-200/60">
@@ -319,10 +314,8 @@ export function LandingWizardForm() {
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-white leading-tight whitespace-nowrap">
-                    {s.shortLabel}
-                  </span>
                 </button>
+
               );
             })}
           </div>
@@ -333,7 +326,8 @@ export function LandingWizardForm() {
             />
           </div>
         </div>
-      </FancyShell>
+      </div>
+
 
       {/* Step 1: Typ nieruchomości + miejscowość */}
       {step === 1 && (
