@@ -312,28 +312,30 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
         <SendToInvestorsDialog open={!!sendOpen} onOpenChange={(o) => !o && setSendOpen(null)} applicationId={row.id} audience={sendOpen} />
       )}
 
-      {/* Oferta wewnętrzna — dialog z kalkulatorem */}
-      <Dialog open={calcOpen} onOpenChange={setCalcOpen}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              Oferta wewnętrzna — {clientName}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="pt-2">
-            <LoanCalculator
-              investorGuidance
-              hideFinanceYouFee
-              internalOperatorMode
-              initialOnHand={row.loan_amount ? Number(row.loan_amount) : undefined}
-              initialMonths={row.preferred_period_months ?? undefined}
-              clientEmail={row.client?.email ?? null}
-              clientName={clientName}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Oferta wewnętrzna — dialog z kalkulatorem (tylko dla operatora) */}
+      {showInternalOffer && (
+        <Dialog open={calcOpen} onOpenChange={setCalcOpen}>
+          <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-primary" />
+                Oferta wewnętrzna — {clientName}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="pt-2">
+              <LoanCalculator
+                investorGuidance
+                hideFinanceYouFee
+                internalOperatorMode
+                initialOnHand={row.loan_amount ? Number(row.loan_amount) : undefined}
+                initialMonths={row.preferred_period_months ?? undefined}
+                clientEmail={row.client?.email ?? null}
+                clientName={clientName}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Lightbox */}
       <Dialog open={lightbox !== null} onOpenChange={(o) => !o && setLightbox(null)}>
