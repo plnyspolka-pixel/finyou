@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon } from "lucide-react";
+import { Phone, MessageSquare, Mail, RefreshCw, ChevronRight, Search, StickyNote, Plus, Loader2, Paperclip, FileText, File as FileIcon, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { leadStatusLabels, formatRelative } from "@/lib/labels";
 import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
+import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
 
 
 export const Route = createFileRoute("/posrednik/leady/")({
