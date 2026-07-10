@@ -51,6 +51,7 @@ function SmartImg({ src, alt, className }: { src: string; alt?: string; classNam
 export function MojeWnioski() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const base = usePanelBase();
   const [rows, setRows] = useState<Row[]>([]);
   const [heroByApp, setHeroByApp] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
