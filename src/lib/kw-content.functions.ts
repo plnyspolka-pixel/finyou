@@ -25,6 +25,25 @@ function baseUrl(): string {
   return raw.replace(/\/(docs|swagger|swagger-ui|openapi)(\/.*)?$/i, "");
 }
 
+function decodeMaybeBase64(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+  // If it already looks like HTML, return as-is.
+  if (/<\w+[\s>]/.test(s)) return s;
+  // Try base64 decode (CMD v3 zwraca HTML zakodowany w base64).
+  try {
+    const cleaned = s.replace(/\s+/g, "");
+    if (!/^[A-Za-z0-9+/=]+$/.test(cleaned)) return s;
+    const decoded = Buffer.from(cleaned, "base64").toString("utf-8");
+    if (/<\w+[\s>]/.test(decoded)) return decoded;
+    return decoded || s;
+  } catch {
+    return s;
+  }
+}
+
 async function resolveKwForApplication(loanApplicationId: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("properties")
@@ -115,7 +134,18 @@ export const getKwForApplication = createServerFn({ method: "POST" })
       .eq("kw_number", kw)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return { hasKw: true as const, document: row };
+    const document = row
+      ? {
+          ...row,
+          okladka: decodeMaybeBase64(row.okladka),
+          dzial_1o: decodeMaybeBase64(row.dzial_1o),
+          dzial_1s: decodeMaybeBase64(row.dzial_1s),
+          dzial_2: decodeMaybeBase64(row.dzial_2),
+          dzial_3: decodeMaybeBase64(row.dzial_3),
+          dzial_4: decodeMaybeBase64(row.dzial_4),
+        }
+      : row;
+    return { hasKw: true as const, document };
   });
 
 /** Admin/operator only. Orders KW download from CMD, polls, fetches HTML, stores in cache. */
@@ -218,12 +248,12 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
       .from("kw_documents")
       .update({
         status: "ready",
-        okladka: h.okladka ?? null,
-        dzial_1o: h.dzial1o ?? null,
-        dzial_1s: h.dzial1s ?? null,
-        dzial_2: h.dzial2 ?? null,
-        dzial_3: h.dzial3 ?? null,
-        dzial_4: h.dzial4 ?? null,
+        okladka: decodeMaybeBase64(h.okladka),
+        dzial_1o: decodeMaybeBase64(h.dzial1o),
+        dzial_1s: decodeMaybeBase64(h.dzial1s),
+        dzial_2: decodeMaybeBase64(h.dzial2),
+        dzial_3: decodeMaybeBase64(h.dzial3),
+        dzial_4: decodeMaybeBase64(h.dzial4),
         fetched_at: new Date().toISOString(),
         bill_in: res.billIn ?? null,
         bill_out: res.billOut ?? null,
