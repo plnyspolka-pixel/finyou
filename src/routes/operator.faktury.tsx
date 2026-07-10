@@ -107,16 +107,14 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   const setDealFn = useServerFn(setInvoiceDeal);
 
   const [busy, setBusy] = useState(false);
-  const [issued, setIssued] = useState<{ id: string; invoiceNumber: string } | null>(null);
-  const [deal, setDeal] = useState<DealContext>(EMPTY_DEAL);
-  const [savingDeal, setSavingDeal] = useState(false);
 
-  const entitiesQ = useQuery({ queryKey: ["invoice-entities"], queryFn: () => entitiesFn() });
-  const entities = (entitiesQ.data as any[]) ?? [];
-  const partnersQ = useQuery({ queryKey: ["institutional-partners"], queryFn: () => partnersFn() });
-  const partners = (partnersQ.data as any[]) ?? [];
+  // Persystencja formularza w sessionStorage — nie tracimy danych, gdy user
+  // przełącza karty Chrome, minimalizuje przeglądarkę albo klika inną zakładkę.
+  const FORM_KEY = "operator.faktury.form.v1";
+  const DEAL_KEY = "operator.faktury.deal.v1";
+  const ISSUED_KEY = "operator.faktury.issued.v1";
 
-  const [form, setForm] = useState({
+  const defaultForm = {
     buyerType: "instytucja" as BuyerType,
     entityId: "",
     buyerName: "",
@@ -134,7 +132,66 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
     bankAccount: "",
     dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10),
     operatorCommission: "",
-  });
+  };
+
+  const readStored = <T,>(key: string, fallback: T): T => {
+    if (typeof window === "undefined") return fallback;
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return { ...(fallback as any), ...(parsed as any) } as T;
+    } catch {
+      return fallback;
+    }
+  };
+  const readStoredRaw = <T,>(key: string, fallback: T): T => {
+    if (typeof window === "undefined") return fallback;
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const [issued, setIssued] = useState<{ id: string; invoiceNumber: string } | null>(() =>
+    readStoredRaw<{ id: string; invoiceNumber: string } | null>(ISSUED_KEY, null),
+  );
+  const [deal, setDeal] = useState<DealContext>(() => readStored<DealContext>(DEAL_KEY, EMPTY_DEAL));
+  const [savingDeal, setSavingDeal] = useState(false);
+
+  const entitiesQ = useQuery({ queryKey: ["invoice-entities"], queryFn: () => entitiesFn() });
+  const entities = (entitiesQ.data as any[]) ?? [];
+  const partnersQ = useQuery({ queryKey: ["institutional-partners"], queryFn: () => partnersFn() });
+  const partners = (partnersQ.data as any[]) ?? [];
+
+  const [form, setForm] = useState(() => readStored(FORM_KEY, defaultForm));
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { window.sessionStorage.setItem(FORM_KEY, JSON.stringify(form)); } catch {}
+  }, [form]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { window.sessionStorage.setItem(DEAL_KEY, JSON.stringify(deal)); } catch {}
+  }, [deal]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (issued) window.sessionStorage.setItem(ISSUED_KEY, JSON.stringify(issued));
+      else window.sessionStorage.removeItem(ISSUED_KEY);
+    } catch {}
+  }, [issued]);
+
+  const clearPersisted = () => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.removeItem(FORM_KEY);
+      window.sessionStorage.removeItem(DEAL_KEY);
+      window.sessionStorage.removeItem(ISSUED_KEY);
+    } catch {}
+  };
 
   // Domyślny podmiot + numer rachunku po wczytaniu listy.
   useEffect(() => {
