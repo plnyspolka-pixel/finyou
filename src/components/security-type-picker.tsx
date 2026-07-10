@@ -81,13 +81,8 @@ export function SecurityTypePicker({
                 : "border-border hover:border-primary/60",
             )}
           >
-            <TileIcon
-              tile={tile}
-              className={cn(
-                "h-16 w-16",
-                !tile.img && (active ? "text-primary" : "text-muted-foreground"),
-              )}
-            />
+            <TileIcon tile={tile} className="h-16 w-16" />
+
             <span className="text-sm font-medium">{securityTypeLabels[tile.type]}</span>
           </button>
         );
