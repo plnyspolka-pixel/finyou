@@ -383,15 +383,21 @@ export function SinglePageApplicationForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1) { goNext(); return; }
-    if (step === 2) { goNext(); return; }
+
+    if (!skipContact) {
+      if (!contactValid) {
+        toast.error("Uzupełnij imię, nazwisko, telefon i e-mail.");
+        return;
+      }
+      if (!isBroker && (!consentPrivacy || !consentTerms || !consentMarketing)) {
+        toast.error("Zaakceptuj politykę prywatności i regulamin serwisu.");
+        return;
+      }
+      fireLead();
+    }
 
     if (!typeSelected) {
       toast.error("Wybierz typ nieruchomości.");
-      return;
-    }
-    if (!kwOrDeedOk) {
-      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
       return;
     }
     if (!kwOrDeedOk) {
@@ -402,6 +408,7 @@ export function SinglePageApplicationForm({
       toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
     }
+
 
     setSubmitting(true);
     try {
