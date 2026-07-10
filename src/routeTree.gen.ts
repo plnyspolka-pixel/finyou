@@ -16,7 +16,6 @@ import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
-import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as NegocjujRouteImport } from './routes/negocjuj'
@@ -50,7 +49,6 @@ import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
-import { Route as OperatorRejestracjaRouteImport } from './routes/operator.rejestracja'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -205,11 +203,6 @@ const PosrednikRoute = PosrednikRouteImport.update({
 const PolitykaPrywatnosciRoute = PolitykaPrywatnosciRouteImport.update({
   id: '/polityka-prywatnosci',
   path: '/polityka-prywatnosci',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OperatorRoute = OperatorRouteImport.update({
-  id: '/operator',
-  path: '/operator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OfertyRoute = OfertyRouteImport.update({
@@ -377,11 +370,6 @@ const PosrednicyRejestracjaRoute = PosrednicyRejestracjaRouteImport.update({
   id: '/posrednicy/rejestracja',
   path: '/posrednicy/rejestracja',
   getParentRoute: () => rootRouteImport,
-} as any)
-const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
-  id: '/rejestracja',
-  path: '/rejestracja',
-  getParentRoute: () => OperatorRoute,
 } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
@@ -1040,7 +1028,6 @@ export interface FileRoutesByFullPath {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1101,7 +1088,6 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/rejestracja': typeof OperatorRejestracjaRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1201,7 +1187,6 @@ export interface FileRoutesByTo {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/regulamin': typeof RegulaminRoute
   '/rejestracja': typeof RejestracjaRoute
@@ -1260,7 +1245,6 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/rejestracja': typeof OperatorRejestracjaRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1364,7 +1348,6 @@ export interface FileRoutesById {
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
   '/oferty': typeof OfertyRoute
-  '/operator': typeof OperatorRouteWithChildren
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
   '/regulamin': typeof RegulaminRoute
@@ -1425,7 +1408,6 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
-  '/operator/rejestracja': typeof OperatorRejestracjaRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
@@ -1530,7 +1512,6 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
-    | '/operator'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1591,7 +1572,6 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
-    | '/operator/rejestracja'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1691,7 +1671,6 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
-    | '/operator'
     | '/polityka-prywatnosci'
     | '/regulamin'
     | '/rejestracja'
@@ -1750,7 +1729,6 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
-    | '/operator/rejestracja'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -1853,7 +1831,6 @@ export interface FileRouteTypes {
     | '/negocjuj'
     | '/nowe-haslo'
     | '/oferty'
-    | '/operator'
     | '/polityka-prywatnosci'
     | '/posrednik'
     | '/regulamin'
@@ -1914,7 +1891,6 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
-    | '/operator/rejestracja'
     | '/posrednicy/rejestracja'
     | '/posrednik/leady'
     | '/posrednik/marketing'
@@ -2018,7 +1994,6 @@ export interface RootRouteChildren {
   NegocjujRoute: typeof NegocjujRoute
   NoweHasloRoute: typeof NoweHasloRoute
   OfertyRoute: typeof OfertyRoute
-  OperatorRoute: typeof OperatorRouteWithChildren
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
   RegulaminRoute: typeof RegulaminRoute
@@ -2127,13 +2102,6 @@ declare module '@tanstack/react-router' {
       path: '/polityka-prywatnosci'
       fullPath: '/polityka-prywatnosci'
       preLoaderRoute: typeof PolitykaPrywatnosciRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/operator': {
-      id: '/operator'
-      path: '/operator'
-      fullPath: '/operator'
-      preLoaderRoute: typeof OperatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oferty': {
@@ -2366,13 +2334,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/posrednicy/rejestracja'
       preLoaderRoute: typeof PosrednicyRejestracjaRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/operator/rejestracja': {
-      id: '/operator/rejestracja'
-      path: '/rejestracja'
-      fullPath: '/operator/rejestracja'
-      preLoaderRoute: typeof OperatorRejestracjaRouteImport
-      parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
       id: '/l/$slug'
@@ -3441,18 +3402,6 @@ const KlientRouteChildren: KlientRouteChildren = {
 const KlientRouteWithChildren =
   KlientRoute._addFileChildren(KlientRouteChildren)
 
-interface OperatorRouteChildren {
-  OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
-}
-
-const OperatorRouteChildren: OperatorRouteChildren = {
-  OperatorRejestracjaRoute: OperatorRejestracjaRoute,
-}
-
-const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
-  OperatorRouteChildren,
-)
-
 interface PosrednikLeadyRouteChildren {
   PosrednikLeadyIdRoute: typeof PosrednikLeadyIdRoute
 }
@@ -3515,7 +3464,6 @@ const rootRouteChildren: RootRouteChildren = {
   NegocjujRoute: NegocjujRoute,
   NoweHasloRoute: NoweHasloRoute,
   OfertyRoute: OfertyRoute,
-  OperatorRoute: OperatorRouteWithChildren,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
   RegulaminRoute: RegulaminRoute,
