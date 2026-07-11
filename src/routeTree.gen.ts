@@ -58,6 +58,7 @@ import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-le
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
+import { Route as OperatorKreatorUdzieleniaRouteImport } from './routes/operator.kreator-udzielenia'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -428,6 +429,12 @@ const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
   path: '/faktury',
   getParentRoute: () => OperatorRoute,
 } as any)
+const OperatorKreatorUdzieleniaRoute =
+  OperatorKreatorUdzieleniaRouteImport.update({
+    id: '/kreator-udzielenia',
+    path: '/kreator-udzielenia',
+    getParentRoute: () => OperatorRoute,
+  } as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -1167,6 +1174,7 @@ export interface FileRoutesByFullPath {
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -1336,6 +1344,7 @@ export interface FileRoutesByTo {
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
   '/operator/profil': typeof OperatorProfilRoute
@@ -1510,6 +1519,7 @@ export interface FileRoutesById {
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
   '/operator/faktury': typeof OperatorFakturyRoute
+  '/operator/kreator-udzielenia': typeof OperatorKreatorUdzieleniaRoute
   '/operator/leady': typeof OperatorLeadyRouteWithChildren
   '/operator/messenger': typeof OperatorMessengerRoute
   '/operator/moje-leady': typeof OperatorMojeLeadyRoute
@@ -1687,6 +1697,7 @@ export interface FileRouteTypes {
     | '/klient/propozycje'
     | '/l/$slug'
     | '/operator/faktury'
+    | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
     | '/operator/moje-leady'
@@ -1856,6 +1867,7 @@ export interface FileRouteTypes {
     | '/klient/propozycje'
     | '/l/$slug'
     | '/operator/faktury'
+    | '/operator/kreator-udzielenia'
     | '/operator/messenger'
     | '/operator/moje-leady'
     | '/operator/profil'
@@ -2029,6 +2041,7 @@ export interface FileRouteTypes {
     | '/klient/propozycje'
     | '/l/$slug'
     | '/operator/faktury'
+    | '/operator/kreator-udzielenia'
     | '/operator/leady'
     | '/operator/messenger'
     | '/operator/moje-leady'
@@ -2548,6 +2561,13 @@ declare module '@tanstack/react-router' {
       path: '/faktury'
       fullPath: '/operator/faktury'
       preLoaderRoute: typeof OperatorFakturyRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/kreator-udzielenia': {
+      id: '/operator/kreator-udzielenia'
+      path: '/kreator-udzielenia'
+      fullPath: '/operator/kreator-udzielenia'
+      preLoaderRoute: typeof OperatorKreatorUdzieleniaRouteImport
       parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
@@ -3657,6 +3677,7 @@ const OperatorLeadyRouteWithChildren = OperatorLeadyRoute._addFileChildren(
 
 interface OperatorRouteChildren {
   OperatorFakturyRoute: typeof OperatorFakturyRoute
+  OperatorKreatorUdzieleniaRoute: typeof OperatorKreatorUdzieleniaRoute
   OperatorLeadyRoute: typeof OperatorLeadyRouteWithChildren
   OperatorMessengerRoute: typeof OperatorMessengerRoute
   OperatorMojeLeadyRoute: typeof OperatorMojeLeadyRoute
@@ -3670,6 +3691,7 @@ interface OperatorRouteChildren {
 
 const OperatorRouteChildren: OperatorRouteChildren = {
   OperatorFakturyRoute: OperatorFakturyRoute,
+  OperatorKreatorUdzieleniaRoute: OperatorKreatorUdzieleniaRoute,
   OperatorLeadyRoute: OperatorLeadyRouteWithChildren,
   OperatorMessengerRoute: OperatorMessengerRoute,
   OperatorMojeLeadyRoute: OperatorMojeLeadyRoute,

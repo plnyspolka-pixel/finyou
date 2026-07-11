@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePlaceholders, xmlToPlainText, replaceByOccurrence } from "@/lib/document-fields";
+import { injectScheduleTable, type ScheduleRow } from "@/lib/schedule-table-docx";
 
 export type DocTemplate = {
   id: string;
@@ -80,6 +81,8 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
       investorOfferId?: string | null;
       commissionAmount?: number | null;
       commissionAddedToCosts?: boolean;
+      /** Harmonogram spłat — wstawiany jako tabela w miejsce placeholdera [HARMONOGRAM]. */
+      schedule?: ScheduleRow[] | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -110,7 +113,9 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     // Najpierw sklejamy placeholdery rozbite przez tagi w ciągłe tokeny `[KLUCZ]`,
     // następnie podstawiamy po indeksie wystąpienia (ten sam porządek co podgląd).
     const normalizedXml = normalizePlaceholders(rawXml);
-    const filledXml = replaceByOccurrence(normalizedXml, data.values ?? {});
+    let filledXml = replaceByOccurrence(normalizedXml, data.values ?? {});
+    // Placeholder [HARMONOGRAM] → prawdziwa tabela Worda z harmonogramem spłat.
+    filledXml = injectScheduleTable(filledXml, data.schedule ?? null);
 
     zip.file(docXmlPath, filledXml);
     const outBuf = zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
