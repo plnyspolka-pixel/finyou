@@ -203,7 +203,7 @@ function KlientDashboard() {
     if (!propertyRow?.id) return;
     if (!confirm("Usunąć to zdjęcie? Tej operacji nie można cofnąć.")) return;
     try {
-      await supabase.storage.from("property-photos").remove([path]);
+      await deleteStoragePath(path);
       const next = photoPaths.filter((p) => p !== path);
       const { error } = await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
       if (error) throw error;
