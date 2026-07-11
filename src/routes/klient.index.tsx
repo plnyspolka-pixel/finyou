@@ -140,20 +140,19 @@ function KlientDashboard() {
       const newPhotoPaths: string[] = [];
       for (const file of Array.from(files)) {
         if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: za duży (max 20 MB)`); continue; }
-        const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const isImage = (file.type || "").startsWith("image/");
-        if (isImage) {
-          const path = `klient/${user.id}/${loanRow.id}/${Date.now()}-${safe}`;
-          const up = await supabase.storage.from("property-photos").upload(path, file, { upsert: false, contentType: file.type });
-          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
-          newPhotoPaths.push(path);
-        } else {
-          const path = `klient/${user.id}/${loanRow.id}/doc-${Date.now()}-${safe}`;
-          const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
-          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
-          await supabase.from("documents").insert({
-            loan_application_id: loanRow.id, document_type: "property_doc", file_name: file.name, file_path: path, uploaded_by: user.id,
-          });
+        try {
+          if (isImage) {
+            const res = await uploadFile(file, { context: "property", applicationId: loanRow.id });
+            newPhotoPaths.push(res.path);
+          } else {
+            const res = await uploadFile(file, { context: "document", applicationId: loanRow.id, docType: "property_doc" });
+            await supabase.from("documents").insert({
+              loan_application_id: loanRow.id, document_type: "property_doc", file_name: file.name, file_path: res.path, uploaded_by: user.id,
+            });
+          }
+        } catch (e: any) {
+          toast.error(`${file.name}: ${e?.message ?? "błąd uploadu"}`);
         }
       }
       if (newPhotoPaths.length > 0) {
