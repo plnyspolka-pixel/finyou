@@ -397,10 +397,12 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
                 setBikUploading(true);
                 const t = toast.loading("Wysyłam raport BIK…");
                 try {
-                  const path = `bik/${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-                  const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
-                  if (up.error) { toast.error(up.error.message, { id: t }); return; }
-                  const payload = { bik_report_path: path, bik_report_uploaded_at: new Date().toISOString(), bik_report_name: file.name };
+                  let uploadedPath: string;
+                  try {
+                    const res = await uploadFile(file, { context: "document", applicationId: user.id, docType: "bik" });
+                    uploadedPath = res.path;
+                  } catch (err: any) { toast.error(err?.message ?? "Błąd uploadu", { id: t }); return; }
+                  const payload = { bik_report_path: uploadedPath, bik_report_uploaded_at: new Date().toISOString(), bik_report_name: file.name };
                   const upd = row?.id
                     ? await supabase.from("clients").update(payload).eq("id", row.id)
                     : await supabase.from("clients").insert({ ...payload, user_id: user.id, first_name: f.first_name || "", last_name: f.last_name || "" });
