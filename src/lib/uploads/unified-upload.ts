@@ -62,9 +62,10 @@ async function renderPdfFirstPage(file: Blob): Promise<Blob | null> {
     // Lazy import — pdfjs jest ciezki.
     const pdfjs: typeof import("pdfjs-dist") = await import("pdfjs-dist");
     // Uzyj worker z tego samego pakietu (bundlowany przez Vite).
-    // @ts-expect-error - worker jest ?url importem
-    const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
-    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    const workerMod = (await import(
+      /* @vite-ignore */ "pdfjs-dist/build/pdf.worker.min.mjs?url"
+    )) as { default: string };
+    pdfjs.GlobalWorkerOptions.workerSrc = workerMod.default;
 
     const buf = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
