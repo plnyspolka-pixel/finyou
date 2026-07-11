@@ -239,7 +239,7 @@ function InwestorWniosek() {
         </Card>
       )}
 
-      {p && (p.address || p.city) && (
+      {p && (
         <PropertyLocationAnalysis
           propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address || ""}
           city={p.city}
