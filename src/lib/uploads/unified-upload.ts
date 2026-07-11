@@ -143,3 +143,11 @@ export async function backfillPdfThumbnail(path: string): Promise<string | null>
   }
   return null;
 }
+
+/** Usun plik (i miniature jesli istnieje) sprobowaniem we wszystkich legacy bucketach. */
+export async function deleteStoragePath(path: string): Promise<void> {
+  const buckets = [UNIFIED_BUCKET, "documents", "marketing-materials", "avatars"];
+  for (const bucket of buckets) {
+    await supabase.storage.from(bucket).remove([path, `${path}.thumb.png`]).catch(() => {});
+  }
+}
