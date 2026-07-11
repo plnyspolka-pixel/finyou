@@ -19,6 +19,7 @@ import {
   type SecurityType,
 } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { validateKwNumber } from "@/lib/kw-number";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
@@ -329,7 +330,15 @@ export function SinglePageApplicationForm({
     () => [kwNumber, ...extraKwNumbers].map((k) => k.trim()).filter(Boolean),
     [kwNumber, extraKwNumbers],
   );
-  const kwOrDeedOk = allKwNumbers.length > 0 || hasOwnershipDeed;
+  // Walidacja formatu + cyfry kontrolnej każdego wpisanego numeru KW.
+  const kwErrors = useMemo(
+    () =>
+      allKwNumbers
+        .map((k) => ({ kw: k, res: validateKwNumber(k) }))
+        .filter((x) => !x.res.ok) as Array<{ kw: string; res: { ok: false; error: string } }>,
+    [allKwNumbers],
+  );
+  const kwOrDeedOk = (allKwNumbers.length > 0 && kwErrors.length === 0) || hasOwnershipDeed;
 
   // Allow external CTAs (e.g. hero button) to scroll to the form
   useEffect(() => {
@@ -363,7 +372,11 @@ export function SinglePageApplicationForm({
       return;
     }
     if (!kwOrDeedOk) {
-      toast.error("Podaj numer księgi wieczystej lub dołącz akt własności.");
+      toast.error(
+        kwErrors.length > 0
+          ? `Numer KW „${kwErrors[0].kw}”: ${kwErrors[0].res.error}`
+          : "Podaj numer księgi wieczystej lub dołącz akt własności.",
+      );
       return;
     }
     if (!hasPropertyPhotos) {
@@ -394,11 +407,12 @@ export function SinglePageApplicationForm({
           city: city.trim() || null,
           annual_investor_rate: annualRate,
           max_monthly_payment: maxPayment > 0 ? maxPayment : null,
-          land_register_number: (() => {
-            const parts = [...allKwNumbers];
-            const ua = usableArea.trim();
-            if (ua && BUILDING_TYPES.includes(secType)) parts.push(`Pow. użytkowa: ${ua} m²`);
-            return parts.length > 0 ? parts.join(" | ") : null;
+          land_register_number: allKwNumbers[0] ?? null,
+          additional_land_register_numbers: allKwNumbers.slice(1),
+          usable_area_sqm: (() => {
+            if (!BUILDING_TYPES.includes(secType)) return null;
+            const ua = Number(usableArea.trim().replace(",", "."));
+            return Number.isFinite(ua) && ua > 0 ? ua : null;
           })(),
           photos: photoPayload,
           source: brokerMode?.sourceLabel ?? "landing_single_page",
@@ -583,25 +597,37 @@ export function SinglePageApplicationForm({
                   placeholder="np. WA1M/00123456/7"
                   className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
                 />
+                {kwNumber.trim() && !validateKwNumber(kwNumber).ok && (
+                  <p className="text-xs font-semibold text-red-300">
+                    {(validateKwNumber(kwNumber) as { ok: false; error: string }).error}
+                  </p>
+                )}
                 <p className="text-xs text-white/75">
                   Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
                 </p>
 
                 {extraKwNumbers.map((val, idx) => (
-                  <div key={idx} className="flex gap-2 pt-1">
-                    <Input
-                      value={val}
-                      onChange={(e) => {
-                        const v = e.target.value.toUpperCase();
-                        setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
-                      }}
-                      placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                      className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
-                    />
-                    <Button type="button" variant="outline" size="lg"
-                      onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                      className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                      aria-label="Usuń numer KW">×</Button>
+                  <div key={idx} className="space-y-1 pt-1">
+                    <div className="flex gap-2">
+                      <Input
+                        value={val}
+                        onChange={(e) => {
+                          const v = e.target.value.toUpperCase();
+                          setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
+                        }}
+                        placeholder={`Dodatkowy numer KW #${idx + 2}`}
+                        className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
+                      />
+                      <Button type="button" variant="outline" size="lg"
+                        onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
+                        className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                        aria-label="Usuń numer KW">×</Button>
+                    </div>
+                    {val.trim() && !validateKwNumber(val).ok && (
+                      <p className="text-xs font-semibold text-red-300">
+                        {(validateKwNumber(val) as { ok: false; error: string }).error}
+                      </p>
+                    )}
                   </div>
                 ))}
                 <div className="flex flex-wrap gap-2 pt-1">

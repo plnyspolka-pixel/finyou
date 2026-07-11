@@ -88,13 +88,18 @@ export const Route = createFileRoute("/api/public/loan-application")({
             .single();
           if (lErr || !loan) throw lErr ?? new Error("loan insert failed");
 
+          // Standaryzacja numeru KW do formatu kanonicznego XXXX/DDDDDDDD/C;
+          // pole może zawierać kilka numerów — pierwszy główny, reszta dodatkowe.
+          const { extractKwNumbers } = await import("@/lib/kw-number");
+          const embedKws = extractKwNumbers(data.land_register_number);
           await supabaseAdmin.from("properties").insert({
             loan_application_id: loan.id,
             property_type: data.property_type,
             city: data.city ?? null,
             street: data.street ?? null,
             voivodeship: data.voivodeship ?? null,
-            land_register_number: data.land_register_number ?? null,
+            land_register_number: embedKws[0] ?? data.land_register_number ?? null,
+            additional_land_register_numbers: embedKws.slice(1),
           });
 
           // Jednorazowa analiza zabezpieczenia — fire-and-forget, zapisuje wynik na stałe.

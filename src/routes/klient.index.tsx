@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
+import { validateKwNumber, normalizeKwNumber } from "@/lib/kw-number";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -229,41 +230,11 @@ function KlientDashboard() {
     }
   };
 
-  // Walidacja numeru KW: 4 znaki kodu sądu / 8 cyfr / 1 cyfra kontrolna
-  // np. WA1M/00123456/7
+  // Walidacja numeru KW — wspólny moduł (format + cyfra kontrolna wg algorytmu EKW).
   const validateKw = (raw: string): { ok: boolean; error: string | null; hint: string | null } => {
-    const value = raw.trim().toUpperCase();
-    if (!value) return { ok: false, error: "Wpisz numer księgi wieczystej.", hint: null };
-
-    const parts = value.split("/");
-    if (parts.length !== 3) {
-      return {
-        ok: false,
-        error: "Numer KW musi mieć trzy części oddzielone ukośnikami „/”.",
-        hint: "Przykład: WA1M/00123456/7",
-      };
-    }
-    const [court, digits, control] = parts;
-
-    if (court.length !== 4) {
-      return { ok: false, error: `Kod sądu musi mieć dokładnie 4 znaki (wpisano ${court.length}).`, hint: "np. WA1M" };
-    }
-    if (!/^[A-Z0-9]{4}$/.test(court)) {
-      return { ok: false, error: "Kod sądu może zawierać tylko litery i cyfry (bez polskich znaków).", hint: "np. WA1M, GD1G, KR2K" };
-    }
-    if (digits.length !== 8) {
-      return { ok: false, error: `Numer księgi musi mieć dokładnie 8 cyfr (wpisano ${digits.length}).`, hint: "Uzupełnij zerami z przodu, np. 00123456" };
-    }
-    if (!/^\d{8}$/.test(digits)) {
-      return { ok: false, error: "Numer księgi może zawierać tylko cyfry (0–9).", hint: null };
-    }
-    if (control.length !== 1) {
-      return { ok: false, error: "Cyfra kontrolna musi być dokładnie jedna.", hint: "Ostatnia cyfra z odpisu KW (0–9)." };
-    }
-    if (!/^\d$/.test(control)) {
-      return { ok: false, error: "Cyfra kontrolna musi być cyfrą (0–9).", hint: null };
-    }
-    return { ok: true, error: null, hint: null };
+    const res = validateKwNumber(raw);
+    if (res.ok) return { ok: true, error: null, hint: null };
+    return { ok: false, error: res.error, hint: "Przykład: WA1M/00123456/7" };
   };
 
   const kwValidation = validateKw(kw);
@@ -280,8 +251,10 @@ function KlientDashboard() {
     }
     setSavingKw(true);
     try {
-      const normalized = kw.trim().toUpperCase();
-      const normalizedExtras = extraKws.map((v) => v.trim().toUpperCase()).filter(Boolean);
+      const normalized = normalizeKwNumber(kw) ?? kw.trim().toUpperCase();
+      const normalizedExtras = extraKws
+        .map((v) => normalizeKwNumber(v))
+        .filter((v): v is string => !!v && v !== normalized);
       const { error } = await supabase.from("properties")
         .update({
           land_register_number: normalized,

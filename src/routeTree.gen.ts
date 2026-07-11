@@ -176,6 +176,7 @@ import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/pu
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksLeadFollowUpsRouteImport } from './routes/api/public/hooks/lead-follow-ups'
+import { Route as ApiPublicHooksKwAutofetchRouteImport } from './routes/api/public/hooks/kw-autofetch'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
@@ -1060,6 +1061,12 @@ const ApiPublicHooksLeadFollowUpsRoute =
     path: '/api/public/hooks/lead-follow-ups',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksKwAutofetchRoute =
+  ApiPublicHooksKwAutofetchRouteImport.update({
+    id: '/api/public/hooks/kw-autofetch',
+    path: '/api/public/hooks/kw-autofetch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksFollowUpTickRoute =
   ApiPublicHooksFollowUpTickRouteImport.update({
     id: '/api/public/hooks/follow-up-tick',
@@ -1265,6 +1272,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/kw-autofetch': typeof ApiPublicHooksKwAutofetchRoute
   '/api/public/hooks/lead-follow-ups': typeof ApiPublicHooksLeadFollowUpsRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
@@ -1434,6 +1442,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/kw-autofetch': typeof ApiPublicHooksKwAutofetchRoute
   '/api/public/hooks/lead-follow-ups': typeof ApiPublicHooksLeadFollowUpsRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
@@ -1612,6 +1621,7 @@ export interface FileRoutesById {
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/kw-autofetch': typeof ApiPublicHooksKwAutofetchRoute
   '/api/public/hooks/lead-follow-ups': typeof ApiPublicHooksLeadFollowUpsRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
@@ -1791,6 +1801,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/kw-autofetch'
     | '/api/public/hooks/lead-follow-ups'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
@@ -1960,6 +1971,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/kw-autofetch'
     | '/api/public/hooks/lead-follow-ups'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
@@ -2137,6 +2149,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/kw-autofetch'
     | '/api/public/hooks/lead-follow-ups'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
@@ -2213,6 +2226,7 @@ export interface RootRouteChildren {
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
+  ApiPublicHooksKwAutofetchRoute: typeof ApiPublicHooksKwAutofetchRoute
   ApiPublicHooksLeadFollowUpsRoute: typeof ApiPublicHooksLeadFollowUpsRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
@@ -3403,6 +3417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLeadFollowUpsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/kw-autofetch': {
+      id: '/api/public/hooks/kw-autofetch'
+      path: '/api/public/hooks/kw-autofetch'
+      fullPath: '/api/public/hooks/kw-autofetch'
+      preLoaderRoute: typeof ApiPublicHooksKwAutofetchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/follow-up-tick': {
       id: '/api/public/hooks/follow-up-tick'
       path: '/api/public/hooks/follow-up-tick'
@@ -3837,6 +3858,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksElevenlabsConversationInitRoute:
     ApiPublicHooksElevenlabsConversationInitRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
+  ApiPublicHooksKwAutofetchRoute: ApiPublicHooksKwAutofetchRoute,
   ApiPublicHooksLeadFollowUpsRoute: ApiPublicHooksLeadFollowUpsRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanReminderEmailsTickRoute:

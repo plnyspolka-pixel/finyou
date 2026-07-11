@@ -2,16 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-const KW_REGEX = /^[A-Z]{2}\d[A-Z0-9]\/?\d{8}\/?\d$/i;
-
-function normalizeKw(raw: string): string | null {
-  const v = (raw || "").trim().toUpperCase().replace(/\s+/g, "");
-  // Accept formats with or without slashes
-  const compact = v.replace(/\//g, "");
-  if (!/^[A-Z]{2}\d[A-Z0-9]\d{8}\d$/.test(compact)) return null;
-  return compact; // CMD API uses compact 13-char form
-}
+import { extractKwNumbers, kwToCompact, normalizeKwNumber } from "@/lib/kw-number";
 
 function authHeader(): string {
   const u = process.env.CMD_KW_USER ?? "";
@@ -23,6 +14,10 @@ function baseUrl(): string {
   const raw = (process.env.CMD_KW_BASE_URL ?? "https://dev.monitoringdanych.io:4444").replace(/\/+$/, "");
   // Strip accidental Swagger/docs suffix — API root should not include /docs.
   return raw.replace(/\/(docs|swagger|swagger-ui|openapi)(\/.*)?$/i, "");
+}
+
+export function kwEngineConfigured(): boolean {
+  return !!process.env.CMD_KW_USER && !!process.env.CMD_KW_PASSWORD;
 }
 
 function decodeMaybeBase64(v: unknown): string | null {
@@ -44,20 +39,34 @@ function decodeMaybeBase64(v: unknown): string | null {
   }
 }
 
-async function resolveKwForApplication(loanApplicationId: string): Promise<string | null> {
+/**
+ * Zwraca WSZYSTKIE numery KW wniosku (kanoniczne `XXXX/DDDDDDDD/C`):
+ * - ze wszystkich nieruchomości wniosku (nie tylko pierwszej),
+ * - z pola głównego `land_register_number` (także z zanieczyszczonych,
+ *   sklejonych wartości historycznych — extractKwNumbers),
+ * - z tablicy `additional_land_register_numbers`.
+ */
+export async function resolveKwsForApplication(loanApplicationId: string): Promise<string[]> {
   const { data, error } = await supabaseAdmin
     .from("properties")
-    .select("land_register_number")
+    .select("land_register_number, additional_land_register_numbers")
     .eq("loan_application_id", loanApplicationId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  if (!data?.land_register_number) return null;
-  return normalizeKw(data.land_register_number);
+  const out: string[] = [];
+  for (const row of data ?? []) {
+    for (const kw of extractKwNumbers(row.land_register_number)) {
+      if (!out.includes(kw)) out.push(kw);
+    }
+    for (const extra of (row.additional_land_register_numbers as string[] | null) ?? []) {
+      const norm = normalizeKwNumber(extra) ?? extractKwNumbers(extra)[0] ?? null;
+      if (norm && !out.includes(norm)) out.push(norm);
+    }
+  }
+  return out;
 }
 
-async function fetchKwHtml(kw: string): Promise<{
+async function fetchKwHtml(kwCompact: string): Promise<{
   ok: boolean;
   status: number;
   html?: any;
@@ -65,7 +74,7 @@ async function fetchKwHtml(kw: string): Promise<{
   billOut?: number;
   error?: string;
 }> {
-  const res = await fetch(`${baseUrl()}/v3/html/${encodeURIComponent(kw)}?odpis=aktualny`, {
+  const res = await fetch(`${baseUrl()}/v3/html/${encodeURIComponent(kwCompact)}?odpis=aktualny`, {
     headers: { Authorization: authHeader() },
   });
   const billIn = Number(res.headers.get("x-bill-in") ?? "0") || undefined;
@@ -79,7 +88,7 @@ async function fetchKwHtml(kw: string): Promise<{
   return { ok: false, status: res.status, error: text || `HTTP ${res.status}` };
 }
 
-async function orderKw(kw: string): Promise<{ status: string; reason?: string }> {
+async function orderKw(kwCompact: string): Promise<{ status: string; reason?: string }> {
   const url = `${baseUrl()}/v4/order?crawlingType=ONLY_CURRENT_VIEW`;
   const res = await fetch(url, {
     method: "POST",
@@ -88,7 +97,7 @@ async function orderKw(kw: string): Promise<{ status: string; reason?: string }>
       "Content-Type": "text/plain",
       Accept: "application/json",
     },
-    body: kw,
+    body: kwCompact,
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
@@ -102,53 +111,227 @@ async function orderKw(kw: string): Promise<{ status: string; reason?: string }>
   return { status: json?.status ?? "ENQUEUED" };
 }
 
-
-async function pollResults(kw: string, maxMs = 45000): Promise<"processed" | "not_found" | "etl_error" | "timeout"> {
+async function pollResults(kwCompact: string, maxMs = 45000): Promise<"processed" | "not_found" | "etl_error" | "timeout"> {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
     await new Promise((r) => setTimeout(r, 4000));
     const res = await fetch(`${baseUrl()}/v4/results?crawlingType=ONLY_CURRENT_VIEW`, {
       method: "POST",
       headers: { Authorization: authHeader(), "Content-Type": "text/plain" },
-      body: kw,
+      body: kwCompact,
     });
     if (!res.ok) continue;
     const j: any = await res.json();
-    if (j?.processed?.includes(kw) || j?.downloaded?.includes(kw)) return "processed";
-    if (j?.notFound?.includes(kw)) return "not_found";
-    if (j?.etlError?.includes(kw)) return "etl_error";
+    if (j?.processed?.includes(kwCompact) || j?.downloaded?.includes(kwCompact)) return "processed";
+    if (j?.notFound?.includes(kwCompact)) return "not_found";
+    if (j?.etlError?.includes(kwCompact)) return "etl_error";
   }
   return "timeout";
 }
 
-/** Read cached KW content for a loan application. Returns null when not yet fetched. */
+export type KwFetchOutcome = {
+  kwNumber: string;
+  ok: boolean;
+  status: "ready" | "processing" | "not_found" | "error";
+  cached?: boolean;
+  error?: string;
+};
+
+/**
+ * Rdzeń pobierania treści JEDNEJ księgi (kanoniczny numer z ukośnikami).
+ * Używany przez przycisk w panelu (fetchKwForApplication) oraz automat
+ * (hook kw-autofetch). `poll=false` — tryb asynchroniczny: zleca pobranie
+ * i wraca (kolejny tick crona odbierze gotowy HTML), bez blokowania na 45 s.
+ */
+export async function fetchKwByNumberCore(
+  kwCanonical: string,
+  opts?: { orderedBy?: string | null; force?: boolean; poll?: boolean },
+): Promise<KwFetchOutcome> {
+  const kw = normalizeKwNumber(kwCanonical);
+  const compact = kw ? kwToCompact(kw) : null;
+  if (!kw || !compact) {
+    return { kwNumber: kwCanonical, ok: false, status: "error", error: "Nieprawidłowy numer KW" };
+  }
+  const poll = opts?.poll !== false;
+
+  // Cache — dokumenty mogły historycznie być zapisane w formie zwartej.
+  const { data: cached } = await supabaseAdmin
+    .from("kw_documents")
+    .select("kw_number, status, fetched_at, ordered_at")
+    .in("kw_number", [kw, compact])
+    .order("fetched_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (cached && cached.status === "ready" && !opts?.force) {
+    return { kwNumber: kw, ok: true, status: "ready", cached: true };
+  }
+  // Świeżo zlecone i wciąż w toku — nie dublujemy zlecenia (i kosztów).
+  if (
+    cached &&
+    cached.status === "processing" &&
+    !opts?.force &&
+    cached.ordered_at &&
+    Date.now() - new Date(cached.ordered_at).getTime() < 24 * 3600_000
+  ) {
+    // Spróbuj tylko odebrać gotowy HTML (mogło się już pobrać po stronie CMD).
+    const ready = await fetchKwHtml(compact);
+    if (!ready.ok) return { kwNumber: kw, ok: false, status: "processing" };
+    return storeKwHtml(kw, ready);
+  }
+
+  // Mark/insert as processing (kanoniczny numer jako klucz).
+  await supabaseAdmin.from("kw_documents").upsert(
+    {
+      kw_number: kw,
+      status: "processing",
+      ordered_at: new Date().toISOString(),
+      ordered_by: opts?.orderedBy ?? null,
+      last_error: null,
+    },
+    { onConflict: "kw_number" },
+  );
+
+  // Try direct HTML first — might already be downloaded earlier.
+  // NOTE: 404 z /v3/html oznacza "brak w cache CMD" (nie: brak w EKW),
+  // więc też zlecamy pobranie przez /v4/order.
+  let res = await fetchKwHtml(compact);
+  if (!res.ok) {
+    const ord = await orderKw(compact);
+    if (ord.status === "NOT_ENQUEUED") {
+      const msg = ord.reason ?? "Nie udało się zlecić pobrania KW";
+      await supabaseAdmin
+        .from("kw_documents")
+        .update({ status: "error", last_error: msg })
+        .eq("kw_number", kw);
+      return { kwNumber: kw, ok: false, status: "error", error: msg };
+    }
+    if (!poll) {
+      // Tryb asynchroniczny (cron): zlecone, odbiór przy kolejnym ticku.
+      return { kwNumber: kw, ok: false, status: "processing" };
+    }
+    const result = await pollResults(compact);
+    if (result === "not_found") {
+      await supabaseAdmin
+        .from("kw_documents")
+        .update({ status: "not_found", last_error: "Księga nie znaleziona w EKW" })
+        .eq("kw_number", kw);
+      return { kwNumber: kw, ok: false, status: "not_found", error: "Księga wieczysta nie została odnaleziona w EKW." };
+    }
+    if (result === "etl_error") {
+      await supabaseAdmin
+        .from("kw_documents")
+        .update({ status: "error", last_error: "Błąd przetwarzania po stronie CMD" })
+        .eq("kw_number", kw);
+      return { kwNumber: kw, ok: false, status: "error", error: "Błąd przetwarzania KW po stronie CMD KW Engine." };
+    }
+    if (result === "timeout") {
+      return { kwNumber: kw, ok: false, status: "processing" };
+    }
+    res = await fetchKwHtml(compact);
+  }
+
+  if (res.status === 404) {
+    await supabaseAdmin
+      .from("kw_documents")
+      .update({ status: "not_found", last_error: "404 not found" })
+      .eq("kw_number", kw);
+    return { kwNumber: kw, ok: false, status: "not_found", error: "Księga wieczysta nie została odnaleziona w EKW." };
+  }
+  if (!res.ok || !res.html) {
+    const msg = res.error ?? "Nie udało się pobrać treści KW.";
+    await supabaseAdmin
+      .from("kw_documents")
+      .update({ status: "error", last_error: msg })
+      .eq("kw_number", kw);
+    return { kwNumber: kw, ok: false, status: "error", error: msg };
+  }
+  return storeKwHtml(kw, res);
+}
+
+async function storeKwHtml(
+  kw: string,
+  res: { html?: any; billIn?: number; billOut?: number },
+): Promise<KwFetchOutcome> {
+  const h = res.html;
+  await supabaseAdmin
+    .from("kw_documents")
+    .update({
+      status: "ready",
+      okladka: decodeMaybeBase64(h.okladka),
+      dzial_1o: decodeMaybeBase64(h.dzial1o),
+      dzial_1s: decodeMaybeBase64(h.dzial1s),
+      dzial_2: decodeMaybeBase64(h.dzial2),
+      dzial_3: decodeMaybeBase64(h.dzial3),
+      dzial_4: decodeMaybeBase64(h.dzial4),
+      fetched_at: new Date().toISOString(),
+      bill_in: res.billIn ?? null,
+      bill_out: res.billOut ?? null,
+      last_error: null,
+    })
+    .eq("kw_number", kw);
+  return { kwNumber: kw, ok: true, status: "ready", cached: false };
+}
+
+export type KwDocumentView = {
+  kwNumber: string;
+  status: string | null;
+  okladka: string | null;
+  dzial_1o: string | null;
+  dzial_1s: string | null;
+  dzial_2: string | null;
+  dzial_3: string | null;
+  dzial_4: string | null;
+  fetched_at: string | null;
+  last_error: string | null;
+  ordered_at: string | null;
+};
+
+/** Read cached KW content for a loan application — WSZYSTKIE księgi wniosku. */
 export const getKwForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ loanApplicationId: z.string().uuid() }).parse(i))
   .handler(async ({ data }) => {
-    const kw = await resolveKwForApplication(data.loanApplicationId);
-    if (!kw) return { hasKw: false as const };
-    const { data: row, error } = await supabaseAdmin
+    const kws = await resolveKwsForApplication(data.loanApplicationId);
+    if (kws.length === 0) return { hasKw: false as const, documents: [] as KwDocumentView[] };
+    // Dokumenty mogły historycznie być zapisane w formie zwartej — szukamy obu.
+    const keys = kws.flatMap((k) => [k, kwToCompact(k)!]);
+    const { data: rows, error } = await supabaseAdmin
       .from("kw_documents")
-      .select("status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at")
-      .eq("kw_number", kw)
-      .maybeSingle();
+      .select("kw_number, status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at")
+      .in("kw_number", keys);
     if (error) throw new Error(error.message);
-    const document = row
-      ? {
-          ...row,
-          okladka: decodeMaybeBase64(row.okladka),
-          dzial_1o: decodeMaybeBase64(row.dzial_1o),
-          dzial_1s: decodeMaybeBase64(row.dzial_1s),
-          dzial_2: decodeMaybeBase64(row.dzial_2),
-          dzial_3: decodeMaybeBase64(row.dzial_3),
-          dzial_4: decodeMaybeBase64(row.dzial_4),
-        }
-      : row;
-    return { hasKw: true as const, document };
+    const byKw = new Map<string, any>();
+    for (const r of rows ?? []) {
+      const norm = normalizeKwNumber(r.kw_number) ?? r.kw_number;
+      const prev = byKw.get(norm);
+      if (!prev || (r.fetched_at && (!prev.fetched_at || r.fetched_at > prev.fetched_at))) byKw.set(norm, r);
+    }
+    const documents: KwDocumentView[] = kws.map((kw) => {
+      const row = byKw.get(kw);
+      if (!row) {
+        return {
+          kwNumber: kw, status: null, okladka: null, dzial_1o: null, dzial_1s: null,
+          dzial_2: null, dzial_3: null, dzial_4: null, fetched_at: null, last_error: null, ordered_at: null,
+        };
+      }
+      return {
+        kwNumber: kw,
+        status: row.status,
+        okladka: decodeMaybeBase64(row.okladka),
+        dzial_1o: decodeMaybeBase64(row.dzial_1o),
+        dzial_1s: decodeMaybeBase64(row.dzial_1s),
+        dzial_2: decodeMaybeBase64(row.dzial_2),
+        dzial_3: decodeMaybeBase64(row.dzial_3),
+        dzial_4: decodeMaybeBase64(row.dzial_4),
+        fetched_at: row.fetched_at,
+        last_error: row.last_error,
+        ordered_at: row.ordered_at,
+      };
+    });
+    return { hasKw: true as const, documents };
   });
 
-/** Admin/operator only. Orders KW download from CMD, polls, fetches HTML, stores in cache. */
+/** Admin/operator only. Pobiera treść WSZYSTKICH ksiąg wniosku z CMD. */
 export const fetchKwForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
@@ -165,101 +348,18 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
     const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
     if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 
-    if (!process.env.CMD_KW_USER || !process.env.CMD_KW_PASSWORD) {
+    if (!kwEngineConfigured()) {
       throw new Error("Brak konfiguracji CMD KW Engine (CMD_KW_USER / CMD_KW_PASSWORD).");
     }
 
-    const kw = await resolveKwForApplication(data.loanApplicationId);
-    if (!kw) throw new Error("Wniosek nie ma poprawnego numeru KW na nieruchomości.");
+    const kws = await resolveKwsForApplication(data.loanApplicationId);
+    if (kws.length === 0) throw new Error("Wniosek nie ma poprawnego numeru KW na nieruchomości.");
 
-    // Check cache
-    const { data: cached } = await supabaseAdmin
-      .from("kw_documents")
-      .select("status, fetched_at")
-      .eq("kw_number", kw)
-      .maybeSingle();
-    if (cached && cached.status === "ready" && !data.force) {
-      return { ok: true, kwNumber: kw, status: "ready", cached: true };
+    const results: KwFetchOutcome[] = [];
+    for (const kw of kws) {
+      results.push(await fetchKwByNumberCore(kw, { orderedBy: userId, force: data.force }));
     }
-
-    // Mark/insert as processing
-    await supabaseAdmin.from("kw_documents").upsert(
-      {
-        kw_number: kw,
-        status: "processing",
-        ordered_at: new Date().toISOString(),
-        ordered_by: userId,
-        last_error: null,
-      },
-      { onConflict: "kw_number" },
-    );
-
-    // Try direct HTML first — might already be downloaded earlier.
-    // NOTE: 404 z /v3/html oznacza "brak w cache CMD" (nie: brak w EKW),
-    // więc też zlecamy pobranie przez /v4/order.
-    let res = await fetchKwHtml(kw);
-    if (!res.ok) {
-      const ord = await orderKw(kw);
-      if (ord.status === "NOT_ENQUEUED") {
-        await supabaseAdmin
-          .from("kw_documents")
-          .update({ status: "error", last_error: ord.reason ?? "Nie udało się zlecić pobrania KW" })
-          .eq("kw_number", kw);
-        throw new Error(ord.reason ?? "Nie udało się zlecić pobrania KW");
-      }
-      const result = await pollResults(kw);
-      if (result === "not_found") {
-        await supabaseAdmin
-          .from("kw_documents")
-          .update({ status: "not_found", last_error: "Księga nie znaleziona w EKW" })
-          .eq("kw_number", kw);
-        throw new Error("Księga wieczysta nie została odnaleziona w EKW.");
-      }
-      if (result === "etl_error") {
-        await supabaseAdmin
-          .from("kw_documents")
-          .update({ status: "error", last_error: "Błąd przetwarzania po stronie CMD" })
-          .eq("kw_number", kw);
-        throw new Error("Błąd przetwarzania KW po stronie CMD KW Engine.");
-      }
-      if (result === "timeout") {
-        return { ok: false, kwNumber: kw, status: "processing", cached: false };
-      }
-      res = await fetchKwHtml(kw);
-    }
-
-    if (res.status === 404) {
-      await supabaseAdmin
-        .from("kw_documents")
-        .update({ status: "not_found", last_error: "404 not found" })
-        .eq("kw_number", kw);
-      throw new Error("Księga wieczysta nie została odnaleziona w EKW.");
-    }
-    if (!res.ok || !res.html) {
-      await supabaseAdmin
-        .from("kw_documents")
-        .update({ status: "error", last_error: res.error ?? "Nieznany błąd" })
-        .eq("kw_number", kw);
-      throw new Error(res.error ?? "Nie udało się pobrać treści KW.");
-    }
-
-    const h = res.html;
-    await supabaseAdmin
-      .from("kw_documents")
-      .update({
-        status: "ready",
-        okladka: decodeMaybeBase64(h.okladka),
-        dzial_1o: decodeMaybeBase64(h.dzial1o),
-        dzial_1s: decodeMaybeBase64(h.dzial1s),
-        dzial_2: decodeMaybeBase64(h.dzial2),
-        dzial_3: decodeMaybeBase64(h.dzial3),
-        dzial_4: decodeMaybeBase64(h.dzial4),
-        fetched_at: new Date().toISOString(),
-        bill_in: res.billIn ?? null,
-        bill_out: res.billOut ?? null,
-        last_error: null,
-      })
-      .eq("kw_number", kw);
-
-    return { ok: true, kwNumber: kw, status: "ready", cached: false };
+    const okAll = results.every((r) => r.ok);
+    const firstErr = results.find((r) => !r.ok && r.error)?.error;
+    return { ok: okAll, results, error: okAll ? undefined : firstErr };
   });

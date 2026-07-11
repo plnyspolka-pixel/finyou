@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const KW_REGEX = /\b[A-Z]{2}\d[A-Z0-9]\/\d{8}\/\d\b/g;
+import { extractKwNumbers } from "@/lib/kw-number";
 
 /**
  * Scans documents attached to a loan application and tries to extract
@@ -60,8 +59,7 @@ export const detectKwNumbers = createServerFn({ method: "POST" })
         if (!resp.ok) continue;
         const json = await resp.json();
         const text: string = json?.choices?.[0]?.message?.content ?? "";
-        const matches = text.toUpperCase().match(KW_REGEX) ?? [];
-        for (const m of matches) detected.add(m);
+        for (const m of extractKwNumbers(text)) detected.add(m);
       } catch {
         // ignore
       }
@@ -130,7 +128,7 @@ export const extractKwFromUpload = createServerFn({ method: "POST" })
       return { found: false, numbers: [], reason: "ai_error" as const };
     }
 
-    const matches = Array.from(new Set((text.toUpperCase().match(KW_REGEX) ?? [])));
+    const matches = extractKwNumbers(text);
     if (matches.length === 0) {
       return { found: false, numbers: [], reason: "not_found" as const };
     }

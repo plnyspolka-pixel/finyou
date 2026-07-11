@@ -28,6 +28,7 @@ import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-s
 import { SecurityTypePicker } from "@/components/security-type-picker";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { validateKwNumber } from "@/lib/kw-number";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 
@@ -146,7 +147,12 @@ export function LandingWizardForm() {
     [kwNumber, extraKwNumbers],
   );
   const hasOwnershipDeed = photos.some((p) => p.bucket === "ownership_deed");
-  const kwOk = allKwNumbers.length > 0 || hasOwnershipDeed;
+  // Walidacja formatu + cyfry kontrolnej każdego wpisanego numeru KW.
+  const kwAllValid = useMemo(
+    () => allKwNumbers.every((k) => validateKwNumber(k).ok),
+    [allKwNumbers],
+  );
+  const kwOk = (allKwNumbers.length > 0 && kwAllValid) || hasOwnershipDeed;
 
   const contactValid = useMemo(() => {
     const ph = phone.trim().replace(/\D/g, "");
@@ -232,11 +238,12 @@ export function LandingWizardForm() {
           city: city.trim() || null,
           annual_investor_rate: annualRate,
           max_monthly_payment: maxPayment > 0 ? maxPayment : null,
-          land_register_number: (() => {
-            const parts = [...allKwNumbers];
-            const ua = usableArea.trim();
-            if (ua && BUILDING_TYPES.includes(secType)) parts.push(`Pow. użytkowa: ${ua} m²`);
-            return parts.length > 0 ? parts.join(" | ") : null;
+          land_register_number: allKwNumbers[0] ?? null,
+          additional_land_register_numbers: allKwNumbers.slice(1),
+          usable_area_sqm: (() => {
+            if (!BUILDING_TYPES.includes(secType)) return null;
+            const ua = Number(usableArea.trim().replace(",", "."));
+            return Number.isFinite(ua) && ua > 0 ? ua : null;
           })(),
           photos: photoPayload,
           source: "landing_wizard",
@@ -421,6 +428,11 @@ export function LandingWizardForm() {
                 placeholder="np. WA1M/00123456/7"
                 className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 px-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
               />
+              {kwNumber.trim() && !validateKwNumber(kwNumber).ok && (
+                <p className="text-xs font-semibold text-red-300">
+                  {(validateKwNumber(kwNumber) as { ok: false; error: string }).error}
+                </p>
+              )}
               <p className="text-xs text-white/75">Numer sprawdzisz w mObywatelu. Alternatywnie dołącz akt własności.</p>
               {extraKwNumbers.map((val, idx) => (
                 <div key={idx} className="flex gap-2">

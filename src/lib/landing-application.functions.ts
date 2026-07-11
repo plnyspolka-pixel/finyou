@@ -26,6 +26,8 @@ const SubmitSchema = z.object({
   preferred_period_months: z.number().int().min(3).max(72),
   property_type: PropertyTypeEnum,
   land_register_number: z.string().trim().max(60).optional().nullable(),
+  additional_land_register_numbers: z.array(z.string().trim().max(30)).max(10).optional().default([]),
+  usable_area_sqm: z.number().positive().max(1_000_000).optional().nullable(),
   city: z.string().trim().max(120).optional().nullable(),
   annual_investor_rate: z.number().min(0).max(100).optional().nullable(),
   max_monthly_payment: z.number().min(0).max(1_000_000).optional().nullable(),
@@ -39,12 +41,24 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { normalizePolishPhone } = await import("@/lib/phone");
+    const { normalizeKwNumber, extractKwNumbers } = await import("@/lib/kw-number");
     const { runPropertyCollateralAnalysisCore } = await import(
       "@/lib/property-analysis/property-collateral-analysis.functions"
     );
 
     const { normalized, valid } = normalizePolishPhone(data.phone);
     const source = data.source ?? "landing_single_page";
+
+    // Standaryzacja numerów KW: format kanoniczny XXXX/DDDDDDDD/C.
+    // Pole główne mogło historycznie zawierać sklejone wartości — wyciągamy
+    // wszystkie numery i rozdzielamy na główny + dodatkowe.
+    const primaryKws = extractKwNumbers(data.land_register_number);
+    const extraKws = (data.additional_land_register_numbers ?? [])
+      .map((k) => normalizeKwNumber(k))
+      .filter((k): k is string => !!k);
+    const allKws = [...primaryKws, ...extraKws].filter((k, i, a) => a.indexOf(k) === i);
+    const primaryKw = allKws[0] ?? null;
+    const additionalKws = allKws.slice(1);
 
     // Re-użyj istniejącego klienta po e-mailu zamiast tworzyć duplikat
     const { data: existingClient } = await supabaseAdmin
@@ -96,7 +110,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         status: "nowy_lead",
         loan_amount: data.loan_amount,
         preferred_period_months: data.preferred_period_months,
-        kw_status: data.land_register_number ? "znam" : "nie_znam",
+        kw_status: primaryKw ? "znam" : "nie_znam",
         annual_investor_rate: data.annual_investor_rate ?? null,
         max_monthly_payment: data.max_monthly_payment ?? null,
         source,
@@ -163,7 +177,9 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       .insert({
         loan_application_id: loan.id,
         property_type: data.property_type,
-        land_register_number: data.land_register_number ?? null,
+        land_register_number: primaryKw,
+        additional_land_register_numbers: additionalKws,
+        area_sqm: data.usable_area_sqm ?? null,
         city: data.city ?? null,
       })
       .select("id")
@@ -289,7 +305,7 @@ Telefon: ${data.phone}
 Kwota: ${fmtPLN(data.loan_amount)}
 Okres: ${data.preferred_period_months} mies.
 Zabezpieczenie: ${propertyLabel}
-KW: ${data.land_register_number ?? "—"}
+KW: ${allKws.join(", ") || "—"}
 Załączniki: ${(data.photos ?? []).length}
 
 Podgląd w panelu: ${adminUrl}`;
@@ -302,7 +318,7 @@ Podgląd w panelu: ${adminUrl}`;
             <li><strong>Kwota:</strong> ${fmtPLN(data.loan_amount)}</li>
             <li><strong>Okres:</strong> ${data.preferred_period_months} mies.</li>
             <li><strong>Zabezpieczenie:</strong> ${propertyLabel}</li>
-            <li><strong>KW:</strong> ${data.land_register_number ?? "—"}</li>
+            <li><strong>KW:</strong> ${allKws.join(", ") || "—"}</li>
             <li><strong>Załączniki:</strong> ${(data.photos ?? []).length}</li>
           </ul>
           <p><a href="${adminUrl}" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Otwórz wniosek w panelu →</a></p>
