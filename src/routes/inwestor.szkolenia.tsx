@@ -32,7 +32,6 @@ function extractTrainingPath(url: string | null): string | null {
 function SzkoleniaInwestor() {
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const [posters, setPosters] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void (async () => {
@@ -45,7 +44,6 @@ function SzkoleniaInwestor() {
       const list = data ?? [];
       setVideos(list);
       const urlEntries: Array<[string, string]> = [];
-      const posterEntries: Array<[string, string]> = [];
       await Promise.all(
         list.map(async (v) => {
           if (v.external_url) {
@@ -56,19 +54,9 @@ function SzkoleniaInwestor() {
               .createSignedUrl(v.file_path, 60 * 60 * 4);
             if (signed?.signedUrl) urlEntries.push([v.id, signed.signedUrl]);
           }
-          const posterPath = extractTrainingPath(v.thumbnail_url);
-          if (posterPath) {
-            const { data: signed } = await supabase.storage
-              .from("training-videos")
-              .createSignedUrl(posterPath, 60 * 60 * 4);
-            if (signed?.signedUrl) posterEntries.push([v.id, signed.signedUrl]);
-          } else if (v.thumbnail_url) {
-            posterEntries.push([v.id, v.thumbnail_url]);
-          }
         }),
       );
       setUrls(Object.fromEntries(urlEntries));
-      setPosters(Object.fromEntries(posterEntries));
     })();
   }, []);
 
@@ -89,39 +77,32 @@ function SzkoleniaInwestor() {
                 <CardTitle className="text-lg line-clamp-2 min-h-[3.5rem]">{v.title}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 flex flex-col flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{v.description ?? ""}</p>
-                <div className="mt-auto">
-                {url ? (
-                  external ? (
-                    <iframe
-                      src={embedUrl(url)}
-                      className="aspect-video w-full rounded-md border-0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video
-                      src={url}
-                      poster={posters[v.id] ?? undefined}
-                      controls
-                      preload="metadata"
-                      playsInline
-                      className="aspect-video w-full rounded-md bg-black object-contain"
-                    />
-                  )
-                ) : posters[v.id] ? (
-                  <img
-                    src={posters[v.id]}
-                    alt=""
-                    className="aspect-video w-full rounded-md object-cover"
-                    loading="lazy"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                  />
-                ) : (
-                  <div className="aspect-video w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                    Materiał wkrótce
-                  </div>
+                {v.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{v.description}</p>
                 )}
+                <div className="mt-auto">
+                  {url ? (
+                    external ? (
+                      <iframe
+                        src={embedUrl(url)}
+                        className="aspect-video w-full rounded-md border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        src={url}
+                        controls
+                        preload="metadata"
+                        playsInline
+                        className="aspect-video w-full rounded-md bg-black object-contain"
+                      />
+                    )
+                  ) : (
+                    <div className="aspect-video w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                      Materiał wkrótce
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -132,3 +113,4 @@ function SzkoleniaInwestor() {
     </div>
   );
 }
+
