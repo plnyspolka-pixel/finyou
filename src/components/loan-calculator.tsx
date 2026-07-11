@@ -285,14 +285,20 @@ export function LoanCalculator({
   // więc obu NIE dolicza się ponownie do spłaty (wcześniej były liczone podwójnie).
   const totalToRepay = schedule.totalRata;
 
-  // Inwestor: realny wkład gotówkowy = środki wychodzące z jego konta.
-  // W ofercie wewnętrznej prowizja operatora jest wypłacana z własnych środków inwestora — powiększa wkład
-  // i pomniejsza zysk (inwestor zatrzymuje tylko prowizję NETTO po odjęciu udziału operatora).
-  // Inwestor odbiera: zwrot kapitału + odsetki (= raty z harmonogramu pomniejszone o prowizję FY,
-  // która stanowi wynagrodzenie Finance You). W trybie wewnętrznym FY = 0.
-  const investorCashOut = Math.max(0, amount - commissionPln + operatorCommissionPln);
+  // Inwestor: realny wkład gotówkowy = środki wychodzące z jego konta na starcie:
+  //  • wypłata na rękę dla klienta (nominał − prowizja inwestora potrącona z góry),
+  //  • prowizja Finance You — inwestor WYKŁADA ją od razu (jest wypłacana Finance You
+  //    jako część kapitału pożyczki). Dla inwestora jest dalej oprocentowana i wraca
+  //    w ratach jako część kapitału, więc nie zmienia zysku — ale podnosi wkład.
+  //  • w ofercie wewnętrznej dodatkowo prowizja operatora (z własnych środków inwestora);
+  //    tam prowizja FY = 0.
+  const investorCashOut = Math.max(0, amount - commissionPln + operatorCommissionPln + financeYouFeePln);
+  // Zysk = odsetki + prowizja inwestora (NETTO). Prowizja FY jest neutralna dla zysku
+  // (wyłożona na starcie, odzyskiwana w ratach jako część kapitału).
   const investorProfit = schedule.totalOds + investorNetCommissionPln;
-  const investorTotalIn = investorCashOut + investorProfit; // = zwrot kapitału + odsetki (bez FY)
+  // Inwestor odbiera łącznie = wkład + zysk = pełne raty z harmonogramu (zwrot całego
+  // kapitału startowego wraz z prowizją FY + odsetki).
+  const investorTotalIn = investorCashOut + investorProfit;
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
@@ -576,8 +582,10 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorCashOut)}</p>
               <p className="mt-1 text-xs text-white/65">{internalOperatorMode
-                ? "gotówka wypłacana z konta inwestora (wypłata dla klienta + prowizja operatora)"
-                : "gotówka wypłacana z konta inwestora (kwota nominalna − prowizja potrącona z góry)"}</p>
+                ? "gotówka z konta inwestora (wypłata dla klienta + prowizja operatora)"
+                : hideFinanceYouFee
+                  ? "gotówka z konta inwestora (kwota nominalna − prowizja potrącona z góry)"
+                  : `gotówka z konta inwestora: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} wyłożona na start (wraca w ratach)`}</p>
             </div>
 
             {/* Investor cash in */}
