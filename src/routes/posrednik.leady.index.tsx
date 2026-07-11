@@ -18,6 +18,7 @@ import { PropertyKeyFacts } from "@/components/wniosek/property-key-facts";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
+import { FileThumb } from "@/components/media/FileThumb";
 
 
 export const Route = createFileRoute("/posrednik/leady/")({
