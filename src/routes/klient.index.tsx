@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
