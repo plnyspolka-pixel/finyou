@@ -218,7 +218,7 @@ function KlientDashboard() {
     if (!confirm(`Usunąć dokument „${doc.file_name ?? ""}"? Tej operacji nie można cofnąć.`)) return;
     try {
       if (doc.file_path) {
-        await supabase.storage.from("documents").remove([doc.file_path]);
+        await deleteStoragePath(doc.file_path);
       }
       const { error } = await supabase.from("documents").delete().eq("id", doc.id);
       if (error) throw error;
