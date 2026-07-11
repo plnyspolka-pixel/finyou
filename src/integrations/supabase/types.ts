@@ -2810,6 +2810,7 @@ export type Database = {
           loan_application_id: string | null
           property_id: string | null
           status: string | null
+          thumbnail_path: string | null
           updated_at: string
           uploaded_by: string | null
           visibility_level: Database["public"]["Enums"]["visibility_level"]
@@ -2824,6 +2825,7 @@ export type Database = {
           loan_application_id?: string | null
           property_id?: string | null
           status?: string | null
+          thumbnail_path?: string | null
           updated_at?: string
           uploaded_by?: string | null
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
@@ -2838,6 +2840,7 @@ export type Database = {
           loan_application_id?: string | null
           property_id?: string | null
           status?: string | null
+          thumbnail_path?: string | null
           updated_at?: string
           uploaded_by?: string | null
           visibility_level?: Database["public"]["Enums"]["visibility_level"]
@@ -4152,6 +4155,7 @@ export type Database = {
           ordered_at: string | null
           ordered_by: string | null
           status: string
+          thumbnail_path: string | null
           updated_at: string
         }
         Insert: {
@@ -4171,6 +4175,7 @@ export type Database = {
           ordered_at?: string | null
           ordered_by?: string | null
           status?: string
+          thumbnail_path?: string | null
           updated_at?: string
         }
         Update: {
@@ -4190,6 +4195,7 @@ export type Database = {
           ordered_at?: string | null
           ordered_by?: string | null
           status?: string
+          thumbnail_path?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -5402,6 +5408,7 @@ export type Database = {
           media_type: Database["public"]["Enums"]["marketing_media_type"]
           mime_type: string | null
           storage_path: string
+          thumbnail_path: string | null
           title: string
           updated_at: string
           uploaded_by: string | null
@@ -5416,6 +5423,7 @@ export type Database = {
           media_type: Database["public"]["Enums"]["marketing_media_type"]
           mime_type?: string | null
           storage_path: string
+          thumbnail_path?: string | null
           title: string
           updated_at?: string
           uploaded_by?: string | null
@@ -5430,6 +5438,7 @@ export type Database = {
           media_type?: Database["public"]["Enums"]["marketing_media_type"]
           mime_type?: string | null
           storage_path?: string
+          thumbnail_path?: string | null
           title?: string
           updated_at?: string
           uploaded_by?: string | null
@@ -6576,6 +6585,42 @@ export type Database = {
           scheduled_at?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      storage_migration_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          ok: boolean
+          source_bucket: string
+          source_path: string
+          table_updated: string | null
+          target_bucket: string
+          target_path: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          source_bucket: string
+          source_path: string
+          table_updated?: string | null
+          target_bucket?: string
+          target_path: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          source_bucket?: string
+          source_path?: string
+          table_updated?: string | null
+          target_bucket?: string
+          target_path?: string
         }
         Relationships: []
       }

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,20 +141,19 @@ function KlientDashboard() {
       const newPhotoPaths: string[] = [];
       for (const file of Array.from(files)) {
         if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: za duży (max 20 MB)`); continue; }
-        const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
         const isImage = (file.type || "").startsWith("image/");
-        if (isImage) {
-          const path = `klient/${user.id}/${loanRow.id}/${Date.now()}-${safe}`;
-          const up = await supabase.storage.from("property-photos").upload(path, file, { upsert: false, contentType: file.type });
-          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
-          newPhotoPaths.push(path);
-        } else {
-          const path = `klient/${user.id}/${loanRow.id}/doc-${Date.now()}-${safe}`;
-          const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
-          if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
-          await supabase.from("documents").insert({
-            loan_application_id: loanRow.id, document_type: "property_doc", file_name: file.name, file_path: path, uploaded_by: user.id,
-          });
+        try {
+          if (isImage) {
+            const res = await uploadFile(file, { context: "property", applicationId: loanRow.id });
+            newPhotoPaths.push(res.path);
+          } else {
+            const res = await uploadFile(file, { context: "document", applicationId: loanRow.id, docType: "property_doc" });
+            await supabase.from("documents").insert({
+              loan_application_id: loanRow.id, document_type: "property_doc", file_name: file.name, file_path: res.path, uploaded_by: user.id,
+            });
+          }
+        } catch (e: any) {
+          toast.error(`${file.name}: ${e?.message ?? "błąd uploadu"}`);
         }
       }
       if (newPhotoPaths.length > 0) {
@@ -203,7 +203,7 @@ function KlientDashboard() {
     if (!propertyRow?.id) return;
     if (!confirm("Usunąć to zdjęcie? Tej operacji nie można cofnąć.")) return;
     try {
-      await supabase.storage.from("property-photos").remove([path]);
+      await deleteStoragePath(path);
       const next = photoPaths.filter((p) => p !== path);
       const { error } = await supabase.from("properties").update({ photos: next }).eq("id", propertyRow.id);
       if (error) throw error;
@@ -218,7 +218,7 @@ function KlientDashboard() {
     if (!confirm(`Usunąć dokument „${doc.file_name ?? ""}"? Tej operacji nie można cofnąć.`)) return;
     try {
       if (doc.file_path) {
-        await supabase.storage.from("documents").remove([doc.file_path]);
+        await deleteStoragePath(doc.file_path);
       }
       const { error } = await supabase.from("documents").delete().eq("id", doc.id);
       if (error) throw error;
