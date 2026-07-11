@@ -57,8 +57,8 @@ import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorMojeLeadyRouteImport } from './routes/operator.moje-leady'
 import { Route as OperatorMessengerRouteImport } from './routes/operator.messenger'
 import { Route as OperatorLeadyRouteImport } from './routes/operator.leady'
-import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
 import { Route as OperatorKreatorUdzieleniaRouteImport } from './routes/operator.kreator-udzielenia'
+import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
@@ -424,17 +424,17 @@ const OperatorLeadyRoute = OperatorLeadyRouteImport.update({
   path: '/leady',
   getParentRoute: () => OperatorRoute,
 } as any)
-const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
-  id: '/faktury',
-  path: '/faktury',
-  getParentRoute: () => OperatorRoute,
-} as any)
 const OperatorKreatorUdzieleniaRoute =
   OperatorKreatorUdzieleniaRouteImport.update({
     id: '/kreator-udzielenia',
     path: '/kreator-udzielenia',
     getParentRoute: () => OperatorRoute,
   } as any)
+const OperatorFakturyRoute = OperatorFakturyRouteImport.update({
+  id: '/faktury',
+  path: '/faktury',
+  getParentRoute: () => OperatorRoute,
+} as any)
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
@@ -2556,18 +2556,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorLeadyRouteImport
       parentRoute: typeof OperatorRoute
     }
-    '/operator/faktury': {
-      id: '/operator/faktury'
-      path: '/faktury'
-      fullPath: '/operator/faktury'
-      preLoaderRoute: typeof OperatorFakturyRouteImport
-      parentRoute: typeof OperatorRoute
-    }
     '/operator/kreator-udzielenia': {
       id: '/operator/kreator-udzielenia'
       path: '/kreator-udzielenia'
       fullPath: '/operator/kreator-udzielenia'
       preLoaderRoute: typeof OperatorKreatorUdzieleniaRouteImport
+      parentRoute: typeof OperatorRoute
+    }
+    '/operator/faktury': {
+      id: '/operator/faktury'
+      path: '/faktury'
+      fullPath: '/operator/faktury'
+      preLoaderRoute: typeof OperatorFakturyRouteImport
       parentRoute: typeof OperatorRoute
     }
     '/l/$slug': {
