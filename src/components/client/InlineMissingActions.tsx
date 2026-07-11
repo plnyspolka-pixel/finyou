@@ -331,15 +331,12 @@ function DocumentUploadBox({ userId, loanId, kind, label, onChanged }: { userId:
     setBusy(true);
     const t = toast.loading("Wysyłam plik…");
     try {
-      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-      const path = `klient/${userId}/${loanId}/${kind}-${Date.now()}-${safeName}`;
-      const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
-      if (up.error) throw up.error;
+      const res = await uploadFile(file, { context: "document", applicationId: loanId, docType: kind });
       const ins = await supabase.from("documents").insert({
         loan_application_id: loanId,
         document_type: kind,
         file_name: file.name,
-        file_path: path,
+        file_path: res.path,
         uploaded_by: userId,
       });
       if (ins.error) throw ins.error;
