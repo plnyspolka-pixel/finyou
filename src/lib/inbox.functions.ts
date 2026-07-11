@@ -11,6 +11,9 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
       subject: z.string().min(1).max(300),
       body: z.string().min(1).max(50000),
       replyToCommunicationId: z.string().uuid().optional().nullable(),
+      /** Wniosek, którego dotyczy wiadomość (np. oferta do inwestorów) —
+       *  odpowiedzi będą automatycznie mapowane z powrotem do wniosku. */
+      loanApplicationId: z.string().uuid().optional().nullable(),
     }).parse(input),
 
   )
@@ -28,15 +31,17 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
     let threadId: string | null = null;
     let inReplyTo: string | null = null;
     let references: string | null = null;
+    let loanApplicationId: string | null = data.loanApplicationId ?? null;
     if (data.replyToCommunicationId) {
       const { data: parent } = await supabaseAdmin
         .from("lead_communications")
-        .select("id, lead_id, thread_external_id, external_id, metadata")
+        .select("id, lead_id, loan_application_id, thread_external_id, external_id, metadata")
         .eq("id", data.replyToCommunicationId)
         .maybeSingle();
       if (parent) {
         leadId = parent.lead_id ?? null;
         threadId = parent.thread_external_id ?? null;
+        loanApplicationId = loanApplicationId ?? (parent as any).loan_application_id ?? null;
         const meta = (parent.metadata ?? {}) as Record<string, any>;
         inReplyTo = meta.message_id_header ?? parent.external_id ?? null;
         references = meta.references ?? inReplyTo;
@@ -56,6 +61,26 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
     const { sendResendEmail } = await import("./resend-send.server");
     const { logLeadCommunication } = await import("./lead-comms.server");
 
+    // Rozpoznaj odbiorców będących inwestorami — ich odpowiedzi mają być
+    // mapowane do inwestora i wniosku, a nie traktowane jak nowe leady.
+    const investorByEmail = new Map<string, string>();
+    {
+      const { data: invs } = await supabaseAdmin
+        .from("investors")
+        .select("id, email")
+        .in("email", emails);
+      for (const inv of invs ?? []) {
+        if (inv.email) investorByEmail.set(String(inv.email).toLowerCase(), inv.id);
+      }
+    }
+
+    // Adres zwrotny z tagiem wniosku (plus-addressing): odpowiedź instytucji
+    // wraca na kontakt+la-<id>@financeyou.pl i webhook odbiorczy mapuje ją
+    // deterministycznie do wniosku — nawet gdy nagłówki wątku się pogubią.
+    const replyTo = loanApplicationId
+      ? `kontakt+la-${loanApplicationId.replace(/-/g, "")}@financeyou.pl`
+      : "kontakt@financeyou.pl";
+
     const results: Array<{ email: string; ok: boolean; id?: string; error?: string }> = [];
     for (const to of emails) {
       const res = await sendResendEmail({
@@ -65,13 +90,16 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
         html,
         inReplyTo,
         references,
-        replyTo: "kontakt@financeyou.pl",
+        replyTo,
         showReplyHint: true,
       });
       results.push({ email: to, ok: res.ok, id: res.id, error: res.error });
       try {
+        const investorId = investorByEmail.get(to.toLowerCase()) ?? null;
         await logLeadCommunication({
           leadId,
+          loanApplicationId,
+          investorId,
           email: to,
           channel: "email",
           direction: "outbound",
@@ -79,11 +107,14 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
           subject: data.subject,
           content: data.body,
           externalId: res.id ?? null,
+          threadExternalId: threadId ?? res.id ?? null,
           metadata: {
             source: "inbox_manual",
             sent_by: context.userId,
             thread_id: threadId,
             in_reply_to: inReplyTo,
+            ...(investorId ? { investor_id: investorId } : {}),
+            ...(loanApplicationId ? { loan_application_id: loanApplicationId } : {}),
           },
         });
       } catch (e) {

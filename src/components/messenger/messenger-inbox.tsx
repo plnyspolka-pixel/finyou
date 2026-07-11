@@ -12,7 +12,8 @@ import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon } from "l
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { toast } from "sonner";
-import { sendMessengerReply } from "@/lib/messenger-inbox.functions";
+import { sendMessengerReply, getLeadAttachmentUrls } from "@/lib/messenger-inbox.functions";
+import { AttachmentPreview } from "@/components/inbox/attachment-preview";
 
 type Msg = {
   id: string;
@@ -22,6 +23,7 @@ type Msg = {
   created_at: string;
   metadata: any;
   status: string | null;
+  attachments: any[] | null;
 };
 
 type Lead = {
@@ -57,8 +59,8 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lead_communications")
-        .select("id, lead_id, direction, content, created_at, metadata, status")
-        .eq("channel", "messenger")
+        .select("id, lead_id, direction, content, created_at, metadata, status, attachments")
+        .in("channel", ["messenger", "instagram"])
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -126,6 +128,27 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
       .filter((m) => m.lead_id === selectedLeadId)
       .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
   }, [messages, selectedLeadId]);
+
+  // Podpisane URL-e do załączników wybranego wątku (bucket jest prywatny).
+  const attachFn = useServerFn(getLeadAttachmentUrls);
+  const threadAttachmentPaths = useMemo(() => {
+    const paths: string[] = [];
+    for (const m of thread) {
+      for (const a of m.attachments ?? []) {
+        if (a?.path && !paths.includes(a.path)) paths.push(a.path);
+      }
+    }
+    return paths.slice(0, 50);
+  }, [thread]);
+  const { data: signedUrls } = useQuery({
+    queryKey: ["messenger-attachment-urls", threadAttachmentPaths.join("|")],
+    enabled: threadAttachmentPaths.length > 0,
+    staleTime: 45 * 60_000, // signed URL żyje 60 min
+    queryFn: async () => {
+      const r = await attachFn({ data: { paths: threadAttachmentPaths } });
+      return r.urls as Record<string, string>;
+    },
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -238,6 +261,16 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                             <span>{new Date(m.created_at).toLocaleString("pl-PL")}</span>
                           </div>
                           {m.content || "—"}
+                          {(m.attachments?.length ?? 0) > 0 && (
+                            <div className="mt-2">
+                              <AttachmentPreview
+                                attachments={(m.attachments ?? []).map((a: any) => ({
+                                  ...a,
+                                  url: a?.path ? signedUrls?.[a.path] ?? undefined : a?.url,
+                                }))}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

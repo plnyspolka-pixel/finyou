@@ -37,16 +37,24 @@ export async function findLeadId(opts: {
 
 export type LogCommArgs = {
   leadId?: string | null;
+  /** Wniosek, którego dotyczy korespondencja — zapisywany też jako kolumna
+   *  lead_communications.loan_application_id (mapowanie ofert/odpowiedzi). */
   loanApplicationId?: string | null;
   clientId?: string | null;
   metaLeadId?: string | null;
+  /** Inwestor (np. instytucja odpowiadająca na ofertę) — kolumna investor_id. */
+  investorId?: string | null;
   phoneNormalized?: string | null;
   email?: string | null;
-  channel: "voicebot_call" | "sms" | "email" | "messenger" | "manual_note" | "whatsapp";
+  /** Identyfikator wątku e-mail (RFC Message-ID pierwszej wiadomości). */
+  threadExternalId?: string | null;
+  channel: "voicebot_call" | "sms" | "email" | "messenger" | "instagram" | "manual_note" | "whatsapp";
   direction?: "inbound" | "outbound";
   status?: string | null;
   subject?: string | null;
   content?: string | null;
+  /** Załączniki (np. z Messengera/maila) — zapisywane od razu przy insercie. */
+  attachments?: any[] | null;
   transcript?: any;
   recordingUrl?: string | null;
   durationSeconds?: number | null;
@@ -72,6 +80,9 @@ export async function logLeadCommunication(args: LogCommArgs): Promise<string | 
     .from("lead_communications")
     .insert({
       lead_id: leadId,
+      loan_application_id: args.loanApplicationId ?? null,
+      investor_id: args.investorId ?? null,
+      thread_external_id: args.threadExternalId ?? null,
       phone_normalized: args.phoneNormalized ?? null,
       email: args.email ?? null,
       channel: args.channel,
@@ -79,6 +90,7 @@ export async function logLeadCommunication(args: LogCommArgs): Promise<string | 
       status: args.status ?? null,
       subject: args.subject ?? null,
       content: args.content ?? null,
+      attachments: args.attachments ?? null,
       transcript: args.transcript ?? null,
       recording_url: args.recordingUrl ?? null,
       duration_seconds: args.durationSeconds ?? null,

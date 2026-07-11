@@ -4562,6 +4562,8 @@ export type Database = {
           external_id: string | null
           id: string
           lead_id: string | null
+          loan_application_id: string | null
+          investor_id: string | null
           metadata: Json
           phone_normalized: string | null
           recording_url: string | null
@@ -4586,6 +4588,8 @@ export type Database = {
           external_id?: string | null
           id?: string
           lead_id?: string | null
+          loan_application_id?: string | null
+          investor_id?: string | null
           metadata?: Json
           phone_normalized?: string | null
           recording_url?: string | null
@@ -4610,6 +4614,8 @@ export type Database = {
           external_id?: string | null
           id?: string
           lead_id?: string | null
+          loan_application_id?: string | null
+          investor_id?: string | null
           metadata?: Json
           phone_normalized?: string | null
           recording_url?: string | null

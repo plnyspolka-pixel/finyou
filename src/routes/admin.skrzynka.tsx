@@ -41,6 +41,25 @@ function SkrzynkaPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
   const qc = useQueryClient();
+
+  // Draft z „Wyślij do inwestorów" (sessionStorage) — wcześniej obsługiwany
+  // tylko w panelu pośrednika; w panelu admina draft po nawigacji przepadał.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("inbox:draft");
+      if (raw) {
+        const d = JSON.parse(raw);
+        setComposeInitial({
+          to: d.to ?? "",
+          subject: d.subject ?? "",
+          body: d.body ?? "",
+          loanApplicationId: d.loanApplicationId ?? null,
+        });
+        setComposeOpen(true);
+        sessionStorage.removeItem("inbox:draft");
+      }
+    } catch {}
+  }, []);
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
     mutationFn: (id: string) => refetchBodyFn({ data: { id } }),

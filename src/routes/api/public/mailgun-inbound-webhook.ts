@@ -11,6 +11,7 @@ import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { shouldSkipAutoReply } from "@/lib/email-guard.server";
+import { tryHandleInvestorInbound } from "@/lib/investor-email-mapping.server";
 
 function verifyMailgun(timestamp: string, token: string, signature: string): boolean {
   const key = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
@@ -52,6 +53,49 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
         const references = String(form.get("References") ?? "") || null;
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
+
+        // === ODPOWIEDŹ INWESTORA / INSTYTUCJI NA OFERTĘ ===
+        // Mapowana do wniosku/inwestora — bez tworzenia leada i auto-odpowiedzi.
+        {
+          const recipients = [
+            String(form.get("recipient") ?? ""),
+            String(form.get("To") ?? form.get("to") ?? ""),
+            String(form.get("Cc") ?? form.get("cc") ?? ""),
+          ];
+          const { data: inv } = await supabaseAdmin
+            .from("investors").select("id").ilike("email", fromEmail).maybeSingle();
+          const hasLaTag = recipients.some((r) => r && /\+la-?[0-9a-f]{32}@/i.test(r));
+          if (inv || hasLaTag) {
+            // Załączniki inwestora (inline z multipart) — trwały upload.
+            const invStored: any[] = [];
+            const invAttCount = parseInt(String(form.get("attachment-count") ?? "0"), 10);
+            for (let i = 1; i <= invAttCount; i++) {
+              const file = form.get(`attachment-${i}`);
+              if (file && typeof (file as any).arrayBuffer === "function") {
+                const f = file as File;
+                const buf = new Uint8Array(await f.arrayBuffer());
+                const safeName = f.name.replace(/[^\w.\-]+/g, "_");
+                const path = `leads/investor-${inv?.id ?? "unknown"}/${Date.now()}-${safeName}`;
+                const { error } = await supabaseAdmin.storage.from("documents")
+                  .upload(path, buf, { contentType: f.type || "application/octet-stream", upsert: false });
+                if (!error) invStored.push({ name: safeName, mime: f.type, size: buf.byteLength, path });
+              }
+            }
+            const handled = await tryHandleInvestorInbound({
+              fromEmail,
+              fromName: name,
+              subject,
+              text,
+              messageId: messageId || null,
+              inReplyTo,
+              references,
+              recipients,
+              provider: "mailgun",
+              attachments: invStored,
+            });
+            if (handled) return new Response("investor-reply", { status: 200 });
+          }
+        }
 
         // Match leada po emailu, w razie czego utwórz
         let leadId = await findLeadId({ email: fromEmail });
@@ -110,9 +154,10 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           subject,
           content: text,
           externalId: messageId || null,
+          threadExternalId: inReplyTo ?? messageId ?? null,
           email: fromEmail,
           status: "received",
-          metadata: { from_name: name, in_reply_to: inReplyTo, references },
+          metadata: { from_name: name, in_reply_to: inReplyTo, references, message_id_header: messageId || null },
         });
         if (stored.length && inboundLogId) {
           await supabaseAdmin.from("lead_communications").update({ attachments: stored as any }).eq("id", inboundLogId);

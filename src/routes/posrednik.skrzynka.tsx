@@ -55,7 +55,7 @@ export function SkrzynkaPosrednika() {
       const raw = sessionStorage.getItem("inbox:draft");
       if (raw) {
         const d = JSON.parse(raw);
-        setComposeInitial({ to: d.to ?? "", subject: d.subject ?? "", body: d.body ?? "" });
+        setComposeInitial({ to: d.to ?? "", subject: d.subject ?? "", body: d.body ?? "", loanApplicationId: d.loanApplicationId ?? null });
         setComposeOpen(true);
         sessionStorage.removeItem("inbox:draft");
       }

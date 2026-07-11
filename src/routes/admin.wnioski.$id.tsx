@@ -16,6 +16,7 @@ import { normalizeLoanStatus } from "@/lib/loan-status";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { KwContentSection } from "@/components/kw-content-section";
+import { InvestorCorrespondence } from "@/components/wniosek/investor-correspondence";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
@@ -220,7 +221,8 @@ function WniosekDetail() {
             </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="dystrybucja">
+        <TabsContent value="dystrybucja" className="space-y-4">
+          <InvestorCorrespondence applicationId={id} />
           {distributions.length === 0 ? <p className="text-sm text-muted-foreground">Wniosek nie został jeszcze rozesłany.</p> :
             <div className="space-y-2">{distributions.map((d) => (
               <Card key={d.id}><CardContent className="py-3 text-sm flex items-center justify-between">

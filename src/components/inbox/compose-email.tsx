@@ -15,6 +15,9 @@ export type ComposeEmailInitial = {
   subject?: string;
   body?: string;
   replyToCommunicationId?: string | null;
+  /** Wniosek, którego dotyczy wiadomość (np. oferta do inwestorów) —
+   *  odpowiedzi będą automatycznie mapowane z powrotem do wniosku. */
+  loanApplicationId?: string | null;
 };
 
 export function ComposeEmailDialog({
@@ -49,6 +52,7 @@ export function ComposeEmailDialog({
           subject: subject.trim(),
           body,
           replyToCommunicationId: initial?.replyToCommunicationId ?? null,
+          loanApplicationId: initial?.loanApplicationId ?? null,
         },
       }),
     onSuccess: () => {

@@ -46,7 +46,7 @@ export const sendMessengerReply = createServerFn({ method: "POST" })
 
     await logLeadCommunication({
       leadId: data.leadId,
-      channel: "messenger",
+      channel: platform,
       direction: "outbound",
       content: data.body,
       externalId: send.messageId ?? null,
@@ -62,4 +62,35 @@ export const sendMessengerReply = createServerFn({ method: "POST" })
 
     if (!send.ok) throw new Error(send.error ?? "send_failed");
     return { ok: true, messageId: send.messageId };
+  });
+
+/**
+ * Podpisane URL-e do załączników z DM (bucket `documents` jest prywatny —
+ * bez signed URL podgląd/pobranie w skrzynce zwracał 404).
+ * Dostęp: administrator lub operator (ta sama para ról co odpowiadanie).
+ */
+export const getLeadAttachmentUrls = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      paths: z.array(z.string().min(1).max(500)).min(1).max(50),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "administrator" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operator" }),
+    ]);
+    if (!isAdmin && !isOperator) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const urls: Record<string, string> = {};
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("documents")
+      .createSignedUrls(data.paths, 3600);
+    if (error) throw error;
+    for (const s of signed ?? []) {
+      if (s.signedUrl && s.path) urls[s.path] = s.signedUrl;
+    }
+    return { urls };
   });

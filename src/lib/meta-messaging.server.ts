@@ -28,9 +28,57 @@ async function findOrCreateLeadByPsid(opts: {
         ? { messenger_psid: opts.senderId }
         : { instagram_igsid: opts.senderId });
       await supabaseAdmin.from("leads").update(patch).eq("id", id);
+      // Best-effort: imię/nazwisko z profilu Graph — żeby skrzynka nie
+      // pokazywała „Nieznany klient" dla każdego DM-a.
+      void enrichLeadNameFromGraph(id, opts.senderId, opts.platform).catch(() => {});
     }
     return id;
   });
+}
+
+/** Pobiera first_name/last_name nadawcy z Graph API i uzupełnia lead (jeśli puste). */
+async function enrichLeadNameFromGraph(
+  leadId: string,
+  senderId: string,
+  platform: "messenger" | "instagram",
+): Promise<void> {
+  const token =
+    (platform === "instagram" ? process.env.META_IG_PAGE_ACCESS_TOKEN : undefined) ??
+    process.env.META_PAGE_ACCESS_TOKEN ??
+    process.env.META_ACCESS_TOKEN;
+  if (!token) return;
+  const fields = platform === "instagram" ? "name,username" : "first_name,last_name";
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(senderId)}?fields=${fields}&access_token=${encodeURIComponent(token)}`,
+  );
+  if (!res.ok) return;
+  const p: any = await res.json().catch(() => null);
+  if (!p) return;
+  const first = p.first_name ?? (p.name ? String(p.name).split(/\s+/)[0] : null) ?? p.username ?? null;
+  const last = p.last_name ?? (p.name ? String(p.name).split(/\s+/).slice(1).join(" ") || null : null);
+  if (!first && !last) return;
+  const { data: lead } = await supabaseAdmin
+    .from("leads").select("first_name, last_name").eq("id", leadId).maybeSingle();
+  const patch: { first_name?: string; last_name?: string } = {};
+  if (first && !lead?.first_name) patch.first_name = first;
+  if (last && !lead?.last_name) patch.last_name = last;
+  if (Object.keys(patch).length > 0) {
+    await supabaseAdmin.from("leads").update(patch).eq("id", leadId);
+  }
+}
+
+/** Czy zdarzenie o tym external_id już przetworzyliśmy? (Meta ponawia webhooki
+ *  po timeout/5xx — bez tej blokady klient dostawał zdublowane odpowiedzi bota.) */
+async function alreadyProcessed(externalId: string | null | undefined): Promise<boolean> {
+  if (!externalId) return false;
+  const { data } = await supabaseAdmin
+    .from("lead_communications")
+    .select("id")
+    .eq("external_id", externalId)
+    .eq("direction", "inbound")
+    .limit(1)
+    .maybeSingle();
+  return !!data?.id;
 }
 
 /**
@@ -69,10 +117,14 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
   const msg = ev.message;
   if (!senderId || !msg || msg.is_echo) return;
 
+  // Idempotencja: Meta ponawia dostarczenie webhooka, gdy nie zdążymy z 200.
+  if (await alreadyProcessed(msg.mid)) return;
+
   const leadId = await findOrCreateLeadByPsid({ senderId, platform });
   if (!leadId) return;
 
-  // 1) Załączniki
+  // 1) Załączniki — pobieramy bajty z fbcdn i trwale hostujemy w Storage
+  //    (URL-e fbcdn wygasają). MIME bierzemy z nagłówka odpowiedzi.
   const stored: any[] = [];
   for (const att of msg.attachments ?? []) {
     const url = att.payload?.url;
@@ -81,9 +133,9 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
       leadId,
       url,
       filename: att.payload?.title ?? undefined,
-      mime: att.type === "image" ? "image/jpeg" : undefined,
     });
     if (s) stored.push({ ...s, source_type: att.type });
+    else console.error("[messenger] attachment download failed", { leadId, type: att.type });
   }
 
   const userText = (msg.text ?? "").trim();
@@ -91,19 +143,19 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     ? stored.map((a) => `- ${a.source_type ?? "file"}: ${a.name}`).join("\n")
     : null;
 
-  // 2) Log inbound
+  // 2) Log inbound — załączniki zapisane od razu przy insercie (wcześniej był
+  //    kruchy UPDATE po external_id, który przy pustym `mid` psuł cudze wiersze).
   await logLeadCommunication({
     leadId,
-    channel: platform === "messenger" ? "messenger" : "messenger",
+    channel: platform,
     direction: "inbound",
     content: userText || (attachmentsSummary ? "[załącznik]" : ""),
     externalId: msg.mid ?? null,
+    attachments: stored.length ? stored : null,
     metadata: { platform, sender_id: senderId },
     status: "received",
   });
   if (stored.length) {
-    await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
-      .eq("external_id", msg.mid ?? "");
     try {
       await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
     } catch (e) { console.error("[messenger] attach to client docs", e); }
@@ -132,7 +184,7 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
 
   await logLeadCommunication({
     leadId,
-    channel: "messenger",
+    channel: platform,
     direction: "outbound",
     content: replyText,
     externalId: send.messageId ?? null,
@@ -156,6 +208,8 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
 
   if (!commentId || !fromId) return;
   if (pageId && fromId === pageId) return;
+  // Idempotencja przy ponowionych dostarczeniach webhooka.
+  if (await alreadyProcessed(commentId)) return;
 
   const leadId = await findOrCreateLeadByPsid({ senderId: fromId, platform: "messenger" });
   if (!leadId) return;

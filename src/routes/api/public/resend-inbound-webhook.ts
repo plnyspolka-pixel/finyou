@@ -12,6 +12,7 @@ import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { shouldSkipAutoReply, normalizeHeaders } from "@/lib/email-guard.server";
+import { tryHandleInvestorInbound } from "@/lib/investor-email-mapping.server";
 
 // Svix signature: header `svix-signature` = "v1,<base64sig> v1,<base64sig> ..."
 // signed payload: `${svix-id}.${svix-timestamp}.${body}` with HMAC-SHA256 key = base64-decoded secret after `whsec_`.
@@ -112,6 +113,60 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
 
+        // === ODPOWIEDŹ INWESTORA / INSTYTUCJI NA OFERTĘ ===
+        // Mapujemy do wniosku i inwestora, pobieramy załączniki, NIE tworzymy
+        // leada pożyczkowego i NIE odpowiadamy klienckim agentem AI.
+        {
+          const recipients: Array<string | null | undefined> = [
+            pickFirstAddr(data.to ?? data.To),
+            ...(Array.isArray(data.to) ? data.to.map((t: any) => (typeof t === "string" ? t : t?.email)) : []),
+            ...(Array.isArray(data.cc) ? data.cc.map((t: any) => (typeof t === "string" ? t : t?.email)) : []),
+            typeof data.delivered_to === "string" ? data.delivered_to : null,
+          ];
+          const { data: inv } = await supabaseAdmin
+            .from("investors").select("id").ilike("email", fromEmail).maybeSingle();
+          const hasLaTag = recipients.some((r) => r && /\+la-?[0-9a-f]{32}@/i.test(String(r)));
+
+          if (inv || hasLaTag) {
+            // Załączniki inwestora też pobieramy trwale do Storage.
+            const investorAttachments: any[] = [];
+            if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+              try {
+                const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, { headers: resendHeaders });
+                if (r.ok) {
+                  const list = await r.json();
+                  const items: any[] = Array.isArray(list?.data) ? list.data : [];
+                  for (const a of items) {
+                    if (!a?.download_url) continue;
+                    const s = await downloadAndStore({
+                      leadId: `investor-${inv?.id ?? "unknown"}`,
+                      url: a.download_url,
+                      filename: a?.filename ?? `file-${a?.id ?? Date.now()}`,
+                      mime: a?.content_type ?? undefined,
+                    });
+                    if (s) investorAttachments.push(s);
+                  }
+                }
+              } catch (e) { console.error("[resend-inbound] investor attachments error", e); }
+            }
+            const handled = await tryHandleInvestorInbound({
+              fromEmail,
+              fromName: name,
+              subject,
+              text: text || (html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 8000) : ""),
+              html,
+              messageId: messageId || null,
+              inReplyTo,
+              references,
+              recipients,
+              provider: "resend",
+              emailId: emailId || null,
+              attachments: investorAttachments,
+            });
+            if (handled) return new Response("investor-reply", { status: 200 });
+          }
+        }
+
         let leadId = await findLeadId({ email: fromEmail });
         if (!leadId) {
           const parts = (name ?? "").trim().split(/\s+/);
@@ -158,12 +213,14 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           subject,
           content: finalText,
           externalId: messageId || null,
+          threadExternalId: inReplyTo ?? messageId ?? null,
           email: fromEmail,
           status: "received",
           metadata: {
             from_name: name,
             in_reply_to: inReplyTo,
             references,
+            message_id_header: messageId || null,
             provider: "resend",
             email_id: emailId || null,
             html: html ?? null,
@@ -226,10 +283,11 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
           subject: replySubject,
           content: replyText,
           externalId: send.id ?? null,
+          threadExternalId: inReplyTo ?? messageId ?? null,
           email: fromEmail,
           status: send.ok ? "sent" : "error",
           errorMessage: send.ok ? null : send.error,
-          metadata: { tool_calls: agent.toolCalls, provider: "resend" },
+          metadata: { tool_calls: agent.toolCalls, provider: "resend", in_reply_to: messageId || null },
           agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
         });
 
