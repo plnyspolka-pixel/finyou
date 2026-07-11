@@ -549,13 +549,14 @@ function PropertyDocsCard({ userId, kind, title, icon, description }: {
     try {
       for (const file of Array.from(files)) {
         if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name}: za duży (max 20 MB)`); continue; }
-        const safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-        const path = `klient/${userId}/${loanId}/${kind}-${Date.now()}-${safe}`;
-        const up = await supabase.storage.from("documents").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
-        if (up.error) { toast.error(`${file.name}: ${up.error.message}`); continue; }
-        await supabase.from("documents").insert({
-          loan_application_id: loanId, document_type: kind, file_name: file.name, file_path: path, uploaded_by: userId,
-        });
+        try {
+          const res = await uploadFile(file, { context: "document", applicationId: loanId, docType: kind });
+          await supabase.from("documents").insert({
+            loan_application_id: loanId, document_type: kind, file_name: file.name, file_path: res.path, uploaded_by: userId,
+          });
+        } catch (e: any) {
+          toast.error(`${file.name}: ${e?.message ?? "błąd"}`);
+        }
       }
       toast.success("Wgrano", { id: t });
       setRefresh((x) => x + 1);
@@ -565,7 +566,7 @@ function PropertyDocsCard({ userId, kind, title, icon, description }: {
 
   const remove = async (d: { id: string; file_path: string }) => {
     if (!confirm("Usunąć ten plik?")) return;
-    await supabase.storage.from("documents").remove([d.file_path]);
+    await deleteStoragePath(d.file_path);
     await supabase.from("documents").delete().eq("id", d.id);
     setRefresh((x) => x + 1);
   };
