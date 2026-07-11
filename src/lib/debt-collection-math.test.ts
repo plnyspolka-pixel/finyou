@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { calculateDebt, maxDelayInterestRate } from "./debt-collection-math";
+import {
+  calculateDebt,
+  maxDelayInterestRate,
+  DEFAULT_NBP_REFERENCE_RATE,
+  DEFAULT_MAX_DELAY_RATE,
+} from "./debt-collection-math";
 
 // Struktura: kwota na rękę 100 000 + prowizja Finance You 10 000 (część
 // oprocentowana = 110 000) + prowizja inwestora 20 000 (bez odsetek).
@@ -18,6 +23,67 @@ const base = {
 describe("maxDelayInterestRate", () => {
   it("liczy 2×(NBP+5,5)", () => {
     expect(maxDelayInterestRate(5.75)).toBe(22.5);
+  });
+
+  it("domyślny limit wynika ze wspólnej stopy referencyjnej NBP", () => {
+    expect(DEFAULT_MAX_DELAY_RATE).toBe(maxDelayInterestRate(DEFAULT_NBP_REFERENCE_RATE));
+  });
+});
+
+describe("calculateDebt — limit odsetek maksymalnych faktycznie ogranicza", () => {
+  it("umowna stopa za opóźnienie wyższa niż maksymalna zostaje obcięta", () => {
+    const cap = maxDelayInterestRate(DEFAULT_NBP_REFERENCE_RATE); // 22,5%
+    const r = calculateDebt({
+      ...base,
+      penaltyAnnualRate: 40, // umowa „lichwiarska" — powyżej limitu
+      maxStatutoryRate: cap,
+      terminated: true,
+      terminationDate: "2025-07-01",
+      asOf: "2026-07-01",
+    });
+    expect(r.effectiveDelayRate).toBe(cap);
+    expect(r.penaltyCapped).toBe(true);
+    // Odsetki naliczone wg 22,5%, a nie 40%: ~110 000 × 22,5% ≈ 24 750 zł/rok.
+    expect(r.delayInterest).toBeGreaterThan(23_000);
+    expect(r.delayInterest).toBeLessThan(26_500);
+  });
+
+  it("umowna stopa poniżej limitu nie jest zmieniana", () => {
+    const r = calculateDebt({
+      ...base,
+      penaltyAnnualRate: 12,
+      maxStatutoryRate: DEFAULT_MAX_DELAY_RATE,
+      terminated: true,
+      terminationDate: "2025-07-01",
+      asOf: "2026-07-01",
+    });
+    expect(r.effectiveDelayRate).toBe(12);
+    expect(r.penaltyCapped).toBe(false);
+  });
+
+  it("regresja: podanie tej samej stopy w obu polach (stary błąd) nie ograniczało", () => {
+    // Wcześniej penaltyAnnualRate i maxStatutoryRate były zasilane tym samym
+    // polem umowy — min(x, x) = x, czyli limit był martwy. Ten test dokumentuje
+    // różnicę między starym a poprawnym wywołaniem.
+    const buggy = calculateDebt({
+      ...base,
+      penaltyAnnualRate: 40,
+      maxStatutoryRate: 40,
+      terminated: true,
+      terminationDate: "2025-07-01",
+      asOf: "2026-07-01",
+    });
+    const fixed = calculateDebt({
+      ...base,
+      penaltyAnnualRate: 40,
+      maxStatutoryRate: DEFAULT_MAX_DELAY_RATE,
+      terminated: true,
+      terminationDate: "2025-07-01",
+      asOf: "2026-07-01",
+    });
+    expect(buggy.effectiveDelayRate).toBe(40);
+    expect(fixed.effectiveDelayRate).toBe(DEFAULT_MAX_DELAY_RATE);
+    expect(fixed.delayInterest).toBeLessThan(buggy.delayInterest);
   });
 });
 

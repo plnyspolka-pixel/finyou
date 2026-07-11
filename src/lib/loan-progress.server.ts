@@ -184,8 +184,19 @@ export function computeNextReminder(opts: {
   return { nextAt: slot, stop: false };
 }
 
+// Statusy, w których automat przypomnień (telefon/mail/SMS) ma prawo działać.
+// UWAGA: po unifikacji statusów (migracja 20260709210000 + src/lib/loan-status.ts)
+// kanoniczne wartości to `nowy_lead`/`brak_kontaktu`/`kontakt`/`kompletowanie_danych`.
+// Starsze wartości zostawiamy dla bezpieczeństwa (gdyby jakiś wiersz się przecisnął) —
+// wcześniej lista zawierała WYŁĄCZNIE stare wartości, przez co po migracji
+// prawie żaden wniosek nie kwalifikował się do followupów.
 export const ELIGIBLE_STATUSES_FOR_REMINDERS = [
+  // kanoniczne (aktywne przed skompletowaniem wniosku):
   "nowy_lead",
+  "brak_kontaktu",
+  "kontakt",
+  "kompletowanie_danych",
+  // legacy (sprzed unifikacji):
   "w_trakcie_uzupelniania",
   "braki_w_dokumentach",
   "do_kontaktu",

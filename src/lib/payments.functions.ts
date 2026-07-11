@@ -9,6 +9,22 @@ export const TPAY_PLANS = {
 
 export type TpayPlanId = keyof typeof TPAY_PLANS;
 
+// Jedno źródło prawdy: produkt płatności → investors.subscription_plan (enum DB).
+// Tier rośnie razem z ceną i długością dostępu:
+//   1 dzień  (99 zł)   → podstawowy
+//   1 miesiąc (399 zł) → rozszerzony
+//   1 rok  (2999 zł)   → profesjonalny
+// Używane przez oba webhooki płatności (Stripe i Tpay) — nie edytuj mapowania
+// tylko w jednym miejscu.
+export const PLAN_TO_SUBSCRIPTION: Record<
+  TpayPlanId,
+  "podstawowy" | "rozszerzony" | "profesjonalny"
+> = {
+  investor_access_1d: "podstawowy",
+  investor_access_1m: "rozszerzony",
+  investor_access_1y: "profesjonalny",
+};
+
 export type BuyerType = "person" | "company";
 
 export interface BuyerInput {

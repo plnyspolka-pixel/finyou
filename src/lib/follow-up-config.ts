@@ -18,6 +18,7 @@ export const LEAD_CONTACT_WINDOW = {
 
 /** Statusy terminalne — natychmiast przerywają sekwencję follow-up leada. */
 export const LEAD_TERMINAL_STATUSES = [
+  "zamkniete", // kanoniczny status po unifikacji (loan-status.ts)
   "zamkniety",
   "closed",
   "won",
@@ -30,7 +31,7 @@ export const LEAD_TERMINAL_STATUSES = [
   "blacklist",
 ] as const;
 
-export type FollowUpChannel = "email" | "sms" | "call";
+export type FollowUpChannel = "email" | "sms" | "call" | "messenger";
 
 export type FollowUpEngine = {
   key: string;
@@ -57,15 +58,77 @@ export type FollowUpEngine = {
 export const FOLLOW_UP_ENGINES: FollowUpEngine[] = [
   {
     key: "lead-nurture",
-    name: "Sekwencja Ania (nurture leada)",
-    purpose: "Dociska leada z niedokończonym wnioskiem aż do złożenia lub statusu terminalnego.",
-    trigger: "Nowy lead / niedokończony wniosek",
+    name: "Sekwencja Ania (nurture leada bez wniosku)",
+    purpose:
+      "Dociska leada (np. z Meta), który NIE ma jeszcze wniosku — aż do złożenia wniosku lub statusu terminalnego. " +
+      "Gdy lead dostaje wniosek, sekwencja jest anulowana, a kontakt przejmują silniki wnioskowe.",
+    trigger: "Nowy lead z Meta (scheduleFollowUpsForLead)",
     cadence: "365 dni opadająco — codziennie w 1. m-cu, co 3 dni w 2.–3., tygodniowo w 4.–6., co 2 tyg. do końca roku",
     channels: ["email", "sms", "call"],
     window: `${LEAD_CONTACT_WINDOW.startHour}:00–${LEAD_CONTACT_WINDOW.endHour}:00, ${LEAD_CONTACT_WINDOW.days}`,
     table: "lead_follow_up_schedule",
-    tickEndpoint: "/api/public/hooks/follow-up-tick",
+    tickEndpoint: "/api/public/hooks/lead-follow-ups",
     manageHref: "/admin/klienci",
+  },
+  {
+    key: "loan-reminder-emails",
+    name: "Drip mailowy wniosku (120 szablonów, A/B)",
+    purpose: "Przypomina klientowi z otwartym wnioskiem o dokończeniu — mail 2×/dzień w fazie 1, potem co ~2 dni bez końca.",
+    trigger: "Wniosek w statusie aktywnym (nowy_lead / brak_kontaktu / kontakt / kompletowanie_danych)",
+    cadence: "Faza 1: 2 maile/dzień (8:00 i 20:00); Faza 2 (od 61. maila): co ~2 dni o 8:00, treści cyklują",
+    channels: ["email"],
+    window: "8:00 i 20:00, pon–sob",
+    table: "loan_reminder_email_sends",
+    tickEndpoint: "/api/public/hooks/loan-reminder-emails-tick",
+    manageHref: "/admin/przypomnienia",
+  },
+  {
+    key: "loan-reminder-calls",
+    name: "Telefony Ani (przypomnienia wnioskowe)",
+    purpose: "Ania dzwoni do klientów z niedokończonym wnioskiem wg wygasającej kadencji (nigdy nie milknie sama).",
+    trigger: "loan_applications.next_reminder_at <= teraz (zasiane automatycznie przy utworzeniu wniosku)",
+    cadence: "+5h, +8h, +24h, +48h, potem 3 dni / tydzień / 2 tyg. / 3 tyg. (steady state)",
+    channels: ["call"],
+    window: "8:00–22:00, pon–sob",
+    table: "call_queue",
+    tickEndpoint: "/api/public/hooks/loan-reminders",
+    manageHref: "/admin/przypomnienia",
+  },
+  {
+    key: "ania-callbacks",
+    name: "Oddzwonki Ani (nieodebrane)",
+    purpose: "Dodzwania się 2×/dzień do klientów, którzy nie odebrali / poczta głosowa / zajęte, plus SMS.",
+    trigger: "Ostatni telefon bez kontaktu",
+    cadence: "2 okna dziennie: 9:00–9:30 i 16:00–16:30",
+    channels: ["call", "sms"],
+    window: "9:00–9:30 i 16:00–16:30, pon–sob",
+    table: "call_queue",
+    tickEndpoint: "/api/public/hooks/ania-callbacks",
+    manageHref: "/admin/voicebot",
+  },
+  {
+    key: "messenger-nudges",
+    name: "Nudge Messenger/Instagram",
+    purpose: "Ania pinguje w DM leady, które ucichły po naszej ostatniej wiadomości.",
+    trigger: "Outbound bez odpowiedzi klienta",
+    cadence: "+2h, +6h, +24h, +3d, +7d, +14d, +21d, +30d → stop",
+    channels: ["messenger"],
+    window: "całodobowo (kanał czatowy)",
+    table: "lead_communications",
+    tickEndpoint: "/api/public/hooks/follow-up-tick",
+    manageHref: "/admin/messenger",
+  },
+  {
+    key: "saturday-sms",
+    name: "Sobotni SMS (miesięczny)",
+    purpose: "Raz w miesiącu, w sobotni poranek, SMS przypominający o otwartym wniosku.",
+    trigger: "Wniosek aktywny, ostatni SMS > ~28 dni temu",
+    cadence: "1×/miesiąc",
+    channels: ["sms"],
+    window: "sobota 8:00–11:00",
+    table: "loan_applications",
+    tickEndpoint: "/api/public/hooks/saturday-sms-reminders",
+    manageHref: "/admin/przypomnienia",
   },
 ];
 

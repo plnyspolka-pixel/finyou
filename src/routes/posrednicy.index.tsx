@@ -36,7 +36,7 @@ function PosrednicyLanding() {
         </Link>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm"><Link to="/logowanie">Zaloguj</Link></Button>
-          <Button asChild size="sm"><Link to="/posrednicy/rejestracja">Zostań partnerem</Link></Button>
+          <Button asChild size="sm"><Link to="/posrednicy/rejestracja" search={{ ref: "" }}>Zostań partnerem</Link></Button>
         </div>
       </header>
 
@@ -49,7 +49,7 @@ function PosrednicyLanding() {
             realnych zdarzeń gospodarczych. Rozliczaj się jako B2B lub w ramach działalności nierejestrowanej.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Button asChild size="lg"><Link to="/posrednicy/rejestracja">Dołącz do programu <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+            <Button asChild size="lg"><Link to="/posrednicy/rejestracja" search={{ ref: "" }}>Dołącz do programu <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
           </div>
         </section>
 
@@ -100,7 +100,7 @@ function PosrednicyLanding() {
                   <p className="text-sm text-muted-foreground">Program nie jest systemem zarabiania na zapraszaniu osób. Prowizja powstaje wyłącznie z realnego zdarzenia gospodarczego.</p>
                 </div>
               </div>
-              <Button asChild><Link to="/posrednicy/rejestracja">Zostań partnerem <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+              <Button asChild><Link to="/posrednicy/rejestracja" search={{ ref: "" }}>Zostań partnerem <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
             </CardContent>
           </Card>
         </section>

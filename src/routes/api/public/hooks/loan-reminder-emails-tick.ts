@@ -2,7 +2,7 @@
 // i wywołuje batch tylko jeśli aktualna minuta pasuje do wyrażenia cron.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { requireCronSecret } from "@/lib/cron-auth.server";
+import { requireCronAuth } from "@/lib/cron-auth.server";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -12,12 +12,12 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronAuth(request);
         if (unauth) return unauth;
         const s = admin();
         const { data: cfg } = await s
           .from("reminder_email_schedule")
-          .select("enabled, cron_expression, timezone, last_tick_at, sample_sent_at")
+          .select("enabled, cron_expression, timezone, last_tick_at, last_run_at, sample_sent_at")
           .eq("id", 1)
           .maybeSingle();
 
@@ -81,11 +81,26 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails-tic
           return Response.json({ ok: true, skipped: "not_due" });
         }
 
+        // Optymistyczne przejęcie batcha: przy równoległych tickach tylko jeden
+        // zdoła ustawić last_run_at (warunek na poprzedniej wartości) — przegrany
+        // kończy się no-opem, bez podwójnej wysyłki i podwójnej pracy.
+        let claim = s
+          .from("reminder_email_schedule")
+          .update({ last_run_at: new Date().toISOString() })
+          .eq("id", 1);
+        claim = (cfg as any).last_run_at
+          ? claim.eq("last_run_at", (cfg as any).last_run_at)
+          : claim.is("last_run_at", null);
+        const { data: claimed } = await claim.select("id");
+        if (!claimed || claimed.length === 0) {
+          return Response.json({ ok: true, skipped: "claimed_by_other_tick" });
+        }
+
         const { runDailyReminderEmailsBatch } = await import("@/lib/loan-reminder-emails.server");
         const result = await runDailyReminderEmailsBatch({ force: false });
         await s
           .from("reminder_email_schedule")
-          .update({ last_run_at: new Date().toISOString(), last_result: result as any })
+          .update({ last_result: result as any })
           .eq("id", 1);
 
         return Response.json({ ok: true, ran: true, result });

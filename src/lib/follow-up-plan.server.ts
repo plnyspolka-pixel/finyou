@@ -421,6 +421,13 @@ export async function processDueFollowUps(): Promise<{ processed: number; sent: 
       await cancelFollowUpsForLead(row.lead_id, `terminal status: ${lead.status}`);
       skipped++; continue;
     }
+    // Lead ma już wniosek pożyczkowy → kontakt prowadzą silniki wnioskowe
+    // (drip mailowy 120 szablonów + telefony Ani + sobotni SMS). Anulujemy
+    // sekwencję nurture, żeby klient nie dostawał dwóch równoległych dripów.
+    if (lead.loan_application_id) {
+      await cancelFollowUpsForLead(row.lead_id, "loan application engines take over");
+      skipped++; continue;
+    }
     if (lead.application_data?.followup_paused) {
       skipped++; continue;
     }

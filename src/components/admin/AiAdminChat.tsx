@@ -267,7 +267,7 @@ export function AiAdminChat() {
           {view === "chat" ? "Historia" : "Czat"}
         </Button>
         <Button size="icon" variant="ghost" asChild>
-          <Link to="/admin/ai-administrator"><Settings className="h-4 w-4" /></Link>
+          <Link to="/admin/ustawienia"><Settings className="h-4 w-4" /></Link>
         </Button>
         <Button size="icon" variant="ghost" onClick={() => setOpen(false)} aria-label="Zwiń">
           <ChevronUp className="h-4 w-4" />

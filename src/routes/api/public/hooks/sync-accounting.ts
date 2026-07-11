@@ -2,8 +2,12 @@
 // Uruchamiany co godzinę przez pg_cron. Bez klikania w UI.
 import { createFileRoute } from "@tanstack/react-router";
 import { syncAllAccounting } from "@/lib/accounting/sync-core.server";
+import { requireCronAuth } from "@/lib/cron-auth.server";
 
-async function run() {
+// Wymaga nagłówka `x-cron-secret` = CRON_SECRET (server-only).
+async function run({ request }: { request: Request }) {
+  const unauth = await requireCronAuth(request);
+  if (unauth) return unauth;
   try {
     const out = await syncAllAccounting();
     return new Response(JSON.stringify({ ok: true, ...out }), { headers: { "Content-Type": "application/json" } });

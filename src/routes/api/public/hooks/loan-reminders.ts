@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "@/lib/loan-progress.server";
 import { placeReminderCall } from "@/lib/loan-reminders.functions";
-import { requireCronSecret } from "@/lib/cron-auth.server";
+import { requireCronAuth } from "@/lib/cron-auth.server";
 
 // Publiczny webhook dla pg_cron — uruchamia przypomnienia gotowe do wysłania.
 // Wymaga nagłówka `x-cron-secret` = CRON_SECRET (server-only).
@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/public/hooks/loan-reminders")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronAuth(request);
         if (unauth) return unauth;
         // Quiet hours: dzwonimy tylko 8:00–22:00 czasu Warszawa, poza niedzielami.
         const parts = new Intl.DateTimeFormat("en-GB", {

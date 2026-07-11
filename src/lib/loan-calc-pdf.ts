@@ -158,7 +158,7 @@ function buildLines(p: LoanCalcPayload): string[] {
 // ─────────────────────────────────────────────────────────────────────
 
 /** Buduje bajty PDF z wbudowanym payloadem. */
-export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
+export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array<ArrayBuffer> {
   const lines = buildLines(payload);
 
   // Strona A4 (punkty), font Courier 9pt.

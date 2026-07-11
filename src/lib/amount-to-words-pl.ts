@@ -26,8 +26,12 @@ function pluralPLN(n: number, forms: [string, string, string]): string {
 
 export function amountToWordsPLN(amount: number): string {
   if (!isFinite(amount) || amount < 0) return "";
-  const zl = Math.floor(amount);
-  const gr = Math.round((amount - zl) * 100);
+  // Najpierw zaokrąglamy CAŁĄ kwotę do groszy (liczba całkowita), a dopiero
+  // potem dzielimy na zł/gr — dzięki temu gr zawsze mieści się w 0–99
+  // (np. 1,999 → 200 gr → 2 zł 00/100, a nie „1 zł 100/100").
+  const totalGrosze = Math.round(amount * 100);
+  const zl = Math.floor(totalGrosze / 100);
+  const gr = totalGrosze % 100;
 
   const groups: number[] = [];
   let x = zl;

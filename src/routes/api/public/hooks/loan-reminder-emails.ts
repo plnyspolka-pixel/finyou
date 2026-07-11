@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runDailyReminderEmailsBatch } from "@/lib/loan-reminder-emails.server";
-import { requireCronSecret } from "@/lib/cron-auth.server";
+import { requireCronAuth } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/loan-reminder-emails")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronAuth(request);
         if (unauth) return unauth;
         const url = new URL(request.url);
         const force = url.searchParams.get("force") === "1";

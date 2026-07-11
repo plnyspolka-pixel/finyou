@@ -1,10 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runDailyBlogTick } from "@/lib/blog-autopilot.server";
+import { requireCronAuth } from "@/lib/cron-auth.server";
 
+// Publiczny webhook dla pg_cron — wymaga nagłówka `x-cron-secret` = CRON_SECRET.
 export const Route = createFileRoute("/api/public/hooks/daily-blog-tick")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauth = await requireCronAuth(request);
+        if (unauth) return unauth;
         try {
           const url = new URL(request.url);
           const force = url.searchParams.get("force") === "1";
@@ -22,6 +26,8 @@ export const Route = createFileRoute("/api/public/hooks/daily-blog-tick")({
         }
       },
       GET: async ({ request }) => {
+        const unauth = await requireCronAuth(request);
+        if (unauth) return unauth;
         const url = new URL(request.url);
         if (url.searchParams.get("run") !== "1") {
           return new Response(

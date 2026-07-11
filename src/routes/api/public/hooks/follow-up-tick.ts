@@ -7,7 +7,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { logLeadCommunication } from "@/lib/lead-comms.server";
-import { requireCronSecret } from "@/lib/cron-auth.server";
+import { requireCronAuth } from "@/lib/cron-auth.server";
+import { LEAD_TERMINAL_STATUSES } from "@/lib/follow-up-config";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
 const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
@@ -16,16 +17,14 @@ const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // initial + 8 follow-up
 // (loan-reminder-emails, 120 szablonów). Tu tylko czaty (Messenger/Instagram).
 const SUPPORTED_CHANNELS = ["messenger", "instagram"] as const;
 type Channel = (typeof SUPPORTED_CHANNELS)[number];
-const TERMINAL_STATUSES = new Set([
-  "zamkniety", "closed", "won", "lost", "odrzucony", "rezygnacja",
-  "wyplacony", "spłacony", "do_not_contact", "blacklist",
-]);
+// Wspólna lista statusów terminalnych (zawiera kanoniczne `zamkniete`).
+const TERMINAL_STATUSES = new Set<string>(LEAD_TERMINAL_STATUSES);
 
 export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronAuth(request);
         if (unauth) return unauth;
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();

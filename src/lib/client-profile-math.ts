@@ -48,9 +48,18 @@ export function maskPesel(p?: string): string {
 
 export interface ScheduleInput extends OfferData {}
 
+/**
+ * Wynik harmonogramu z jawnym ostrzeżeniem, gdy maksymalna rata klienta nie
+ * pokrywa nawet miesięcznych odsetek (należności narastają do raty balonowej).
+ */
+export type DirectorScheduleData = ScheduleData & {
+  /** Ustawione, gdy maxPayment < miesięczne odsetki — rata nie pokrywa odsetek. */
+  warning?: string;
+};
+
 export function buildDirectorSchedule(
   offer: ScheduleInput,
-): ScheduleData | null {
+): DirectorScheduleData | null {
   const net = Number(offer.netAmountToClient ?? 0);
   const commission = Number(offer.creditedCommission ?? 0);
   const maxPayment = Number(offer.maxMonthlyPaymentByClient ?? 0);
@@ -58,8 +67,9 @@ export function buildDirectorSchedule(
   const payoutDate = offer.payoutDate;
   const annualInterest = Number(offer.annualInterestPercent ?? 0);
 
-  // walidacja
+  // walidacja — odrzucamy brakujące ORAZ ujemne wartości wejściowe
   if (!net || !maxPayment || !months || !payoutDate) return null;
+  if (net < 0 || commission < 0 || maxPayment < 0 || months < 0 || annualInterest < 0) return null;
 
   const nominalLoanAmount = net + commission;
 
@@ -84,6 +94,15 @@ export function buildDirectorSchedule(
   }
   const monthlyRiskFeePercent =
     nominalLoanAmount > 0 ? (monthlyRiskFeeAmount / nominalLoanAmount) * 100 : 0;
+
+  // JAWNE ostrzeżenie zamiast cichego balonowania: rata klienta nie pokrywa
+  // nawet miesięcznych odsetek — niedopłata narasta co miesiąc do balonu.
+  let warning: string | undefined;
+  if (maxPayment < monthlyInterestAmount) {
+    warning =
+      "Rata nie pokrywa odsetek — saldo rośnie. Maksymalna rata klienta jest niższa niż miesięczne odsetki; niedopłata narasta co miesiąc i zostanie rozliczona w racie balonowej.";
+    warnings.push(warning);
+  }
 
   // info techniczne
   if (maxPayment > expectedMonthly) {
@@ -172,6 +191,7 @@ export function buildDirectorSchedule(
     annualizedInvestorProfitPercent,
     warnings,
     infos,
+    warning,
   };
 }
 

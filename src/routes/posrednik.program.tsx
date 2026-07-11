@@ -37,7 +37,7 @@ function ProgramDashboard() {
         <h1 className="text-2xl font-bold flex items-center gap-2"><Network className="h-6 w-6" /> Program pośredników</h1>
         <Card>
           <CardHeader><CardTitle>Nie jesteś jeszcze partnerem</CardTitle><CardDescription>Dołącz do sieci partnerskiej Finance You, aby naliczać prowizje sieciowe.</CardDescription></CardHeader>
-          <CardContent><Button asChild><Link to="/posrednicy/rejestracja">Zarejestruj się jako partner</Link></Button></CardContent>
+          <CardContent><Button asChild><Link to="/posrednicy/rejestracja" search={{ ref: "" }}>Zarejestruj się jako partner</Link></Button></CardContent>
         </Card>
         <ComplianceNotice />
       </div>

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TPAY_PLANS, type TpayPlanId } from "@/lib/payments.functions";
+import { PLAN_TO_SUBSCRIPTION, TPAY_PLANS, type TpayPlanId } from "@/lib/payments.functions";
 
 // Tpay sends notifications as application/x-www-form-urlencoded (classic
 // format) for transactions created via Open API. We verify by re-fetching
@@ -45,6 +45,20 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
           }
 
           const planCfg = TPAY_PLANS[plan];
+
+          // Weryfikacja kwoty: nie przyznajemy subskrypcji, jeśli zapłacona
+          // kwota nie odpowiada cenie planu (Tpay podaje kwotę w PLN).
+          const paidAmount = Number(tx.amount);
+          if (!Number.isFinite(paidAmount) || paidAmount !== planCfg.amount) {
+            console.error("[tpay-webhook] amount mismatch — subscription NOT granted", {
+              trId: String(trId),
+              plan,
+              paid: tx.amount,
+              expected: planCfg.amount,
+            });
+            return new Response("TRUE", { status: 200 });
+          }
+
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
           // Find investor row
@@ -62,16 +76,11 @@ export const Route = createFileRoute("/api/public/payments/tpay-webhook")({
           const newUntil = new Date(baseDate);
           newUntil.setDate(newUntil.getDate() + planCfg.days);
 
-          // Map Tpay plan → investors.subscription_plan enum
-          const planEnumMap: Record<TpayPlanId, "podstawowy" | "profesjonalny" | "rozszerzony"> = {
-            investor_access_1d: "podstawowy",
-            investor_access_1m: "profesjonalny",
-            investor_access_1y: "rozszerzony",
-          };
-
           const payload = {
             user_id: userId,
-            subscription_plan: planEnumMap[plan],
+            // Wspólne mapowanie plan → investors.subscription_plan (to samo,
+            // którego używa webhook Stripe) — patrz PLAN_TO_SUBSCRIPTION.
+            subscription_plan: PLAN_TO_SUBSCRIPTION[plan],
             subscription_status: "aktywny" as const,
             subscription_active_until: newUntil.toISOString(),
             updated_at: new Date().toISOString(),

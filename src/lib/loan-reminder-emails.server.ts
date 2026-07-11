@@ -27,6 +27,17 @@ function warsawDateKey(now: Date = new Date()): string {
   }).formatToParts(now);
   return `${p.find(x=>x.type==="year")?.value}-${p.find(x=>x.type==="month")?.value}-${p.find(x=>x.type==="day")?.value}`;
 }
+/** Aktualne przesunięcie strefy Europe/Warsaw względem UTC (np. "+01:00"/"+02:00").
+ *  Wcześniej offset był zaszyty na sztywno jako +02:00, co zimą (CET, +01:00)
+ *  przesuwało granicę doby o godzinę i psuło dzienny limit wysyłek. */
+function warsawUtcOffset(now: Date = new Date()): string {
+  const p = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Warsaw", timeZoneName: "longOffset",
+  }).formatToParts(now);
+  const raw = p.find((x) => x.type === "timeZoneName")?.value ?? "GMT+02:00";
+  const m = raw.match(/([+-]\d{2}:\d{2})/);
+  return m ? m[1] : "+02:00";
+}
 
 function publicBaseUrl(): string {
   // Pierwszeństwo dla pełnej domeny produkcyjnej
@@ -145,7 +156,7 @@ export async function runDailyReminderEmailsBatch(opts?: { force?: boolean; only
 
   const s = admin();
   const dayKey = warsawDateKey(now);
-  const dayStartIso = new Date(`${dayKey}T00:00:00+02:00`).toISOString();
+  const dayStartIso = new Date(`${dayKey}T00:00:00${warsawUtcOffset(now)}`).toISOString();
 
   // Advisory lock w aplikacji (sesja Supabase): zapobiega równoległym batchom w obrębie jednego node'a.
   // Twardą gwarancją braku duplikatów jest unique constraint (loan_application_id, variant_id).

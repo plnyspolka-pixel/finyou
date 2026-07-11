@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins, Printer, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN } from "@/lib/labels";
+import { computeLoanSchedule } from "@/lib/loan-math";
+import { DEFAULT_NBP_REFERENCE_RATE } from "@/lib/debt-collection-math";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
@@ -166,7 +168,9 @@ export function LoanCalculator({
     queryFn: () => fetchRates(),
     staleTime: 12 * 60 * 60 * 1000,
   });
-  const liveRefRate = ratesQ.data?.referenceRate ?? 3.75;
+  // Fallback (do czasu pobrania stopy z NBP) — JEDNA wspólna wartość dla całej
+  // aplikacji, spójna z modułem windykacji (debt-collection-math).
+  const liveRefRate = ratesQ.data?.referenceRate ?? DEFAULT_NBP_REFERENCE_RATE;
 
   const [months, setMonths] = useState(initialMonths);
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
@@ -239,37 +243,23 @@ export function LoanCalculator({
 
 
 
+  // Harmonogram liczony wspólnym silnikiem z loan-math.ts (jedno źródło prawdy):
+  // balon = rzeczywiste saldo po symulacji spłat ograniczoną ratą (amortyzacja do zera),
+  // z flagą ujemnej amortyzacji, gdy rata nie pokrywa nawet odsetek.
   const schedule = useMemo(() => {
-    if (!grossPrincipal || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
-    const monthlyRate = annualRate / 100 / 12;
-    const rows: any[] = [];
+    const core = computeLoanSchedule({
+      principal: grossPrincipal,
+      annualRatePercent: annualRate,
+      months,
+      maxPayment,
+    });
     const start = new Date();
-
-    const nominalRata = monthlyRate > 0
-      ? (grossPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
-      : grossPrincipal / months;
-    const cappedRata = maxPayment > 0 ? Math.min(nominalRata, maxPayment) : nominalRata;
-    const balloon = Math.max(0, (nominalRata - cappedRata) * months);
-
-    let saldo = grossPrincipal;
-    for (let i = 1; i <= months; i++) {
-      const ods = saldo * monthlyRate;
-      const last = i === months;
-      const rata = last ? cappedRata + balloon : cappedRata;
-      const kap = rata - ods;
-      saldo = Math.max(0, saldo - kap);
-      const d = new Date(start); d.setMonth(d.getMonth() + i);
-      rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata, kap, ods, saldo });
-    }
-    return {
-      rows,
-      totalRata: rows.reduce((s, r) => s + r.rata, 0),
-      totalOds: rows.reduce((s, r) => s + r.ods, 0),
-      totalKap: rows.reduce((s, r) => s + r.kap, 0),
-      balloon,
-      nominalRata,
-      cappedRata,
-    };
+    const rows = core.rows.map((r) => {
+      const d = new Date(start);
+      d.setMonth(d.getMonth() + r.idx);
+      return { ...r, date: d.toLocaleDateString("pl-PL") };
+    });
+    return { ...core, rows };
   }, [grossPrincipal, months, annualRate, maxPayment]);
 
   // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You jest osobnym wynagrodzeniem operatora i nie jest kosztem pozaodsetkowym po stronie pożyczki.
@@ -596,7 +586,7 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorTotalIn)}</p>
               <p className="mt-1 text-xs text-emerald-100/80">
-                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
+                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% w skali roku, stopa uproszczona)
               </p>
             </div>
 
@@ -764,7 +754,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
                 <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    Realny roczny zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> jest poniżej minimum <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora lub skróć okres.
+                    Zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> w skali roku (stopa roczna uproszczona, nie RRSO) jest poniżej minimum <b>36% w skali roku</b>. Zwiększ oprocentowanie, prowizję inwestora lub skróć okres.
                   </AlertDescription>
                 </Alert>
               )}
@@ -800,7 +790,18 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
               <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata nominalna (annuitet){investorGuidance && <InfoTip text="Pełna rata annuitetowa wyliczona od kapitału startowego i oprocentowania." />}</span><b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata balonowa (ostatnia nadwyżka){investorGuidance && <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />}</span><b className="tabular-nums">{formatPLN(schedule.balloon)}</b></div>
             </div>
-            {schedule.balloon > 0 && (
+            {schedule.negativeAmortization && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Rata nie pokrywa odsetek — saldo rośnie</AlertTitle>
+                <AlertDescription>
+                  Maksymalna rata <b>{formatPLN(schedule.cappedRata)}</b> jest niższa niż same odsetki w pierwszym miesiącu (ujemna amortyzacja).
+                  Kapitał narasta przez cały okres i zostanie rozliczony w wysokiej racie balonowej <b>{formatPLN(schedule.balloon)}</b>.
+                  Zwiększ maksymalną ratę, obniż oprocentowanie lub zmniejsz kwotę pożyczki.
+                </AlertDescription>
+              </Alert>
+            )}
+            {schedule.balloon > 0 && !schedule.negativeAmortization && (
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu.</AlertDescription>

@@ -1,8 +1,7 @@
 // Meta webhook: Messenger (page messages) + Instagram Direct.
 // GET = handshake (hub.verify_token), POST = wiadomości + załączniki.
-// Weryfikacja HMAC X-Hub-Signature-256 (META_APP_SECRET) — jeśli sekret jest
-// skonfigurowany. Gdy nie jest, przetwarzamy mimo to (tak jak meta-leads-webhook),
-// aby nie porzucać po cichu wszystkich wiadomości z powodu braku jednej zmiennej.
+// Weryfikacja HMAC X-Hub-Signature-256 (META_APP_SECRET) jest obowiązkowa —
+// brak sekretu = 500 (fail closed), nieprawidłowy podpis = 401.
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
@@ -25,10 +24,11 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
         const mode = url.searchParams.get("hub.mode");
         const token = url.searchParams.get("hub.verify_token");
         const challenge = url.searchParams.get("hub.challenge");
+        // Uwaga: META_APP_SECRET celowo NIE jest akceptowany jako verify token —
+        // to sekret do podpisów HMAC i nie może wyciekać w parametrach URL.
         const accepted = [
           process.env.META_WEBHOOK_VERIFY_TOKEN,
           process.env.META_IG_WEBHOOK_VERIFY_TOKEN,
-          process.env.META_APP_SECRET,
         ].filter(Boolean);
         if (mode === "subscribe" && token && accepted.includes(token) && challenge) {
           return new Response(challenge, { status: 200 });
@@ -39,13 +39,13 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
         const raw = await request.text();
         const sig = request.headers.get("x-hub-signature-256");
         const secret = process.env.META_APP_SECRET;
-        if (secret) {
-          if (!verifySig(raw, sig, secret)) {
-            console.warn("[meta-messenger-webhook] invalid signature");
-            return new Response("Forbidden", { status: 403 });
-          }
-        } else {
-          console.warn("[meta-messenger-webhook] META_APP_SECRET not set — skipping signature verification");
+        if (!secret) {
+          console.error("[meta-messenger-webhook] META_APP_SECRET not set — rejecting request (fail closed)");
+          return new Response("Server misconfigured", { status: 500 });
+        }
+        if (!verifySig(raw, sig, secret)) {
+          console.warn("[meta-messenger-webhook] invalid signature");
+          return new Response("Unauthorized", { status: 401 });
         }
         let body: any;
         try { body = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }

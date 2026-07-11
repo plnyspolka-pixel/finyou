@@ -270,8 +270,12 @@ function WindykacjaCaseCard() {
       payoutDate: loan.data_umowy,
       dueDate: loan.termin_splaty,
       contractualAnnualRate: Number(loan.oprocentowanie_roczne || 0),
+      // Umowna stopa odsetek za opóźnienie (z umowy pożyczki).
       penaltyAnnualRate: Number(loan.stopa_odsetek_max || 0),
-      maxStatutoryRate: Number(loan.stopa_odsetek_max || 0),
+      // Ustawowy limit odsetek maksymalnych za opóźnienie (art. 481 §2¹ KC):
+      // 2 × (stopa referencyjna NBP + 5,5 p.p.) — NIE stopa z umowy, inaczej
+      // ograniczenie min(umowna, maksymalna) nigdy by nie działało.
+      maxStatutoryRate: maxDelayInterestRate(DEFAULT_NBP_REFERENCE_RATE),
       terminated,
       terminationDate: loan.data_wypowiedzenia,
       overdueInstallmentsAmount: Number(kase.kwota_zalegla || 0),

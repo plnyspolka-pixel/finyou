@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
 import { createInvoiceFromPayment } from "@/lib/accounting/auto-invoice";
 import { createCommissionEvent } from "@/lib/affiliate/engine";
+import { PLAN_TO_SUBSCRIPTION, TPAY_PLANS, type TpayPlanId } from "@/lib/payments.functions";
 
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
@@ -15,18 +16,6 @@ function getSupabase() {
   return _supabase;
 }
 
-const PLAN_DURATION_DAYS: Record<string, number> = {
-  investor_access_1d: 1,
-  investor_access_1m: 30,
-  investor_access_1y: 365,
-};
-
-const PLAN_TO_DB: Record<string, string> = {
-  investor_access_1d: "podstawowy",
-  investor_access_1m: "rozszerzony",
-  investor_access_1y: "profesjonalny",
-};
-
 async function handleCheckoutCompleted(session: any) {
   const userId: string | undefined = session.metadata?.userId;
   const plan: string | undefined = session.metadata?.plan;
@@ -34,12 +23,28 @@ async function handleCheckoutCompleted(session: any) {
     ? session.customer
     : session.customer?.id;
 
-  if (!userId || !plan || !PLAN_DURATION_DAYS[plan]) {
+  const planCfg = plan && plan in TPAY_PLANS ? TPAY_PLANS[plan as TpayPlanId] : undefined;
+  if (!userId || !plan || !planCfg) {
     console.error("Webhook: missing metadata", { userId, plan });
     return;
   }
 
-  const days = PLAN_DURATION_DAYS[plan];
+  // Weryfikacja kwoty: nie przyznajemy subskrypcji, jeśli zapłacona kwota
+  // nie odpowiada cenie planu (amount_total jest w groszach).
+  const expectedTotal = planCfg.amount * 100;
+  const currency = String(session.currency ?? "").toLowerCase();
+  if (session.amount_total !== expectedTotal || currency !== "pln") {
+    console.error("Webhook: amount mismatch — subscription NOT granted", {
+      session_id: session.id,
+      plan,
+      amount_total: session.amount_total,
+      expected: expectedTotal,
+      currency: session.currency,
+    });
+    return;
+  }
+
+  const days = planCfg.days;
   const supabase = getSupabase() as any;
 
   const { data: existing } = await supabase
@@ -56,7 +61,7 @@ async function handleCheckoutCompleted(session: any) {
   const newEnd = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
 
   const payload = {
-    subscription_plan: PLAN_TO_DB[plan],
+    subscription_plan: PLAN_TO_SUBSCRIPTION[plan as TpayPlanId],
     subscription_status: "aktywny",
     subscription_source: "stripe",
     subscription_active_until: newEnd.toISOString(),
@@ -101,7 +106,7 @@ async function handleCheckoutCompleted(session: any) {
   try {
     const grossAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : 0;
     if (grossAmount > 0) {
-      const planLabel = PLAN_TO_DB[plan] ? `Dostęp inwestora Finance You — ${PLAN_TO_DB[plan]}` : "Dostęp inwestora Finance You";
+      const planLabel = `Dostęp inwestora Finance You — ${PLAN_TO_SUBSCRIPTION[plan as TpayPlanId]}`;
       await createInvoiceFromPayment(supabase as any, {
         paymentId: session.id,
         grossAmount,

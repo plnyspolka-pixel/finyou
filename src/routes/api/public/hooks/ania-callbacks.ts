@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "@/lib/loan-progress.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
+import { requireCronAuth } from "@/lib/cron-auth.server";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -147,6 +148,8 @@ export const Route = createFileRoute("/api/public/hooks/ania-callbacks")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const unauth = await requireCronAuth(request);
+        if (unauth) return unauth;
         try {
           const url = new URL(request.url);
           const force = url.searchParams.get("force") === "1";
@@ -157,6 +160,8 @@ export const Route = createFileRoute("/api/public/hooks/ania-callbacks")({
         }
       },
       GET: async ({ request }) => {
+        const unauth = await requireCronAuth(request);
+        if (unauth) return unauth;
         try {
           const url = new URL(request.url);
           const force = url.searchParams.get("force") === "1";
