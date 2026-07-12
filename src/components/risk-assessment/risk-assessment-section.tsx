@@ -1,0 +1,422 @@
+import { useEffect, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
+  Scale, UserRound, MessagesSquare, FileScan, Landmark, Sparkles, HeartPulse,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  runInvestmentRiskAssessment,
+  getInvestmentRiskAssessment,
+} from "@/lib/risk-assessment/risk-assessment.functions";
+import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
+import { recommendationLabel } from "@/lib/risk-assessment/types";
+import { bandLabel } from "@/lib/risk-assessment/life-expectancy";
+import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
+import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
+
+function fmtPln(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(v);
+}
+
+function statusIcon(s: SourceStatus) {
+  if (s === "success") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />;
+  if (s === "partial") return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />;
+  if (s === "error") return <XCircle className="h-3.5 w-3.5 text-destructive" />;
+  return <span className="h-3.5 w-3.5 inline-block rounded-full bg-muted-foreground/40" />;
+}
+
+function gradeColor(grade: string): string {
+  switch (grade) {
+    case "A": return "bg-emerald-600 text-white";
+    case "B": return "bg-emerald-500 text-white";
+    case "C": return "bg-amber-500 text-white";
+    case "D": return "bg-orange-500 text-white";
+    default: return "bg-destructive text-white";
+  }
+}
+
+function recVariant(r: string): "default" | "secondary" | "destructive" | "outline" {
+  if (r === "rekomendowana") return "default";
+  if (r === "warunkowa") return "secondary";
+  if (r === "odradzana") return "destructive";
+  return "outline";
+}
+
+const COMPONENT_META: Array<{ key: keyof InvestmentRiskAssessment["componentScores"]; label: string; icon: ReactNode }> = [
+  { key: "collateral", label: "Zabezpieczenie", icon: <ShieldAlert className="h-4 w-4" /> },
+  { key: "valuationConfidence", label: "Pewność wyceny", icon: <Sparkles className="h-4 w-4" /> },
+  { key: "legal", label: "Stan prawny (KW)", icon: <Scale className="h-4 w-4" /> },
+  { key: "borrowerLongevity", label: "Ryzyko dożycia", icon: <HeartPulse className="h-4 w-4" /> },
+  { key: "correspondence", label: "Korespondencja", icon: <MessagesSquare className="h-4 w-4" /> },
+  { key: "documentCompleteness", label: "Dokumenty (OCR)", icon: <FileScan className="h-4 w-4" /> },
+];
+
+function scoreBarColor(v: number): string {
+  if (v >= 70) return "text-emerald-600";
+  if (v >= 50) return "text-amber-600";
+  return "text-destructive";
+}
+
+export function RiskAssessmentSection({ applicationId }: { applicationId: string }) {
+  const fetchRA = useServerFn(getInvestmentRiskAssessment);
+  const runRA = useServerFn(runInvestmentRiskAssessment);
+  const [row, setRow] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetchRA({ data: { applicationId } });
+      setRow(r);
+    } catch {
+      setRow(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { void load(); }, [applicationId]);
+
+  const run = async () => {
+    setRunning(true);
+    try {
+      await runRA({ data: { applicationId } });
+      toast.success("Ocena ryzyka zakończona");
+      await load();
+    } catch (e: any) {
+      toast.error("Błąd oceny ryzyka", { description: e?.message ?? String(e) });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie oceny…</div>;
+  }
+
+  const result = row?.result_json as InvestmentRiskAssessment | undefined;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2"><ShieldAlert className="h-5 w-5" /> Wycena i ocena ryzyka inwestycji</h3>
+          <p className="text-xs text-muted-foreground">Pełny pipeline: OCR → KW → właściciel (PESEL/GUS) → korespondencja → dane rządowe → nadrzędna wycena Perplexity.</p>
+        </div>
+        <Button onClick={run} disabled={running} size="sm">
+          {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {row ? "Uruchom ponownie" : "Uruchom ocenę"}
+        </Button>
+      </div>
+
+      {running && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription>Trwa zaciąganie i analiza danych ze wszystkich źródeł. To może potrwać do ~1 minuty (Perplexity + Gemini).</AlertDescription>
+        </Alert>
+      )}
+
+      {!result && !running && (
+        <>
+          <Card><CardContent className="py-6 text-sm text-muted-foreground">
+            Brak wyników. Uruchom ocenę, aby zebrać dane ze wszystkich źródeł i wygenerować nadrzędną wycenę oraz rekomendację inwestycyjną.
+          </CardContent></Card>
+          <DataSourceCatalog />
+        </>
+      )}
+
+      {result && (
+        <>
+          {/* Nagłówek: score, klasa, rekomendacja */}
+          <Card>
+            <CardContent className="py-5">
+              <div className="flex items-center gap-5 flex-wrap">
+                <div className="flex flex-col items-center justify-center min-w-[110px]">
+                  <div className={`h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold ${gradeColor(result.riskGrade)}`}>
+                    {result.riskGrade}
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-1">klasa ryzyka</span>
+                </div>
+                <div className="flex-1 min-w-[220px]">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">{result.investmentScore}</span>
+                    <span className="text-sm text-muted-foreground">/100 — ocena inwestycji</span>
+                  </div>
+                  <Progress value={result.investmentScore} className="h-2 mt-2" />
+                  <div className="mt-2">
+                    <Badge variant={recVariant(result.recommendation)} className="text-sm">
+                      {recommendationLabel(result.recommendation)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm mt-4 leading-relaxed">{result.executiveSummary}</p>
+            </CardContent>
+          </Card>
+
+          {result.warnings?.length > 0 && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <ul className="list-disc pl-5 space-y-1">
+                  {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Oceny cząstkowe */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Oceny cząstkowe</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {COMPONENT_META.map((c) => {
+                const v = result.componentScores[c.key];
+                return (
+                  <div key={c.key} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">{c.icon} {c.label}</span>
+                      <span className={`font-semibold ${scoreBarColor(v)}`}>{v}</span>
+                    </div>
+                    <Progress value={v} className="h-1.5" />
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Ryzyka i mocne strony */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" /> Kluczowe ryzyka</CardTitle></CardHeader>
+              <CardContent>
+                {result.keyRisks.length ? (
+                  <ul className="list-disc pl-5 space-y-1 text-sm">{result.keyRisks.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                ) : <p className="text-sm text-muted-foreground">Nie zidentyfikowano krytycznych ryzyk.</p>}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Mocne strony</CardTitle></CardHeader>
+              <CardContent>
+                {result.keyStrengths.length ? (
+                  <ul className="list-disc pl-5 space-y-1 text-sm">{result.keyStrengths.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                ) : <p className="text-sm text-muted-foreground">—</p>}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Nadrzędna wycena Perplexity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> Nadrzędna wycena (Perplexity)</CardTitle>
+              <CardDescription>Wycena i rekomendacja na bazie pełnego dossier oraz aktualnego rynku.</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {result.masterValuation.status === "success" ? (
+                <>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <Stat label="Dolna" value={fmtPln(result.masterValuation.estimatedValueLowPln)} />
+                    <Stat label="Środkowa" value={fmtPln(result.masterValuation.estimatedValueMidPln)} highlight />
+                    <Stat label="Górna" value={fmtPln(result.masterValuation.estimatedValueHighPln)} />
+                  </div>
+                  <Separator />
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    <div><span className="text-muted-foreground">Sugerowana maks. pożyczka:</span> <b>{fmtPln(result.masterValuation.suggestedMaxLoanAmountPln)}</b></div>
+                    <div><span className="text-muted-foreground">Pułap LTV:</span> <b>{result.masterValuation.suggestedLtvCapPercent ?? "—"}%</b></div>
+                    <div><span className="text-muted-foreground">Trend:</span> {result.masterValuation.marketTrend}</div>
+                  </div>
+                  {result.masterValuation.rationale && <p className="text-muted-foreground">{result.masterValuation.rationale}</p>}
+                  {result.masterValuation.citations.length > 0 && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground">Źródła ({result.masterValuation.citations.length})</summary>
+                      <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                        {result.masterValuation.citations.slice(0, 10).map((c, i) => (
+                          <li key={i}><a href={c} target="_blank" rel="noreferrer" className="underline break-all">{c}</a></li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </>
+              ) : (
+                <p className="text-muted-foreground">{result.masterValuation.errorMessage ?? "Brak nadrzędnej wyceny — wymagana ręczna weryfikacja."}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Właściciel — PESEL / trwanie życia */}
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><UserRound className="h-4 w-4" /> Analiza właściciela</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-1">
+              <div><span className="text-muted-foreground">Właściciel:</span> <b>{result.owner.fullName ?? "—"}</b></div>
+              <div><span className="text-muted-foreground">Wiek / płeć:</span> {result.owner.age ?? "—"} {result.owner.sex ? `(${result.owner.sex === "M" ? "M" : "K"})` : ""} · PESEL {result.owner.peselValid ? "✓ poprawny" : "✗ brak/niepoprawny"}</div>
+              {result.owner.lifeExpectancy.available && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <HeartPulse className="h-4 w-4 text-rose-500" />
+                    <span>Dalsze trwanie życia (GUS): <b>{result.owner.lifeExpectancy.remainingYears} lat</b> · przewidywany wiek dożycia ≈ {result.owner.lifeExpectancy.projectedAgeAtDeath}</span>
+                  </div>
+                  <div><Badge variant="outline">{bandLabel(result.owner.lifeExpectancy.longevityRiskBand)}</Badge>
+                    {result.owner.lifeExpectancy.survivalProbabilityOverTerm != null && (
+                      <span className="text-muted-foreground ml-2">P(przeżycia okresu) ≈ {Math.round(result.owner.lifeExpectancy.survivalProbabilityOverTerm * 100)}%</span>
+                    )}
+                  </div>
+                </>
+              )}
+              <div><span className="text-muted-foreground">Zgodność z właścicielem w KW:</span> {result.owner.matchesKwOwner === null ? "nieustalona" : result.owner.matchesKwOwner ? <span className="text-emerald-600">zgodny</span> : <span className="text-destructive font-medium">NIEZGODNY</span>}</div>
+              {result.owner.notes.length > 0 && <ul className="list-disc pl-5 text-muted-foreground text-xs mt-1">{result.owner.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
+              <p className="text-[11px] text-muted-foreground italic mt-1">{result.owner.lifeExpectancy.disclaimer}</p>
+            </CardContent>
+          </Card>
+
+          {/* Stan prawny KW */}
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Scale className="h-4 w-4" /> Stan prawny (Księga wieczysta)</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {result.kwLegal.available ? (
+                <>
+                  <p>{result.kwLegal.summary}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {result.kwLegal.hasEnforcement && <Badge variant="destructive">Egzekucja / zajęcie</Badge>}
+                    {result.kwLegal.hasUsufruct && <Badge variant="secondary">Służebność / dożywocie</Badge>}
+                    {result.kwLegal.mortgages.length > 0 && <Badge variant="secondary">Hipoteki: {result.kwLegal.mortgages.length}</Badge>}
+                    {result.kwLegal.owners.length > 1 && <Badge variant="outline">Współwłaściciele: {result.kwLegal.owners.length}</Badge>}
+                  </div>
+                  {result.kwLegal.warnings.length > 0 && (
+                    <ul className="list-disc pl-5 text-amber-700 dark:text-amber-400">{result.kwLegal.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+                  )}
+                </>
+              ) : (
+                <p className="text-muted-foreground">Brak pobranej treści KW. Pobierz księgę w zakładce „Nieruchomość", aby ocenić stan prawny.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Korespondencja */}
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><MessagesSquare className="h-4 w-4" /> Analiza korespondencji</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {result.correspondence.available || result.correspondence.messagesAnalyzed > 0 ? (
+                <>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    <div><span className="text-muted-foreground">Wiadomości:</span> {result.correspondence.messagesAnalyzed}</div>
+                    <div><span className="text-muted-foreground">Kanały:</span> {result.correspondence.channels.join(", ") || "—"}</div>
+                    <div><span className="text-muted-foreground">Sentyment:</span> {result.correspondence.sentiment}</div>
+                    <div><span className="text-muted-foreground">Współpraca:</span> {result.correspondence.cooperationLevel}</div>
+                  </div>
+                  {result.correspondence.redFlags.length > 0 && (
+                    <div><span className="text-destructive font-medium">Sygnały ostrzegawcze:</span>
+                      <ul className="list-disc pl-5">{result.correspondence.redFlags.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                    </div>
+                  )}
+                  {result.correspondence.inconsistencies.length > 0 && (
+                    <div><span className="text-amber-700 dark:text-amber-400 font-medium">Niespójności:</span>
+                      <ul className="list-disc pl-5">{result.correspondence.inconsistencies.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                    </div>
+                  )}
+                  {result.correspondence.summary && <p className="text-muted-foreground">{result.correspondence.summary}</p>}
+                </>
+              ) : (
+                <p className="text-muted-foreground">{result.correspondence.summary}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* OCR dokumentów */}
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileScan className="h-4 w-4" /> OCR dokumentów</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {result.ocr.documentsProcessed > 0 ? (
+                <div className="space-y-1">
+                  {result.ocr.documents.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      {statusIcon(d.status)}
+                      <span className="font-medium">{d.fileName ?? d.documentId}</span>
+                      <Badge variant="outline" className="text-[10px]">{d.docKind}</Badge>
+                      {d.rawTextSnippet && <span className="text-muted-foreground text-xs truncate max-w-[40ch]">{d.rawTextSnippet}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-muted-foreground">Brak dokumentów do OCR.</p>}
+            </CardContent>
+          </Card>
+
+          {/* Wykorzystane źródła danych */}
+          <UsedSources sources={result.dataSources} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-md border p-2 ${highlight ? "border-primary/50 bg-primary/5" : ""}`}>
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className={`font-semibold ${highlight ? "text-primary" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function UsedSources({ sources }: { sources: DataSourceUsage[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4" /> Wykorzystane źródła danych</CardTitle>
+        <CardDescription>Wszystkie źródła zaciągnięte do tej oceny.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-1.5">
+        {sources.map((s, i) => (
+          <div key={i} className="flex items-start gap-2 text-sm">
+            {statusIcon(s.status)}
+            <div>
+              <span className="font-medium">{s.source}</span>
+              {s.dataLevel && <span className="text-muted-foreground"> · {s.dataLevel}</span>}
+              <div className="text-xs text-muted-foreground">{s.purpose}{s.note ? ` — ${s.note}` : ""}</div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DataSourceCatalog() {
+  const byCat = DATA_SOURCE_CATALOG.reduce<Record<string, typeof DATA_SOURCE_CATALOG>>((acc, s) => {
+    (acc[s.category] ??= []).push(s);
+    return acc;
+  }, {});
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4" /> Katalog źródeł danych</CardTitle>
+        <CardDescription>Wszystkie źródła, z których korzysta system wyceny i oceny ryzyka.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {Object.entries(byCat).map(([cat, list]) => (
+          <div key={cat}>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">{CATEGORY_LABELS[cat as keyof typeof CATEGORY_LABELS]}</div>
+            <div className="space-y-1">
+              {list.map((s) => (
+                <div key={s.key} className="text-sm flex items-start gap-2">
+                  {s.governmental ? <Landmark className="h-3.5 w-3.5 mt-0.5 text-blue-600" /> : <Sparkles className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />}
+                  <div>
+                    <span className="font-medium">{s.name}</span>
+                    {s.governmental && <Badge variant="outline" className="ml-2 text-[10px]">rządowe</Badge>}
+                    <div className="text-xs text-muted-foreground">{s.provides} · <span className="italic">{s.provider}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
