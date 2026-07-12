@@ -1,5 +1,5 @@
-// Czyste funkcje: harmonogram „Dyrektor Finansowy", kompletność profilu,
-// rekomendacje zabezpieczeń. Wszystkie wyliczenia są deterministyczne.
+// Czyste funkcje: harmonogram spłat (odsetki od malejącego salda), kompletność
+// profilu, rekomendacje zabezpieczeń. Wszystkie wyliczenia są deterministyczne.
 
 import type {
   BorrowerType,
@@ -43,7 +43,10 @@ export function maskPesel(p?: string): string {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// HARMONOGRAM — model „Dyrektor Finansowy"
+// HARMONOGRAM SPŁAT — odsetki liczone od MALEJĄCEGO salda kapitału
+// (dawny model „Dyrektor Finansowy" liczył odsetki płasko od pełnego
+// nominału przez cały okres — zawyżał odsetki i dawał inne liczby niż
+// kalkulator anuitetowy; został usunięty).
 // ────────────────────────────────────────────────────────────────────
 
 export interface ScheduleInput extends OfferData {}
@@ -52,14 +55,14 @@ export interface ScheduleInput extends OfferData {}
  * Wynik harmonogramu z jawnym ostrzeżeniem, gdy maksymalna rata klienta nie
  * pokrywa nawet miesięcznych odsetek (należności narastają do raty balonowej).
  */
-export type DirectorScheduleData = ScheduleData & {
+export type RepaymentScheduleData = ScheduleData & {
   /** Ustawione, gdy maxPayment < miesięczne odsetki — rata nie pokrywa odsetek. */
   warning?: string;
 };
 
-export function buildDirectorSchedule(
+export function buildRepaymentSchedule(
   offer: ScheduleInput,
-): DirectorScheduleData | null {
+): RepaymentScheduleData | null {
   const net = Number(offer.netAmountToClient ?? 0);
   const commission = Number(offer.creditedCommission ?? 0);
   const maxPayment = Number(offer.maxMonthlyPaymentByClient ?? 0);
@@ -72,6 +75,7 @@ export function buildDirectorSchedule(
   if (net < 0 || commission < 0 || maxPayment < 0 || months < 0 || annualInterest < 0) return null;
 
   const nominalLoanAmount = net + commission;
+  const monthlyRate = annualInterest / 100 / 12;
 
   let expectedMonthly = 0;
   if (offer.investorMonthlyReturnType === "percent") {
@@ -81,7 +85,10 @@ export function buildDirectorSchedule(
   }
   if (!expectedMonthly) return null;
 
-  const monthlyInterestAmount = (nominalLoanAmount * annualInterest) / 100 / 12;
+  // Wartości „nagłówkowe" (pierwszy miesiąc, pełne saldo) — do podsumowań
+  // i dokumentów. W kolejnych miesiącach odsetki maleją wraz z saldem,
+  // a opłata za ryzyko domyka stałe wynagrodzenie inwestora.
+  const monthlyInterestAmount = nominalLoanAmount * monthlyRate;
   let monthlyRiskFeeAmount = expectedMonthly - monthlyInterestAmount;
   const warnings: string[] = [];
   const infos: string[] = [];
@@ -122,18 +129,23 @@ export function buildDirectorSchedule(
   for (let i = 1; i <= months; i++) {
     const rowDate = addMonths(payoutDate, i);
 
+    // Odsetki za bieżący miesiąc — od AKTUALNEGO salda kapitału.
+    const interestDue = remainingCapital * monthlyRate;
+    // Opłata za ryzyko domyka stałe miesięczne wynagrodzenie inwestora.
+    const riskFeeDue = Math.max(0, expectedMonthly - interestDue);
+
     // rozliczenie raty w kolejności: odsetki, opłata za ryzyko, kapitał
     let payment = maxPayment;
-    let interestPaid = Math.min(payment, monthlyInterestAmount);
+    const interestPaid = Math.min(payment, interestDue);
     payment -= interestPaid;
-    let riskPaid = Math.min(payment, monthlyRiskFeeAmount);
+    const riskPaid = Math.min(payment, riskFeeDue);
     payment -= riskPaid;
-    let capitalPaid = Math.min(payment, remainingCapital);
+    const capitalPaid = Math.min(payment, remainingCapital);
 
     // jeżeli płatność klienta jest mniejsza niż wynagrodzenie inwestora,
     // brakujące części trafiają do balonu
-    unpaidInterest += monthlyInterestAmount - interestPaid;
-    unpaidRiskFee += monthlyRiskFeeAmount - riskPaid;
+    unpaidInterest += interestDue - interestPaid;
+    unpaidRiskFee += riskFeeDue - riskPaid;
 
     remainingCapital = Math.max(0, remainingCapital - capitalPaid);
 

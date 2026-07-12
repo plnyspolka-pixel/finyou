@@ -28,7 +28,7 @@ import {
   type InvestorReturnType,
 } from "@/lib/client-profile-types";
 import {
-  buildDirectorSchedule,
+  buildRepaymentSchedule,
   calculateProfileCompletion,
   recommendSecurity,
   formatPLN,
@@ -227,7 +227,7 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
   };
 
   // ── derived ──────────────────────────────────────────────
-  const schedule = useMemo(() => buildDirectorSchedule(profile.offerData), [profile.offerData]);
+  const schedule = useMemo(() => buildRepaymentSchedule(profile.offerData), [profile.offerData]);
   const completion = useMemo(() => calculateProfileCompletion(profile), [profile]);
   const securityRec = useMemo(() => recommendSecurity(schedule, profile.offerData), [schedule, profile.offerData]);
 
@@ -775,7 +775,7 @@ function KreatorPozyczki() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Kreator umów pożyczkowych B2B</h1>
-        <p className="text-sm text-muted-foreground">Profil klienta, oferta inwestora, harmonogram „Dyrektor Finansowy”, zabezpieczenia, dokumenty.</p>
+        <p className="text-sm text-muted-foreground">Profil klienta, oferta inwestora, harmonogram spłat (odsetki od malejącego salda), zabezpieczenia, dokumenty.</p>
       </div>
       {view.mode === "list" ? (
         <ProfileList

@@ -65,7 +65,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
-import { buildDirectorSchedule, formatPLN } from "@/lib/client-profile-math";
+import { buildRepaymentSchedule, formatPLN } from "@/lib/client-profile-math";
 
 // ════════════════════════════════════════════════════════════════════
 // KATEGORIE
@@ -301,7 +301,7 @@ export function DocumentCreatorPage() {
   // ─── Kalkulator: harmonogram
   const scheduleData = useMemo(() => {
     if (!showCalculator) return null;
-    return buildDirectorSchedule({
+    return buildRepaymentSchedule({
       netAmountToClient: calc.netAmount,
       creditedCommission: calc.commission || 0,
       maxMonthlyPaymentByClient: calc.maxMonthly,
