@@ -77,30 +77,27 @@ export function buildRepaymentSchedule(
   const nominalLoanAmount = net + commission;
   const monthlyRate = annualInterest / 100 / 12;
 
+  // Oczekiwane wynagrodzenie inwestora — wyłącznie INFORMACYJNE (benchmark
+  // negocjacyjny). Umowa nie przewiduje opłaty za ryzyko, więc realne
+  // wynagrodzenie inwestora to odsetki + prowizja.
   let expectedMonthly = 0;
   if (offer.investorMonthlyReturnType === "percent") {
     expectedMonthly = (net * Number(offer.investorMonthlyReturnPercent ?? 0)) / 100;
   } else {
     expectedMonthly = Number(offer.investorMonthlyReturnAmount ?? 0);
   }
-  if (!expectedMonthly) return null;
 
-  // Wartości „nagłówkowe" (pierwszy miesiąc, pełne saldo) — do podsumowań
-  // i dokumentów. W kolejnych miesiącach odsetki maleją wraz z saldem,
-  // a opłata za ryzyko domyka stałe wynagrodzenie inwestora.
+  // Wartość „nagłówkowa" (pierwszy miesiąc, pełne saldo) — do podsumowań
+  // i dokumentów. W kolejnych miesiącach odsetki maleją wraz z saldem.
   const monthlyInterestAmount = nominalLoanAmount * monthlyRate;
-  let monthlyRiskFeeAmount = expectedMonthly - monthlyInterestAmount;
   const warnings: string[] = [];
   const infos: string[] = [];
 
-  if (monthlyRiskFeeAmount < 0) {
-    warnings.push(
-      "Oprocentowanie roczne generuje odsetki wyższe niż oczekiwane miesięczne wynagrodzenie inwestora.",
+  if (expectedMonthly > 0 && expectedMonthly > monthlyInterestAmount) {
+    infos.push(
+      "Oczekiwane wynagrodzenie inwestora przewyższa miesięczne odsetki — umowa nie przewiduje opłaty za ryzyko, więc wynagrodzenie inwestora stanowią wyłącznie odsetki i prowizja.",
     );
-    monthlyRiskFeeAmount = 0;
   }
-  const monthlyRiskFeePercent =
-    nominalLoanAmount > 0 ? (monthlyRiskFeeAmount / nominalLoanAmount) * 100 : 0;
 
   // JAWNE ostrzeżenie zamiast cichego balonowania: rata klienta nie pokrywa
   // nawet miesięcznych odsetek — niedopłata narasta co miesiąc do balonu.
@@ -112,50 +109,40 @@ export function buildRepaymentSchedule(
   }
 
   // info techniczne
-  if (maxPayment > expectedMonthly) {
-    infos.push("Nadwyżka ponad wynagrodzenie inwestora pomniejsza kapitał bieżąco.");
-  } else if (maxPayment === expectedMonthly) {
-    infos.push("Kapitał będzie spłacany w racie balonowej.");
+  if (maxPayment > monthlyInterestAmount) {
+    infos.push("Nadwyżka ponad odsetki pomniejsza kapitał bieżąco.");
   } else {
-    infos.push("Część wynagrodzenia inwestora zostanie rozliczona w racie balonowej.");
+    infos.push("Kapitał będzie spłacany w racie balonowej.");
   }
 
   const rows: ScheduleRow[] = [];
   let remainingCapital = nominalLoanAmount;
   // skumulowane braki rozliczone w balonie
   let unpaidInterest = 0;
-  let unpaidRiskFee = 0;
 
   for (let i = 1; i <= months; i++) {
     const rowDate = addMonths(payoutDate, i);
 
     // Odsetki za bieżący miesiąc — od AKTUALNEGO salda kapitału.
     const interestDue = remainingCapital * monthlyRate;
-    // Opłata za ryzyko domyka stałe miesięczne wynagrodzenie inwestora.
-    const riskFeeDue = Math.max(0, expectedMonthly - interestDue);
 
-    // rozliczenie raty w kolejności: odsetki, opłata za ryzyko, kapitał
+    // rozliczenie raty w kolejności: odsetki, kapitał
     let payment = maxPayment;
     const interestPaid = Math.min(payment, interestDue);
     payment -= interestPaid;
-    const riskPaid = Math.min(payment, riskFeeDue);
-    payment -= riskPaid;
     const capitalPaid = Math.min(payment, remainingCapital);
 
-    // jeżeli płatność klienta jest mniejsza niż wynagrodzenie inwestora,
-    // brakujące części trafiają do balonu
+    // niedopłacone odsetki trafiają do balonu
     unpaidInterest += interestDue - interestPaid;
-    unpaidRiskFee += riskFeeDue - riskPaid;
 
     remainingCapital = Math.max(0, remainingCapital - capitalPaid);
 
     rows.push({
       index: i,
       date: rowDate,
-      paymentAmount: round2(interestPaid + riskPaid + capitalPaid),
+      paymentAmount: round2(interestPaid + capitalPaid),
       capital: round2(capitalPaid),
       interest: round2(interestPaid),
-      riskFee: round2(riskPaid),
       remainingCapital: round2(remainingCapital),
     });
   }
@@ -164,8 +151,7 @@ export function buildRepaymentSchedule(
   const balloonDate = addMonths(payoutDate, months);
   const balloonCapital = remainingCapital;
   const balloonInterest = Math.max(0, unpaidInterest);
-  const balloonRisk = Math.max(0, unpaidRiskFee);
-  const balloonPayment = balloonCapital + balloonInterest + balloonRisk;
+  const balloonPayment = balloonCapital + balloonInterest;
 
   rows.push({
     index: "Balon",
@@ -173,7 +159,6 @@ export function buildRepaymentSchedule(
     paymentAmount: round2(balloonPayment),
     capital: round2(balloonCapital),
     interest: round2(balloonInterest),
-    riskFee: round2(balloonRisk),
     remainingCapital: 0,
   });
 
@@ -183,8 +168,7 @@ export function buildRepaymentSchedule(
   const totalClientObligation = round2(sumOfRegularPayments + balloonPayment);
 
   const totalInterest = rows.reduce((a, r) => a + r.interest, 0);
-  const totalRiskFee = rows.reduce((a, r) => a + r.riskFee, 0);
-  const totalInvestorProfit = round2(totalInterest + totalRiskFee + commission);
+  const totalInvestorProfit = round2(totalInterest + commission);
   const annualizedInvestorProfitAmount = round2((totalInvestorProfit / months) * 12);
   const annualizedInvestorProfitPercent =
     net > 0 ? round2((annualizedInvestorProfitAmount / net) * 100) : 0;
@@ -194,8 +178,6 @@ export function buildRepaymentSchedule(
     nominalLoanAmount: round2(nominalLoanAmount),
     expectedMonthlyInvestorReturn: round2(expectedMonthly),
     monthlyInterestAmount: round2(monthlyInterestAmount),
-    monthlyRiskFeeAmount: round2(monthlyRiskFeeAmount),
-    monthlyRiskFeePercent: round2(monthlyRiskFeePercent),
     balloonPayment: round2(balloonPayment),
     totalClientObligation,
     totalInvestorProfit,

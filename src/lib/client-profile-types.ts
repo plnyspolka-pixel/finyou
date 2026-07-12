@@ -185,17 +185,16 @@ export interface ScheduleRow {
   paymentAmount: number;
   capital: number;
   interest: number;
-  riskFee: number;
   remainingCapital: number;
 }
 
 export interface ScheduleData {
   rows: ScheduleRow[];
   nominalLoanAmount: number;
+  /** Oczekiwane wynagrodzenie inwestora — informacyjnie (benchmark negocjacyjny);
+   *  umowa nie przewiduje opłaty za ryzyko, wynagrodzenie = odsetki + prowizja. */
   expectedMonthlyInvestorReturn: number;
   monthlyInterestAmount: number;
-  monthlyRiskFeeAmount: number;
-  monthlyRiskFeePercent: number;
   balloonPayment: number;
   totalClientObligation: number;
   totalInvestorProfit: number;

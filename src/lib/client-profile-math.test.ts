@@ -75,11 +75,26 @@ describe("buildRepaymentSchedule — odsetki od malejącego salda (nie płaskie)
     expect(later.interest).toBeCloseTo(prev.remainingCapital * 0.01, 0);
   });
 
-  it("wynagrodzenie inwestora pozostaje stałe: odsetki + opłata za ryzyko = oczekiwana kwota", () => {
+  it("bez opłaty za ryzyko: rata = odsetki + kapitał, zysk inwestora = odsetki + prowizja", () => {
     const s = buildRepaymentSchedule({ ...baseOffer, maxMonthlyPaymentByClient: 5_000 });
     expect(s).not.toBeNull();
-    for (const row of s!.rows.slice(0, 12)) {
-      expect(row.interest + row.riskFee).toBeCloseTo(2_000, 0);
+    for (const row of s!.rows) {
+      // umowa nie przewiduje opłaty za ryzyko — rata rozlicza tylko odsetki i kapitał
+      expect(row.paymentAmount).toBeCloseTo(row.interest + row.capital, 2);
     }
+    const totalInterest = s!.rows.reduce((a, r) => a + r.interest, 0);
+    expect(s!.totalInvestorProfit).toBeCloseTo(totalInterest + 10_000, 1);
+  });
+
+  it("balon domyka zobowiązanie: kapitał pozostały + niedopłacone odsetki", () => {
+    const s = buildRepaymentSchedule(baseOffer); // rata 3 000 < odsetki+kapitał → część w balonie
+    expect(s).not.toBeNull();
+    const balloon = s!.rows[s!.rows.length - 1];
+    expect(balloon.index).toBe("Balon");
+    expect(balloon.remainingCapital).toBe(0);
+    expect(balloon.paymentAmount).toBeCloseTo(balloon.capital + balloon.interest, 2);
+    // suma kapitału ze wszystkich wierszy = kwota nominalna
+    const totalCapital = s!.rows.reduce((a, r) => a + r.capital, 0);
+    expect(totalCapital).toBeCloseTo(s!.nominalLoanAmount, 1);
   });
 });

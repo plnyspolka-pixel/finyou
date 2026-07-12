@@ -613,9 +613,7 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
             <CardContent className="grid md:grid-cols-4 gap-3 text-sm">
               <Stat label="Kwota nominalna pożyczki" value={formatPLN(schedule?.nominalLoanAmount)} />
               <Stat label="Wynagrodzenie inwestora / mies." value={formatPLN(schedule?.expectedMonthlyInvestorReturn)} />
-              <Stat label="Odsetki / mies." value={formatPLN(schedule?.monthlyInterestAmount)} />
-              <Stat label="Opłata za ryzyko / mies." value={formatPLN(schedule?.monthlyRiskFeeAmount)} />
-              <Stat label="Opłata za ryzyko (% kw. nom.)" value={`${(schedule?.monthlyRiskFeePercent ?? 0).toFixed(4)}%`} />
+              <Stat label="Odsetki / mies. (1. miesiąc)" value={formatPLN(schedule?.monthlyInterestAmount)} />
               <Stat label="Rata balonowa" value={formatPLN(schedule?.balloonPayment)} />
               <Stat label="Całk. zobowiązanie klienta" value={formatPLN(schedule?.totalClientObligation)} />
               <Stat label="Zysk inwestora (annualized)" value={`${formatPLN(schedule?.annualizedInvestorProfitAmount)} (${schedule?.annualizedInvestorProfitPercent ?? 0}%)`} />
@@ -635,7 +633,7 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
             <CardHeader><CardTitle>Harmonogram spłat</CardTitle></CardHeader>
             <CardContent>
               {!schedule ? (
-                <p className="text-sm text-muted-foreground">Uzupełnij ofertę aby wygenerować harmonogram (kwota, okres, max rata, data wypłaty, wynagrodzenie inwestora).</p>
+                <p className="text-sm text-muted-foreground">Uzupełnij ofertę aby wygenerować harmonogram (kwota, okres, max rata, data wypłaty).</p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -646,7 +644,6 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                         <TableHead className="text-right">Kwota raty</TableHead>
                         <TableHead className="text-right">Kapitał</TableHead>
                         <TableHead className="text-right">Odsetki</TableHead>
-                        <TableHead className="text-right">Opłata za ryzyko</TableHead>
                         <TableHead className="text-right">Kapitał pozostały</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -658,7 +655,6 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                           <TableCell className="text-right">{formatPLN(r.paymentAmount)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.capital)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.interest)}</TableCell>
-                          <TableCell className="text-right">{formatPLN(r.riskFee)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.remainingCapital)}</TableCell>
                         </TableRow>
                       ))}
