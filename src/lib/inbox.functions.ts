@@ -98,16 +98,16 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
 
 
 
-/** Zwraca tymczasowy podpisany URL do pliku w buckecie `documents`. */
+/** Zwraca tymczasowy podpisany URL do pliku w buckecie `documents`. Dostępne dla admin / operator. */
 export const getCommAttachmentUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { path: string }) => input)
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "administrator",
-    });
-    if (!isAdmin) throw new Error("Forbidden");
+    const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "administrator" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operator" }),
+    ]);
+    if (!isAdmin && !isOperator) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error } = await supabaseAdmin.storage
       .from("documents")

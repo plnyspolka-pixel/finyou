@@ -10,6 +10,7 @@ import { sendMetaMessage } from "@/lib/meta-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
+import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 
 async function findOrCreateLeadByPsid(opts: {
   senderId: string;
@@ -31,6 +32,31 @@ async function findOrCreateLeadByPsid(opts: {
     }
     return id;
   });
+}
+
+/**
+ * Uzupełnia brakujące imię/nazwisko leada danymi z profilu Meta (Graph API
+ * zwraca stronie imię i nazwisko rozmówcy po PSID/IGSID). Dzięki temu
+ * rozmowa w skrzynce od razu jest podpisana klientem, a nie "Nieznany klient".
+ */
+async function ensureLeadNameFromMetaProfile(opts: {
+  leadId: string;
+  senderId: string;
+  platform: "messenger" | "instagram";
+}): Promise<void> {
+  const { data: lead } = await supabaseAdmin
+    .from("leads").select("first_name, last_name").eq("id", opts.leadId).maybeSingle();
+  if (lead?.first_name && lead?.last_name) return;
+
+  const profile = await fetchMetaUserProfile({ userId: opts.senderId, platform: opts.platform });
+  if (!profile) return;
+
+  const patch: Record<string, string> = {};
+  if (profile.firstName && !lead?.first_name) patch.first_name = profile.firstName;
+  if (profile.lastName && !lead?.last_name) patch.last_name = profile.lastName;
+  if (Object.keys(patch).length > 0) {
+    await supabaseAdmin.from("leads").update(patch).eq("id", opts.leadId);
+  }
 }
 
 /**
@@ -72,6 +98,11 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
   const leadId = await findOrCreateLeadByPsid({ senderId, platform });
   if (!leadId) return;
 
+  // 0) Imię i nazwisko z profilu Meta — od razu podpisujemy leada klientem
+  try {
+    await ensureLeadNameFromMetaProfile({ leadId, senderId, platform });
+  } catch (e) { console.error("[messenger] profile name error", e); }
+
   // 1) Załączniki
   const stored: any[] = [];
   for (const att of msg.attachments ?? []) {
@@ -92,7 +123,7 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     : null;
 
   // 2) Log inbound
-  await logLeadCommunication({
+  const commId = await logLeadCommunication({
     leadId,
     channel: platform === "messenger" ? "messenger" : "messenger",
     direction: "inbound",
@@ -102,8 +133,15 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     status: "received",
   });
   if (stored.length) {
-    await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
-      .eq("external_id", msg.mid ?? "");
+    // Aktualizacja po id wstawionego rekordu — update po external_id gubił
+    // załączniki, gdy Meta nie przysłała `mid`.
+    if (commId) {
+      await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
+        .eq("id", commId);
+    } else if (msg.mid) {
+      await supabaseAdmin.from("lead_communications").update({ attachments: stored as any })
+        .eq("external_id", msg.mid);
+    }
     try {
       await attachStoredToClientDocuments({ leadId, stored, sourceLabel: platform });
     } catch (e) { console.error("[messenger] attach to client docs", e); }
@@ -162,10 +200,13 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
 
   if (fromName) {
     const { data: existing } = await supabaseAdmin
-      .from("leads").select("first_name").eq("id", leadId).maybeSingle();
-    if (!existing?.first_name) {
-      const first = fromName.split(/\s+/)[0];
-      await supabaseAdmin.from("leads").update({ first_name: first }).eq("id", leadId);
+      .from("leads").select("first_name, last_name").eq("id", leadId).maybeSingle();
+    const parts = fromName.trim().split(/\s+/);
+    const patch: Record<string, string> = {};
+    if (!existing?.first_name && parts[0]) patch.first_name = parts[0];
+    if (!existing?.last_name && parts.length > 1) patch.last_name = parts.slice(1).join(" ");
+    if (Object.keys(patch).length > 0) {
+      await supabaseAdmin.from("leads").update(patch).eq("id", leadId);
     }
   }
 
