@@ -22,10 +22,12 @@ const AGENCY_LEANING_PORTALS = ["domiporta.pl", "morizon.pl", "gratka.pl", "nier
 
 function classifyPostedBy(blob: string, domain: string): ListingPostedBy {
   const b = blob.toLowerCase();
-  const privateHit = /(oferta prywatna|osoba prywatna|bez po[śs]redni|bezpo[śs]rednio od w[łl]a[śs]cic|od w[łl]a[śs]ciciela)/.test(b);
+  // Jawne sygnały oferty prywatnej mają priorytet — „bez pośredników"/„od właściciela"
+  // zawierają fragment „pośrednik", więc muszą być sprawdzone przed regułą agencyjną.
+  const privateHit = /(oferta prywatna|osoba prywatna|bez po[śs]redni|bezpo[śs]rednio od w[łl]a[śs]cic|od w[łl]a[śs]ciciela|sprzedam bezpo[śs]rednio)/.test(b);
+  if (privateHit) return "private";
   const agencyHit = /(biuro nieruchomo|agencja nieruchomo|po[śs]rednik|prowizj|oferta biura|oferta od:\s*(biuro|agencja)|zapraszam do biura|numer oferty|nr oferty|mln estate|dom development|sp\.\s*z\s*o\.o\.)/.test(b);
   if (agencyHit) return "agency";
-  if (privateHit) return "private";
   if (AGENCY_LEANING_PORTALS.includes(domain)) return "agency";
   return "unknown";
 }

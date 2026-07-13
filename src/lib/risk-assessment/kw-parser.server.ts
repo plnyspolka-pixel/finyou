@@ -41,18 +41,43 @@ function splitEntries(text: string): string[] {
     .filter((s) => s.length > 8);
 }
 
+// Słowa, które nie są imieniem/nazwiskiem — odsiewają fałszywe dopasowania.
+const NAME_STOPWORDS = new Set([
+  "wlasciciel", "wspolwlasciciel", "udzial", "prawo", "dzial", "ksiega", "wieczysta",
+  "hipoteka", "wpis", "wzmianka", "numer", "data", "rodzaj", "tresc", "podstawa",
+  "nieruchomosc", "lokal", "budynek", "dzialka", "wartosc", "kwota", "lista", "osoba",
+  "fizyczna", "prawna", "imie", "imiona", "nazwisko", "pesel", "regon", "skarb", "panstwa",
+  "gmina", "miasto", "wojewodztwo", "sad", "rejonowy",
+]);
+
+function norm(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+}
+
 function parseOwners(dzial2: string | null | undefined): string[] {
   const text = stripHtml(dzial2);
   if (!text) return [];
   const owners = new Set<string>();
-  // Osoby fizyczne: "NAZWISKO Imię (Ojciec, Matka)" lub imię+nazwisko wielkimi/tytułowymi literami.
-  const personRe = /([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)?)\s+([A-ZĄĆĘŁŃÓŚŹŻ]{2,}(?:[- ][A-ZĄĆĘŁŃÓŚŹŻ]{2,})?)/g;
+
+  // 1) Ekstrakcja po etykiecie „Imię: … Nazwisko: …" (typowy układ EKW).
+  const labeled = [...text.matchAll(/imi[eę][^:]*:\s*([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}-]+)[\s\S]{0,40}?nazwisk[^:]*:\s*([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}-]+)/giu)];
+  for (const m of labeled) {
+    const cand = `${m[1]} ${m[2]}`.trim();
+    if (cand.length <= 60) owners.add(cand);
+  }
+
+  // 2) Osoby fizyczne: dwa–trzy człony rozpoczynające się wielką literą
+  //    (obsługuje „Jan Kowalski", „KOWALSKI JAN", „Anna Nowak-Kowalska").
+  const personRe = /\b([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)(?:\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+))?\b/gu;
   let m: RegExpExecArray | null;
   while ((m = personRe.exec(text)) !== null) {
-    const candidate = `${m[1]} ${m[2]}`.trim();
-    if (candidate.length <= 60) owners.add(candidate);
+    const tokens = [m[1], m[2], m[3]].filter(Boolean) as string[];
+    if (tokens.some((t) => NAME_STOPWORDS.has(norm(t)))) continue;
+    const candidate = tokens.join(" ").trim();
+    if (candidate.length >= 5 && candidate.length <= 60) owners.add(candidate);
   }
-  // Osoby prawne / instytucje.
+
+  // 3) Osoby prawne / instytucje.
   const orgRe = /((?:Sp[óo]ł?ka|Sp\.\s*z\s*o\.o\.|S\.A\.|Bank|Gmina|Skarb Pa[ńn]stwa|Wsp[óo]lnota)[^.,;]{0,60})/gi;
   while ((m = orgRe.exec(text)) !== null) {
     const o = m[1].trim();
