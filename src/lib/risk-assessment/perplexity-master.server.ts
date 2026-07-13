@@ -2,7 +2,7 @@
 // dossier: nieruchomość + KW + właściciel + korespondencja + dane rządowe + OCR.
 // To ostateczna warstwa, która domyka wycenę.
 
-import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary } from "./types";
+import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, GovBenchmark } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import { valuationBasisLabel, buyerPoolLabel, plotCategoryLabel, type PlotBuildabilityResult } from "./plot-buildability";
 
@@ -21,6 +21,7 @@ export interface MasterValuationInput {
   correspondence: CorrespondenceIntel;
   ocr: OcrSummary;
   plotBuildability?: PlotBuildabilityResult | null;
+  govBenchmark?: GovBenchmark | null;
 }
 
 function fmt(n: number | null | undefined): string {
@@ -36,8 +37,13 @@ function buildDossier(i: MasterValuationInput): string {
     .flatMap((d) => (Array.isArray((d.fields as any).keyFindings) ? (d.fields as any).keyFindings : []))
     .slice(0, 8);
 
-  return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
+  const gov = i.govBenchmark;
+  const govBlock = gov?.available
+    ? `\n0) DANE RZĄDOWE — GUS BDL (KOTWICA WYCENY, priorytet):${gov.pricePerHa != null ? `\n- Cena gruntu rolnego: ${gov.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${gov.soilCategory})${gov.landValuePln ? `, wartość działki ≈ ${gov.landValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.pricePerM2Median != null ? `\n- Mediana ceny lokali: ${gov.pricePerM2Median.toLocaleString("pl-PL")} zł/m²${gov.dwellingValuePln ? `, wartość ≈ ${gov.dwellingValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}\n- Jednostka: ${gov.unitName ?? "—"} (${gov.unitLevel ?? "—"}), okres ${gov.period ?? "—"}${gov.fallbackUsed ? " [dane zastępcze wyższego poziomu]" : ""}\n`
+    : "\n0) DANE RZĄDOWE — GUS BDL: brak danych dla tej jednostki.\n";
 
+  return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
+${govBlock}
 1) NIERUCHOMOŚĆ
 - Typ: ${i.propertyType}
 - Lokalizacja: ${loc}
@@ -90,6 +96,7 @@ ZADANIE:
 4. Wydaj rekomendację: "rekomendowana" | "warunkowa" | "do_weryfikacji" | "odradzana".
 
 WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana".
+- PRIORYTET DANYCH RZĄDOWYCH: jeżeli w sekcji (0) podano dane GUS BDL, przyjmij je jako KOTWICĘ wyceny i nie odchylaj się od nich istotnie bez uzasadnienia w danych rynkowych.
 - Grunt rolny: wyceniaj wg CEN GRUNTÓW ROLNYCH GUS (za hektar, wg klasy bonitacyjnej i województwa; posiłkowo KOWR/agronet), NIE jak działkę budowlaną. Rynek gruntów rolnych jest relatywnie płynny — nie zaniżaj sztucznie płynności z powodu małej miejscowości czy oddalenia od miasta.
 - Zabudowa zagrodowa/siedliskowa (RM): wycena mieszana (rolno-budowlana) i uwzględnij wąski krąg nabywców pod zabudowę (budowa zasadniczo tylko dla rolnika).
 

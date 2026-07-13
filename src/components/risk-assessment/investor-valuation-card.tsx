@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Gavel, Users, MapPinned, Building2 } from "lucide-react";
+import { TrendingUp, Gavel, Users, MapPinned, Building2, Landmark } from "lucide-react";
 import {
   getInvestorValuationSummary,
   type InvestorValuationSummary,
@@ -77,6 +77,13 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
             {pv.suggestedLtvCapPercent != null && <span>Sugerowany pułap LTV: {pv.suggestedLtvCapPercent}%</span>}
             {pv.suggestedMaxLoanAmountPln != null && <span>Sugerowana maks. kwota: {fmtPln(pv.suggestedMaxLoanAmountPln)}</span>}
           </div>
+          {data.govBenchmark?.available && (
+            <div className="mt-1 text-xs flex items-center gap-1 text-blue-700 dark:text-blue-400">
+              <Landmark className="h-3.5 w-3.5" /> Dane GUS ({data.govBenchmark.unitName ?? "—"}):
+              {data.govBenchmark.pricePerHa != null && <b> {data.govBenchmark.pricePerHa.toLocaleString("pl-PL")} zł/ha</b>}
+              {data.govBenchmark.pricePerM2Median != null && <b> {data.govBenchmark.pricePerM2Median.toLocaleString("pl-PL")} zł/m²</b>}
+            </div>
+          )}
         </div>
 
         <Separator />

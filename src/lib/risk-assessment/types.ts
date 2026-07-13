@@ -45,6 +45,8 @@ export interface KwLegalAnalysis {
   kondygnacja: number | null;
   /** Liczba pięter budynku nad parterem (z KW, jeśli dostępna). */
   floorsInBuilding: number | null;
+  /** Klasa bonitacyjna gruntu (np. „R IVa") z działu I-O, jeśli dostępna. */
+  soilClass: string | null;
   legalRiskScore: number; // 0–100 (wyżej = bezpieczniej)
   warnings: string[];
   summary: string;
@@ -172,6 +174,30 @@ export interface ForcedSaleEstimate {
   legalBasis: string;
 }
 
+// ---- Dane rządowe: benchmark GUS BDL (ceny gruntów rolnych zł/ha, lokale zł/m²) ----
+export interface GovBenchmark {
+  source: "GUS BDL";
+  available: boolean;
+  propertyType: string;
+  // grunt rolny:
+  pricePerHa: number | null;
+  soilClass: string | null;
+  soilCategory: "dobre" | "srednie" | "slabe" | "ogolem";
+  areaHa: number | null;
+  landValuePln: number | null;
+  // lokale / domy:
+  pricePerM2Median: number | null;
+  pricePerM2Average: number | null;
+  dwellingValuePln: number | null;
+  // wspólne:
+  unitName: string | null;
+  unitLevel: string | null; // powiat / wojewodztwo / krajowy
+  period: string | null;
+  fallbackUsed: boolean;
+  summaryLine: string;
+  warnings: string[];
+}
+
 // ---- Wynik zbiorczy ----
 export interface RiskComponentScores {
   collateral: number; // z analizy zabezpieczenia
@@ -198,6 +224,7 @@ export interface InvestmentRiskAssessment {
   ocr: OcrSummary;
   saleability: SaleabilityForecast;
   plotBuildability: PlotBuildabilityResult;
+  govBenchmark: GovBenchmark;
   forcedSale: ForcedSaleEstimate;
   masterValuation: MasterValuation;
 

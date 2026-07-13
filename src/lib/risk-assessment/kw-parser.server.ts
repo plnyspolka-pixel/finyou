@@ -136,6 +136,15 @@ function parseFloorInfo(dzial1o: string | null | undefined): { kondygnacja: numb
   return { kondygnacja, floorsInBuilding };
 }
 
+// Klasa bonitacyjna gruntu z działu I-O (np. „R IVa", „PsIII", „ŁIV").
+function parseSoilClass(dzial1o: string | null | undefined): string | null {
+  const text = stripHtml(dzial1o);
+  if (!text) return null;
+  const m = text.match(/\b(R|Ps|[ŁL]|Br|Lz|W|N)\s?(I{1,3}|IV|V|VI)(a|b)?\b/);
+  if (!m) return null;
+  return `${m[1]} ${m[2]}${m[3] ?? ""}`.replace(/\s+/g, " ").trim();
+}
+
 function parseMortgages(dzial4: string | null | undefined): KwLegalAnalysis["mortgages"] {
   const text = stripHtml(dzial4);
   if (!text || /brak wpis/i.test(text)) return [];
@@ -187,6 +196,7 @@ export async function analyzeKwLegal(args: {
     hasUsufruct: false,
     kondygnacja: null,
     floorsInBuilding: null,
+    soilClass: null,
     legalRiskScore: 60,
     warnings: [],
     summary: "Brak pobranej treści KW — stan prawny wymaga weryfikacji.",
@@ -207,6 +217,7 @@ export async function analyzeKwLegal(args: {
   const { encumbrances, hasEnforcement, hasUsufruct } = parseEncumbrances(row.dzial_3);
   const mortgages = parseMortgages(row.dzial_4);
   const { kondygnacja, floorsInBuilding } = parseFloorInfo(row.dzial_1o);
+  const soilClass = parseSoilClass(row.dzial_1o);
   const totalMortgage = mortgages.reduce<number | null>((acc, m) => {
     if (m.amount == null) return acc;
     return (acc ?? 0) + m.amount;
@@ -247,6 +258,7 @@ export async function analyzeKwLegal(args: {
     hasUsufruct,
     kondygnacja,
     floorsInBuilding,
+    soilClass,
     legalRiskScore,
     warnings,
     summary: kondygnacja != null ? `${summary} Kondygnacja lokalu: ${kondygnacja} (${kondygnacja <= 1 ? "parter" : (kondygnacja - 1) + ". piętro"}).` : summary,

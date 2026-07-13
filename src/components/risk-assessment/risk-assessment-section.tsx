@@ -217,6 +217,25 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
             </Card>
           </div>
 
+          {/* Dane rządowe — GUS BDL */}
+          {result.govBenchmark?.available && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4 text-blue-600" /> Dane rządowe — GUS BDL (kotwica wyceny)</CardTitle>
+                <CardDescription>{result.govBenchmark.unitName} · {result.govBenchmark.unitLevel} · {result.govBenchmark.period}{result.govBenchmark.fallbackUsed ? " (dane zastępcze)" : ""}</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                {result.govBenchmark.pricePerHa != null && (
+                  <div><span className="text-muted-foreground">Cena gruntu rolnego:</span> <b>{result.govBenchmark.pricePerHa.toLocaleString("pl-PL")} zł/ha</b> (klasa: {result.govBenchmark.soilCategory}){result.govBenchmark.landValuePln != null && <> → wartość ≈ <b>{fmtPln(result.govBenchmark.landValuePln)}</b></>}</div>
+                )}
+                {result.govBenchmark.pricePerM2Median != null && (
+                  <div><span className="text-muted-foreground">Mediana ceny lokali:</span> <b>{result.govBenchmark.pricePerM2Median.toLocaleString("pl-PL")} zł/m²</b>{result.govBenchmark.dwellingValuePln != null && <> → wartość ≈ <b>{fmtPln(result.govBenchmark.dwellingValuePln)}</b></>}</div>
+                )}
+                <p className="text-[11px] text-muted-foreground">{result.govBenchmark.summaryLine}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Nadrzędna wycena Perplexity */}
           <Card>
             <CardHeader>

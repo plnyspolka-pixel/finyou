@@ -15,6 +15,7 @@ import { analyzeCorrespondence } from "./correspondence-intel.server";
 import { analyzeSaleability, applyFloorToSaleability, applyPlotBuildabilityToSaleability } from "./saleability.server";
 import { assessFloor } from "./floor-factor";
 import { assessPlotBuildability } from "./plot-buildability";
+import { fetchGovBenchmark } from "./gov-benchmark.server";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
 import { combineRiskAssessment } from "./risk-scoring";
@@ -139,6 +140,18 @@ export async function runInvestmentRiskAssessmentCore(
     : saleabilityFloor;
   if (plotBuildability.onlyFarmerCanBuild) warnings.push(...plotBuildability.warnings);
 
+  // 5c) Dane rządowe — GUS BDL (priorytetowe źródło wyceny): ceny gruntów rolnych
+  //     zł/ha (wg klasy bonitacyjnej) oraz lokali zł/m². Zawsze próbujemy najpierw.
+  const govBenchmark = await fetchGovBenchmark({
+    propertyType: property?.property_type ?? "inna",
+    city: property?.city ?? null,
+    voivodeship: property?.voivodeship ?? null,
+    county: null,
+    soilClass: kwLegal.soilClass,
+    areaSqm: property?.area_sqm ?? null,
+    landAreaHa: null,
+  });
+
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
   const areaM2 = property?.area_sqm ?? null;
   const master = await perplexityMasterValuation({
@@ -156,6 +169,7 @@ export async function runInvestmentRiskAssessmentCore(
     correspondence,
     ocr,
     plotBuildability,
+    govBenchmark,
   });
   if (master.status !== "success") warnings.push(`Nadrzędna wycena Perplexity: ${master.errorMessage ?? "brak danych"}.`);
 
@@ -166,14 +180,18 @@ export async function runInvestmentRiskAssessmentCore(
     (collateral?.perplexityValuation?.estimatedValueLowPln && collateral?.perplexityValuation?.estimatedValueHighPln
       ? Math.round((collateral.perplexityValuation.estimatedValueLowPln + collateral.perplexityValuation.estimatedValueHighPln) / 2)
       : null);
-  const basisValue = master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
-  const basisSource = master.estimatedValueMidPln
-    ? "Perplexity (wycena nadrzędna)"
-    : collateralMid
-      ? "Analiza zabezpieczenia"
-      : declaredValue
-        ? "Wartość deklarowana"
-        : "brak";
+  // Government-first: dla gruntu rolnego podstawą wyceny jest twarda wartość GUS BDL (zł/ha × ha).
+  const govLandValue = property?.property_type === "grunt_rolny" ? govBenchmark.landValuePln : null;
+  const basisValue = govLandValue ?? master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
+  const basisSource = govLandValue
+    ? "GUS BDL (ceny gruntów rolnych)"
+    : master.estimatedValueMidPln
+      ? "Perplexity (wycena nadrzędna)"
+      : collateralMid
+        ? "Analiza zabezpieczenia"
+        : declaredValue
+          ? "Wartość deklarowana"
+          : "brak";
   const forcedSale = estimateForcedSale({
     basisValuePln: basisValue,
     basisSource,
@@ -191,7 +209,7 @@ export async function runInvestmentRiskAssessmentCore(
   const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, plotBuildability, master });
 
   // 9) Rejestr wykorzystanych źródeł danych.
-  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, collateral, master });
+  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, govBenchmark, collateral, master });
 
   // 9) Executive summary.
   const valueStr = master.estimatedValueMidPln
@@ -223,6 +241,7 @@ export async function runInvestmentRiskAssessmentCore(
     ocr,
     saleability,
     plotBuildability,
+    govBenchmark,
     forcedSale,
     masterValuation: master,
     collateralAnalysis: collateral,
@@ -267,10 +286,26 @@ function buildDataSources(a: {
   owner: InvestmentRiskAssessment["owner"];
   correspondence: InvestmentRiskAssessment["correspondence"];
   saleability: InvestmentRiskAssessment["saleability"];
+  govBenchmark: InvestmentRiskAssessment["govBenchmark"];
   collateral: InvestmentRiskAssessment["collateralAnalysis"];
   master: InvestmentRiskAssessment["masterValuation"];
 }): DataSourceUsage[] {
   const sources: DataSourceUsage[] = [];
+
+  // Government-first: GUS BDL raportujemy jako priorytetowe źródło wyceny.
+  sources.push({
+    source: "GUS BDL — ceny gruntów rolnych / lokali (dane rządowe)",
+    used: a.govBenchmark.available,
+    purpose: "priorytetowa wycena z danych urzędowych (zł/ha wg klasy, zł/m²)",
+    dataLevel: a.govBenchmark.available
+      ? [a.govBenchmark.pricePerHa != null ? `${a.govBenchmark.pricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
+         a.govBenchmark.pricePerM2Median != null ? `${a.govBenchmark.pricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
+         a.govBenchmark.unitName].filter(Boolean).join(", ")
+      : "—",
+    period: a.govBenchmark.period ?? "",
+    status: a.govBenchmark.available ? "success" : "no_data",
+    note: a.govBenchmark.fallbackUsed ? `dane zastępcze: ${a.govBenchmark.unitLevel ?? ""}` : undefined,
+  });
 
   sources.push({
     source: "Skany dokumentów (OCR — Gemini)",
@@ -408,6 +443,17 @@ export interface InvestorValuationSummary {
     valuationBasis: string;
     onlyFarmerCanBuild: boolean;
   } | null;
+  govBenchmark: {
+    available: boolean;
+    pricePerHa: number | null;
+    pricePerM2Median: number | null;
+    landValuePln: number | null;
+    dwellingValuePln: number | null;
+    unitName: string | null;
+    unitLevel: string | null;
+    period: string | null;
+    soilCategory: string;
+  } | null;
   generatedAt: string;
 }
 
@@ -481,6 +527,19 @@ export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): Inve
           buyerPool: r.plotBuildability.buyerPool,
           valuationBasis: r.plotBuildability.valuationBasis,
           onlyFarmerCanBuild: r.plotBuildability.onlyFarmerCanBuild,
+        }
+      : null,
+    govBenchmark: r.govBenchmark?.available
+      ? {
+          available: true,
+          pricePerHa: r.govBenchmark.pricePerHa,
+          pricePerM2Median: r.govBenchmark.pricePerM2Median,
+          landValuePln: r.govBenchmark.landValuePln,
+          dwellingValuePln: r.govBenchmark.dwellingValuePln,
+          unitName: r.govBenchmark.unitName,
+          unitLevel: r.govBenchmark.unitLevel,
+          period: r.govBenchmark.period,
+          soilCategory: r.govBenchmark.soilCategory,
         }
       : null,
     generatedAt: r.generatedAt,

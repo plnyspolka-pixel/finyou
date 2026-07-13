@@ -71,6 +71,16 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provider: "Walidacja PESEL (algorytm krajowy)",
   },
   {
+    key: "gus_bdl_prices",
+    name: "GUS BDL — ceny gruntów rolnych i lokali",
+    category: "instytucja_rzadowa",
+    governmental: true,
+    purpose: "priorytetowa wycena z danych urzędowych (grunt rolny zł/ha wg klasy, lokale zł/m²)",
+    provides: "przeciętne ceny transakcyjne GUS (powiat → województwo → kraj)",
+    provider: "GUS Bank Danych Lokalnych (API)",
+    envKey: "GUS_BDL_API_KEY",
+  },
+  {
     key: "gus_life_tables",
     name: "Tablice trwania życia GUS",
     category: "instytucja_rzadowa",
