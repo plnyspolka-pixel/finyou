@@ -18,9 +18,27 @@ export type ExtractedFacts = {
 const KW_RE =
   /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d[A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
 
-// "100 000 zł", "100.000 PLN", "50 tys", "1,2 mln zł", "kwota: 250000"
+// Fragmenty, w których cyfry na pewno nie są kwotą — maile przychodzą często
+// jako surowy HTML/CSS (kolory hex typu #951246), a adresy e-mail i linki
+// zawierają liczby, które regex brałby za kwoty.
+const stripNoise = (text: string): string => {
+  let t = text
+    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\bhttps?:\/\/[^\s"'<>]+/gi, " ")
+    .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, " ")
+    .replace(/#[0-9a-f]{3,8}\b/gi, " ");
+  // Ciała reguł CSS ({...}) — część klientów pocztowych wkleja arkusz bez
+  // znaczników <style>; pętla zdejmuje kolejne poziomy zagnieżdżenia.
+  for (let i = 0; i < 5 && /\{[^{}]*\}/.test(t); i++) t = t.replace(/\{[^{}]*\}/g, " ");
+  return t;
+};
+
+// "100 000 zł", "100.000 PLN", "50 tys", "1,2 mln zł", "kwota: 250000".
+// Goła liczba bez waluty i bez słowa-klucza to zwykle telefon/kod/identyfikator
+// — kwotę akceptujemy tylko z grupą 1 (słowo-klucz) lub 4 (waluta/jednostka).
 const AMOUNT_RE =
-  /(?:\b(?:kwota|pożyczka|potrzebuj[eę]|pożyczy[ćc]|wnioskuj[eę]|potrzeba)[^0-9]{0,30})?(\d{1,3}(?:[ .\u00a0]\d{3})+|\d{4,7})(?:[.,](\d{1,2}))?\s*(z[łl]|pln|tys(?:i[aą]c)?\.?|mln|m)?/gi;
+  /(?:\b(kwot\p{L}*|pożyczk\p{L}*|pożyczy[ćc]|potrzebuj\p{L}*|potrzeba|wnioskuj\p{L}*|kredyt\p{L}*|finansowan\p{L}*)[^0-9]{0,30})?(?<![\w#@./-])(\d{1,3}(?:[ .\u00a0]\d{3})+|\d{4,7}|\d{1,3})(?:[.,](\d{1,2}))?(?!\d)\s*(z[łl]|pln|tys(?:i[aą]c\p{L}*)?\.?|mln|m\b)?/giu;
 
 const CITY_RE =
   /\b(?:z|w|do|nieruchomo[śs][ćc]\s*w|dzia[łl]ka\s*w|mieszkanie\s*w)\s+([A-ZŁŚŻŹĆĄĘÓŃ][a-ząćęłńóśżź]{2,}(?:[- ][A-ZŁŚŻŹĆĄĘÓŃ]?[a-ząćęłńóśżź]{2,})?)/g;
@@ -40,11 +58,12 @@ const NAME_STOPWORDS = new Set([
   "Was", "Ciebie", "Cię", "Bardzo", "Wszystkich", "Zainteresowany", "Zainteresowana",
 ]);
 
-export function extractInboundFacts(text: string | null | undefined): ExtractedFacts {
+export function extractInboundFacts(rawText: string | null | undefined): ExtractedFacts {
   const out: ExtractedFacts = {
     kwNumbers: [], loanAmount: null, city: null, firstName: null, lastName: null,
   };
-  if (!text) return out;
+  if (!rawText) return out;
+  const text = stripNoise(rawText);
 
   // KW — deduplikuj po znormalizowanej formie
   const kwSeen = new Set<string>();
@@ -59,11 +78,13 @@ export function extractInboundFacts(text: string | null | undefined): ExtractedF
   // Kwota — wybierz największą wiarygodną wartość w PLN
   let bestAmt = 0;
   for (const m of text.matchAll(AMOUNT_RE)) {
-    const digits = m[1].replace(/[ .\u00a0]/g, "");
+    const keyword = m[1];
+    const unit = (m[4] ?? "").toLowerCase();
+    if (!keyword && !unit) continue;
+    const digits = m[2].replace(/[ .\u00a0]/g, "");
     let n = Number(digits);
     if (!Number.isFinite(n)) continue;
-    if (m[2]) n = Number(`${digits}.${m[2]}`);
-    const unit = (m[3] ?? "").toLowerCase();
+    if (m[3]) n = Number(`${digits}.${m[3]}`);
     if (unit.startsWith("tys")) n *= 1000;
     else if (unit === "mln" || unit === "m") n *= 1_000_000;
     // Odsiej numery telefonów / PESEL / lata (>=5000 zł, <=10 mln)
