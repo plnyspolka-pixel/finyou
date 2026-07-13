@@ -84,7 +84,7 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
     const patch: Record<string, any> = { application_data: appData };
     if (firstName && firstName !== lead.first_name) patch.first_name = firstName;
     if (lastName && lastName !== lead.last_name) patch.last_name = lastName;
-    await supabaseAdmin.from("leads").update(patch).eq("id", lead.id);
+    await supabaseAdmin.from("leads").update(patch as any).eq("id", lead.id);
     if (patch.first_name || patch.last_name) {
       if (source === "meta") namesFromMeta += 1;
       else namesFromText += 1;

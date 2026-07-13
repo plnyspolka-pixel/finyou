@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 
-// Osadzenie na zewnętrznej stronie (iframe) — sam formularz wniosku,
-// bez nagłówka, logo i paska telefonu. Tło transparentne, żeby wpasować
-// się w dowolną stronę hostującą.
-const SinglePageApplicationForm = lazy(() =>
-  import("@/components/landing/single-page-application-form").then((m) => ({
-    default: m.SinglePageApplicationForm,
+// Osadzenie na zewnętrznej stronie (iframe) — jedno-krokowy wniosek:
+// suwaki kwota + okres, dane kontaktowe, typ nieruchomości, KW, zdjęcia.
+// Bez kalkulatora i bez raty. Po wysłaniu klient trafia do /klient.
+const EmbedApplicationForm = lazy(() =>
+  import("@/components/landing/embed-application-form").then((m) => ({
+    default: m.EmbedApplicationForm,
   })),
 );
 
@@ -23,7 +23,7 @@ function EmbedWniosek() {
       <style>{`html,body{background:transparent !important;}`}</style>
       <div className="min-h-screen bg-transparent p-3 sm:p-4">
         <Suspense fallback={<div className="text-sm text-white/70 p-4">Ładowanie wniosku…</div>}>
-          <SinglePageApplicationForm />
+          <EmbedApplicationForm />
         </Suspense>
       </div>
     </>
