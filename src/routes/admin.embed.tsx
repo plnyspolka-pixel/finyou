@@ -33,6 +33,7 @@ function EmbedPage() {
   }, [origin, source]);
 
   const invoicesUrl = `${origin}/embed/faktury`;
+  const invoicesPreviewUrl = "/embed/faktury?preview=admin";
   const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
 
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
@@ -161,7 +162,7 @@ function EmbedPage() {
         </CardHeader>
         <CardContent>
           {showInvoicesPreview ? (
-            <iframe src={`${currentOrigin}/embed/faktury`} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
+            <iframe src={invoicesPreviewUrl} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
           ) : (
             <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
           )}
