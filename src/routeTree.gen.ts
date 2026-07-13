@@ -73,6 +73,7 @@ import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkul
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
+import { Route as EmbedLeadyRouteImport } from './routes/embed.leady'
 import { Route as EmbedFakturyRouteImport } from './routes/embed.faktury'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -505,6 +506,11 @@ const FakturaIdRoute = FakturaIdRouteImport.update({
 const EmbedWniosekRoute = EmbedWniosekRouteImport.update({
   id: '/embed/wniosek',
   path: '/embed/wniosek',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedLeadyRoute = EmbedLeadyRouteImport.update({
+  id: '/embed/leady',
+  path: '/embed/leady',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmbedFakturyRoute = EmbedFakturyRouteImport.update({
@@ -1166,6 +1172,7 @@ export interface FileRoutesByFullPath {
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/faktury': typeof EmbedFakturyRoute
+  '/embed/leady': typeof EmbedLeadyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -1338,6 +1345,7 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/faktury': typeof EmbedFakturyRoute
+  '/embed/leady': typeof EmbedLeadyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -1513,6 +1521,7 @@ export interface FileRoutesById {
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/faktury': typeof EmbedFakturyRoute
+  '/embed/leady': typeof EmbedLeadyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -1692,6 +1701,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/faktury'
+    | '/embed/leady'
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
@@ -1864,6 +1874,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/faktury'
+    | '/embed/leady'
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
@@ -2038,6 +2049,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/faktury'
+    | '/embed/leady'
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
@@ -2182,6 +2194,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   EmbedFakturyRoute: typeof EmbedFakturyRoute
+  EmbedLeadyRoute: typeof EmbedLeadyRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   FakturaIdRoute: typeof FakturaIdRoute
   LSlugRoute: typeof LSlugRoute
@@ -2679,6 +2692,13 @@ declare module '@tanstack/react-router' {
       path: '/embed/wniosek'
       fullPath: '/embed/wniosek'
       preLoaderRoute: typeof EmbedWniosekRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/leady': {
+      id: '/embed/leady'
+      path: '/embed/leady'
+      fullPath: '/embed/leady'
+      preLoaderRoute: typeof EmbedLeadyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/embed/faktury': {
@@ -3804,6 +3824,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   EmbedFakturyRoute: EmbedFakturyRoute,
+  EmbedLeadyRoute: EmbedLeadyRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   FakturaIdRoute: FakturaIdRoute,
   LSlugRoute: LSlugRoute,
