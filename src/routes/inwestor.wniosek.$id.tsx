@@ -8,12 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Eye } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Eye, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
+import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
+import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
@@ -254,7 +258,7 @@ function InwestorWniosek() {
 
       <InvestorSummaryCard applicationId={id} />
 
-
+      <InvestorValuationCard applicationId={id} />
 
       {incomeDocs.length > 0 && (
         <Card>
@@ -289,6 +293,29 @@ function InwestorWniosek() {
         initialMaxPayment={Number(app.max_monthly_payment) || 0}
         onChange={setCalc}
       />
+
+      {(() => {
+        // Ostrzeżenie art. 952¹ § 2 KPC — kwota pożyczki < 5% wartości nieruchomości
+        // mieszkalnej może zablokować licytację (ochrona potrzeb mieszkaniowych dłużnika).
+        const propValue = Number(p?.estimated_value) || 0;
+        const loanNow = Number(calc?.amount) || Number(app.loan_amount) || 0;
+        const block = residentialAuctionBlockRisk({
+          propertyType: p?.property_type ?? "",
+          loanAmountPln: loanNow,
+          propertyValuePln: propValue,
+        });
+        return block.blocked ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <b>Uwaga — możliwa blokada licytacji (art. 952¹ § 2 KPC).</b> {block.message}
+              <span className="block mt-1 text-xs opacity-80">{block.legalBasis}</span>
+            </AlertDescription>
+          </Alert>
+        ) : null;
+      })()}
+
+      <RiskDisclaimer />
 
 
       <Card>

@@ -15,6 +15,7 @@ import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLa
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
+import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 
@@ -106,6 +107,7 @@ function WniosekDetail() {
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
           <TabsTrigger value="zabezpieczenie">Zabezpieczenie</TabsTrigger>
+          <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">Dokumenty ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length})</TabsTrigger>
           <TabsTrigger value="selekcja">Selekcja</TabsTrigger>
@@ -160,6 +162,10 @@ function WniosekDetail() {
 
         <TabsContent value="zabezpieczenie" className="space-y-4">
           <CollateralAnalysisSection applicationId={id} />
+        </TabsContent>
+
+        <TabsContent value="ryzyko" className="space-y-4">
+          <RiskAssessmentSection applicationId={id} />
         </TabsContent>
 
 

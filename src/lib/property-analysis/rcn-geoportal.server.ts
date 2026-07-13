@@ -27,6 +27,10 @@ proj4.defs(
 
 const RCN_BASE_ENDPOINT = "https://mapy.geoportal.gov.pl/wss/service/rcn";
 const RCN_TIMEOUT_MS = 25_000;
+// Twardy limit sond GetFeatureInfo na jedno zapytanie — bez tego siatka 20×20×3
+// generuje ~1200 żądań przez edge function i regularnie timeout'uje (główna przyczyna
+// „nie udało się wdrożyć"). Cap utrzymuje koszt w ryzach.
+const MAX_TOTAL_PROBES = 180;
 
 // Proxy przez Supabase Edge Function — Workers nie mają wyjścia do geoportalu.
 function proxify(target: string): string {
@@ -146,7 +150,7 @@ export async function testRcnCapabilities(): Promise<{
   return { attempts: [attempt], successfulUrl: null, layers: [], xml: null };
 }
 
-function parseLayerNamesFromWms(xml: string): string[] {
+export function parseLayerNamesFromWms(xml: string): string[] {
   const layers: string[] = [];
   // Każda warstwa WMS GetCapabilities ma <Name>...</Name>. Bierzemy wszystkie i
   // odfiltrowujemy nazwę serwisową (WMS) i style ("default").
@@ -173,11 +177,11 @@ function parseLayerNamesFromWms(xml: string): string[] {
 
 // --------- BBOX i grid sond ---------
 
-function point2180(lat: number, lng: number): [number, number] {
+export function point2180(lat: number, lng: number): [number, number] {
   return proj4("EPSG:4326", "EPSG:2180", [lng, lat]) as [number, number];
 }
 
-function bbox2180(lat: number, lng: number, radiusM: number): [number, number, number, number] {
+export function bbox2180(lat: number, lng: number, radiusM: number): [number, number, number, number] {
   const [x, y] = point2180(lat, lng);
   return [x - radiusM, y - radiusM, x + radiusM, y + radiusM];
 }
@@ -188,7 +192,7 @@ function bbox2180(lat: number, lng: number, radiusM: number): [number, number, n
 
 // scaleDenominator ≈ pixelSizeM * 1000 / 0.28
 // MapServer twardo odrzuca WIDTH/HEIGHT > 4096 ("Image size out of range").
-function widthForScale(bboxWidthM: number, scaleLimit: number): number {
+export function widthForScale(bboxWidthM: number, scaleLimit: number): number {
   const maxPxSize = (scaleLimit * 0.28) / 1000; // m/pixel
   const desired = Math.ceil(bboxWidthM / maxPxSize);
   return Math.max(512, Math.min(4096, desired));
@@ -230,7 +234,7 @@ async function getFeatureInfo(
 // Parsuje HTML GetFeatureInfo z usługi Geoportal RCN.
 // Każdy obiekt to <div class="accordion"> zawierający sekcje h3 (Dane transakcji / Nieruchomość / Budynek / Dokument)
 // oraz pola <li><span class="list-item-value">Etykieta:</span> wartość</li>.
-function parseHtmlFeatures(html: string, _layer: string): Array<Record<string, unknown>> {
+export function parseHtmlFeatures(html: string, _layer: string): Array<Record<string, unknown>> {
   if (!html) return [];
   // Szybkie odsianie pustego HTML
   if (!/class\s*=\s*"accordion"/i.test(html) && !/list-item-value/i.test(html)) return [];
@@ -304,7 +308,7 @@ function tryParseDate(v: unknown): string | null {
   return null;
 }
 
-function extractFromProps(p: Record<string, unknown>, layer: string): RcnFeatureRaw {
+export function extractFromProps(p: Record<string, unknown>, layer: string): RcnFeatureRaw {
   const keys = Object.keys(p);
   const findFirst = (rgxs: RegExp[]): unknown => {
     for (const r of rgxs) {
@@ -441,6 +445,7 @@ export async function rcnBenchmark(args: {
   const seenSig = new Set<string>();
   let chosenLayer: string | null = null;
   let chosenRadius: number | null = null;
+  let probesUsed = 0;
   const radiiUsed: number[] = [];
   // Minimalna liczba transakcji, którą warto uzbierać zanim przerwiemy eskalację.
   // Dla obszarów typu Warszawa łatwo wpaść w setki transakcji, więc nie kończymy
@@ -477,7 +482,9 @@ export async function rcnBenchmark(args: {
       // Wykonujemy w batchach równolegle, żeby nie zatkać edge function.
       const batchSize = 12;
       for (let b = 0; b < probes.length; b += batchSize) {
+        if (probesUsed >= MAX_TOTAL_PROBES) break;
         const batch = probes.slice(b, b + batchSize);
+        probesUsed += batch.length;
         const results = await Promise.all(
           batch.map(([i, j]) => getFeatureInfo(layer, bbox, w, h, i, j)),
         );
