@@ -1,12 +1,13 @@
 // Prognozowana łatwość sprzedaży (płynność wyjścia z inwestycji).
 // Łączy: badanie popytu z otoczenia przez Perplexity (zaludnienie, większe miasto,
 // zbiornik wodny, kurort/uzdrowisko, sanatorium, atrakcje turystyczne, dostępność
-// komunikacyjna, siła nabywcza, popyt na najem) + realną dostępność pośredników
-// nieruchomości na rynku lokalnym (Google Maps Places).
+// komunikacyjna, siła nabywcza, popyt na najem) + realne aktywne oferty sprzedaży
+// w okolicy wystawione przez biura nieruchomości (Firecrawl — portale ogłoszeniowe).
 
 import type { SaleabilityForecast, SaleabilityBand } from "./types";
+import { scrapeSimilarListings } from "@/lib/property-analysis/listings-scraping.server";
 
-const GM_GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
+const LOCAL_OFFERS_RADIUS_KM = 10;
 
 function bandFromScore(score: number): SaleabilityBand {
   if (score >= 80) return "bardzo_latwa";
@@ -20,32 +21,57 @@ export function saleabilityBandFromScore(score: number): SaleabilityBand {
   return bandFromScore(score);
 }
 
-// ---- Pośrednicy nieruchomości w okolicy (Google Maps Places) ----
-async function countRealEstateAgents(lat: number, lng: number, radiusM: number): Promise<number | null> {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
-  if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY) return null;
+type LocalOffers = SaleabilityForecast["localMarketOffers"];
+
+// ---- Aktywne oferty sprzedaży w okolicy wystawione przez biura (Firecrawl) ----
+async function gatherLocalOffers(args: {
+  propertyType: string;
+  city: string | null;
+  district: string | null;
+  voivodeship: string | null;
+  areaM2: number | null;
+}): Promise<LocalOffers> {
+  const emptyOffers: LocalOffers = {
+    available: false,
+    totalActiveListings: 0,
+    agencyListings: 0,
+    privateListings: 0,
+    medianPricePerM2: null,
+    radiusKm: LOCAL_OFFERS_RADIUS_KM,
+    source: "Firecrawl (portale ogłoszeniowe)",
+    sample: [],
+  };
   try {
-    const res = await fetch(`${GM_GATEWAY}/places/v1/places:searchNearby`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": GOOGLE_MAPS_API_KEY,
-        "Content-Type": "application/json",
-        "X-Goog-FieldMask": "places.displayName,places.types",
-      },
-      body: JSON.stringify({
-        includedTypes: ["real_estate_agency"],
-        maxResultCount: 20,
-        locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: Math.min(radiusM, 50000) } },
-        languageCode: "pl",
-      }),
+    const res = await scrapeSimilarListings({
+      propertyType: args.propertyType,
+      city: args.city,
+      district: args.district,
+      voivodeship: args.voivodeship,
+      areaM2: args.areaM2,
+      maxResults: 20,
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return Array.isArray(data.places) ? data.places.length : 0;
+    const listings = res.listings ?? [];
+    const agencyListings = listings.filter((l) => l.postedBy === "agency").length;
+    const privateListings = listings.filter((l) => l.postedBy === "private").length;
+    return {
+      available: agencyListings > 0,
+      totalActiveListings: listings.length,
+      agencyListings,
+      privateListings,
+      medianPricePerM2: res.pricePerM2Median,
+      radiusKm: LOCAL_OFFERS_RADIUS_KM,
+      source: "Firecrawl (portale ogłoszeniowe)",
+      sample: listings.slice(0, 6).map((l) => ({
+        title: l.title,
+        url: l.url,
+        source: l.source,
+        postedBy: l.postedBy ?? "unknown",
+        pricePln: l.pricePln,
+        pricePerM2: l.pricePerM2,
+      })),
+    };
   } catch {
-    return null;
+    return emptyOffers;
   }
 }
 
@@ -104,7 +130,8 @@ function computeScore(d: {
   touristAttractionWithin20km: boolean;
   majorRoadWithin10km: boolean;
   rentalDemand: string;
-  agentsCount: number | null;
+  agencyListings: number;
+  totalActiveListings: number;
   liquidType: boolean;
 }): number {
   let s = 30; // baza
@@ -134,13 +161,12 @@ function computeScore(d: {
   // Popyt na najem (alternatywne wyjście).
   if (d.rentalDemand === "wysoki") s += 5;
   else if (d.rentalDemand === "niski") s -= 3;
-  // Aktywni pośrednicy = płynny, obsługiwany rynek.
-  if (d.agentsCount != null) {
-    if (d.agentsCount >= 10) s += 8;
-    else if (d.agentsCount >= 4) s += 5;
-    else if (d.agentsCount >= 1) s += 2;
-    else s -= 5; // brak pośredników = rynek płytki
-  }
+  // Aktywne oferty biur w okolicy = płynny, obsługiwany rynek.
+  if (d.agencyListings >= 8) s += 8;
+  else if (d.agencyListings >= 4) s += 5;
+  else if (d.agencyListings >= 1) s += 2;
+  else s -= 5; // brak ofert biur = płytki rynek
+  if (d.totalActiveListings >= 10) s += 2; // aktywna podaż porównywalnych ofert
   // Typ nieruchomości.
   if (d.liquidType) s += 4; else s -= 4;
   return Math.max(0, Math.min(100, Math.round(s)));
@@ -152,21 +178,23 @@ export async function analyzeSaleability(args: {
   propertyType: string;
   address: string | null;
   city: string | null;
+  district?: string | null;
   voivodeship: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
+  areaM2?: number | null;
 }): Promise<SaleabilityForecast> {
   const loc = [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ") || "Polska";
   const liquidType = LIQUID_TYPES.includes(args.propertyType);
 
-  // Pośrednicy — równolegle z Perplexity.
-  const agentsRadiusKm = 25;
-  const agentsPromise =
-    args.latitude != null && args.longitude != null
-      ? countRealEstateAgents(args.latitude, args.longitude, agentsRadiusKm * 1000)
-      : Promise.resolve(null);
+  // Aktywne oferty biur w okolicy — równolegle z Perplexity.
+  const offersPromise = gatherLocalOffers({
+    propertyType: args.propertyType,
+    city: args.city,
+    district: args.district ?? null,
+    voivodeship: args.voivodeship,
+    areaM2: args.areaM2 ?? null,
+  });
 
-  const empty = (summary: string, agentsCount: number | null): SaleabilityForecast => ({
+  const empty = (summary: string, offers: LocalOffers): SaleabilityForecast => ({
     available: false,
     score: 45,
     band: "nieznana",
@@ -180,12 +208,7 @@ export async function analyzeSaleability(args: {
     },
     rentalDemand: "nieznany",
     purchasingPowerComment: null,
-    realEstateAgents: {
-      available: (agentsCount ?? 0) > 0,
-      count: agentsCount ?? 0,
-      radiusKm: agentsRadiusKm,
-      source: "Google Maps Places",
-    },
+    localMarketOffers: offers,
     rationale: "",
     citations: [],
     summary,
@@ -193,12 +216,12 @@ export async function analyzeSaleability(args: {
 
   const apiKey = process.env.PERPLEXITY_API_KEY;
   if (!apiKey) {
-    const agentsCount = await agentsPromise;
-    return empty("Brak PERPLEXITY_API_KEY — prognoza łatwości sprzedaży pominięta.", agentsCount);
+    const offers = await offersPromise;
+    return empty("Brak PERPLEXITY_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach biur zachowane).", offers);
   }
 
   try {
-    const [res, agentsCount] = await Promise.all([
+    const [res, offers] = await Promise.all([
       fetch("https://api.perplexity.ai/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -212,17 +235,17 @@ export async function analyzeSaleability(args: {
           search_recency_filter: "year",
         }),
       }),
-      agentsPromise,
+      offersPromise,
     ]);
 
     if (!res.ok) {
-      return empty(`Perplexity HTTP ${res.status} — prognoza łatwości sprzedaży niedostępna.`, agentsCount);
+      return empty(`Perplexity HTTP ${res.status} — prognoza łatwości sprzedaży niedostępna.`, offers);
     }
     const json: any = await res.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const citations: string[] = Array.isArray(json?.citations) ? json.citations : [];
     const parsed = tryParseJson(content);
-    if (!parsed) return empty("Nie udało się sparsować prognozy łatwości sprzedaży.", agentsCount);
+    if (!parsed) return empty("Nie udało się sparsować prognozy łatwości sprzedaży.", offers);
 
     const nearest = parsed.nearestLargeCity ?? {};
     const demandDrivers = {
@@ -244,7 +267,8 @@ export async function analyzeSaleability(args: {
       nearestCityDistanceKm: nearestDistanceKm,
       ...demandDrivers,
       rentalDemand,
-      agentsCount,
+      agencyListings: offers.agencyListings,
+      totalActiveListings: offers.totalActiveListings,
       liquidType,
     });
 
@@ -262,7 +286,7 @@ export async function analyzeSaleability(args: {
       (localityPopulation ? `Miejscowość ~${localityPopulation.toLocaleString("pl-PL")} mieszk. (${populationTrend}). ` : "") +
       (nearest.name ? `Najbliższe większe miasto: ${nearest.name}${nearestDistanceKm ? ` (${nearestDistanceKm} km)` : ""}. ` : "") +
       (drivers.length ? `Czynniki popytu: ${drivers.join(", ")}. ` : "") +
-      (agentsCount != null ? `Pośrednicy w ${agentsRadiusKm} km: ${agentsCount}.` : "");
+      `Oferty sprzedaży w okolicy: ${offers.totalActiveListings} (biura: ${offers.agencyListings}).`;
 
     return {
       available: true,
@@ -279,18 +303,17 @@ export async function analyzeSaleability(args: {
       demandDrivers,
       rentalDemand,
       purchasingPowerComment: typeof parsed.purchasingPowerComment === "string" ? parsed.purchasingPowerComment : null,
-      realEstateAgents: {
-        available: (agentsCount ?? 0) > 0,
-        count: agentsCount ?? 0,
-        radiusKm: agentsRadiusKm,
-        source: "Google Maps Places",
-      },
+      localMarketOffers: offers,
       rationale: typeof parsed.rationale === "string" ? parsed.rationale : "",
       citations,
       summary,
     };
   } catch (e: any) {
-    const agentsCount = await agentsPromise.catch(() => null);
-    return empty(`Błąd prognozy łatwości sprzedaży: ${e?.message ?? "nieznany"}.`, agentsCount);
+    const offers = await offersPromise.catch<LocalOffers>(() => ({
+      available: false, totalActiveListings: 0, agencyListings: 0, privateListings: 0,
+      medianPricePerM2: null, radiusKm: LOCAL_OFFERS_RADIUS_KM,
+      source: "Firecrawl (portale ogłoszeniowe)", sample: [],
+    }));
+    return empty(`Błąd prognozy łatwości sprzedaży: ${e?.message ?? "nieznany"}.`, offers);
   }
 }

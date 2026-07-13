@@ -3,6 +3,8 @@
 import type { PropertyType } from "./types";
 import { median as med, average as avg, filterIqrOutliers } from "./cache.server";
 
+export type ListingPostedBy = "agency" | "private" | "unknown";
+
 export interface ScrapedListing {
   source: string;        // np. "otodom.pl"
   url: string;
@@ -11,6 +13,21 @@ export interface ScrapedListing {
   areaM2: number | null;
   pricePerM2: number | null;
   snippet?: string;
+  /** Kto wystawił ofertę: biuro nieruchomości / osoba prywatna / nieustalone. */
+  postedBy?: ListingPostedBy;
+}
+
+// Portale zdominowane przez oferty biur nieruchomości (domyślnie klasyfikujemy jako agency).
+const AGENCY_LEANING_PORTALS = ["domiporta.pl", "morizon.pl", "gratka.pl", "nieruchomosci-online.pl"];
+
+function classifyPostedBy(blob: string, domain: string): ListingPostedBy {
+  const b = blob.toLowerCase();
+  const privateHit = /(oferta prywatna|osoba prywatna|bez po[śs]redni|bezpo[śs]rednio od w[łl]a[śs]cic|od w[łl]a[śs]ciciela)/.test(b);
+  const agencyHit = /(biuro nieruchomo|agencja nieruchomo|po[śs]rednik|prowizj|oferta biura|oferta od:\s*(biuro|agencja)|zapraszam do biura|numer oferty|nr oferty|mln estate|dom development|sp\.\s*z\s*o\.o\.)/.test(b);
+  if (agencyHit) return "agency";
+  if (privateHit) return "private";
+  if (AGENCY_LEANING_PORTALS.includes(domain)) return "agency";
+  return "unknown";
 }
 
 export interface ListingsBenchmark {
@@ -148,6 +165,7 @@ export async function scrapeSimilarListings(p: ListingsScrapeParams): Promise<Li
       source: domain, url, title: title.slice(0, 200),
       pricePln, areaM2, pricePerM2,
       snippet: description ? description.slice(0, 240) : undefined,
+      postedBy: classifyPostedBy(blob, domain),
     });
   }
 

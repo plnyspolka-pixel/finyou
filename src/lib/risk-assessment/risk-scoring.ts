@@ -125,8 +125,8 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (i.saleability.available) {
     if (i.saleability.band === "bardzo_trudna" || i.saleability.band === "trudna")
       keyRisks.push(`Ograniczona łatwość sprzedaży (${i.saleability.band.replace(/_/g, " ")}) — ryzyko długiego wyjścia z inwestycji.`);
-    if (!i.saleability.realEstateAgents.available)
-      keyRisks.push(`Brak aktywnych pośredników nieruchomości w promieniu ${i.saleability.realEstateAgents.radiusKm} km — płytki rynek.`);
+    if (!i.saleability.localMarketOffers.available)
+      keyRisks.push(`Brak aktywnych ofert sprzedaży wystawionych przez biura w okolicy (~${i.saleability.localMarketOffers.radiusKm} km) — płytki rynek.`);
     if (i.saleability.populationTrend === "malejaca")
       keyRisks.push("Malejąca liczba mieszkańców w okolicy — presja na płynność i ceny.");
   }
@@ -139,8 +139,8 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (i.correspondence.cooperationLevel === "wysoki") keyStrengths.push("Wysoki poziom współpracy klienta.");
   if (i.saleability.available && (i.saleability.band === "bardzo_latwa" || i.saleability.band === "latwa"))
     keyStrengths.push(`Dobra prognozowana łatwość sprzedaży (${i.saleability.band.replace(/_/g, " ")}) — sprawne wyjście z inwestycji.`);
-  if (i.saleability.realEstateAgents.count >= 4)
-    keyStrengths.push(`Aktywny rynek pośredników (${i.saleability.realEstateAgents.count} w ${i.saleability.realEstateAgents.radiusKm} km).`);
+  if (i.saleability.localMarketOffers.agencyListings >= 4)
+    keyStrengths.push(`Aktywny rynek: ${i.saleability.localMarketOffers.agencyListings} ofert biur nieruchomości w okolicy (~${i.saleability.localMarketOffers.radiusKm} km).`);
   if (i.collateral?.collateralScore?.mainStrengths) keyStrengths.push(...i.collateral.collateralScore.mainStrengths);
   keyStrengths.push(...i.master.keyStrengths);
 

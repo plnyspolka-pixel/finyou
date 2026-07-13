@@ -80,8 +80,7 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
       address: property?.address ?? null,
       city: property?.city ?? null,
       voivodeship: property?.voivodeship ?? null,
-      latitude: collateral?.property?.latitude ?? null,
-      longitude: collateral?.property?.longitude ?? null,
+      areaM2: property?.area_sqm ?? null,
     }),
   ]);
 
@@ -262,12 +261,12 @@ function buildDataSources(a: {
     status: a.saleability.available ? "success" : "no_data",
   });
   sources.push({
-    source: "Pośrednicy nieruchomości (Google Maps Places)",
-    used: a.saleability.realEstateAgents.count > 0,
-    purpose: "dostępność profesjonalnej obsługi rynku / płynność zbycia",
-    dataLevel: `${a.saleability.realEstateAgents.count} w ${a.saleability.realEstateAgents.radiusKm} km`,
-    period: "",
-    status: a.saleability.realEstateAgents.count > 0 ? "success" : "no_data",
+    source: "Aktywne oferty sprzedaży w okolicy — biura nieruchomości (Firecrawl)",
+    used: a.saleability.localMarketOffers.totalActiveListings > 0,
+    purpose: "realna podaż i obsługa rynku przez biura — sygnał płynności zbycia",
+    dataLevel: `${a.saleability.localMarketOffers.agencyListings} ofert biur / ${a.saleability.localMarketOffers.totalActiveListings} ogółem (~${a.saleability.localMarketOffers.radiusKm} km)`,
+    period: "oferty aktywne",
+    status: a.saleability.localMarketOffers.totalActiveListings > 0 ? "success" : "no_data",
   });
 
   // Źródła z analizy zabezpieczenia (Google Maps, ISOK/Wody Polskie, Perplexity wstępna) — przenieś, by uniknąć duplikatów.

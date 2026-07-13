@@ -319,24 +319,14 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                     {result.saleability.demandDrivers.touristAttractionWithin20km && <Badge variant="outline">atrakcja turystyczna ≤20 km</Badge>}
                     {result.saleability.demandDrivers.majorRoadWithin10km && <Badge variant="outline">droga S/A/DK ≤10 km</Badge>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      Pośrednicy nieruchomości w {result.saleability.realEstateAgents.radiusKm} km: <b>{result.saleability.realEstateAgents.count}</b>
-                      {result.saleability.realEstateAgents.available
-                        ? <span className="text-emerald-600"> — rynek obsługiwany</span>
-                        : <span className="text-amber-600"> — brak/płytki rynek pośredników</span>}
-                    </span>
-                  </div>
+                  <LocalOffersBlock offers={result.saleability.localMarketOffers} />
                   {result.saleability.purchasingPowerComment && <p className="text-muted-foreground">Siła nabywcza: {result.saleability.purchasingPowerComment}</p>}
                   {result.saleability.rationale && <p className="text-muted-foreground">{result.saleability.rationale}</p>}
                 </>
               ) : (
                 <>
                   <p className="text-muted-foreground">{result.saleability.summary}</p>
-                  {result.saleability.realEstateAgents.count > 0 && (
-                    <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Pośrednicy w {result.saleability.realEstateAgents.radiusKm} km: <b>{result.saleability.realEstateAgents.count}</b></div>
-                  )}
+                  <LocalOffersBlock offers={result.saleability.localMarketOffers} />
                 </>
               )}
             </CardContent>
@@ -442,6 +432,41 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           {/* Wykorzystane źródła danych */}
           <UsedSources sources={result.dataSources} />
         </>
+      )}
+    </div>
+  );
+}
+
+function LocalOffersBlock({ offers }: { offers: InvestmentRiskAssessment["saleability"]["localMarketOffers"] }) {
+  return (
+    <div className="rounded-md border p-3 space-y-2">
+      <div className="flex items-center gap-2 text-sm">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span>
+          Oferty sprzedaży w okolicy (~{offers.radiusKm} km):{" "}
+          <b>{offers.totalActiveListings}</b> — w tym biura: <b>{offers.agencyListings}</b>, prywatne: {offers.privateListings}
+          {offers.available
+            ? <span className="text-emerald-600"> — rynek obsługiwany przez biura</span>
+            : <span className="text-amber-600"> — brak/płytki rynek ofert biur</span>}
+        </span>
+      </div>
+      {offers.medianPricePerM2 != null && (
+        <div className="text-xs text-muted-foreground">Mediana ceny ofertowej w okolicy: <b>{fmtPln(offers.medianPricePerM2)}/m²</b></div>
+      )}
+      {offers.sample.length > 0 && (
+        <div className="space-y-0.5">
+          {offers.sample.map((l, i) => (
+            <div key={i} className="text-xs flex items-center gap-1.5">
+              <Badge variant={l.postedBy === "agency" ? "secondary" : "outline"} className="text-[10px]">
+                {l.postedBy === "agency" ? "biuro" : l.postedBy === "private" ? "prywatna" : "?"}
+              </Badge>
+              <a href={l.url} target="_blank" rel="noreferrer" className="underline truncate max-w-[38ch]">{l.title || l.url}</a>
+              <span className="text-muted-foreground whitespace-nowrap">
+                {l.pricePln != null ? fmtPln(l.pricePln) : "—"}{l.pricePerM2 != null ? ` · ${fmtPln(l.pricePerM2)}/m²` : ""} · {l.source}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

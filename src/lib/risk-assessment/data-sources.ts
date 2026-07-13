@@ -141,14 +141,14 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     envKey: "PERPLEXITY_API_KEY",
   },
   {
-    key: "real_estate_agents",
-    name: "Pośrednicy nieruchomości (rynek lokalny)",
+    key: "local_market_offers",
+    name: "Oferty sprzedaży w okolicy — biura nieruchomości",
     category: "rynek_nieruchomosci",
     governmental: false,
-    purpose: "dostępność profesjonalnej obsługi rynku — sygnał płynności",
-    provides: "liczba biur/pośredników nieruchomości w promieniu do 25 km",
-    provider: "Google Maps Places (Lovable connector)",
-    envKey: "GOOGLE_MAPS_API_KEY",
+    purpose: "realna podaż i obsługa rynku przez biura — sygnał płynności zbycia",
+    provides: "aktywne ogłoszenia sprzedaży w okolicy (~10 km), udział ofert biur vs prywatnych, mediana ceny/m²",
+    provider: "Firecrawl (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
+    envKey: "FIRECRAWL_API_KEY",
   },
   // 8. Rynek nieruchomości + wycena nadrzędna
   {

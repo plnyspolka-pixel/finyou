@@ -123,8 +123,17 @@ export interface SaleabilityForecast {
   };
   rentalDemand: "wysoki" | "sredni" | "niski" | "nieznany";
   purchasingPowerComment: string | null;
-  // Dostępność pośredników nieruchomości na rynku lokalnym.
-  realEstateAgents: { available: boolean; count: number; radiusKm: number; source: string };
+  // Aktywne oferty sprzedaży w okolicy wystawione przez biura nieruchomości.
+  localMarketOffers: {
+    available: boolean;          // czy rynek jest zaopatrzony w oferty biur
+    totalActiveListings: number; // wszystkie znalezione oferty w okolicy
+    agencyListings: number;      // wystawione przez biura nieruchomości
+    privateListings: number;     // oferty prywatne
+    medianPricePerM2: number | null;
+    radiusKm: number;
+    source: string;
+    sample: Array<{ title: string; url: string; source: string; postedBy: string; pricePln: number | null; pricePerM2: number | null }>;
+  };
   rationale: string;
   citations: string[];
   summary: string;
