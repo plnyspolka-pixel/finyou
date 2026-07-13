@@ -40,24 +40,24 @@ const fetchPublicInvoices = createServerFn({ method: "GET" }).handler(async () =
     .ilike("name", "%finance you%");
   const entityIds = (entities ?? []).map((e: any) => e.id);
   let q = supabaseAdmin
-    .from("sales_invoices")
-    .select("id, invoice_number, issue_date, gross_amount, currency, buyer_name, buyer_nip, items, status")
-    .in("status", ["issued", "sent", "paid"])
-    .order("issue_date", { ascending: false })
+    .from("accounting_documents")
+    .select("id, invoice_number, issue_date, gross_amount, currency, counterparty_name, counterparty_nip, items")
+    .eq("direction", "sales")
+    .order("issue_date", { ascending: false, nullsFirst: false })
     .limit(25);
   if (entityIds.length > 0) q = q.in("entity_id", entityIds);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   const rows: PublicInvoice[] = (data ?? []).map((r: any) => {
     const items = Array.isArray(r.items) ? r.items : [];
-    const firstItem = items[0]?.name ?? "Usługa finansowa";
+    const firstItem = items[0]?.name ?? items[0]?.description ?? "Usługa finansowa";
     return {
       id: r.id,
       invoice_number: r.invoice_number,
       issue_date: r.issue_date,
       gross_amount: Number(r.gross_amount ?? 0),
       currency: r.currency ?? "PLN",
-      buyer_label: anonBuyer(r.buyer_name, r.buyer_nip),
+      buyer_label: anonBuyer(r.counterparty_name, r.counterparty_nip),
       item_label: String(firstItem).slice(0, 80),
     };
   });
