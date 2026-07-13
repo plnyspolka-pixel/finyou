@@ -67,10 +67,26 @@ export function KwContentSection({
   const onFetch = async (force = false) => {
     setBusy(true);
     try {
-      const r = await doFetch({ data: { loanApplicationId: applicationId, force } });
-      setKwNumber(r.kwNumber ?? null);
-      if (r.status === "ready") toast.success("Treść KW pobrana");
-      else if (r.status === "processing") toast.info("KW jest w trakcie pobierania — odśwież za chwilę");
+      if (force) {
+        // Wymuszone odświeżenie: pojedyncze uderzenie (invalid cache po stronie serwera i tak nie ma dedykowanego trybu).
+        const r = await doFetch({ data: { loanApplicationId: applicationId, force: true } });
+        setKwNumber(r.kwNumber ?? null);
+      }
+      // Automatyczne dowożenie do końca — bez ingerencji użytkownika.
+      const res = await ensureKwReady(applicationId, {
+        onStatus: (s) => {
+          if (s === "processing") setDoc((d) => (d ? { ...d, status: "processing" } : d));
+        },
+      });
+      if (res.ok) {
+        toast.success("Treść KW pobrana");
+      } else if (res.status === "not_found") {
+        toast.error("Księga wieczysta nie została odnaleziona w EKW");
+      } else if (res.status === "timeout") {
+        toast.info("Pobieranie trwa dłużej niż zwykle — spróbuj ponownie za chwilę");
+      } else if (res.status !== "no_kw") {
+        toast.error(res.message || "Nie udało się pobrać KW");
+      }
       await reload();
     } catch (e: any) {
       toast.error(e?.message || "Nie udało się pobrać KW");
