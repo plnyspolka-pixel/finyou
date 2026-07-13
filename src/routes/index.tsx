@@ -8,9 +8,9 @@ import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
 
 
 
-const PHONE_DISPLAY = "+48 732 059 898";
-const PHONE_HREF = "+48732059898";
-const EMAIL = "kontakt@financeyou.pl";
+export const PHONE_DISPLAY = "+48 732 059 898";
+export const PHONE_HREF = "+48732059898";
+export const EMAIL = "kontakt@financeyou.pl";
 
 export const Route = createFileRoute("/")({
   head: () => ({
