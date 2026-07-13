@@ -11,7 +11,7 @@ describe("assessPlotBuildability — prawo zabudowy działki", () => {
     expect(r.warnings.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("słowo „siedlisko" w opisie także klasyfikuje jako zagrodowa", () => {
+  it('słowo „siedlisko" w opisie także klasyfikuje jako zagrodowa', () => {
     const r = assessPlotBuildability({ propertyType: "dzialka_zabudowana", ocrText: "Działka siedliskowa z budynkiem gospodarczym" });
     expect(r.category).toBe("zagrodowa_siedliskowa");
     expect(r.onlyFarmerCanBuild).toBe(true);
