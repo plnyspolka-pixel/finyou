@@ -159,6 +159,36 @@ export async function runAgentTurn(opts: {
 
   const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nNazwisko: ${lead.last_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
 
+  // Checklist braków liczona z BAZY (lead + application_data + załączniki),
+  // nie z pamięci modelu — bot ma dopytywać tylko o to, czego naprawdę nie mamy,
+  // a gdy komplet jest zebrany, lead awansuje na wniosek (maybePromote…).
+  const appData = (lead.application_data ?? {}) as Record<string, any>;
+  const { count: attCount } = await s
+    .from("lead_communications")
+    .select("id", { count: "exact", head: true })
+    .eq("lead_id", opts.leadId)
+    .not("attachments", "is", null);
+  const known: string[] = [];
+  const missing: string[] = [];
+  const mark = (ok: boolean, label: string) => (ok ? known : missing).push(label);
+  mark(appData.loan_amount != null, "kwota pożyczki");
+  mark(!!appData.typ_nieruchomosci, "rodzaj nieruchomości");
+  mark(
+    (Array.isArray(appData.kw_numbers) && appData.kw_numbers.length > 0) || !!appData.numer_kw,
+    "numer księgi wieczystej",
+  );
+  mark(
+    (attCount ?? 0) > 0 || opts.attachmentsSummary != null || appData.zdjecia_nieruchomosci === "przesłane",
+    "zdjęcia/dokumenty nieruchomości",
+  );
+  mark(!!(lead.phone_raw || lead.phone_normalized || appData.phone), "numer telefonu");
+  mark(!!(lead.email || appData.email), "adres e-mail");
+  mark(!!(lead.first_name && lead.last_name), "imię i nazwisko");
+  const checklistBlock =
+    missing.length === 0
+      ? `\n\n[STAN DANYCH — sprawdzony w bazie]\nKOMPLET: mamy wszystkie dane (${known.join(", ")}). Nie dopytuj o nic z tej listy. Sprawa przechodzi do analizy — poinformuj o tym klienta, jeśli jeszcze tego nie zrobiłeś.`
+      : `\n\n[STAN DANYCH — sprawdzony w bazie]\nMamy już: ${known.length ? known.join(", ") : "nic"}.\nBrakuje: ${missing.join(", ")}.\nNIE pytaj o nic z listy "mamy już". Dopytuj naturalnie o PIERWSZĄ brakującą pozycję (jedno pytanie na wiadomość), najpierw odpowiadając na pytanie klienta.`;
+
   // RAG: pobierz fragmenty bazy wiedzy najbardziej pasujące do wiadomości klienta.
   let knowledgeBlock = "";
   try {
@@ -174,7 +204,7 @@ export async function runAgentTurn(opts: {
   }
 
   const messages: EmittedMessage[] = [
-    { role: "system", content: systemPrompt + leadContext + knowledgeBlock },
+    { role: "system", content: systemPrompt + leadContext + checklistBlock + knowledgeBlock },
   ];
   for (const m of history ?? []) {
     if (!m.content) continue;
