@@ -96,7 +96,7 @@ ZADANIE:
 1. Ustal nadrzędną wycenę rynkową (low/mid/high w PLN), korygując wartość deklarowaną o realia rynku oraz obciążenia prawne (hipoteki, egzekucje, służebności obniżają wartość zabezpieczenia netto).
 2. Zaproponuj maksymalną bezpieczną kwotę pożyczki i pułap LTV, uwzględniając ryzyko prawne, płynność i ryzyko dożycia/sukcesji właściciela.
 3. Wypunktuj kluczowe ryzyka i mocne strony.
-4. Wydaj rekomendację: "rekomendowana" | "warunkowa" | "do_weryfikacji" | "odradzana".
+4. Sklasyfikuj poziom ryzyka (klasyfikacja analityczna, NIE rekomendacja ani porada): "rekomendowana" (=niskie ryzyko) | "warunkowa" (=umiarkowane) | "do_weryfikacji" | "odradzana" (=wysokie ryzyko).
 
 WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana".
 - PRIORYTET DANYCH RZĄDOWYCH: jeżeli w sekcji (0) podano dane RCN (rzeczywiste transakcje) lub GUS BDL, przyjmij je jako KOTWICĘ wyceny (RCN ma pierwszeństwo przed GUS) i nie odchylaj się od nich istotnie bez uzasadnienia w danych rynkowych.
@@ -152,7 +152,7 @@ export async function perplexityMasterValuation(input: MasterValuationInput): Pr
       body: JSON.stringify({
         model: "sonar-pro",
         messages: [
-          { role: "system", content: "Jesteś rzeczoznawcą i analitykiem ryzyka nieruchomości w Polsce. Odpowiadasz wyłącznie poprawnym JSON-em." },
+          { role: "system", content: "Jesteś analitykiem ryzyka nieruchomości w Polsce. Dostarczasz wyłącznie analizę i klasyfikację ryzyka — NIE udzielasz rekomendacji, porad inwestycyjnych ani prawnych. Odpowiadasz wyłącznie poprawnym JSON-em." },
           { role: "user", content: buildPrompt(input) },
         ],
         temperature: 0.2,

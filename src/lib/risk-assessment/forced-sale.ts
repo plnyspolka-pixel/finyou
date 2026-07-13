@@ -6,15 +6,54 @@
 //   • II licytacja — 2/3 sumy oszacowania (art. 983 KPC); poniżej nie można nabyć,
 //     a po bezskutecznej II licytacji wierzyciel może przejąć za 2/3 (art. 984 KPC).
 
-import type { ForcedSaleEstimate, AuctionOutcome } from "./types";
+import type { ForcedSaleEstimate, AuctionOutcome, ResidentialAuctionBlock } from "./types";
 
 const FIRST_AUCTION_FRACTION = 0.75;       // 3/4
 const SECOND_AUCTION_FRACTION = 2 / 3;     // ~0.6667
+// Art. 952¹ § 2 KPC — próg 1/20 sumy oszacowania.
+const RESIDENTIAL_MIN_CLAIM_FRACTION = 0.05; // 1/20 = 5%
+const RESIDENTIAL_TYPES = new Set(["mieszkanie", "dom"]);
+
+const ART_952_1_BASIS =
+  "Art. 952¹ § 2 KPC — licytację lokalu mieszkalnego / domu służącego zaspokojeniu potrzeb mieszkaniowych dłużnika można wyznaczyć na wniosek wierzyciela tylko, gdy egzekwowana należność główna wynosi co najmniej 1/20 (5%) sumy oszacowania. Wyjątki: należność Skarbu Państwa, z wyroku karnego, albo zgoda dłużnika/sądu.";
+
+/**
+ * Ryzyko blokady licytacji nieruchomości mieszkalnej (mieszkanie/dom), gdy kwota
+ * pożyczki (należność główna) jest niższa niż 5% wartości (art. 952¹ § 2 KPC).
+ * Czysta, testowalna funkcja — używana i w kalkulatorze inwestora (na żywo), i w ocenie.
+ */
+export function residentialAuctionBlockRisk(a: {
+  propertyType: string;
+  loanAmountPln?: number | null;
+  propertyValuePln?: number | null;
+}): ResidentialAuctionBlock {
+  const applicable =
+    RESIDENTIAL_TYPES.has(a.propertyType) &&
+    !!a.loanAmountPln && a.loanAmountPln > 0 &&
+    !!a.propertyValuePln && a.propertyValuePln > 0;
+
+  if (!applicable) {
+    return {
+      applicable: false, blocked: false, loanToValuePercent: null, thresholdPln: null,
+      message: "", legalBasis: ART_952_1_BASIS,
+    };
+  }
+  const value = a.propertyValuePln as number;
+  const loan = a.loanAmountPln as number;
+  const thresholdPln = Math.round(value * RESIDENTIAL_MIN_CLAIM_FRACTION);
+  const loanToValuePercent = Math.round((loan / value) * 1000) / 10; // 1 miejsce po przecinku
+  const blocked = loan < thresholdPln;
+  const message = blocked
+    ? `Kwota pożyczki (${loan.toLocaleString("pl-PL")} PLN) to ${loanToValuePercent}% wartości nieruchomości mieszkalnej — poniżej progu 5%. Wierzyciel może NIE być w stanie skutecznie wyznaczyć licytacji (art. 952¹ § 2 KPC): egzekucja z nieruchomości może być zablokowana. Minimalna należność główna umożliwiająca licytację: ${thresholdPln.toLocaleString("pl-PL")} PLN.`
+    : "";
+  return { applicable: true, blocked, loanToValuePercent, thresholdPln, message, legalBasis: ART_952_1_BASIS };
+}
 
 export interface ForcedSaleInput {
   /** Suma oszacowania (nasza najlepsza wartość rynkowa) w PLN. */
   basisValuePln: number | null;
   basisSource: string;
+  propertyType?: string | null;
   requestedLoanPln?: number | null;
   /** 0–100 z prognozy łatwości sprzedaży — wpływa na spodziewany wynik licytacji. */
   saleabilityScore?: number | null;
@@ -34,6 +73,12 @@ export function estimateForcedSale(i: ForcedSaleInput): ForcedSaleEstimate {
   const legalBasis =
     "Ceny wywołania od sumy oszacowania: I licytacja 3/4 (art. 965 KPC), II licytacja 2/3 (art. 983 KPC); przejęcie przez wierzyciela za 2/3 (art. 984 KPC).";
 
+  const residentialAuctionBlock = residentialAuctionBlockRisk({
+    propertyType: i.propertyType ?? "",
+    loanAmountPln: i.requestedLoanPln,
+    propertyValuePln: i.basisValuePln,
+  });
+
   const v = i.basisValuePln && i.basisValuePln > 0 ? i.basisValuePln : null;
   if (!v) {
     return {
@@ -48,6 +93,7 @@ export function estimateForcedSale(i: ForcedSaleInput): ForcedSaleEstimate {
       expectedForcedSaleHighPln: null,
       likelyAuctionOutcome: "nieznany",
       loanToForcedSalePercent: null,
+      residentialAuctionBlock,
       recoveryComment: "Brak wiarygodnej wartości nieruchomości — nie można oszacować ceny wymuszonej sprzedaży.",
       legalBasis,
     };
@@ -107,7 +153,8 @@ export function estimateForcedSale(i: ForcedSaleInput): ForcedSaleEstimate {
     expectedForcedSaleHighPln,
     likelyAuctionOutcome,
     loanToForcedSalePercent,
-    recoveryComment,
+    residentialAuctionBlock,
+    recoveryComment: residentialAuctionBlock.blocked ? `${recoveryComment} ${residentialAuctionBlock.message}` : recoveryComment,
     legalBasis,
   };
 }

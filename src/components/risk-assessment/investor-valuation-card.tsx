@@ -3,7 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Gavel, Users, MapPinned, Building2, Landmark } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TrendingUp, Gavel, Users, MapPinned, Building2, Landmark, AlertTriangle } from "lucide-react";
 import {
   getInvestorValuationSummary,
   type InvestorValuationSummary,
@@ -11,6 +12,7 @@ import {
 import { saleabilityBandLabel, auctionOutcomeLabel } from "@/lib/risk-assessment/forced-sale";
 import { plotCategoryLabel, buyerPoolLabel, valuationBasisLabel } from "@/lib/risk-assessment/plot-buildability";
 import { ValuationLadderChart } from "./risk-charts";
+import { RiskDisclaimer } from "./risk-disclaimer";
 
 function fmtPln(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -75,8 +77,8 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
             <span>Trend rynku: {pv.marketTrend}</span>
-            {pv.suggestedLtvCapPercent != null && <span>Sugerowany pułap LTV: {pv.suggestedLtvCapPercent}%</span>}
-            {pv.suggestedMaxLoanAmountPln != null && <span>Sugerowana maks. kwota: {fmtPln(pv.suggestedMaxLoanAmountPln)}</span>}
+            {pv.suggestedLtvCapPercent != null && <span>Pułap LTV (analiza): {pv.suggestedLtvCapPercent}%</span>}
+            {pv.suggestedMaxLoanAmountPln != null && <span>Kwota przy LTV do {pv.suggestedLtvCapPercent ?? "—"}%: {fmtPln(pv.suggestedMaxLoanAmountPln)}</span>}
           </div>
           {data.govBenchmark?.available && (
             <div className="mt-1 text-xs flex items-center gap-1 text-blue-700 dark:text-blue-400">
@@ -116,6 +118,14 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
               loanAmountPln: null,
             }} />
           </div>
+          {qs.residentialAuctionBlocked && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                <b>Możliwa blokada licytacji (art. 952¹ § 2 KPC).</b> {qs.residentialBlockMessage}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <Separator />
@@ -164,6 +174,8 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
             </div>
           )}
         </div>
+
+        <RiskDisclaimer compact />
       </CardContent>
     </Card>
   );

@@ -197,6 +197,7 @@ export async function runInvestmentRiskAssessmentCore(
   const forcedSale = estimateForcedSale({
     basisValuePln: basisValue,
     basisSource,
+    propertyType: property?.property_type ?? null,
     requestedLoanPln: loanAmount,
     saleabilityScore: saleability.available ? saleability.score : null,
     marketLowPln: master.estimatedValueLowPln ?? collateral?.valuationBenchmark?.conservativeLowPln ?? null,
@@ -205,6 +206,9 @@ export async function runInvestmentRiskAssessmentCore(
   });
   if (forcedSale.loanToForcedSalePercent != null && forcedSale.loanToForcedSalePercent > 100) {
     warnings.push("Kwota pożyczki przekracza spodziewany odzysk z licytacji komorniczej (II licytacja) — bardzo wysokie ryzyko.");
+  }
+  if (forcedSale.residentialAuctionBlock.blocked) {
+    warnings.push(forcedSale.residentialAuctionBlock.message);
   }
 
   // 8) Zbiorczy scoring.
@@ -227,7 +231,7 @@ export async function runInvestmentRiskAssessmentCore(
     `Ocena inwestycji: ${combined.investmentScore}/100 (klasa ${combined.riskGrade}) — ${recommendationLabel(combined.recommendation)}. ` +
     `Szacowana wartość nieruchomości: ${valueStr}. ` +
     saleStr + forcedStr +
-    (master.suggestedMaxLoanAmountPln ? `Sugerowana maks. kwota pożyczki: ${master.suggestedMaxLoanAmountPln.toLocaleString("pl-PL")} PLN (LTV do ${master.suggestedLtvCapPercent ?? "—"}%). ` : "") +
+    (master.suggestedMaxLoanAmountPln ? `Kwota odpowiadająca pułapowi LTV do ${master.suggestedLtvCapPercent ?? "—"}%: ${master.suggestedMaxLoanAmountPln.toLocaleString("pl-PL")} PLN (wskaźnik analityczny). ` : "") +
     (combined.keyRisks.length ? `Główne ryzyka: ${combined.keyRisks.slice(0, 3).join("; ")}.` : "Nie zidentyfikowano krytycznych ryzyk.");
 
   const result: InvestmentRiskAssessment = {
@@ -382,7 +386,7 @@ function buildDataSources(a: {
   sources.push({
     source: "Perplexity (sonar-pro) — nadrzędna wycena i opinia o ryzyku",
     used: a.master.status === "success",
-    purpose: "domknięcie wyceny i rekomendacji na bazie pełnego dossier + rynku",
+    purpose: "domknięcie wyceny i klasyfikacji ryzyka na bazie pełnego dossier + rynku",
     dataLevel: a.master.citations.length ? `${a.master.citations.length} źródeł online` : "—",
     period: "ostatnie 12 mies.",
     status: a.master.status === "success" ? "success" : a.master.status === "no_data" ? "no_data" : "error",
@@ -434,6 +438,8 @@ export interface InvestorValuationSummary {
     expectedLowPln: number | null;
     expectedHighPln: number | null;
     likelyAuctionOutcome: string;
+    residentialAuctionBlocked: boolean;
+    residentialBlockMessage: string;
   };
   saleability: {
     available: boolean;
@@ -559,6 +565,8 @@ export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): Inve
       expectedLowPln: r.forcedSale.expectedForcedSaleLowPln,
       expectedHighPln: r.forcedSale.expectedForcedSaleHighPln,
       likelyAuctionOutcome: r.forcedSale.likelyAuctionOutcome,
+      residentialAuctionBlocked: r.forcedSale.residentialAuctionBlock.blocked,
+      residentialBlockMessage: r.forcedSale.residentialAuctionBlock.message,
     },
     saleability: {
       available: r.saleability.available,

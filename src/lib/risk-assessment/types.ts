@@ -158,6 +158,16 @@ export type AuctionOutcome =
   | "przejecie_wierzyciela"
   | "nieznany";
 
+// Ryzyko blokady licytacji nieruchomości mieszkalnej (art. 952¹ § 2 KPC).
+export interface ResidentialAuctionBlock {
+  applicable: boolean;
+  blocked: boolean;
+  loanToValuePercent: number | null;
+  thresholdPln: number | null; // 5% wartości = minimalna należność główna
+  message: string;
+  legalBasis: string;
+}
+
 export interface ForcedSaleEstimate {
   basisValuePln: number | null;   // suma oszacowania przyjęta do wyliczeń
   basisSource: string;
@@ -170,6 +180,7 @@ export interface ForcedSaleEstimate {
   expectedForcedSaleHighPln: number | null;
   likelyAuctionOutcome: AuctionOutcome;
   loanToForcedSalePercent: number | null;  // pokrycie kwoty pożyczki z wymuszonej sprzedaży
+  residentialAuctionBlock: ResidentialAuctionBlock;
   recoveryComment: string;
   legalBasis: string;
 }
@@ -261,11 +272,12 @@ export function gradeFromScore(score: number): RiskGrade {
   return "E";
 }
 
+// Neutralna klasyfikacja ryzyka (NIE rekomendacja/porada inwestycyjna).
 export function recommendationLabel(r: Recommendation): string {
   switch (r) {
-    case "rekomendowana": return "Inwestycja rekomendowana";
-    case "warunkowa": return "Rekomendacja warunkowa";
+    case "rekomendowana": return "Profil niskiego ryzyka";
+    case "warunkowa": return "Profil ryzyka umiarkowanego (warunkowy)";
     case "do_weryfikacji": return "Wymaga dodatkowej weryfikacji";
-    case "odradzana": return "Inwestycja odradzana";
+    case "odradzana": return "Profil wysokiego ryzyka";
   }
 }

@@ -22,6 +22,7 @@ import { bandLabel } from "@/lib/risk-assessment/life-expectancy";
 import { auctionOutcomeLabel, saleabilityBandLabel } from "@/lib/risk-assessment/forced-sale";
 import { plotCategoryLabel, buyerPoolLabel, valuationBasisLabel } from "@/lib/risk-assessment/plot-buildability";
 import { InvestmentScoreGauge, ComponentScoresChart, ValuationLadderChart } from "./risk-charts";
+import { RiskDisclaimer } from "./risk-disclaimer";
 import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
 import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
 
@@ -124,15 +125,16 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
       {!result && !running && (
         <>
           <Card><CardContent className="py-6 text-sm text-muted-foreground">
-            Brak wyników. Uruchom ocenę, aby zebrać dane ze wszystkich źródeł i wygenerować nadrzędną wycenę oraz rekomendację inwestycyjną.
+            Brak wyników. Uruchom ocenę, aby zebrać dane ze wszystkich źródeł i wygenerować nadrzędną wycenę oraz automatyczną klasyfikację ryzyka.
           </CardContent></Card>
+          <RiskDisclaimer />
           <DataSourceCatalog />
         </>
       )}
 
       {result && (
         <>
-          {/* Nagłówek: score, klasa, rekomendacja */}
+          {/* Nagłówek: miernik oceny + klasyfikacja ryzyka */}
           <Card>
             <CardContent className="py-5">
               <div className="flex items-center gap-5 flex-wrap">
@@ -146,6 +148,8 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
               </div>
             </CardContent>
           </Card>
+
+          <RiskDisclaimer />
 
           {result.warnings?.length > 0 && (
             <Alert>
@@ -247,7 +251,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> Nadrzędna wycena (Perplexity)</CardTitle>
-              <CardDescription>Wycena i rekomendacja na bazie pełnego dossier oraz aktualnego rynku.</CardDescription>
+              <CardDescription>Wycena i klasyfikacja ryzyka na bazie pełnego dossier oraz aktualnego rynku.</CardDescription>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               {result.masterValuation.status === "success" ? (
@@ -259,7 +263,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                   </div>
                   <Separator />
                   <div className="flex flex-wrap gap-x-6 gap-y-1">
-                    <div><span className="text-muted-foreground">Sugerowana maks. pożyczka:</span> <b>{fmtPln(result.masterValuation.suggestedMaxLoanAmountPln)}</b></div>
+                    <div><span className="text-muted-foreground">Kwota przy pułapie LTV:</span> <b>{fmtPln(result.masterValuation.suggestedMaxLoanAmountPln)}</b></div>
                     <div><span className="text-muted-foreground">Pułap LTV:</span> <b>{result.masterValuation.suggestedLtvCapPercent ?? "—"}%</b></div>
                     <div><span className="text-muted-foreground">Trend:</span> {result.masterValuation.marketTrend}</div>
                   </div>
@@ -311,6 +315,14 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                       </Badge>
                     )}
                   </div>
+                  {result.forcedSale.residentialAuctionBlock?.blocked && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <b>Blokada licytacji (art. 952¹ § 2 KPC).</b> {result.forcedSale.residentialAuctionBlock.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <p className="text-muted-foreground">{result.forcedSale.recoveryComment}</p>
                   <p className="text-[11px] text-muted-foreground italic">Podstawa wyceny: {result.forcedSale.basisSource}. {result.forcedSale.legalBasis}</p>
                 </>
