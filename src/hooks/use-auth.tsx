@@ -46,8 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (pending === "inwestor" && !next.includes("inwestor") && !next.includes("administrator")) ||
         (pending === "posrednik" && !next.includes("operator") && !next.includes("administrator")) ||
         (pending === "klient" && next.length > 0 && !next.includes("klient"));
-      if (needsFix && typeof window !== "undefined" && !window.location.pathname.startsWith("/wybor-roli")) {
+      const path = typeof window !== "undefined" ? window.location.pathname : "";
+      if (needsFix && typeof window !== "undefined" && !path.startsWith("/wybor-roli") && !path.startsWith("/embed")) {
         window.location.assign("/wybor-roli");
+
       } else if (!needsFix) {
         window.localStorage.removeItem("pending_role_selection");
       }
