@@ -1,10 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
@@ -22,6 +21,7 @@ import { recommendationLabel } from "@/lib/risk-assessment/types";
 import { bandLabel } from "@/lib/risk-assessment/life-expectancy";
 import { auctionOutcomeLabel, saleabilityBandLabel } from "@/lib/risk-assessment/forced-sale";
 import { plotCategoryLabel, buyerPoolLabel, valuationBasisLabel } from "@/lib/risk-assessment/plot-buildability";
+import { InvestmentScoreGauge, ComponentScoresChart, ValuationLadderChart } from "./risk-charts";
 import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
 import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
 
@@ -37,37 +37,11 @@ function statusIcon(s: SourceStatus) {
   return <span className="h-3.5 w-3.5 inline-block rounded-full bg-muted-foreground/40" />;
 }
 
-function gradeColor(grade: string): string {
-  switch (grade) {
-    case "A": return "bg-emerald-600 text-white";
-    case "B": return "bg-emerald-500 text-white";
-    case "C": return "bg-amber-500 text-white";
-    case "D": return "bg-orange-500 text-white";
-    default: return "bg-destructive text-white";
-  }
-}
-
 function recVariant(r: string): "default" | "secondary" | "destructive" | "outline" {
   if (r === "rekomendowana") return "default";
   if (r === "warunkowa") return "secondary";
   if (r === "odradzana") return "destructive";
   return "outline";
-}
-
-const COMPONENT_META: Array<{ key: keyof InvestmentRiskAssessment["componentScores"]; label: string; icon: ReactNode }> = [
-  { key: "collateral", label: "Zabezpieczenie", icon: <ShieldAlert className="h-4 w-4" /> },
-  { key: "valuationConfidence", label: "Pewność wyceny", icon: <Sparkles className="h-4 w-4" /> },
-  { key: "legal", label: "Stan prawny (KW)", icon: <Scale className="h-4 w-4" /> },
-  { key: "borrowerLongevity", label: "Ryzyko dożycia", icon: <HeartPulse className="h-4 w-4" /> },
-  { key: "correspondence", label: "Korespondencja", icon: <MessagesSquare className="h-4 w-4" /> },
-  { key: "documentCompleteness", label: "Dokumenty (OCR)", icon: <FileScan className="h-4 w-4" /> },
-  { key: "exitLiquidity", label: "Łatwość sprzedaży", icon: <TrendingUp className="h-4 w-4" /> },
-];
-
-function scoreBarColor(v: number): string {
-  if (v >= 70) return "text-emerald-600";
-  if (v >= 50) return "text-amber-600";
-  return "text-destructive";
 }
 
 export function RiskAssessmentSection({ applicationId }: { applicationId: string }) {
@@ -162,26 +136,14 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           <Card>
             <CardContent className="py-5">
               <div className="flex items-center gap-5 flex-wrap">
-                <div className="flex flex-col items-center justify-center min-w-[110px]">
-                  <div className={`h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold ${gradeColor(result.riskGrade)}`}>
-                    {result.riskGrade}
-                  </div>
-                  <span className="text-xs text-muted-foreground mt-1">klasa ryzyka</span>
-                </div>
+                <InvestmentScoreGauge score={result.investmentScore} grade={result.riskGrade} />
                 <div className="flex-1 min-w-[220px]">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold">{result.investmentScore}</span>
-                    <span className="text-sm text-muted-foreground">/100 — ocena inwestycji</span>
-                  </div>
-                  <Progress value={result.investmentScore} className="h-2 mt-2" />
-                  <div className="mt-2">
-                    <Badge variant={recVariant(result.recommendation)} className="text-sm">
-                      {recommendationLabel(result.recommendation)}
-                    </Badge>
-                  </div>
+                  <Badge variant={recVariant(result.recommendation)} className="text-sm">
+                    {recommendationLabel(result.recommendation)}
+                  </Badge>
+                  <p className="text-sm mt-3 leading-relaxed">{result.executiveSummary}</p>
                 </div>
               </div>
-              <p className="text-sm mt-4 leading-relaxed">{result.executiveSummary}</p>
             </CardContent>
           </Card>
 
@@ -198,20 +160,9 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
 
           {/* Oceny cząstkowe */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Oceny cząstkowe</CardTitle></CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {COMPONENT_META.map((c) => {
-                const v = result.componentScores[c.key];
-                return (
-                  <div key={c.key} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1.5 text-muted-foreground">{c.icon} {c.label}</span>
-                      <span className={`font-semibold ${scoreBarColor(v)}`}>{v}</span>
-                    </div>
-                    <Progress value={v} className="h-1.5" />
-                  </div>
-                );
-              })}
+            <CardHeader><CardTitle className="text-base">Oceny cząstkowe</CardTitle><CardDescription>0–100, wyżej = bezpieczniej.</CardDescription></CardHeader>
+            <CardContent>
+              <ComponentScoresChart scores={result.componentScores} />
             </CardContent>
           </Card>
 
@@ -345,6 +296,13 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                     <Stat label="II licytacja (2/3)" value={fmtPln(result.forcedSale.secondAuctionOpeningPln)} />
                     <Stat label="Odzysk (zakres)" value={`${fmtPln(result.forcedSale.expectedForcedSaleLowPln)}–${fmtPln(result.forcedSale.expectedForcedSaleHighPln)}`} />
                   </div>
+                  <ValuationLadderChart input={{
+                    marketMidPln: result.forcedSale.basisValuePln,
+                    firstAuctionPln: result.forcedSale.firstAuctionOpeningPln,
+                    secondAuctionPln: result.forcedSale.secondAuctionOpeningPln,
+                    expectedLowPln: result.forcedSale.expectedForcedSaleLowPln,
+                    loanAmountPln: result.collateralAnalysis?.ltv?.requestedLoanAmountPln ?? null,
+                  }} />
                   <div className="flex flex-wrap gap-2 items-center">
                     <Badge variant="outline">Prawdopodobny wynik: {auctionOutcomeLabel(result.forcedSale.likelyAuctionOutcome)}</Badge>
                     {result.forcedSale.loanToForcedSalePercent != null && (

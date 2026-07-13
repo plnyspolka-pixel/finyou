@@ -10,6 +10,7 @@ import {
 } from "@/lib/risk-assessment/risk-assessment.functions";
 import { saleabilityBandLabel, auctionOutcomeLabel } from "@/lib/risk-assessment/forced-sale";
 import { plotCategoryLabel, buyerPoolLabel, valuationBasisLabel } from "@/lib/risk-assessment/plot-buildability";
+import { ValuationLadderChart } from "./risk-charts";
 
 function fmtPln(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -106,6 +107,15 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
             </div>
           </div>
           <div className="mt-1 text-xs text-muted-foreground">Prawdopodobny wynik: {auctionOutcomeLabel(qs.likelyAuctionOutcome as never)}</div>
+          <div className="mt-2">
+            <ValuationLadderChart input={{
+              marketMidPln: pv.midPln,
+              firstAuctionPln: qs.firstAuctionOpeningPln,
+              secondAuctionPln: qs.secondAuctionOpeningPln,
+              expectedLowPln: qs.expectedLowPln,
+              loanAmountPln: null,
+            }} />
+          </div>
         </div>
 
         <Separator />
