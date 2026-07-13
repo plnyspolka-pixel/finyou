@@ -14,6 +14,7 @@ import { PropertyLocationAnalysis } from "@/components/property-location-analysi
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
+import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
@@ -254,7 +255,7 @@ function InwestorWniosek() {
 
       <InvestorSummaryCard applicationId={id} />
 
-
+      <InvestorValuationCard applicationId={id} />
 
       {incomeDocs.length > 0 && (
         <Card>

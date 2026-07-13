@@ -33,13 +33,35 @@ async function assertAdminOrOperator(userId: string) {
 
 export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
+  .inputValidator((d) => z.object({ applicationId: z.string().uuid(), force: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdminOrOperator(context.userId);
-    return runInvestmentRiskAssessmentCore(data.applicationId);
+    return runInvestmentRiskAssessmentCore(data.applicationId, { force: data.force ?? false });
   });
 
-export async function runInvestmentRiskAssessmentCore(applicationId: string): Promise<InvestmentRiskAssessment> {
+/**
+ * Ocena liczona JEDEN RAZ na temat inwestycyjny (wniosek). Zapisujemy przy kliencie
+ * (client_id) i cache'ujemy — kolejne wywołania zwracają zapis, chyba że force=true
+ * (świadome przeliczenie przez administratora/operatora).
+ */
+export async function runInvestmentRiskAssessmentCore(
+  applicationId: string,
+  opts: { force?: boolean } = {},
+): Promise<InvestmentRiskAssessment> {
+  // Idempotencja: jeśli ocena już istnieje i nie wymuszono przeliczenia — zwróć zapis.
+  if (!opts.force) {
+    try {
+      const { data: existing } = await db
+        .from("investment_risk_assessments")
+        .select("result_json")
+        .eq("application_id", applicationId)
+        .maybeSingle();
+      if (existing?.result_json) return existing.result_json as InvestmentRiskAssessment;
+    } catch {
+      // brak tabeli / błąd odczytu — policz normalnie
+    }
+  }
+
   const generatedAt = new Date().toISOString();
   const warnings: string[] = [];
 
@@ -312,3 +334,102 @@ export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
       return null;
     }
   });
+
+// ---- Podsumowanie dla kalkulatora inwestora (bezpieczny podzbiór) ----
+// Zawiera WYŁĄCZNIE dane o nieruchomości i rynku: prognozowaną wartość, szybką/
+// wymuszoną sprzedaż oraz ludność/otoczenie. NIE zawiera danych właściciela
+// (PESEL/trwanie życia) ani analizy korespondencji.
+export interface InvestorValuationSummary {
+  predictedValue: {
+    lowPln: number | null;
+    midPln: number | null;
+    highPln: number | null;
+    marketTrend: string;
+    suggestedMaxLoanAmountPln: number | null;
+    suggestedLtvCapPercent: number | null;
+  };
+  quickSale: {
+    firstAuctionOpeningPln: number | null;
+    secondAuctionOpeningPln: number | null;
+    expectedLowPln: number | null;
+    expectedHighPln: number | null;
+    likelyAuctionOutcome: string;
+  };
+  saleability: {
+    available: boolean;
+    score: number;
+    band: string;
+    estimatedDaysOnMarket: number | null;
+    localityPopulation: number | null;
+    populationTrend: string;
+    nearestLargeCity: { name: string | null; population: number | null; distanceKm: number | null };
+    demandDrivers: InvestmentRiskAssessment["saleability"]["demandDrivers"];
+    offersTotal: number;
+    offersAgency: number;
+    medianPricePerM2: number | null;
+  };
+  generatedAt: string;
+}
+
+export const getInvestorValuationSummary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }): Promise<InvestorValuationSummary | null> => {
+    try {
+      // Bramka: udostępniamy wyłącznie dla tematów dostępnych dla inwestorów.
+      const { data: app } = await supabaseAdmin
+        .from("loan_applications")
+        .select("id, available_to_investors")
+        .eq("id", data.applicationId)
+        .maybeSingle();
+      if (!app || !app.available_to_investors) return null;
+
+      const { data: row } = await db
+        .from("investment_risk_assessments")
+        .select("result_json")
+        .eq("application_id", data.applicationId)
+        .maybeSingle();
+      const r = row?.result_json as InvestmentRiskAssessment | undefined;
+      if (!r) return null;
+      return buildInvestorValuationSummary(r);
+    } catch {
+      return null;
+    }
+  });
+
+/** Buduje bezpieczny (bez PII) podzbiór dla inwestora z pełnego dossier. */
+export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): InvestorValuationSummary {
+  const mv = r.masterValuation;
+  const cb = r.collateralAnalysis?.valuationBenchmark ?? null;
+  return {
+    predictedValue: {
+      lowPln: mv.estimatedValueLowPln ?? cb?.conservativeLowPln ?? null,
+      midPln: mv.estimatedValueMidPln ?? cb?.estimatedValueMedianPln ?? null,
+      highPln: mv.estimatedValueHighPln ?? cb?.conservativeHighPln ?? null,
+      marketTrend: mv.marketTrend,
+      suggestedMaxLoanAmountPln: mv.suggestedMaxLoanAmountPln,
+      suggestedLtvCapPercent: mv.suggestedLtvCapPercent,
+    },
+    quickSale: {
+      firstAuctionOpeningPln: r.forcedSale.firstAuctionOpeningPln,
+      secondAuctionOpeningPln: r.forcedSale.secondAuctionOpeningPln,
+      expectedLowPln: r.forcedSale.expectedForcedSaleLowPln,
+      expectedHighPln: r.forcedSale.expectedForcedSaleHighPln,
+      likelyAuctionOutcome: r.forcedSale.likelyAuctionOutcome,
+    },
+    saleability: {
+      available: r.saleability.available,
+      score: r.saleability.score,
+      band: r.saleability.band,
+      estimatedDaysOnMarket: r.saleability.estimatedDaysOnMarket,
+      localityPopulation: r.saleability.localityPopulation,
+      populationTrend: r.saleability.populationTrend,
+      nearestLargeCity: r.saleability.nearestLargeCity,
+      demandDrivers: r.saleability.demandDrivers,
+      offersTotal: r.saleability.localMarketOffers.totalActiveListings,
+      offersAgency: r.saleability.localMarketOffers.agencyListings,
+      medianPricePerM2: r.saleability.localMarketOffers.medianPricePerM2,
+    },
+    generatedAt: r.generatedAt,
+  };
+}

@@ -91,8 +91,9 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
   const run = async () => {
     setRunning(true);
     try {
-      await runRA({ data: { applicationId } });
-      toast.success("Ocena ryzyka zakończona");
+      // Pierwsze uruchomienie liczy ocenę; ponowne (gdy zapis istnieje) wymusza przeliczenie.
+      await runRA({ data: { applicationId, force: !!row } });
+      toast.success(row ? "Ocena przeliczona ponownie" : "Ocena ryzyka zakończona");
       await load();
     } catch (e: any) {
       toast.error("Błąd oceny ryzyka", { description: e?.message ?? String(e) });
