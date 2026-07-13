@@ -3815,6 +3815,66 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_risk_assessments: {
+        Row: {
+          application_id: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          data_sources: Json | null
+          error_message: string | null
+          forced_sale_floor_pln: number | null
+          id: string
+          investment_score: number | null
+          master_valuation_status: string | null
+          property_id: string | null
+          recommendation: string | null
+          result_json: Json | null
+          risk_grade: string | null
+          saleability_score: number | null
+          updated_at: string
+          warnings: Json | null
+        }
+        Insert: {
+          application_id: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_sources?: Json | null
+          error_message?: string | null
+          forced_sale_floor_pln?: number | null
+          id?: string
+          investment_score?: number | null
+          master_valuation_status?: string | null
+          property_id?: string | null
+          recommendation?: string | null
+          result_json?: Json | null
+          risk_grade?: string | null
+          saleability_score?: number | null
+          updated_at?: string
+          warnings?: Json | null
+        }
+        Update: {
+          application_id?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_sources?: Json | null
+          error_message?: string | null
+          forced_sale_floor_pln?: number | null
+          id?: string
+          investment_score?: number | null
+          master_valuation_status?: string | null
+          property_id?: string | null
+          recommendation?: string | null
+          result_json?: Json | null
+          risk_grade?: string | null
+          saleability_score?: number | null
+          updated_at?: string
+          warnings?: Json | null
+        }
+        Relationships: []
+      }
       investor_offers: {
         Row: {
           admin_note: string | null
@@ -5444,6 +5504,44 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: []
+      }
+      messenger_outbox: {
+        Row: {
+          body: string
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messenger_outbox_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meta_ad_accounts: {
         Row: {
