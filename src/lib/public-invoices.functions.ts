@@ -35,7 +35,7 @@ export const fetchPublicInvoices = createServerFn({ method: "GET" }).handler(asy
   if (error) throw new Error(error.message);
   const rows: PublicInvoice[] = (data ?? []).map((r: any) => {
     const items = Array.isArray(r.items) ? r.items : [];
-    const firstItem = items[0]?.name ?? items[0]?.description ?? "Usługa finansowa";
+    const firstItem = items[0]?.name ?? items[0]?.description ?? "Pośrednictwo finansowe";
     return {
       id: r.id,
       invoice_number: r.invoice_number,
