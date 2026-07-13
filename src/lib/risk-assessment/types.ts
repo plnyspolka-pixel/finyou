@@ -76,7 +76,7 @@ export interface OcrDocumentResult {
   fileName: string | null;
   docKind: string;
   status: SourceStatus;
-  fields: Record<string, unknown>;
+  fields: Record<string, any>;
   rawTextSnippet: string | null;
 }
 export interface OcrSummary {

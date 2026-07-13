@@ -1,5 +1,5 @@
 import { useEffect, type MutableRefObject } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Lock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,6 +29,8 @@ export type OfferCalculatorPanelProps = {
   setMaxPayment: (v: number) => void;
   headerLabel?: string;
   shellVariant?: "navy" | "silver" | "gold";
+  locked?: boolean;
+  lockedMessage?: string;
 };
 
 export function OfferCalculatorPanel({
@@ -41,6 +43,8 @@ export function OfferCalculatorPanel({
   maxPayment, setMaxPayment,
   headerLabel = "Wniosek przyjęty",
   shellVariant = "navy",
+  locked = false,
+  lockedMessage = "Uzupełnij powyższe pola, żeby odblokować kalkulator.",
 }: OfferCalculatorPanelProps) {
   const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
   const FINANCEYOU_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
@@ -95,13 +99,25 @@ export function OfferCalculatorPanel({
 
   return (
     <FancyShell variant={shellVariant}>
-      <div className="space-y-6">
+      <div className="space-y-6 relative">
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
-            <Check className="h-4 w-4" strokeWidth={3} />
+            {locked ? <Lock className="h-4 w-4" strokeWidth={3} /> : <Check className="h-4 w-4" strokeWidth={3} />}
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white">{headerLabel}</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white">
+            {locked ? "Kalkulator raty — zablokowany" : headerLabel}
+          </span>
         </div>
+
+        {locked && (
+          <div className="rounded-2xl border border-white/30 bg-white/10 p-4 text-sm text-white backdrop-blur-sm flex items-start gap-3">
+            <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+            <span>{lockedMessage}</span>
+          </div>
+        )}
+
+        <div className={locked ? "pointer-events-none select-none opacity-50" : ""} aria-hidden={locked}>
+        <div className="space-y-6">
 
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
@@ -234,6 +250,8 @@ export function OfferCalculatorPanel({
         <p className="text-[11px] text-white/70">
           Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
         </p>
+        </div>
+        </div>
       </div>
     </FancyShell>
   );
