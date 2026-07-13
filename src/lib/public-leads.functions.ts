@@ -43,15 +43,13 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     .filter((x: string | null): x is string => !!x);
 
   const amountByApp = new Map<string, number>();
-  const cityByApp = new Map<string, string>();
   if (appIds.length > 0) {
     const { data: apps } = await supabaseAdmin
       .from("loan_applications")
-      .select("id, loan_amount, property_city")
+      .select("id, loan_amount")
       .in("id", appIds);
     for (const a of apps ?? []) {
-      if (a.loan_amount != null) amountByApp.set(a.id, Number(a.loan_amount));
-      if (a.property_city) cityByApp.set(a.id, String(a.property_city));
+      if (a && a.loan_amount != null) amountByApp.set(a.id, Number(a.loan_amount));
     }
   }
 
