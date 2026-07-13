@@ -20,8 +20,11 @@ export const Route = createFileRoute("/embed/wniosek")({
 function EmbedWniosek() {
   return (
     <>
-      <style>{`html,body{background:transparent !important;}`}</style>
-      <div className="min-h-screen bg-transparent p-3 sm:p-4">
+      <style>{`
+        html,body,#root,#app{background:transparent !important;}
+        html,body{margin:0 !important;padding:0 !important;}
+      `}</style>
+      <div className="bg-transparent p-3 sm:p-4">
         <Suspense fallback={<div className="text-sm text-white/70 p-4">Ładowanie wniosku…</div>}>
           <EmbedApplicationForm />
         </Suspense>
