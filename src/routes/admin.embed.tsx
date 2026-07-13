@@ -107,19 +107,27 @@ function EmbedPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Podgląd</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowFormPreview((v) => !v)}>
+            {showFormPreview ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
         </CardHeader>
         <CardContent>
-          <iframe
-            src={url}
-            width="100%"
-            height={/^\d+$/.test(height) ? Number(height) : 900}
-            style={{ border: 0 }}
-            title="Podgląd wniosku"
-          />
+          {showFormPreview ? (
+            <iframe
+              src={url}
+              width="100%"
+              height={/^\d+$/.test(height) ? Number(height) : 900}
+              style={{ border: 0 }}
+              title="Podgląd wniosku"
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony, żeby uniknąć przeładowań przy edycji ustawień.</p>
+          )}
         </CardContent>
       </Card>
+
 
       <div className="pt-6">
         <h2 className="text-xl font-bold text-foreground">Faktury sprzedaży (anonimowo)</h2>
