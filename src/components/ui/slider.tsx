@@ -10,7 +10,7 @@ type SliderProps = React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> &
    * - "good-bad": left = green (preferred), right = red
    * - "bad-good": left = red, right = green (preferred)
    */
-  gradient?: "good-bad" | "bad-good";
+  gradient?: "good-bad" | "bad-good" | "brand";
 };
 
 const Slider = React.forwardRef<
@@ -22,7 +22,10 @@ const Slider = React.forwardRef<
       ? { background: "linear-gradient(to right, hsl(142 71% 45%), hsl(48 96% 53%), hsl(0 84% 60%))" }
       : gradient === "bad-good"
         ? { background: "linear-gradient(to right, hsl(0 84% 60%), hsl(48 96% 53%), hsl(142 71% 45%))" }
-        : undefined;
+        : gradient === "brand"
+          ? { background: "linear-gradient(to right, hsl(199 89% 60%), hsl(217 91% 60%), hsl(263 78% 62%))" }
+          : undefined;
+
 
   return (
     <SliderPrimitive.Root
