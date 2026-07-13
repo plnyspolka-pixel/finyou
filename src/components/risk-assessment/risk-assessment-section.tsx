@@ -16,6 +16,7 @@ import {
   getInvestmentRiskAssessment,
   diagnoseRcnForApplication,
 } from "@/lib/risk-assessment/risk-assessment.functions";
+import { ensureKwReady } from "@/lib/kw-ensure";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import { recommendationLabel } from "@/lib/risk-assessment/types";
 import { bandLabel } from "@/lib/risk-assessment/life-expectancy";
