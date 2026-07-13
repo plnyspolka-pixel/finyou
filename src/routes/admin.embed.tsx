@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,17 @@ export const Route = createFileRoute("/admin/embed")({
 
 function EmbedPage() {
   const PROD_ORIGIN = "https://app.financeyou.pl";
-  const currentOrigin = typeof window !== "undefined" ? window.location.origin : PROD_ORIGIN;
+  const [currentOrigin, setCurrentOrigin] = useState(PROD_ORIGIN);
+  useEffect(() => {
+    if (typeof window !== "undefined") setCurrentOrigin(window.location.origin);
+  }, []);
   // Zawsze używamy produkcyjnej domeny w generowanym kodzie embed,
   // żeby iframe nie wymagał logowania do Lovable (preview jest chronione).
   const origin = PROD_ORIGIN;
   const [source, setSource] = useState("strona-www");
   const [height, setHeight] = useState("100%");
+  const [showFormPreview, setShowFormPreview] = useState(false);
+  const [showInvoicesPreview, setShowInvoicesPreview] = useState(false);
 
   const url = useMemo(() => {
     const u = new URL("/embed/wniosek", origin);
@@ -31,6 +36,7 @@ function EmbedPage() {
   const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
 
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
+
   const linkSnippet = `<a href="${url}" target="_blank" rel="noopener">Złóż wniosek o pożyczkę</a>`;
 
   const copy = async (text: string, label: string) => {
@@ -101,19 +107,27 @@ function EmbedPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Podgląd</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowFormPreview((v) => !v)}>
+            {showFormPreview ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
         </CardHeader>
         <CardContent>
-          <iframe
-            src={url}
-            width="100%"
-            height={/^\d+$/.test(height) ? Number(height) : 900}
-            style={{ border: 0 }}
-            title="Podgląd wniosku"
-          />
+          {showFormPreview ? (
+            <iframe
+              src={url}
+              width="100%"
+              height={/^\d+$/.test(height) ? Number(height) : 900}
+              style={{ border: 0 }}
+              title="Podgląd wniosku"
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony, żeby uniknąć przeładowań przy edycji ustawień.</p>
+          )}
         </CardContent>
       </Card>
+
 
       <div className="pt-6">
         <h2 className="text-xl font-bold text-foreground">Faktury sprzedaży (anonimowo)</h2>
@@ -139,16 +153,24 @@ function EmbedPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Podgląd faktur</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowInvoicesPreview((v) => !v)}>
+            {showInvoicesPreview ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
         </CardHeader>
         <CardContent>
-          <iframe src={`${currentOrigin}/embed/faktury`} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
-          {currentOrigin !== PROD_ORIGIN && (
+          {showInvoicesPreview ? (
+            <iframe src={`${currentOrigin}/embed/faktury`} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
+          ) : (
+            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
+          )}
+          {showInvoicesPreview && currentOrigin !== PROD_ORIGIN && (
             <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 }
