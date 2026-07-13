@@ -9,6 +9,7 @@ import {
   type InvestorValuationSummary,
 } from "@/lib/risk-assessment/risk-assessment.functions";
 import { saleabilityBandLabel, auctionOutcomeLabel } from "@/lib/risk-assessment/forced-sale";
+import { plotCategoryLabel, buyerPoolLabel, valuationBasisLabel } from "@/lib/risk-assessment/plot-buildability";
 
 function fmtPln(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -134,6 +135,15 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
           {drivers.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {drivers.map((d, i) => <Badge key={i} variant="outline" className="text-[10px]">{d}</Badge>)}
+            </div>
+          )}
+          {data.buildability?.applicable && (
+            <div className="flex flex-wrap gap-1.5 items-center text-xs">
+              <Badge variant="secondary" className="text-[10px]">{plotCategoryLabel(data.buildability.category as never)}</Badge>
+              <Badge variant={data.buildability.buyerPool === "szeroki" ? "outline" : "destructive"} className="text-[10px]">
+                nabywcy: {buyerPoolLabel(data.buildability.buyerPool as never)}
+              </Badge>
+              <span className="text-muted-foreground">wycena {valuationBasisLabel(data.buildability.valuationBasis as never)}</span>
             </div>
           )}
         </div>

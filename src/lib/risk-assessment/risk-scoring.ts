@@ -6,6 +6,7 @@ import type {
   OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, MasterValuation,
   SaleabilityForecast,
 } from "./types";
+import { plotCategoryLabel, type PlotBuildabilityResult } from "./plot-buildability";
 import { gradeFromScore } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { LongevityBand } from "./life-expectancy";
@@ -58,6 +59,7 @@ export interface CombineInput {
   correspondence: CorrespondenceIntel;
   ocr: OcrSummary;
   saleability: SaleabilityForecast;
+  plotBuildability?: PlotBuildabilityResult | null;
   master: MasterValuation;
 }
 
@@ -135,6 +137,11 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     if (ff?.available && ff.score < 45)
       keyRisks.push(`Niekorzystna kondygnacja (${ff.label}) — ${ff.note}.`);
   }
+  const pb = i.plotBuildability;
+  if (pb?.applicable && pb.onlyFarmerCanBuild)
+    keyRisks.push(`Ograniczony krąg nabywców: ${plotCategoryLabel(pb.category)} — budowa zasadniczo tylko dla rolnika (wąski rynek, wycena ${pb.valuationBasis === "rolna" ? "jak grunt rolny" : "mieszana"}).`);
+  else if (pb?.applicable && pb.category === "budowlana" && pb.buyerPool === "szeroki")
+    keyStrengths.push("Działka budowlana — szeroki krąg nabywców.");
   if (i.collateral?.collateralScore?.mainRisks) keyRisks.push(...i.collateral.collateralScore.mainRisks);
   keyRisks.push(...i.master.keyRisks);
 

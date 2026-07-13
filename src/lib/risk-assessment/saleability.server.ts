@@ -7,6 +7,7 @@
 import type { SaleabilityForecast, SaleabilityBand } from "./types";
 import { scrapeSimilarListings } from "@/lib/property-analysis/listings-scraping.server";
 import type { FloorFactorResult } from "./floor-factor";
+import type { PlotBuildabilityResult } from "./plot-buildability";
 
 const LOCAL_OFFERS_RADIUS_KM = 10;
 // Próg „rozsądnego/sprzedawalnego" rynku dla nieruchomości innych niż grunt rolny.
@@ -165,11 +166,15 @@ function computeScore(d: {
   // Trend demograficzny.
   if (d.populationTrend === "rosnaca") s += 6;
   else if (d.populationTrend === "malejaca") s -= 8;
-  // Bliskość większego miasta.
+  // Położenie względem większego miasta — im bliżej, tym lepsza płynność; duża
+  // odległość od jakiegokolwiek większego ośrodka istotnie obniża sprzedawalność.
   if (d.largeCityWithin50km) s += 8;
   if (d.nearestCityDistanceKm != null) {
-    if (d.nearestCityDistanceKm <= 20) s += 8;
-    else if (d.nearestCityDistanceKm <= 50) s += 4;
+    if (d.nearestCityDistanceKm <= 15) s += 10;
+    else if (d.nearestCityDistanceKm <= 30) s += 6;
+    else if (d.nearestCityDistanceKm <= 50) s += 3;
+    else if (d.nearestCityDistanceKm <= 80) s -= 6;
+    else s -= 12; // >80 km od większego miasta — peryferyjna lokalizacja
   }
   // Czynniki turystyczno-rekreacyjne (popyt drugodomowy/sezonowy).
   if (d.waterBodyWithin20km) s += 5;
@@ -366,5 +371,20 @@ export function applyFloorToSaleability(base: SaleabilityForecast, floor: FloorF
     band: base.available ? bandFromScore(newScore) : base.band,
     floorFactor: floor,
     summary: base.summary + suffix,
+  };
+}
+
+/**
+ * Nakłada wpływ prawa zabudowy działki (RM/siedlisko/grunt rolny) na łatwość
+ * sprzedaży — ograniczony krąg nabywców obniża wynik. Zwraca nowy obiekt.
+ */
+export function applyPlotBuildabilityToSaleability(base: SaleabilityForecast, pb: PlotBuildabilityResult): SaleabilityForecast {
+  if (!pb.applicable || pb.saleabilityDelta === 0) return base;
+  const newScore = Math.max(0, Math.min(100, base.score + pb.saleabilityDelta));
+  return {
+    ...base,
+    score: base.available ? newScore : base.score,
+    band: base.available ? bandFromScore(newScore) : base.band,
+    summary: `${base.summary} Zabudowa działki: ${pb.summary}`,
   };
 }

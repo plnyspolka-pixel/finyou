@@ -4,6 +4,7 @@
 
 import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
+import { valuationBasisLabel, buyerPoolLabel, plotCategoryLabel, type PlotBuildabilityResult } from "./plot-buildability";
 
 export interface MasterValuationInput {
   propertyType: string;
@@ -19,6 +20,7 @@ export interface MasterValuationInput {
   kwLegal: KwLegalAnalysis;
   correspondence: CorrespondenceIntel;
   ocr: OcrSummary;
+  plotBuildability?: PlotBuildabilityResult | null;
 }
 
 function fmt(n: number | null | undefined): string {
@@ -69,7 +71,11 @@ function buildDossier(i: MasterValuationInput): string {
 - Niespójności: ${i.correspondence.inconsistencies.join("; ") || "brak"}
 
 6) OCR DOKUMENTÓW
-- Kluczowe ustalenia: ${ocrFindings.join("; ") || "brak przetworzonych dokumentów"}`;
+- Kluczowe ustalenia: ${ocrFindings.join("; ") || "brak przetworzonych dokumentów"}
+
+7) PRAWO ZABUDOWY DZIAŁKI${i.plotBuildability?.applicable
+  ? `\n- Kategoria: ${plotCategoryLabel(i.plotBuildability.category)}\n- Krąg nabywców: ${buyerPoolLabel(i.plotBuildability.buyerPool)}${i.plotBuildability.onlyFarmerCanBuild ? " (budowa zasadniczo tylko dla rolnika indywidualnego)" : ""}\n- Zalecana podstawa wyceny: ${valuationBasisLabel(i.plotBuildability.valuationBasis)}`
+  : "\n- nie dotyczy (nie jest działką/gruntem)"}`;
 }
 
 function buildPrompt(i: MasterValuationInput): string {
@@ -83,7 +89,7 @@ ZADANIE:
 3. Wypunktuj kluczowe ryzyka i mocne strony.
 4. Wydaj rekomendację: "rekomendowana" | "warunkowa" | "do_weryfikacji" | "odradzana".
 
-WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana".
+WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana". Jeżeli działka jest zagrodowa/siedliskowa (RM) lub gruntem rolnym bez prawa zabudowy — wyceniaj wg zalecanej podstawy (grunt rolny / mieszana), a NIE jak działkę budowlaną, i uwzględnij wąski krąg nabywców (obniżona płynność).
 
 ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown:
 {

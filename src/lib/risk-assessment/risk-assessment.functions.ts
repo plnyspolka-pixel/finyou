@@ -12,8 +12,9 @@ import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
-import { analyzeSaleability, applyFloorToSaleability } from "./saleability.server";
+import { analyzeSaleability, applyFloorToSaleability, applyPlotBuildabilityToSaleability } from "./saleability.server";
 import { assessFloor } from "./floor-factor";
+import { assessPlotBuildability } from "./plot-buildability";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
 import { combineRiskAssessment } from "./risk-scoring";
@@ -113,10 +114,30 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
   //    budynku bez windy najgorzej. Kondygnacja z działu I-O KW.
-  const saleability =
+  const saleabilityFloor =
     property?.property_type === "mieszkanie"
       ? applyFloorToSaleability(saleabilityRaw, assessFloor({ kondygnacja: kwLegal.kondygnacja, totalFloors: kwLegal.floorsInBuilding }))
       : saleabilityRaw;
+
+  // 5b) Prawo zabudowy działki (RM/siedlisko/grunt rolny) — ograniczony krąg nabywców
+  //     (budowa zasadniczo tylko dla rolnika) obniża płynność i sugeruje wycenę rolną.
+  const ocrText = (ocr.documents ?? [])
+    .flatMap((d) => {
+      const f = d.fields as any;
+      return [f?.landUse, ...(Array.isArray(f?.keyFindings) ? f.keyFindings : [])];
+    })
+    .filter(Boolean)
+    .join(" ");
+  const plotBuildability = assessPlotBuildability({
+    propertyType: property?.property_type ?? "inna",
+    mpzpInfo: (property as any)?.mpzp_info ?? null,
+    landRegistryExtract: (property as any)?.land_registry_extract ?? null,
+    ocrText: ocrText || null,
+  });
+  const saleability = plotBuildability.applicable
+    ? applyPlotBuildabilityToSaleability(saleabilityFloor, plotBuildability)
+    : saleabilityFloor;
+  if (plotBuildability.onlyFarmerCanBuild) warnings.push(...plotBuildability.warnings);
 
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
   const areaM2 = property?.area_sqm ?? null;
@@ -134,6 +155,7 @@ export async function runInvestmentRiskAssessmentCore(
     kwLegal,
     correspondence,
     ocr,
+    plotBuildability,
   });
   if (master.status !== "success") warnings.push(`Nadrzędna wycena Perplexity: ${master.errorMessage ?? "brak danych"}.`);
 
@@ -166,7 +188,7 @@ export async function runInvestmentRiskAssessmentCore(
   }
 
   // 8) Zbiorczy scoring.
-  const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, master });
+  const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, plotBuildability, master });
 
   // 9) Rejestr wykorzystanych źródeł danych.
   const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, collateral, master });
@@ -200,6 +222,7 @@ export async function runInvestmentRiskAssessmentCore(
     correspondence,
     ocr,
     saleability,
+    plotBuildability,
     forcedSale,
     masterValuation: master,
     collateralAnalysis: collateral,
@@ -378,6 +401,13 @@ export interface InvestorValuationSummary {
     reasonableMarket: boolean;
     floor: { available: boolean; floorPietro: number | null; label: string } | null;
   };
+  buildability: {
+    applicable: boolean;
+    category: string;
+    buyerPool: string;
+    valuationBasis: string;
+    onlyFarmerCanBuild: boolean;
+  } | null;
   generatedAt: string;
 }
 
@@ -444,6 +474,15 @@ export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): Inve
         ? { available: r.saleability.floorFactor.available, floorPietro: r.saleability.floorFactor.floorPietro, label: r.saleability.floorFactor.label }
         : null,
     },
+    buildability: r.plotBuildability?.applicable
+      ? {
+          applicable: true,
+          category: r.plotBuildability.category,
+          buyerPool: r.plotBuildability.buyerPool,
+          valuationBasis: r.plotBuildability.valuationBasis,
+          onlyFarmerCanBuild: r.plotBuildability.onlyFarmerCanBuild,
+        }
+      : null,
     generatedAt: r.generatedAt,
   };
 }

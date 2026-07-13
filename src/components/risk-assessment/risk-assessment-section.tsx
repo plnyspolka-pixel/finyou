@@ -20,6 +20,7 @@ import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import { recommendationLabel } from "@/lib/risk-assessment/types";
 import { bandLabel } from "@/lib/risk-assessment/life-expectancy";
 import { auctionOutcomeLabel, saleabilityBandLabel } from "@/lib/risk-assessment/forced-sale";
+import { plotCategoryLabel, buyerPoolLabel, valuationBasisLabel } from "@/lib/risk-assessment/plot-buildability";
 import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
 import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
 
@@ -345,6 +346,31 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
               )}
             </CardContent>
           </Card>
+
+          {/* Prawo zabudowy działki */}
+          {result.plotBuildability?.applicable && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><MapPinned className="h-4 w-4" /> Prawo zabudowy działki</CardTitle>
+                <CardDescription>Status gruntu, krąg nabywców i zalecana podstawa wyceny.</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">{plotCategoryLabel(result.plotBuildability.category)}</Badge>
+                  <Badge variant={result.plotBuildability.buyerPool === "szeroki" ? "default" : "destructive"}>
+                    krąg nabywców: {buyerPoolLabel(result.plotBuildability.buyerPool)}
+                  </Badge>
+                  <Badge variant="outline">wycena: {valuationBasisLabel(result.plotBuildability.valuationBasis)}</Badge>
+                  {result.plotBuildability.onlyFarmerCanBuild && <Badge variant="destructive">budowa tylko dla rolnika</Badge>}
+                </div>
+                {result.plotBuildability.warnings.length > 0 && (
+                  <ul className="list-disc pl-5 text-amber-700 dark:text-amber-400 space-y-1">
+                    {result.plotBuildability.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Właściciel — PESEL / trwanie życia */}
           <Card>

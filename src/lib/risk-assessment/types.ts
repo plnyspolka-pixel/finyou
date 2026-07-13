@@ -4,6 +4,7 @@
 import type { SourceStatus, DataSourceUsage, PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
+import type { PlotBuildabilityResult } from "./plot-buildability";
 
 export type RiskGrade = "A" | "B" | "C" | "D" | "E";
 
@@ -196,6 +197,7 @@ export interface InvestmentRiskAssessment {
   correspondence: CorrespondenceIntel;
   ocr: OcrSummary;
   saleability: SaleabilityForecast;
+  plotBuildability: PlotBuildabilityResult;
   forcedSale: ForcedSaleEstimate;
   masterValuation: MasterValuation;
 
