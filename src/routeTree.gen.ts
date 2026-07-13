@@ -73,6 +73,7 @@ import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkul
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
+import { Route as EmbedFakturyRouteImport } from './routes/embed.faktury'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
@@ -504,6 +505,11 @@ const FakturaIdRoute = FakturaIdRouteImport.update({
 const EmbedWniosekRoute = EmbedWniosekRouteImport.update({
   id: '/embed/wniosek',
   path: '/embed/wniosek',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedFakturyRoute = EmbedFakturyRouteImport.update({
+  id: '/embed/faktury',
+  path: '/embed/faktury',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -1159,6 +1165,7 @@ export interface FileRoutesByFullPath {
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/embed/faktury': typeof EmbedFakturyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -1330,6 +1337,7 @@ export interface FileRoutesByTo {
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/embed/faktury': typeof EmbedFakturyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -1504,6 +1512,7 @@ export interface FileRoutesById {
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/embed/faktury': typeof EmbedFakturyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
@@ -1682,6 +1691,7 @@ export interface FileRouteTypes {
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
+    | '/embed/faktury'
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
@@ -1853,6 +1863,7 @@ export interface FileRouteTypes {
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
+    | '/embed/faktury'
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
@@ -2026,6 +2037,7 @@ export interface FileRouteTypes {
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
+    | '/embed/faktury'
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
@@ -2169,6 +2181,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BlogSlugRoute: typeof BlogSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  EmbedFakturyRoute: typeof EmbedFakturyRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   FakturaIdRoute: typeof FakturaIdRoute
   LSlugRoute: typeof LSlugRoute
@@ -2666,6 +2679,13 @@ declare module '@tanstack/react-router' {
       path: '/embed/wniosek'
       fullPath: '/embed/wniosek'
       preLoaderRoute: typeof EmbedWniosekRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/faktury': {
+      id: '/embed/faktury'
+      path: '/embed/faktury'
+      fullPath: '/embed/faktury'
+      preLoaderRoute: typeof EmbedFakturyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -3783,6 +3803,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BlogSlugRoute: BlogSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  EmbedFakturyRoute: EmbedFakturyRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   FakturaIdRoute: FakturaIdRoute,
   LSlugRoute: LSlugRoute,
