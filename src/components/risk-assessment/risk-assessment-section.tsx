@@ -135,7 +135,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
       {running && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
-          <AlertDescription>Trwa zaciąganie i analiza danych ze wszystkich źródeł. To może potrwać do ~1 minuty (Perplexity + Gemini).</AlertDescription>
+          <AlertDescription>{stage ?? "Trwa zaciąganie i analiza danych ze wszystkich źródeł."} To może potrwać kilka minut (KW + Perplexity + Gemini).</AlertDescription>
         </Alert>
       )}
 
