@@ -3,6 +3,7 @@
 
 import type { SourceStatus, DataSourceUsage, PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { LifeExpectancyResult } from "./life-expectancy";
+import type { FloorFactorResult } from "./floor-factor";
 
 export type RiskGrade = "A" | "B" | "C" | "D" | "E";
 
@@ -39,6 +40,10 @@ export interface KwLegalAnalysis {
   totalMortgageAmountPln: number | null;
   hasEnforcement: boolean; // egzekucja / komornik
   hasUsufruct: boolean; // służebność / dożywocie
+  /** Dział I-O — kondygnacja lokalu (numeracja KW: parter = 1). */
+  kondygnacja: number | null;
+  /** Liczba pięter budynku nad parterem (z KW, jeśli dostępna). */
+  floorsInBuilding: number | null;
   legalRiskScore: number; // 0–100 (wyżej = bezpieczniej)
   warnings: string[];
   summary: string;
@@ -111,6 +116,10 @@ export interface SaleabilityForecast {
   estimatedDaysOnMarket: number | null;
   localityPopulation: number | null;
   populationTrend: "rosnaca" | "stabilna" | "malejaca" | "nieznana";
+  /** Rozsądny/sprzedawalny rynek: miasto >20 tys. mieszk. lub grunt rolny (bez ograniczeń). */
+  reasonableMarket: boolean;
+  /** Czynnik kondygnacji (tylko dla mieszkań; null dla pozostałych typów). */
+  floorFactor: FloorFactorResult | null;
   nearestLargeCity: { name: string | null; population: number | null; distanceKm: number | null };
   // Czynniki popytu w otoczeniu (20/50 km).
   demandDrivers: {

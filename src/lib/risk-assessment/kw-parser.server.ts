@@ -109,6 +109,33 @@ function parseEncumbrances(dzial3: string | null | undefined): { encumbrances: s
   return { encumbrances, hasEnforcement, hasUsufruct };
 }
 
+// Dział I-O: kondygnacja lokalu + liczba kondygnacji budynku.
+function parseFloorInfo(dzial1o: string | null | undefined): { kondygnacja: number | null; floorsInBuilding: number | null } {
+  const text = stripHtml(dzial1o);
+  if (!text) return { kondygnacja: null, floorsInBuilding: null };
+  const low = text.toLowerCase();
+
+  // Liczba kondygnacji budynku (jeśli podana) — wyłuskaj najpierw, by nie pomylić z kondygnacją lokalu.
+  let floorsInBuilding: number | null = null;
+  const liczbaM = low.match(/liczba\s+kondygnacj\w*[^0-9]{0,12}(\d{1,2})/);
+  if (liczbaM) {
+    const k = Number(liczbaM[1]);
+    if (Number.isFinite(k) && k >= 1 && k <= 60) floorsInBuilding = k - 1; // kondygnacje → piętra nad parterem
+  }
+
+  // Kondygnacja lokalu (usuwamy frazę „liczba kondygnacji", by nie złapać jej wartości).
+  const withoutLiczba = low.replace(/liczba\s+kondygnacj\w*[^0-9]{0,12}\d{1,2}/g, " ");
+  let kondygnacja: number | null = null;
+  const kondM =
+    withoutLiczba.match(/kondygnacj\w*[^0-9]{0,12}(\d{1,2})/) ||
+    withoutLiczba.match(/(\d{1,2})\s*kondygnacj/);
+  if (kondM) {
+    const k = Number(kondM[1]);
+    if (Number.isFinite(k) && k >= 1 && k <= 60) kondygnacja = k;
+  }
+  return { kondygnacja, floorsInBuilding };
+}
+
 function parseMortgages(dzial4: string | null | undefined): KwLegalAnalysis["mortgages"] {
   const text = stripHtml(dzial4);
   if (!text || /brak wpis/i.test(text)) return [];
@@ -158,6 +185,8 @@ export async function analyzeKwLegal(args: {
     totalMortgageAmountPln: null,
     hasEnforcement: false,
     hasUsufruct: false,
+    kondygnacja: null,
+    floorsInBuilding: null,
     legalRiskScore: 60,
     warnings: [],
     summary: "Brak pobranej treści KW — stan prawny wymaga weryfikacji.",
@@ -168,7 +197,7 @@ export async function analyzeKwLegal(args: {
 
   const { data: row } = await supabaseAdmin
     .from("kw_documents")
-    .select("kw_number, status, dzial_2, dzial_3, dzial_4")
+    .select("kw_number, status, dzial_1o, dzial_2, dzial_3, dzial_4")
     .eq("kw_number", kw)
     .maybeSingle();
 
@@ -177,6 +206,7 @@ export async function analyzeKwLegal(args: {
   const owners = parseOwners(row.dzial_2);
   const { encumbrances, hasEnforcement, hasUsufruct } = parseEncumbrances(row.dzial_3);
   const mortgages = parseMortgages(row.dzial_4);
+  const { kondygnacja, floorsInBuilding } = parseFloorInfo(row.dzial_1o);
   const totalMortgage = mortgages.reduce<number | null>((acc, m) => {
     if (m.amount == null) return acc;
     return (acc ?? 0) + m.amount;
@@ -215,8 +245,10 @@ export async function analyzeKwLegal(args: {
     totalMortgageAmountPln: totalMortgage,
     hasEnforcement,
     hasUsufruct,
+    kondygnacja,
+    floorsInBuilding,
     legalRiskScore,
     warnings,
-    summary,
+    summary: kondygnacja != null ? `${summary} Kondygnacja lokalu: ${kondygnacja} (${kondygnacja <= 1 ? "parter" : (kondygnacja - 1) + ". piętro"}).` : summary,
   };
 }

@@ -12,7 +12,8 @@ import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
-import { analyzeSaleability } from "./saleability.server";
+import { analyzeSaleability, applyFloorToSaleability } from "./saleability.server";
+import { assessFloor } from "./floor-factor";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
 import { combineRiskAssessment } from "./risk-scoring";
@@ -89,7 +90,7 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 2) OCR dokumentów, 3) KW (stan prawny), 5) korespondencja, 6) łatwość sprzedaży — równolegle.
   const documents = (docs ?? []).map((d) => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name }));
-  const [ocr, kwLegal, correspondence, saleability] = await Promise.all([
+  const [ocr, kwLegal, correspondence, saleabilityRaw] = await Promise.all([
     ocrDocuments({ applicationId, documents }),
     analyzeKwLegal({
       kwNumber: property?.land_register_number ?? null,
@@ -109,6 +110,13 @@ export async function runInvestmentRiskAssessmentCore(
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska.
   const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal });
   warnings.push(...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)));
+
+  // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
+  //    budynku bez windy najgorzej. Kondygnacja z działu I-O KW.
+  const saleability =
+    property?.property_type === "mieszkanie"
+      ? applyFloorToSaleability(saleabilityRaw, assessFloor({ kondygnacja: kwLegal.kondygnacja, totalFloors: kwLegal.floorsInBuilding }))
+      : saleabilityRaw;
 
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
   const areaM2 = property?.area_sqm ?? null;
@@ -367,6 +375,8 @@ export interface InvestorValuationSummary {
     offersTotal: number;
     offersAgency: number;
     medianPricePerM2: number | null;
+    reasonableMarket: boolean;
+    floor: { available: boolean; floorPietro: number | null; label: string } | null;
   };
   generatedAt: string;
 }
@@ -429,6 +439,10 @@ export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): Inve
       offersTotal: r.saleability.localMarketOffers.totalActiveListings,
       offersAgency: r.saleability.localMarketOffers.agencyListings,
       medianPricePerM2: r.saleability.localMarketOffers.medianPricePerM2,
+      reasonableMarket: r.saleability.reasonableMarket,
+      floor: r.saleability.floorFactor
+        ? { available: r.saleability.floorFactor.available, floorPietro: r.saleability.floorFactor.floorPietro, label: r.saleability.floorFactor.label }
+        : null,
     },
     generatedAt: r.generatedAt,
   };

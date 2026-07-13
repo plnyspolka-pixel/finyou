@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
   Scale, UserRound, MessagesSquare, FileScan, Landmark, Sparkles, HeartPulse,
-  TrendingUp, Gavel, Users, MapPinned,
+  TrendingUp, Gavel, Users, MapPinned, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -299,10 +299,23 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                     <Badge className="text-sm" variant={result.saleability.score >= 62 ? "default" : result.saleability.score >= 45 ? "secondary" : "destructive"}>
                       {result.saleability.score}/100 · {saleabilityBandLabel(result.saleability.band)}
                     </Badge>
+                    <Badge variant={result.saleability.reasonableMarket ? "default" : "destructive"}>
+                      {result.saleability.reasonableMarket ? "rynek rozsądny (>20 tys. / grunt rolny)" : "poniżej 20 tys. mieszk."}
+                    </Badge>
                     {result.saleability.estimatedDaysOnMarket != null && (
                       <span className="text-muted-foreground">Szac. czas sprzedaży: ~{result.saleability.estimatedDaysOnMarket} dni</span>
                     )}
                   </div>
+                  {result.saleability.floorFactor?.available && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        Kondygnacja: <b>{result.saleability.floorFactor.floorPietro === 0 ? "parter" : `${result.saleability.floorFactor.floorPietro}. piętro`}</b>
+                        {result.saleability.floorFactor.kondygnacja != null ? ` (kondygnacja ${result.saleability.floorFactor.kondygnacja} w KW)` : ""}
+                        {" — "}<span className="text-muted-foreground">{result.saleability.floorFactor.label}</span>
+                      </span>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-x-6 gap-y-1">
                     {result.saleability.localityPopulation != null && (
                       <div><span className="text-muted-foreground">Zaludnienie:</span> {result.saleability.localityPopulation.toLocaleString("pl-PL")} ({result.saleability.populationTrend})</div>

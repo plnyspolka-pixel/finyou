@@ -6,8 +6,11 @@
 
 import type { SaleabilityForecast, SaleabilityBand } from "./types";
 import { scrapeSimilarListings } from "@/lib/property-analysis/listings-scraping.server";
+import type { FloorFactorResult } from "./floor-factor";
 
 const LOCAL_OFFERS_RADIUS_KM = 10;
+// Próg „rozsądnego/sprzedawalnego" rynku dla nieruchomości innych niż grunt rolny.
+const REASONABLE_POPULATION = 20000;
 
 function bandFromScore(score: number): SaleabilityBand {
   if (score >= 80) return "bardzo_latwa";
@@ -118,8 +121,19 @@ function numOrNull(v: any): number | null {
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
 }
 
+function isAgriLand(propertyType: string): boolean {
+  return propertyType === "grunt_rolny";
+}
+
+// Rozsądny/sprzedawalny rynek: miasto >20 tys. mieszk. albo grunt rolny (bez ograniczeń).
+export function isReasonableMarket(propertyType: string, localityPopulation: number | null): boolean {
+  if (isAgriLand(propertyType)) return true;
+  return (localityPopulation ?? 0) >= REASONABLE_POPULATION;
+}
+
 // Scoring 0–100 z sygnałów popytu.
 function computeScore(d: {
+  propertyType: string;
   localityPopulation: number | null;
   populationTrend: string;
   nearestCityDistanceKm: number | null;
@@ -135,6 +149,7 @@ function computeScore(d: {
   liquidType: boolean;
 }): number {
   let s = 30; // baza
+  const agri = isAgriLand(d.propertyType);
   // Zaludnienie miejscowości.
   const pop = d.localityPopulation ?? 0;
   if (pop >= 200000) s += 22;
@@ -142,6 +157,11 @@ function computeScore(d: {
   else if (pop >= 20000) s += 12;
   else if (pop >= 5000) s += 7;
   else if (pop >= 1000) s += 3;
+  // Próg rozsądnego rynku: >20 tys. = premia, <20 tys. = kara — ale NIE dla gruntów rolnych.
+  if (!agri) {
+    if (pop >= REASONABLE_POPULATION) s += 6;
+    else if (pop > 0) s -= 14; // miasto poniżej 20 tys. — słaba sprzedawalność
+  }
   // Trend demograficzny.
   if (d.populationTrend === "rosnaca") s += 6;
   else if (d.populationTrend === "malejaca") s -= 8;
@@ -208,6 +228,8 @@ export async function analyzeSaleability(args: {
     },
     rentalDemand: "nieznany",
     purchasingPowerComment: null,
+    reasonableMarket: isReasonableMarket(args.propertyType, null),
+    floorFactor: null,
     localMarketOffers: offers,
     rationale: "",
     citations: [],
@@ -262,6 +284,7 @@ export async function analyzeSaleability(args: {
     const nearestDistanceKm = numOrNull(nearest.distanceKm);
 
     const score = computeScore({
+      propertyType: args.propertyType,
       localityPopulation,
       populationTrend,
       nearestCityDistanceKm: nearestDistanceKm,
@@ -273,6 +296,7 @@ export async function analyzeSaleability(args: {
     });
 
     const band = bandFromScore(score);
+    const reasonableMarket = isReasonableMarket(args.propertyType, localityPopulation);
     const drivers: string[] = [];
     if (demandDrivers.largeCityWithin50km) drivers.push("duże miasto w 50 km");
     if (demandDrivers.waterBodyWithin20km) drivers.push("zbiornik wodny w 20 km");
@@ -281,9 +305,15 @@ export async function analyzeSaleability(args: {
     if (demandDrivers.touristAttractionWithin20km) drivers.push("atrakcja turystyczna w 20 km");
     if (demandDrivers.majorRoadWithin10km) drivers.push("dobra dostępność drogowa");
 
+    const reasonNote = isAgriLand(args.propertyType)
+      ? "Grunt rolny — bez progu wielkości miejscowości. "
+      : reasonableMarket
+        ? "Miejscowość powyżej 20 tys. mieszkańców — rynek uznany za rozsądny/sprzedawalny. "
+        : "Miejscowość poniżej 20 tys. mieszkańców — ograniczona sprzedawalność. ";
     const summary =
       `Prognozowana łatwość sprzedaży: ${score}/100 (${band.replace(/_/g, " ")}). ` +
       (localityPopulation ? `Miejscowość ~${localityPopulation.toLocaleString("pl-PL")} mieszk. (${populationTrend}). ` : "") +
+      reasonNote +
       (nearest.name ? `Najbliższe większe miasto: ${nearest.name}${nearestDistanceKm ? ` (${nearestDistanceKm} km)` : ""}. ` : "") +
       (drivers.length ? `Czynniki popytu: ${drivers.join(", ")}. ` : "") +
       `Oferty sprzedaży w okolicy: ${offers.totalActiveListings} (biura: ${offers.agencyListings}).`;
@@ -295,6 +325,8 @@ export async function analyzeSaleability(args: {
       estimatedDaysOnMarket: numOrNull(parsed.estimatedDaysOnMarket),
       localityPopulation,
       populationTrend,
+      reasonableMarket,
+      floorFactor: null,
       nearestLargeCity: {
         name: typeof nearest.name === "string" ? nearest.name : null,
         population: numOrNull(nearest.population),
@@ -316,4 +348,23 @@ export async function analyzeSaleability(args: {
     }));
     return empty(`Błąd prognozy łatwości sprzedaży: ${e?.message ?? "nieznany"}.`, offers);
   }
+}
+
+/**
+ * Nakłada czynnik kondygnacji (mieszkania) na prognozę łatwości sprzedaży —
+ * koryguje wynik o piętro i przelicza pasmo. Zwraca nowy obiekt (bez mutacji).
+ */
+export function applyFloorToSaleability(base: SaleabilityForecast, floor: FloorFactorResult): SaleabilityForecast {
+  if (!floor.available) return { ...base, floorFactor: floor };
+  // Odchylenie od neutralnych 70 pkt, skala 0.15 → maks. ±~6 pkt.
+  const delta = Math.max(-6, Math.min(5, Math.round((floor.score - 70) * 0.15)));
+  const newScore = Math.max(0, Math.min(100, base.score + delta));
+  const suffix = ` Kondygnacja: ${floor.label} (${floor.note}).`;
+  return {
+    ...base,
+    score: base.available ? newScore : base.score,
+    band: base.available ? bandFromScore(newScore) : base.band,
+    floorFactor: floor,
+    summary: base.summary + suffix,
+  };
 }

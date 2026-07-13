@@ -104,12 +104,21 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
 
         {/* Łatwość sprzedaży + ludność/otoczenie */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant={sa.score >= 62 ? "default" : sa.score >= 45 ? "secondary" : "destructive"}>
               {sa.available ? `${sa.score}/100 · ${saleabilityBandLabel(sa.band)}` : "łatwość sprzedaży: brak danych"}
             </Badge>
+            <Badge variant={sa.reasonableMarket ? "default" : "destructive"}>
+              {sa.reasonableMarket ? "rynek rozsądny" : "poniżej 20 tys. mieszk."}
+            </Badge>
             {sa.estimatedDaysOnMarket != null && <span className="text-xs text-muted-foreground">szac. czas sprzedaży ~{sa.estimatedDaysOnMarket} dni</span>}
           </div>
+          {sa.floor?.available && (
+            <div className="text-xs flex items-center gap-1">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              Kondygnacja: <b>{sa.floor.floorPietro === 0 ? "parter" : `${sa.floor.floorPietro}. piętro`}</b> — {sa.floor.label}
+            </div>
+          )}
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
             {sa.localityPopulation != null && (
               <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-muted-foreground" /> Ludność: <b>{sa.localityPopulation.toLocaleString("pl-PL")}</b> ({sa.populationTrend})</span>

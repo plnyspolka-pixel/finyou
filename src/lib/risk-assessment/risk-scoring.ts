@@ -129,6 +129,11 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
       keyRisks.push(`Brak aktywnych ofert sprzedaży wystawionych przez biura w okolicy (~${i.saleability.localMarketOffers.radiusKm} km) — płytki rynek.`);
     if (i.saleability.populationTrend === "malejaca")
       keyRisks.push("Malejąca liczba mieszkańców w okolicy — presja na płynność i ceny.");
+    if (!i.saleability.reasonableMarket)
+      keyRisks.push("Miejscowość poniżej 20 tys. mieszkańców — poza gruntami rolnymi rynek uznawany za trudno sprzedawalny.");
+    const ff = i.saleability.floorFactor;
+    if (ff?.available && ff.score < 45)
+      keyRisks.push(`Niekorzystna kondygnacja (${ff.label}) — ${ff.note}.`);
   }
   if (i.collateral?.collateralScore?.mainRisks) keyRisks.push(...i.collateral.collateralScore.mainRisks);
   keyRisks.push(...i.master.keyRisks);
@@ -141,6 +146,10 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     keyStrengths.push(`Dobra prognozowana łatwość sprzedaży (${i.saleability.band.replace(/_/g, " ")}) — sprawne wyjście z inwestycji.`);
   if (i.saleability.localMarketOffers.agencyListings >= 4)
     keyStrengths.push(`Aktywny rynek: ${i.saleability.localMarketOffers.agencyListings} ofert biur nieruchomości w okolicy (~${i.saleability.localMarketOffers.radiusKm} km).`);
+  if (i.saleability.reasonableMarket && (i.saleability.localityPopulation ?? 0) >= 20000)
+    keyStrengths.push(`Miasto powyżej 20 tys. mieszkańców — rynek uznany za rozsądny/sprzedawalny.`);
+  if (i.saleability.floorFactor?.available && i.saleability.floorFactor.score >= 85)
+    keyStrengths.push(`Korzystna kondygnacja (${i.saleability.floorFactor.label}).`);
   if (i.collateral?.collateralScore?.mainStrengths) keyStrengths.push(...i.collateral.collateralScore.mainStrengths);
   keyStrengths.push(...i.master.keyStrengths);
 
