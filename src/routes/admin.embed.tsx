@@ -14,12 +14,17 @@ export const Route = createFileRoute("/admin/embed")({
 
 function EmbedPage() {
   const PROD_ORIGIN = "https://app.financeyou.pl";
-  const currentOrigin = typeof window !== "undefined" ? window.location.origin : PROD_ORIGIN;
+  const [currentOrigin, setCurrentOrigin] = useState(PROD_ORIGIN);
+  useEffect(() => {
+    if (typeof window !== "undefined") setCurrentOrigin(window.location.origin);
+  }, []);
   // Zawsze używamy produkcyjnej domeny w generowanym kodzie embed,
   // żeby iframe nie wymagał logowania do Lovable (preview jest chronione).
   const origin = PROD_ORIGIN;
   const [source, setSource] = useState("strona-www");
   const [height, setHeight] = useState("100%");
+  const [showFormPreview, setShowFormPreview] = useState(false);
+  const [showInvoicesPreview, setShowInvoicesPreview] = useState(false);
 
   const url = useMemo(() => {
     const u = new URL("/embed/wniosek", origin);
@@ -31,6 +36,7 @@ function EmbedPage() {
   const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
 
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
+
   const linkSnippet = `<a href="${url}" target="_blank" rel="noopener">Złóż wniosek o pożyczkę</a>`;
 
   const copy = async (text: string, label: string) => {
