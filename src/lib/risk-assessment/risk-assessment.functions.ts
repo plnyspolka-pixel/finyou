@@ -12,6 +12,8 @@ import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
+import { analyzeSaleability } from "./saleability.server";
+import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
 import { combineRiskAssessment } from "./risk-scoring";
 import type { InvestmentRiskAssessment } from "./types";
@@ -63,9 +65,9 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
 
-  // 2) OCR dokumentów, 3) KW (stan prawny), 5) korespondencja — równolegle.
+  // 2) OCR dokumentów, 3) KW (stan prawny), 5) korespondencja, 6) łatwość sprzedaży — równolegle.
   const documents = (docs ?? []).map((d) => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name }));
-  const [ocr, kwLegal, correspondence] = await Promise.all([
+  const [ocr, kwLegal, correspondence, saleability] = await Promise.all([
     ocrDocuments({ applicationId, documents }),
     analyzeKwLegal({
       kwNumber: property?.land_register_number ?? null,
@@ -73,6 +75,14 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
       hasMortgageFlag: property?.has_mortgage ?? null,
     }),
     analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: property?.city ?? null }),
+    analyzeSaleability({
+      propertyType: property?.property_type ?? "inna",
+      address: property?.address ?? null,
+      city: property?.city ?? null,
+      voivodeship: property?.voivodeship ?? null,
+      latitude: collateral?.property?.latitude ?? null,
+      longitude: collateral?.property?.longitude ?? null,
+    }),
   ]);
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska.
@@ -98,11 +108,39 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
   });
   if (master.status !== "success") warnings.push(`Nadrzędna wycena Perplexity: ${master.errorMessage ?? "brak danych"}.`);
 
-  // 7) Zbiorczy scoring.
-  const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, master });
+  // 7) Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze).
+  //    Podstawa: mediana wyceny nadrzędnej → wycena zabezpieczenia → wartość deklarowana.
+  const collateralMid =
+    collateral?.valuationBenchmark?.estimatedValueMedianPln ??
+    (collateral?.perplexityValuation?.estimatedValueLowPln && collateral?.perplexityValuation?.estimatedValueHighPln
+      ? Math.round((collateral.perplexityValuation.estimatedValueLowPln + collateral.perplexityValuation.estimatedValueHighPln) / 2)
+      : null);
+  const basisValue = master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
+  const basisSource = master.estimatedValueMidPln
+    ? "Perplexity (wycena nadrzędna)"
+    : collateralMid
+      ? "Analiza zabezpieczenia"
+      : declaredValue
+        ? "Wartość deklarowana"
+        : "brak";
+  const forcedSale = estimateForcedSale({
+    basisValuePln: basisValue,
+    basisSource,
+    requestedLoanPln: loanAmount,
+    saleabilityScore: saleability.available ? saleability.score : null,
+    marketLowPln: master.estimatedValueLowPln ?? collateral?.valuationBenchmark?.conservativeLowPln ?? null,
+    marketMidPln: basisValue,
+    marketHighPln: master.estimatedValueHighPln ?? collateral?.valuationBenchmark?.conservativeHighPln ?? null,
+  });
+  if (forcedSale.loanToForcedSalePercent != null && forcedSale.loanToForcedSalePercent > 100) {
+    warnings.push("Kwota pożyczki przekracza spodziewany odzysk z licytacji komorniczej (II licytacja) — bardzo wysokie ryzyko.");
+  }
 
-  // 8) Rejestr wykorzystanych źródeł danych.
-  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, collateral, master });
+  // 8) Zbiorczy scoring.
+  const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, master });
+
+  // 9) Rejestr wykorzystanych źródeł danych.
+  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, collateral, master });
 
   // 9) Executive summary.
   const valueStr = master.estimatedValueMidPln
@@ -110,9 +148,14 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
     : (collateral?.valuationBenchmark?.conservativeLowPln
         ? `${collateral.valuationBenchmark.conservativeLowPln.toLocaleString("pl-PL")}–${collateral.valuationBenchmark.conservativeHighPln?.toLocaleString("pl-PL") ?? "—"} PLN`
         : "brak wiarygodnej wyceny");
+  const forcedStr = forcedSale.secondAuctionOpeningPln
+    ? `Wymuszona sprzedaż (komornik): I licytacja od ${forcedSale.firstAuctionOpeningPln?.toLocaleString("pl-PL")} PLN, II licytacja od ${forcedSale.secondAuctionOpeningPln.toLocaleString("pl-PL")} PLN. `
+    : "";
+  const saleStr = saleability.available ? `Prognozowana łatwość sprzedaży: ${saleability.score}/100. ` : "";
   const executiveSummary =
     `Ocena inwestycji: ${combined.investmentScore}/100 (klasa ${combined.riskGrade}) — ${recommendationLabel(combined.recommendation)}. ` +
     `Szacowana wartość nieruchomości: ${valueStr}. ` +
+    saleStr + forcedStr +
     (master.suggestedMaxLoanAmountPln ? `Sugerowana maks. kwota pożyczki: ${master.suggestedMaxLoanAmountPln.toLocaleString("pl-PL")} PLN (LTV do ${master.suggestedLtvCapPercent ?? "—"}%). ` : "") +
     (combined.keyRisks.length ? `Główne ryzyka: ${combined.keyRisks.slice(0, 3).join("; ")}.` : "Nie zidentyfikowano krytycznych ryzyk.");
 
@@ -127,6 +170,8 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
     kwLegal,
     correspondence,
     ocr,
+    saleability,
+    forcedSale,
     masterValuation: master,
     collateralAnalysis: collateral,
     componentScores: combined.componentScores,
@@ -147,6 +192,8 @@ export async function runInvestmentRiskAssessmentCore(applicationId: string): Pr
         investment_score: combined.investmentScore,
         risk_grade: combined.riskGrade,
         recommendation: combined.recommendation,
+        saleability_score: saleability.available ? saleability.score : null,
+        forced_sale_floor_pln: forcedSale.secondAuctionOpeningPln,
         result_json: result,
         data_sources: dataSources,
         warnings,
@@ -167,6 +214,7 @@ function buildDataSources(a: {
   kwLegal: InvestmentRiskAssessment["kwLegal"];
   owner: InvestmentRiskAssessment["owner"];
   correspondence: InvestmentRiskAssessment["correspondence"];
+  saleability: InvestmentRiskAssessment["saleability"];
   collateral: InvestmentRiskAssessment["collateralAnalysis"];
   master: InvestmentRiskAssessment["masterValuation"];
 }): DataSourceUsage[] {
@@ -203,6 +251,23 @@ function buildDataSources(a: {
     dataLevel: `${a.correspondence.messagesAnalyzed} wiadomości${a.correspondence.channels.length ? " (" + a.correspondence.channels.join(", ") + ")" : ""}`,
     period: "",
     status: a.correspondence.available ? "success" : a.correspondence.messagesAnalyzed > 0 ? "partial" : "no_data",
+  });
+
+  sources.push({
+    source: "Prognoza łatwości sprzedaży (Perplexity: popyt z otoczenia 20/50 km)",
+    used: a.saleability.available,
+    purpose: "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje, dostępność",
+    dataLevel: a.saleability.available ? `${a.saleability.score}/100 (${a.saleability.band.replace(/_/g, " ")})` : "—",
+    period: "ostatnie 12 mies.",
+    status: a.saleability.available ? "success" : "no_data",
+  });
+  sources.push({
+    source: "Pośrednicy nieruchomości (Google Maps Places)",
+    used: a.saleability.realEstateAgents.count > 0,
+    purpose: "dostępność profesjonalnej obsługi rynku / płynność zbycia",
+    dataLevel: `${a.saleability.realEstateAgents.count} w ${a.saleability.realEstateAgents.radiusKm} km`,
+    period: "",
+    status: a.saleability.realEstateAgents.count > 0 ? "success" : "no_data",
   });
 
   // Źródła z analizy zabezpieczenia (Google Maps, ISOK/Wody Polskie, Perplexity wstępna) — przenieś, by uniknąć duplikatów.

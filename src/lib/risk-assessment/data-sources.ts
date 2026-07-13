@@ -129,7 +129,28 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provider: "Google Maps (Lovable connector)",
     envKey: "GOOGLE_MAPS_API_KEY",
   },
-  // 7. Rynek nieruchomości + wycena nadrzędna
+  // 7. Prognoza łatwości sprzedaży (popyt z otoczenia)
+  {
+    key: "saleability_demand",
+    name: "Prognoza łatwości sprzedaży (popyt z otoczenia)",
+    category: "rynek_nieruchomosci",
+    governmental: false,
+    purpose: "ocena płynności wyjścia z inwestycji na podstawie otoczenia 20/50 km",
+    provides: "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje turystyczne, dostępność drogowa, popyt na najem",
+    provider: "Perplexity (sonar-pro)",
+    envKey: "PERPLEXITY_API_KEY",
+  },
+  {
+    key: "real_estate_agents",
+    name: "Pośrednicy nieruchomości (rynek lokalny)",
+    category: "rynek_nieruchomosci",
+    governmental: false,
+    purpose: "dostępność profesjonalnej obsługi rynku — sygnał płynności",
+    provides: "liczba biur/pośredników nieruchomości w promieniu do 25 km",
+    provider: "Google Maps Places (Lovable connector)",
+    envKey: "GOOGLE_MAPS_API_KEY",
+  },
+  // 8. Rynek nieruchomości + wycena nadrzędna
   {
     key: "perplexity",
     name: "Perplexity (sonar-pro)",

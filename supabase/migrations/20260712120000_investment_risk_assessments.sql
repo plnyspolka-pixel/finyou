@@ -10,6 +10,8 @@ CREATE TABLE public.investment_risk_assessments (
   investment_score INTEGER,
   risk_grade TEXT,
   recommendation TEXT,
+  saleability_score INTEGER,
+  forced_sale_floor_pln NUMERIC,
   result_json JSONB,
   data_sources JSONB DEFAULT '[]'::jsonb,
   warnings JSONB DEFAULT '[]'::jsonb,

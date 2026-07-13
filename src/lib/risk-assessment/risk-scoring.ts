@@ -4,6 +4,7 @@
 import type {
   RiskComponentScores, Recommendation, RiskGrade,
   OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, MasterValuation,
+  SaleabilityForecast,
 } from "./types";
 import { gradeFromScore } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
@@ -11,12 +12,13 @@ import type { LongevityBand } from "./life-expectancy";
 
 // Wagi komponentów (suma = 1).
 const WEIGHTS: Record<keyof RiskComponentScores, number> = {
-  collateral: 0.30,
-  valuationConfidence: 0.15,
-  legal: 0.25,
-  borrowerLongevity: 0.12,
-  correspondence: 0.10,
-  documentCompleteness: 0.08,
+  collateral: 0.24,
+  valuationConfidence: 0.12,
+  legal: 0.22,
+  borrowerLongevity: 0.10,
+  correspondence: 0.09,
+  documentCompleteness: 0.06,
+  exitLiquidity: 0.17,
 };
 
 function longevityToScore(band: LongevityBand): number {
@@ -55,6 +57,7 @@ export interface CombineInput {
   kwLegal: KwLegalAnalysis;
   correspondence: CorrespondenceIntel;
   ocr: OcrSummary;
+  saleability: SaleabilityForecast;
   master: MasterValuation;
 }
 
@@ -75,6 +78,7 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     borrowerLongevity: longevityToScore(i.owner.lifeExpectancy.longevityRiskBand),
     correspondence: i.correspondence.available ? i.correspondence.behavioralRiskScore : 60,
     documentCompleteness: documentCompletenessScore(i.ocr),
+    exitLiquidity: i.saleability.available ? i.saleability.score : 45,
   };
 
   const weighted =
@@ -118,6 +122,14 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     keyRisks.push(`Ryzyko dożycia/sukcesji właściciela: ${i.owner.lifeExpectancy.longevityRiskBand}.`);
   keyRisks.push(...i.correspondence.redFlags.map((r) => `Korespondencja: ${r}`));
   keyRisks.push(...i.correspondence.inconsistencies.map((r) => `Niespójność: ${r}`));
+  if (i.saleability.available) {
+    if (i.saleability.band === "bardzo_trudna" || i.saleability.band === "trudna")
+      keyRisks.push(`Ograniczona łatwość sprzedaży (${i.saleability.band.replace(/_/g, " ")}) — ryzyko długiego wyjścia z inwestycji.`);
+    if (!i.saleability.realEstateAgents.available)
+      keyRisks.push(`Brak aktywnych pośredników nieruchomości w promieniu ${i.saleability.realEstateAgents.radiusKm} km — płytki rynek.`);
+    if (i.saleability.populationTrend === "malejaca")
+      keyRisks.push("Malejąca liczba mieszkańców w okolicy — presja na płynność i ceny.");
+  }
   if (i.collateral?.collateralScore?.mainRisks) keyRisks.push(...i.collateral.collateralScore.mainRisks);
   keyRisks.push(...i.master.keyRisks);
 
@@ -125,6 +137,10 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (componentScores.collateral >= 70) keyStrengths.push("Dobra jakość zabezpieczenia.");
   if (i.owner.lifeExpectancy.longevityRiskBand === "niskie") keyStrengths.push("Niskie ryzyko dożycia/sukcesji właściciela.");
   if (i.correspondence.cooperationLevel === "wysoki") keyStrengths.push("Wysoki poziom współpracy klienta.");
+  if (i.saleability.available && (i.saleability.band === "bardzo_latwa" || i.saleability.band === "latwa"))
+    keyStrengths.push(`Dobra prognozowana łatwość sprzedaży (${i.saleability.band.replace(/_/g, " ")}) — sprawne wyjście z inwestycji.`);
+  if (i.saleability.realEstateAgents.count >= 4)
+    keyStrengths.push(`Aktywny rynek pośredników (${i.saleability.realEstateAgents.count} w ${i.saleability.realEstateAgents.radiusKm} km).`);
   if (i.collateral?.collateralScore?.mainStrengths) keyStrengths.push(...i.collateral.collateralScore.mainStrengths);
   keyStrengths.push(...i.master.keyStrengths);
 

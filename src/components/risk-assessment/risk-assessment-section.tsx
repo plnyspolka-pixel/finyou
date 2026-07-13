@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
   Scale, UserRound, MessagesSquare, FileScan, Landmark, Sparkles, HeartPulse,
+  TrendingUp, Gavel, Users, MapPinned,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -18,6 +19,7 @@ import {
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import { recommendationLabel } from "@/lib/risk-assessment/types";
 import { bandLabel } from "@/lib/risk-assessment/life-expectancy";
+import { auctionOutcomeLabel, saleabilityBandLabel } from "@/lib/risk-assessment/forced-sale";
 import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
 import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
 
@@ -57,6 +59,7 @@ const COMPONENT_META: Array<{ key: keyof InvestmentRiskAssessment["componentScor
   { key: "borrowerLongevity", label: "Ryzyko dożycia", icon: <HeartPulse className="h-4 w-4" /> },
   { key: "correspondence", label: "Korespondencja", icon: <MessagesSquare className="h-4 w-4" /> },
   { key: "documentCompleteness", label: "Dokumenty (OCR)", icon: <FileScan className="h-4 w-4" /> },
+  { key: "exitLiquidity", label: "Łatwość sprzedaży", icon: <TrendingUp className="h-4 w-4" /> },
 ];
 
 function scoreBarColor(v: number): string {
@@ -246,6 +249,95 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                 </>
               ) : (
                 <p className="text-muted-foreground">{result.masterValuation.errorMessage ?? "Brak nadrzędnej wyceny — wymagana ręczna weryfikacja."}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><Gavel className="h-4 w-4" /> Cena sprzedaży i wymuszonej sprzedaży (licytacje)</CardTitle>
+              <CardDescription>Prognoza odzysku z egzekucji komorniczej wg KPC — dwie licytacje.</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm space-y-3">
+              {result.forcedSale.basisValuePln ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <Stat label="Wartość rynkowa" value={fmtPln(result.forcedSale.basisValuePln)} highlight />
+                    <Stat label="I licytacja (3/4)" value={fmtPln(result.forcedSale.firstAuctionOpeningPln)} />
+                    <Stat label="II licytacja (2/3)" value={fmtPln(result.forcedSale.secondAuctionOpeningPln)} />
+                    <Stat label="Odzysk (zakres)" value={`${fmtPln(result.forcedSale.expectedForcedSaleLowPln)}–${fmtPln(result.forcedSale.expectedForcedSaleHighPln)}`} />
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Badge variant="outline">Prawdopodobny wynik: {auctionOutcomeLabel(result.forcedSale.likelyAuctionOutcome)}</Badge>
+                    {result.forcedSale.loanToForcedSalePercent != null && (
+                      <Badge variant={result.forcedSale.loanToForcedSalePercent > 100 ? "destructive" : result.forcedSale.loanToForcedSalePercent > 80 ? "secondary" : "default"}>
+                        Pożyczka / cena wywołania: {result.forcedSale.loanToForcedSalePercent}%
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground">{result.forcedSale.recoveryComment}</p>
+                  <p className="text-[11px] text-muted-foreground italic">Podstawa wyceny: {result.forcedSale.basisSource}. {result.forcedSale.legalBasis}</p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">{result.forcedSale.recoveryComment}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Prognozowana łatwość sprzedaży */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4" /> Prognozowana łatwość sprzedaży</CardTitle>
+              <CardDescription>Popyt z otoczenia (20/50 km) i płynność wyjścia z inwestycji.</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm space-y-3">
+              {result.saleability.available ? (
+                <>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge className="text-sm" variant={result.saleability.score >= 62 ? "default" : result.saleability.score >= 45 ? "secondary" : "destructive"}>
+                      {result.saleability.score}/100 · {saleabilityBandLabel(result.saleability.band)}
+                    </Badge>
+                    {result.saleability.estimatedDaysOnMarket != null && (
+                      <span className="text-muted-foreground">Szac. czas sprzedaży: ~{result.saleability.estimatedDaysOnMarket} dni</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    {result.saleability.localityPopulation != null && (
+                      <div><span className="text-muted-foreground">Zaludnienie:</span> {result.saleability.localityPopulation.toLocaleString("pl-PL")} ({result.saleability.populationTrend})</div>
+                    )}
+                    {result.saleability.nearestLargeCity.name && (
+                      <div><span className="text-muted-foreground">Większe miasto:</span> {result.saleability.nearestLargeCity.name}{result.saleability.nearestLargeCity.distanceKm != null ? ` (${result.saleability.nearestLargeCity.distanceKm} km)` : ""}</div>
+                    )}
+                    <div><span className="text-muted-foreground">Popyt na najem:</span> {result.saleability.rentalDemand}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.saleability.demandDrivers.largeCityWithin50km && <Badge variant="outline"><MapPinned className="h-3 w-3 mr-1" />duże miasto ≤50 km</Badge>}
+                    {result.saleability.demandDrivers.waterBodyWithin20km && <Badge variant="outline">zbiornik wodny ≤20 km</Badge>}
+                    {result.saleability.demandDrivers.spaResortWithin20km && <Badge variant="outline">kurort/uzdrowisko ≤20 km</Badge>}
+                    {result.saleability.demandDrivers.sanatoriumWithin20km && <Badge variant="outline">sanatorium ≤20 km</Badge>}
+                    {result.saleability.demandDrivers.touristAttractionWithin20km && <Badge variant="outline">atrakcja turystyczna ≤20 km</Badge>}
+                    {result.saleability.demandDrivers.majorRoadWithin10km && <Badge variant="outline">droga S/A/DK ≤10 km</Badge>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      Pośrednicy nieruchomości w {result.saleability.realEstateAgents.radiusKm} km: <b>{result.saleability.realEstateAgents.count}</b>
+                      {result.saleability.realEstateAgents.available
+                        ? <span className="text-emerald-600"> — rynek obsługiwany</span>
+                        : <span className="text-amber-600"> — brak/płytki rynek pośredników</span>}
+                    </span>
+                  </div>
+                  {result.saleability.purchasingPowerComment && <p className="text-muted-foreground">Siła nabywcza: {result.saleability.purchasingPowerComment}</p>}
+                  {result.saleability.rationale && <p className="text-muted-foreground">{result.saleability.rationale}</p>}
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">{result.saleability.summary}</p>
+                  {result.saleability.realEstateAgents.count > 0 && (
+                    <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Pośrednicy w {result.saleability.realEstateAgents.radiusKm} km: <b>{result.saleability.realEstateAgents.count}</b></div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

@@ -95,6 +95,64 @@ export interface MasterValuation {
   errorMessage?: string;
 }
 
+// ---- Prognozowana łatwość sprzedaży (popyt z otoczenia) ----
+export type SaleabilityBand =
+  | "bardzo_latwa"
+  | "latwa"
+  | "umiarkowana"
+  | "trudna"
+  | "bardzo_trudna"
+  | "nieznana";
+
+export interface SaleabilityForecast {
+  available: boolean;
+  score: number; // 0–100, wyżej = łatwiej sprzedać
+  band: SaleabilityBand;
+  estimatedDaysOnMarket: number | null;
+  localityPopulation: number | null;
+  populationTrend: "rosnaca" | "stabilna" | "malejaca" | "nieznana";
+  nearestLargeCity: { name: string | null; population: number | null; distanceKm: number | null };
+  // Czynniki popytu w otoczeniu (20/50 km).
+  demandDrivers: {
+    largeCityWithin50km: boolean;
+    waterBodyWithin20km: boolean;      // jezioro / zbiornik / zalew
+    spaResortWithin20km: boolean;      // kurort / miejscowość uzdrowiskowa
+    sanatoriumWithin20km: boolean;
+    touristAttractionWithin20km: boolean;
+    majorRoadWithin10km: boolean;      // dostępność komunikacyjna (S/A/DK)
+  };
+  rentalDemand: "wysoki" | "sredni" | "niski" | "nieznany";
+  purchasingPowerComment: string | null;
+  // Dostępność pośredników nieruchomości na rynku lokalnym.
+  realEstateAgents: { available: boolean; count: number; radiusKm: number; source: string };
+  rationale: string;
+  citations: string[];
+  summary: string;
+}
+
+// ---- Wycena wymuszonej sprzedaży (licytacja komornicza) ----
+export type AuctionOutcome =
+  | "pierwsza_licytacja"
+  | "druga_licytacja"
+  | "przejecie_wierzyciela"
+  | "nieznany";
+
+export interface ForcedSaleEstimate {
+  basisValuePln: number | null;   // suma oszacowania przyjęta do wyliczeń
+  basisSource: string;
+  marketSalePriceLowPln: number | null;
+  marketSalePriceMidPln: number | null;
+  marketSalePriceHighPln: number | null;
+  firstAuctionOpeningPln: number | null;   // 3/4 sumy oszacowania (art. 965 KPC)
+  secondAuctionOpeningPln: number | null;  // 2/3 sumy oszacowania (art. 983 KPC)
+  expectedForcedSaleLowPln: number | null;
+  expectedForcedSaleHighPln: number | null;
+  likelyAuctionOutcome: AuctionOutcome;
+  loanToForcedSalePercent: number | null;  // pokrycie kwoty pożyczki z wymuszonej sprzedaży
+  recoveryComment: string;
+  legalBasis: string;
+}
+
 // ---- Wynik zbiorczy ----
 export interface RiskComponentScores {
   collateral: number; // z analizy zabezpieczenia
@@ -103,6 +161,7 @@ export interface RiskComponentScores {
   borrowerLongevity: number;
   correspondence: number;
   documentCompleteness: number;
+  exitLiquidity: number; // prognozowana łatwość sprzedaży / wyjścia z inwestycji
 }
 
 export interface InvestmentRiskAssessment {
@@ -118,6 +177,8 @@ export interface InvestmentRiskAssessment {
   kwLegal: KwLegalAnalysis;
   correspondence: CorrespondenceIntel;
   ocr: OcrSummary;
+  saleability: SaleabilityForecast;
+  forcedSale: ForcedSaleEstimate;
   masterValuation: MasterValuation;
 
   /** Wynik istniejącej analizy zabezpieczenia (wycena Perplexity + lokalizacja + powódź). */
