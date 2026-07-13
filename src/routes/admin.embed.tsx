@@ -122,16 +122,22 @@ function EmbedPage() {
         </CardHeader>
         <CardContent>
           {showFormPreview ? (
-            <iframe
-              src={url}
-              width="100%"
-              height={/^\d+$/.test(height) ? Number(height) : 900}
-              style={{ border: 0 }}
-              title="Podgląd wniosku"
-            />
+            <>
+              <iframe
+                src={(() => { const u = new URL("/embed/wniosek", currentOrigin); if (source.trim()) u.searchParams.set("source", source.trim()); return u.toString(); })()}
+                width="100%"
+                height={/^\d+$/.test(height) ? Number(height) : 900}
+                style={{ border: 0 }}
+                title="Podgląd wniosku"
+              />
+              {currentOrigin !== PROD_ORIGIN && (
+                <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+              )}
+            </>
           ) : (
             <p className="text-xs text-muted-foreground">Podgląd jest wyłączony, żeby uniknąć przeładowań przy edycji ustawień.</p>
           )}
+
         </CardContent>
       </Card>
 
