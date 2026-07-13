@@ -8,11 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon, Paperclip, Download, FileText, Loader2 } from "lucide-react";
+import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon, Paperclip, Download, FileText, Loader2, Wand2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { toast } from "sonner";
-import { sendMessengerReply } from "@/lib/messenger-inbox.functions";
+import { sendMessengerReply, backfillMessengerData } from "@/lib/messenger-inbox.functions";
 import { getCommAttachmentUrl } from "@/lib/inbox.functions";
 
 type Attachment = {
@@ -129,6 +129,20 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const sendFn = useServerFn(sendMessengerReply);
+  const backfillFn = useServerFn(backfillMessengerData);
+
+  const backfillMut = useMutation({
+    mutationFn: () => backfillFn(),
+    onSuccess: (r) => {
+      toast.success(
+        `Uzupełniono: ${r.namesFromMeta + r.namesFromText} nazwisk (Meta: ${r.namesFromMeta}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
+          (r.filesSkipped ? `, pominięto ${r.filesSkipped} plików bez dopasowania` : ""),
+      );
+      qc.invalidateQueries({ queryKey: ["messenger-inbox"] });
+      qc.invalidateQueries({ queryKey: ["messenger-inbox-leads"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Backfill nie powiódł się"),
+  });
 
   const { data: messages, refetch, isFetching } = useQuery({
     queryKey: ["messenger-inbox"],
@@ -229,10 +243,22 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
           <MessageCircle className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">{title}</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Odśwież
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => backfillMut.mutate()}
+            disabled={backfillMut.isPending}
+            title="Uzupełnia wstecz imiona/nazwiska klientów i dopina stare załączniki do wiadomości"
+          >
+            <Wand2 className={`h-4 w-4 mr-2 ${backfillMut.isPending ? "animate-pulse" : ""}`} />
+            {backfillMut.isPending ? "Uzupełniam…" : "Uzupełnij historię"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            Odśwież
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
