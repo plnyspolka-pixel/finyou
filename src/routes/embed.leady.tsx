@@ -81,10 +81,10 @@ function EmbedLeads() {
                       <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
                         {formatPLN(l.loan_amount)}
                       </div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500">wnioskowana kwota</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">zapytanie</div>
                     </>
                   ) : (
-                    <div className="text-[11px] uppercase tracking-wider text-slate-500">nowe zgłoszenie</div>
+                    <div className="text-[11px] uppercase tracking-wider text-slate-500">nowy lead</div>
                   )}
                 </div>
               </li>
