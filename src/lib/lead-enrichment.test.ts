@@ -152,3 +152,37 @@ describe("extractInboundFacts — kwota pożyczki vs wartość nieruchomości", 
     expect(f.propertyValue).toBeNull();
   });
 });
+
+describe("extractInboundFacts — formularz reklamy FB", () => {
+  const fbGreeting =
+    "Cześć! Wypełniłem(am) formularz i chcę dowiedzieć się więcej o Twojej firmie.\n" +
+    "Full name: Michał Szpak\nPhone number: 609 657 140\nEmail: michszpak@gmail.com";
+
+  it("wyciąga imię, nazwisko, telefon i e-mail z bloku formularza", () => {
+    const f = extractInboundFacts(fbGreeting);
+    expect(f.firstName).toBe("Michał");
+    expect(f.lastName).toBe("Szpak");
+    expect(f.phone).toBe("609 657 140");
+    expect(f.email).toBe("michszpak@gmail.com");
+    expect(f.loanAmount).toBeNull();
+  });
+
+  it("radzi sobie z samym imieniem w formularzu", () => {
+    const f = extractInboundFacts("Full name: Marzena\nPhone number: 511 834 349\nEmail: kontakt.amd@wp.pl");
+    expect(f.firstName).toBe("Marzena");
+    expect(f.lastName).toBeNull();
+    expect(f.email).toBe("kontakt.amd@wp.pl");
+  });
+
+  it("formularz ma pierwszeństwo przed 'pozdrawiam…' w tej samej wiadomości", () => {
+    const f = extractInboundFacts("Full name: Jan Nowak\npozdrawiam Adam Inny");
+    expect(f.firstName).toBe("Jan");
+    expect(f.lastName).toBe("Nowak");
+  });
+
+  it("zwykła wiadomość bez formularza nie ma e-maila/telefonu", () => {
+    const f = extractInboundFacts("Dzień dobry, potrzebuję 100 000 zł");
+    expect(f.email).toBeNull();
+    expect(f.phone).toBeNull();
+  });
+});

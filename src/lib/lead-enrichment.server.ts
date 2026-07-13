@@ -14,6 +14,8 @@ export type ExtractedFacts = {
   city: string | null;
   firstName: string | null;
   lastName: string | null;
+  email: string | null;
+  phone: string | null;
 };
 
 const KW_RE =
@@ -58,6 +60,21 @@ const NAME_RE = new RegExp(
   "g",
 );
 
+// Wiadomość powitalna z reklamy leadowej FB — Messenger wstawia blok:
+// "Full name: Michał Szpak\nPhone number: 609 657 140\nEmail: x@y.pl".
+// To najpewniejsze źródło danych, parsujemy je wprost.
+const FORM_NAME_RE = /(?:Full name|Imi[ęe] i nazwisko|Name)\s*[:\-]\s*([^\n\r]{2,60})/i;
+const FORM_PHONE_RE = /(?:Phone(?: number)?|Telefon|Nr telefonu)\s*[:\-]\s*(\+?[\d][\d \-]{7,17})/i;
+const FORM_EMAIL_RE = /E-?mail\s*[:\-]\s*([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/i;
+
+function normalizePhone(p: string): string | null {
+  const digits = p.replace(/\D/g, "");
+  if (p.trim().startsWith("+") && digits.length >= 9) return `+${digits}`;
+  if (digits.length === 9) return `+48${digits}`;
+  if (digits.length === 11 && digits.startsWith("48")) return `+${digits}`;
+  return null;
+}
+
 // Słowa, które pasują do wzorca, ale nie są imieniem.
 const NAME_STOPWORDS = new Set([
   "Serdecznie", "Cieplutko", "Gorąco", "Państwa", "Pana", "Panią", "Pani",
@@ -66,9 +83,23 @@ const NAME_STOPWORDS = new Set([
 
 export function extractInboundFacts(rawText: string | null | undefined): ExtractedFacts {
   const out: ExtractedFacts = {
-    kwNumbers: [], loanAmount: null, propertyValue: null, city: null, firstName: null, lastName: null,
+    kwNumbers: [], loanAmount: null, propertyValue: null, city: null,
+    firstName: null, lastName: null, email: null, phone: null,
   };
   if (!rawText) return out;
+
+  // Blok formularza z reklamy FB — parsujemy PRZED stripNoise (usuwa e-maile).
+  const formEmail = FORM_EMAIL_RE.exec(rawText);
+  if (formEmail) out.email = formEmail[1].toLowerCase();
+  const formPhone = FORM_PHONE_RE.exec(rawText);
+  if (formPhone) out.phone = formPhone[1].trim();
+  const formName = FORM_NAME_RE.exec(rawText);
+  if (formName) {
+    const parts = formName[1].trim().split(/\s+/).filter(Boolean);
+    if (parts[0]) out.firstName = parts[0];
+    if (parts.length > 1) out.lastName = parts.slice(1).join(" ");
+  }
+
   const text = stripNoise(rawText);
 
   // KW — deduplikuj po znormalizowanej formie
@@ -125,14 +156,16 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
   const cityMatch = CITY_RE.exec(text);
   if (cityMatch) out.city = cityMatch[1];
 
-  // Imię i nazwisko — pierwsze dopasowanie, które nie trafia w stop-listę
-  for (const m of text.matchAll(NAME_RE)) {
-    const first = m[1];
-    const last = m[2] ?? null;
-    if (NAME_STOPWORDS.has(first)) continue;
-    out.firstName = first;
-    out.lastName = last && !NAME_STOPWORDS.has(last) ? last : null;
-    break;
+  // Imię i nazwisko z treści — tylko jeśli formularz FB ich nie podał
+  if (!out.firstName) {
+    for (const m of text.matchAll(NAME_RE)) {
+      const first = m[1];
+      const last = m[2] ?? null;
+      if (NAME_STOPWORDS.has(first)) continue;
+      out.firstName = first;
+      out.lastName = last && !NAME_STOPWORDS.has(last) ? last : null;
+      break;
+    }
   }
 
   return out;
@@ -181,11 +214,17 @@ export async function enrichLeadFromInbound(opts: {
     appData.property_value = facts.propertyValue;
     touched = true;
   }
-  // Imię i nazwisko z treści rozmowy — uzupełnij tylko brakujące pola,
-  // aby lead od razu był podpisany danymi klienta (np. w skrzynce Messenger).
+  // Imię, nazwisko, e-mail i telefon z treści rozmowy — uzupełnij tylko
+  // brakujące pola, aby lead od razu był podpisany danymi klienta.
   const namePatch: Record<string, string> = {};
   if (facts.firstName && !lead.first_name) namePatch.first_name = facts.firstName;
   if (facts.lastName && !lead.last_name) namePatch.last_name = facts.lastName;
+  if (facts.email && !lead.email) namePatch.email = facts.email;
+  if (facts.phone && !lead.phone_raw && !lead.phone_normalized) {
+    namePatch.phone_raw = facts.phone;
+    const norm = normalizePhone(facts.phone);
+    if (norm) namePatch.phone_normalized = norm;
+  }
   if (Object.keys(namePatch).length > 0) touched = true;
 
   if (touched) {
@@ -229,7 +268,14 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
 
   const appData = (lead.application_data as Record<string, any>) ?? {};
   const kwNumbers: string[] = Array.isArray(appData.kw_numbers) ? appData.kw_numbers : [];
-  const loanAmount: number | null = typeof appData.loan_amount === "number" ? appData.loan_amount : null;
+  // Bot potrafi zapisać kwotę jako string ("60000") — akceptuj też liczbę w tekście.
+  const rawAmount = appData.loan_amount;
+  const loanAmount: number | null =
+    typeof rawAmount === "number" && Number.isFinite(rawAmount)
+      ? rawAmount
+      : rawAmount != null && Number.isFinite(Number(rawAmount)) && Number(rawAmount) > 0
+        ? Number(rawAmount)
+        : null;
   if (kwNumbers.length === 0 || !loanAmount) return null;
 
   // Sprawdź czy są jakiekolwiek załączniki na lead_communications lub dokumenty
