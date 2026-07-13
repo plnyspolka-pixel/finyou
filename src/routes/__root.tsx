@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 
 import { useEffect } from "react";
@@ -121,6 +122,19 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isEmbedRoute = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/embed"),
+  });
+
+  if (isEmbedRoute) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <main id="main">
+          <Outlet />
+        </main>
+      </QueryClientProvider>
+    );
+  }
   
   return (
     <QueryClientProvider client={queryClient}>

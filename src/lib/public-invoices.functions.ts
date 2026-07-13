@@ -1,0 +1,57 @@
+import { createServerFn } from "@tanstack/react-start";
+
+export type PublicInvoice = {
+  id: string;
+  invoice_number: string | null;
+  issue_date: string | null;
+  gross_amount: number;
+  currency: string;
+  buyer_label: string;
+  item_label: string;
+};
+
+export const fetchPublicInvoices = createServerFn({ method: "GET" }).handler(async () => {
+  const anonBuyer = (name: string | null | undefined, nip: string | null | undefined): string => {
+    if (nip && nip.replace(/\D/g, "").length >= 9) {
+      const clean = (name ?? "").trim();
+      if (!clean) return "Podmiot gospodarczy";
+      const short = clean.length > 3 ? `${clean.slice(0, 3)}***` : "Podmiot";
+      return `${short} (firma)`;
+    }
+    const clean = (name ?? "").trim();
+    if (!clean) return "Klient prywatny";
+    const parts = clean.split(/\s+/).filter(Boolean);
+    const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join(". ");
+    return initials ? `${initials}.` : "Klient prywatny";
+  };
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: entities } = await supabaseAdmin
+    .from("accounting_entities")
+    .select("id, name")
+    .ilike("name", "%finance you%");
+  const entityIds = (entities ?? []).map((e: any) => e.id);
+  let q = supabaseAdmin
+    .from("accounting_documents")
+    .select("id, invoice_number, issue_date, gross_amount, currency, counterparty_name, counterparty_nip, items")
+    .eq("direction", "sales")
+    .order("issue_date", { ascending: false, nullsFirst: false })
+    .limit(25);
+  if (entityIds.length > 0) q = q.in("entity_id", entityIds);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  const rows: PublicInvoice[] = (data ?? []).map((r: any) => {
+    const items = Array.isArray(r.items) ? r.items : [];
+    const firstItem = items[0]?.name ?? items[0]?.description ?? "Usługa finansowa";
+    return {
+      id: r.id,
+      invoice_number: r.invoice_number,
+      issue_date: r.issue_date,
+      gross_amount: Number(r.gross_amount ?? 0),
+      currency: r.currency ?? "PLN",
+      buyer_label: anonBuyer(r.counterparty_name, r.counterparty_nip),
+      item_label: String(firstItem).slice(0, 80),
+    };
+  });
+  return rows;
+});
