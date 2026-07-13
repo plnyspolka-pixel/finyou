@@ -52,7 +52,7 @@ function EmbedLeads() {
 
         {data.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
-            Brak zgłoszeń do wyświetlenia.
+            Brak leadów do wyświetlenia.
           </div>
         ) : (
           <ul className="space-y-2">
