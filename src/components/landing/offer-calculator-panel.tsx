@@ -251,6 +251,7 @@ export function OfferCalculatorPanel({
           Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
         </p>
         </div>
+        </div>
       </div>
     </FancyShell>
   );
