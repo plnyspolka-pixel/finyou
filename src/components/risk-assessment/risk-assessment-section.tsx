@@ -83,19 +83,32 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
   };
   useEffect(() => { void load(); }, [applicationId]);
 
+  const [stage, setStage] = useState<string | null>(null);
+
   const run = async () => {
     setRunning(true);
+    setStage("Pobieranie treści księgi wieczystej…");
     try {
-      // Pierwsze uruchomienie liczy ocenę; ponowne (gdy zapis istnieje) wymusza przeliczenie.
+      // Najpierw skutecznie dowieź KW do stanu "ready" — bez ingerencji użytkownika.
+      const kw = await ensureKwReady(applicationId, {
+        onStatus: (s) => {
+          if (s === "processing") setStage("Pobieranie treści księgi wieczystej…");
+          else if (s === "ready") setStage("KW pobrana — analiza ryzyka…");
+        },
+      });
+      if (!kw.ok && kw.status !== "no_kw") {
+        toast.error("Nie udało się pobrać KW", { description: kw.message });
+        // mimo błędu KW pozwalamy uruchomić ocenę na dostępnych danych
+      }
+      setStage("Analiza ryzyka i wycena…");
       const computed = await runRA({ data: { applicationId, force: !!row } });
       toast.success(row ? "Ocena przeliczona ponownie" : "Ocena ryzyka zakończona");
-      // Wynik pokazujemy zawsze — nawet gdy zapis do bazy się nie powiódł
-      // (wtedy odczyt zwraca null i bez fallbacku widok zostawał pusty).
       const saved = await fetchRA({ data: { applicationId } }).catch(() => null);
       setRow(saved ?? (computed ? { result_json: computed } : null));
     } catch (e: any) {
       toast.error("Błąd oceny ryzyka", { description: e?.message ?? String(e) });
     } finally {
+      setStage(null);
       setRunning(false);
     }
   };
