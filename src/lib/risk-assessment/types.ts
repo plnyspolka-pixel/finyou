@@ -174,21 +174,32 @@ export interface ForcedSaleEstimate {
   legalBasis: string;
 }
 
-// ---- Dane rządowe: benchmark GUS BDL (ceny gruntów rolnych zł/ha, lokale zł/m²) ----
+// ---- Dane rządowe: GUS BDL (przeciętne ceny) + RCN/Geoportal (rzeczywiste transakcje) ----
 export interface GovBenchmark {
-  source: "GUS BDL";
+  source: "GUS BDL" | "RCN + GUS BDL";
   available: boolean;
   propertyType: string;
-  // grunt rolny:
+  // Wybrane (priorytet: RCN transakcyjne > GUS przeciętne):
+  primarySource: "RCN" | "GUS BDL" | "brak";
   pricePerHa: number | null;
+  pricePerM2Median: number | null;
+  pricePerM2Average: number | null; // GUS (informacyjnie)
   soilClass: string | null;
   soilCategory: "dobre" | "srednie" | "slabe" | "ogolem";
   areaHa: number | null;
   landValuePln: number | null;
-  // lokale / domy:
-  pricePerM2Median: number | null;
-  pricePerM2Average: number | null;
   dwellingValuePln: number | null;
+  // GUS (dla porównania):
+  gusPricePerHa: number | null;
+  gusPricePerM2Median: number | null;
+  // RCN — rzeczywiste transakcje z Rejestru Cen Nieruchomości:
+  rcnAvailable: boolean;
+  rcnPricePerHa: number | null;
+  rcnPricePerM2: number | null;
+  rcnTransactions: number;
+  rcnRadiusKm: number | null;
+  rcnStatus: string;
+  rcnStatusMessage: string;
   // wspólne:
   unitName: string | null;
   unitLevel: string | null; // powiat / wojewodztwo / krajowy

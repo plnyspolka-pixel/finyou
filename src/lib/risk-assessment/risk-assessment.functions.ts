@@ -150,6 +150,8 @@ export async function runInvestmentRiskAssessmentCore(
     soilClass: kwLegal.soilClass,
     areaSqm: property?.area_sqm ?? null,
     landAreaHa: null,
+    latitude: collateral?.property?.latitude ?? null,
+    longitude: collateral?.property?.longitude ?? null,
   });
 
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
@@ -184,7 +186,7 @@ export async function runInvestmentRiskAssessmentCore(
   const govLandValue = property?.property_type === "grunt_rolny" ? govBenchmark.landValuePln : null;
   const basisValue = govLandValue ?? master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
   const basisSource = govLandValue
-    ? "GUS BDL (ceny gruntów rolnych)"
+    ? (govBenchmark.primarySource === "RCN" ? "RCN — rzeczywiste transakcje (Geoportal)" : "GUS BDL (ceny gruntów rolnych)")
     : master.estimatedValueMidPln
       ? "Perplexity (wycena nadrzędna)"
       : collateralMid
@@ -292,19 +294,31 @@ function buildDataSources(a: {
 }): DataSourceUsage[] {
   const sources: DataSourceUsage[] = [];
 
-  // Government-first: GUS BDL raportujemy jako priorytetowe źródło wyceny.
+  // Government-first: RCN (rzeczywiste transakcje) — priorytetowe źródło rządowe.
+  const gb = a.govBenchmark;
   sources.push({
-    source: "GUS BDL — ceny gruntów rolnych / lokali (dane rządowe)",
-    used: a.govBenchmark.available,
-    purpose: "priorytetowa wycena z danych urzędowych (zł/ha wg klasy, zł/m²)",
-    dataLevel: a.govBenchmark.available
-      ? [a.govBenchmark.pricePerHa != null ? `${a.govBenchmark.pricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
-         a.govBenchmark.pricePerM2Median != null ? `${a.govBenchmark.pricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
-         a.govBenchmark.unitName].filter(Boolean).join(", ")
+    source: "RCN / Geoportal — rejestr cen nieruchomości (dane rządowe, transakcje)",
+    used: gb.rcnAvailable,
+    purpose: "rzeczywiste ceny transakcyjne nieruchomości w okolicy (priorytet nad średnimi)",
+    dataLevel: gb.rcnAvailable
+      ? [gb.rcnPricePerHa != null ? `${gb.rcnPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
+         gb.rcnPricePerM2 != null ? `${gb.rcnPricePerM2.toLocaleString("pl-PL")} zł/m²` : null,
+         `${gb.rcnTransactions} transakcji`].filter(Boolean).join(", ")
       : "—",
-    period: a.govBenchmark.period ?? "",
-    status: a.govBenchmark.available ? "success" : "no_data",
-    note: a.govBenchmark.fallbackUsed ? `dane zastępcze: ${a.govBenchmark.unitLevel ?? ""}` : undefined,
+    period: gb.rcnRadiusKm ? `promień ${gb.rcnRadiusKm} km` : "",
+    status: gb.rcnAvailable ? "success" : gb.rcnStatus === "not_started" ? "no_data" : "error",
+    note: gb.rcnAvailable ? undefined : gb.rcnStatusMessage,
+  });
+  sources.push({
+    source: "GUS BDL — przeciętne ceny gruntów rolnych / lokali (dane rządowe)",
+    used: gb.gusPricePerHa != null || gb.gusPricePerM2Median != null,
+    purpose: "przeciętne ceny urzędowe (zł/ha wg klasy, zł/m²) — wsparcie/fallback wobec RCN",
+    dataLevel: [gb.gusPricePerHa != null ? `${gb.gusPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
+         gb.gusPricePerM2Median != null ? `${gb.gusPricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
+         gb.unitName].filter(Boolean).join(", ") || "—",
+    period: gb.period ?? "",
+    status: (gb.gusPricePerHa != null || gb.gusPricePerM2Median != null) ? "success" : "no_data",
+    note: gb.fallbackUsed ? `dane zastępcze: ${gb.unitLevel ?? ""}` : undefined,
   });
 
   sources.push({
@@ -445,10 +459,13 @@ export interface InvestorValuationSummary {
   } | null;
   govBenchmark: {
     available: boolean;
+    primarySource: string;
     pricePerHa: number | null;
     pricePerM2Median: number | null;
     landValuePln: number | null;
     dwellingValuePln: number | null;
+    rcnTransactions: number;
+    rcnRadiusKm: number | null;
     unitName: string | null;
     unitLevel: string | null;
     period: string | null;
@@ -481,6 +498,46 @@ export const getInvestorValuationSummary = createServerFn({ method: "GET" })
     } catch {
       return null;
     }
+  });
+
+// Diagnostyka RCN „na żywo" — administrator/operator może sprawdzić DOKŁADNIE, na
+// którym etapie pobieranie z Geoportalu zawodzi (capabilities / warstwy / brak transakcji
+// / odfiltrowane). Zwraca pełną RcnDiagnostics dla danego wniosku.
+export const diagnoseRcnForApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOperator(context.userId);
+    const { rcnBenchmark } = await import("@/lib/property-analysis/rcn-geoportal.server");
+    const { geocode } = await import("@/lib/property-analysis/location-score.server");
+
+    const { data: props } = await supabaseAdmin
+      .from("properties")
+      .select("property_type, address, city, voivodeship")
+      .eq("loan_application_id", data.applicationId);
+    const property = props?.[0] ?? null;
+    if (!property) return { ok: false as const, message: "Brak nieruchomości dla wniosku." };
+
+    const geo = property.address
+      ? await geocode([property.address, property.city, property.voivodeship, "Polska"].filter(Boolean).join(", "), {
+          expectedCity: property.city,
+          expectedVoivodeship: property.voivodeship,
+        })
+      : null;
+    if (!geo) return { ok: false as const, message: "Nie udało się zgeokodować adresu — RCN wymaga współrzędnych." };
+
+    const res = await rcnBenchmark({ lat: geo.lat, lng: geo.lng, propertyType: property.property_type ?? "inna" });
+    return {
+      ok: true as const,
+      coordinates: { lat: geo.lat, lng: geo.lng },
+      propertyType: property.property_type,
+      status: res.diagnostics.status,
+      statusMessage: res.diagnostics.statusMessage,
+      transactionsCount: res.transactionsCount,
+      radiusKm: res.radiusKm,
+      stats: res.stats,
+      diagnostics: res.diagnostics,
+    };
   });
 
 /** Buduje bezpieczny (bez PII) podzbiór dla inwestora z pełnego dossier. */
@@ -532,10 +589,13 @@ export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): Inve
     govBenchmark: r.govBenchmark?.available
       ? {
           available: true,
+          primarySource: r.govBenchmark.primarySource,
           pricePerHa: r.govBenchmark.pricePerHa,
           pricePerM2Median: r.govBenchmark.pricePerM2Median,
           landValuePln: r.govBenchmark.landValuePln,
           dwellingValuePln: r.govBenchmark.dwellingValuePln,
+          rcnTransactions: r.govBenchmark.rcnTransactions,
+          rcnRadiusKm: r.govBenchmark.rcnRadiusKm,
           unitName: r.govBenchmark.unitName,
           unitLevel: r.govBenchmark.unitLevel,
           period: r.govBenchmark.period,

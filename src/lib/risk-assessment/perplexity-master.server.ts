@@ -38,9 +38,12 @@ function buildDossier(i: MasterValuationInput): string {
     .slice(0, 8);
 
   const gov = i.govBenchmark;
+  const rcnLine = gov?.rcnAvailable
+    ? `\n- RCN (rzeczywiste transakcje, PRIORYTET): ${[gov.rcnPricePerHa != null ? `${gov.rcnPricePerHa.toLocaleString("pl-PL")} zł/ha` : null, gov.rcnPricePerM2 != null ? `${gov.rcnPricePerM2.toLocaleString("pl-PL")} zł/m²` : null].filter(Boolean).join(", ")} z ${gov.rcnTransactions} transakcji${gov.rcnRadiusKm ? ` w promieniu ${gov.rcnRadiusKm} km` : ""}`
+    : "";
   const govBlock = gov?.available
-    ? `\n0) DANE RZĄDOWE — GUS BDL (KOTWICA WYCENY, priorytet):${gov.pricePerHa != null ? `\n- Cena gruntu rolnego: ${gov.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${gov.soilCategory})${gov.landValuePln ? `, wartość działki ≈ ${gov.landValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.pricePerM2Median != null ? `\n- Mediana ceny lokali: ${gov.pricePerM2Median.toLocaleString("pl-PL")} zł/m²${gov.dwellingValuePln ? `, wartość ≈ ${gov.dwellingValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}\n- Jednostka: ${gov.unitName ?? "—"} (${gov.unitLevel ?? "—"}), okres ${gov.period ?? "—"}${gov.fallbackUsed ? " [dane zastępcze wyższego poziomu]" : ""}\n`
-    : "\n0) DANE RZĄDOWE — GUS BDL: brak danych dla tej jednostki.\n";
+    ? `\n0) DANE RZĄDOWE — KOTWICA WYCENY (priorytet: ${gov.primarySource}):${rcnLine}${gov.pricePerHa != null ? `\n- Cena gruntu rolnego (przyjęta): ${gov.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${gov.soilCategory})${gov.landValuePln ? `, wartość działki ≈ ${gov.landValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.pricePerM2Median != null ? `\n- Cena lokali (przyjęta): ${gov.pricePerM2Median.toLocaleString("pl-PL")} zł/m²${gov.dwellingValuePln ? `, wartość ≈ ${gov.dwellingValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.gusPricePerHa != null && gov.primarySource === "RCN" ? `\n- (GUS porównawczo: ${gov.gusPricePerHa.toLocaleString("pl-PL")} zł/ha)` : ""}\n- Jednostka: ${gov.unitName ?? "—"} (${gov.unitLevel ?? "—"}), okres ${gov.period ?? "—"}${gov.fallbackUsed ? " [dane zastępcze wyższego poziomu]" : ""}\n`
+    : `\n0) DANE RZĄDOWE (RCN/GUS): brak danych (RCN: ${gov?.rcnStatusMessage ?? "—"}).\n`;
 
   return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
 ${govBlock}
@@ -96,7 +99,7 @@ ZADANIE:
 4. Wydaj rekomendację: "rekomendowana" | "warunkowa" | "do_weryfikacji" | "odradzana".
 
 WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana".
-- PRIORYTET DANYCH RZĄDOWYCH: jeżeli w sekcji (0) podano dane GUS BDL, przyjmij je jako KOTWICĘ wyceny i nie odchylaj się od nich istotnie bez uzasadnienia w danych rynkowych.
+- PRIORYTET DANYCH RZĄDOWYCH: jeżeli w sekcji (0) podano dane RCN (rzeczywiste transakcje) lub GUS BDL, przyjmij je jako KOTWICĘ wyceny (RCN ma pierwszeństwo przed GUS) i nie odchylaj się od nich istotnie bez uzasadnienia w danych rynkowych.
 - Grunt rolny: wyceniaj wg CEN GRUNTÓW ROLNYCH GUS (za hektar, wg klasy bonitacyjnej i województwa; posiłkowo KOWR/agronet), NIE jak działkę budowlaną. Rynek gruntów rolnych jest relatywnie płynny — nie zaniżaj sztucznie płynności z powodu małej miejscowości czy oddalenia od miasta.
 - Zabudowa zagrodowa/siedliskowa (RM): wycena mieszana (rolno-budowlana) i uwzględnij wąski krąg nabywców pod zabudowę (budowa zasadniczo tylko dla rolnika).
 

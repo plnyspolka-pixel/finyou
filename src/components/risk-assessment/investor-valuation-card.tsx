@@ -79,7 +79,7 @@ export function InvestorValuationCard({ applicationId }: { applicationId: string
           </div>
           {data.govBenchmark?.available && (
             <div className="mt-1 text-xs flex items-center gap-1 text-blue-700 dark:text-blue-400">
-              <Landmark className="h-3.5 w-3.5" /> Dane GUS ({data.govBenchmark.unitName ?? "—"}):
+              <Landmark className="h-3.5 w-3.5" /> Dane rządowe {data.govBenchmark.primarySource === "RCN" ? `(RCN — ${data.govBenchmark.rcnTransactions} transakcji)` : `(GUS, ${data.govBenchmark.unitName ?? "—"})`}:
               {data.govBenchmark.pricePerHa != null && <b> {data.govBenchmark.pricePerHa.toLocaleString("pl-PL")} zł/ha</b>}
               {data.govBenchmark.pricePerM2Median != null && <b> {data.govBenchmark.pricePerM2Median.toLocaleString("pl-PL")} zł/m²</b>}
             </div>
