@@ -16,8 +16,8 @@ export const Route = createFileRoute("/embed/leady")({
   loader: ({ context }) => context.queryClient.ensureQueryData(leadsQO),
   head: () => ({
     meta: [
-      { title: "Ostatnie wnioski — Finance You" },
-      { name: "description", content: "Zanonimizowana lista ostatnich wniosków pożyczkowych Finance You." },
+      { title: "Ostatnie leady — Finance You" },
+      { name: "description", content: "Zanonimizowana lista ostatnich leadów, które wpadły do Finance You." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -35,14 +35,14 @@ function EmbedLeads() {
         <header className="flex items-end justify-between gap-3 border-b border-white/10 pb-4">
           <div>
             <p className="text-[11px] uppercase tracking-widest text-sky-300/80">Finance You</p>
-            <h1 className="text-xl sm:text-2xl font-semibold">Ostatnie wnioski</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold">Ostatnie leady</h1>
             <p className="mt-1 text-xs text-slate-400">
-              Dane zanonimizowane — {data.length} najnowszych zgłoszeń.
+              Dane zanonimizowane — {data.length} najnowszych leadów.
             </p>
           </div>
           {withAmount > 0 && (
             <div className="text-right">
-              <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma wniosków</p>
+              <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma zapytań</p>
               <p className="text-lg sm:text-xl font-semibold tabular-nums text-emerald-300">
                 {formatPLN(total)}
               </p>
@@ -52,7 +52,7 @@ function EmbedLeads() {
 
         {data.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
-            Brak zgłoszeń do wyświetlenia.
+            Brak leadów do wyświetlenia.
           </div>
         ) : (
           <ul className="space-y-2">
@@ -81,10 +81,10 @@ function EmbedLeads() {
                       <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
                         {formatPLN(l.loan_amount)}
                       </div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500">wnioskowana kwota</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">zapytanie</div>
                     </>
                   ) : (
-                    <div className="text-[11px] uppercase tracking-wider text-slate-500">nowe zgłoszenie</div>
+                    <div className="text-[11px] uppercase tracking-wider text-slate-500">nowy lead</div>
                   )}
                 </div>
               </li>
