@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { BookOpenCheck, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
+import { ensureKwReady } from "@/lib/kw-ensure";
 
 type KwDoc = {
   status: string;
