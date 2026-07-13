@@ -234,7 +234,9 @@ export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
 
 /** Blob PDF do pobrania w przeglądarce. */
 export function buildLoanCalcPdfBlob(payload: LoanCalcPayload): Blob {
-  return new Blob([buildLoanCalcPdfBytes(payload)], { type: "application/pdf" });
+  const bytes = buildLoanCalcPdfBytes(payload);
+  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  return new Blob([buf], { type: "application/pdf" });
 }
 
 // ─────────────────────────────────────────────────────────────────────
