@@ -27,6 +27,19 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
       POST: async ({ request }) => {
         const unauth = requireCronSecret(request);
         if (unauth) return unauth;
+
+        // Uzupełnianie historii Messenger/IG (imiona z Meta/treści wiadomości,
+        // jednorazowa migracja załączników) — best-effort, nie może wywrócić ticka.
+        try {
+          const { runScheduledMessengerBackfill } = await import("@/lib/messenger-backfill.server");
+          const bf = await runScheduledMessengerBackfill();
+          if (bf.namesFromMeta || bf.namesFromText || bf.attachmentsRun) {
+            console.log("[follow-up-tick] messenger backfill", JSON.stringify(bf));
+          }
+        } catch (e) {
+          console.error("[follow-up-tick] messenger backfill error", e);
+        }
+
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 
