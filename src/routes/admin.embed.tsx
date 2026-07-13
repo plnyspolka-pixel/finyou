@@ -153,16 +153,24 @@ function EmbedPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Podgląd faktur</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowInvoicesPreview((v) => !v)}>
+            {showInvoicesPreview ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
         </CardHeader>
         <CardContent>
-          <iframe src={`${currentOrigin}/embed/faktury`} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
-          {currentOrigin !== PROD_ORIGIN && (
+          {showInvoicesPreview ? (
+            <iframe src={`${currentOrigin}/embed/faktury`} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
+          ) : (
+            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
+          )}
+          {showInvoicesPreview && currentOrigin !== PROD_ORIGIN && (
             <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 }
