@@ -28,6 +28,7 @@ import {
   type CompanyBundle,
   type CalculatorOutputs,
 } from "@/lib/document-fields";
+import { DocumentImportScan } from "@/components/document-creator/DocumentImportScan";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,6 +390,34 @@ export function DocumentCreatorPage() {
     [applyCalcPayload],
   );
 
+  // ─── Wczytanie danych z innego dokumentu (OCR/AI) — wpisujemy tylko w puste
+  // pola, żeby nie nadpisać wartości wpisanych ręcznie.
+  const applyImportedDocValues = useCallback((extracted: Record<string, string>) => {
+    setValues((v) => {
+      const next = { ...v };
+      let filled = 0;
+      let skipped = 0;
+      for (const [id, val] of Object.entries(extracted)) {
+        if (!val.trim()) continue;
+        if ((v[id] ?? "").trim()) {
+          skipped++;
+          continue;
+        }
+        next[id] = val.trim();
+        filled++;
+      }
+      if (filled === 0 && skipped === 0) {
+        toast.message("Nie znalazłem w tym dokumencie danych pasujących do pól wzoru.");
+      } else {
+        toast.success(
+          `Wpisano ${filled} pól z dokumentu.` +
+            (skipped ? ` Pominięto ${skipped} — były już wypełnione.` : ""),
+        );
+      }
+      return filled > 0 ? next : v;
+    });
+  }, []);
+
   // ─── Pobieranie danych firmowych
   const loadCompanyBundle = useCallback(
     async (ids: { nip?: string; regon?: string; krs?: string }): Promise<BundleResult> => {
@@ -558,8 +587,8 @@ export function DocumentCreatorPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Wybierz wzór, uzupełnij pola pogrupowane wg stron umowy. Dane firmowe pobierzesz jednym
-          kliknięciem z GUS, KRS i Białej Listy, a kwoty z kalkulatora pożyczki. Treść wzoru nie
-          jest zmieniana.
+          kliknięciem z GUS, KRS i Białej Listy, kwoty z kalkulatora pożyczki, a resztę wczytasz z
+          innego dokumentu (OCR wykryje dane automatycznie). Treść wzoru nie jest zmieniana.
         </p>
       </div>
 
@@ -722,6 +751,14 @@ export function DocumentCreatorPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Wczytanie danych z innego dokumentu (OCR/AI) */}
+              <DocumentImportScan
+                templateName={selected.name}
+                fields={fields}
+                disabled={previewLoading || fields.length === 0}
+                onApply={applyImportedDocValues}
+              />
 
               {/* Kalkulator pożyczki — tylko przy Umowie pożyczki */}
               {showCalculator && (
