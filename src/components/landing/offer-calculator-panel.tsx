@@ -99,13 +99,25 @@ export function OfferCalculatorPanel({
 
   return (
     <FancyShell variant={shellVariant}>
-      <div className="space-y-6">
+      <div className="space-y-6 relative">
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-white text-foreground shadow-md">
-            <Check className="h-4 w-4" strokeWidth={3} />
+            {locked ? <Lock className="h-4 w-4" strokeWidth={3} /> : <Check className="h-4 w-4" strokeWidth={3} />}
           </span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white">{headerLabel}</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white">
+            {locked ? "Kalkulator raty — zablokowany" : headerLabel}
+          </span>
         </div>
+
+        {locked && (
+          <div className="rounded-2xl border border-white/30 bg-white/10 p-4 text-sm text-white backdrop-blur-sm flex items-start gap-3">
+            <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+            <span>{lockedMessage}</span>
+          </div>
+        )}
+
+        <div className={locked ? "pointer-events-none select-none opacity-50" : ""} aria-hidden={locked}>
+        <div className="space-y-6">
 
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
