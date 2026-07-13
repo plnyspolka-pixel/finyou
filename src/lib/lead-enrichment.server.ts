@@ -11,6 +11,8 @@ export type ExtractedFacts = {
   kwNumbers: string[];
   loanAmount: number | null;
   city: string | null;
+  firstName: string | null;
+  lastName: string | null;
 };
 
 const KW_RE =
@@ -23,8 +25,25 @@ const AMOUNT_RE =
 const CITY_RE =
   /\b(?:z|w|do|nieruchomo[śs][ćc]\s*w|dzia[łl]ka\s*w|mieszkanie\s*w)\s+([A-ZŁŚŻŹĆĄĘÓŃ][a-ząćęłńóśżź]{2,}(?:[- ][A-ZŁŚŻŹĆĄĘÓŃ]?[a-ząćęłńóśżź]{2,})?)/g;
 
+// "jestem Jan Kowalski", "nazywam się…", "pozdrawiam Waldek Trojanowski",
+// "z poważaniem…", "mam na imię Jan". Imię/nazwisko muszą zaczynać się
+// wielką literą, więc "jestem zainteresowany" nie zostanie złapane.
+const NAME_TOKEN = "[A-ZŁŚŻŹĆĄĘÓŃ][a-ząćęłńóśżź]+(?:-[A-ZŁŚŻŹĆĄĘÓŃ][a-ząćęłńóśżź]+)?";
+const NAME_RE = new RegExp(
+  `(?:[Jj]estem|[Nn]azywam si[ęe]|[Mm]am na imi[ęe]|[Zz] tej strony|[Pp]ozdrawiam|[Zz] powa[żz]aniem|[Ii]mi[ęe] i nazwisko:?)\\s+(${NAME_TOKEN})(?:\\s+(${NAME_TOKEN}))?`,
+  "g",
+);
+
+// Słowa, które pasują do wzorca, ale nie są imieniem.
+const NAME_STOPWORDS = new Set([
+  "Serdecznie", "Cieplutko", "Gorąco", "Państwa", "Pana", "Panią", "Pani",
+  "Was", "Ciebie", "Cię", "Bardzo", "Wszystkich", "Zainteresowany", "Zainteresowana",
+]);
+
 export function extractInboundFacts(text: string | null | undefined): ExtractedFacts {
-  const out: ExtractedFacts = { kwNumbers: [], loanAmount: null, city: null };
+  const out: ExtractedFacts = {
+    kwNumbers: [], loanAmount: null, city: null, firstName: null, lastName: null,
+  };
   if (!text) return out;
 
   // KW — deduplikuj po znormalizowanej formie
@@ -53,8 +72,19 @@ export function extractInboundFacts(text: string | null | undefined): ExtractedF
   if (bestAmt > 0) out.loanAmount = Math.round(bestAmt * 100) / 100;
 
   // Miasto — pierwsze dopasowanie
+  CITY_RE.lastIndex = 0;
   const cityMatch = CITY_RE.exec(text);
   if (cityMatch) out.city = cityMatch[1];
+
+  // Imię i nazwisko — pierwsze dopasowanie, które nie trafia w stop-listę
+  for (const m of text.matchAll(NAME_RE)) {
+    const first = m[1];
+    const last = m[2] ?? null;
+    if (NAME_STOPWORDS.has(first)) continue;
+    out.firstName = first;
+    out.lastName = last && !NAME_STOPWORDS.has(last) ? last : null;
+    break;
+  }
 
   return out;
 }
@@ -98,9 +128,16 @@ export async function enrichLeadFromInbound(opts: {
     appData.city = facts.city;
     touched = true;
   }
+  // Imię i nazwisko z treści rozmowy — uzupełnij tylko brakujące pola,
+  // aby lead od razu był podpisany danymi klienta (np. w skrzynce Messenger).
+  const namePatch: Record<string, string> = {};
+  if (facts.firstName && !lead.first_name) namePatch.first_name = facts.firstName;
+  if (facts.lastName && !lead.last_name) namePatch.last_name = facts.lastName;
+  if (Object.keys(namePatch).length > 0) touched = true;
+
   if (touched) {
     appData.enriched_at = new Date().toISOString();
-    await s.from("leads").update({ application_data: appData as any }).eq("id", leadId);
+    await s.from("leads").update({ ...namePatch, application_data: appData as any }).eq("id", leadId);
   }
 
   const promoted = await maybePromoteLeadToApplication(leadId);

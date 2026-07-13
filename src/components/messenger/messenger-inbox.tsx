@@ -8,11 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon } from "lucide-react";
+import { MessageCircle, Send, RefreshCw, Search, Bot, User as UserIcon, Paperclip, Download, FileText, Loader2, Wand2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
 import { toast } from "sonner";
-import { sendMessengerReply } from "@/lib/messenger-inbox.functions";
+import { sendMessengerReply, backfillMessengerData } from "@/lib/messenger-inbox.functions";
+import { getCommAttachmentUrl } from "@/lib/inbox.functions";
+
+type Attachment = {
+  name?: string | null;
+  mime?: string | null;
+  size?: number | null;
+  path: string;
+  source_type?: string | null;
+};
 
 type Msg = {
   id: string;
@@ -22,6 +31,7 @@ type Msg = {
   created_at: string;
   metadata: any;
   status: string | null;
+  attachments: Attachment[] | null;
 };
 
 type Lead = {
@@ -31,6 +41,74 @@ type Lead = {
   messenger_psid: string | null;
   instagram_igsid: string | null;
 };
+
+function isImageAtt(att: Attachment): boolean {
+  const name = att.name ?? att.path;
+  return (att.mime ?? "").startsWith("image/") || /\.(jpe?g|png|gif|webp|heic|bmp|avif)$/i.test(name);
+}
+
+/**
+ * Pojedynczy załącznik wiadomości — zdjęcia jako miniatura (klik = pełny
+ * rozmiar w nowej karcie), pozostałe pliki jako wiersz z nazwą. Zawsze
+ * z przyciskiem pobrania. Podpisany URL pochodzi z server fn (bucket
+ * `documents` jest prywatny).
+ */
+function CommAttachment({ att }: { att: Attachment }) {
+  const signFn = useServerFn(getCommAttachmentUrl);
+  const { data: url, isLoading } = useQuery({
+    queryKey: ["comm-att-url", att.path],
+    queryFn: async () => (await signFn({ data: { path: att.path } })).url,
+    staleTime: 45 * 60 * 1000, // podpisany URL żyje godzinę
+    retry: 1,
+  });
+  const name = att.name ?? att.path.split("/").pop() ?? "plik";
+  const sizeLabel = att.size ? `${Math.max(1, Math.round(att.size / 1024))} KB` : null;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-xs opacity-70">
+        <Loader2 className="h-3 w-3 animate-spin" /> Wczytuję załącznik…
+      </div>
+    );
+  }
+  if (!url) {
+    return (
+      <div className="flex items-center gap-2 text-xs opacity-70">
+        <Paperclip className="h-3 w-3" /> {name} (niedostępny)
+      </div>
+    );
+  }
+  const downloadUrl = `${url}${url.includes("?") ? "&" : "?"}download=${encodeURIComponent(name)}`;
+
+  if (isImageAtt(att)) {
+    return (
+      <div className="group/att relative w-fit">
+        <a href={url} target="_blank" rel="noreferrer" title={name}>
+          <img src={url} alt={name} className="max-h-56 max-w-full rounded-lg border object-cover" loading="lazy" />
+        </a>
+        <a
+          href={downloadUrl}
+          className="absolute right-1.5 top-1.5 rounded-md bg-black/60 p-1.5 text-white opacity-0 transition-opacity group-hover/att:opacity-100"
+          title={`Pobierz ${name}`}
+        >
+          <Download className="h-3.5 w-3.5" />
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 rounded-lg border bg-background/60 px-2.5 py-1.5">
+      <FileText className="h-4 w-4 shrink-0 opacity-70" />
+      <a href={url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-xs font-medium hover:underline" title={name}>
+        {name}
+      </a>
+      {sizeLabel && <span className="whitespace-nowrap text-[10px] opacity-60">{sizeLabel}</span>}
+      <a href={downloadUrl} title={`Pobierz ${name}`} className="shrink-0 opacity-70 hover:opacity-100">
+        <Download className="h-3.5 w-3.5" />
+      </a>
+    </div>
+  );
+}
 
 type MessengerInboxProps = {
   /** Tytuł nagłówka sekcji. */
@@ -51,13 +129,27 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const sendFn = useServerFn(sendMessengerReply);
+  const backfillFn = useServerFn(backfillMessengerData);
+
+  const backfillMut = useMutation({
+    mutationFn: () => backfillFn(),
+    onSuccess: (r) => {
+      toast.success(
+        `Uzupełniono: ${r.namesFromMeta + r.namesFromText} nazwisk (Meta: ${r.namesFromMeta}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
+          (r.filesSkipped ? `, pominięto ${r.filesSkipped} plików bez dopasowania` : ""),
+      );
+      qc.invalidateQueries({ queryKey: ["messenger-inbox"] });
+      qc.invalidateQueries({ queryKey: ["messenger-inbox-leads"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Backfill nie powiódł się"),
+  });
 
   const { data: messages, refetch, isFetching } = useQuery({
     queryKey: ["messenger-inbox"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lead_communications")
-        .select("id, lead_id, direction, content, created_at, metadata, status")
+        .select("id, lead_id, direction, content, created_at, metadata, status, attachments")
         .eq("channel", "messenger")
         .order("created_at", { ascending: false })
         .limit(500);
@@ -151,10 +243,22 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
           <MessageCircle className="h-5 w-5" />
           <h1 className="text-2xl font-semibold">{title}</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Odśwież
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => backfillMut.mutate()}
+            disabled={backfillMut.isPending}
+            title="Uzupełnia wstecz imiona/nazwiska klientów i dopina stare załączniki do wiadomości"
+          >
+            <Wand2 className={`h-4 w-4 mr-2 ${backfillMut.isPending ? "animate-pulse" : ""}`} />
+            {backfillMut.isPending ? "Uzupełniam…" : "Uzupełnij historię"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            Odśwież
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
@@ -186,8 +290,11 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                         {formatDistanceToNow(new Date(c.lastAt), { addSuffix: true, locale: pl })}
                       </div>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      {(c.last.content ?? "").slice(0, 80) || "—"}
+                    <div className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                      {Array.isArray(c.last.attachments) && c.last.attachments.length > 0 && (
+                        <Paperclip className="h-3 w-3 shrink-0" />
+                      )}
+                      <span className="truncate">{(c.last.content ?? "").slice(0, 80) || "—"}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       <Badge variant="secondary" className="text-[10px] h-4">{platform}</Badge>
@@ -238,6 +345,13 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                             <span>{new Date(m.created_at).toLocaleString("pl-PL")}</span>
                           </div>
                           {m.content || "—"}
+                          {Array.isArray(m.attachments) && m.attachments.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {m.attachments.map((a, i) => (
+                                <CommAttachment key={`${m.id}-${i}`} att={a} />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
