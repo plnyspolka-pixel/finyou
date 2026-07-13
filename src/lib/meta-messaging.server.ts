@@ -206,7 +206,7 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     if (!existing?.first_name && parts[0]) patch.first_name = parts[0];
     if (!existing?.last_name && parts.length > 1) patch.last_name = parts.slice(1).join(" ");
     if (Object.keys(patch).length > 0) {
-      await supabaseAdmin.from("leads").update(patch).eq("id", leadId);
+      await supabaseAdmin.from("leads").update(patch as any).eq("id", leadId);
     }
   }
 
