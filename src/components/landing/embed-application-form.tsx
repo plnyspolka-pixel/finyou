@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Send, Upload, Camera, FileText, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { Loader2, Send, Upload, Camera, FileText, ArrowRight, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,15 +56,9 @@ function openClientPanel(path = "/klient") {
   }
 }
 
-const STEPS = [
-  { key: "amount", label: "Kwota" },
-  { key: "period", label: "Okres" },
-  { key: "contact", label: "Dane" },
-  { key: "property", label: "Nieruchomość" },
-  { key: "kw", label: "KW" },
-  { key: "photos", label: "Zdjęcia" },
-  { key: "consent", label: "Wyślij" },
-] as const;
+// 5 kroków (bez wyświetlania numeracji): parametry, dane, nieruchomość+KW, zdjęcia, wyślij.
+const STEPS = ["params", "contact", "property", "photos", "consent"] as const;
+type StepKey = (typeof STEPS)[number];
 
 export function EmbedApplicationForm() {
   const submitFn = useServerFn(submitLandingLoanApplication);
@@ -116,18 +110,16 @@ export function EmbedApplicationForm() {
     phone.trim().replace(/\D/g, "").length >= 9 &&
     /.+@.+\..+/.test(email.trim());
 
+  const currentStep: StepKey = STEPS[step];
+
   const canAdvance = (() => {
-    switch (STEPS[step].key) {
-      case "amount":
-        return amount >= 20_000;
-      case "period":
-        return months >= 12;
+    switch (currentStep) {
+      case "params":
+        return amount >= 20_000 && months >= 12;
       case "contact":
         return contactValid;
       case "property":
-        return !!secType;
-      case "kw":
-        return kwNumber.trim().length > 0;
+        return !!secType && kwNumber.trim().length > 0;
       case "photos":
         return photos.length > 0;
       case "consent":
@@ -215,70 +207,61 @@ export function EmbedApplicationForm() {
     >
       <FancyShell>
         <div className="space-y-6">
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-white/80">
-              <span className="font-semibold uppercase tracking-wide">
-                Krok {step + 1} z {STEPS.length}
-              </span>
-              <span className="font-semibold">{STEPS[step].label}</span>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
-              <div
-                className="h-full rounded-full transition-[width] duration-300"
-                style={{
-                  width: `${((step + 1) / STEPS.length) * 100}%`,
-                  background:
-                    "linear-gradient(to right, hsl(199 89% 60%), hsl(217 91% 60%), hsl(263 78% 62%))",
-                }}
-              />
-            </div>
+          {/* Progress bar (bez etykiet i numeracji kroków) */}
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+            <div
+              className="h-full rounded-full transition-[width] duration-300"
+              style={{
+                width: `${((step + 1) / STEPS.length) * 100}%`,
+                background:
+                  "linear-gradient(to right, hsl(199 89% 60%), hsl(217 91% 60%), hsl(263 78% 62%))",
+              }}
+            />
           </div>
 
           <div className="min-h-[220px]">
-            {STEPS[step].key === "amount" && (
-              <div className="space-y-4">
-                <div className="flex items-baseline justify-between">
-                  <Label className="text-sm font-semibold text-white">Kwota pożyczki</Label>
-                  <span className="text-3xl font-extrabold tabular-nums text-white">{formatPLN(amount)}</span>
+            {currentStep === "params" && (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <Label className="text-sm font-semibold text-white">Kwota pożyczki</Label>
+                    <span className="text-2xl font-extrabold tabular-nums text-white">{formatPLN(amount)}</span>
+                  </div>
+                  <Slider
+                    gradient="brand"
+                    value={[amount]}
+                    min={20_000}
+                    max={1_000_000}
+                    step={5_000}
+                    onValueChange={(v) => setAmount(v[0] ?? amount)}
+                  />
+                  <div className="flex justify-between text-xs text-white/70">
+                    <span>20 000 zł</span>
+                    <span>1 000 000 zł</span>
+                  </div>
                 </div>
-                <Slider
-                  gradient="brand"
-                  value={[amount]}
-                  min={20_000}
-                  max={1_000_000}
-                  step={5_000}
-                  onValueChange={(v) => setAmount(v[0] ?? amount)}
-                />
-                <div className="flex justify-between text-xs text-white/70">
-                  <span>20 000 zł</span>
-                  <span>1 000 000 zł</span>
+                <div className="space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <Label className="text-sm font-semibold text-white">Okres spłaty</Label>
+                    <span className="text-2xl font-extrabold tabular-nums text-white">{months} mies.</span>
+                  </div>
+                  <Slider
+                    gradient="brand"
+                    value={[months]}
+                    min={12}
+                    max={72}
+                    step={1}
+                    onValueChange={(v) => setMonths(v[0] ?? months)}
+                  />
+                  <div className="flex justify-between text-xs text-white/70">
+                    <span>12 mies.</span>
+                    <span>72 mies.</span>
+                  </div>
                 </div>
               </div>
             )}
 
-            {STEPS[step].key === "period" && (
-              <div className="space-y-4">
-                <div className="flex items-baseline justify-between">
-                  <Label className="text-sm font-semibold text-white">Okres spłaty</Label>
-                  <span className="text-3xl font-extrabold tabular-nums text-white">{months} mies.</span>
-                </div>
-                <Slider
-                  gradient="brand"
-                  value={[months]}
-                  min={12}
-                  max={72}
-                  step={1}
-                  onValueChange={(v) => setMonths(v[0] ?? months)}
-                />
-                <div className="flex justify-between text-xs text-white/70">
-                  <span>12 mies.</span>
-                  <span>72 mies.</span>
-                </div>
-              </div>
-            )}
-
-            {STEPS[step].key === "contact" && (
+            {currentStep === "contact" && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-white">Imię *</Label>
@@ -299,47 +282,46 @@ export function EmbedApplicationForm() {
               </div>
             )}
 
-            {STEPS[step].key === "property" && (
-              <div className="space-y-2">
-                <Label className="text-white">Typ nieruchomości *</Label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {PROPERTY_TYPES.map((p) => {
-                    const active = secType === p.value;
-                    return (
-                      <button
-                        key={p.value}
-                        type="button"
-                        onClick={() => setSecType(p.value)}
-                        className={`rounded-xl border-2 px-3 py-4 text-sm font-semibold backdrop-blur-sm transition ${
-                          active
-                            ? "border-white bg-white text-foreground shadow-lg"
-                            : "border-white/30 bg-white/10 text-white hover:border-white/70 hover:bg-white/20"
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    );
-                  })}
+            {currentStep === "property" && (
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-white">Typ nieruchomości *</Label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {PROPERTY_TYPES.map((p) => {
+                      const active = secType === p.value;
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setSecType(p.value)}
+                          className={`rounded-xl border-2 px-3 py-3 text-sm font-semibold backdrop-blur-sm transition ${
+                            active
+                              ? "border-white bg-white text-foreground shadow-lg"
+                              : "border-white/30 bg-white/10 text-white hover:border-white/70 hover:bg-white/20"
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Numer księgi wieczystej *</Label>
+                  <Input
+                    value={kwNumber}
+                    onChange={(e) => setKwNumber(e.target.value)}
+                    placeholder="WA1M/00000000/0"
+                    className={INPUT_CLASS}
+                  />
+                  <p className="text-xs text-white/70">
+                    Format: kod sądu / numer / cyfra kontrolna.
+                  </p>
                 </div>
               </div>
             )}
 
-            {STEPS[step].key === "kw" && (
-              <div className="space-y-2">
-                <Label className="text-white">Numer księgi wieczystej *</Label>
-                <Input
-                  value={kwNumber}
-                  onChange={(e) => setKwNumber(e.target.value)}
-                  placeholder="WA1M/00000000/0"
-                  className={INPUT_CLASS}
-                />
-                <p className="text-xs text-white/70">
-                  Format: kod sądu / numer / cyfra kontrolna. Bez KW nie zweryfikujemy nieruchomości.
-                </p>
-              </div>
-            )}
-
-            {STEPS[step].key === "photos" && (
+            {currentStep === "photos" && (
               <div className="space-y-3">
                 <Label className="text-white">Zdjęcia nieruchomości *</Label>
                 <div className="flex gap-2">
@@ -406,7 +388,7 @@ export function EmbedApplicationForm() {
               </div>
             )}
 
-            {STEPS[step].key === "consent" && (
+            {currentStep === "consent" && (
               <div className="space-y-4">
                 <div className="rounded-xl border border-white/25 bg-white/10 p-4 text-sm text-white backdrop-blur-sm space-y-1">
                   <div className="flex justify-between"><span className="text-white/70">Kwota</span><span className="font-semibold">{formatPLN(amount)}</span></div>
