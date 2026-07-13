@@ -259,9 +259,9 @@ export async function runInvestmentRiskAssessmentCore(
     executiveSummary,
   };
 
-  // 10) Zapis.
+  // 10) Zapis. Uwaga: supabase-js nie rzuca wyjątków — błąd trzeba odczytać z { error }.
   try {
-    await db.from("investment_risk_assessments").upsert(
+    const { error: saveError } = await db.from("investment_risk_assessments").upsert(
       {
         application_id: applicationId,
         property_id: property?.id ?? null,
@@ -278,9 +278,14 @@ export async function runInvestmentRiskAssessmentCore(
       },
       { onConflict: "application_id" },
     );
+    if (saveError) throw saveError;
   } catch (e: any) {
-    // Zapis nie może wywrócić całej oceny.
+    // Zapis nie może wywrócić całej oceny — ale musi być widoczny dla operatora.
     console.error("[risk-assessment] save failed:", e?.message ?? e);
+    result.warnings = dedupeStr([
+      ...result.warnings,
+      `Nie udało się zapisać oceny w bazie (${e?.message ?? "błąd"}) — wynik nie będzie widoczny po odświeżeniu strony.`,
+    ]);
   }
 
   return result;
