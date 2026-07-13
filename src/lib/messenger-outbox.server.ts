@@ -21,6 +21,16 @@ export async function processMessengerOutbox(): Promise<{ sent: number; errors: 
     .limit(20);
 
   for (const row of pending ?? []) {
+    // Atomowe przejęcie wiersza — dwa równoległe ticki nie wyślą tej samej
+    // wiadomości dwa razy (update warunkowy pending → sending).
+    const { data: claimed } = await sb
+      .from("messenger_outbox")
+      .update({ status: "sending" })
+      .eq("id", row.id)
+      .eq("status", "pending")
+      .select("id");
+    if (!claimed?.length) continue;
+
     const { data: lead } = await sb
       .from("leads")
       .select("messenger_psid, instagram_igsid")
