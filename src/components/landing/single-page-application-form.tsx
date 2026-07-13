@@ -690,7 +690,7 @@ export function SinglePageApplicationForm({
               </div>
             </FancyShell>
 
-            {/* D: kalkulator oferty (ukryty dla pośrednika) */}
+            {/* D: kalkulator raty (ukryty dla pośrednika) — zablokowany do czasu uzupełnienia typu, KW/aktu i zdjęć */}
             {!isBroker && (
               <OfferCalculatorPanel
                 amount={amount} setAmount={setAmount}
@@ -700,7 +700,9 @@ export function SinglePageApplicationForm({
                 annualRate={annualRate} setAnnualRate={setAnnualRate}
                 rateTouchedRef={rateTouchedRef}
                 maxPayment={maxPayment} setMaxPayment={setMaxPayment}
-                headerLabel="Twoja wstępna oferta"
+                headerLabel="Kalkulator raty"
+                locked={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
+                lockedMessage="Wybierz typ nieruchomości, podaj numer KW (lub dodaj akt własności) oraz wgraj zdjęcia — wtedy odblokujemy kalkulator raty."
               />
             )}
           </div>
