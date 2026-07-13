@@ -29,6 +29,7 @@ function EmbedPage() {
   const [height, setHeight] = useState("100%");
   const [showFormPreview, setShowFormPreview] = useState(false);
   const [showInvoicesPreview, setShowInvoicesPreview] = useState(false);
+  const [showLeadsPreview, setShowLeadsPreview] = useState(false);
 
   const url = useMemo(() => {
     const u = new URL("/embed/wniosek", origin);
@@ -38,6 +39,8 @@ function EmbedPage() {
 
   const invoicesUrl = `${origin}/embed/faktury`;
   const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
+  const leadsUrl = `${origin}/embed/leady`;
+  const leadsIframe = `<iframe src="${leadsUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Ostatnie wnioski Finance You"></iframe>`;
 
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
 
