@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
+import { formatDate, formatPLN } from "@/lib/labels";
+import { fetchPublicInvoices } from "@/lib/public-invoices.functions";
 
 export const Route = createFileRoute("/admin/embed")({
   component: EmbedPage,
@@ -33,7 +36,6 @@ function EmbedPage() {
   }, [origin, source]);
 
   const invoicesUrl = `${origin}/embed/faktury`;
-  const invoicesPreviewUrl = "/embed/faktury?preview=admin";
   const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
 
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
@@ -162,7 +164,7 @@ function EmbedPage() {
         </CardHeader>
         <CardContent>
           {showInvoicesPreview ? (
-            <iframe src={invoicesPreviewUrl} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
+            <InvoicesInlinePreview />
           ) : (
             <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
           )}
@@ -172,6 +174,62 @@ function EmbedPage() {
         </CardContent>
       </Card>
 
+    </div>
+  );
+}
+
+function InvoicesInlinePreview() {
+  const { data = [], isLoading, error } = useQuery({
+    queryKey: ["admin", "embed", "public-invoices-preview"],
+    queryFn: () => fetchPublicInvoices(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const total = data.reduce((acc, r) => acc + r.gross_amount, 0);
+
+  if (isLoading) return <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">Ładowanie faktur…</div>;
+  if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">Nie udało się wczytać podglądu faktur.</div>;
+
+  return (
+    <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4 text-slate-100 sm:p-6">
+      <div className="mb-4 flex items-end justify-between gap-3 border-b border-white/10 pb-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-widest text-sky-300/80">Finance You</p>
+          <h3 className="text-xl font-semibold">Faktury sprzedaży</h3>
+          <p className="mt-1 text-xs text-slate-400">Dane zanonimizowane — najnowsze {data.length} pozycji.</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma brutto</p>
+          <p className="text-lg font-semibold tabular-nums text-emerald-300">{formatPLN(total)}</p>
+        </div>
+      </div>
+
+      {data.length === 0 ? (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
+          Brak wystawionych faktur do wyświetlenia.
+        </div>
+      ) : (
+        <ul className="max-h-[560px] space-y-2 overflow-auto pr-1">
+          {data.map((inv) => (
+            <li key={inv.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className="tabular-nums">{inv.issue_date ? formatDate(inv.issue_date) : "—"}</span>
+                  <span className="opacity-40">•</span>
+                  <span className="truncate font-mono">{inv.invoice_number ?? "—"}</span>
+                </div>
+                <div className="mt-0.5 truncate text-sm text-slate-200">{inv.item_label}</div>
+                <div className="mt-0.5 truncate text-xs text-slate-400">
+                  Nabywca: <span className="text-slate-300">{inv.buyer_label}</span>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(inv.gross_amount)}</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">brutto</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
