@@ -119,3 +119,36 @@ describe("extractInboundFacts — imię i nazwisko", () => {
     expect(f.lastName).toBe("Trojanowski");
   });
 });
+
+describe("extractInboundFacts — kwota pożyczki vs wartość nieruchomości", () => {
+  it("nie bierze wartości domu za kwotę pożyczki (przypadek z Messengera)", () => {
+    const f = extractInboundFacts(
+      "Wartość domu to około 600000 złotych akurat tak jak w ogłoszeniu więc 360000 złotych jak najbardziej byłoby ok",
+    );
+    expect(f.loanAmount).toBe(360000);
+    expect(f.propertyValue).toBe(600000);
+  });
+
+  it("słowo-klucz prośby wygrywa z większą liczbą bez kontekstu", () => {
+    const f = extractInboundFacts("Dom jest wart 900 000 zł, potrzebuję 250 000 zł");
+    expect(f.loanAmount).toBe(250000);
+    expect(f.propertyValue).toBe(900000);
+  });
+
+  it("'wycena' też oznacza wartość nieruchomości", () => {
+    const f = extractInboundFacts("Wycena mieszkania: 450 000 zł. Chciałbym 200 000 zł");
+    expect(f.propertyValue).toBe(450000);
+    expect(f.loanAmount).toBe(200000);
+  });
+
+  it("'wartość pożyczki' to nadal kwota pożyczki (słowo-klucz)", () => {
+    const f = extractInboundFacts("wartość pożyczki 300 000 zł");
+    expect(f.loanAmount).toBe(300000);
+  });
+
+  it("sama kwota z walutą bez kontekstu wartości pozostaje kwotą pożyczki", () => {
+    const f = extractInboundFacts("Chciałbym 8900 zł");
+    expect(f.loanAmount).toBe(8900);
+    expect(f.propertyValue).toBeNull();
+  });
+});

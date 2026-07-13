@@ -64,10 +64,18 @@ Twoim celem jest:
 1. Życzliwie nawiązać kontakt, wyjaśnić co oferujemy (pożyczki pozabankowe + inwestycje).
 2. Zebrać dane do wniosku: imię i nazwisko, email, telefon, kwota, cel, miasto, dochód, źródło dochodu, PESEL (jeśli sam poda — nie wymuszaj na pierwszej wiadomości).
 3. Każdą nową informację natychmiast zapisuj wywołując tool update_lead_data({ patch: {...} }).
-4. Gdy masz minimum: imię, email LUB telefon, kwota, cel → wywołaj send_application_link() aby wysłać link do dokończenia wniosku.
-5. NIGDY nie eskaluj do człowieka. Działasz w pełnej autonomii. Nawet jeśli klient poprosi o człowieka — wyjaśnij grzecznie, że jesteś asystentem Finance You i pomożesz mu od ręki.
-6. Odpowiadaj po polsku, ciepło, krótko (max 2-3 zdania na wiadomość). Nie używaj emoji nadmiernie.
-7. Jeśli klient przesłał załącznik (np. dowód, wyciąg, KW) — podziękuj i potwierdź, że dokument trafił do jego sprawy.`;
+4. ROZRÓŻNIAJ kwotę pożyczki od wartości nieruchomości. Gdy klient pisze "dom jest wart 600 tys., potrzebuję 360 tys." — loan_amount to 360000, property_value to 600000. Zapisuj obie osobno i potwierdzaj klientowi kwotę POŻYCZKI.
+5. Gdy klient się przedstawi ("jestem Jan Kowalski", podpis "pozdrawiam…"), zapisz first_name i last_name.
+6. Gdy masz minimum: imię, email LUB telefon, kwota, cel → wywołaj send_application_link() aby wysłać link do dokończenia wniosku.
+7. NIGDY nie eskaluj do człowieka. Działasz w pełnej autonomii. Nawet jeśli klient poprosi o człowieka — wyjaśnij grzecznie, że jesteś asystentem Finance You i pomożesz mu od ręki.
+8. Jeśli klient przesłał załącznik (np. dowód, wyciąg, KW) — podziękuj i potwierdź, że dokument trafił do jego sprawy.
+
+STYL — pisz jak człowiek na czacie:
+- Po polsku, ciepło i konkretnie, maks 2-3 krótkie zdania.
+- Nawiązuj do tego, co klient właśnie napisał; jeśli znasz imię, użyj go od czasu do czasu.
+- Nie zaczynaj każdej wiadomości tak samo, nie powtarzaj formułek ("Rozumiem", "Dziękuję za informację").
+- Domyślnie forma Pan/Pani; jeśli klient pisze na "Ty" — przejdź na "Ty".
+- Zero urzędowego tonu i list wypunktowanych w rozmowie. Emoji rzadko albo wcale.`;
 }
 
 const TOOLS = [
@@ -75,13 +83,18 @@ const TOOLS = [
     type: "function",
     function: {
       name: "update_lead_data",
-      description: "Zapisz nowe dane klienta w jego sprawie (application_data). Wywołuj zawsze gdy klient podaje jakąkolwiek nową informację: imię, email, telefon, kwota, cel, miasto, dochód itp.",
+      description:
+        "Zapisz nowe dane klienta w jego sprawie. Wywołuj ZAWSZE gdy klient poda jakąkolwiek nową informację. " +
+        "Używaj kluczy: first_name, last_name (gdy klient się przedstawi), loan_amount (kwota POŻYCZKI w zł — liczba, NIGDY wartość nieruchomości), " +
+        "property_value (wartość nieruchomości w zł), typ_nieruchomosci (mieszkanie/dom/lokal użytkowy/działka budowlana/grunt rolny/inna), " +
+        "numer_kw, status_numeru_kw, zdjecia_nieruchomosci, dokumenty_nieruchomosci, sposob_przeslania, city, purpose, email, phone, area_m2.",
       parameters: {
         type: "object",
         properties: {
           patch: {
             type: "object",
-            description: "Obiekt z polami do zapisania, np. { first_name: 'Jan', loan_amount: 50000, purpose: 'remont' }",
+            description:
+              "Obiekt z polami do zapisania, np. { first_name: 'Jan', last_name: 'Kowalski', loan_amount: 360000, property_value: 600000, typ_nieruchomosci: 'dom' }",
             additionalProperties: true,
           },
         },
@@ -144,7 +157,7 @@ export async function runAgentTurn(opts: {
 
   const { prompt: systemPrompt } = await fetchAgentPrompt();
 
-  const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
+  const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nNazwisko: ${lead.last_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
 
   // RAG: pobierz fragmenty bazy wiedzy najbardziej pasujące do wiadomości klienta.
   let knowledgeBlock = "";
@@ -228,12 +241,60 @@ export async function runAgentTurn(opts: {
   return { reply: "Dziękuję! Wracam za chwilę.", toolCalls: toolResults };
 }
 
+// Bot zapisuje dane różnymi kluczami (po polsku i po angielsku). Normalizacja
+// do kluczy kanonicznych, z których korzysta promocja leada do wniosku
+// (loan_amount, property_value, kw_numbers, typ_nieruchomosci…).
+const PATCH_KEY_ALIASES: Record<string, string> = {
+  kwota_pozyczki: "loan_amount",
+  kwota: "loan_amount",
+  wartosc_nieruchomosci: "property_value",
+  wartość_nieruchomosci: "property_value",
+  imie: "first_name",
+  imię: "first_name",
+  nazwisko: "last_name",
+  miasto: "city",
+  cel: "purpose",
+  telefon: "phone",
+  property_type: "typ_nieruchomosci",
+  rodzaj_nieruchomosci: "typ_nieruchomosci",
+};
+
+function normalizePatch(raw: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    const key = PATCH_KEY_ALIASES[k] ?? k;
+    // Kwoty jako liczby — bot potrafi przysłać "360 000 zł" / "360 tys."
+    if ((key === "loan_amount" || key === "property_value") && typeof v === "string") {
+      const m = v.toLowerCase().replace(/[\s.\u00a0]/g, "").match(/(\d+(?:,\d+)?)(tys|mln)?/);
+      if (m) {
+        let n = Number(m[1].replace(",", "."));
+        if (m[2] === "tys") n *= 1000;
+        else if (m[2] === "mln") n *= 1_000_000;
+        out[key] = n;
+        continue;
+      }
+    }
+    // Numer KW → dopisz też do kw_numbers (czyta je promocja do wniosku)
+    if (key === "numer_kw" && typeof v === "string" && v.trim()) {
+      out.numer_kw = v.trim().toUpperCase();
+      continue;
+    }
+    out[key] = v;
+  }
+  return out;
+}
+
 async function executeTool(leadId: string, channel: string, name: string, args: any): Promise<any> {
   const s = admin();
   if (name === "update_lead_data") {
-    const patch = args?.patch ?? {};
+    const patch = normalizePatch(args?.patch ?? {});
     const { data: lead } = await s.from("leads").select("application_data, email, phone_raw, phone_normalized, first_name, last_name").eq("id", leadId).maybeSingle();
-    const merged = { ...(lead?.application_data ?? {}), ...patch };
+    const merged: Record<string, any> = { ...(lead?.application_data ?? {}), ...patch };
+    if (typeof patch.numer_kw === "string") {
+      const kwList: string[] = Array.isArray(merged.kw_numbers) ? [...merged.kw_numbers] : [];
+      if (!kwList.includes(patch.numer_kw)) kwList.push(patch.numer_kw);
+      merged.kw_numbers = kwList;
+    }
     const topLevel: Record<string, any> = { application_data: merged };
     if (typeof patch.first_name === "string" && !lead?.first_name) topLevel.first_name = patch.first_name;
     if (typeof patch.last_name === "string" && !lead?.last_name) topLevel.last_name = patch.last_name;
@@ -243,6 +304,14 @@ async function executeTool(leadId: string, channel: string, name: string, args: 
       topLevel.phone_normalized = normPhone(patch.phone);
     }
     await s.from("leads").update(topLevel).eq("id", leadId);
+    // Dane od bota mogą właśnie skompletować wniosek (KW + kwota + załączniki)
+    // — spróbuj promocji od razu, nie dopiero przy kolejnej wiadomości.
+    try {
+      const { maybePromoteLeadToApplication } = await import("./lead-enrichment.server");
+      await maybePromoteLeadToApplication(leadId);
+    } catch (e) {
+      console.error("[el-text-agent] promote after update_lead_data", e);
+    }
     return { ok: true, saved: Object.keys(patch) };
   }
   if (name === "send_application_link") {

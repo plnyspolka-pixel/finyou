@@ -10,6 +10,7 @@ function admin(): SupabaseClient {
 export type ExtractedFacts = {
   kwNumbers: string[];
   loanAmount: number | null;
+  propertyValue: number | null;
   city: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -40,6 +41,11 @@ const stripNoise = (text: string): string => {
 const AMOUNT_RE =
   /(?:\b(kwot\p{L}*|pożyczk\p{L}*|pożyczy[ćc]|potrzebuj\p{L}*|potrzeba|wnioskuj\p{L}*|kredyt\p{L}*|finansowan\p{L}*)[^0-9]{0,30})?(?<![\w#@./-])(\d{1,3}(?:[ .\u00a0]\d{3})+|\d{4,7}|\d{1,3})(?:[.,](\d{1,2}))?(?!\d)\s*(z[łl]|pln|tys(?:i[aą]c\p{L}*)?\.?|mln|m\b)?/giu;
 
+// Kontekst "wartość nieruchomości" — kwota tuż po tych słowach to wycena
+// zabezpieczenia, nie kwota pożyczki ("Wartość domu to około 600000 zł").
+// Uwaga: \b nie działa po polskich znakach (ć/ś to nie \w) — używamy \p{L}.
+const VALUE_CTX_RE = /(?<!\p{L})(warto[śs][ćc]\p{L}*|wycen\p{L}*|wart[aey]?)(?!\p{L})/giu;
+
 const CITY_RE =
   /\b(?:z|w|do|nieruchomo[śs][ćc]\s*w|dzia[łl]ka\s*w|mieszkanie\s*w)\s+([A-ZŁŚŻŹĆĄĘÓŃ][a-ząćęłńóśżź]{2,}(?:[- ][A-ZŁŚŻŹĆĄĘÓŃ]?[a-ząćęłńóśżź]{2,})?)/g;
 
@@ -60,7 +66,7 @@ const NAME_STOPWORDS = new Set([
 
 export function extractInboundFacts(rawText: string | null | undefined): ExtractedFacts {
   const out: ExtractedFacts = {
-    kwNumbers: [], loanAmount: null, city: null, firstName: null, lastName: null,
+    kwNumbers: [], loanAmount: null, propertyValue: null, city: null, firstName: null, lastName: null,
   };
   if (!rawText) return out;
   const text = stripNoise(rawText);
@@ -75,8 +81,17 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
     }
   }
 
-  // Kwota — wybierz największą wiarygodną wartość w PLN
-  let bestAmt = 0;
+  // Pozycje słów "wartość/wycena/wart" — kwota do ~40 znaków za takim słowem
+  // to wartość nieruchomości, nie kwota pożyczki.
+  const valueCtxIdx: number[] = [];
+  for (const v of text.matchAll(VALUE_CTX_RE)) valueCtxIdx.push(v.index ?? 0);
+
+  // Kwota pożyczki vs wartość nieruchomości. Preferencje dla kwoty pożyczki:
+  // 1) kwota ze słowem-kluczem prośby (kwota/pożyczka/potrzebuję/kredyt…),
+  // 2) inaczej największa kwota poza kontekstem "wartość…".
+  let bestKeywordAmt = 0;
+  let bestPlainAmt = 0;
+  let bestValueAmt = 0;
   for (const m of text.matchAll(AMOUNT_RE)) {
     const keyword = m[1];
     const unit = (m[4] ?? "").toLowerCase();
@@ -88,9 +103,22 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
     if (unit.startsWith("tys")) n *= 1000;
     else if (unit === "mln" || unit === "m") n *= 1_000_000;
     // Odsiej numery telefonów / PESEL / lata (>=5000 zł, <=10 mln)
-    if (n >= 5000 && n <= 10_000_000 && n > bestAmt) bestAmt = n;
+    if (n < 5000 || n > 10_000_000) continue;
+
+    const digitIdx = (m.index ?? 0) + m[0].search(/\d/);
+    const inValueCtx = valueCtxIdx.some((vi) => vi < digitIdx && digitIdx - vi <= 40);
+
+    if (keyword) {
+      if (n > bestKeywordAmt) bestKeywordAmt = n;
+    } else if (inValueCtx) {
+      if (n > bestValueAmt) bestValueAmt = n;
+    } else if (n > bestPlainAmt) {
+      bestPlainAmt = n;
+    }
   }
+  const bestAmt = bestKeywordAmt || bestPlainAmt;
   if (bestAmt > 0) out.loanAmount = Math.round(bestAmt * 100) / 100;
+  if (bestValueAmt > 0) out.propertyValue = Math.round(bestValueAmt * 100) / 100;
 
   // Miasto — pierwsze dopasowanie
   CITY_RE.lastIndex = 0;
@@ -149,6 +177,10 @@ export async function enrichLeadFromInbound(opts: {
     appData.city = facts.city;
     touched = true;
   }
+  if (facts.propertyValue && !appData.property_value) {
+    appData.property_value = facts.propertyValue;
+    touched = true;
+  }
   // Imię i nazwisko z treści rozmowy — uzupełnij tylko brakujące pola,
   // aby lead od razu był podpisany danymi klienta (np. w skrzynce Messenger).
   const namePatch: Record<string, string> = {};
@@ -163,6 +195,22 @@ export async function enrichLeadFromInbound(opts: {
 
   const promoted = await maybePromoteLeadToApplication(leadId);
   return { updated: touched, promoted };
+}
+
+/**
+ * Mapuje typ nieruchomości zapisany przez bota / z rozmowy (typ_nieruchomosci,
+ * np. "dom", "lokal użytkowy") na wartość enuma property_type w bazie.
+ */
+export function mapPropertyType(raw: unknown): string {
+  const t = String(raw ?? "").toLowerCase();
+  if (!t) return "mieszkanie";
+  if (t.includes("dom")) return "dom";
+  if (t.includes("mieszk")) return "mieszkanie";
+  if (t.includes("lokal") || t.includes("usług") || t.includes("uslug") || t.includes("użytk") || t.includes("uzytk")) return "lokal_uslugowy";
+  if (t.includes("działk") || t.includes("dzialk") || t.includes("budowlan")) return "dzialka_budowlana";
+  if (t.includes("grunt") || t.includes("rolny") || t.includes("rolna")) return "grunt_rolny";
+  if (t.includes("udział") || t.includes("udzial")) return "udzial_w_nieruchomosci";
+  return "inna";
 }
 
 /**
@@ -235,12 +283,17 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     return null;
   }
 
-  // 3) Properties per KW
+  // 3) Properties per KW — typ z danych zebranych przez bota (typ_nieruchomosci),
+  //    wartość z rozmowy (property_value), miasto z ekstrakcji.
+  const propertyType = mapPropertyType(appData.typ_nieruchomosci ?? appData.property_type);
+  const estimatedValue: number | null =
+    typeof appData.property_value === "number" ? appData.property_value : null;
   const propRows = kwNumbers.map((kw) => ({
     loan_application_id: loan.id,
-    property_type: "mieszkanie" as any,
+    property_type: propertyType as any,
     city: (appData.city as string | null) ?? null,
     land_register_number: kw,
+    estimated_value: estimatedValue,
   }));
   const { error: pErr } = await s.from("properties").insert(propRows as any);
   if (pErr) console.error("[lead-enrichment] properties insert error", pErr);
@@ -258,6 +311,36 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     .update({ loan_application_id: loan.id })
     .is("loan_application_id", null)
     .like("file_path", `leads/${leadId}/%`);
+
+  // 6) Załączniki z rozmów (zdjęcia z Messengera/maili sprzed powstania
+  //    wniosku) → rekordy documents, żeby były widoczne we wniosku.
+  const attRows: Record<string, any>[] = [];
+  for (const c of commsWithAtts ?? []) {
+    for (const a of (Array.isArray((c as any).attachments) ? (c as any).attachments : []) as any[]) {
+      if (!a?.path) continue;
+      attRows.push({
+        loan_application_id: loan.id,
+        document_type: "attachment_inbound",
+        file_name: a.name ?? String(a.path).split("/").pop(),
+        file_path: a.path,
+        file_url: a.path,
+        status: "received",
+        visibility_level: "pelne",
+      });
+    }
+  }
+  if (attRows.length > 0) {
+    const { data: existingDocs } = await s
+      .from("documents")
+      .select("file_path")
+      .in("file_path", attRows.map((r) => r.file_path));
+    const seenPaths = new Set((existingDocs ?? []).map((d: any) => d.file_path));
+    const fresh = attRows.filter((r) => !seenPaths.has(r.file_path));
+    if (fresh.length > 0) {
+      const { error: dErr } = await s.from("documents").insert(fresh as any);
+      if (dErr) console.error("[lead-enrichment] comm attachments -> documents error", dErr);
+    }
+  }
 
   return loan.id;
 }
