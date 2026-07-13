@@ -143,7 +143,10 @@ function EmbedPage() {
           <CardTitle>Podgląd faktur</CardTitle>
         </CardHeader>
         <CardContent>
-          <iframe src={invoicesUrl} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
+          <iframe src={`${currentOrigin}/embed/faktury`} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
+          {currentOrigin !== PROD_ORIGIN && (
+            <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+          )}
         </CardContent>
       </Card>
     </div>
