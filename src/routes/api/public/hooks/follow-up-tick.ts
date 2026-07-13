@@ -28,6 +28,15 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         const unauth = requireCronSecret(request);
         if (unauth) return unauth;
 
+        // Kolejka wiadomości wychodzących (messenger_outbox) — best-effort.
+        try {
+          const { processMessengerOutbox } = await import("@/lib/messenger-outbox.server");
+          const ob = await processMessengerOutbox();
+          if (ob.sent || ob.errors) console.log("[follow-up-tick] outbox", JSON.stringify(ob));
+        } catch (e) {
+          console.error("[follow-up-tick] outbox error", e);
+        }
+
         // Uzupełnianie historii Messenger/IG (imiona z Meta/treści wiadomości,
         // jednorazowa migracja załączników) — best-effort, nie może wywrócić ticka.
         try {

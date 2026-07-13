@@ -102,6 +102,22 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
 
   const text = stripNoise(rawText);
 
+  // Telefon poza formularzem — tylko w jednoznacznych sytuacjach:
+  // (a) cała wiadomość to numer (odpowiedź na pytanie o telefon),
+  // (b) numer z prefiksem +48, (c) numer po słowie tel/telefon/numer/kontakt.
+  if (!out.phone) {
+    const trimmed = text.trim();
+    if (/^(?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}$/.test(trimmed)) {
+      out.phone = trimmed;
+    } else {
+      const ctx =
+        /(?:tel\.?|telefon\p{L}*|numer\p{L}*|kontakt\p{L}*|dzwoni[ćc]|zadzwo[ńn]\p{L}*)[^\d\n]{0,20}((?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/iu.exec(text);
+      const pref = /(\+48[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/.exec(text);
+      if (ctx) out.phone = ctx[1].trim();
+      else if (pref) out.phone = pref[1].trim();
+    }
+  }
+
   // KW — deduplikuj po znormalizowanej formie
   const kwSeen = new Set<string>();
   for (const m of text.matchAll(KW_RE)) {

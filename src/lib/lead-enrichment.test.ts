@@ -186,3 +186,27 @@ describe("extractInboundFacts — formularz reklamy FB", () => {
     expect(f.phone).toBeNull();
   });
 });
+
+describe("extractInboundFacts — telefon poza formularzem", () => {
+  it("cała wiadomość będąca numerem to telefon (odpowiedź na pytanie bota)", () => {
+    expect(extractInboundFacts("609 657 140").phone).toBe("609 657 140");
+    expect(extractInboundFacts("+48 609 657 140").phone).toBe("+48 609 657 140");
+    expect(extractInboundFacts("609657140").phone).toBe("609657140");
+  });
+
+  it("numer po 'tel/kontakt' to telefon", () => {
+    expect(extractInboundFacts("Proszę o kontakt: 511 834 349").phone).toBe("511 834 349");
+    expect(extractInboundFacts("tel. 511834349").phone).toBe("511834349");
+    expect(extractInboundFacts("mój numer to 730 397 993").phone).toBe("730 397 993");
+  });
+
+  it("kwota nie jest braną za telefon", () => {
+    const f = extractInboundFacts("potrzebuję 360000 zł");
+    expect(f.phone).toBeNull();
+    expect(f.loanAmount).toBe(360000);
+  });
+
+  it("numer w środku zdania bez kontekstu nie jest telefonem", () => {
+    expect(extractInboundFacts("działka ma 123 456 789 m2 powierzchni").phone).toBeNull();
+  });
+});
