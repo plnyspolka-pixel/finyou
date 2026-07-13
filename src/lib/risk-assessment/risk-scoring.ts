@@ -138,8 +138,10 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
       keyRisks.push(`Niekorzystna kondygnacja (${ff.label}) — ${ff.note}.`);
   }
   const pb = i.plotBuildability;
-  if (pb?.applicable && pb.onlyFarmerCanBuild)
-    keyRisks.push(`Ograniczony krąg nabywców: ${plotCategoryLabel(pb.category)} — budowa zasadniczo tylko dla rolnika (wąski rynek, wycena ${pb.valuationBasis === "rolna" ? "jak grunt rolny" : "mieszana"}).`);
+  if (pb?.applicable && pb.category === "zagrodowa_siedliskowa")
+    keyRisks.push(`Zabudowa zagrodowa/siedliskowa (RM) — budowa zasadniczo tylko dla rolnika, wąski krąg nabywców pod zabudowę; wycena mieszana.`);
+  else if (pb?.applicable && pb.category === "rolna_bez_zabudowy")
+    keyStrengths.push("Grunt rolny — wyceniany wg cen gruntów GUS; rynek rolny relatywnie płynny.");
   else if (pb?.applicable && pb.category === "budowlana" && pb.buyerPool === "szeroki")
     keyStrengths.push("Działka budowlana — szeroki krąg nabywców.");
   if (i.collateral?.collateralScore?.mainRisks) keyRisks.push(...i.collateral.collateralScore.mainRisks);

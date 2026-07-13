@@ -149,8 +149,23 @@ function computeScore(d: {
   totalActiveListings: number;
   liquidType: boolean;
 }): number {
-  let s = 30; // baza
   const agri = isAgriLand(d.propertyType);
+
+  // GRUNT ROLNY: rynek rolny (ceny GUS) jest relatywnie płynny i rządzi się
+  // inną logiką niż mieszkaniowy. Nie stosujemy „miejskich" kar (mała ludność,
+  // oddalenie od miasta, brak ofert biur, „nietypowy typ") — zawyżałyby ryzyko.
+  if (agri) {
+    let sa = 58; // bazowa płynność rynku gruntów rolnych
+    if (d.majorRoadWithin10km) sa += 4;               // dojazd/logistyka
+    if (d.waterBodyWithin20km) sa += 2;
+    if (d.largeCityWithin50km) sa += 4;               // bliskość rynku zbytu podnosi cenę/płynność
+    if (d.nearestCityDistanceKm != null && d.nearestCityDistanceKm <= 30) sa += 3;
+    if (d.populationTrend === "malejaca") sa -= 2;     // słaby wpływ
+    if (d.agencyListings >= 1 || d.totalActiveListings >= 3) sa += 4; // aktywny obrót w okolicy
+    return Math.max(0, Math.min(100, Math.round(sa)));
+  }
+
+  let s = 30; // baza (nieruchomości nierolne)
   // Zaludnienie miejscowości.
   const pop = d.localityPopulation ?? 0;
   if (pop >= 200000) s += 22;
@@ -158,11 +173,9 @@ function computeScore(d: {
   else if (pop >= 20000) s += 12;
   else if (pop >= 5000) s += 7;
   else if (pop >= 1000) s += 3;
-  // Próg rozsądnego rynku: >20 tys. = premia, <20 tys. = kara — ale NIE dla gruntów rolnych.
-  if (!agri) {
-    if (pop >= REASONABLE_POPULATION) s += 6;
-    else if (pop > 0) s -= 14; // miasto poniżej 20 tys. — słaba sprzedawalność
-  }
+  // Próg rozsądnego rynku: >20 tys. = premia, <20 tys. = kara.
+  if (pop >= REASONABLE_POPULATION) s += 6;
+  else if (pop > 0) s -= 14; // miasto poniżej 20 tys. — słaba sprzedawalność
   // Trend demograficzny.
   if (d.populationTrend === "rosnaca") s += 6;
   else if (d.populationTrend === "malejaca") s -= 8;

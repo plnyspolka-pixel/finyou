@@ -89,7 +89,9 @@ ZADANIE:
 3. Wypunktuj kluczowe ryzyka i mocne strony.
 4. Wydaj rekomendację: "rekomendowana" | "warunkowa" | "do_weryfikacji" | "odradzana".
 
-WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana". Jeżeli działka jest zagrodowa/siedliskowa (RM) lub gruntem rolnym bez prawa zabudowy — wyceniaj wg zalecanej podstawy (grunt rolny / mieszana), a NIE jak działkę budowlaną, i uwzględnij wąski krąg nabywców (obniżona płynność).
+WYMAGANIA: liczby realistyczne dla polskiego rynku 2025/2026; jeśli występuje egzekucja lub niezgodność właściciela z KW — rekomendacja nie może być "rekomendowana".
+- Grunt rolny: wyceniaj wg CEN GRUNTÓW ROLNYCH GUS (za hektar, wg klasy bonitacyjnej i województwa; posiłkowo KOWR/agronet), NIE jak działkę budowlaną. Rynek gruntów rolnych jest relatywnie płynny — nie zaniżaj sztucznie płynności z powodu małej miejscowości czy oddalenia od miasta.
+- Zabudowa zagrodowa/siedliskowa (RM): wycena mieszana (rolno-budowlana) i uwzględnij wąski krąg nabywców pod zabudowę (budowa zasadniczo tylko dla rolnika).
 
 ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown:
 {

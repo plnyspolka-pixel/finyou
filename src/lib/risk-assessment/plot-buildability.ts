@@ -12,8 +12,8 @@ export type PlotBuildCategory =
   | "zabudowana"             // działka już zabudowana
   | "nieokreslona";
 
-export type BuyerPool = "szeroki" | "ograniczony_rolnicy" | "waski";
-export type ValuationBasis = "budowlana" | "rolna" | "mieszana" | "nieokreslona";
+export type BuyerPool = "szeroki" | "rolniczy" | "ograniczony_rolnicy" | "waski";
+export type ValuationBasis = "budowlana" | "rolna_gus" | "mieszana" | "nieokreslona";
 
 export interface PlotBuildabilityInput {
   propertyType: string;
@@ -103,14 +103,16 @@ export function assessPlotBuildability(input: PlotBuildabilityInput): PlotBuilda
       );
       break;
     case "rolna_bez_zabudowy":
-      buyerPool = "ograniczony_rolnicy";
-      onlyFarmerCanBuild = true;
+      // Grunt rolny traktujemy jako rolny i wyceniamy wg cen gruntów GUS.
+      // Rynek rolny jest relatywnie płynny — NIE stosujemy kary za sprzedawalność.
+      buyerPool = "rolniczy";
+      onlyFarmerCanBuild = true; // dot. wyłącznie prawa zabudowy, nie zbywalności
       buildableForNonFarmer = hasWz ? true : false;
       requiresOdrolnienieOrWz = true;
-      valuationBasis = "rolna";
-      saleabilityDelta = -10;
+      valuationBasis = "rolna_gus";
+      saleabilityDelta = 0;
       warnings.push(
-        "Grunt rolny bez prawa zabudowy — obrót ograniczony ustawą o kształtowaniu ustroju rolnego (prawo pierwokupu KOWR, nabywca zwykle rolnik dla areału >1 ha). Budowa wymaga odrolnienia lub decyzji WZ dla rolnika.",
+        "Grunt rolny — wyceniany wg cen gruntów rolnych GUS (za ha wg klasy bonitacyjnej/regionu). Rynek rolny relatywnie płynny; obrót podlega ustawie o kształtowaniu ustroju rolnego (prawo pierwokupu KOWR). Budowa wymagałaby odrolnienia lub decyzji WZ dla rolnika.",
       );
       break;
     case "budowlana":
@@ -178,6 +180,7 @@ export function plotCategoryLabel(c: PlotBuildCategory): string {
 export function buyerPoolLabel(p: BuyerPool): string {
   switch (p) {
     case "szeroki": return "szeroki";
+    case "rolniczy": return "rynek rolny (rolnicy/KOWR)";
     case "ograniczony_rolnicy": return "ograniczony (głównie rolnicy)";
     case "waski": return "wąski";
   }
@@ -185,7 +188,7 @@ export function buyerPoolLabel(p: BuyerPool): string {
 export function valuationBasisLabel(v: ValuationBasis): string {
   switch (v) {
     case "budowlana": return "jak działka budowlana";
-    case "rolna": return "jak grunt rolny";
+    case "rolna_gus": return "jak grunt rolny (ceny GUS)";
     case "mieszana": return "mieszana (rolno-budowlana)";
     case "nieokreslona": return "nieokreślona";
   }

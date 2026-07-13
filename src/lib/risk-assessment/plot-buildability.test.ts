@@ -17,11 +17,13 @@ describe("assessPlotBuildability — prawo zabudowy działki", () => {
     expect(r.onlyFarmerCanBuild).toBe(true);
   });
 
-  it("grunt rolny bez planu — brak prawa zabudowy, wycena rolna", () => {
+  it("grunt rolny bez planu — wycena wg GUS, bez kary za sprzedawalność", () => {
     const r = assessPlotBuildability({ propertyType: "grunt_rolny" });
     expect(r.category).toBe("rolna_bez_zabudowy");
-    expect(r.valuationBasis).toBe("rolna");
+    expect(r.valuationBasis).toBe("rolna_gus");
     expect(r.requiresOdrolnienieOrWz).toBe(true);
+    expect(r.saleabilityDelta).toBe(0); // grunt rolny sprzedaje się relatywnie dobrze
+    expect(r.buyerPool).toBe("rolniczy");
   });
 
   it("działka budowlana (MPZP MN) — szeroki krąg nabywców", () => {
