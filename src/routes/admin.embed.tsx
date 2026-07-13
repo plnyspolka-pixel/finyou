@@ -27,6 +27,9 @@ function EmbedPage() {
     return u.toString();
   }, [origin, source]);
 
+  const invoicesUrl = `${origin}/embed/faktury`;
+  const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
+
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
   const linkSnippet = `<a href="${url}" target="_blank" rel="noopener">Złóż wniosek o pożyczkę</a>`;
 
@@ -109,6 +112,38 @@ function EmbedPage() {
             style={{ border: 0 }}
             title="Podgląd wniosku"
           />
+        </CardContent>
+      </Card>
+
+      <div className="pt-6">
+        <h2 className="text-xl font-bold text-foreground">Faktury sprzedaży (anonimowo)</h2>
+        <p className="text-sm text-muted-foreground">
+          Zanonimizowana lista ostatnich faktur sprzedaży Finance You — do wklejenia na stronę jako dowód aktywnej sprzedaży.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Kod HTML (iframe)</CardTitle>
+            <CardDescription>Wklej w dowolne miejsce strony.</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => copy(invoicesIframe, "Kod iframe faktur")}>
+            <Copy className="mr-2 h-4 w-4" /> Kopiuj
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Textarea readOnly value={invoicesIframe} rows={3} className="font-mono text-xs" />
+          <p className="mt-2 text-xs text-muted-foreground break-all">URL: {invoicesUrl}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Podgląd faktur</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <iframe src={invoicesUrl} width="100%" height={720} style={{ border: 0 }} title="Podgląd faktur" />
         </CardContent>
       </Card>
     </div>
