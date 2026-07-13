@@ -86,9 +86,12 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
     setRunning(true);
     try {
       // Pierwsze uruchomienie liczy ocenę; ponowne (gdy zapis istnieje) wymusza przeliczenie.
-      await runRA({ data: { applicationId, force: !!row } });
+      const computed = await runRA({ data: { applicationId, force: !!row } });
       toast.success(row ? "Ocena przeliczona ponownie" : "Ocena ryzyka zakończona");
-      await load();
+      // Wynik pokazujemy zawsze — nawet gdy zapis do bazy się nie powiódł
+      // (wtedy odczyt zwraca null i bez fallbacku widok zostawał pusty).
+      const saved = await fetchRA({ data: { applicationId } }).catch(() => null);
+      setRow(saved ?? (computed ? { result_json: computed } : null));
     } catch (e: any) {
       toast.error("Błąd oceny ryzyka", { description: e?.message ?? String(e) });
     } finally {
