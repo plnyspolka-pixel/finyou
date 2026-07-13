@@ -56,7 +56,6 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
   const rows: PublicLead[] = (data ?? []).map((r: any) => {
     const app = r.application_data ?? {};
     const city =
-      (r.loan_application_id && cityByApp.get(r.loan_application_id)) ||
       app.property_city ||
       app.city ||
       null;
