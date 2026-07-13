@@ -39,7 +39,8 @@ export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ applicationId: z.string().uuid(), force: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdminOrOperator(context.userId);
-    return runInvestmentRiskAssessmentCore(data.applicationId, { force: data.force ?? false });
+    const result = await runInvestmentRiskAssessmentCore(data.applicationId, { force: data.force ?? false });
+    return result as unknown as InvestmentRiskAssessment;
   });
 
 /**
