@@ -178,6 +178,116 @@ function EmbedPage() {
         </CardContent>
       </Card>
 
+      <div className="pt-6">
+        <h2 className="text-xl font-bold text-foreground">Ostatnie wnioski (anonimowo)</h2>
+        <p className="text-sm text-muted-foreground">
+          Zanonimizowana lista ostatnich zgłoszeń pożyczkowych — dowód aktywnego ruchu na formularzu.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Kod HTML (iframe)</CardTitle>
+            <CardDescription>Wklej w dowolne miejsce strony.</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => copy(leadsIframe, "Kod iframe wniosków")}>
+            <Copy className="mr-2 h-4 w-4" /> Kopiuj
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Textarea readOnly value={leadsIframe} rows={3} className="font-mono text-xs" />
+          <p className="mt-2 text-xs text-muted-foreground break-all">URL: {leadsUrl}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Podgląd wniosków</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowLeadsPreview((v) => !v)}>
+            {showLeadsPreview ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showLeadsPreview ? (
+            <LeadsInlinePreview />
+          ) : (
+            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
+          )}
+          {showLeadsPreview && currentOrigin !== PROD_ORIGIN && (
+            <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+          )}
+        </CardContent>
+      </Card>
+
+    </div>
+  );
+}
+
+function LeadsInlinePreview() {
+  const { data = [], isLoading, error } = useQuery({
+    queryKey: ["admin", "embed", "public-leads-preview"],
+    queryFn: () => fetchPublicLeads(),
+    staleTime: 2 * 60 * 1000,
+  });
+  const total = data.reduce((acc, r) => acc + (r.loan_amount ?? 0), 0);
+  const withAmount = data.filter((r) => r.loan_amount != null).length;
+
+  if (isLoading) return <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">Ładowanie wniosków…</div>;
+  if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">Nie udało się wczytać podglądu wniosków.</div>;
+
+  return (
+    <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4 text-slate-100 sm:p-6">
+      <div className="mb-4 flex items-end justify-between gap-3 border-b border-white/10 pb-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-widest text-sky-300/80">Finance You</p>
+          <h3 className="text-xl font-semibold">Ostatnie wnioski</h3>
+          <p className="mt-1 text-xs text-slate-400">Dane zanonimizowane — {data.length} najnowszych zgłoszeń.</p>
+        </div>
+        {withAmount > 0 && (
+          <div className="text-right">
+            <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma wniosków</p>
+            <p className="text-lg font-semibold tabular-nums text-emerald-300">{formatPLN(total)}</p>
+          </div>
+        )}
+      </div>
+
+      {data.length === 0 ? (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
+          Brak zgłoszeń do wyświetlenia.
+        </div>
+      ) : (
+        <ul className="max-h-[560px] space-y-2 overflow-auto pr-1">
+          {data.map((l) => (
+            <li key={l.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sm font-semibold text-sky-100 ring-1 ring-white/10">
+                {l.initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className="tabular-nums">{formatRelative(l.created_at)}</span>
+                  <span className="opacity-40">•</span>
+                  <span className="truncate">{l.source_label}</span>
+                </div>
+                <div className="mt-0.5 truncate text-sm text-slate-200">
+                  Klient <span className="font-mono">{l.initials}</span>
+                  {l.city ? <span className="text-slate-400"> · {l.city}</span> : null}
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                {l.loan_amount != null ? (
+                  <>
+                    <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(l.loan_amount)}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">wnioskowana kwota</div>
+                  </>
+                ) : (
+                  <div className="text-[11px] uppercase tracking-wider text-slate-500">nowe zgłoszenie</div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
