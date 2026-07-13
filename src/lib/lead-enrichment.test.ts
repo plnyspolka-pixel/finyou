@@ -1,6 +1,82 @@
 import { describe, expect, it } from "vitest";
 import { extractInboundFacts } from "./lead-enrichment.server";
 
+describe("extractInboundFacts — kwota", () => {
+  it("nie bierze koloru hex z CSS phishingowego maila za kwotę (#951246)", () => {
+    const text =
+      "body{margin:0;padding:0}.mail a[href]:not(.deep-link){color:#c2185b}" +
+      ".mail a[href]:not(.deep-link):hover{color:#951246}" +
+      "blockquote{color:#6a1b9a !important;border-left:2px solid #6a1b9a}";
+    expect(extractInboundFacts(text).loanAmount).toBeNull();
+  });
+
+  it("nie bierze cyfr z adresu e-mail za kwotę (ikunia8900@…)", () => {
+    const text =
+      "Cześć! Wypełniłem(am) formularz.\nFull name: Ewelina Flis\n" +
+      "Phone number: 730 397 993\nEmail: ikunia8900@interia.pl";
+    expect(extractInboundFacts(text).loanAmount).toBeNull();
+  });
+
+  it("nie bierze numeru telefonu za kwotę", () => {
+    expect(extractInboundFacts("Proszę o kontakt: 511 834 349").loanAmount).toBeNull();
+    expect(extractInboundFacts("tel. 511834349").loanAmount).toBeNull();
+  });
+
+  it("ignoruje gołą liczbę bez waluty i słowa-klucza", () => {
+    expect(extractInboundFacts("numer sprawy 951246").loanAmount).toBeNull();
+    expect(extractInboundFacts("kod 88123").loanAmount).toBeNull();
+  });
+
+  it("akceptuje kwotę z walutą", () => {
+    expect(extractInboundFacts("Chciałbym 8900 zł").loanAmount).toBe(8900);
+    expect(extractInboundFacts("mam do spłaty 100 000 PLN").loanAmount).toBe(100000);
+    expect(extractInboundFacts("50 tys zł na remont").loanAmount).toBe(50000);
+    expect(extractInboundFacts("inwestycja 1,2 mln").loanAmount).toBe(1200000);
+  });
+
+  it("akceptuje kwotę ze słowem-kluczem bez waluty", () => {
+    expect(extractInboundFacts("kwota: 250000").loanAmount).toBe(250000);
+    expect(extractInboundFacts("potrzebuję 150 000 na dokończenie budowy").loanAmount).toBe(150000);
+    expect(extractInboundFacts("wnioskuję o kredyt w wysokości 320.000").loanAmount).toBe(320000);
+  });
+
+  it("wybiera największą wiarygodną kwotę", () => {
+    expect(
+      extractInboundFacts("potrzebuję 100 000 zł, ale wystarczy też 50 000 zł").loanAmount,
+    ).toBe(100000);
+  });
+
+  it("odsiewa wartości spoza zakresu 5 tys – 10 mln", () => {
+    expect(extractInboundFacts("potrzebuję 3000 zł").loanAmount).toBeNull();
+    expect(extractInboundFacts("kwota 50 mln zł").loanAmount).toBeNull();
+  });
+
+  it("ignoruje liczby w linkach", () => {
+    expect(
+      extractInboundFacts("Szczegóły: https://example.com/oferta/951246?id=88123").loanAmount,
+    ).toBeNull();
+  });
+});
+
+describe("extractInboundFacts — KW i miasto", () => {
+  it("wyciąga numer KW także z maila z HTML", () => {
+    const text = "<p>Moja księga to <b>WR1E/00097423/1</b>, potrzebuję 60 000 zł</p>";
+    const facts = extractInboundFacts(text);
+    expect(facts.kwNumbers).toEqual(["WR1E/00097423/1"]);
+    expect(facts.loanAmount).toBe(60000);
+  });
+
+  it("wyciąga miasto", () => {
+    expect(extractInboundFacts("mieszkanie w Poznaniu, kwota 200 000 zł").city).toBe("Poznaniu");
+  });
+
+  it("jest stabilna między wywołaniami (regex z flagą g)", () => {
+    const text = "działka w Krakowie";
+    expect(extractInboundFacts(text).city).toBe("Krakowie");
+    expect(extractInboundFacts(text).city).toBe("Krakowie");
+  });
+});
+
 describe("extractInboundFacts — imię i nazwisko", () => {
   it("wyciąga imię i nazwisko po 'pozdrawiam'", () => {
     const f = extractInboundFacts(
