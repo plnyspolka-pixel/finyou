@@ -34,8 +34,6 @@ export const fetchPublicInvoices = createServerFn({ method: "GET" }).handler(asy
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   const rows: PublicInvoice[] = (data ?? []).map((r: any) => {
-    const items = Array.isArray(r.items) ? r.items : [];
-    const firstItem = items[0]?.name ?? items[0]?.description ?? "Usługa finansowa";
     return {
       id: r.id,
       invoice_number: r.invoice_number,
@@ -44,7 +42,7 @@ export const fetchPublicInvoices = createServerFn({ method: "GET" }).handler(asy
       gross_amount: Number(r.gross_amount ?? 0),
       currency: r.currency ?? "PLN",
       buyer_label: anonBuyer(r.counterparty_name),
-      item_label: String(firstItem).slice(0, 80),
+      item_label: "Pośrednictwo finansowe",
     };
   });
   return rows;
