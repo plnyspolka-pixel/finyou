@@ -19,6 +19,8 @@ import {
   type SecurityType,
 } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
+import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
@@ -33,6 +35,11 @@ type PhotoItem = {
   url: string;
   bucket: string;
   file: File;
+  status: "uploading" | "ready" | "error";
+  storagePath?: string;
+  uploadedMime?: string;
+  uploadedName?: string;
+  errorMsg?: string;
 };
 
 type BucketDef = { kind: string; label: string; hint?: string; optional?: boolean };
