@@ -34,16 +34,12 @@ type PhotoItem = {
   type: string;
   url: string;
   file: File;
+  status: "uploading" | "ready" | "error";
+  storagePath?: string;
+  uploadedMime?: string;
+  uploadedName?: string;
+  errorMsg?: string;
 };
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(String(fr.result));
-    fr.onerror = () => reject(fr.error);
-    fr.readAsDataURL(file);
-  });
-}
 
 function openClientPanel(path = "/klient") {
   try {
