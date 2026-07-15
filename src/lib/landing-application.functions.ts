@@ -11,11 +11,12 @@ const PropertyTypeEnum = z.enum([
 ]);
 
 const PhotoSchema = z.object({
-  dataUrl: z.string().min(20).max(15_000_000), // <=~11MB base64
+  dataUrl: z.string().min(20).max(15_000_000).optional(), // ~11MB base64 (opcjonalne, gdy podano storagePath)
+  storagePath: z.string().min(1).max(500).optional(), // ścieżka w buckecie `property-photos` (upload już wykonany)
   mimeType: z.string().max(120),
   fileName: z.string().max(200),
-  bucket: z.string().max(60), // bucket label (kind of doc)
-});
+  bucket: z.string().max(60), // logiczny typ dokumentu
+}).refine((v) => !!v.dataUrl || !!v.storagePath, { message: "Wymagany dataUrl lub storagePath" });
 
 const SubmitSchema = z.object({
   first_name: z.string().trim().min(1).max(100),
