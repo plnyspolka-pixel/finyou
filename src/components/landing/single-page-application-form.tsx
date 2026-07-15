@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Send, Upload, Camera, FileText, Loader2 } from "lucide-react";
+import { Send, Upload, Camera, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
