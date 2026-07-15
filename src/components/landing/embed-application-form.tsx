@@ -79,8 +79,31 @@ export function EmbedApplicationForm() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
+  const uploadFn = useServerFn(uploadLandingAttachment);
 
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
+
+  const uploadOne = async (id: string, file: File) => {
+    try {
+      const { blob, mimeType, fileName } = await compressImageIfNeeded(file);
+      const dataUrl = await fileToDataUrl(blob);
+      const res = await uploadFn({
+        data: { dataUrl, mimeType, fileName, bucket: "property_photos" },
+      });
+      setPhotos((cur) =>
+        cur.map((p) =>
+          p.id === id
+            ? { ...p, status: "ready", storagePath: res.path, uploadedMime: mimeType, uploadedName: fileName }
+            : p,
+        ),
+      );
+    } catch (e: any) {
+      console.error("[embed-form] upload failed", e);
+      setPhotos((cur) =>
+        cur.map((p) => (p.id === id ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" } : p)),
+      );
+    }
+  };
 
   const addPhotos = (files: FileList | null) => {
     if (!files?.length) return;
@@ -90,8 +113,17 @@ export function EmbedApplicationForm() {
       type: f.type,
       url: URL.createObjectURL(f),
       file: f,
+      status: "uploading" as const,
     }));
     setPhotos((cur) => [...cur, ...next]);
+    // Uruchom upload w tle dla każdego pliku niezależnie — nie blokujemy UI.
+    for (const item of next) void uploadOne(item.id, item.file);
+  };
+
+  const retryUpload = (id: string) => {
+    setPhotos((cur) => cur.map((p) => (p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p)));
+    const target = photos.find((p) => p.id === id);
+    if (target) void uploadOne(id, target.file);
   };
 
   const removePhoto = (id: string) => {
@@ -109,6 +141,8 @@ export function EmbedApplicationForm() {
     /.+@.+\..+/.test(email.trim());
 
   const currentStep: StepKey = STEPS[step];
+  const allPhotosReady = photos.length > 0 && photos.every((p) => p.status === "ready");
+  const anyUploading = photos.some((p) => p.status === "uploading");
 
   const canAdvance = (() => {
     switch (currentStep) {
@@ -119,9 +153,9 @@ export function EmbedApplicationForm() {
       case "property":
         return !!secType && kwNumber.trim().length > 0;
       case "photos":
-        return photos.length > 0;
+        return allPhotosReady;
       case "consent":
-        return consent;
+        return consent && allPhotosReady;
       default:
         return false;
     }
@@ -134,16 +168,20 @@ export function EmbedApplicationForm() {
       toast.error("Zaakceptuj politykę prywatności i regulamin.");
       return;
     }
+    if (!allPhotosReady) {
+      toast.error(anyUploading ? "Poczekaj — trwa wysyłanie zdjęć." : "Nie wszystkie pliki zostały wysłane.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const photoPayload = await Promise.all(
-        photos.map(async (p) => ({
-          dataUrl: await readAsDataUrl(p.file),
-          mimeType: p.type || "application/octet-stream",
-          fileName: p.name,
+      const photoPayload = photos
+        .filter((p) => p.storagePath)
+        .map((p) => ({
+          storagePath: p.storagePath!,
+          mimeType: p.uploadedMime ?? p.type ?? "application/octet-stream",
+          fileName: p.uploadedName ?? p.name,
           bucket: "property_photos",
-        })),
-      );
+        }));
       const res = await submitFn({
         data: {
           first_name: firstName.trim(),
