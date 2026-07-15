@@ -64,6 +64,17 @@ export function PanelShell({ title, groups, allow, footer, fancy = false }: Pane
     );
   }
 
+  // Uwierzytelniony, ale bez wymaganej roli: NIE renderuj <Outlet/> (ani danych
+  // panelu). Bez tego strona-dziecko montowałaby się i odpalała swoje loadery
+  // danych na co najmniej jeden commit, zanim useEffect wykona navigate({to:"/"}).
+  // `loading` jest false dopiero po dociągnięciu ról, więc legalni użytkownicy
+  // nie zobaczą tego ekranu.
+  if (allow && !allow.some((r) => roles.includes(r))) {
+    return (
+      <div className="grid min-h-screen place-items-center text-muted-foreground">Przekierowywanie…</div>
+    );
+  }
+
   const brand = (
     <div className="flex items-center gap-2.5 font-semibold">
       <img

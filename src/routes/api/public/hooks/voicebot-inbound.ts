@@ -13,7 +13,9 @@ import { describeLoanStatusForAgent, LOAN_STATUS_LABELS } from "@/lib/loan-statu
 
 function normalize(phone: string | null | undefined): string {
   if (!phone) return "";
-  const s = String(phone).replace(/[\s-]/g, "");
+  // Zostaw wyłącznie cyfry i „+" — wynik trafia do PostgREST `.or()`,
+  // więc `,`/`(`/`.` musi zniknąć, aby nie dało się wstrzyknąć filtra.
+  const s = String(phone).replace(/[^\d+]/g, "");
   if (s.startsWith("+")) return s;
   const d = s.replace(/\D/g, "");
   if (d.length === 9) return `+48${d}`;

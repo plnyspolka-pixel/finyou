@@ -2,6 +2,7 @@
 // GET/POST /api/public/hooks/seed-blog?count=10
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireCronSecret } from "@/lib/cron-auth.server";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
@@ -175,6 +176,8 @@ export const Route = createFileRoute("/api/public/hooks/seed-blog")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const denied = requireCronSecret(request);
+        if (denied) return denied;
         const url = new URL(request.url);
         const count = Math.min(20, Math.max(1, Number(url.searchParams.get("count") ?? 10)));
         try {
@@ -185,6 +188,8 @@ export const Route = createFileRoute("/api/public/hooks/seed-blog")({
         }
       },
       POST: async ({ request }) => {
+        const denied = requireCronSecret(request);
+        if (denied) return denied;
         const url = new URL(request.url);
         const count = Math.min(20, Math.max(1, Number(url.searchParams.get("count") ?? 10)));
         try {

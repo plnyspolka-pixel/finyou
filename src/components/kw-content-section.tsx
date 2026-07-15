@@ -10,6 +10,7 @@ import { BookOpenCheck, RefreshCw, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
 import { ensureKwReady } from "@/lib/kw-ensure";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 type KwDoc = {
   status: string;
@@ -170,7 +171,7 @@ export function KwContentSection({
                   <AccordionContent>
                     <div
                       className="kw-html prose prose-sm max-w-none dark:prose-invert overflow-x-auto"
-                      dangerouslySetInnerHTML={{ __html: html }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
                     />
                   </AccordionContent>
                 </AccordionItem>
