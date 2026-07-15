@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Send, Upload, Camera, FileText, Loader2 } from "lucide-react";
+import { Send, Upload, Camera, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
   type SecurityType,
 } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
+import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 import { FancyShell } from "@/components/landing/fancy-shell";
@@ -33,6 +35,11 @@ type PhotoItem = {
   url: string;
   bucket: string;
   file: File;
+  status: "uploading" | "ready" | "error";
+  storagePath?: string;
+  uploadedMime?: string;
+  uploadedName?: string;
+  errorMsg?: string;
 };
 
 type BucketDef = { kind: string; label: string; hint?: string; optional?: boolean };
@@ -124,6 +131,7 @@ function PhotoBucket({
   photos,
   onAdd,
   onRemove,
+  onRetry,
 }: {
   label: string;
   hint?: string;
@@ -131,6 +139,7 @@ function PhotoBucket({
   photos: PhotoItem[];
   onAdd: (files: FileList | null, bucket: string) => void;
   onRemove: (id: string) => void;
+  onRetry: (id: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
@@ -171,6 +180,27 @@ function PhotoBucket({
                 <div className="grid aspect-square place-items-center bg-white/10">
                   <FileText className="h-6 w-6 text-white/80" />
                 </div>
+              )}
+              {p.status === "uploading" && (
+                <div className="absolute inset-0 grid place-items-center bg-black/55 text-white">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              )}
+              {p.status === "ready" && (
+                <div className="absolute bottom-1 left-1 rounded-full bg-emerald-500/90 p-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                </div>
+              )}
+              {p.status === "error" && (
+                <button
+                  type="button"
+                  onClick={() => onRetry(p.id)}
+                  className="absolute inset-0 grid place-items-center bg-red-600/70 text-[10px] font-semibold text-white"
+                  title={p.errorMsg ?? "Błąd — kliknij, aby ponowić"}
+                >
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="mt-1">Ponów</span>
+                </button>
               )}
               <button type="button" onClick={() => onRemove(p.id)}
                 className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-xs font-bold text-foreground shadow"
@@ -301,6 +331,24 @@ export function SinglePageApplicationForm({
     );
   };
 
+  const uploadFn = useServerFn(uploadLandingAttachment);
+
+  const uploadOne = async (id: string, file: File, bucket: string) => {
+    try {
+      const { blob, mimeType, fileName } = await compressImageIfNeeded(file);
+      const dataUrl = await fileToDataUrl(blob);
+      const res = await uploadFn({ data: { dataUrl, mimeType, fileName, bucket } });
+      setPhotos((cur) => cur.map((p) => p.id === id
+        ? { ...p, status: "ready", storagePath: res.path, uploadedMime: mimeType, uploadedName: fileName }
+        : p));
+    } catch (e: any) {
+      console.error("[landing-form] upload failed", e);
+      setPhotos((cur) => cur.map((p) => p.id === id
+        ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" }
+        : p));
+    }
+  };
+
   const addPhotos = (files: FileList | null, bucket: string) => {
     if (!files?.length) return;
     const next: PhotoItem[] = Array.from(files).map((f) => ({
@@ -310,9 +358,18 @@ export function SinglePageApplicationForm({
       url: URL.createObjectURL(f),
       bucket,
       file: f,
+      status: "uploading" as const,
     }));
     setPhotos((cur) => [...cur, ...next]);
+    for (const item of next) void uploadOne(item.id, item.file, bucket);
   };
+
+  const retryUpload = (id: string) => {
+    setPhotos((cur) => cur.map((p) => p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p));
+    const item = photos.find((p) => p.id === id);
+    if (item) void uploadOne(id, item.file, item.bucket);
+  };
+
   const removePhoto = (id: string) => {
     setPhotos((cur) => {
       const r = cur.find((p) => p.id === id);
@@ -370,17 +427,34 @@ export function SinglePageApplicationForm({
       toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
     }
+    if (photos.some((p) => p.status === "uploading")) {
+      toast.error("Poczekaj — trwa wysyłanie plików w tle.");
+      return;
+    }
+    if (photos.some((p) => p.status === "error")) {
+      toast.error("Niektóre pliki nie zostały wysłane — kliknij ikonę, aby ponowić.");
+      return;
+    }
 
 
     setSubmitting(true);
     try {
       const photoPayload = await Promise.all(
-        photos.map(async (p) => ({
-          dataUrl: await readAsDataUrl(p.file),
-          mimeType: p.type || "application/octet-stream",
-          fileName: p.name,
-          bucket: p.bucket,
-        })),
+        photos.map(async (p) =>
+          p.storagePath
+            ? {
+                storagePath: p.storagePath,
+                mimeType: p.uploadedMime || p.type || "application/octet-stream",
+                fileName: p.uploadedName || p.name,
+                bucket: p.bucket,
+              }
+            : {
+                dataUrl: await readAsDataUrl(p.file),
+                mimeType: p.type || "application/octet-stream",
+                fileName: p.name,
+                bucket: p.bucket,
+              },
+        ),
       );
       const res = await submitFn({
         data: {
@@ -680,6 +754,7 @@ export function SinglePageApplicationForm({
                   photos={photos}
                   onAdd={addPhotos}
                   onRemove={removePhoto}
+                  onRetry={retryUpload}
                 />
 
                 {docPhotos.length > 0 && (
