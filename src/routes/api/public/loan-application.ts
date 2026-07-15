@@ -52,6 +52,35 @@ export const Route = createFileRoute("/api/public/loan-application")({
           const data = Schema.parse(json);
           const { normalized, valid } = normalizePolishPhone(data.phone);
 
+          // Ochrona przed podwójnym wysłaniem / spamem: jeśli ten sam e-mail
+          // złożył wniosek w ciągu ostatnich 60 s, zwracamy istniejący wniosek
+          // zamiast tworzyć duplikat i ponownie odpalać kosztowną analizę
+          // nieruchomości. Okno jest krótkie — nie blokuje realnych, poprawionych
+          // ponownych zgłoszeń (formularz i tak przekierowuje po sukcesie).
+          const since = new Date(Date.now() - 60_000).toISOString();
+          const { data: recentClients } = await supabaseAdmin
+            .from("clients")
+            .select("id")
+            .eq("email", data.email)
+            .gte("created_at", since);
+          const recentIds = (recentClients ?? []).map((c) => c.id);
+          if (recentIds.length > 0) {
+            const { data: dup } = await supabaseAdmin
+              .from("loan_applications")
+              .select("id")
+              .in("client_id", recentIds)
+              .gte("created_at", since)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (dup?.id) {
+              return new Response(JSON.stringify({ ok: true, id: dup.id, duplicate: true }), {
+                status: 200,
+                headers: corsHeaders,
+              });
+            }
+          }
+
           const { data: client, error: cErr } = await supabaseAdmin
             .from("clients")
             .insert({
@@ -107,11 +136,20 @@ export const Route = createFileRoute("/api/public/loan-application")({
             headers: corsHeaders,
           });
         } catch (e) {
-          const msg = e instanceof Error ? e.message : "Bad request";
-          return new Response(JSON.stringify({ ok: false, error: msg }), {
-            status: 400,
-            headers: corsHeaders,
-          });
+          // Błędy walidacji (Zod) są bezpieczne i pomocne dla klienta.
+          // Pozostałe (np. błędy bazy) logujemy po stronie serwera i zwracamy
+          // komunikat ogólny, aby nie ujawniać wewnętrznych szczegółów.
+          if (e instanceof z.ZodError) {
+            return new Response(
+              JSON.stringify({ ok: false, error: "Nieprawidłowe dane formularza.", issues: e.issues }),
+              { status: 400, headers: corsHeaders },
+            );
+          }
+          console.error("[loan-application] error", e);
+          return new Response(
+            JSON.stringify({ ok: false, error: "Wystąpił błąd. Spróbuj ponownie później." }),
+            { status: 500, headers: corsHeaders },
+          );
         }
       },
     },
