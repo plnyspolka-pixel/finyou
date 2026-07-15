@@ -173,15 +173,24 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
     // Upload photos to property-photos bucket and create document records.
     for (const p of data.photos ?? []) {
       try {
-        const m = /^data:([^;]+);base64,(.*)$/.exec(p.dataUrl);
-        if (!m) continue;
-        const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
-        const safeName = p.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-        const path = `${loan.id}/${p.bucket}/${Date.now()}-${safeName}`;
-        const { error: upErr } = await supabaseAdmin.storage
-          .from("property-photos")
-          .upload(path, bytes, { contentType: p.mimeType || m[1], upsert: false });
-        if (upErr) continue;
+        let path: string | null = null;
+        let contentType = p.mimeType || "application/octet-stream";
+        if (p.storagePath) {
+          // Plik został już wgrany osobno (np. przez `uploadLandingAttachment`).
+          path = p.storagePath;
+        } else if (p.dataUrl) {
+          const m = /^data:([^;]+);base64,(.*)$/.exec(p.dataUrl);
+          if (!m) continue;
+          const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+          const safeName = p.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+          path = `${loan.id}/${p.bucket}/${Date.now()}-${safeName}`;
+          contentType = p.mimeType || m[1];
+          const { error: upErr } = await supabaseAdmin.storage
+            .from("property-photos")
+            .upload(path, bytes, { contentType, upsert: false });
+          if (upErr) continue;
+        }
+        if (!path) continue;
         await supabaseAdmin.from("documents").insert({
           loan_application_id: loan.id,
           property_id: property?.id ?? null,
