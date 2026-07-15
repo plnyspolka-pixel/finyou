@@ -409,6 +409,27 @@ export function EmbedApplicationForm() {
                             <FileText className="h-6 w-6 text-white/80" />
                           </div>
                         )}
+                        {p.status === "uploading" && (
+                          <div className="absolute inset-0 grid place-items-center bg-black/55 text-white">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          </div>
+                        )}
+                        {p.status === "ready" && (
+                          <div className="absolute bottom-1 left-1 rounded-full bg-emerald-500/90 p-0.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                          </div>
+                        )}
+                        {p.status === "error" && (
+                          <button
+                            type="button"
+                            onClick={() => retryUpload(p.id)}
+                            className="absolute inset-0 grid place-items-center bg-red-600/70 text-[10px] font-semibold text-white"
+                            title={p.errorMsg ?? "Błąd — kliknij, aby ponowić"}
+                          >
+                            <AlertCircle className="h-5 w-5" />
+                            <span className="mt-1">Ponów</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => removePhoto(p.id)}
@@ -420,6 +441,15 @@ export function EmbedApplicationForm() {
                       </div>
                     ))}
                   </div>
+                )}
+                {photos.length > 0 && (
+                  <p className="text-xs text-white/70">
+                    {allPhotosReady
+                      ? `Wysłano ${photos.length} ${photos.length === 1 ? "plik" : "plików"}.`
+                      : anyUploading
+                        ? "Wysyłanie w tle — możesz dodawać kolejne pliki."
+                        : "Kliknij ikonę alertu, aby ponowić upload."}
+                  </p>
                 )}
               </div>
             )}
