@@ -737,6 +737,7 @@ export function SinglePageApplicationForm({
                   photos={photos}
                   onAdd={addPhotos}
                   onRemove={removePhoto}
+                  onRetry={retryUpload}
                 />
 
                 {docPhotos.length > 0 && (
