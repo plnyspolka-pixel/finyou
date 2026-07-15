@@ -51,7 +51,20 @@ export function SendToInvestorsDialog({
         .not("email", "is", null)
         .order("company_name", { ascending: true, nullsFirst: false });
       if (error) throw error;
-      return (data ?? []) as Investor[];
+      const rows = (data ?? []) as Investor[];
+      // Deduplikuj po e-mailu (case-insensitive) — preferuj rekord z pełniejszą nazwą.
+      const byEmail = new Map<string, Investor>();
+      for (const r of rows) {
+        const key = (r.email ?? "").trim().toLowerCase();
+        if (!key) continue;
+        const prev = byEmail.get(key);
+        if (!prev) { byEmail.set(key, r); continue; }
+        const score = (i: Investor) => (i.company_name?.length ?? 0) + (i.city ? 5 : 0);
+        if (score(r) > score(prev)) byEmail.set(key, r);
+      }
+      return Array.from(byEmail.values()).sort((a, b) =>
+        (a.company_name ?? "").localeCompare(b.company_name ?? "", "pl"),
+      );
     },
     enabled: open,
   });
