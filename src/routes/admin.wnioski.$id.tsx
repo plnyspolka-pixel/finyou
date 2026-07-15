@@ -11,13 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
-import { loanStatusLabels, formatPLN, formatDate, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
+import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
 import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
+import { FileThumb } from "@/components/media/FileThumb";
+import { signStoragePath } from "@/lib/property-photos";
+import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -108,7 +111,7 @@ function WniosekDetail() {
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
           <TabsTrigger value="zabezpieczenie">Zabezpieczenie</TabsTrigger>
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
-          <TabsTrigger value="dokumenty">Dokumenty ({docs.length})</TabsTrigger>
+          <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length})</TabsTrigger>
           <TabsTrigger value="selekcja">Selekcja</TabsTrigger>
           <TabsTrigger value="dystrybucja">Dystrybucja ({distributions.length})</TabsTrigger>
@@ -171,13 +174,27 @@ function WniosekDetail() {
 
 
         <TabsContent value="dokumenty">
-          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Brak dokumentów.</p> :
-            <div className="space-y-2">{docs.map((d) => (
-              <Card key={d.id}><CardContent className="py-3 text-sm flex items-center justify-between">
-                <div><div className="font-medium">{d.file_name}</div><div className="text-xs text-muted-foreground">{d.document_type} · {formatDate(d.created_at)}</div></div>
-                {d.file_url && <a href={d.file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">Pobierz</a>}
-              </CardContent></Card>
-            ))}</div>}
+          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Brak plików.</p> :
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{docs.map((d) => {
+              const src = d.file_path ?? d.file_url;
+              if (!src) return null;
+              const open = async () => {
+                const url = /^https?:\/\//i.test(src) ? src : await signStoragePath(src, 3600);
+                if (url) window.open(url, "_blank", "noopener");
+                else toast.error("Nie udało się otworzyć pliku");
+              };
+              return (
+                <FileThumb
+                  key={d.id}
+                  path={src}
+                  name={d.file_name ?? d.document_type ?? "plik"}
+                  thumbnailPath={d.thumbnail_path ?? null}
+                  aspect="video"
+                  showName
+                  onClick={() => void open()}
+                />
+              );
+            })}</div>}
         </TabsContent>
 
         <TabsContent value="kontakt" className="space-y-4">

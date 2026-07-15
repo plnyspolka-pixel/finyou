@@ -19,6 +19,7 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -100,7 +101,7 @@ function InwestorWniosek() {
     const imgs = list.filter((d: any) => d.file_path && isImage(d.file_name ?? ""));
     const next: Record<string, string> = {};
     await Promise.all(imgs.map(async (d: any) => {
-      const { data: u } = await supabase.storage.from("documents").createSignedUrl(d.file_path, 3600);
+      const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
       if (u?.signedUrl) next[d.id] = u.signedUrl;
     }));
     setDocUrls(next);
@@ -115,18 +116,15 @@ function InwestorWniosek() {
     const resolved = await Promise.all(rawPhotos.map(async (src) => {
       if (!src || typeof src !== "string") return null;
       if (/^https?:\/\//i.test(src)) return src;
-      for (const bucket of ["documents", "property-photos"] as const) {
-        const { data: u } = await supabase.storage.from(bucket).createSignedUrl(src, 3600);
-        if (u?.signedUrl) return u.signedUrl;
-      }
-      return null;
+      const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(src, 3600);
+      return u?.signedUrl ?? null;
     }));
     setPhotoUrls(resolved.filter((s): s is string => !!s));
   })(); }, [id, user]);
 
   const openFile = async (d: any) => {
     if (!d.file_path) return;
-    const { data } = await supabase.storage.from("documents").createSignedUrl(d.file_path, 3600);
+    const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 

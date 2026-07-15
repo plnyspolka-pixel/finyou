@@ -3,6 +3,7 @@ import { FileText, FileSpreadsheet, FileImage, File as FileIcon, Music, Video, L
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { backfillPdfThumbnail } from "@/lib/uploads/unified-upload";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const IMG_EXT = /\.(jpe?g|png|gif|webp|heic|bmp|avif)$/i;
 const PDF_EXT = /\.pdf$/i;
@@ -11,10 +12,9 @@ const XLS_EXT = /\.(xlsx?|ods|csv)$/i;
 const AUDIO_EXT = /\.(mp3|wav|m4a|ogg|opus)$/i;
 const VIDEO_EXT = /\.(mp4|mov|webm|mkv)$/i;
 
-// Buckety w ktorych szukamy sciezek (nowe pliki w property-photos, legacy w innych)
+// Buckety w ktorych szukamy sciezek (wszystkie pliki klienta w pliki-klienta, legacy w innych)
 const CANDIDATE_BUCKETS = [
-  "property-photos",
-  "documents",
+  CLIENT_FILES_BUCKET,
   "marketing-materials",
   "avatars",
   "ad-creatives",
@@ -95,6 +95,8 @@ export function FileThumb({
   const [url, setUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
+  // np. HEIC z iPhone'a — przeglądarka nie wyrenderuje, pokazujemy ikonę
+  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -149,7 +151,7 @@ export function FileThumb({
 
   const Icon = iconFor(displayName, mimeType);
   const badge = badgeFor(displayName, mimeType);
-  const src = thumbUrl ?? url;
+  const src = imgFailed ? null : thumbUrl ?? url;
 
   return (
     <button
@@ -169,7 +171,7 @@ export function FileThumb({
         </div>
       ) : src ? (
         <>
-          <img src={src} alt={displayName} className="h-full w-full object-cover" loading="lazy" />
+          <img src={src} alt={displayName} className="h-full w-full object-cover" loading="lazy" onError={() => setImgFailed(true)} />
           {!isImage(displayName, mimeType) && (
             <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
               {badge}

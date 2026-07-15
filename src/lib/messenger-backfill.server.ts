@@ -8,6 +8,7 @@
 // przyciskiem "Uzupełnij historię" w skrzynce. Idempotentne.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { extractInboundFacts } from "@/lib/lead-enrichment.server";
 
 // Znacznik jednorazowej migracji załączników (bucket documents).
@@ -103,14 +104,14 @@ export async function backfillOrphanAttachments(): Promise<AttachmentBackfillRes
   let attachmentsLinked = 0;
   let filesSkipped = 0;
 
-  const { data: leadFolders } = await supabaseAdmin.storage.from("documents").list("leads", { limit: 1000 });
+  const { data: leadFolders } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).list("leads", { limit: 1000 });
 
   for (const folder of leadFolders ?? []) {
     const leadId = folder.name;
     if (!leadId || folder.id) continue; // pliki (nie foldery) mają id
 
     const { data: files } = await supabaseAdmin.storage
-      .from("documents")
+      .from(CLIENT_FILES_BUCKET)
       .list(`leads/${leadId}`, { limit: 1000 });
     if (!files?.length) continue;
 
@@ -177,14 +178,14 @@ export async function backfillOrphanAttachments(): Promise<AttachmentBackfillRes
 }
 
 async function attachmentsBackfillDone(): Promise<boolean> {
-  const { data } = await supabaseAdmin.storage.from("documents").list("system", { limit: 100 });
+  const { data } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).list("system", { limit: 100 });
   const markerName = ATTACH_MARKER_PATH.split("/").pop()!;
   return (data ?? []).some((f) => f.name === markerName);
 }
 
 export async function markAttachmentsBackfillDone(): Promise<void> {
   await supabaseAdmin.storage
-    .from("documents")
+    .from(CLIENT_FILES_BUCKET)
     .upload(ATTACH_MARKER_PATH, new TextEncoder().encode(new Date().toISOString()), {
       contentType: "text/plain",
       upsert: true,

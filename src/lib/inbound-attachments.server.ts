@@ -1,6 +1,7 @@
-// Pobieranie załączników (Messenger/IG URL lub Mailgun storage URL) i upload do bucketu `documents`
+// Pobieranie załączników (Messenger/IG URL lub Mailgun storage URL) i upload do bucketu `pliki-klienta`
 // pod prefiksem leads/{lead_id}/...
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -10,7 +11,7 @@ export type StoredAttachment = {
   name: string;
   mime: string;
   size: number;
-  path: string; // ścieżka w bucket `documents`
+  path: string; // ścieżka w buckecie `pliki-klienta`
 };
 
 export async function downloadAndStore(opts: {
@@ -28,7 +29,7 @@ export async function downloadAndStore(opts: {
     const safeName = (opts.filename ?? `file-${Date.now()}`).replace(/[^\w.\-]+/g, "_");
     const path = `leads/${opts.leadId}/${Date.now()}-${safeName}${safeName.includes(".") ? "" : ext}`;
     const mime = opts.mime ?? res.headers.get("content-type") ?? "application/octet-stream";
-    const { error } = await admin().storage.from("documents").upload(path, buf, {
+    const { error } = await admin().storage.from(CLIENT_FILES_BUCKET).upload(path, buf, {
       contentType: mime,
       upsert: false,
     });
@@ -48,7 +49,7 @@ export async function downloadAndStore(opts: {
  * - znajduje loan_application_id powiązany z leadem (przez leads.loan_application_id
  *   lub przez clients → najnowsze loan_applications),
  * - dla każdego załącznika zakłada rekord w public.documents (file_path wskazuje
- *   na bucket "documents", tę samą ścieżkę co w Storage).
+ *   na bucket "pliki-klienta", tę samą ścieżkę co w Storage).
  * Idempotentne best-effort — błędy logujemy i lecimy dalej.
  */
 export async function attachStoredToClientDocuments(opts: {
@@ -91,7 +92,7 @@ export async function attachStoredToClientDocuments(opts: {
     document_type: `attachment_${label}`,
     file_name: a.name,
     file_path: a.path,
-    file_url: a.path, // tylko ścieżka w buckecie "documents" — signed URL generujemy w UI
+    file_url: a.path, // tylko ścieżka w buckecie "pliki-klienta" — signed URL generujemy w UI
     status: "received",
     visibility_level: "pelne" as const,
   }));

@@ -9,6 +9,7 @@ import { upsertLeadFromSource, logLeadCommunication, findLeadId } from "@/lib/le
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { shouldSkipAutoReply } from "@/lib/email-guard.server";
 
@@ -77,7 +78,7 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
             const buf = new Uint8Array(await f.arrayBuffer());
             const safeName = f.name.replace(/[^\w.\-]+/g, "_");
             const path = `leads/${leadId}/${Date.now()}-${safeName}`;
-            const { error } = await supabaseAdmin.storage.from("documents")
+            const { error } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)
               .upload(path, buf, { contentType: f.type || "application/octet-stream", upsert: false });
             if (!error) stored.push({ name: safeName, mime: f.type, size: buf.byteLength, path });
           }

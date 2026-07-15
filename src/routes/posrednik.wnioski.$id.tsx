@@ -13,11 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock,
   MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save,
-  ImageOff, Calculator, Send, ArrowRight,
+  Calculator, Send, ArrowRight,
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
-import { resolveShowablePhotoUrls } from "@/lib/property-photos";
+import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
+import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { FileThumb } from "@/components/media/FileThumb";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
@@ -49,18 +51,27 @@ type Row = {
   }>;
 };
 
-type Doc = { id: string; document_type: string | null; file_name: string | null; file_url: string | null; created_at: string };
+type Doc = { id: string; document_type: string | null; file_name: string | null; file_path: string | null; file_url: string | null; created_at: string };
 
-function SmartImg({ src, alt, className }: { src: string; alt?: string; className?: string }) {
-  const [broken, setBroken] = useState(false);
-  if (broken || !src) {
-    return (
-      <div className={`flex items-center justify-center bg-muted text-muted-foreground ${className ?? ""}`}>
-        <ImageOff className="h-8 w-8" />
-      </div>
-    );
-  }
-  return <img src={src} alt={alt ?? ""} loading="lazy" className={className} onError={() => setBroken(true)} />;
+// Jeden worek na wszystko: zdjęcia z properties.photos + wpisy z tabeli
+// documents, każdy plik jako miniatura z podglądem.
+type ClientFile = { key: string; name: string; path: string | null; externalUrl: string | null };
+
+function collectClientFiles(photoPaths: string[], docs: Doc[]): ClientFile[] {
+  const seen = new Set<string>();
+  const out: ClientFile[] = [];
+  const push = (key: string, name: string, src: string | null) => {
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    const external = /^https?:\/\//i.test(src);
+    out.push({ key, name, path: external ? null : src, externalUrl: external ? src : null });
+  };
+  photoPaths.forEach((p, i) => push(`photo:${i}`, p?.split("/").pop() ?? `zdjęcie-${i + 1}`, p));
+  docs.forEach((d) => {
+    const src = d.file_path ?? d.file_url;
+    push(`doc:${d.id}`, d.file_name ?? src?.split("/").pop() ?? "plik", src ?? null);
+  });
+  return out;
 }
 
 export function BrokerApplicationDetail({ showInternalOffer = false }: { showInternalOffer?: boolean } = {}) {
@@ -68,11 +79,10 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
   const base = usePanelBase();
   const [row, setRow] = useState<Row | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
-  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendOpen, setSendOpen] = useState<null | "instytucjonalny" | "indywidualny">(null);
   const [calcOpen, setCalcOpen] = useState(false);
-  const [lightbox, setLightbox] = useState<number | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
@@ -90,7 +100,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
           .maybeSingle(),
         supabase
           .from("documents")
-          .select("id, document_type, file_name, file_url, created_at")
+          .select("id, document_type, file_name, file_path, file_url, created_at")
           .eq("loan_application_id", id)
           .order("created_at", { ascending: false }),
       ]);
@@ -98,15 +108,23 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
       setRow(appRow);
       setNotes(appRow?.broker_notes ?? "");
       setDocs((d as any) ?? []);
-
-      // Zdjęcia nieruchomości: tylko faktyczne obrazki (bez skanów dokumentów/PDF),
-      // podpisane w Storage (ścieżki mogą leżeć w `property-photos` lub `documents`).
-      const p = Array.isArray(appRow?.properties) ? appRow.properties[0] : (appRow?.properties as any);
-      const resolved = await resolveShowablePhotoUrls(p?.photos, 60 * 60);
-      setPhotos(resolved);
       setLoading(false);
     })();
   }, [id]);
+
+  // Wszystkie pliki klienta w jednym worku (zdjęcia + wpisy z tabeli documents).
+  const clientFiles = useMemo(() => {
+    const p = row ? (Array.isArray(row.properties) ? row.properties[0] : (row.properties as any)) : null;
+    const photoPaths = Array.isArray(p?.photos) ? (p!.photos as string[]) : [];
+    return collectClientFiles(photoPaths, docs);
+  }, [row, docs]);
+
+  const openClientFile = async (f: ClientFile) => {
+    const url = f.externalUrl ?? (f.path ? await signStoragePath(f.path, 3600) : null);
+    if (!url) { toast.error("Nie udało się otworzyć pliku"); return; }
+    if (IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.path ?? "")) setLightboxUrl(url);
+    else window.open(url, "_blank", "noopener");
+  };
 
   const saveNotes = async () => {
     if (!row) return;
@@ -227,34 +245,42 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
         <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
-      {/* Zdjęcia — hero grid */}
+      {/* Pliki klienta — jeden worek: zdjęcia, skany, załączniki. Wszystko jako miniatury. */}
       <FancyCard tone="light">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><ImageIcon className="h-4 w-4" /></div>
             <div>
-              <div className="text-sm font-bold">Zdjęcia nieruchomości</div>
-              <div className="text-xs text-muted-foreground">Kliknij, aby powiększyć</div>
+              <div className="text-sm font-bold">{CLIENT_FILES_LABEL}</div>
+              <div className="text-xs text-muted-foreground">Kliknij, aby powiększyć lub otworzyć</div>
             </div>
           </div>
-          <Badge variant="outline" className="text-sm">{photos.length}</Badge>
+          <Badge variant="outline" className="text-sm">{clientFiles.length}</Badge>
         </div>
-        {photos.length === 0 ? (
-          <div className="rounded-xl border border-dashed py-14 text-center text-sm text-muted-foreground">Brak zdjęć.</div>
+        {clientFiles.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-14 text-center text-sm text-muted-foreground">Brak plików.</div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {photos.map((url, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setLightbox(i)}
-                className="group relative aspect-[4/3] overflow-hidden rounded-xl border bg-muted transition hover:shadow-lg"
-              >
-                <SmartImg src={url} alt={`Zdjęcie ${i + 1}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
-                  Zdjęcie {i + 1} / {photos.length}
-                </div>
-              </button>
+            {clientFiles.map((f) => (
+              f.path ? (
+                <FileThumb
+                  key={f.key}
+                  path={f.path}
+                  name={f.name}
+                  aspect="video"
+                  showName
+                  onClick={() => void openClientFile(f)}
+                />
+              ) : (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => void openClientFile(f)}
+                  className="group relative aspect-video overflow-hidden rounded-lg border bg-muted transition hover:shadow-lg"
+                >
+                  <img src={f.externalUrl ?? ""} alt={f.name} loading="lazy" className="h-full w-full object-cover" />
+                </button>
+              )
             ))}
           </div>
         )}
@@ -280,27 +306,6 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
           </div>
         </FancyCard>
       </div>
-
-      {/* Dokumenty */}
-      <FancyCard tone="light" title="Dokumenty" icon={<FileText className="h-4 w-4" />} rightSlot={<Badge variant="outline">{docs.length}</Badge>}>
-        {docs.length === 0 ? (
-          <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">Brak dokumentów.</div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {docs.map((doc) => (
-              <a key={doc.id} href={doc.file_url ?? "#"} target="_blank" rel="noopener noreferrer"
-                className="group flex items-center gap-3 rounded-xl border bg-card p-3 transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><FileText className="h-4 w-4" /></div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{doc.file_name || doc.document_type || "Dokument"}</div>
-                  <div className="text-xs text-muted-foreground">{doc.document_type ?? "—"} · {new Date(doc.created_at).toLocaleDateString("pl-PL")}</div>
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
-              </a>
-            ))}
-          </div>
-        )}
-      </FancyCard>
 
       {p?.description && (
         <FancyCard tone="light" title="Opis">
@@ -338,11 +343,11 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
       )}
 
       {/* Lightbox */}
-      <Dialog open={lightbox !== null} onOpenChange={(o) => !o && setLightbox(null)}>
+      <Dialog open={lightboxUrl !== null} onOpenChange={(o) => !o && setLightboxUrl(null)}>
         <DialogContent className="max-w-5xl border-0 bg-black/95 p-2">
-          {lightbox !== null && photos[lightbox] && (
+          {lightboxUrl && (
             <div className="flex items-center justify-center">
-              <img src={photos[lightbox]} alt={`Zdjęcie ${lightbox + 1}`} className="max-h-[85vh] w-auto rounded-lg object-contain" />
+              <img src={lightboxUrl} alt="Podgląd pliku" className="max-h-[85vh] w-auto rounded-lg object-contain" />
             </div>
           )}
         </DialogContent>

@@ -26,6 +26,7 @@ import {
   type CompanyBundle,
 } from "@/lib/document-fields";
 import { amountToWordsPLN } from "@/lib/amount-to-words-pl";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { FY_CREDITOR } from "@/lib/windykacja-docfill";
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
@@ -210,7 +211,7 @@ async function loadTemplateText(
   if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
   const { data: file, error: dlErr } = await supabase.storage
-    .from("documents")
+    .from(CLIENT_FILES_BUCKET)
     .download(tpl.template_file_path);
   if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
 

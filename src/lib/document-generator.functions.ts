@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePlaceholders, xmlToPlainText, replaceByOccurrence } from "@/lib/document-fields";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { injectScheduleTable, type ScheduleRow } from "@/lib/schedule-table-docx";
 
 export type DocTemplate = {
@@ -99,7 +100,7 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
 
     // 2. Pobierz plik z Storage
     const { data: file, error: dlErr } = await supabase.storage
-      .from("documents")
+      .from(CLIENT_FILES_BUCKET)
       .download(tpl.template_file_path);
     if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
     const arrayBuf = await file.arrayBuffer();
@@ -124,7 +125,7 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     const safeName = tpl.name.replace(/[^\p{L}\p{N}._-]+/gu, "_").slice(0, 60);
     const outPath = `generated/${userId}/${ts}_${safeName}.docx`;
-    const { error: upErr } = await supabase.storage.from("documents").upload(
+    const { error: upErr } = await supabase.storage.from(CLIENT_FILES_BUCKET).upload(
       outPath,
       new Blob([new Uint8Array(outBuf)], {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -163,7 +164,7 @@ export const getGeneratedDocSignedUrl = createServerFn({ method: "POST" })
   .inputValidator((d: { path: string; expiresInSec?: number }) => d)
   .handler(async ({ data, context }) => {
     const { data: signed, error } = await context.supabase.storage
-      .from("documents")
+      .from(CLIENT_FILES_BUCKET)
       .createSignedUrl(data.path, data.expiresInSec ?? 300);
     if (error || !signed) throw new Error(error?.message ?? "Brak URL");
     return { url: signed.signedUrl };
@@ -189,7 +190,7 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
     const { data: file, error: dlErr } = await context.supabase.storage
-      .from("documents")
+      .from(CLIENT_FILES_BUCKET)
       .download(tpl.template_file_path);
     if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
 

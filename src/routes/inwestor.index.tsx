@@ -12,6 +12,7 @@ import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from 
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { isShowablePropertyPhoto, isPropertyPhotoDocument } from "@/lib/property-photos";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorList,
@@ -75,10 +76,8 @@ function InwestorList() {
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
-        for (const bucket of ["documents", "property-photos"] as const) {
-          const { data: u } = await supabase.storage.from(bucket).createSignedUrl(first, 3600);
-          if (u?.signedUrl) { next[a.id] = u.signedUrl; return; }
-        }
+        const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(first, 3600);
+        if (u?.signedUrl) next[a.id] = u.signedUrl;
       })());
     }
     await Promise.all(tasks);

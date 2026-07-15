@@ -2,21 +2,21 @@
 //
 // `properties.photos` to tablica KLUCZY w Storage (a nie gotowych URL-i) i bywa
 // niejednorodna:
-//   - część ścieżek leży w buckecie `property-photos`, część w `documents`
-//     (zależnie od tego, którym uploaderem trafiły do systemu),
 //   - obok prawdziwych zdjęć są też skany dokumentów (ownership_deed, KW, akty)
 //     oraz pliki nie-obrazkowe (PDF), których NIE wolno renderować jako <img>,
 //   - część rekordów (seed / import) to gotowe zewnętrzne URL-e http(s).
 //
-// Buckety są prywatne, więc ścieżki trzeba podpisać (signed URL). Poniższe
-// helpery filtrują do faktycznych zdjęć i podpisują je, próbując obu bucketów.
+// Wszystkie pliki klienta leżą w JEDNYM prywatnym buckecie `pliki-klienta`,
+// więc ścieżki trzeba podpisać (signed URL). Poniższe helpery filtrują do
+// faktycznych zdjęć i podpisują je.
 
 import { supabase } from "@/integrations/supabase/client";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 export const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i;
 
 /** Buckety, w których mogą leżeć zdjęcia nieruchomości (kolejność = priorytet). */
-const PHOTO_BUCKETS = ["property-photos", "documents"] as const;
+const PHOTO_BUCKETS = [CLIENT_FILES_BUCKET] as const;
 
 /** Typy dokumentów z tabeli `documents`, które są faktycznie zdjęciami nieruchomości. */
 export const PROPERTY_PHOTO_TYPES = new Set([

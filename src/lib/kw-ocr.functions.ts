@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const KW_REGEX = /\b[A-Z]{2}\d[A-Z0-9]\/\d{8}\/\d\b/g;
 
@@ -38,7 +39,7 @@ export const detectKwNumbers = createServerFn({ method: "POST" })
     for (const d of candidates.slice(0, 8)) {
       try {
         const { data: signed, error: se } = await supabase.storage
-          .from("documents")
+          .from(CLIENT_FILES_BUCKET)
           .createSignedUrl(d.file_path ?? "", 300);
         if (se || !signed?.signedUrl) continue;
         if (/\.pdf$/i.test(d.file_name ?? "")) continue;

@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { FileThumb } from "@/components/media/FileThumb";
+import { signStoragePath } from "@/lib/property-photos";
+import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp, Paperclip, Download, Code2 } from "lucide-react";
 
 const channelLabel: Record<string, string> = {
@@ -85,7 +88,7 @@ export function LeadDetailView({ id, compact = false, hideAdvancedTabs = false }
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="komunikacja">Komunikacja ({communications.length})</TabsTrigger>
           <TabsTrigger value="dane">Dane</TabsTrigger>
-          <TabsTrigger value="dokumenty">Dokumenty ({documents.length})</TabsTrigger>
+          <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({documents.length})</TabsTrigger>
           {!compact && !hideAdvancedTabs && <TabsTrigger value="sekwencja">Sekwencja maili{emailSequence ? ` (${emailSequence.sends.length}/${emailSequence.totalVariants})` : ""}</TabsTrigger>}
           {!compact && !hideAdvancedTabs && <TabsTrigger value="meta-capi">Meta CAPI</TabsTrigger>}
           {!compact && !hideAdvancedTabs && <TabsTrigger value="raw">Surowe dane</TabsTrigger>}
@@ -194,18 +197,29 @@ export function LeadDetailView({ id, compact = false, hideAdvancedTabs = false }
         <TabsContent value="dokumenty">
           <Card className="p-4">
             {documents.length === 0 ? (
-              <div className="text-muted-foreground text-sm">Brak dokumentów.</div>
+              <div className="text-muted-foreground text-sm">Brak plików.</div>
             ) : (
-              <ul className="space-y-2">
-                {documents.map((d: any) => (
-                  <li key={d.id} className="flex items-center gap-2 text-sm border-b pb-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{d.file_name}</span>
-                    <Badge variant="outline" className="text-[10px]">{d.document_type}</Badge>
-                    <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(d.created_at)}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {documents.map((d: any) => {
+                  const src = d.file_path ?? d.file_url;
+                  if (!src) return null;
+                  const open = async () => {
+                    const url = /^https?:\/\//i.test(src) ? src : await signStoragePath(src, 3600);
+                    if (url) window.open(url, "_blank", "noopener");
+                    else toast.error("Nie udało się otworzyć pliku");
+                  };
+                  return (
+                    <FileThumb
+                      key={d.id}
+                      path={src}
+                      name={d.file_name ?? d.document_type ?? "plik"}
+                      aspect="video"
+                      showName
+                      onClick={() => void open()}
+                    />
+                  );
+                })}
+              </div>
             )}
           </Card>
         </TabsContent>

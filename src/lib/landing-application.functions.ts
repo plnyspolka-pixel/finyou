@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const PropertyTypeEnum = z.enum([
   "mieszkanie",
@@ -169,7 +170,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       .select("id")
       .single();
 
-    // Upload photos to property-photos bucket and create document records.
+    // Upload plików do bucketu pliki-klienta + rekordy w tabeli documents.
     for (const p of data.photos ?? []) {
       try {
         const m = /^data:([^;]+);base64,(.*)$/.exec(p.dataUrl);
@@ -178,7 +179,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         const safeName = p.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
         const path = `${loan.id}/${p.bucket}/${Date.now()}-${safeName}`;
         const { error: upErr } = await supabaseAdmin.storage
-          .from("property-photos")
+          .from(CLIENT_FILES_BUCKET)
           .upload(path, bytes, { contentType: p.mimeType || m[1], upsert: false });
         if (upErr) continue;
         await supabaseAdmin.from("documents").insert({

@@ -1,11 +1,12 @@
 // Zunifikowany uploader: WSZYSTKIE nowe pliki (zdjecia, dokumenty, awatary,
-// zalaczniki, materialy marketingowe) laduja w jednym buckecie `property-photos`.
+// zalaczniki, materialy marketingowe) laduja w jednym buckecie `pliki-klienta`.
 // Prefiks (`context`) porzadkuje sciezki, a polityki RLS bucketu obsluguja
-// wszystkie te prefiksy naraz (patrz migracja z 2026-07-11 na storage.objects).
+// wszystkie te prefiksy naraz (patrz migracja 20260715090000 na storage.objects).
 
 import { supabase } from "@/integrations/supabase/client";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
-export const UNIFIED_BUCKET = "property-photos" as const;
+export const UNIFIED_BUCKET = CLIENT_FILES_BUCKET;
 
 export type UploadContext =
   | { context: "property"; applicationId: string }
@@ -121,7 +122,7 @@ export async function uploadFile(file: File, ctx: UploadContext): Promise<Upload
 
 /** Generuje miniature PDF w tle i zapisuje ja do bazy dla pliku ktory jej nie ma. */
 export async function backfillPdfThumbnail(path: string): Promise<string | null> {
-  const buckets = [UNIFIED_BUCKET, "documents", "marketing-materials"];
+  const buckets = [UNIFIED_BUCKET, "marketing-materials"];
   for (const bucket of buckets) {
     const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 600);
     if (!data?.signedUrl) continue;
@@ -146,7 +147,7 @@ export async function backfillPdfThumbnail(path: string): Promise<string | null>
 
 /** Usun plik (i miniature jesli istnieje) sprobowaniem we wszystkich legacy bucketach. */
 export async function deleteStoragePath(path: string): Promise<void> {
-  const buckets = [UNIFIED_BUCKET, "documents", "marketing-materials", "avatars"];
+  const buckets = [UNIFIED_BUCKET, "marketing-materials", "avatars"];
   for (const bucket of buckets) {
     await supabase.storage.from(bucket).remove([path, `${path}.thumb.png`]).catch(() => {});
   }
