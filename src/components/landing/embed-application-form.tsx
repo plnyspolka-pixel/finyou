@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Send, Upload, Camera, FileText, ArrowRight, ArrowLeft } from "lucide-react";
+import { Loader2, Send, Upload, Camera, FileText, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Slider } from "@/components/ui/slider";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { formatPLN, type SecurityType } from "@/lib/loan-math";
 import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
+import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/fb-pixel";
 
