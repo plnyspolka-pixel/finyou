@@ -331,6 +331,24 @@ export function SinglePageApplicationForm({
     );
   };
 
+  const uploadFn = useServerFn(uploadLandingAttachment);
+
+  const uploadOne = async (id: string, file: File, bucket: string) => {
+    try {
+      const { blob, mimeType, fileName } = await compressImageIfNeeded(file);
+      const dataUrl = await fileToDataUrl(blob);
+      const res = await uploadFn({ data: { dataUrl, mimeType, fileName, bucket } });
+      setPhotos((cur) => cur.map((p) => p.id === id
+        ? { ...p, status: "ready", storagePath: res.path, uploadedMime: mimeType, uploadedName: fileName }
+        : p));
+    } catch (e: any) {
+      console.error("[landing-form] upload failed", e);
+      setPhotos((cur) => cur.map((p) => p.id === id
+        ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" }
+        : p));
+    }
+  };
+
   const addPhotos = (files: FileList | null, bucket: string) => {
     if (!files?.length) return;
     const next: PhotoItem[] = Array.from(files).map((f) => ({
@@ -340,9 +358,18 @@ export function SinglePageApplicationForm({
       url: URL.createObjectURL(f),
       bucket,
       file: f,
+      status: "uploading" as const,
     }));
     setPhotos((cur) => [...cur, ...next]);
+    for (const item of next) void uploadOne(item.id, item.file, bucket);
   };
+
+  const retryUpload = (id: string) => {
+    setPhotos((cur) => cur.map((p) => p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p));
+    const item = photos.find((p) => p.id === id);
+    if (item) void uploadOne(id, item.file, item.bucket);
+  };
+
   const removePhoto = (id: string) => {
     setPhotos((cur) => {
       const r = cur.find((p) => p.id === id);
