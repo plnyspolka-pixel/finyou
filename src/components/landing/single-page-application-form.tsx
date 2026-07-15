@@ -427,17 +427,34 @@ export function SinglePageApplicationForm({
       toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
       return;
     }
+    if (photos.some((p) => p.status === "uploading")) {
+      toast.error("Poczekaj — trwa wysyłanie plików w tle.");
+      return;
+    }
+    if (photos.some((p) => p.status === "error")) {
+      toast.error("Niektóre pliki nie zostały wysłane — kliknij ikonę, aby ponowić.");
+      return;
+    }
 
 
     setSubmitting(true);
     try {
       const photoPayload = await Promise.all(
-        photos.map(async (p) => ({
-          dataUrl: await readAsDataUrl(p.file),
-          mimeType: p.type || "application/octet-stream",
-          fileName: p.name,
-          bucket: p.bucket,
-        })),
+        photos.map(async (p) =>
+          p.storagePath
+            ? {
+                storagePath: p.storagePath,
+                mimeType: p.uploadedMime || p.type || "application/octet-stream",
+                fileName: p.uploadedName || p.name,
+                bucket: p.bucket,
+              }
+            : {
+                dataUrl: await readAsDataUrl(p.file),
+                mimeType: p.type || "application/octet-stream",
+                fileName: p.name,
+                bucket: p.bucket,
+              },
+        ),
       );
       const res = await submitFn({
         data: {
