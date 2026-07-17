@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Paperclip, FileText, Image as ImageIcon, Download, Eye, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { signStoragePath } from "@/lib/property-photos";
 
 type Att = {
   url?: string;
@@ -16,15 +17,20 @@ type Att = {
   size?: number;
 };
 
+const isHttpUrl = (s: string) => /^https?:\/\//i.test(s);
+
 function pick(a: Att, i: number) {
-  const url = a?.url ?? a?.public_url ?? a?.signed_url ?? a?.path ?? "";
+  // Gotowy URL (np. z Messengera) używamy wprost; jeśli mamy tylko `path`, to jest
+  // klucz w prywatnym buckecie Storage i trzeba go podpisać — patrz `storagePath`.
+  const directUrl = [a?.url, a?.public_url, a?.signed_url].find((u) => u && isHttpUrl(u)) ?? "";
+  const storagePath = !directUrl && a?.path && !isHttpUrl(a.path) ? a.path : "";
   const name = a?.name ?? a?.filename ?? `załącznik-${i + 1}`;
   const mime = (a?.content_type ?? a?.mime_type ?? a?.type ?? "").toLowerCase();
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   const isImage = mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif", "avif"].includes(ext);
   const isPdf = mime === "application/pdf" || ext === "pdf";
   const isText = mime.startsWith("text/") || ["txt", "md", "csv", "json", "xml", "html"].includes(ext);
-  return { url, name, mime, ext, isImage, isPdf, isText };
+  return { directUrl, storagePath, name, mime, ext, isImage, isPdf, isText };
 }
 
 function fmtSize(n?: number) {
@@ -36,9 +42,31 @@ function fmtSize(n?: number) {
 
 export function AttachmentPreview({ attachments }: { attachments: Att[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
+  // Załączniki inbound (mail/Messenger) trzymamy jako klucze w prywatnym buckecie
+  // `documents` — bez podpisania nic się nie wyświetli. Podpisujemy je po zamontowaniu.
+  const [signed, setSigned] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const entries = await Promise.all(
+        (attachments ?? []).map(async (a, i) => {
+          const { directUrl, storagePath } = pick(a, i);
+          if (directUrl) return [i, directUrl] as const;
+          if (!storagePath) return null;
+          const url = await signStoragePath(storagePath, 60 * 60);
+          return url ? ([i, url] as const) : null;
+        }),
+      );
+      if (cancelled) return;
+      setSigned(Object.fromEntries(entries.filter(Boolean) as Array<readonly [number, string]>));
+    })();
+    return () => { cancelled = true; };
+  }, [attachments]);
+
   if (!attachments?.length) return null;
 
-  const active = openIdx != null ? pick(attachments[openIdx], openIdx) : null;
+  const active = openIdx != null ? { ...pick(attachments[openIdx], openIdx), url: signed[openIdx] ?? "" } : null;
 
   return (
     <div>
@@ -47,7 +75,8 @@ export function AttachmentPreview({ attachments }: { attachments: Att[] }) {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {attachments.map((a, i) => {
-          const { url, name, isImage, isPdf, isText, ext } = pick(a, i);
+          const { name, isImage, isPdf, isText, ext } = pick(a, i);
+          const url = signed[i] ?? "";
           const size = fmtSize(a?.size);
           return (
             <div

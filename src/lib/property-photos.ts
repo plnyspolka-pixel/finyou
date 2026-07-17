@@ -20,6 +20,10 @@ const PHOTO_BUCKETS = ["property-photos", "documents"] as const;
 
 /** Typy dokumentów z tabeli `documents`, które są faktycznie zdjęciami nieruchomości. */
 export const PROPERTY_PHOTO_TYPES = new Set([
+  // `property_photos` to główny typ zapisywany przez formularz landingowy
+  // (patrz landing-application.functions.ts — document_type = bucket). Bez niego
+  // fallback do tabeli `documents` nie znajdował zdjęć i miniaturki znikały.
+  "property_photos",
   "zdjecie_nieruchomosci",
   "zdjecia_nieruchomosci",
   "zdjecia_pomieszczen",
@@ -82,4 +86,37 @@ export async function resolveShowablePhotoUrls(
   return showable
     .map((p) => (isExternalUrl(p) ? p : urlByPath.get(p)))
     .filter((u): u is string => !!u);
+}
+
+export type PhotoDocumentRow = {
+  file_path?: string | null;
+  file_name?: string | null;
+  document_type?: string | null;
+};
+
+/** Ścieżki faktycznych zdjęć nieruchomości wyciągnięte z tabeli `documents`. */
+export function photoPathsFromDocuments(docs: PhotoDocumentRow[] | null | undefined): string[] {
+  return (docs ?? [])
+    .filter(isPropertyPhotoDocument)
+    .map((d) => String(d.file_path ?? ""))
+    .filter(Boolean);
+}
+
+/**
+ * Łączy zdjęcia z `properties.photos` oraz z tabeli `documents`, usuwa duplikaty,
+ * filtruje do pokazywalnych obrazków i podpisuje w Storage (próbuje obu bucketów).
+ *
+ * Używać wszędzie tam, gdzie `properties.photos` bywa puste — wnioski złożone przez
+ * formularz landingowy mają zdjęcia wyłącznie w tabeli `documents`, więc poleganie
+ * tylko na `properties.photos` powodowało puste galerie i brak miniaturek.
+ */
+export async function resolveApplicationPhotoUrls(
+  photos: string[] | null | undefined,
+  docs: PhotoDocumentRow[] | null | undefined,
+  expiresIn = 3600,
+): Promise<string[]> {
+  const merged = Array.from(
+    new Set([...(photos ?? []).filter(Boolean), ...photoPathsFromDocuments(docs)]),
+  );
+  return resolveShowablePhotoUrls(merged, expiresIn);
 }

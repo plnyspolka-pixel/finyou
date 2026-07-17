@@ -171,6 +171,9 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       .single();
 
     // Upload photos to property-photos bucket and create document records.
+    // Ścieżki faktycznych zdjęć nieruchomości zbieramy też do `properties.photos`,
+    // żeby galerie i miniaturki w panelach działały bez fallbacku do tabeli `documents`.
+    const propertyPhotoPaths: string[] = [];
     for (const p of data.photos ?? []) {
       try {
         let path: string | null = null;
@@ -200,9 +203,20 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
           visibility_level: "pelne",
           status: "received",
         });
+        // Do galerii nieruchomości trafiają tylko zdjęcia mieszkania/budynku,
+        // nie skany dokumentów (np. ownership_deed).
+        if (p.bucket === "property_photos") propertyPhotoPaths.push(path);
       } catch (e) {
         console.error("[landing-application] photo upload failed", e);
       }
+    }
+
+    if (property?.id && propertyPhotoPaths.length > 0) {
+      const { error: photoErr } = await supabaseAdmin
+        .from("properties")
+        .update({ photos: propertyPhotoPaths })
+        .eq("id", property.id);
+      if (photoErr) console.error("[landing-application] properties.photos update failed", photoErr);
     }
 
     void runPropertyCollateralAnalysisCore(loan.id).catch((err) => {

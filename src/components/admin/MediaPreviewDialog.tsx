@@ -36,6 +36,11 @@ async function signDocument(path: string): Promise<string | null> {
   return (await signOne("documents", path)) ?? (await signOne("property-photos", path));
 }
 
+// Zdjęcia z `properties.photos` mogą leżeć w obu bucketach — próbujemy oba (najpierw fotki).
+async function signPhoto(path: string): Promise<string | null> {
+  return (await signOne("property-photos", path)) ?? (await signOne("documents", path));
+}
+
 function inferKind(name: string): Kind {
   const n = name.toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
@@ -67,22 +72,21 @@ export function MediaPreviewDialog({
       setLoading(true);
       const all: MediaItem[] = [];
 
-      // Photos (property-photos bucket)
+      // Photos (property.photos — mogą być w buckecie property-photos lub documents)
       if (photoPaths.length > 0) {
-        const { data } = await supabase.storage
-          .from("property-photos")
-          .createSignedUrls(photoPaths, 60 * 60);
-        (data ?? []).forEach((d, i) => {
-          if (d.signedUrl) {
-            const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
-            all.push({
-              key: `photo:${photoPaths[i]}`,
-              name,
-              url: d.signedUrl,
-              kind: inferKind(name) === "other" ? "image" : inferKind(name),
-              source: "photo",
-            });
-          }
+        const signedPhotos = await Promise.all(
+          photoPaths.map(async (path, i) => ({ path, i, url: await signPhoto(path) })),
+        );
+        signedPhotos.forEach(({ path, i, url }) => {
+          if (!url) return;
+          const name = path.split("/").pop() ?? `zdjęcie-${i + 1}`;
+          all.push({
+            key: `photo:${path}`,
+            name,
+            url,
+            kind: inferKind(name) === "other" ? "image" : inferKind(name),
+            source: "photo",
+          });
         });
       }
 
@@ -93,9 +97,15 @@ export function MediaPreviewDialog({
         .eq("loan_application_id", loanApplicationId)
         .order("created_at", { ascending: false });
 
+      const photoPathSet = new Set(photoPaths);
       for (const d of (docRows ?? []) as Doc[]) {
-        let url = d.file_url ?? null;
-        if (!url && d.file_path) url = await signDocument(d.file_path);
+        // Zdjęcie z `properties.photos` bywa też wierszem w `documents` — pokazujemy raz.
+        if (d.file_path && photoPathSet.has(d.file_path)) continue;
+        // `file_url` bywa surową ścieżką Storage (np. załączniki inbound), a nie gotowym
+        // URL-em — używamy go tylko gdy to http(s), w przeciwnym razie podpisujemy `file_path`.
+        const httpUrl = d.file_url && /^https?:\/\//i.test(d.file_url) ? d.file_url : null;
+        let url = httpUrl;
+        if (!url) url = await signDocument(d.file_path ?? d.file_url ?? "");
         if (!url) continue;
         const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
         all.push({

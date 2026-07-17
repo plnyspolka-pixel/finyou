@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { FilePlus2, ImageOff, Search, MapPin, FileText, Calendar, Hash } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
-import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
+import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath, photoPathsFromDocuments } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
@@ -153,7 +153,10 @@ export function MojeWnioski() {
           {visible.map((r) => {
             const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
             const city = p?.city ?? r.client?.city ?? "—";
-            const photoCount = (Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : []).filter(isShowablePropertyPhoto).length;
+            const photoCount = new Set([
+              ...(Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : []).filter(isShowablePropertyPhoto),
+              ...photoPathsFromDocuments(r.documents),
+            ]).size;
             const clientName = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient";
             const hero = heroByApp[r.id];
             const docCount = r.documents?.length ?? 0;
