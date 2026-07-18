@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeKwNumber } from "@/lib/kw-normalize";
+import { normalizeKwNumber } from "@/lib/kw";
 
 export type KwAddress = {
   street?: string | null;
