@@ -528,7 +528,8 @@ function dedupeStr(arr: string[]): string[] {
 export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const db = context.supabase as unknown as SupabaseLike;
     try {
       const { data: row } = await db
         .from("investment_risk_assessments")
@@ -539,7 +540,6 @@ export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
         .maybeSingle();
       return row ?? null;
     } catch {
-      // Tabela może jeszcze nie istnieć (migracja niezastosowana) — degraduj miękko.
       return null;
     }
   });
