@@ -186,6 +186,19 @@ export async function runInvestmentRiskAssessmentCore(
     longitude: collateral?.property?.longitude ?? null,
   });
 
+  // 5d) Rynek porównawczy — deweloperuch.pl (rzeczywiste transakcje domów/mieszkań przy ulicy)
+  //      + otodom.pl (aktywne oferty działek). Uzupełnia RCN, gdy WFS milczy, i dostarcza
+  //      Perplexity twarde zł/m² wprost z rynku.
+  const marketComparables = await fetchMarketComparables({
+    propertyType: property?.property_type ?? "inna",
+    city: effCity,
+    street: (property as any)?.street ?? kwLegal.address?.street ?? null,
+    voivodeship: effVoivodeship,
+  }).catch((e) => {
+    warnings.push(`Rynek porównawczy (deweloperuch/otodom): ${e?.message ?? "błąd"}.`);
+    return null;
+  });
+
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
   const areaM2 = property?.area_sqm ?? null;
   const master = await perplexityMasterValuation({
@@ -204,8 +217,10 @@ export async function runInvestmentRiskAssessmentCore(
     ocr,
     plotBuildability,
     govBenchmark,
+    marketComparables,
   });
   if (master.status !== "success") warnings.push(`Nadrzędna wycena Perplexity: ${master.errorMessage ?? "brak danych"}.`);
+
 
   // 7) Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze).
   //    Podstawa: mediana wyceny nadrzędnej → wycena zabezpieczenia → wartość deklarowana.
