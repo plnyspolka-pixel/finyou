@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from "lucide-react";
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-import { isShowablePropertyPhoto, isPropertyPhotoDocument } from "@/lib/property-photos";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorList,
@@ -76,8 +75,8 @@ function InwestorList() {
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
-        const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(first, 3600);
-        if (u?.signedUrl) next[a.id] = u.signedUrl;
+        const url = await signStoragePath(first, 3600);
+        if (url) next[a.id] = url;
       })());
     }
     await Promise.all(tasks);
