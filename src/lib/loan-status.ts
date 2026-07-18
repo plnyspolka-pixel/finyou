@@ -80,6 +80,7 @@ export function loanStatusLabel(status: string | null | undefined): string {
 export const LOAN_STATUS_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead — czekamy na pierwszy kontakt",
   brak_kontaktu: "Brak kontaktu — brakuje imienia, nazwiska, telefonu lub e-maila",
+  brak_kwoty: "Brak kwoty pożyczki — mamy dane kontaktowe, czekamy na wskazanie kwoty",
   brak_kw: "Brak numeru KW — mamy dane kontaktowe, czekamy na numer księgi wieczystej",
   brak_zdjec_dokumentow: "Brak zdjęć / dokumentów — potrzebujemy zdjęć nieruchomości lub innych dokumentów",
   kontakt: "W kontakcie — pośrednik prowadzi rozmowę",
