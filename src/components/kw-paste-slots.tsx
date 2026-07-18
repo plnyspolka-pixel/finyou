@@ -165,8 +165,14 @@ export function KwPasteSlotsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+    <Dialog open={open} onOpenChange={(v) => { if (!v && filledCount > 0 && !busy) { if (!window.confirm("Zamknąć okno? Wgrane screeny zostaną utracone.")) return; } onOpenChange(v); }}>
+      <DialogContent
+        className="max-w-3xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onFocusOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { if (filledCount > 0) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle>Wgraj screeny treści KW</DialogTitle>
           <DialogDescription>
