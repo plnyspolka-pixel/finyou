@@ -312,7 +312,7 @@ function KlienciPage() {
                           <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
                           <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
                           <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
-                          {(r.comms.messenger ?? 0) > 0 && <span className="inline-flex items-center gap-1" title="Messenger/IG"><MessageSquare className="h-3 w-3" />{r.comms.messenger}</span>}
+                          <span className="inline-flex items-center gap-1" title="Messenger/IG"><MessagesSquare className="h-3 w-3" />{r.comms.messenger ?? 0}</span>
                           {r.comms.notes > 0 && <span className="inline-flex items-center gap-1" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
                           {filesCount(r) > 0 && (
                             <span className="inline-flex items-center gap-1 rounded bg-primary/10 text-primary px-1.5 py-0.5" title="Pliki klienta">
