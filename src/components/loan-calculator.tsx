@@ -15,7 +15,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins, Printer, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatPLN } from "@/lib/labels";
+import { formatPLN, propertyTypeLabels } from "@/lib/labels";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
@@ -207,6 +209,11 @@ export function LoanCalculator({
   const [mortgageOverride, setMortgageOverride] = useState<number | null>(null);
   const [art777Override, setArt777Override] = useState<number | null>(null);
 
+  // Nieruchomość stanowiąca zabezpieczenie — rodzaj i suma oszacowania (0 = nie podano).
+  // Pozwala na żywo sprawdzić próg 5% (art. 952¹ § 2 KPC) i wartość „po komorniku".
+  const [propertyType, setPropertyType] = useState<string>("mieszkanie");
+  const [propertyValue, setPropertyValue] = useState<number>(0);
+
   // Wysyłka harmonogramu do klienta
   const sendSchedule = useServerFn(sendLoanScheduleToClient);
   const [sendOpen, setSendOpen] = useState(false);
@@ -317,6 +324,18 @@ export function LoanCalculator({
   const proposedSecurityDefault = Math.round(totalToRepay * 2);
   const mortgageAmount = mortgageOverride ?? proposedSecurityDefault;
   const art777Amount = art777Override ?? proposedSecurityDefault;
+
+  // Wycena „po komorniku" (KPC): cena wywołania I licytacji = 3/4 sumy oszacowania (art. 965),
+  // II licytacji = 2/3 (art. 983); po bezskutecznej II licytacji wierzyciel może przejąć za 2/3
+  // (art. 984). Ostrożny odzysk z egzekucji przyjmujemy na poziomie 2/3.
+  const firstAuctionPln = Math.round(propertyValue * 0.75);
+  const secondAuctionPln = Math.round(propertyValue * (2 / 3));
+  // Próg 5% dla nieruchomości mieszkaniowej (art. 952¹ § 2 KPC): licytacji mieszkania/domu
+  // nie można wyznaczyć, gdy egzekwowana należność główna < 1/20 sumy oszacowania.
+  const auctionBlock = residentialAuctionBlockRisk({ propertyType, loanAmountPln: amount, propertyValuePln: propertyValue });
+  const ltvPct = propertyValue > 0 ? (amount / propertyValue) * 100 : 0;
+  const collateralCoveragePct = propertyValue > 0 && totalToRepay > 0 ? (secondAuctionPln / totalToRepay) * 100 : 0;
+  const collateralShortfall = propertyValue > 0 && totalToRepay > secondAuctionPln + 1e-9;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
@@ -952,7 +971,56 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2"><Scale className="h-4 w-4" /> Proponowane zabezpieczenia</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">Rodzaj nieruchomości (zabezpieczenie) <InfoTip text="Dla mieszkania i domu obowiązuje próg z art. 952¹ § 2 KPC: wierzyciel może wyznaczyć licytację dopiero, gdy należność główna wynosi co najmniej 5% (1/20) sumy oszacowania." /></Label>
+              <Select value={propertyType} onValueChange={setPropertyType}>
+                <SelectTrigger className="w-full bg-white text-slate-900"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(propertyTypeLabels).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">Wartość nieruchomości (suma oszacowania) <InfoTip text="Szacunkowa wartość rynkowa przyjmowana jako suma oszacowania w egzekucji. Od niej liczone są ceny wywołania licytacji (3/4 i 2/3) oraz próg 5% dla mieszkań i domów. Zostaw 0, aby pominąć analizę zabezpieczenia." /></Label>
+              <NumberField value={propertyValue} onCommit={(n) => setPropertyValue(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
+              <p className="text-xs text-white/60">0 = pomiń analizę zabezpieczenia.</p>
+            </div>
+          </div>
+
+          {propertyValue > 0 && (
+            <>
+              <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+                <div className="flex justify-between"><span className="text-white/70">LTV (kwota nominalna / wartość)</span><b className="tabular-nums">{ltvPct.toFixed(1)}%</b></div>
+                <div className="flex justify-between"><span className="text-white/70">Próg 5% licytacji (art. 952¹ § 2 KPC)</span><b className="tabular-nums">{auctionBlock.applicable ? formatPLN(auctionBlock.thresholdPln ?? 0) : "nie dotyczy"}</b></div>
+                <div className="flex justify-between"><span className="text-white/70">I licytacja — cena wywołania (3/4)</span><b className="tabular-nums">{formatPLN(firstAuctionPln)}</b></div>
+                <div className="flex justify-between"><span className="text-white/70">Wartość „po komorniku" (2/3 — II licytacja / przejęcie)</span><b className="tabular-nums">{formatPLN(secondAuctionPln)}</b></div>
+                <div className="flex justify-between sm:col-span-2 border-t border-white/15 pt-1.5"><span className="text-white/70">Pokrycie łącznej należności ({formatPLN(totalToRepay)}) wartością „po komorniku"</span><b className={`tabular-nums ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}>{collateralCoveragePct.toFixed(0)}%</b></div>
+              </div>
+
+              {auctionBlock.blocked && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <ShieldAlert className="h-4 w-4" />
+                  <AlertTitle>Możliwa blokada licytacji — kwota poniżej 5% wartości (art. 952¹ § 2 KPC)</AlertTitle>
+                  <AlertDescription className="text-xs">{auctionBlock.message}</AlertDescription>
+                </Alert>
+              )}
+              {collateralShortfall && (
+                <Alert className="py-2 border-amber-400/60 bg-amber-950/60 text-amber-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Wartość „po komorniku" ({formatPLN(secondAuctionPln)} = 2/3 sumy oszacowania) nie pokrywa łącznej należności {formatPLN(totalToRepay)}.
+                    W razie egzekucji odzysk z samej nieruchomości może być niepełny — rozważ niższą kwotę pożyczki, krótszy okres lub dodatkowe zabezpieczenie.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">Proponowana kwota hipoteki <InfoTip text="Kwota wpisu hipoteki umownej. Domyślnie dwukrotność sumy wszystkich należności inwestora (łącznej kwoty do spłaty). Wpisz własną wartość, aby nadpisać." /></Label>
               <div className="flex items-center gap-2">
@@ -973,6 +1041,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
               </div>
               <p className="text-xs text-white/60">Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}).</p>
             </div>
+          </div>
           </CardContent>
         </Card></FancyShell>
       )}
