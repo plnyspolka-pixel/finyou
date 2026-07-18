@@ -254,11 +254,55 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
         </FancyCard>
       </div>
 
-      {/* Kluczowe parametry */}
+      {/* Kluczowe parametry — edytowalne inline */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={<Wallet className="h-5 w-5" />} label="Wnioskowana kwota" value={row.loan_amount ? formatPLN(Number(row.loan_amount)) : "—"} accent />
-        <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Okres" value={row.preferred_period_months ? `${row.preferred_period_months} mies.` : "—"} />
-        <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value={p?.property_type ?? "—"} />
+        <EditableStatCard
+          icon={<Wallet className="h-5 w-5" />}
+          label="Wnioskowana kwota"
+          value={row.loan_amount ?? null}
+          display={(v) => (v ? formatPLN(Number(v)) : "—")}
+          type="number"
+          table="loan_applications"
+          rowId={row.id}
+          column="loan_amount"
+          onSaved={() => void load(true)}
+          accent
+        />
+        <EditableStatCard
+          icon={<CalendarClock className="h-5 w-5" />}
+          label="Okres (mies.)"
+          value={row.preferred_period_months ?? null}
+          display={(v) => (v ? `${v} mies.` : "—")}
+          type="number"
+          table="loan_applications"
+          rowId={row.id}
+          column="preferred_period_months"
+          onSaved={() => void load(true)}
+        />
+        {p?.id ? (
+          <EditableStatCard
+            icon={<Home className="h-5 w-5" />}
+            label="Typ nieruchomości"
+            value={p.property_type ?? "inna"}
+            display={(v) => (v ? String(v) : "—")}
+            type="select"
+            options={[
+              { value: "mieszkanie", label: "Mieszkanie" },
+              { value: "dom", label: "Dom" },
+              { value: "lokal_uslugowy", label: "Lokal usługowy" },
+              { value: "dzialka_budowlana", label: "Działka budowlana" },
+              { value: "grunt_rolny", label: "Grunt rolny" },
+              { value: "udzial_w_nieruchomosci", label: "Udział w nieruchomości" },
+              { value: "inna", label: "Inna" },
+            ]}
+            table="properties"
+            rowId={p.id}
+            column="property_type"
+            onSaved={() => void load(true)}
+          />
+        ) : (
+          <StatCard icon={<Home className="h-5 w-5" />} label="Typ nieruchomości" value="—" />
+        )}
       </div>
 
       {/* MEGA CTA — dystrybucja + oferta wewnętrzna */}
@@ -467,6 +511,78 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
           <div className="truncate text-base font-bold">{value}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EditableStatCard({
+  icon, label, value, display, type, options, table, rowId, column, onSaved, accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number | null;
+  display: (v: string | number | null) => string;
+  type: "number" | "text" | "select";
+  options?: { value: string; label: string }[];
+  table: string;
+  rowId: string;
+  column: string;
+  onSaved?: () => void;
+  accent?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(value == null ? "" : String(value));
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    let payload: unknown = draft;
+    if (type === "number") payload = draft === "" ? null : Number(draft);
+    else if (draft === "") payload = null;
+    const { error } = await supabase.from(table as any).update({ [column]: payload } as any).eq("id", rowId);
+    setSaving(false);
+    if (error) { toast.error("Błąd zapisu", { description: error.message }); return; }
+    toast.success("Zapisano");
+    setEditing(false);
+    onSaved?.();
+  };
+
+  return (
+    <Card
+      className={`group cursor-pointer transition ${accent ? "border-primary/40 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" : "border-primary/10"} hover:border-primary/60`}
+      onClick={() => { if (!editing) { setDraft(value == null ? "" : String(value)); setEditing(true); } }}
+    >
+      <CardContent className="flex items-center gap-3 py-4">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent ? "bg-primary text-primary-foreground shadow-md" : "bg-primary/10 text-primary"}`}>{icon}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+          {editing ? (
+            <div className="mt-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {type === "select" && options ? (
+                <Select value={draft} onValueChange={(v) => { setDraft(v); }}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <input
+                  autoFocus
+                  type={type === "number" ? "number" : "text"}
+                  className="h-8 w-full rounded border bg-background px-2 text-sm"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(false); }}
+                />
+              )}
+              <Button size="sm" className="h-8" disabled={saving} onClick={() => void save()}>OK</Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditing(false)}>×</Button>
+            </div>
+          ) : (
+            <div className="truncate text-base font-bold">{display(value)}</div>
+          )}
         </div>
       </CardContent>
     </Card>
