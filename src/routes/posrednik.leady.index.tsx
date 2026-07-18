@@ -278,12 +278,19 @@ function NoteBlock({ lead, onSaved }: { lead: any; onSaved: () => void }) {
 
 type InboundAtt = { name: string; mime?: string; size?: number; path?: string; at: string };
 
-function InboundAttachmentsThumbs({ attachments }: { attachments: InboundAtt[] }) {
+const TONES: Record<string, { wrap: string; label: string }> = {
+  violet: { wrap: "bg-violet-500/15 border-violet-300/30", label: "text-violet-100" },
+  sky: { wrap: "bg-sky-500/15 border-sky-300/30", label: "text-sky-100" },
+  emerald: { wrap: "bg-emerald-500/15 border-emerald-300/30", label: "text-emerald-100" },
+};
+
+function AttachmentsThumbs({ attachments, label, tone = "violet" }: { attachments: InboundAtt[]; label: string; tone?: "violet" | "sky" | "emerald" }) {
+  const t = TONES[tone] ?? TONES.violet;
   const visible = attachments.slice(0, 8);
   return (
-    <div className="mt-2 rounded-md bg-violet-500/15 border border-violet-300/30 p-2">
-      <div className="inline-flex items-center gap-1 text-xs font-medium text-violet-100 mb-2">
-        <Paperclip className="h-3 w-3" /> Załączniki z maili: <strong>{attachments.length}</strong>
+    <div className={`mt-2 rounded-md border p-2 ${t.wrap}`}>
+      <div className={`inline-flex items-center gap-1 text-xs font-medium mb-2 ${t.label}`}>
+        <Paperclip className="h-3 w-3" /> {label}: <strong>{attachments.length}</strong>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
         {visible.map((a, i) =>
