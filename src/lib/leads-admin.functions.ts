@@ -92,13 +92,22 @@ export const listLeads = createServerFn({ method: "GET" })
     // Liczniki kontaktu czytamy SERVICE-ROLEM (endpoint jest już za assertAdmin) —
     // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
     // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
+    // Chunk .in() clauses — 500 UUIDs w jednym GET-cie potrafi przekroczyć limit
+    // długości URL PostgREST-a, przez co licznik komunikacji dostaje pustą odpowiedź.
+    const chunk = <T,>(arr: T[], n: number): T[][] => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+      return out;
+    };
     const queries: Promise<any>[] = [];
-    // Podnosimy limit z domyślnych 1000 — inaczej licznik gubi maile/SMS przy większych leadach.
-    if (ids.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", ids).limit(20000)));
-    if (phones.length) queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", phones).limit(20000)));
-    if (emailsLower.length) {
-      // ilike.any() = case-insensitive email match, catches inbound emails filed against a different (auto-created) lead row.
-      const orExpr = emailsLower.map((e) => `email.ilike.${e}`).join(",");
+    for (const c of chunk(ids, 100)) {
+      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("lead_id", c).limit(20000)));
+    }
+    for (const c of chunk(phones, 100)) {
+      queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).in("phone_normalized", c).limit(20000)));
+    }
+    for (const c of chunk(emailsLower, 100)) {
+      const orExpr = c.map((e) => `email.ilike.${e}`).join(",");
       queries.push(Promise.resolve(supabaseAdmin.from("lead_communications").select(COLS).or(orExpr).limit(20000)));
     }
     const results = await Promise.all(queries);
