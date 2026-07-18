@@ -152,7 +152,10 @@ function WniosekDetail() {
 
       <ApplicationInfoBadges app={app} client={c} loanApplicationId={id} />
 
-      <Tabs defaultValue="dane">
+      <Tabs
+        value={(typeof window !== "undefined" && sessionStorage.getItem(`wniosek-tab:${id}`)) || tabValue}
+        onValueChange={(v) => { setTabValue(v); try { sessionStorage.setItem(`wniosek-tab:${id}`, v); } catch {} }}
+      >
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
