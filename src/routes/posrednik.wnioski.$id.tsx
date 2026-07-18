@@ -99,7 +99,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
       supabase
         .from("loan_applications")
         .select(
-          "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(id,property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
+          "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(id,first_name,last_name,city,phone,email), properties(id,property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
         )
         .eq("id", id)
         .maybeSingle(),
