@@ -125,18 +125,11 @@ export function OperatorLeadsList() {
                       periodMonths={r.loan.preferred_period_months}
                     />
                   )}
-                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-x-3 gap-y-1 min-w-0">
-                    {r.email && (
-                      <a
-                        href={`mailto:${r.email}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 hover:text-white underline-offset-2 hover:underline max-w-full break-all"
-                      >
-                        <Mail className="h-3 w-3 shrink-0" /> <span className="break-all">{r.email}</span>
-                      </a>
-                    )}
-                    {phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</span>}
+                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-2 min-w-0">
+                    <RevealContact leadId={r.id} field="email" value={r.email} onRevealed={() => q.refetch()} />
+                    <RevealContact leadId={r.id} field="phone" value={phone} onRevealed={() => q.refetch()} />
                   </div>
+                  <RevealsList reveals={r.comms.reveals} />
                   <div className="text-xs text-white/70 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms.lastAt && <span>· ostatni kontakt {formatRelative(r.comms.lastAt)}</span>}
