@@ -22,7 +22,19 @@ const SYSTEM_PROMPT =
   "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Przepisujesz treść DOSŁOWNIE — niczego nie zgadujesz " +
   "ani nie uzupełniasz. Pole, którego nie widać na obrazach, zwracasz jako null. Odpowiadasz WYŁĄCZNIE poprawnym JSON-em.";
 
-const USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z przeglądarki EKW (ekw.ms.gov.pl) — mogą obejmować okładkę oraz działy I-O, I-Sp, II, III i IV, w dowolnej kolejności, także we fragmentach. Połącz treść ze WSZYSTKICH obrazów i zwróć jeden JSON:
+const TRANSCRIBE_SYSTEM_PROMPT =
+  "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Twoim jedynym zadaniem jest DOSŁOWNE przepisanie tekstu " +
+  "widocznego na obrazach — bez interpretacji, bez zgadywania, bez pomijania. Zachowujesz układ sekcji i wersaliki.";
+
+const TRANSCRIBE_USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z przeglądarki EKW (ekw.ms.gov.pl) — okładka i/lub działy I-O, I-Sp, II, III, IV, w dowolnej kolejności, także we fragmentach.
+
+Przepisz DOSŁOWNIE cały widoczny tekst ze wszystkich obrazów. Zasady:
+- Rozdziel sekcje nagłówkami typu "=== OKŁADKA ===", "=== DZIAŁ I-O ===", "=== DZIAŁ I-SP ===", "=== DZIAŁ II ===", "=== DZIAŁ III ===", "=== DZIAŁ IV ===" — tak jak wynika to z obrazów.
+- Zachowaj tabele w formie tekstowej (rubryki / wartości linia po linii).
+- Nie tłumacz, nie skracaj, nie zgaduj brakujących liter — nieczytelne fragmenty zaznacz jako [nieczytelne].
+- Nie zwracaj JSON-a, nie dodawaj komentarzy — tylko surowa treść KW.`;
+
+const USER_PROMPT = `Poniżej masz DOSŁOWNĄ transkrypcję treści księgi wieczystej (może obejmować okładkę i działy I-O, I-Sp, II, III, IV — w dowolnej kolejności, także we fragmentach). Twoim zadaniem jest wyłącznie uporządkować te dane w JSON — niczego nie dopisuj i nie zgaduj. Zwróć JEDEN JSON:
 
 {
   "kwNumber": "numer KW w formacie AA1A/00000000/0 lub null",
@@ -47,10 +59,14 @@ const USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z 
 }
 
 ZASADY:
-- Cały dział nieobecny na obrazach → null (NIE {"brakWpisu": true} — to oznacza dział widoczny i pusty).
-- "brakWpisu": true tylko, gdy na obrazie wyraźnie widać pusty dział (np. "BRAK WPISU").
+- Cały dział nieobecny w transkrypcji → null (NIE {"brakWpisu": true} — to oznacza dział widoczny i pusty).
+- "brakWpisu": true tylko, gdy w transkrypcji wyraźnie widać pusty dział (np. "BRAK WPISU").
 - Kwoty hipotek jako liczby (300000.00), waluta osobno.
-- Nazwiska i nazwy przepisuj dokładnie (wersaliki jak w EKW).`;
+- Nazwiska i nazwy przepisuj dokładnie tak jak w transkrypcji.
+
+=== TRANSKRYPCJA ===
+{{TRANSCRIPT}}`;
+
 
 const ImageSchema = z.object({
   dataUrl: z.string().min(50).max(MAX_FILE_B64),
