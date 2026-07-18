@@ -188,6 +188,31 @@ export function KwPasteSlotsDialog({
     }
   };
 
+  const runDebug = async () => {
+    const images = slots
+      .map((s, i) => (s ? { ...s, fileName: s.fileName || `${SLOTS[i].key}.png` } : null))
+      .filter(Boolean) as Array<{ dataUrl: string; mimeType: string; fileName: string }>;
+    if (images.length === 0) {
+      toast.error("Wgraj przynajmniej jeden screen");
+      return;
+    }
+    setDebugBusy(true);
+    setDebug(null);
+    try {
+      const res: any = await doOcrImport({ data: { loanApplicationId, images, dryRun: true } });
+      if (res?.debug) {
+        setDebug({ transcript: res.debug.transcript || "", rawJson: res.debug.rawJson || "", parsed: res.debug.parsed });
+        toast.success("Podgląd OCR gotowy");
+      } else {
+        toast.error("Brak danych debug w odpowiedzi");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Debug OCR nie powiódł się");
+    } finally {
+      setDebugBusy(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && filledCount > 0 && !busy) { if (!window.confirm("Zamknąć okno? Wgrane screeny zostaną utracone.")) return; } onOpenChange(v); }}>
       <DialogContent
