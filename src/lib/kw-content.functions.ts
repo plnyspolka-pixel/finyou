@@ -30,10 +30,9 @@ export const getKwForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ loanApplicationId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const kw = await resolveKwForApplication(context.supabase, data.loanApplicationId);
     if (!kw) return { hasKw: false as const };
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("kw_documents")
       .select("status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at")
       .eq("kw_number", kw)
