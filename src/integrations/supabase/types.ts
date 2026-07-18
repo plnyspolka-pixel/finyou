@@ -4928,6 +4928,7 @@ export type Database = {
           accepted_terms_at: string | null
           admin_decision: string | null
           annual_investor_rate: number | null
+          archived_at: string | null
           assigned_operator: string | null
           automation_paused: boolean
           automation_status:
@@ -4968,6 +4969,7 @@ export type Database = {
           location_quality: string | null
           make_scenario_id: string | null
           max_monthly_payment: number | null
+          merged_into_id: string | null
           missing_documents_snapshot: Json
           missing_fields: Json | null
           next_contact_at: string | null
@@ -5010,6 +5012,7 @@ export type Database = {
           accepted_terms_at?: string | null
           admin_decision?: string | null
           annual_investor_rate?: number | null
+          archived_at?: string | null
           assigned_operator?: string | null
           automation_paused?: boolean
           automation_status?:
@@ -5050,6 +5053,7 @@ export type Database = {
           location_quality?: string | null
           make_scenario_id?: string | null
           max_monthly_payment?: number | null
+          merged_into_id?: string | null
           missing_documents_snapshot?: Json
           missing_fields?: Json | null
           next_contact_at?: string | null
@@ -5092,6 +5096,7 @@ export type Database = {
           accepted_terms_at?: string | null
           admin_decision?: string | null
           annual_investor_rate?: number | null
+          archived_at?: string | null
           assigned_operator?: string | null
           automation_paused?: boolean
           automation_status?:
@@ -5132,6 +5137,7 @@ export type Database = {
           location_quality?: string | null
           make_scenario_id?: string | null
           max_monthly_payment?: number | null
+          merged_into_id?: string | null
           missing_documents_snapshot?: Json
           missing_fields?: Json | null
           next_contact_at?: string | null
@@ -5171,6 +5177,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_applications_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
           {
@@ -7357,6 +7370,7 @@ export type Database = {
         Args: { _loan_id: string }
         Returns: Database["public"]["Enums"]["loan_status"]
       }
+      dedup_loan_applications: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -7484,6 +7498,8 @@ export type Database = {
         }
         Returns: number
       }
+      pl_first_name_canonical: { Args: { _name: string }; Returns: string }
+      pl_strip_diacritics: { Args: { _s: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
