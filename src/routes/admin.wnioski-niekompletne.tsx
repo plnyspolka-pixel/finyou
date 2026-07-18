@@ -131,7 +131,11 @@ function ApplicationsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,merged_into_id,archived_at,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos)")
+      .is("merged_into_id", null)
+      .is("archived_at", null)
+      .neq("status", "archiwalny")
+      .neq("status", "zamkniete")
       .order("updated_at", { ascending: false })
       .limit(1000);
     if (!error && data) {
