@@ -20,6 +20,44 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+// ── Preview bypass ─────────────────────────────────────────────────────────
+// Na preview (id-preview--*.lovable.app) OAuth Google/Apple bywa blokowany
+// w iframie edytora. Żeby dało się przeklikać cały serwis bez logowania,
+// udajemy zalogowanego użytkownika ze WSZYSTKIMI rolami. To NIE działa
+// end-to-end (zapytania do bazy dalej respektują RLS), ale odblokowuje
+// nawigację po panelach do celów podglądowych.
+export const PREVIEW_BYPASS_KEY = "fy_preview_bypass";
+export function isPreviewHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return h.startsWith("id-preview--") || h.endsWith(".lovableproject.com") || h === "localhost";
+}
+export function isPreviewBypassActive(): boolean {
+  if (!isPreviewHost()) return false;
+  try {
+    return window.localStorage.getItem(PREVIEW_BYPASS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+export function setPreviewBypass(on: boolean) {
+  try {
+    if (on) window.localStorage.setItem(PREVIEW_BYPASS_KEY, "1");
+    else window.localStorage.removeItem(PREVIEW_BYPASS_KEY);
+  } catch {}
+  if (typeof window !== "undefined") window.location.reload();
+}
+
+const FAKE_USER = {
+  id: "00000000-0000-0000-0000-000000000000",
+  email: "preview@financeyou.local",
+  app_metadata: {},
+  user_metadata: { full_name: "Podgląd (bez logowania)" },
+  aud: "authenticated",
+  created_at: new Date().toISOString(),
+} as unknown as User;
+const ALL_ROLES: AppRole[] = ["administrator", "operator", "klient", "inwestor", "ksiegowosc"];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -82,12 +120,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const bypass = isPreviewBypassActive();
   const value: AuthState = {
-    user,
-    session,
-    roles,
-    loading,
+    user: bypass ? FAKE_USER : user,
+    session: bypass ? ({ user: FAKE_USER } as unknown as Session) : session,
+    roles: bypass ? ALL_ROLES : roles,
+    loading: bypass ? false : loading,
     signOut: async () => {
+      if (bypass) {
+        setPreviewBypass(false);
+        return;
+      }
       await supabase.auth.signOut();
     },
     refreshRoles: async () => loadRoles(user?.id),

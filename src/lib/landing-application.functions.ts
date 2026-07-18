@@ -12,11 +12,12 @@ const PropertyTypeEnum = z.enum([
 ]);
 
 const PhotoSchema = z.object({
-  dataUrl: z.string().min(20).max(15_000_000), // <=~11MB base64
+  dataUrl: z.string().min(20).max(15_000_000).optional(), // ~11MB base64 (opcjonalne, gdy podano storagePath)
+  storagePath: z.string().min(1).max(500).optional(), // ścieżka w buckecie `pliki-klienta` (upload już wykonany)
   mimeType: z.string().max(120),
   fileName: z.string().max(200),
-  bucket: z.string().max(60), // bucket label (kind of doc)
-});
+  bucket: z.string().max(60), // logiczny typ dokumentu
+}).refine((v) => !!v.dataUrl || !!v.storagePath, { message: "Wymagany dataUrl lub storagePath" });
 
 const SubmitSchema = z.object({
   first_name: z.string().trim().min(1).max(100),
@@ -173,15 +174,24 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
     // Upload plików do bucketu pliki-klienta + rekordy w tabeli documents.
     for (const p of data.photos ?? []) {
       try {
-        const m = /^data:([^;]+);base64,(.*)$/.exec(p.dataUrl);
-        if (!m) continue;
-        const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
-        const safeName = p.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-        const path = `${loan.id}/${p.bucket}/${Date.now()}-${safeName}`;
-        const { error: upErr } = await supabaseAdmin.storage
-          .from(CLIENT_FILES_BUCKET)
-          .upload(path, bytes, { contentType: p.mimeType || m[1], upsert: false });
-        if (upErr) continue;
+        let path: string | null = null;
+        let contentType = p.mimeType || "application/octet-stream";
+        if (p.storagePath) {
+          // Plik został już wgrany osobno (np. przez `uploadLandingAttachment`).
+          path = p.storagePath;
+        } else if (p.dataUrl) {
+          const m = /^data:([^;]+);base64,(.*)$/.exec(p.dataUrl);
+          if (!m) continue;
+          const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+          const safeName = p.fileName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+          path = `${loan.id}/${p.bucket}/${Date.now()}-${safeName}`;
+          contentType = p.mimeType || m[1];
+          const { error: upErr } = await supabaseAdmin.storage
+            .from(CLIENT_FILES_BUCKET)
+            .upload(path, bytes, { contentType, upsert: false });
+          if (upErr) continue;
+        }
+        if (!path) continue;
         await supabaseAdmin.from("documents").insert({
           loan_application_id: loan.id,
           property_id: property?.id ?? null,
