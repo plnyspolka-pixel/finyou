@@ -690,7 +690,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora jest potrącana z góry; prowizję Finance You inwestor wykłada osobno na wejściu — nie wpływa ona na wypłatę ani dług klienta." />}</Label>
+              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora oraz prowizja Finance You są potrącane z góry — obie kredytowane do kapitału i spłacane przez klienta w ratach." />}</Label>
               <NumberField
                 value={Math.round(onHand)}
                 onCommit={(target) => setOnHand(Math.min(1_000_000, Math.max(1_000, target || 0)))}
