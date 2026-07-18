@@ -90,19 +90,27 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
           .maybeSingle(),
         supabase
           .from("documents")
-          .select("id, document_type, file_name, file_url, created_at")
+          .select("id, document_type, file_name, file_path, file_url, created_at")
           .eq("loan_application_id", id)
           .order("created_at", { ascending: false }),
       ]);
       const appRow = (app as any) ?? null;
       setRow(appRow);
       setNotes(appRow?.broker_notes ?? "");
-      setDocs((d as any) ?? []);
+      const docsRows = ((d as any) ?? []) as Array<Doc & { file_path?: string | null }>;
+      setDocs(docsRows);
 
-      // Zdjęcia nieruchomości: tylko faktyczne obrazki (bez skanów dokumentów/PDF),
-      // podpisane w Storage (ścieżki mogą leżeć w `property-photos` lub `documents`).
+      // Zdjęcia nieruchomości: najpierw properties.photos, jeśli puste — fallback
+      // z tabeli `documents` (dokumenty typu property_photos itp.).
       const p = Array.isArray(appRow?.properties) ? appRow.properties[0] : (appRow?.properties as any);
-      const resolved = await resolveShowablePhotoUrls(p?.photos, 60 * 60);
+      let resolved = await resolveShowablePhotoUrls(p?.photos, 60 * 60);
+      if (resolved.length === 0) {
+        const photoDocs = docsRows.filter((doc) => isPropertyPhotoDocument(doc as any));
+        const signed = await Promise.all(
+          photoDocs.map(async (doc) => (doc.file_path ? signStoragePath(doc.file_path, 3600) : null)),
+        );
+        resolved = signed.filter((u): u is string => !!u);
+      }
       setPhotos(resolved);
       setLoading(false);
     })();
