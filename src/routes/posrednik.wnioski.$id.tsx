@@ -38,7 +38,7 @@ type Row = {
   loan_amount: number | null;
   preferred_period_months: number | null;
   created_at: string;
-  client: { first_name?: string; last_name?: string; city?: string; phone?: string; email?: string } | null;
+  client: { id?: string; first_name?: string; last_name?: string; city?: string; phone?: string; email?: string } | null;
   properties: Array<{
     id?: string;
     property_type?: string;
@@ -54,6 +54,7 @@ type Row = {
     description?: string | null;
   }>;
 };
+
 
 type Doc = { id: string; document_type: string | null; file_name: string | null; file_path: string | null; file_url: string | null; created_at: string };
 
