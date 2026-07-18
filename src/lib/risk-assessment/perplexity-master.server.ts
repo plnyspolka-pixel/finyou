@@ -48,8 +48,14 @@ function buildDossier(i: MasterValuationInput): string {
     ? `\n0) DANE RZĄDOWE — KOTWICA WYCENY (priorytet: ${gov.primarySource}):${rcnLine}${gov.pricePerHa != null ? `\n- Cena gruntu rolnego (przyjęta): ${gov.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${gov.soilCategory})${gov.landValuePln ? `, wartość działki ≈ ${gov.landValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.pricePerM2Median != null ? `\n- Cena lokali (przyjęta): ${gov.pricePerM2Median.toLocaleString("pl-PL")} zł/m²${gov.dwellingValuePln ? `, wartość ≈ ${gov.dwellingValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.gusPricePerHa != null && gov.primarySource === "RCN" ? `\n- (GUS porównawczo: ${gov.gusPricePerHa.toLocaleString("pl-PL")} zł/ha)` : ""}\n- Jednostka: ${gov.unitName ?? "—"} (${gov.unitLevel ?? "—"}), okres ${gov.period ?? "—"}${gov.fallbackUsed ? " [dane zastępcze wyższego poziomu]" : ""}\n`
     : `\n0) DANE RZĄDOWE (RCN/GUS): brak danych (RCN: ${gov?.rcnStatusMessage ?? "—"}).\n`;
 
+  const mc = i.marketComparables;
+  const mcBlock = mc && (mc.status === "success" || mc.status === "partial")
+    ? `\n0b) RYNEK PORÓWNAWCZY (deweloperuch.pl transakcje + otodom.pl oferty):\n- Mediana: ${mc.pricePerM2Median ? mc.pricePerM2Median.toLocaleString("pl-PL") + " zł/m²" : "—"} (zakres ${mc.pricePerM2Min ?? "—"}–${mc.pricePerM2Max ?? "—"})\n- Transakcji: ${mc.transactionsCount}, ofert: ${mc.offersCount}${mc.street ? `, rejon: ${mc.street}, ${mc.city}` : mc.city ? `, ${mc.city}` : ""}\n- Próbki: ${mc.sample.slice(0, 5).map((s) => `${s.source}${s.date ? ` ${s.date}` : ""} ${s.address ?? s.title ?? ""} ${s.pricePerM2 ?? "—"} zł/m²`).join(" | ") || "—"}\n`
+    : mc ? `\n0b) RYNEK PORÓWNAWCZY: brak danych (${mc.message}).\n` : "";
+
   return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
-${govBlock}
+${govBlock}${mcBlock}
+
 1) NIERUCHOMOŚĆ
 - Typ: ${i.propertyType}
 - Lokalizacja: ${loc}
