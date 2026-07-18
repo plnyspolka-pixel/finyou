@@ -456,18 +456,11 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
       </Card>
       )}
 
-      {has("photos") && (
-      <PropertyDocsCard userId={user?.id ?? null} kind="photos_all"
-        title="Zdjęcia nieruchomości (wnętrza i z zewnątrz)"
-        icon={<ImageIcon className="h-4 w-4" />}
-        description="Wrzuć tutaj wszystkie zdjęcia w jednym miejscu — z zewnątrz i każdego pomieszczenia. Możesz wybrać wiele plików na raz." />
-      )}
-
-      {has("income") && (
-      <PropertyDocsCard userId={user?.id ?? null} kind="income_docs"
-        title="Dokumenty dochodowe"
-        icon={<Wallet className="h-4 w-4" />}
-        description="PIT, zaświadczenia o dochodach, wyciągi — wszystko, co pokazuje inwestorowi Twoją zdolność spłaty. Niewymagane, ale mocno zwiększa szanse." />
+      {(has("photos") || has("income")) && (
+      <PropertyDocsCard userId={user?.id ?? null} kind="klient_upload"
+        title="Pliki klienta"
+        icon={<FolderOpen className="h-4 w-4" />}
+        description="Wrzuć tu wszystko w jednym miejscu — zdjęcia nieruchomości, skany dokumentów własności, PIT/zaświadczenia o dochodach, wyciągi bankowe. Nie musisz nic sortować, my to poukładamy." />
       )}
 
       {(!filtered || has("company") || has("bank") || has("phone")) && (
