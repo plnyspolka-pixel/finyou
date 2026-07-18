@@ -431,7 +431,7 @@ function WindykacjaCaseCard() {
           {documents.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Dokumenty ({documents.length})</CardTitle>
+                <CardTitle className="text-base">Pliki klienta ({documents.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {documents.map((d) => (
