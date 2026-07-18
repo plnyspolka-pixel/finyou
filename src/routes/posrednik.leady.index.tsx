@@ -194,21 +194,6 @@ export function OperatorLeadsList() {
                   <NoteBlock lead={r} onSaved={() => q.refetch()} />
                 </div>
                 <div className="flex flex-row sm:flex-col items-stretch sm:items-end gap-2 shrink-0 w-full sm:w-auto">
-                  {phone && (
-                    <a
-                      href={`tel:${phone}`}
-                      onClick={() => {
-                        logCall.mutate({ leadId: r.id, phone });
-                        setOutcome({ leadId: r.id, name });
-                      }}
-                      className="inline-flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-md bg-emerald-500 text-white px-3 h-9 text-sm font-medium hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
-                      aria-label={`Zadzwoń ${phone}`}
-                      title={`Zadzwoń: ${phone}`}
-                    >
-                      <Phone className="h-4 w-4" />
-                      <span>Zadzwoń</span>
-                    </a>
-                  )}
                   <MetaRateButtons
                     leadId={r.id}
                     markedBad={r.marked_bad_lead}
