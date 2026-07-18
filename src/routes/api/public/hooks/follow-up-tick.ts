@@ -37,12 +37,13 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] outbox error", e);
         }
 
-        // Uzupełnianie historii Messenger/IG (imiona z Meta/treści wiadomości,
-        // jednorazowa migracja załączników) — best-effort, nie może wywrócić ticka.
+        // Uzupełnianie historii Messenger/IG (imiona z Meta/OCR/KW/treści
+        // wiadomości, jednorazowa migracja załączników) — best-effort,
+        // nie może wywrócić ticka.
         try {
           const { runScheduledMessengerBackfill } = await import("@/lib/messenger-backfill.server");
           const bf = await runScheduledMessengerBackfill();
-          if (bf.namesFromMeta || bf.namesFromText || bf.attachmentsRun) {
+          if (bf.namesFromMeta || bf.namesFromText || bf.namesFromOcr || bf.namesFromKw || bf.attachmentsRun) {
             console.log("[follow-up-tick] messenger backfill", JSON.stringify(bf));
           }
         } catch (e) {

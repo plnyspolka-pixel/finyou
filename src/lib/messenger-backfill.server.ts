@@ -10,13 +10,19 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { extractInboundFacts } from "@/lib/lead-enrichment.server";
+import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
 
 // Znacznik jednorazowej migracji załączników (bucket documents).
 const ATTACH_MARKER_PATH = "system/messenger-attachments-backfill-v1.done";
 // Ponawiaj próbę pobrania nazwiska dla leada najwcześniej po dobie.
 const NAME_RETRY_MS = 24 * 3600_000;
 
-export type NameBackfillResult = { namesFromMeta: number; namesFromText: number };
+export type NameBackfillResult = {
+  namesFromMeta: number;
+  namesFromText: number;
+  namesFromOcr: number;
+  namesFromKw: number;
+};
 export type AttachmentBackfillResult = { attachmentsLinked: number; filesSkipped: number };
 
 /**
@@ -29,6 +35,8 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
   const force = opts?.force ?? false;
   let namesFromMeta = 0;
   let namesFromText = 0;
+  let namesFromOcr = 0;
+  let namesFromKw = 0;
 
   const { data: unnamedLeads } = await supabaseAdmin
     .from("leads")
@@ -39,15 +47,15 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
 
   const now = Date.now();
   for (const lead of unnamedLeads ?? []) {
-    const appData = { ...((lead.application_data as Record<string, any>) ?? {}) };
-    if (!force && appData.name_backfill_at) {
-      const last = Date.parse(appData.name_backfill_at);
+    const throttleData = (lead.application_data as Record<string, any>) ?? {};
+    if (!force && throttleData.name_backfill_at) {
+      const last = Date.parse(throttleData.name_backfill_at);
       if (Number.isFinite(last) && now - last < NAME_RETRY_MS) continue;
     }
 
     let firstName = lead.first_name as string | null;
     let lastName = lead.last_name as string | null;
-    let source: "meta" | "text" | null = null;
+    let source: "meta" | "ocr" | "text" | null = null;
 
     // a) Profil Meta
     try {
@@ -64,7 +72,38 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
       console.warn("[backfill] meta profile error", lead.id, e);
     }
 
-    // b) Fallback — treść wiadomości przychodzących
+    // b) OCR załączników — wyciąga imię/nazwisko właściciela z dokumentów
+    //    (operat, odpis KW) oraz numery KW; zapisuje bezpośrednio do leada.
+    if (!firstName || !lastName) {
+      try {
+        const ocr = await ocrLeadAttachmentsAndEnrich({ leadId: lead.id });
+        if (ocr.nameFilled) { source = source ?? "ocr"; namesFromOcr += 1; }
+      } catch (e) {
+        console.warn("[backfill] attachment ocr error", lead.id, e);
+      }
+    }
+
+    // c) Właściciel z działu II KW — z cache kw_documents, a w razie braku
+    //    treści zleca pobranie z CMD KW Engine.
+    try {
+      const kwFilled = await fillLeadNameFromKw({ leadId: lead.id, allowOrder: true });
+      if (kwFilled) namesFromKw += 1;
+    } catch (e) {
+      console.warn("[backfill] kw name error", lead.id, e);
+    }
+
+    // Kroki b/c piszą do leada same (imię/nazwisko, kw_numbers, znaczniki OCR)
+    // — odśwież stan, żeby finalny zapis znacznika ich nie nadpisał.
+    const { data: freshLead } = await supabaseAdmin
+      .from("leads")
+      .select("first_name, last_name, application_data")
+      .eq("id", lead.id)
+      .maybeSingle();
+    if (freshLead?.first_name) firstName = firstName ?? freshLead.first_name;
+    if (freshLead?.last_name) lastName = lastName ?? freshLead.last_name;
+    const appData = { ...(((freshLead?.application_data ?? lead.application_data) as Record<string, any>) ?? {}) };
+
+    // d) Fallback — treść wiadomości przychodzących
     if (!firstName || !lastName) {
       const { data: inbound } = await supabaseAdmin
         .from("lead_communications")
@@ -83,16 +122,16 @@ export async function backfillLeadNames(opts?: { force?: boolean }): Promise<Nam
 
     appData.name_backfill_at = new Date(now).toISOString();
     const patch: Record<string, any> = { application_data: appData };
-    if (firstName && firstName !== lead.first_name) patch.first_name = firstName;
-    if (lastName && lastName !== lead.last_name) patch.last_name = lastName;
+    if (firstName && firstName !== (freshLead?.first_name ?? lead.first_name)) patch.first_name = firstName;
+    if (lastName && lastName !== (freshLead?.last_name ?? lead.last_name)) patch.last_name = lastName;
     await supabaseAdmin.from("leads").update(patch as any).eq("id", lead.id);
     if (patch.first_name || patch.last_name) {
       if (source === "meta") namesFromMeta += 1;
-      else namesFromText += 1;
+      else if (source === "text") namesFromText += 1;
     }
   }
 
-  return { namesFromMeta, namesFromText };
+  return { namesFromMeta, namesFromText, namesFromOcr, namesFromKw };
 }
 
 /**
