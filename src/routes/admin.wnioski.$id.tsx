@@ -22,8 +22,10 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
+import { EditableField } from "@/components/admin/EditableField";
 import { signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
