@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { ELIGIBLE_STATUSES_FOR_REMINDERS } from "@/lib/loan-progress.server";
 import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
+import { requireCronSecret, hasPrivateCronSecret } from "@/lib/cron-auth.server";
 
 function admin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -147,9 +148,14 @@ export const Route = createFileRoute("/api/public/hooks/ania-callbacks")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const denied = requireCronSecret(request);
+        if (denied) return denied;
         try {
           const url = new URL(request.url);
-          const force = url.searchParams.get("force") === "1";
+          // `force` omija wszystkie okna czasowe i może wystrzelić masę
+          // telefonów/SMS — dopuszczamy je wyłącznie z prywatnym CRON_SECRET,
+          // nigdy z publicznym kluczem anon.
+          const force = url.searchParams.get("force") === "1" && hasPrivateCronSecret(request);
           const out = await runBatch(force);
           return Response.json(out);
         } catch (e: any) {
@@ -157,9 +163,11 @@ export const Route = createFileRoute("/api/public/hooks/ania-callbacks")({
         }
       },
       GET: async ({ request }) => {
+        const denied = requireCronSecret(request);
+        if (denied) return denied;
         try {
           const url = new URL(request.url);
-          const force = url.searchParams.get("force") === "1";
+          const force = url.searchParams.get("force") === "1" && hasPrivateCronSecret(request);
           const out = await runBatch(force);
           return Response.json(out);
         } catch (e: any) {

@@ -25,6 +25,8 @@ export const PROPERTY_PHOTO_TYPES = new Set([
   "zdjecia_pomieszczen",
   "zdjecia_bryly",
   "zdjecia_lokalu",
+  "property_photos",
+  "property_photo",
   "klient_upload",
 ]);
 

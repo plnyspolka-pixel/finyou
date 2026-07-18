@@ -12,6 +12,19 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
       subject: z.string().min(1).max(300),
       body: z.string().min(1).max(50000),
       replyToCommunicationId: z.string().uuid().optional().nullable(),
+      attachments: z
+        .array(
+          z.object({
+            name: z.string().min(1).max(200),
+            path: z.string().max(1000).optional().nullable(),
+            bucket: z.string().max(100).optional().nullable(),
+            url: z.string().max(2000).optional().nullable(),
+            mime: z.string().max(150).optional().nullable(),
+            size: z.number().int().nonnegative().optional().nullable(),
+          }),
+        )
+        .max(15)
+        .optional(),
     }).parse(input),
 
   )
@@ -57,6 +70,22 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
     const { sendResendEmail } = await import("./resend-send.server");
     const { logLeadCommunication } = await import("./lead-comms.server");
 
+    // Załączniki: pobierz pliki raz (Storage/URL → base64) i dołącz je do maila
+    // jako prawdziwe pliki. Jeśli któregoś nie da się pobrać — nie wysyłaj
+    // "po cichu" maila bez załącznika, tylko zgłoś błąd nadawcy.
+    let resolvedAttachments: Array<{ filename: string; content: string; contentType?: string }> = [];
+    const attachmentRefs = data.attachments ?? [];
+    if (attachmentRefs.length) {
+      const { resolveOutboundAttachments } = await import("./outbound-attachments.server");
+      const { attachments, errors } = await resolveOutboundAttachments(attachmentRefs);
+      if (errors.length) throw new Error(errors.join(" "));
+      resolvedAttachments = attachments.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        contentType: a.contentType,
+      }));
+    }
+
     const results: Array<{ email: string; ok: boolean; id?: string; error?: string }> = [];
     for (const to of emails) {
       const res = await sendResendEmail({
@@ -68,6 +97,7 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
         references,
         replyTo: "kontakt@financeyou.pl",
         showReplyHint: true,
+        attachments: resolvedAttachments.length ? resolvedAttachments : undefined,
       });
       results.push({ email: to, ok: res.ok, id: res.id, error: res.error });
       try {
@@ -86,6 +116,15 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
             thread_id: threadId,
             in_reply_to: inReplyTo,
           },
+          attachments: attachmentRefs.length
+            ? attachmentRefs.map((a) => ({
+                name: a.name,
+                path: a.path ?? null,
+                url: a.url ?? null,
+                mime: a.mime ?? null,
+                size: a.size ?? null,
+              }))
+            : null,
         });
       } catch (e) {
         console.error("[sendInboxEmail] log comm error", e);
@@ -110,6 +149,7 @@ export const getCommAttachmentUrl = createServerFn({ method: "POST" })
     ]);
     if (!isAdmin && !isOperator) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Wszystkie załączniki (inbound i outbound) leżą w buckecie "pliki-klienta".
     const { data: signed, error } = await supabaseAdmin.storage
       .from(CLIENT_FILES_BUCKET)
       .createSignedUrl(data.path, 3600);

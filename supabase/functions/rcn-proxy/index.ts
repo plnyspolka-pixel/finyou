@@ -384,7 +384,9 @@ serve(async (req: Request) => {
             Accept: "text/html,application/xml,text/xml,application/json,*/*",
             "User-Agent": "FinyouApp/1.0 RCN-Proxy Deno",
           },
-
+          // Host walidowany tylko dla pierwszego URL; nie podążamy za 3xx,
+          // by przekierowanie nie ominęło allowlisty (ochrona przed SSRF).
+          redirect: "manual",
           signal: controller.signal,
         });
         clearTimeout(t);

@@ -32,6 +32,20 @@ type ProxyPayload = {
   body?: string | null;
 };
 
+// Dozwolone metody — proxy obsługuje wyłącznie odczyt/utworzenie transakcji
+// Tpay. Blokujemy PUT/DELETE/PATCH itd., by nie dało się użyć proxy do
+// dowolnych operacji po stronie Tpay.
+const ALLOWED_METHODS = new Set(["GET", "POST"]);
+
+// Opcjonalny wspólny sekret. Jeśli ustawiony (PROXY_SHARED_SECRET), każdy
+// request musi go podać w nagłówku `x-proxy-secret`. Gdy nieustawiony —
+// zachowanie bez zmian (kompatybilność wsteczna).
+function checkSharedSecret(req: Request): boolean {
+  const expected = Deno.env.get("PROXY_SHARED_SECRET");
+  if (!expected) return true;
+  return req.headers.get("x-proxy-secret") === expected;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -39,6 +53,13 @@ serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (!checkSharedSecret(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -60,17 +81,27 @@ serve(async (req) => {
     });
   }
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25_000);
+  const method = (payload.method ?? "GET").toUpperCase();
+  if (!ALLOWED_METHODS.has(method)) {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25_000);
+  try {
+    // redirect:"manual" — host jest walidowany tylko dla pierwszego URL;
+    // podążanie za 3xx pozwoliłoby ominąć allowlistę i uderzyć w dowolny
+    // (także wewnętrzny) host. Odpowiedzi przekierowań nie propagujemy dalej.
     const upstream = await fetch(payload.url, {
-      method: payload.method ?? "GET",
+      method,
       headers: payload.headers ?? {},
       body: payload.body ?? undefined,
       signal: controller.signal,
+      redirect: "manual",
     });
-    clearTimeout(timeout);
 
     const text = await upstream.text();
     return new Response(text, {
@@ -81,9 +112,12 @@ serve(async (req) => {
       },
     });
   } catch (e) {
+    console.error("[tpay-proxy]", e instanceof Error ? e.message : e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "proxy error" }),
+      JSON.stringify({ error: "proxy error" }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  } finally {
+    clearTimeout(timeout);
   }
 });

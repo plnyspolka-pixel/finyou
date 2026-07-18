@@ -46,23 +46,43 @@ globalThis.FileReader = FakeFileReader;
 import { SinglePageApplicationForm } from "./single-page-application-form";
 
 // --- Helpers ------------------------------------------------------------
+//
+// Formularz jest jednostronicowy (bez kroków „Dalej"): wszystko dzieje się
+// przy kliknięciu „Złóż wniosek" (onSubmit). `Lead` odpala się w onSubmit po
+// poprawnych danych kontaktowych i zgodach, jeszcze przed walidacją
+// typu/KW/zdjęć; `CompleteRegistration` dopiero po udanym wysłaniu.
 
-async function clickNext() {
-  await userEvent.click(screen.getByRole("button", { name: /dalej/i }));
+function leadCalls() {
+  return trackEventMock.mock.calls.filter(([name]) => name === "Lead");
+}
+function crCalls() {
+  return trackEventMock.mock.calls.filter(([name]) => name === "CompleteRegistration");
 }
 
-async function fillContactStep() {
-  await userEvent.type(screen.getByLabelText(/imię/i), "Anna");
-  await userEvent.type(screen.getByLabelText(/nazwisko/i), "Kowalska");
-  await userEvent.type(screen.getByLabelText(/telefon/i), "600100200");
-  await userEvent.type(screen.getByLabelText(/e-mail/i), "anna@example.com");
+async function fillContact() {
+  // Kotwiczymy na początku etykiety — teksty zgód też zawierają „telefon"/„e-mail".
+  await userEvent.type(screen.getByLabelText(/^imię/i), "Anna");
+  await userEvent.type(screen.getByLabelText(/^nazwisko/i), "Kowalska");
+  await userEvent.type(screen.getByLabelText(/^telefon/i), "600100200");
+  await userEvent.type(screen.getByLabelText(/^e-mail/i), "anna@example.com");
 }
 
-async function goToContactStep() {
-  // Step 1 -> Step 2 (typ zabezpieczenia ma domyślną wartość 'mieszkanie')
-  await clickNext();
-  // Step 2 -> Step 3 (parametry mają wartości domyślne)
-  await clickNext();
+function acceptConsents() {
+  fireEvent.click(screen.getByRole("checkbox", { name: /politykę prywatności/i }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /regulamin serwisu/i }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /kontakt marketingowy/i }));
+}
+
+function submitForm() {
+  return userEvent.click(screen.getByRole("button", { name: /złóż wniosek/i }));
+}
+
+function addPropertyPhoto() {
+  const label = screen.getByText("Zdjęcia i dokumenty nieruchomości");
+  const input = label.closest("div")?.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("Nie znaleziono inputu zdjęć nieruchomości");
+  const file = new File([new Uint8Array([1, 2, 3])], "foto.jpg", { type: "image/jpeg" });
+  fireEvent.change(input, { target: { files: [file] } });
 }
 
 // --- Tests --------------------------------------------------------------
@@ -75,28 +95,27 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
 
   it("Lead NIE odpala się gdy dane kontaktowe są niekompletne", async () => {
     render(<SinglePageApplicationForm />);
-    await goToContactStep();
 
-    // Brak danych — próba przejścia dalej nie wysyła Lead.
-    await clickNext();
-    expect(trackEventMock).not.toHaveBeenCalledWith("Lead", expect.anything(), expect.anything());
+    // Pusty formularz — submit nie wysyła Lead.
+    await submitForm();
+    expect(leadCalls()).toHaveLength(0);
 
     // Częściowe dane — wciąż brak Lead.
     await userEvent.type(screen.getByLabelText(/imię/i), "Anna");
-    await clickNext();
-    const leadCalls = trackEventMock.mock.calls.filter(([name]) => name === "Lead");
-    expect(leadCalls).toHaveLength(0);
+    await submitForm();
+    expect(leadCalls()).toHaveLength(0);
   });
 
-  it("Lead odpala się po poprawnym przejściu kroku Kontakt", async () => {
+  it("Lead odpala się po poprawnych danych kontaktowych i zgodach", async () => {
     render(<SinglePageApplicationForm />);
-    await goToContactStep();
-    await fillContactStep();
-    await clickNext();
+    await fillContact();
+    acceptConsents();
+    // Submit bez wybranego typu/KW/zdjęć: Lead odpala się (walidacja kontaktu),
+    // ale wysyłka i CompleteRegistration jeszcze nie.
+    await submitForm();
 
-    const leadCalls = trackEventMock.mock.calls.filter(([name]) => name === "Lead");
-    expect(leadCalls).toHaveLength(1);
-    const [, params, identity] = leadCalls[0]!;
+    expect(leadCalls()).toHaveLength(1);
+    const [, params, identity] = leadCalls()[0]!;
     expect(params).toMatchObject({
       currency: "PLN",
       content_category: "mieszkanie",
@@ -107,35 +126,26 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
       lastName: "Kowalska",
     });
 
-    // CompleteRegistration NIE może jeszcze odpalić.
-    const crCalls = trackEventMock.mock.calls.filter(([name]) => name === "CompleteRegistration");
-    expect(crCalls).toHaveLength(0);
+    expect(submitMock).not.toHaveBeenCalled();
+    expect(crCalls()).toHaveLength(0);
   });
 
-  it("CompleteRegistration odpala się dopiero po finalnym submit z KW lub plikami", async () => {
+  it("CompleteRegistration odpala się dopiero po finalnym submit z KW i zdjęciem", async () => {
     render(<SinglePageApplicationForm />);
-    await goToContactStep();
-    await fillContactStep();
-    await clickNext(); // -> krok 4
+    await fillContact();
+    acceptConsents();
 
-    // Submit bez KW i bez plików – nic nie wysyłamy, CR też nie.
-    await userEvent.click(screen.getByRole("button", { name: /wyślij wniosek/i }));
+    // Submit bez typu/KW/zdjęć — nic nie wysyłamy, CR też nie (Lead już tak).
+    await submitForm();
     expect(submitMock).not.toHaveBeenCalled();
-    expect(
-      trackEventMock.mock.calls.filter(([n]) => n === "CompleteRegistration"),
-    ).toHaveLength(0);
+    expect(crCalls()).toHaveLength(0);
 
-    // Podaj KW i dołącz plik, potem submit.
-    const kw = screen.getByLabelText(/numer księgi wieczystej/i);
-    await userEvent.type(kw, "wa1m/00123456/7");
+    // Wybierz typ nieruchomości, podaj KW i dołącz zdjęcie nieruchomości.
+    await userEvent.click(screen.getByRole("button", { name: /^mieszkanie$/i }));
+    await userEvent.type(screen.getByLabelText(/numer księgi wieczystej/i), "wa1m/00123456/7");
+    addPropertyPhoto();
 
-    const file = new File([new Uint8Array([1, 2, 3])], "akt.pdf", { type: "application/pdf" });
-    const hiddenInputs = document.querySelectorAll<HTMLInputElement>('input[type="file"]');
-    expect(hiddenInputs.length).toBeGreaterThan(0);
-    // pierwszy ukryty input pliku (pierwszy bucket) — wystarczy do przejścia walidacji
-    fireEvent.change(hiddenInputs[0]!, { target: { files: [file] } });
-
-    await userEvent.click(screen.getByRole("button", { name: /wyślij wniosek/i }));
+    await submitForm();
 
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
 
@@ -150,11 +160,8 @@ describe("SinglePageApplicationForm – Meta pixel events", () => {
     });
     expect((payload.data.photos as unknown[]).length).toBe(1);
 
-    await waitFor(() => {
-      const cr = trackEventMock.mock.calls.filter(([n]) => n === "CompleteRegistration");
-      expect(cr).toHaveLength(1);
-    });
-    const crCall = trackEventMock.mock.calls.find(([n]) => n === "CompleteRegistration")!;
+    await waitFor(() => expect(crCalls()).toHaveLength(1));
+    const crCall = crCalls()[0]!;
     expect(crCall[1]).toMatchObject({
       currency: "PLN",
       content_category: "mieszkanie",

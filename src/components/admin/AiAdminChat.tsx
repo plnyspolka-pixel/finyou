@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import {
   sendAdminChat,
   listConversations,
@@ -12,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bot, X, Send, Trash2, Plus, Settings, Loader2, Wrench, Mic, Square, Paperclip, ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { Bot, X, Send, Trash2, Plus, Loader2, Wrench, Mic, Square, Paperclip, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -265,9 +264,6 @@ export function AiAdminChat() {
         </div>
         <Button size="sm" variant="ghost" onClick={() => setView(view === "chat" ? "list" : "chat")}>
           {view === "chat" ? "Historia" : "Czat"}
-        </Button>
-        <Button size="icon" variant="ghost" asChild>
-          <Link to="/admin/ai-administrator"><Settings className="h-4 w-4" /></Link>
         </Button>
         <Button size="icon" variant="ghost" onClick={() => setOpen(false)} aria-label="Zwiń">
           <ChevronUp className="h-4 w-4" />

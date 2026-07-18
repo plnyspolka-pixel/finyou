@@ -20,6 +20,7 @@ import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalize
 import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { FileThumb } from "@/components/media/FileThumb";
+import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
@@ -122,8 +123,11 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
   const openClientFile = async (f: ClientFile) => {
     const url = f.externalUrl ?? (f.path ? await signStoragePath(f.path, 3600) : null);
     if (!url) { toast.error("Nie udało się otworzyć pliku"); return; }
-    if (IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.path ?? "")) setLightboxUrl(url);
-    else window.open(url, "_blank", "noopener");
+    if (IMAGE_EXT.test(f.name) || IMAGE_EXT.test(f.path ?? "")) {
+      setLightboxUrl(await toDisplayableImageUrl(url, f.name));
+    } else {
+      window.open(url, "_blank", "noopener");
+    }
   };
 
   const saveNotes = async () => {

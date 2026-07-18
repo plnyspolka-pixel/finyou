@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { backfillPdfThumbnail } from "@/lib/uploads/unified-upload";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { toDisplayableImageUrl } from "@/lib/heic-preview";
 
 const IMG_EXT = /\.(jpe?g|png|gif|webp|heic|bmp|avif)$/i;
 const PDF_EXT = /\.pdf$/i;
@@ -111,9 +112,10 @@ export function FileThumb({
           return;
         }
       }
-      // 2. Dla obrazow podpisz oryginal
+      // 2. Dla obrazow podpisz oryginal (HEIC konwertujemy w locie do JPEG)
       if (isImage(displayName, mimeType)) {
-        const u = await signPath(path);
+        const signed = await signPath(path);
+        const u = signed ? await toDisplayableImageUrl(signed, displayName) : null;
         if (!cancelled) {
           setUrl(u);
           setBusy(false);

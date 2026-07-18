@@ -34,7 +34,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
 
     const { data: docs } = await supabaseAdmin
       .from("documents")
-      .select("file_name, document_type, file_url")
+      .select("file_name, document_type, file_url, file_path")
       .eq("loan_application_id", data.applicationId);
 
     const { data: brokerProfile } = await supabaseAdmin
@@ -68,24 +68,34 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
 
     const subject = `Nowy temat pożyczkowy pod zabezpieczenie hipoteczne — ${kwota} · KW ${kw}`;
 
-    const photosHtml = photos.length
-      ? `<div style="margin:16px 0"><div style="font-weight:600;margin-bottom:8px">Zdjęcia nieruchomości (${photos.length})</div><div style="display:flex;flex-wrap:wrap;gap:8px">${photos
-          .map(
-            (u) =>
-              `<a href="${u}" style="display:inline-block"><img src="${u}" alt="" style="width:140px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0" /></a>`,
-          )
-          .join("")}</div></div>`
+    // Dokumenty i zdjęcia idą jako PRAWDZIWE załączniki maila (pliki), a nie
+    // linki w treści — `file_url`/`photos` to zwykle klucze w Storage, więc
+    // linki i tak nie działały u odbiorcy. Serwer pobierze pliki przy wysyłce.
+    const isHttp = (s: string) => /^https?:\/\//i.test(s);
+    const baseName = (p: string) => decodeURIComponent(p.split("/").pop() ?? p).split("?")[0] || "plik";
+
+    const attachments: Array<{ name: string; path?: string | null; url?: string | null }> = [];
+    for (const d of docs ?? []) {
+      const src = (d as any).file_path ?? (d as any).file_url;
+      if (!src) continue;
+      const name = (d as any).file_name ?? (d as any).document_type ?? baseName(String(src));
+      attachments.push(isHttp(String(src)) ? { name, url: String(src) } : { name, path: String(src) });
+    }
+    const photoAttachments = photos.map((u) =>
+      isHttp(u) ? { name: baseName(u), url: u } : { name: baseName(u), path: u },
+    );
+    const docsAttachedCount = attachments.length;
+    attachments.push(...photoAttachments);
+    const photosAttachedCount = photoAttachments.length;
+
+    const attachmentsSentence = attachments.length
+      ? `W załączeniu przesyłam ${docsAttachedCount ? `dokumenty (${docsAttachedCount})` : ""}${
+          docsAttachedCount && photosAttachedCount ? " oraz " : ""
+        }${photosAttachedCount ? `zdjęcia nieruchomości (${photosAttachedCount})` : ""}.`
       : "";
 
-    const docsHtml = docs && docs.length
-      ? `<div style="margin:16px 0"><div style="font-weight:600;margin-bottom:8px">Dokumenty (${docs.length})</div><ul style="padding-left:18px;margin:0">${docs
-          .map(
-            (d: any) =>
-              `<li style="margin:4px 0"><a href="${d.file_url ?? "#"}">${d.file_name ?? d.document_type ?? "Dokument"}</a>${
-                d.document_type ? ` <span style="color:#64748b">· ${d.document_type}</span>` : ""
-              }</li>`,
-          )
-          .join("")}</ul></div>`
+    const attachmentsNote = attachmentsSentence
+      ? `<p style="margin:16px 0">${attachmentsSentence}</p>`
       : "";
 
     const facts = `
@@ -125,8 +135,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
         <p>Dzień dobry,</p>
         <p>przesyłam temat pożyczkowy pod zabezpieczenie hipoteczne. Poniżej najważniejsze parametry:</p>
         ${facts}
-        ${photosHtml}
-        ${docsHtml}
+        ${attachmentsNote}
         ${opis}
         <p>Zapraszam do kontaktu w sprawie oferty finansowania.</p>
         ${signature}
@@ -137,10 +146,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       `Dzień dobry,\n\nprzesyłam temat pożyczkowy pod zabezpieczenie hipoteczne.\n\n` +
       `Kwota: ${kwota}\nOkres: ${okres}\nKW: ${kw}${extraKw.length ? ` (dodatkowe: ${extraKw.join(", ")})` : ""}\n` +
       `Adres: ${address}\nTyp: ${p?.property_type ?? "—"}\nSzacowana wartość: ${value}\n\n` +
-      (photos.length ? `Zdjęcia (${photos.length}):\n${photos.join("\n")}\n\n` : "") +
-      (docs && docs.length
-        ? `Dokumenty:\n${docs.map((d: any) => `- ${d.file_name ?? d.document_type ?? "Dokument"}: ${d.file_url ?? ""}`).join("\n")}\n\n`
-        : "") +
+      (attachmentsSentence ? `${attachmentsSentence}\n\n` : "") +
       `Pozdrawiam,\n${brokerName}${brokerPhone ? `\ntel. ${brokerPhone}` : ""}\nkontakt@financeyou.pl`;
 
     return {
@@ -150,6 +156,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       recipients: data.recipients,
       brokerName,
       brokerEmail,
+      attachments,
     };
   });
 
