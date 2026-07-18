@@ -172,6 +172,8 @@ export function KwPasteSlotsDialog({
       if (res.ok) {
         toast.success(`Treść KW ${res.kwNumber} zaimportowana`, { description: res.summary });
         for (const w of (res.warnings ?? []).slice(0, 4)) toast.info(w);
+        try { sessionStorage.removeItem(storageKey); } catch {}
+        setSlots(SLOTS.map(() => null));
         onImported();
         onOpenChange(false);
       } else {
