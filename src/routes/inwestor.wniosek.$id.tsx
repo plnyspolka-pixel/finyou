@@ -230,18 +230,6 @@ function InwestorWniosek() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Parametry wnioskowane przez klienta</CardTitle>
-          <CardDescription>Tak klient określił swoje potrzeby — możesz złożyć ofertę zgodną lub kontrofertę.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
-          <div className="flex justify-between rounded-md border bg-muted/30 p-3"><span className="text-muted-foreground">Kwota pożyczki</span><b className="tabular-nums">{formatPLN(Number(app.loan_amount) || 0)}</b></div>
-          <div className="flex justify-between rounded-md border bg-muted/30 p-3"><span className="text-muted-foreground">Okres</span><b className="tabular-nums">{app.preferred_period_months ?? "—"} mies.</b></div>
-          <div className="flex justify-between rounded-md border bg-muted/30 p-3"><span className="text-muted-foreground">Maks. rata miesięczna</span><b className="tabular-nums">{app.max_monthly_payment ? formatPLN(Number(app.max_monthly_payment)) : "—"}</b></div>
-          <div className="flex justify-between rounded-md border bg-muted/30 p-3"><span className="text-muted-foreground">Oczekiwane oprocentowanie roczne</span><b className="tabular-nums">{app.annual_investor_rate != null ? `${Number(app.annual_investor_rate)}%` : "—"}</b></div>
-        </CardContent>
-      </Card>
 
       <LoanCalculator
         key={`calc-${ratesQ.data?.referenceRate ?? "loading"}`}
