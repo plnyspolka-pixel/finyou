@@ -1,32 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, ClipboardPaste, X, Upload, Bug, Copy } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Upload, Bug, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { importKwFromScreenshots } from "@/lib/kw-ocr-import.functions";
-import { cn } from "@/lib/utils";
-
-const SLOTS: Array<{ key: string; label: string; hint: string }> = [
-  { key: "okladka", label: "Okładka", hint: "Numer KW, sąd, typ księgi" },
-  { key: "dzial1", label: "Dział I (I-O + I-Sp)", hint: "Oznaczenie nieruchomości i spis praw" },
-  { key: "dzial2", label: "Dział II", hint: "Właściciele / użytkownicy wieczyści" },
-  { key: "dzial3", label: "Dział III", hint: "Prawa, roszczenia, ograniczenia" },
-  { key: "dzial4", label: "Dział IV", hint: "Hipoteki" },
-];
-
-const MAX_BYTES = 6_500_000;
-
-type Slot = { dataUrl: string; mimeType: string; fileName: string } | null;
-
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error("Nie udało się wczytać obrazu"));
-    r.readAsDataURL(file);
-  });
-}
 
 export function KwPasteSlotsDialog({
   open,
@@ -39,143 +18,45 @@ export function KwPasteSlotsDialog({
   loanApplicationId: string;
   onImported: () => void;
 }) {
-  const doOcrImport = useServerFn(importKwFromScreenshots);
-  const storageKey = `kw-paste-slots:${loanApplicationId}`;
-  const [slots, setSlots] = useState<Slot[]>(() => {
-    if (typeof window === "undefined") return SLOTS.map(() => null);
-    try {
-      const raw = sessionStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Slot[];
-        if (Array.isArray(parsed) && parsed.length === SLOTS.length) return parsed;
-      }
-    } catch {}
-    return SLOTS.map(() => null);
+  const doImport = useServerFn(importKwFromScreenshots);
+  const storageKey = `kw-paste-text:${loanApplicationId}`;
+  const [text, setText] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try { return sessionStorage.getItem(storageKey) ?? ""; } catch { return ""; }
   });
-  const [activeIdx, setActiveIdx] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
-  const [debug, setDebug] = useState<{ transcript: string } | null>(null);
-  const boxRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [debug, setDebug] = useState<{ parsed: any } | null>(null);
 
-  // Persist slots so switching Chrome tabs (which may remount this component) doesn't lose work.
   useEffect(() => {
     try {
-      if (slots.some(Boolean)) sessionStorage.setItem(storageKey, JSON.stringify(slots));
+      if (text.trim()) sessionStorage.setItem(storageKey, text);
       else sessionStorage.removeItem(storageKey);
     } catch {}
-  }, [slots, storageKey]);
+  }, [text, storageKey]);
 
-  useEffect(() => {
-    if (open) {
-      // focus first empty slot so Ctrl+V works immediately
-      const firstEmpty = Math.max(0, slots.findIndex((s) => !s));
-      setActiveIdx(firstEmpty < 0 ? 0 : firstEmpty);
-      setTimeout(() => boxRefs.current[firstEmpty < 0 ? 0 : firstEmpty]?.focus(), 50);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  const setSlot = async (idx: number, file: File) => {
-    if (file.size > MAX_BYTES) {
-      toast.error(`Obraz jest za duży (limit ~6 MB)`);
-      return;
-    }
-    const dataUrl = await fileToDataUrl(file);
-    setSlots((prev) => {
-      const next = [...prev];
-      next[idx] = { dataUrl, mimeType: file.type || "image/png", fileName: file.name || `${SLOTS[idx].key}.png` };
-      return next;
-    });
-    // move focus to next empty slot
-    const nextEmpty = SLOTS.findIndex((_, i) => i > idx && !slots[i]);
-    if (nextEmpty >= 0) {
-      setActiveIdx(nextEmpty);
-      setTimeout(() => boxRefs.current[nextEmpty]?.focus(), 30);
-    }
-  };
-
-  const handlePaste = (idx: number) => async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
-      if (it.type.startsWith("image/")) {
-        const file = it.getAsFile();
-        if (file) {
-          e.preventDefault();
-          await setSlot(idx, file);
-          return;
-        }
-      }
-    }
-  };
-
-  const handleGlobalPaste = async (e: ClipboardEvent) => {
-    if (!open) return;
-    // if focus is on a slot, its own handler will run; this is only for edge cases
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
-      if (it.type.startsWith("image/")) {
-        const file = it.getAsFile();
-        if (file) {
-          e.preventDefault();
-          await setSlot(activeIdx, file);
-          return;
-        }
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e: ClipboardEvent) => void handleGlobalPaste(e);
-    window.addEventListener("paste", h);
-    return () => window.removeEventListener("paste", h);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, activeIdx, slots]);
-
-  const clearSlot = (idx: number) => {
-    setSlots((prev) => {
-      const next = [...prev];
-      next[idx] = null;
-      return next;
-    });
-  };
-
-  const onFile = (idx: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) void setSlot(idx, f);
-    e.target.value = "";
-  };
-
-  const filledCount = slots.filter(Boolean).length;
+  const chars = text.length;
 
   const submit = async () => {
-    const images = slots
-      .map((s, i) => (s ? { ...s, fileName: s.fileName || `${SLOTS[i].key}.png` } : null))
-      .filter(Boolean) as Array<{ dataUrl: string; mimeType: string; fileName: string }>;
-    if (images.length === 0) {
-      toast.error("Wgraj przynajmniej jeden screen");
+    if (chars < 20) {
+      toast.error("Wklej tekst treści KW (min. 20 znaków).");
       return;
     }
     setBusy(true);
     try {
-      let res = await doOcrImport({ data: { loanApplicationId, images } });
-      if (!res.ok && (res as any).needsForce) {
-        if (!window.confirm("Treść tej KW jest już zapisana. Nadpisać ją danymi z OCR?")) {
+      let res: any = await doImport({ data: { loanApplicationId, text } });
+      if (!res.ok && res.needsForce) {
+        if (!window.confirm("Treść tej KW jest już zapisana. Nadpisać ją?")) {
           setBusy(false);
           return;
         }
-        res = await doOcrImport({ data: { loanApplicationId, images, force: true } });
+        res = await doImport({ data: { loanApplicationId, text, force: true } });
       }
       if (res.ok) {
-        toast.success(`Treść KW ${res.kwNumber} zaimportowana`);
+        toast.success(`Treść KW ${res.kwNumber} zapisana`);
         for (const w of (res.warnings ?? []).slice(0, 4)) toast.info(w);
         try { sessionStorage.removeItem(storageKey); } catch {}
-        setSlots(SLOTS.map(() => null));
+        setText("");
         onImported();
         onOpenChange(false);
       } else {
@@ -189,173 +70,99 @@ export function KwPasteSlotsDialog({
   };
 
   const runDebug = async () => {
-    const images = slots
-      .map((s, i) => (s ? { ...s, fileName: s.fileName || `${SLOTS[i].key}.png` } : null))
-      .filter(Boolean) as Array<{ dataUrl: string; mimeType: string; fileName: string }>;
-    if (images.length === 0) {
-      toast.error("Wgraj przynajmniej jeden screen");
+    if (chars < 20) {
+      toast.error("Wklej tekst KW (min. 20 znaków).");
       return;
     }
     setDebugBusy(true);
     setDebug(null);
     try {
-      const res: any = await doOcrImport({ data: { loanApplicationId, images, dryRun: true } });
+      const res: any = await doImport({ data: { loanApplicationId, text, dryRun: true } });
       if (res?.debug) {
-        setDebug({ transcript: res.debug.transcript || "" });
-        toast.success("Podgląd OCR gotowy");
+        setDebug({ parsed: res.debug.parsed });
+        toast.success("Podgląd JSON gotowy");
       } else {
         toast.error("Brak danych debug w odpowiedzi");
       }
     } catch (e: any) {
-      toast.error(e?.message || "Debug OCR nie powiódł się");
+      toast.error(e?.message || "Debug nie powiódł się");
     } finally {
       setDebugBusy(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v && filledCount > 0 && !busy) { if (!window.confirm("Zamknąć okno? Wgrane screeny zostaną utracone.")) return; } onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v && text.trim().length > 20 && !busy) {
+          if (!window.confirm("Zamknąć okno? Wklejony tekst zostanie utracony.")) return;
+        }
+        onOpenChange(v);
+      }}
+    >
       <DialogContent
         className="max-w-3xl"
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         onFocusOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => { if (filledCount > 0) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (text.trim()) e.preventDefault(); }}
       >
         <DialogHeader>
-          <DialogTitle>Wgraj screeny treści KW</DialogTitle>
+          <DialogTitle>Wklej treść KW</DialogTitle>
           <DialogDescription>
-            Kliknij w pojemnik i wklej screen z EKW (Ctrl+V / Cmd+V). Możesz też przeciągnąć plik lub kliknąć „Wybierz plik”.
+            Otwórz KW w{" "}
+            <a
+              href="https://ekw.ms.gov.pl/eukw_ogol/menu.do"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary underline inline-flex items-center gap-1"
+            >
+              EKW <ExternalLink className="h-3 w-3" />
+            </a>
+            , zaznacz treść (Ctrl+A / Ctrl+C) i wklej ją poniżej. AI podzieli tekst na działy i zapisze do KW.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {SLOTS.map((s, idx) => {
-            const val = slots[idx];
-            const isActive = activeIdx === idx;
-            return (
-              <div
-                key={s.key}
-                ref={(el) => { boxRefs.current[idx] = el; }}
-                tabIndex={0}
-                onClick={() => setActiveIdx(idx)}
-                onFocus={() => setActiveIdx(idx)}
-                onPaste={handlePaste(idx)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) await setSlot(idx, f);
-                }}
-                className={cn(
-                  "relative rounded-lg border-2 border-dashed p-3 min-h-[160px] flex flex-col items-center justify-center text-center cursor-pointer transition-colors outline-none",
-                  val ? "border-emerald-500/50 bg-emerald-500/5" : "border-muted-foreground/30 hover:border-primary/50 bg-muted/20",
-                  isActive && !val && "border-primary ring-2 ring-primary/30",
-                )}
-              >
-                <div className="absolute top-2 left-2 text-xs font-medium text-muted-foreground">
-                  {idx + 1}. {s.label}
-                </div>
-                {val ? (
-                  <>
-                    <img src={val.dataUrl} alt={s.label} className="max-h-32 w-auto object-contain rounded mt-4" />
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); clearSlot(idx); }}
-                      className="absolute top-1 right-1 rounded-full bg-background border p-1 hover:bg-destructive hover:text-destructive-foreground"
-                      aria-label="Usuń"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <ClipboardPaste className="h-6 w-6 text-muted-foreground mb-1 mt-4" />
-                    <div className="text-xs text-muted-foreground">Kliknij i wklej (Ctrl+V)</div>
-                    <div className="text-[10px] text-muted-foreground/70 mt-0.5">{s.hint}</div>
-                    <label
-                      className="mt-2 text-xs underline text-primary cursor-pointer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      wybierz plik
-                      <input type="file" accept="image/*" className="hidden" onChange={onFile(idx)} />
-                    </label>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Wklej tutaj treść KW (okładka + działy I-O, I-Sp, II, III, IV)…"
+          className="min-h-[320px] font-mono text-xs"
+          autoFocus
+        />
+        <div className="text-xs text-muted-foreground">{chars.toLocaleString("pl-PL")} znaków</div>
 
         {(debugBusy || debug) && (
-          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-3 max-h-[50vh] overflow-auto">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <Bug className="h-4 w-4 text-amber-600" /> Debug OCR
-              </div>
-              {debug && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => { void navigator.clipboard.writeText(debug.transcript); toast.success("Transkrypcja skopiowana"); }}
-                >
-                  <Copy className="h-3 w-3 mr-1" /> Kopiuj transkrypcję
-                </Button>
-              )}
+          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2 max-h-[40vh] overflow-auto">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <Bug className="h-4 w-4 text-amber-600" /> Podgląd JSON
             </div>
-
             {debugBusy && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Uruchamiam OCR (transkrypcja + strukturyzacja)…
+                <Loader2 className="h-4 w-4 animate-spin" /> AI dzieli tekst na sekcje…
               </div>
             )}
-
             {debug && (
-              <>
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground mb-1">Przetworzone obrazy ({slots.filter(Boolean).length})</div>
-                  <div className="flex flex-wrap gap-2">
-                    {slots.map((s, i) => s && (
-                      <div key={i} className="border rounded p-1 bg-background">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">{SLOTS[i].label}</div>
-                        <img src={s.dataUrl} alt={SLOTS[i].label} className="max-h-32 w-auto object-contain rounded" />
-                        <div className="text-[10px] text-muted-foreground mt-0.5">{Math.round(s.dataUrl.length / 1024)} KB · {s.mimeType}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground mb-1">Surowa transkrypcja (Gemini)</div>
-                  <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-background border rounded p-2 max-h-64 overflow-auto">
-                    {debug.transcript || <span className="text-muted-foreground italic">(pusta)</span>}
-                  </pre>
-                </div>
-
-                <div className="text-[11px] text-muted-foreground italic">
-                  Strukturyzacja JSON wyłączona — zapisujemy dosłowną transkrypcję sekcji KW.
-                </div>
-
-              </>
+              <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-background border rounded p-2 max-h-72 overflow-auto">
+                {JSON.stringify(debug.parsed, null, 2)}
+              </pre>
             )}
           </div>
         )}
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <div className="text-xs text-muted-foreground mr-auto">
-            Wypełnione: <b>{filledCount}</b> / {SLOTS.length}
-          </div>
           <Button
             variant="ghost"
             onClick={() => void runDebug()}
-            disabled={busy || debugBusy || filledCount === 0}
-            title="Uruchom OCR bez zapisu — pokaż transkrypcję i JSON"
+            disabled={busy || debugBusy || chars < 20}
+            title="Uruchom parsowanie bez zapisu — pokaż JSON"
           >
             {debugBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bug className="mr-2 h-4 w-4" />}
-            Podgląd OCR
+            Podgląd JSON
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Anuluj</Button>
-          <Button onClick={() => void submit()} disabled={busy || filledCount === 0}>
+          <Button onClick={() => void submit()} disabled={busy || chars < 20}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
             Importuj treść KW
           </Button>
