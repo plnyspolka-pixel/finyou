@@ -72,10 +72,12 @@ export const listLeads = createServerFn({ method: "GET" })
     const emailsLower = Array.from(new Set(list.map((l) => (l.email ?? "").toLowerCase()).filter(Boolean))) as string[];
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
+    type Reveal = { id: string; name?: string | null; count: number; lastAt: string };
     type InboundAttachment = { name: string; mime?: string; size?: number; path?: string; at: string };
-    type Comm = { calls: number; sms: number; emails: number; messenger: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
+    type Comm = { calls: number; sms: number; emails: number; messenger: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[]; reveals?: { phone: Reveal[]; email: Reveal[]; messenger: Reveal[] } };
     const commsByLead: Record<string, Comm> = {};
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
+    const revealsByLead: Record<string, { phone: Record<string, { count: number; lastAt: string }>; email: Record<string, { count: number; lastAt: string }>; messenger: Record<string, { count: number; lastAt: string }> }> = {};
     const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, messenger: 0, notes: 0, inboundCalls: 0, inboundSms: 0, inboundMessenger: 0, inboundEmails: 0, lastInboundAt: null, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
