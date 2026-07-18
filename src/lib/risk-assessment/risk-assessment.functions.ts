@@ -350,7 +350,9 @@ function buildDataSources(a: {
   govBenchmark: InvestmentRiskAssessment["govBenchmark"];
   collateral: InvestmentRiskAssessment["collateralAnalysis"];
   master: InvestmentRiskAssessment["masterValuation"];
+  marketComparables?: InvestmentRiskAssessment["marketComparables"];
 }): DataSourceUsage[] {
+
   const sources: DataSourceUsage[] = [];
 
   // Government-first: RCN (rzeczywiste transakcje) — priorytetowe źródło rządowe.
