@@ -298,39 +298,42 @@ export function LoanCalculator({
     };
   }, [grossPrincipal, months, annualRate, maxPayment]);
 
-  // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You nie jest kosztem pożyczki
-  // po stronie klienta w ogóle — to koszt inwestora płacony operatorowi.
-  const nonInterestTotal = commissionPln;
-  // Całkowity koszt pożyczki PO STRONIE KLIENTA = odsetki + prowizja inwestora.
-  // Prowizja Finance You nie obciąża klienta (płaci ją inwestor), więc nie jest tu wliczana.
-  const totalCost = schedule.totalOds + commissionPln;
-  // Na rękę = kwota nominalna − prowizja inwestora (potrącana z góry).
-  // Z konstrukcji (nominał = onHand / (1 − prowizja%)) wartość ta jest równa onHand.
+  // MPKK obejmuje prowizję inwestora ORAZ prowizję Finance You — obie są kosztami
+  // pozaodsetkowymi po stronie klienta (art. 36a UoKK).
+  const nonInterestTotal = commissionPln + financeYouFeePln;
+  // Całkowity koszt pożyczki PO STRONIE KLIENTA = odsetki + prowizja inwestora + prowizja FY.
+  const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
+  // Na rękę = kwota nominalna − prowizja inwestora − prowizja FY (obie potrącane z góry).
+  // Z konstrukcji (nominał = onHand / (1 − prowizja_inw% − prowizja_FY%)) wartość ta jest równa onHand.
   const disbursedOnHand = Math.max(0, onHand);
 
   // Łączna kwota spłacana przez pożyczkobiorcę = raty z harmonogramu (zwrot nominału + odsetki).
-  // Prowizja inwestora jest potrącana z góry (zawarta w nominale), więc NIE dolicza się jej ponownie.
+  // Obie prowizje są potrącane z góry (zawarte w nominale), więc NIE doliczają się ponownie.
   const totalToRepay = schedule.totalRata;
 
-  // Inwestor: realny wkład gotówkowy = środki wychodzące z jego konta na starcie:
-  //  • wypłata na rękę dla klienta (nominał − prowizja inwestora potrącona z góry),
-  //  • prowizja Finance You — inwestor WYKŁADA ją na wejściu jako wynagrodzenie operatora;
-  //    NIE wraca w ratach (klient jej nie spłaca) — to bezzwrotny koszt wejścia,
-  //  • w ofercie wewnętrznej dodatkowo prowizja operatora (z własnych środków inwestora);
+  // Inwestor: realny wkład gotówkowy na starcie = środki wychodzące z jego konta:
+  //  • wypłata na rękę dla klienta (nominał − prowizja inwestora − prowizja FY, potrącone z góry),
+  //  • prowizja Finance You — inwestor przekazuje ją operatorowi (Finance You) przy uruchomieniu;
+  //    klient dostaje na nią fakturę VAT od Finance You. Klient spłaca ją w ratach (kredytowana
+  //    do kapitału), więc wraca do inwestora — jest neutralna dla zysku, ale podnosi wkład startowy,
+  //  • w ofercie wewnętrznej dodatkowo prowizja operatora pośrednika (z własnych środków inwestora);
   //    tam prowizja FY = 0.
-  const investorCashOut = Math.max(0, amount - commissionPln + operatorCommissionPln + financeYouFeePln);
+  const investorCashOut = Math.max(0, amount - commissionPln - financeYouFeePln + operatorCommissionPln + financeYouFeePln);
   // Inwestor odbiera łącznie = wszystkie raty z harmonogramu (zwrot nominału + odsetki).
+  // Prowizja FY spłacana przez klienta wraca do inwestora w ratach — dlatego nie odejmujemy jej z zysku.
   const investorTotalIn = totalToRepay;
   // Zysk = to, co wraca, minus to, co wyszło z konta:
-  // odsetki + prowizja inwestora (netto) − prowizja Finance You wyłożona na wejściu.
+  // odsetki + prowizja inwestora (netto). Prowizja FY jest przelotowa (wyłożona i zwrócona w ratach).
   const investorProfit = investorTotalIn - investorCashOut;
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
-  // Prowizja Finance You w ogóle nie występuje w przepływach klienta, więc nic tu nie korygujemy.
-  const krotnoscBasis = Math.max(0, amount - commissionPln);
+  // Prowizja FY jest kosztem klienta (kredytowana), ale klient dostaje ją w formie usługi FY —
+  // krotność liczymy klasycznie: łączna spłata ÷ kwota na rękę.
+  const krotnoscBasis = Math.max(0, disbursedOnHand);
   const krotnoscRepay = totalToRepay;
   const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
+
 
   // Proponowane zabezpieczenia: domyślnie dwukrotność sumy wszystkich należności
   // inwestora (łącznej kwoty do spłaty). Edytowalne — override ma pierwszeństwo.
