@@ -14,6 +14,8 @@ import { renderKwSections, type KwExtraction } from "@/lib/kw-render";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
+const STRUCTURE_MODEL = "openai/gpt-5.5";
+
 const MAX_FILES = 12;
 const MAX_FILE_B64 = 9_000_000; // ~6,5 MB pliku
 const MAX_TOTAL_B64 = 40_000_000;
@@ -159,7 +161,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
+        model: STRUCTURE_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: USER_PROMPT.replace("{{TRANSCRIPT}}", transcript) },
