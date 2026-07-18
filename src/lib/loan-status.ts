@@ -7,6 +7,7 @@
 export const LOAN_STATUS_ORDER = [
   "nowy_lead",
   "brak_kontaktu",
+  "brak_kwoty",
   "brak_kw",
   "brak_zdjec_dokumentow",
   "kontakt",
@@ -24,6 +25,7 @@ export type LoanStatus = (typeof LOAN_STATUS_ORDER)[number];
 export const LOAN_STATUS_SHORT_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead",
   brak_kontaktu: "Brak kontaktu",
+  brak_kwoty: "Brak kwoty pożyczki",
   brak_kw: "Brak numeru KW",
   brak_zdjec_dokumentow: "Brak zdjęć / dokumentów",
   kontakt: "Kontakt",
@@ -78,6 +80,7 @@ export function loanStatusLabel(status: string | null | undefined): string {
 export const LOAN_STATUS_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead — czekamy na pierwszy kontakt",
   brak_kontaktu: "Brak kontaktu — brakuje imienia, nazwiska, telefonu lub e-maila",
+  brak_kwoty: "Brak kwoty pożyczki — mamy dane kontaktowe, czekamy na wskazanie kwoty",
   brak_kw: "Brak numeru KW — mamy dane kontaktowe, czekamy na numer księgi wieczystej",
   brak_zdjec_dokumentow: "Brak zdjęć / dokumentów — potrzebujemy zdjęć nieruchomości lub innych dokumentów",
   kontakt: "W kontakcie — pośrednik prowadzi rozmowę",
@@ -108,6 +111,15 @@ export function describeLoanStatusForAgent(status: string): {
         status_message:
           "Twój wniosek jest u nas — pośrednik wkrótce się skontaktuje, aby omówić szczegóły.",
         client_action: "Odbierz telefon od naszego pośrednika.",
+        is_decision_available: false,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "brak_kwoty":
+      return {
+        status_label: label,
+        status_message: "Mamy Twoje dane kontaktowe. Czekamy jeszcze na wskazanie kwoty pożyczki.",
+        client_action: "Wskaż kwotę pożyczki w panelu klienta.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
