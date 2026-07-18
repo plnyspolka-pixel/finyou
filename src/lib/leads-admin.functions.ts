@@ -254,16 +254,48 @@ export const listLeads = createServerFn({ method: "GET" })
     // Liczba dokumentów per wniosek — do „kluczowych faktów" na liście (KW/media).
     const loanIds = Array.from(new Set(list.map((l) => l.loan?.id).filter(Boolean))) as string[];
     const docCountByLoan: Record<string, number> = {};
+    const loanAttsByLoan: Record<string, InboundAttachment[]> = {};
     if (loanIds.length) {
       const { data: docs } = await supabaseAdmin
         .from("documents")
-        .select("loan_application_id")
-        .in("loan_application_id", loanIds);
+        .select("loan_application_id, file_name, file_path, mime_type, file_size, created_at")
+        .in("loan_application_id", loanIds)
+        .order("created_at", { ascending: false });
       for (const d of (docs ?? []) as any[]) {
-        if (d.loan_application_id) {
-          docCountByLoan[d.loan_application_id] = (docCountByLoan[d.loan_application_id] ?? 0) + 1;
+        if (!d.loan_application_id) continue;
+        docCountByLoan[d.loan_application_id] = (docCountByLoan[d.loan_application_id] ?? 0) + 1;
+        (loanAttsByLoan[d.loan_application_id] ??= []).push({
+          name: d.file_name ?? "dokument",
+          mime: d.mime_type ?? undefined,
+          size: typeof d.file_size === "number" ? d.file_size : undefined,
+          path: d.file_path ?? undefined,
+          at: d.created_at,
+        });
+      }
+    }
+    // Zdjęcia nieruchomości z wniosku
+    for (const l of list) {
+      if (!l.loan?.id) continue;
+      const props = (l.loan.properties ?? []) as any[];
+      for (const p of props) {
+        const photos = Array.isArray(p?.photos) ? p.photos : [];
+        for (const ph of photos) {
+          const path = typeof ph === "string" ? ph : (ph?.path ?? ph?.file_path);
+          if (!path) continue;
+          (loanAttsByLoan[l.loan.id] ??= []).push({
+            name: (typeof ph === "object" && (ph.name ?? ph.file_name)) || path.split("/").pop() || "zdjęcie",
+            mime: (typeof ph === "object" && ph.mime) || undefined,
+            path,
+            at: l.loan.created_at ?? l.created_at,
+          });
         }
       }
+    }
+    for (const l of list) {
+      const s = commsByLead[l.id];
+      if (!s || !l.loan?.id) continue;
+      const arr = loanAttsByLoan[l.loan.id];
+      if (arr && arr.length) s.loanAttachments.push(...arr);
     }
 
     const enriched = list.map((l) => {
