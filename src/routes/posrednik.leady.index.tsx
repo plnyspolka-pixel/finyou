@@ -180,7 +180,13 @@ export function OperatorLeadsList() {
                     </div>
                   )}
                   {Array.isArray(r.comms.inboundAttachments) && r.comms.inboundAttachments.length > 0 && (
-                    <InboundAttachmentsThumbs attachments={r.comms.inboundAttachments} />
+                    <AttachmentsThumbs label="Załączniki z maili" attachments={r.comms.inboundAttachments} tone="violet" />
+                  )}
+                  {Array.isArray(r.comms.messengerAttachments) && r.comms.messengerAttachments.length > 0 && (
+                    <AttachmentsThumbs label="Załączniki z Messenger / IG" attachments={r.comms.messengerAttachments} tone="sky" />
+                  )}
+                  {Array.isArray(r.comms.loanAttachments) && r.comms.loanAttachments.length > 0 && (
+                    <AttachmentsThumbs label="Zdjęcia i dokumenty z wniosku" attachments={r.comms.loanAttachments} tone="emerald" />
                   )}
                   {Array.isArray(r.comms.brokerCalls) && r.comms.brokerCalls.length > 0 && (
                     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
