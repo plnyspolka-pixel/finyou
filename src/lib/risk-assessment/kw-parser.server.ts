@@ -3,6 +3,8 @@
 // Dział II = własność, Dział III = prawa/roszczenia/ograniczenia, Dział IV = hipoteki.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { parseKwAddress } from "@/lib/kw-address-core";
+import { parsePesel } from "./pesel";
 import type { KwLegalAnalysis } from "./types";
 
 function stripHtml(s: string | null | undefined): string {
@@ -88,6 +90,14 @@ export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwne
   for (const m of text.matchAll(new RegExp(`nazwisk[^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?imi[eę][^:]{0,20}:\\s*(${TOKEN})`, "giu"))) {
     push(m[2], m[1]);
   }
+  // Układ EKW bez dwukropków: "Imię pierwsze JAN … Nazwisko / pierwszy człon
+  // nazwiska złożonego SZPAK" — etykiety pisane normalnie, wartości WERSALIKAMI.
+  const CAPS = "[A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻ-]+";
+  for (const m of text.matchAll(
+    new RegExp(`[Ii]mi[eę]\\s+pierwsze\\s+(${CAPS})[\\s\\S]{0,140}?[Nn]azwisko[^A-ZĄĆĘŁŃÓŚŹŻ]{0,80}(${CAPS})`, "gu"),
+  )) {
+    push(m[1], m[2]);
+  }
   if (out.length > 0) return out.slice(0, 6);
 
   // Fallback: "Jan Kowalski" (mieszana wielkość liter → kolejność imię-nazwisko)
@@ -97,27 +107,56 @@ export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwne
   return out.slice(0, 6);
 }
 
+export type KwOwnerPesel = { pesel: string; ownerName: string | null };
+
+/**
+ * Wyciąga z działu II KW numery PESEL właścicieli (pole „PESEL" w podrubryce
+ * osoby fizycznej EKW) wraz z najbliższym poprzedzającym imieniem i nazwiskiem.
+ * Zwraca wyłącznie numery przechodzące walidację (data + suma kontrolna) —
+ * odsiewa przypadkowe ciągi 11 cyfr. UWAGA (RODO): wynik służy jedynie do
+ * wyznaczenia wieku/płci właściciela i uzupełnienia rekordu klienta — nie
+ * trafia do zapisywanego JSON-a oceny.
+ */
+export function extractKwOwnerPesels(dzial2: string | null | undefined): KwOwnerPesel[] {
+  const text = stripHtml(dzial2);
+  if (!text) return [];
+  const out: KwOwnerPesel[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/pesel[^0-9]{0,30}(\d{11})/gi)) {
+    const pesel = m[1];
+    if (seen.has(pesel) || !parsePesel(pesel).valid) continue;
+    seen.add(pesel);
+    // W EKW pola imienia/nazwiska poprzedzają pole PESEL w tej samej podrubryce.
+    const before = text.slice(Math.max(0, (m.index ?? 0) - 400), m.index ?? 0);
+    const persons = extractKwOwnerPersons(before);
+    const nearest = persons.length ? persons[persons.length - 1] : null;
+    out.push({ pesel, ownerName: nearest ? `${nearest.firstName} ${nearest.lastName}` : null });
+  }
+  return out.slice(0, 6);
+}
+
 function parseOwners(dzial2: string | null | undefined): string[] {
   const text = stripHtml(dzial2);
   if (!text) return [];
   const owners = new Set<string>();
 
-  // 1) Ekstrakcja po etykiecie „Imię: … Nazwisko: …" (typowy układ EKW).
-  const labeled = [...text.matchAll(/imi[eę][^:]*:\s*([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}-]+)[\s\S]{0,40}?nazwisk[^:]*:\s*([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}-]+)/giu)];
-  for (const m of labeled) {
-    const cand = `${m[1]} ${m[2]}`.trim();
-    if (cand.length <= 60) owners.add(cand);
+  // 0) Pary imię+nazwisko z układów etykietowanych (dwukropkowy i EKW bez dwukropków).
+  for (const p of extractKwOwnerPersons(dzial2)) {
+    owners.add(`${p.firstName} ${p.lastName}`);
   }
 
-  // 2) Osoby fizyczne: dwa–trzy człony rozpoczynające się wielką literą
-  //    (obsługuje „Jan Kowalski", „KOWALSKI JAN", „Anna Nowak-Kowalska").
-  const personRe = /\b([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)(?:\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+))?\b/gu;
+  // 1) Osoby fizyczne — heurystyka par wielkoliterowych TYLKO gdy układ
+  //    etykietowany nic nie znalazł (inaczej dokłada śmieciowe „nazwiska"
+  //    z treści wpisów i sztucznie mnoży liczbę właścicieli).
   let m: RegExpExecArray | null;
-  while ((m = personRe.exec(text)) !== null) {
-    const tokens = [m[1], m[2], m[3]].filter(Boolean) as string[];
-    if (tokens.some((t) => NAME_STOPWORDS.has(norm(t)))) continue;
-    const candidate = tokens.join(" ").trim();
-    if (candidate.length >= 5 && candidate.length <= 60) owners.add(candidate);
+  if (owners.size === 0) {
+    const personRe = /\b([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+)?)(?:\s+([A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]+))?\b/gu;
+    while ((m = personRe.exec(text)) !== null) {
+      const tokens = [m[1], m[2], m[3]].filter(Boolean) as string[];
+      if (tokens.some((t) => NAME_STOPWORDS.has(norm(t)))) continue;
+      const candidate = tokens.join(" ").trim();
+      if (candidate.length >= 5 && candidate.length <= 60) owners.add(candidate);
+    }
   }
 
   // 3) Osoby prawne / instytucje.
@@ -188,13 +227,79 @@ function parseSoilClass(dzial1o: string | null | undefined): string | null {
   return `${m[1]} ${m[2]}${m[3] ?? ""}`.replace(/\s+/g, " ").trim();
 }
 
-function parseMortgages(dzial4: string | null | undefined): KwLegalAnalysis["mortgages"] {
+// Wpisy hipoteczne w EKW rozpoznajemy po polach rubryki 4.4 („Rodzaj hipoteki",
+// „Numer hipoteki", „Wierzyciel hipoteczny") albo po nazwie rodzaju hipoteki.
+const MORTGAGE_ENTRY_RE =
+  /rodzaj\s+hipoteki|numer\s+hipoteki|wierzyciel\s+hipoteczn|hipotek[aię]\w*\s+(?:umown|przymusow|kaucyjn|[łl][aą]czn|morsk)/i;
+
+// Kwota hipoteki: pole „Suma (kwota)" — bez „Suma słownie"; waluta bywa w osobnym
+// polu „Waluta sumy", więc nie wymagamy jednostki tuż za liczbą.
+function extractMortgageAmount(block: string): { amount: number | null; currency: string | null } {
+  const direct = extractAmountPln(block);
+  const sumaM = block.match(/suma(?!\s*s[łl]ownie)(?:\s*\([^)]*\))?[^0-9]{0,30}(\d[\d\s.]*(?:,\d{1,2})?)/i);
+  if (sumaM) {
+    const raw = sumaM[1].trim().replace(/\s/g, "").replace(/\.(?=\d{3})/g, "").replace(",", ".");
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) {
+      const walutaM = block.match(/waluta(?:\s+sumy)?[^a-ząćęłńóśźż0-9]{0,10}(z[łl]|pln|eur|chf|usd)/i);
+      const cur = (walutaM?.[1] ?? direct.currency ?? "zł").toLowerCase();
+      return { amount: Math.round(n), currency: /z[łl]|pln/.test(cur) ? "PLN" : cur.toUpperCase() };
+    }
+  }
+  return direct;
+}
+
+function extractMortgageCreditor(block: string): string | null {
+  // „na rzecz X" / „wierzyciel: X" (starsze układy).
+  const inline = block.match(/(?:na rzecz|wierzyciel[a-z]*:)\s+([^.,;]{3,60})/i);
+  if (inline) return inline[1].trim();
+  // Układ EKW: sekcja „Wierzyciel hipoteczny" → osoba prawna z polem „Nazwa" albo instytucja.
+  const wIdx = block.search(/wierzyciel/i);
+  if (wIdx >= 0) {
+    const rest = block.slice(wIdx);
+    const nazwaM = rest.match(/nazwa(?:\s*\([^)]*\))?\s+([A-ZĄĆĘŁŃÓŚŹŻ][^;]{2,80}?)(?=\s+(?:siedziba|regon|kraj|lp\b|numer|tre[śs][ćc]|$))/i);
+    if (nazwaM) return nazwaM[1].trim();
+    const orgM = rest.match(/((?:bank|sp[óo][łl]dzielcz\w+|kasa|fundusz|towarzystwo|sp[óo][łl]ka|s\.a\.|sp\.\s*z\s*o\.o\.|skarb pa[ńn]stwa)[^.,;]{0,60})/i);
+    if (orgM) return orgM[1].trim();
+    const persons = extractKwOwnerPersons(rest.slice(0, 400));
+    if (persons.length) return `${persons[0].firstName} ${persons[0].lastName}`;
+  }
+  return null;
+}
+
+export function parseMortgages(dzial4: string | null | undefined): KwLegalAnalysis["mortgages"] {
   const text = stripHtml(dzial4);
-  if (!text || /brak wpis/i.test(text)) return [];
-  const entries = splitEntries(text).filter((e) => /hipotek|wierzyteln|zabezpiecz|kwota/i.test(e));
+  if (!text) return [];
+
+  const hasEntryMarkers = MORTGAGE_ENTRY_RE.test(text);
+  // „brak wpisu" kończy analizę TYLKO, gdy dział naprawdę nie zawiera wpisu
+  // hipoteki — fraza pojawia się też w podpolach (np. wzmianki) działu
+  // z wpisaną hipoteką i wcześniej powodowała jej pominięcie.
+  if (!hasEntryMarkers && /brak wpis/i.test(text)) return [];
+
   const out: KwLegalAnalysis["mortgages"] = [];
+  if (hasEntryMarkers) {
+    // Rozbij na bloki per hipoteka — każdy wpis EKW zaczyna się polem „Numer
+    // hipoteki (roszczenia) N" (fallback: „Rodzaj hipoteki").
+    const splitter = /numer\s+hipoteki/i.test(text) ? /(?=[Nn]umer\s+hipoteki)/ : /(?=[Rr]odzaj\s+hipoteki)/;
+    let blocks = text.split(splitter).filter((b) => MORTGAGE_ENTRY_RE.test(b));
+    if (blocks.length === 0) blocks = [text];
+    for (const b of blocks.slice(0, 10)) {
+      const { amount, currency } = extractMortgageAmount(b);
+      out.push({
+        text: b.trim().slice(0, 240),
+        amount,
+        currency,
+        creditor: extractMortgageCreditor(b),
+      });
+    }
+    return out;
+  }
+
+  // Starsze/nietypowe układy: heurystyka fragmentów z frazami hipotecznymi.
+  const entries = splitEntries(text).filter((e) => /hipotek|wierzyteln|zabezpiecz|kwota/i.test(e));
   for (const e of entries.slice(0, 10)) {
-    const { amount, currency } = extractAmountPln(e);
+    const { amount, currency } = extractMortgageAmount(e);
     const creditorM = e.match(/(?:na rzecz|wierzyciel[a-z]*:?)\s+([^.,;]{3,60})/i);
     out.push({
       text: e.slice(0, 240),
@@ -231,6 +336,7 @@ export async function analyzeKwLegal(args: {
   const empty: KwLegalAnalysis = {
     available: false,
     kwNumber: args.kwNumber ?? null,
+    address: null,
     owners: [],
     encumbrances: [],
     mortgages: [],
@@ -244,6 +350,11 @@ export async function analyzeKwLegal(args: {
     warnings: [],
     summary: "Brak pobranej treści KW — stan prawny wymaga weryfikacji.",
   };
+  if (args.hasMortgageFlag) {
+    // Deklaracja z wniosku musi być widoczna nawet bez treści KW.
+    empty.warnings.push("We wniosku zadeklarowano hipotekę — treść działu IV KW niedostępna, obciążenie wymaga weryfikacji.");
+    empty.legalRiskScore = 45;
+  }
 
   const kw = (args.kwNumber ?? "").replace(/\s|\//g, "").toUpperCase();
   if (!kw) return empty;
@@ -257,6 +368,7 @@ export async function analyzeKwLegal(args: {
   if (!row || row.status !== "ready") return empty;
 
   const owners = parseOwners(row.dzial_2);
+  const address = parseKwAddress(row.dzial_1o);
   const { encumbrances, hasEnforcement, hasUsufruct } = parseEncumbrances(row.dzial_3);
   const mortgages = parseMortgages(row.dzial_4);
   const { kondygnacja, floorsInBuilding } = parseFloorInfo(row.dzial_1o);
@@ -266,9 +378,14 @@ export async function analyzeKwLegal(args: {
     return (acc ?? 0) + m.amount;
   }, null);
 
+  // Zadeklarowano hipotekę, a dział IV pusty/nieodczytany → ostrożnościowo
+  // traktujemy nieruchomość jako obciążoną (dane wniosku vs. parser).
+  const dzial4Text = stripHtml(row.dzial_4);
+  const declaredMortgageUnconfirmed = !!args.hasMortgageFlag && mortgages.length === 0;
+
   const hasCoOwners = args.hasCoOwners ?? owners.length > 1;
   const legalRiskScore = computeLegalRiskScore({
-    hasMortgages: mortgages.length > 0,
+    hasMortgages: mortgages.length > 0 || declaredMortgageUnconfirmed,
     totalMortgage,
     hasEnforcement,
     hasUsufruct,
@@ -281,6 +398,12 @@ export async function analyzeKwLegal(args: {
     warnings.push(
       `Nieruchomość obciążona hipoteką${totalMortgage ? ` na ok. ${totalMortgage.toLocaleString("pl-PL")} PLN` : ""} (dział IV KW).`,
     );
+  if (declaredMortgageUnconfirmed)
+    warnings.push(
+      dzial4Text
+        ? "We wniosku zadeklarowano hipotekę, ale nie rozpoznano wpisów w dziale IV KW — zweryfikuj treść działu IV ręcznie."
+        : "We wniosku zadeklarowano hipotekę, a dział IV KW jest pusty/nieodczytany — obciążenie przyjęto ostrożnościowo.",
+    );
   if (hasEnforcement) warnings.push("W dziale III KW występują wpisy o egzekucji/zajęciu — bardzo wysokie ryzyko prawne.");
   if (hasUsufruct) warnings.push("W dziale III KW występuje służebność/dożywocie — ograniczenie zbywalności/wartości.");
   if (owners.length > 1) warnings.push(`Wielu właścicieli w dziale II KW (${owners.length}) — wymagana zgoda współwłaścicieli.`);
@@ -288,11 +411,13 @@ export async function analyzeKwLegal(args: {
   const summary =
     `Dział II: ${owners.length ? owners.length + " podmiotów (" + owners.slice(0, 3).join(", ") + (owners.length > 3 ? "…" : "") + ")" : "brak rozpoznanych właścicieli"}. ` +
     `Dział III: ${encumbrances.length ? encumbrances.length + " wpisów" : "brak istotnych wpisów"}${hasEnforcement ? " (w tym egzekucja)" : ""}. ` +
-    `Dział IV: ${mortgages.length ? mortgages.length + " hipotek" + (totalMortgage ? ", łącznie ~" + totalMortgage.toLocaleString("pl-PL") + " PLN" : "") : "brak hipotek"}.`;
+    `Dział IV: ${mortgages.length ? mortgages.length + " hipotek" + (totalMortgage ? ", łącznie ~" + totalMortgage.toLocaleString("pl-PL") + " PLN" : "") : "brak hipotek"}.` +
+    (address.fullAddress ? ` Adres (dz. I-O): ${address.fullAddress}.` : "");
 
   return {
     available: true,
     kwNumber: kw,
+    address,
     owners,
     encumbrances,
     mortgages,

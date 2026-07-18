@@ -2,6 +2,7 @@
 // Bezpieczne do importu po stronie klienta i serwera (brak zależności serwerowych).
 
 import type { SourceStatus, DataSourceUsage, PropertyAnalysisResult } from "@/lib/property-analysis/types";
+import type { KwAddress } from "@/lib/kw-address-core";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
@@ -33,6 +34,8 @@ export interface OwnerProfile {
 export interface KwLegalAnalysis {
   available: boolean;
   kwNumber: string | null;
+  /** Adres nieruchomości odczytany z działu I-O KW (fallback, gdy brak w danych wniosku). */
+  address: KwAddress | null;
   owners: string[];
   /** Dział III — prawa, roszczenia, ograniczenia. */
   encumbrances: string[];

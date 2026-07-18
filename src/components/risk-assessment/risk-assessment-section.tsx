@@ -466,6 +466,12 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
               {result.kwLegal.available ? (
                 <>
                   <p>{result.kwLegal.summary}</p>
+                  {result.kwLegal.address?.fullAddress && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPinned className="h-4 w-4 text-muted-foreground" />
+                      <span><span className="text-muted-foreground">Adres z KW (dz. I-O):</span> <b>{result.kwLegal.address.fullAddress}</b></span>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {result.kwLegal.hasEnforcement && <Badge variant="destructive">Egzekucja / zajęcie</Badge>}
                     {result.kwLegal.hasUsufruct && <Badge variant="secondary">Służebność / dożywocie</Badge>}
