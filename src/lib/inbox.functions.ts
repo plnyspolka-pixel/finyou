@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 /** Wysyła maila ze skrzynki (nowy lub odpowiedź). Dostępne dla admin / operator. */
 export const sendInboxEmail = createServerFn({ method: "POST" })
@@ -137,7 +138,7 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
 
 
 
-/** Zwraca tymczasowy podpisany URL do pliku w buckecie `documents`. Dostępne dla admin / operator. */
+/** Zwraca tymczasowy podpisany URL do pliku w buckecie `pliki-klienta`. Dostępne dla admin / operator. */
 export const getCommAttachmentUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { path: string }) => input)
@@ -148,17 +149,12 @@ export const getCommAttachmentUrl = createServerFn({ method: "POST" })
     ]);
     if (!isAdmin && !isOperator) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Załączniki inbound leżą w "documents", outbound (z kreatora wiadomości)
-    // w zunifikowanym buckecie "property-photos" — próbujemy po kolei.
-    let lastError: unknown = null;
-    for (const bucket of ["documents", "property-photos"]) {
-      const { data: signed, error } = await supabaseAdmin.storage
-        .from(bucket)
-        .createSignedUrl(data.path, 3600);
-      if (!error && signed?.signedUrl) return { url: signed.signedUrl };
-      lastError = error;
-    }
-    throw lastError ?? new Error("Nie znaleziono pliku");
+    // Wszystkie załączniki (inbound i outbound) leżą w buckecie "pliki-klienta".
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from(CLIENT_FILES_BUCKET)
+      .createSignedUrl(data.path, 3600);
+    if (error) throw error;
+    return { url: signed.signedUrl };
   });
 
 /**

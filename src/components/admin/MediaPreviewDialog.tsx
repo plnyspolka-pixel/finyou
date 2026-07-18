@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,15 +26,10 @@ type MediaItem = {
   docType?: string | null;
 };
 
-async function signOne(bucket: string, path: string): Promise<string | null> {
-  const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60);
-  return data?.signedUrl ?? null;
-}
-
-// Dokumenty z landingu trafiają do bucketu "property-photos" (zdjęcia + skany dokumentów),
-// a te z dashboardu klienta — do "documents". Próbujemy oba, żeby podgląd zawsze działał.
+// Wszystkie pliki klienta leżą w jednym buckecie "pliki-klienta".
 async function signDocument(path: string): Promise<string | null> {
-  return (await signOne("documents", path)) ?? (await signOne("property-photos", path));
+  const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(path, 60 * 60);
+  return data?.signedUrl ?? null;
 }
 
 function inferKind(name: string): Kind {
@@ -67,10 +63,10 @@ export function MediaPreviewDialog({
       setLoading(true);
       const all: MediaItem[] = [];
 
-      // Photos (property-photos bucket)
+      // Zdjęcia z properties.photos
       if (photoPaths.length > 0) {
         const { data } = await supabase.storage
-          .from("property-photos")
+          .from(CLIENT_FILES_BUCKET)
           .createSignedUrls(photoPaths, 60 * 60);
         (data ?? []).forEach((d, i) => {
           if (d.signedUrl) {
@@ -117,20 +113,14 @@ export function MediaPreviewDialog({
     return () => { cancelled = true; };
   }, [open, loanApplicationId, photoPaths.join("|")]);
 
-  const photoCount = items.filter((i) => i.source === "photo").length;
-  const docCount = items.filter((i) => i.source === "document").length;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[95vw] max-h-[92vh] overflow-hidden p-0 flex flex-col">
         <DialogHeader className="px-4 py-3 border-b">
           <DialogTitle className="flex items-center gap-3 text-base">
-            <span>{title ?? "Podgląd dokumentów i zdjęć"}</span>
+            <span>{title ?? CLIENT_FILES_LABEL}</span>
             <Badge variant="secondary" className="font-normal">
-              <ImageIcon className="h-3 w-3 mr-1" /> {photoCount}
-            </Badge>
-            <Badge variant="secondary" className="font-normal">
-              <FileText className="h-3 w-3 mr-1" /> {docCount}
+              <ImageIcon className="h-3 w-3 mr-1" /> {items.length}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -173,12 +163,6 @@ export function MediaPreviewDialog({
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
                         <div className="text-[9px] text-white truncate">{it.name}</div>
                       </div>
-                      <Badge
-                        variant={it.source === "photo" ? "default" : "secondary"}
-                        className="absolute top-1 left-1 text-[8px] px-1 py-0 h-4"
-                      >
-                        {it.source === "photo" ? "foto" : "dok"}
-                      </Badge>
                     </button>
                   );
                 })}

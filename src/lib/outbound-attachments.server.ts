@@ -3,6 +3,7 @@
 // normalny załącznik maila (a nie link w treści).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { OutboundAttachmentRef } from "./email-attachments.types";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 export type ResolvedAttachment = {
   filename: string;
@@ -14,9 +15,9 @@ export type ResolvedAttachment = {
 // Resend limituje cały mail do ~40 MB — zostawiamy margines na treść i narzut base64.
 export const MAX_ATTACHMENTS_TOTAL_BYTES = 30 * 1024 * 1024;
 
-// `documents.file_url` / `properties.photos` bywają kluczami w różnych bucketach
-// (zależnie od tego, którym uploaderem plik trafił do systemu).
-const CANDIDATE_BUCKETS = ["property-photos", "documents", "marketing-materials"];
+// Wszystkie pliki klienta leżą w jednym buckecie `pliki-klienta`;
+// materiały marketingowe mają nadal własny bucket.
+const CANDIDATE_BUCKETS = [CLIENT_FILES_BUCKET, "marketing-materials"];
 
 const isHttpUrl = (s: string) => /^https?:\/\//i.test(s);
 

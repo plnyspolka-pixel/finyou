@@ -4,6 +4,7 @@ import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-quer
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { InvestorProposalCalculator } from "@/components/client/InvestorProposalCalculator";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -190,7 +191,7 @@ function KlientDashboard() {
       if (photoPaths.length === 0) { setThumbs([]); return; }
       const slice = photoPaths.slice(0, 6);
       const { data } = await supabase.storage
-        .from("property-photos")
+        .from(CLIENT_FILES_BUCKET)
         .createSignedUrls(slice, 60 * 60);
       if (!cancelled && data) {
         setThumbs(data.map((d, i) => ({ url: d.signedUrl ?? "", path: slice[i] })).filter(t => t.url));
@@ -595,8 +596,7 @@ function KlientDashboard() {
 
                     <div className="flex items-center justify-between gap-3 pt-1">
                       <div className="flex gap-3 text-[11px] text-white/75">
-                        <span className="inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {photoPaths.length} zdjęć</span>
-                        <span className="inline-flex items-center gap-1"><FileText className="h-3 w-3" /> {docCount} dokumentów</span>
+                        <span className="inline-flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {totalFiles} plików</span>
                       </div>
                       <Button
                         size="sm"
