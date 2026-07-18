@@ -88,7 +88,7 @@ export const listLeads = createServerFn({ method: "GET" })
       (leadsByEmailLower[k] ??= []).push(l);
     }
 
-    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments";
+    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments, metadata";
     // Liczniki kontaktu czytamy SERVICE-ROLEM (endpoint jest już za assertAdmin) —
     // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
     // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
