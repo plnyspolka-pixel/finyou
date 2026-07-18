@@ -382,6 +382,22 @@ function buildDataSources(a: {
     note: gb.fallbackUsed ? `dane zastępcze: ${gb.unitLevel ?? ""}` : undefined,
   });
 
+  const mc = a.marketComparables;
+  sources.push({
+    source: "Rynek porównawczy — deweloperuch.pl (transakcje) + otodom.pl (oferty działek)",
+    used: !!mc && (mc.status === "success" || mc.status === "partial"),
+    purpose: "twarde zł/m² z rynku: rzeczywiste transakcje domów/mieszkań przy ulicy oraz aktywne oferty działek",
+    dataLevel: mc
+      ? [mc.pricePerM2Median != null ? `mediana ${mc.pricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
+         `${mc.transactionsCount} transakcji`, `${mc.offersCount} ofert`,
+         mc.street ? `rejon: ${mc.street}` : mc.city ? mc.city : null].filter(Boolean).join(", ")
+      : "—",
+    period: "aktualne / ostatnie 12–24 mies.",
+    status: mc?.status === "success" ? "success" : mc?.status === "partial" ? "partial" : mc?.status === "error" ? "error" : "no_data",
+    note: mc && mc.status !== "success" ? mc.message : undefined,
+  });
+
+
   sources.push({
     source: "Skany dokumentów (OCR — Gemini)",
     used: a.ocr.documentsProcessed > 0 && a.ocr.status !== "no_data",
