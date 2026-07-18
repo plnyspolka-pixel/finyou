@@ -59,10 +59,18 @@ const ImageSchema = z.object({
 });
 
 function tryParseJson(s: string): KwExtraction | null {
-  const m = s.match(/\{[\s\S]*\}/);
-  if (!m) return null;
+  if (!s) return null;
+  // Strip ```json fences if present.
+  let text = s.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   try {
-    return JSON.parse(m[0]) as KwExtraction;
+    return JSON.parse(text) as KwExtraction;
+  } catch {}
+  // Fallback: grab widest {...} block.
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first === -1 || last <= first) return null;
+  try {
+    return JSON.parse(text.slice(first, last + 1)) as KwExtraction;
   } catch {
     return null;
   }
