@@ -3,73 +3,33 @@ import { createServerFn } from "@tanstack/react-start";
 export type PublicLead = {
   id: string;
   created_at: string;
-  initials: string;
-  city: string | null;
+  property_type: string;
   loan_amount: number | null;
-  source_label: string;
-};
-
-const anonInitials = (first?: string | null, last?: string | null): string => {
-  const a = (first ?? "").trim();
-  const b = (last ?? "").trim();
-  const fi = a ? a[0].toUpperCase() : "";
-  const li = b ? b[0].toUpperCase() : "";
-  const s = `${fi}${li}`.trim();
-  return s || "•••";
-};
-
-const sourceLabel = (src?: string | null): string => {
-  const s = (src ?? "").toLowerCase();
-  if (s.includes("meta") || s.includes("facebook") || s.includes("fb") || s.includes("instagram") || s.includes("ig"))
-    return "Kampania Meta";
-  if (s.includes("google") || s.includes("ads")) return "Google Ads";
-  if (s.includes("landing") || s.includes("strona") || s.includes("web")) return "Strona www";
-  if (s.includes("phone") || s.includes("call") || s.includes("voice")) return "Telefon";
-  if (s.includes("messenger")) return "Messenger";
-  return "Wniosek online";
 };
 
 export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Ostatnie okazje inwestycyjne: wnioski z ustawionym typem nieruchomości.
   const { data, error } = await supabaseAdmin
-    .from("leads")
-    .select("id, created_at, first_name, last_name, source, application_data, loan_application_id")
+    .from("loan_applications")
+    .select("id, created_at, loan_amount, properties(property_type)")
     .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(60);
   if (error) throw new Error(error.message);
 
-  const appIds = (data ?? [])
-    .map((r: any) => r.loan_application_id)
-    .filter((x: string | null): x is string => !!x);
-
-  const amountByApp = new Map<string, number>();
-  if (appIds.length > 0) {
-    const { data: apps } = await supabaseAdmin
-      .from("loan_applications")
-      .select("id, loan_amount")
-      .in("id", appIds);
-    for (const a of apps ?? []) {
-      if (a && a.loan_amount != null) amountByApp.set(a.id, Number(a.loan_amount));
-    }
-  }
-
-  const rows: PublicLead[] = (data ?? []).map((r: any) => {
-    const app = r.application_data ?? {};
-    const city =
-      app.property_city ||
-      app.city ||
-      null;
-    const amount =
-      (r.loan_application_id && amountByApp.get(r.loan_application_id)) ??
-      (app.loan_amount != null ? Number(app.loan_amount) : null);
-    return {
+  const rows: PublicLead[] = [];
+  for (const r of (data ?? []) as any[]) {
+    const props = Array.isArray(r.properties) ? r.properties[0] : r.properties;
+    const pt = props?.property_type;
+    if (!pt) continue;
+    const amt = r.loan_amount != null ? Number(r.loan_amount) : null;
+    rows.push({
       id: r.id,
       created_at: r.created_at,
-      initials: anonInitials(r.first_name, r.last_name),
-      city: city ? String(city) : null,
-      loan_amount: amount != null && !Number.isNaN(amount) ? amount : null,
-      source_label: sourceLabel(r.source),
-    };
-  });
+      property_type: String(pt),
+      loan_amount: amt != null && !Number.isNaN(amt) ? amt : null,
+    });
+    if (rows.length >= 30) break;
+  }
   return rows;
 });
