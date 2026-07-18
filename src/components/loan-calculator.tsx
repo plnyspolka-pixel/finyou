@@ -669,7 +669,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o prowizję inwestora; odsetki liczone są od kwoty nominalnej. Prowizja Finance You nie powiększa kapitału — inwestor płaci ją osobno na wejściu." />}</Label>
+              <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Zawiera prowizję inwestora ORAZ prowizję Finance You — obie potrącane z góry. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o obie prowizje; odsetki liczone są od całej kwoty nominalnej. Klient dostaje fakturę VAT od Finance You za prowizję FY." />}</Label>
               <NumberField value={Math.round(amount)} onCommit={(n) => setAmount(n || 0)} className="w-40" />
             </div>
             <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
