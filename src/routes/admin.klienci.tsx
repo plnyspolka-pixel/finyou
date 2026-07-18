@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink, Paperclip, FileText } from "lucide-react";
 import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadStatusLabels, formatDateTime } from "@/lib/labels";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
