@@ -524,10 +524,10 @@ function PropertyDocsCard({ userId, kind, title, icon, description }: {
       .eq("client_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (!la) return;
     setLoanId(la.id);
+    // "Pliki klienta" = wszystkie pliki wniosku, bez podziału na kategorie.
     const { data: ds } = await supabase.from("documents")
       .select("id, file_name, file_path, uploaded_at")
       .eq("loan_application_id", la.id)
-      .eq("document_type", kind)
       .order("uploaded_at", { ascending: false });
     setDocs((ds as any) ?? []);
   })(); }, [userId, kind, refresh]);
