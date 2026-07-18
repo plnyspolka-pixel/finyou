@@ -172,24 +172,29 @@ function InwestorWniosek() {
         </Card>
       )}
 
-      {p && (
+      {(totalFiles > 0) && (
         <Card>
-          <CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><FolderOpen className="h-5 w-5" />{CLIENT_FILES_LABEL} <span className="text-xs font-normal text-muted-foreground">({totalFiles})</span></CardTitle>
+            <CardDescription>Zdjęcia nieruchomości, skany dokumentów i wszystkie inne załączniki wgrane przez klienta — w jednym miejscu.</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4">
-            {(() => {
-              const loc = [p.city, p.voivodeship].filter(Boolean).join(", ");
-              return (
-                <div className="text-sm grid gap-1 md:grid-cols-2">
-                  <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
-                  {loc && <div><span className="text-muted-foreground">Lokalizacja:</span> {loc}</div>}
-                  {p.area_sqm && <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm} m²</div>}
-                  {p.estimated_value && <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>}
-                  {p.land_register_number && (
-                    <div className="md:col-span-2"><span className="text-muted-foreground">Numer KW:</span> <span className="font-mono font-medium">{p.land_register_number}</span></div>
-                  )}
-                </div>
-              );
-            })()}
+            {(imageDocs.length > 0 || photoUrls.length > 0) && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {imageDocs.map(renderDocCard)}
+                {photoUrls.map((src, i) => (
+                  <a key={`ph-${i}`} href={src} target="_blank" rel="noreferrer" className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
+                    <div className="aspect-[4/3] bg-muted overflow-hidden">
+                      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+            {otherDocs.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{otherDocs.map(renderDocCard)}</div>
+            )}
           </CardContent>
         </Card>
       )}
