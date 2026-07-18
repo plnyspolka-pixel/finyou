@@ -232,5 +232,7 @@ export function KwContentSection({
         )}
       </CardContent>
     </Card>
+    {pasteDialog}
+    </>
   );
 }
