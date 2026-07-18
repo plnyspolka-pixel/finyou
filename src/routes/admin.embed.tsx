@@ -267,25 +267,33 @@ function LeadsInlinePreview() {
           {data.map((l) => {
             const labels: Record<string, string> = {
               apartment: "Mieszkanie",
+              mieszkanie: "Mieszkanie",
               house: "Dom",
+              dom: "Dom",
               plot_building: "Działka",
-              commercial: "Lokal",
+              dzialka: "Działka",
+              commercial: "Lokal usługowy",
+              lokal_uslugowy: "Lokal usługowy",
+              inna: "Inna",
+            };
+            const emojis: Record<string, string> = {
+              apartment: "🏢", mieszkanie: "🏢",
+              house: "🏠", dom: "🏠",
+              plot_building: "🌳", dzialka: "🌳",
+              commercial: "🏬", lokal_uslugowy: "🏬",
+              inna: "🏗️",
             };
             return (
               <li key={l.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sky-100 ring-1 ring-white/10 text-xs font-semibold">
-                  {(labels[l.property_type] ?? "?").slice(0, 2)}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/30 via-indigo-500/20 to-emerald-400/20 ring-1 ring-white/15 shadow-[0_6px_20px_-6px_rgba(56,189,248,0.5)] text-2xl leading-none">
+                  <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]">{emojis[l.property_type] ?? "🏗️"}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm text-slate-200">{labels[l.property_type] ?? l.property_type}</div>
                   <div className="mt-0.5 text-xs text-slate-400 tabular-nums">{formatRelative(l.created_at)}</div>
                 </div>
                 <div className="shrink-0 text-right">
-                  {l.loan_amount != null ? (
-                    <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(l.loan_amount)}</div>
-                  ) : (
-                    <div className="text-[11px] uppercase tracking-wider text-slate-500">—</div>
-                  )}
+                  <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(l.loan_amount ?? 0)}</div>
                 </div>
               </li>
             );
