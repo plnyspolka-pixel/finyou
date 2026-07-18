@@ -7,9 +7,10 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle, ShieldAlert,
-  Scale, UserRound, MessagesSquare, FileScan, Landmark, Sparkles, HeartPulse,
+  Scale, UserRound, MessagesSquare, Sparkles, HeartPulse,
   TrendingUp, Gavel, Users, MapPinned, Building2,
 } from "lucide-react";
+
 import { toast } from "sonner";
 import {
   runInvestmentRiskAssessment,
