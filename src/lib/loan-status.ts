@@ -115,6 +115,15 @@ export function describeLoanStatusForAgent(status: string): {
         is_completed: false,
         is_rejected: false,
       };
+    case "brak_kwoty":
+      return {
+        status_label: label,
+        status_message: "Mamy Twoje dane kontaktowe. Czekamy jeszcze na wskazanie kwoty pożyczki.",
+        client_action: "Wskaż kwotę pożyczki w panelu klienta.",
+        is_decision_available: false,
+        is_completed: false,
+        is_rejected: false,
+      };
     case "brak_kw":
       return {
         status_label: label,
