@@ -160,6 +160,16 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provider: "Perplexity (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
     envKey: "PERPLEXITY_API_KEY",
   },
+  {
+    key: "market_comparables_scrape",
+    name: "Rynek porównawczy — deweloperuch.pl + otodom.pl (scraping)",
+    category: "rynek_nieruchomosci",
+    governmental: false,
+    purpose: "twarde zł/m² z rynku: transakcje domów/mieszkań przy ulicy (deweloperuch) i aktywne oferty działek (otodom)",
+    provides: "mediana/średnia zł/m², liczba transakcji, aktywne oferty w okolicy",
+    provider: "Firecrawl v2 (deweloperuch.pl, otodom.pl)",
+    envKey: "FIRECRAWL_API_KEY",
+  },
   // 8. Rynek nieruchomości + wycena nadrzędna
   {
     key: "perplexity",
