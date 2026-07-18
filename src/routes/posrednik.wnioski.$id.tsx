@@ -325,7 +325,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
             <div className="space-y-3 text-sm">
               <EditableField label="Imię" value={row.client.first_name ?? ""} table="clients" rowId={row.client.id} column="first_name" onSaved={() => void load(true)} />
               <EditableField label="Nazwisko" value={row.client.last_name ?? ""} table="clients" rowId={row.client.id} column="last_name" onSaved={() => void load(true)} />
-              <EditableField label="Miasto" value={row.client.city ?? ""} table="clients" rowId={row.client.id} column="city" onSaved={() => void load(true)} />
+
               <EditableField label="Telefon" value={row.client.phone ?? ""} table="clients" rowId={row.client.id} column="phone" type="tel" onSaved={() => void load(true)} />
               <EditableField label="E-mail" value={row.client.email ?? ""} table="clients" rowId={row.client.id} column="email" type="email" onSaved={() => void load(true)} />
             </div>
