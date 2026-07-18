@@ -517,6 +517,78 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
   );
 }
 
+function EditableStatCard({
+  icon, label, value, display, type, options, table, rowId, column, onSaved, accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number | null;
+  display: (v: string | number | null) => string;
+  type: "number" | "text" | "select";
+  options?: { value: string; label: string }[];
+  table: string;
+  rowId: string;
+  column: string;
+  onSaved?: () => void;
+  accent?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(value == null ? "" : String(value));
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    let payload: unknown = draft;
+    if (type === "number") payload = draft === "" ? null : Number(draft);
+    else if (draft === "") payload = null;
+    const { error } = await supabase.from(table as any).update({ [column]: payload } as any).eq("id", rowId);
+    setSaving(false);
+    if (error) { toast.error("Błąd zapisu", { description: error.message }); return; }
+    toast.success("Zapisano");
+    setEditing(false);
+    onSaved?.();
+  };
+
+  return (
+    <Card
+      className={`group cursor-pointer transition ${accent ? "border-primary/40 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" : "border-primary/10"} hover:border-primary/60`}
+      onClick={() => { if (!editing) { setDraft(value == null ? "" : String(value)); setEditing(true); } }}
+    >
+      <CardContent className="flex items-center gap-3 py-4">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent ? "bg-primary text-primary-foreground shadow-md" : "bg-primary/10 text-primary"}`}>{icon}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+          {editing ? (
+            <div className="mt-1 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {type === "select" && options ? (
+                <Select value={draft} onValueChange={(v) => { setDraft(v); }}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <input
+                  autoFocus
+                  type={type === "number" ? "number" : "text"}
+                  className="h-8 w-full rounded border bg-background px-2 text-sm"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(false); }}
+                />
+              )}
+              <Button size="sm" className="h-8" disabled={saving} onClick={() => void save()}>OK</Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditing(false)}>×</Button>
+            </div>
+          ) : (
+            <div className="truncate text-base font-bold">{display(value)}</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function InfoRow({ icon, label, value, mono }: { icon?: React.ReactNode; label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3">
