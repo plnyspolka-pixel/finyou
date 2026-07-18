@@ -13,6 +13,7 @@ import { ShieldCheck, ShieldAlert, RefreshCw } from "lucide-react";
 import { runAmlScreening, getLatestAmlScreening } from "@/lib/aml-screening.functions";
 import {
   amlOverallStatusLabels,
+  keySanctionListLabels,
   screenedPersonSourceLabels,
   type AmlScreeningReport,
   type AmlStage,
@@ -66,6 +67,10 @@ function PersonRow({ p }: { p: PersonScreeningResult }) {
   if (p.candidates.some((c) => c.isSanctioned)) flags.push("Sankcje");
   if (p.candidates.some((c) => c.isPep)) flags.push("PEP");
   if (p.candidates.some((c) => c.isRca)) flags.push("Powiązanie z PEP");
+  // Kluczowe listy sankcyjne (UE / ONZ-GIIF / MSWiA / MF), na których figurują kandydaci.
+  const keyLists = Array.from(new Set(p.candidates.flatMap((c) => c.datasets)))
+    .filter((d) => keySanctionListLabels[d])
+    .map((d) => keySanctionListLabels[d]);
   return (
     <TableRow>
       <TableCell className="font-medium">
@@ -86,6 +91,13 @@ function PersonRow({ p }: { p: PersonScreeningResult }) {
           <div className="flex flex-wrap gap-1 mb-1">
             {flags.map((f) => (
               <Badge key={f} variant={f === "Sankcje" ? "destructive" : "secondary"}>{f}</Badge>
+            ))}
+          </div>
+        )}
+        {keyLists.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {keyLists.map((l) => (
+              <Badge key={l} variant="destructive">{l}</Badge>
             ))}
           </div>
         )}
@@ -153,8 +165,8 @@ export function AmlScreeningPanel({ profileId, isCompany }: { profileId?: string
         </div>
         <p className="text-xs text-muted-foreground">
           {isCompany
-            ? "Pobiera beneficjentów rzeczywistych z CRBR, porównuje z KRS i sprawdza osoby z profilu w bazach PEP/sankcyjnych (OpenSanctions)."
-            : "JDG nie podlega CRBR — sprawdzane są osoby z profilu w bazach PEP/sankcyjnych (OpenSanctions)."}{" "}
+            ? "Pobiera beneficjentów rzeczywistych z CRBR, porównuje z KRS i sprawdza osoby z profilu w bazach PEP i na listach sankcyjnych (OpenSanctions: m.in. UE, ONZ/GIIF, krajowa lista MSWiA, lista MF z art. 118)."
+            : "JDG nie podlega CRBR — osoby z profilu sprawdzane są w bazach PEP i na listach sankcyjnych (OpenSanctions: m.in. UE, ONZ/GIIF, krajowa lista MSWiA, lista MF z art. 118)."}{" "}
           Wynik wymaga oceny operatora; oświadczenie PEP klienta znajduje się w dokumentach.
         </p>
       </CardHeader>

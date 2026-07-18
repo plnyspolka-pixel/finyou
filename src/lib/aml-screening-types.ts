@@ -90,6 +90,19 @@ export const screenedPersonSourceLabels: Record<ScreenedPersonSource, string> = 
   spolka: "Podmiot (spółka)",
 };
 
+/**
+ * Kluczowe listy sankcyjne dla polskiej instytucji obowiązanej — identyfikatory
+ * datasetów OpenSanctions → etykieta pokazywana operatorowi. Screening przeszukuje
+ * wszystkie ~400 źródeł OpenSanctions; te cztery wyróżniamy, bo wynikają wprost
+ * z polskich obowiązków AML (UE, ONZ/GIIF, krajowa lista MSWiA, lista MF).
+ */
+export const keySanctionListLabels: Record<string, string> = {
+  eu_fsf: "Sankcje UE (lista skonsolidowana)",
+  un_sc_sanctions: "Sankcje ONZ (RB — podstawa listy GIIF)",
+  pl_mswia_sanctions: "Krajowa lista sankcyjna MSWiA",
+  pl_finanse_sanctions: "Lista MF/GIIF (art. 118 ustawy AML)",
+};
+
 export interface ScreeningCandidate {
   /** Id encji w bazie OpenSanctions (np. Q-id / NK-id). */
   entityId: string;
