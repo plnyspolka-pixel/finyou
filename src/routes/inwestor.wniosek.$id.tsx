@@ -20,6 +20,7 @@ import { InvestorSummaryCard } from "@/components/property-analysis/investor-sum
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
 import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { signStoragePath } from "@/lib/property-photos";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -80,28 +81,24 @@ function InwestorWniosek() {
     const next: Record<string, string> = {};
     await Promise.all(list.map(async (d: any) => {
       if (!d.file_path) return;
-      const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
-      if (u?.signedUrl) next[d.id] = u.signedUrl;
+      const url = await signStoragePath(d.file_path, 3600);
+      if (url) next[d.id] = url;
     }));
     setDocUrls(next);
 
-    // Zdjęcia z properties.photos (starszy format, luźne URL-e/ścieżki) — nie duplikujemy tych, które są już w documents.
+    // Zdjęcia z properties.photos (starszy format) — nie duplikujemy tych, które są już w documents.
     const knownDocPaths = new Set(list.map((d: any) => d.file_path).filter(Boolean));
     const rawPhotos: string[] = ((data?.properties?.[0]?.photos ?? []) as string[])
       .filter((src) => isImage(src) && !knownDocPaths.has(src));
-    const resolved = await Promise.all(rawPhotos.map(async (src) => {
-      if (!src || typeof src !== "string") return null;
-      if (/^https?:\/\//i.test(src)) return src;
-      const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(src, 3600);
-      return u?.signedUrl ?? null;
-    }));
+    const resolved = await Promise.all(rawPhotos.map((src) => signStoragePath(src, 3600)));
     setPhotoUrls(resolved.filter((s): s is string => !!s));
   })(); }, [id, user]);
 
   const openFile = async (d: any) => {
     if (!d.file_path) return;
-    const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    const url = await signStoragePath(d.file_path, 3600);
+    if (url) window.open(url, "_blank");
+    else toast.error("Nie udało się otworzyć pliku");
   };
 
   const submit = async (status: "szkic" | "zlozona") => {
