@@ -19,7 +19,7 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -39,31 +39,6 @@ function maxMonthsForAmount(amount: number): number {
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
 });
-
-const docTypeLabels: Record<string, string> = {
-  dochod: "Dokumenty dochodowe",
-  dokument_wlasnosci: "Prawa do nieruchomości",
-  prawo_wlasnosci: "Prawa do nieruchomości",
-  zdjecia_pomieszczen: "Zdjęcia pomieszczeń",
-  zdjecia_bryly: "Zdjęcia bryły budynku",
-  zdjecia_lokalu: "Zdjęcia lokalu",
-  mpzp: "MPZP / warunki zabudowy",
-  wypis_rejestru: "Wypis z rejestru gruntów",
-  inne: "Inne dokumenty",
-  klient_upload: "Pozostałe",
-};
-
-const PROPERTY_PHOTO_TYPES = new Set([
-  "zdjecie_nieruchomosci",
-  "zdjecia_nieruchomosci",
-  "zdjecia_pomieszczen",
-  "zdjecia_bryly",
-  "zdjecia_lokalu",
-  "zdjecie_wewnetrzne",
-  "zdjecie_zewnetrzne",
-  "property_photos",
-  "klient_upload",
-]);
 
 function isImage(name: string) {
   return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(name);
