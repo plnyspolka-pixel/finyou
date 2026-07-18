@@ -6,7 +6,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
 import { analyzeKwLegal } from "./kw-parser.server";
@@ -23,6 +22,8 @@ import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
 import type { InvestmentRiskAssessment, GovBenchmark, OcrSummary } from "./types";
 import { recommendationLabel } from "./types";
+
+type SupabaseLike = { from: (t: string) => any };
 
 const EMPTY_OCR: OcrSummary = { status: "no_data", documentsProcessed: 0, documents: [] };
 
@@ -58,16 +59,9 @@ function emptyGovBenchmark(propertyType: string): GovBenchmark {
   };
 }
 
-
-// Tabela investment_risk_assessments nie jest jeszcze w wygenerowanych typach —
-// dostęp przez rzutowanie (typy regenerują się w pipeline Supabase/Lovable).
-const db = supabaseAdmin as unknown as {
-  from: (t: string) => any;
-};
-
-async function assertAdminOrOperator(userId: string) {
-  const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
-  const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
+async function assertAdminOrOperator(supabase: SupabaseLike, userId: string) {
+  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const allowed = (roles ?? []).some((r: { role: string }) => r.role === "administrator" || r.role === "operator");
   if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 }
 
@@ -75,8 +69,9 @@ export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid(), force: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertAdminOrOperator(context.userId);
-    return runInvestmentRiskAssessmentCore(data.applicationId, { force: data.force ?? false });
+    const supabase = context.supabase as unknown as SupabaseLike;
+    await assertAdminOrOperator(supabase, context.userId);
+    return runInvestmentRiskAssessmentCore(supabase, data.applicationId, { force: data.force ?? false });
   });
 
 /**
@@ -85,9 +80,11 @@ export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
  * (świadome przeliczenie przez administratora/operatora).
  */
 export async function runInvestmentRiskAssessmentCore(
+  supabase: SupabaseLike,
   applicationId: string,
   opts: { force?: boolean } = {},
 ): Promise<InvestmentRiskAssessment> {
+  const db = supabase;
   // Idempotencja: jeśli ocena już istnieje i nie wymuszono przeliczenia — zwróć zapis.
   if (!opts.force) {
     try {
@@ -107,8 +104,8 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 0) Wczytaj wniosek, właściciela (client_id), nieruchomość, dokumenty.
   const [{ data: app }, { data: props }] = await Promise.all([
-    supabaseAdmin.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
-    supabaseAdmin.from("properties").select("*").eq("loan_application_id", applicationId),
+    db.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
+    db.from("properties").select("*").eq("loan_application_id", applicationId),
   ]);
 
   if (!app) throw new Error("Wniosek nie znaleziony.");
@@ -151,7 +148,7 @@ export async function runInvestmentRiskAssessmentCore(
     if (!property.voivodeship && kwAddr?.voivodeship) patch.voivodeship = kwAddr.voivodeship;
     if (property.area_sqm == null && kwAreaSqm != null) patch.area_sqm = kwAreaSqm;
     if (Object.keys(patch).length > 0) {
-      const { error: patchError } = await supabaseAdmin.from("properties").update(patch).eq("id", property.id);
+      const { error: patchError } = await db.from("properties").update(patch).eq("id", property.id);
       if (patchError) console.error("[risk-assessment] property KW backfill failed:", patchError.message);
       else Object.assign(property, patch);
     }
@@ -531,7 +528,8 @@ function dedupeStr(arr: string[]): string[] {
 export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const db = context.supabase as unknown as SupabaseLike;
     try {
       const { data: row } = await db
         .from("investment_risk_assessments")
@@ -542,7 +540,6 @@ export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
         .maybeSingle();
       return row ?? null;
     } catch {
-      // Tabela może jeszcze nie istnieć (migracja niezastosowana) — degraduj miękko.
       return null;
     }
   });
@@ -611,10 +608,10 @@ export interface InvestorValuationSummary {
 export const getInvestorValuationSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }): Promise<InvestorValuationSummary | null> => {
+  .handler(async ({ data, context }): Promise<InvestorValuationSummary | null> => {
+    const db = context.supabase as unknown as SupabaseLike;
     try {
-      // Bramka: udostępniamy wyłącznie dla tematów dostępnych dla inwestorów.
-      const { data: app } = await supabaseAdmin
+      const { data: app } = await db
         .from("loan_applications")
         .select("id, available_to_investors")
         .eq("id", data.applicationId)
