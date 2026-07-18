@@ -5,7 +5,6 @@ export type PublicLead = {
   created_at: string;
   property_type: string;
   loan_amount: number | null;
-  voivodeship: string | null;
 };
 
 export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async () => {
@@ -13,7 +12,7 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
   // Ostatnie okazje inwestycyjne: wnioski z ustawionym typem nieruchomości.
   const { data, error } = await supabaseAdmin
     .from("loan_applications")
-    .select("id, created_at, loan_amount, properties(property_type, voivodeship)")
+    .select("id, created_at, loan_amount, properties(property_type)")
     .order("created_at", { ascending: false })
     .limit(60);
   if (error) throw new Error(error.message);
@@ -30,7 +29,6 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
       created_at: r.created_at,
       property_type: String(pt),
       loan_amount: amt,
-      voivodeship: props?.voivodeship ? String(props.voivodeship) : null,
     });
     if (rows.length >= 30) break;
   }

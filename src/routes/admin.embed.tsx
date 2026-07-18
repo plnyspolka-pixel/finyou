@@ -289,10 +289,7 @@ function LeadsInlinePreview() {
                   <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]">{emojis[l.property_type] ?? "🏗️"}</span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-slate-200">
-                    {labels[l.property_type] ?? l.property_type}
-                    {l.voivodeship ? <span className="text-slate-400"> · {l.voivodeship}</span> : null}
-                  </div>
+                  <div className="truncate text-sm text-slate-200">{labels[l.property_type] ?? l.property_type}</div>
                   <div className="mt-0.5 text-xs text-slate-400 tabular-nums">{formatRelative(l.created_at)}</div>
                 </div>
                 <div className="shrink-0 text-right">
