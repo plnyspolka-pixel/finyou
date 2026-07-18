@@ -14,7 +14,7 @@ import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
-import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
+
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
@@ -151,7 +151,7 @@ function WniosekDetail() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
-          <TabsTrigger value="zabezpieczenie">Zabezpieczenie</TabsTrigger>
+          
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length + comms.length})</TabsTrigger>
@@ -206,9 +206,8 @@ function WniosekDetail() {
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>
 
-        <TabsContent value="zabezpieczenie" className="space-y-4">
-          <CollateralAnalysisSection applicationId={id} />
-        </TabsContent>
+
+
 
         <TabsContent value="ryzyko" className="space-y-4">
           <RiskAssessmentSection applicationId={id} />

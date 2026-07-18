@@ -14,7 +14,7 @@ import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import { propertyTypeLabels } from "@/lib/labels";
 import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
-import { CollateralAnalysisSection } from "@/components/property-analysis/collateral-analysis-section";
+
 import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
@@ -204,7 +204,7 @@ function InwestorWniosek() {
         />
       )}
 
-      <CollateralAnalysisSection applicationId={id} readOnly />
+      
 
       <KwContentSection applicationId={id} canFetch={false} />
 
