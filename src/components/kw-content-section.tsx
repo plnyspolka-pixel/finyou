@@ -9,9 +9,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { BookOpenCheck, RefreshCw, AlertCircle, Loader2, ScanText } from "lucide-react";
 import { toast } from "sonner";
 import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
-import { importKwFromScreenshots } from "@/lib/kw-ocr-import.functions";
 import { ensureKwReady } from "@/lib/kw-ensure";
 import { sanitizeHtml } from "@/lib/sanitize-html";
+import { KwPasteSlotsDialog } from "@/components/kw-paste-slots";
 
 const MAX_UPLOAD_FILES = 12;
 const MAX_UPLOAD_BYTES = 6_500_000;
