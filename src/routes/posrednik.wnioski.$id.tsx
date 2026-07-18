@@ -296,13 +296,10 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
         <FancyCard tone="light" title="Nieruchomość i KW" icon={<Landmark className="h-4 w-4" />}>
           {p?.id ? (
             <div className="space-y-3 text-sm">
-              <EditableField label="Ulica" value={p.street ?? p.address ?? ""} table="properties" rowId={p.id} column="street" onSaved={() => void load(true)} />
-              <EditableField label="Miasto" value={p.city ?? ""} table="properties" rowId={p.id} column="city" onSaved={() => void load(true)} />
-              <EditableField label="Województwo" value={p.voivodeship ?? ""} table="properties" rowId={p.id} column="voivodeship" onSaved={() => void load(true)} />
               <EditableField label="Numer KW" value={p.land_register_number ?? ""} table="properties" rowId={p.id} column="land_register_number" onSaved={() => void load(true)} />
               <EditableField label="Powierzchnia (m²)" value={p.area_sqm ?? ""} table="properties" rowId={p.id} column="area_sqm" type="number" onSaved={() => void load(true)} />
-              <EditableField label="Szacowana wartość" value={p.estimated_value ?? ""} table="properties" rowId={p.id} column="estimated_value" type="number" display={(v) => v ? formatPLN(Number(v)) : "—"} onSaved={() => void load(true)} />
             </div>
+
           ) : (
             <div className="space-y-3 text-sm">
               <p className="text-muted-foreground">Brak danych nieruchomości.</p>
