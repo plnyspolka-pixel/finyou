@@ -63,14 +63,12 @@ export function KwContentSection({
 }) {
   const getKw = useServerFn(getKwForApplication);
   const doFetch = useServerFn(fetchKwForApplication);
-  const doOcrImport = useServerFn(importKwFromScreenshots);
   const [doc, setDoc] = useState<KwDoc>(null);
   const [hasKw, setHasKw] = useState<boolean | null>(null);
   const [kwNumber, setKwNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [ocrBusy, setOcrBusy] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
 
   const reload = async () => {
     try {
