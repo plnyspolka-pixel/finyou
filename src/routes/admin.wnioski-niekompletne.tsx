@@ -226,7 +226,7 @@ function ApplicationsPage() {
       return 0;
     });
     return out;
-  }, [rows, q, sort, tab]);
+  }, [applications, q, sort, tab]);
 
   return (
     <div className="space-y-4">
