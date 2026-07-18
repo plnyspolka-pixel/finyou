@@ -236,74 +236,79 @@ function LeadsInlinePreview() {
     queryFn: () => fetchPublicLeads(),
     staleTime: 2 * 60 * 1000,
   });
-  const total = data.reduce((acc, r) => acc + (r.loan_amount ?? 0), 0);
-  const withAmount = data.filter((r) => r.loan_amount != null).length;
 
   if (isLoading) return <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">Ładowanie wniosków…</div>;
   if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">Nie udało się wczytać podglądu wniosków.</div>;
 
-  return (
-    <div className="rounded-2xl border border-slate-700 bg-slate-950 p-4 text-slate-100 sm:p-6">
-      <div className="mb-4 flex items-end justify-between gap-3 border-b border-white/10 pb-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-widest text-sky-300/80">Finance You</p>
-          <h3 className="text-xl font-semibold">Ostatnie wnioski</h3>
-          <p className="mt-1 text-xs text-slate-400">Dane zanonimizowane — {data.length} najnowszych zgłoszeń.</p>
-        </div>
-        {withAmount > 0 && (
-          <div className="text-right">
-            <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma wniosków</p>
-            <p className="text-lg font-semibold tabular-nums text-emerald-300">{formatPLN(total)}</p>
-          </div>
-        )}
-      </div>
+  const labels: Record<string, string> = {
+    apartment: "Mieszkanie", mieszkanie: "Mieszkanie",
+    house: "Dom", dom: "Dom",
+    plot_building: "Działka", dzialka: "Działka",
+    commercial: "Lokal użytkowy", lokal_uslugowy: "Lokal użytkowy",
+    inna: "Inna",
+  };
+  const emojis: Record<string, string> = {
+    apartment: "🏢", mieszkanie: "🏢",
+    house: "🏠", dom: "🏠",
+    plot_building: "🌳", dzialka: "🌳",
+    commercial: "🏬", lokal_uslugowy: "🏬",
+    inna: "🏗️",
+  };
 
+  return (
+    <div className="rounded-2xl bg-[#0a1030] p-4 sm:p-6">
       {data.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
           Brak zgłoszeń do wyświetlenia.
         </div>
       ) : (
-        <ul className="max-h-[560px] space-y-2 overflow-auto pr-1">
-          {data.map((l) => {
-            const labels: Record<string, string> = {
-              apartment: "Mieszkanie",
-              mieszkanie: "Mieszkanie",
-              house: "Dom",
-              dom: "Dom",
-              plot_building: "Działka",
-              dzialka: "Działka",
-              commercial: "Lokal usługowy",
-              lokal_uslugowy: "Lokal usługowy",
-              inna: "Inna",
-            };
-            const emojis: Record<string, string> = {
-              apartment: "🏢", mieszkanie: "🏢",
-              house: "🏠", dom: "🏠",
-              plot_building: "🌳", dzialka: "🌳",
-              commercial: "🏬", lokal_uslugowy: "🏬",
-              inna: "🏗️",
-            };
-            return (
-              <li key={l.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/30 via-indigo-500/20 to-emerald-400/20 ring-1 ring-white/15 shadow-[0_6px_20px_-6px_rgba(56,189,248,0.5)] text-2xl leading-none">
-                  <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]">{emojis[l.property_type] ?? "🏗️"}</span>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {data.map((l) => (
+            <article key={l.id} className="group relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)]">
+              <div className="flex items-start justify-between gap-3 p-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/30 via-indigo-500/25 to-emerald-400/20 ring-1 ring-white/15 text-3xl leading-none">
+                    <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]">{emojis[l.property_type] ?? "🏗️"}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-bold text-white">{labels[l.property_type] ?? l.property_type}</h3>
+                    {l.city && <p className="mt-0.5 truncate text-sm text-slate-400">{l.city}</p>}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-slate-200">{labels[l.property_type] ?? l.property_type}</div>
-                  <div className="mt-0.5 text-xs text-slate-400 tabular-nums">{formatRelative(l.created_at)}</div>
+                {l.is_new ? (
+                  <span className="shrink-0 rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-900">Nowa oferta</span>
+                ) : (
+                  <span className="shrink-0 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">Szuka inwestora</span>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2 border-t border-white/5 px-4 py-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Kwota</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{formatPLN(l.loan_amount ?? 0)}</p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(l.loan_amount ?? 0)}</div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">LTV</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{l.ltv != null ? `${l.ltv}%` : "—"}</p>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Okres</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{l.period_months != null ? `${l.period_months} mies.` : "—"}</p>
+                </div>
+              </div>
+              <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3">
+                <div className="flex items-center justify-between text-sm font-semibold text-white">
+                  <span>Oferta szuka inwestora</span>
+                  <span aria-hidden>→</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
       )}
-
     </div>
   );
 }
+
 
 function InvoicesInlinePreview() {
   const { data = [], isLoading, error } = useQuery({
