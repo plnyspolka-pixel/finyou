@@ -167,18 +167,33 @@ function ApplicationsPage() {
 
   useEffect(() => { void load(); }, []);
 
+  // Wniosek = coś więcej niż same dane leada (imię/nazwisko/email/telefon).
+  // Wystarczy kwota pożyczki, jakakolwiek nieruchomość (KW lub zdjęcia) albo dokument.
+  const isApplication = (r: Row) => {
+    if (r.loan_amount != null) return true;
+    if ((r.docCount ?? 0) > 0) return true;
+    for (const p of r.properties ?? []) {
+      if (p.land_register_number && p.land_register_number.trim().length > 0) return true;
+      if (Array.isArray(p.photos) && p.photos.length > 0) return true;
+    }
+    return false;
+  };
+
+  const applications = useMemo(() => rows.filter(isApplication), [rows]);
+
   const counts = useMemo(() => ({
-    all: rows.length,
-    incomplete: rows.filter((r) => INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
-    complete: rows.filter((r) => COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
-  }), [rows]);
+    all: applications.length,
+    incomplete: applications.filter((r) => INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
+    complete: applications.filter((r) => COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
+  }), [applications]);
 
   const filtered = useMemo(() => {
-    const byTab = rows.filter((r) => {
+    const byTab = applications.filter((r) => {
       if (tab === "incomplete") return INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status));
       if (tab === "complete") return COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status));
       return true;
     });
+
     const out = byTab.filter((r) => {
       if (!q.trim()) return true;
       const s = q.toLowerCase();
@@ -211,7 +226,7 @@ function ApplicationsPage() {
       return 0;
     });
     return out;
-  }, [rows, q, sort, tab]);
+  }, [applications, q, sort, tab]);
 
   return (
     <div className="space-y-4">
