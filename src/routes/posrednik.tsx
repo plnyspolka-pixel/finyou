@@ -14,6 +14,7 @@ const groups: NavGroup[] = [
       { to: "/posrednik/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
       { to: "/posrednik/skrzynka", label: "Skrzynka mailowa", icon: Mail },
+      { to: "/posrednik/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/posrednik/profil", label: "Mój profil", icon: UserCircle },
     ],
   },
