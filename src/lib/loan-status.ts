@@ -77,7 +77,9 @@ export function loanStatusLabel(status: string | null | undefined): string {
 /** Pełne, opisowe komunikaty (voicebot / panel klienta). */
 export const LOAN_STATUS_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead — czekamy na pierwszy kontakt",
-  brak_kontaktu: "Brak kontaktu — nie udało się dodzwonić",
+  brak_kontaktu: "Brak kontaktu — brakuje imienia, nazwiska, telefonu lub e-maila",
+  brak_kw: "Brak numeru KW — mamy dane kontaktowe, czekamy na numer księgi wieczystej",
+  brak_zdjec_dokumentow: "Brak zdjęć / dokumentów — potrzebujemy zdjęć nieruchomości lub innych dokumentów",
   kontakt: "W kontakcie — pośrednik prowadzi rozmowę",
   kompletowanie_danych: "Kompletowanie danych i dokumentów",
   szukamy_inwestora: "Szukamy inwestora — wniosek w dystrybucji / oczekujemy na ofertę",
