@@ -163,6 +163,7 @@ export function KwContentSection({
   if (!doc && !canFetch) return null;
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-3 flex-wrap">
