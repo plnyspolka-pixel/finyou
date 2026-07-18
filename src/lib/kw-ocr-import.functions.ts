@@ -10,6 +10,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeKwNumber } from "@/lib/kw-fetch.server";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
