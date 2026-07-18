@@ -22,8 +22,10 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
+import { EditableField } from "@/components/admin/EditableField";
 import { signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -177,15 +179,31 @@ function WniosekDetail() {
         <TabsContent value="dane" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Card><CardHeader><CardTitle>Dane klienta</CardTitle></CardHeader><CardContent className="text-sm space-y-1">
-              <div><span className="text-muted-foreground">Imię i nazwisko:</span> <b>{c?.first_name} {c?.last_name}</b></div>
-              <div><span className="text-muted-foreground">Telefon:</span> {c?.phone ?? "—"}</div>
-              <div><span className="text-muted-foreground">E-mail:</span> {c?.email ?? "—"}</div>
-              <div><span className="text-muted-foreground">Źródło:</span> <span title={c?.source ?? undefined}>{leadSourceLabel(c?.source)}</span></div>
-              <div><span className="text-muted-foreground">Zgody:</span> RODO {c?.consent_rodo ? "✓" : "✗"} · e-mail {c?.consent_email ? "✓" : "✗"} · tel {c?.consent_phone ? "✓" : "✗"} · SMS {c?.consent_sms ? "✓" : "✗"}</div>
+              {c ? (
+                <>
+                  <EditableField label="Imię" value={c.first_name} table="clients" rowId={c.id} column="first_name" onSaved={load} />
+                  <EditableField label="Nazwisko" value={c.last_name} table="clients" rowId={c.id} column="last_name" onSaved={load} />
+                  <EditableField label="PESEL" value={c.pesel} table="clients" rowId={c.id} column="pesel" onSaved={load} />
+                  <EditableField label="Telefon" value={c.phone} table="clients" rowId={c.id} column="phone" type="tel" onSaved={load} />
+                  <EditableField label="E-mail" value={c.email} table="clients" rowId={c.id} column="email" type="email" onSaved={load} />
+                  <div><span className="text-muted-foreground">Źródło:</span> <span title={c?.source ?? undefined}>{leadSourceLabel(c?.source)}</span></div>
+                  <div className="pt-1 border-t mt-2">
+                    <div className="text-muted-foreground text-xs mb-1">Zgody</div>
+                    <EditableField label="RODO" value={c.consent_rodo} table="clients" rowId={c.id} column="consent_rodo" type="bool" display={(v) => v ? "✓" : "✗"} onSaved={load} />
+                    <EditableField label="E-mail" value={c.consent_email} table="clients" rowId={c.id} column="consent_email" type="bool" display={(v) => v ? "✓" : "✗"} onSaved={load} />
+                    <EditableField label="Telefon" value={c.consent_phone} table="clients" rowId={c.id} column="consent_phone" type="bool" display={(v) => v ? "✓" : "✗"} onSaved={load} />
+                    <EditableField label="SMS" value={c.consent_sms} table="clients" rowId={c.id} column="consent_sms" type="bool" display={(v) => v ? "✓" : "✗"} onSaved={load} />
+                  </div>
+                </>
+              ) : <p className="text-muted-foreground">Brak danych klienta.</p>}
             </CardContent></Card>
             <Card><CardHeader><CardTitle>Wniosek</CardTitle></CardHeader><CardContent className="text-sm space-y-1">
-              <div><span className="text-muted-foreground">Kwota:</span> <b>{formatPLN(app.loan_amount)}</b></div>
-              <div><span className="text-muted-foreground">Numer KW:</span> {p?.land_register_number ?? "—"}</div>
+              <EditableField label="Kwota (PLN)" value={app.loan_amount} table="loan_applications" rowId={app.id} column="loan_amount" type="number" display={(v) => <b>{formatPLN(v as number)}</b>} onSaved={load} />
+              {p ? (
+                <EditableField label="Numer KW" value={p.land_register_number} table="properties" rowId={p.id} column="land_register_number" onSaved={load} />
+              ) : (
+                <div><span className="text-muted-foreground">Numer KW:</span> —</div>
+              )}
             </CardContent></Card>
           </div>
         </TabsContent>
@@ -194,18 +212,22 @@ function WniosekDetail() {
             <>
               <Card><CardHeader><CardTitle>{propertyTypeLabels[p.property_type] ?? p.property_type}</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
-                  <div><span className="text-muted-foreground">Adres:</span> {[p.address, p.city, p.voivodeship].filter(Boolean).join(", ") || "—"}</div>
-                  <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm ? `${p.area_sqm} m²` : "—"}</div>
-                  <div><span className="text-muted-foreground">Szacowana wartość:</span> {formatPLN(p.estimated_value)}</div>
-                  <div><span className="text-muted-foreground">KW:</span> {p.land_register_number ?? "—"}</div>
-                  <div><span className="text-muted-foreground">Hipoteka:</span> {p.has_mortgage ? "Tak" : "Nie"} · Współwłaściciele: {p.has_co_owners ? "Tak" : "Nie"}</div>
-                  <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
+                  <EditableField label="Adres" value={p.address} table="properties" rowId={p.id} column="address" onSaved={load} />
+                  <EditableField label="Miasto" value={p.city} table="properties" rowId={p.id} column="city" onSaved={load} />
+                  <EditableField label="Województwo" value={p.voivodeship} table="properties" rowId={p.id} column="voivodeship" onSaved={load} />
+                  <EditableField label="Powierzchnia (m²)" value={p.area_sqm} table="properties" rowId={p.id} column="area_sqm" type="number" display={(v) => v ? `${v} m²` : "—"} onSaved={load} />
+                  <EditableField label="Szacowana wartość" value={p.estimated_value} table="properties" rowId={p.id} column="estimated_value" type="number" display={(v) => formatPLN(v as number)} onSaved={load} />
+                  <EditableField label="Numer KW" value={p.land_register_number} table="properties" rowId={p.id} column="land_register_number" onSaved={load} />
+                  <EditableField label="Hipoteka" value={p.has_mortgage} table="properties" rowId={p.id} column="has_mortgage" type="bool" display={(v) => v ? "Tak" : "Nie"} onSaved={load} />
+                  <EditableField label="Współwłaściciele" value={p.has_co_owners} table="properties" rowId={p.id} column="has_co_owners" type="bool" display={(v) => v ? "Tak" : "Nie"} onSaved={load} />
+                  <EditableField label="Opis" value={p.description} table="properties" rowId={p.id} column="description" onSaved={load} />
                 </CardContent>
               </Card>
               <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr={isAdmin} />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>
+
 
 
 
