@@ -172,7 +172,7 @@ export function KwPasteSlotsDialog({
         res = await doOcrImport({ data: { loanApplicationId, images, force: true } });
       }
       if (res.ok) {
-        toast.success(`Treść KW ${res.kwNumber} zaimportowana`, { description: res.summary });
+        toast.success(`Treść KW ${res.kwNumber} zaimportowana`);
         for (const w of (res.warnings ?? []).slice(0, 4)) toast.info(w);
         try { sessionStorage.removeItem(storageKey); } catch {}
         setSlots(SLOTS.map(() => null));
