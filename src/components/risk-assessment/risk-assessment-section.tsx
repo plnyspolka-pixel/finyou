@@ -466,6 +466,20 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                 </>
               )}
               <div><span className="text-muted-foreground">Zgodność z właścicielem w KW:</span> {result.owner.matchesKwOwner === null ? "nieustalona" : result.owner.matchesKwOwner ? <span className="text-emerald-600">zgodny</span> : <span className="text-destructive font-medium">NIEZGODNY</span>}</div>
+              {result.owner.businessActivity && (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Działalność gospodarcza (CEIDG):</span>
+                  {result.owner.businessActivity.isEntrepreneur ? (
+                    <Badge variant="default">
+                      przedsiębiorca{result.owner.businessActivity.company?.startDate ? ` od ${result.owner.businessActivity.company.startDate}` : ""} · obniża ryzyko
+                    </Badge>
+                  ) : result.owner.businessActivity.available ? (
+                    <span>brak aktywnej działalności</span>
+                  ) : (
+                    <span className="text-muted-foreground">nie sprawdzono</span>
+                  )}
+                </div>
+              )}
               {result.owner.notes.length > 0 && <ul className="list-disc pl-5 text-muted-foreground text-xs mt-1">{result.owner.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
               <p className="text-[11px] text-muted-foreground italic mt-1">{result.owner.lifeExpectancy.disclaimer}</p>
             </CardContent>
@@ -482,6 +496,16 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                     <div className="flex items-center gap-2 text-sm">
                       <MapPinned className="h-4 w-4 text-muted-foreground" />
                       <span><span className="text-muted-foreground">Adres z KW (dz. I-O):</span> <b>{result.kwLegal.address.fullAddress}</b></span>
+                    </div>
+                  )}
+                  {result.kwLegal.propertyParams && (result.kwLegal.propertyParams.kind || result.kwLegal.propertyParams.usableAreaM2 != null || result.kwLegal.propertyParams.landAreaHa != null || result.kwLegal.propertyParams.roomCount != null || result.kwLegal.propertyParams.landUse) && (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <span className="text-muted-foreground">Parametry z KW (dz. I-O) — podstawa wyceny:</span>
+                      {result.kwLegal.propertyParams.kind && <span>rodzaj: <b>{result.kwLegal.propertyParams.kind}</b></span>}
+                      {result.kwLegal.propertyParams.usableAreaM2 != null && <span>pow. użytkowa: <b>{result.kwLegal.propertyParams.usableAreaM2} m²</b></span>}
+                      {result.kwLegal.propertyParams.landAreaHa != null && <span>obszar: <b>{result.kwLegal.propertyParams.landAreaHa} ha</b></span>}
+                      {result.kwLegal.propertyParams.roomCount != null && <span>izby/pokoje: <b>{result.kwLegal.propertyParams.roomCount}</b></span>}
+                      {result.kwLegal.propertyParams.landUse && <span>sposób korzystania: <b>{result.kwLegal.propertyParams.landUse}</b></span>}
                     </div>
                   )}
                   <div className="flex flex-wrap gap-2">

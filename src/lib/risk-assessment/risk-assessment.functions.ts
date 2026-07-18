@@ -101,26 +101,47 @@ export async function runInvestmentRiskAssessmentCore(
   const effAddress = property?.address || kwAddr?.fullAddress || null;
   const effCity = property?.city || kwAddr?.city || null;
   const effVoivodeship = property?.voivodeship || kwAddr?.voivodeship || null;
-  if (property && kwAddr) {
-    // Uzupełnij puste pola rekordu nieruchomości (adres z KW jest urzędowy) —
-    // dzięki temu widzi go też analiza zabezpieczenia i diagnostyka RCN.
-    const patch: { address?: string; street?: string; city?: string; voivodeship?: string } = {};
-    if (!property.address && kwAddr.fullAddress) patch.address = kwAddr.fullAddress;
-    if (!property.street && kwAddr.street) patch.street = kwAddr.street;
-    if (!property.city && kwAddr.city) patch.city = kwAddr.city;
-    if (!property.voivodeship && kwAddr.voivodeship) patch.voivodeship = kwAddr.voivodeship;
+
+  // Parametry nieruchomości z działu I-O KW (oznaczenie) — źródło do wyceny.
+  const kwParams = kwLegal.propertyParams;
+  const kwFloorPietro = kwLegal.kondygnacja != null ? Math.max(0, kwLegal.kondygnacja - 1) : null;
+  const kwAreaSqm = kwParams.usableAreaM2 ?? kwParams.landAreaM2 ?? null;
+
+  if (property && (kwAddr || kwAreaSqm != null)) {
+    // Uzupełnij puste pola rekordu nieruchomości (dane z KW są urzędowe) —
+    // dzięki temu widzi je też analiza zabezpieczenia i diagnostyka RCN.
+    const patch: { address?: string; street?: string; city?: string; voivodeship?: string; area_sqm?: number } = {};
+    if (!property.address && kwAddr?.fullAddress) patch.address = kwAddr.fullAddress;
+    if (!property.street && kwAddr?.street) patch.street = kwAddr.street;
+    if (!property.city && kwAddr?.city) patch.city = kwAddr.city;
+    if (!property.voivodeship && kwAddr?.voivodeship) patch.voivodeship = kwAddr.voivodeship;
+    if (property.area_sqm == null && kwAreaSqm != null) patch.area_sqm = kwAreaSqm;
     if (Object.keys(patch).length > 0) {
       const { error: patchError } = await supabaseAdmin.from("properties").update(patch).eq("id", property.id);
-      if (patchError) console.error("[risk-assessment] property address backfill failed:", patchError.message);
+      if (patchError) console.error("[risk-assessment] property KW backfill failed:", patchError.message);
       else Object.assign(property, patch);
     }
   }
+
+  // KW-parametry przekazywane do wyceny (Perplexity): mają pierwszeństwo, bo
+  // wycena ma dotyczyć nieruchomości o parametrach i lokalizacji z księgi wieczystej.
+  const kwValuationOpts = {
+    kw: {
+      usableAreaM2: kwParams.usableAreaM2,
+      landAreaM2: kwParams.landAreaM2,
+      landAreaHa: kwParams.landAreaHa,
+      roomCount: kwParams.roomCount,
+      floorPietro: kwFloorPietro,
+      landUse: kwParams.landUse ?? kwParams.kind ?? null,
+      fromKw: kwLegal.available,
+    },
+  };
 
   // 2) Analiza zabezpieczenia (reuse: wycena Perplexity + lokalizacja + powódź + scoring).
   //    Nie przerywamy oceny, gdy padnie — degradujemy się miękko.
   let collateral = null as InvestmentRiskAssessment["collateralAnalysis"];
   try {
-    collateral = await runPropertyCollateralAnalysisCore(applicationId);
+    collateral = await runPropertyCollateralAnalysisCore(applicationId, kwValuationOpts);
   } catch (e: any) {
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
@@ -141,7 +162,7 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
   //    zapasowo odczytywany z działu II KW, gdy brak w rekordzie klienta.
-  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal, kwNumber: kwLegal.kwNumber });
+  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal, kwNumber: kwLegal.kwNumber, city: effCity, voivodeship: effVoivodeship });
   warnings.push(...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)));
 
   // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
@@ -200,14 +221,20 @@ export async function runInvestmentRiskAssessmentCore(
   });
 
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
-  const areaM2 = property?.area_sqm ?? null;
+  //    Parametry i lokalizacja z KW mają pierwszeństwo w wycenie.
+  const areaM2 = kwParams.usableAreaM2 ?? property?.area_sqm ?? null;
   const master = await perplexityMasterValuation({
     propertyType: property?.property_type ?? "inna",
     address: effAddress,
     city: effCity,
     voivodeship: effVoivodeship,
     areaM2,
-    landAreaHa: null,
+    landAreaHa: kwParams.landAreaHa,
+    kwKind: kwParams.kind,
+    roomCount: kwParams.roomCount,
+    floorPietro: kwFloorPietro,
+    landUse: kwParams.landUse,
+    parametersFromKw: kwLegal.available,
     declaredValuePln: declaredValue,
     requestedLoanPln: loanAmount,
     collateral,
@@ -423,6 +450,17 @@ function buildDataSources(a: {
     dataLevel: a.owner.age != null ? `wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat` : "brak PESEL",
     period: "GUS 2022",
     status: a.owner.peselValid ? "success" : "no_data",
+  });
+  sources.push({
+    source: "CEIDG — działalność gospodarcza właściciela",
+    used: a.owner.businessActivity?.available ?? false,
+    purpose: "czy właściciel jest przedsiębiorcą (JDG) — czynnik obniżający ryzyko",
+    dataLevel: a.owner.businessActivity?.isEntrepreneur
+      ? `przedsiębiorca (${a.owner.businessActivity.status}, dopasowanie: ${a.owner.businessActivity.matchConfidence})`
+      : a.owner.businessActivity?.available ? "brak aktywnej działalności" : "—",
+    period: "",
+    status: a.owner.businessActivity?.available ? "success" : "no_data",
+    note: a.owner.businessActivity?.note,
   });
   sources.push({
     source: "Korespondencja z klientem (e-mail / DM / transkrypcje)",

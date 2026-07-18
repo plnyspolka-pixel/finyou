@@ -22,7 +22,21 @@ export const runPropertyCollateralAnalysis = createServerFn({ method: "POST" })
   .inputValidator((d) => Input.parse(d))
   .handler(async ({ data }) => runPropertyCollateralAnalysisCore(data.applicationId));
 
-export async function runPropertyCollateralAnalysisCore(applicationId: string) {
+// Parametry nieruchomości odczytane z KW (dział I-O) — mają pierwszeństwo w wycenie
+// (pytanie do Perplexity o cenę za m² dla nieruchomości o tych parametrach i lokalizacji).
+export interface CollateralAnalysisOpts {
+  kw?: {
+    usableAreaM2?: number | null;
+    landAreaM2?: number | null;
+    landAreaHa?: number | null;
+    roomCount?: number | null;
+    floorPietro?: number | null;
+    landUse?: string | null;
+    fromKw?: boolean;
+  };
+}
+
+export async function runPropertyCollateralAnalysisCore(applicationId: string, opts: CollateralAnalysisOpts = {}) {
   {
 
     // Załaduj wniosek + property + dokumenty
@@ -53,6 +67,19 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string) {
       requestedLoanAmountPln: app.loan_amount ?? null,
       documents: (docs ?? []).map(d => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name })),
     };
+
+    // Parametry z KW mają pierwszeństwo — wycena ma dotyczyć nieruchomości
+    // o parametrach i lokalizacji odczytanych z księgi wieczystej.
+    const kw = opts.kw;
+    if (kw) {
+      if (kw.usableAreaM2 != null) input.usableAreaM2 = kw.usableAreaM2;
+      if (kw.landAreaM2 != null) input.landAreaM2 = kw.landAreaM2;
+      if (kw.landAreaHa != null) input.landAreaHa = kw.landAreaHa;
+      input.roomCount = kw.roomCount ?? null;
+      input.floorPietro = kw.floorPietro ?? null;
+      input.landUse = kw.landUse ?? null;
+      input.parametersFromKw = !!kw.fromKw;
+    }
 
     const warnings: string[] = [];
     const sourcesUsed: DataSourceUsage[] = [];
@@ -98,12 +125,18 @@ export async function runPropertyCollateralAnalysisCore(applicationId: string) {
       buildingAreaM2: input.buildingAreaM2,
       landAreaM2: input.landAreaM2,
       landAreaHa: input.landAreaHa,
+      roomCount: input.roomCount,
+      floorPietro: input.floorPietro,
+      landUse: input.landUse,
+      parametersFromKw: input.parametersFromKw,
       declaredPropertyValuePln: input.declaredPropertyValuePln,
     });
     sourcesUsed.push({
       source: "Perplexity (sonar-pro)",
       used: pplx.status === "success",
-      purpose: "wycena porównawcza z aktualnych ogłoszeń i raportów rynkowych",
+      purpose: input.parametersFromKw
+        ? "wycena za m² dla nieruchomości o parametrach i lokalizacji z księgi wieczystej"
+        : "wycena porównawcza z aktualnych ogłoszeń i raportów rynkowych",
       dataLevel: input.city ? `lokalnie: ${input.city}` : "Polska",
       period: "ostatnie 12 mies.",
       status: pplx.status,

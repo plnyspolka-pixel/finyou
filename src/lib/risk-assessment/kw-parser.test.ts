@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { extractKwOwnerPersons, extractKwOwnerPesels, parseMortgages } from "./kw-parser.server";
+import { extractKwOwnerPersons, extractKwOwnerPesels, parseMortgages, parseKwPropertyParams } from "./kw-parser.server";
+
+describe("parseKwPropertyParams — dział I-O KW", () => {
+  it("czyta lokal mieszkalny: powierzchnia użytkowa, liczba izb, rodzaj", () => {
+    const html =
+      "<table><tr><td>Przeznaczenie lokalu</td><td>LOKAL MIESZKALNY</td></tr>" +
+      "<tr><td>Pole powierzchni użytkowej lokalu</td><td>45,50 m2</td></tr>" +
+      "<tr><td>Liczba izb</td><td>3</td></tr></table>";
+    const p = parseKwPropertyParams(html);
+    expect(p.usableAreaM2).toBe(45.5);
+    expect(p.roomCount).toBe(3);
+    expect(p.kind).toContain("lokal mieszkalny");
+  });
+
+  it("czyta działkę: obszar w ha i sposób korzystania", () => {
+    const html =
+      "<table><tr><td>Obszar</td><td>0,4500 HA</td></tr>" +
+      "<tr><td>Sposób korzystania</td><td>B - tereny mieszkaniowe</td></tr></table>";
+    const p = parseKwPropertyParams(html);
+    expect(p.landAreaHa).toBe(0.45);
+    expect(p.landAreaM2).toBe(4500);
+    expect(p.landUse).toContain("tereny mieszkaniowe");
+  });
+
+  it("pusty/brakujący dział I-O daje puste parametry", () => {
+    const p = parseKwPropertyParams(null);
+    expect(p).toEqual({ kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null });
+  });
+});
 
 describe("extractKwOwnerPersons — dział II KW", () => {
   it("czyta układ etykietowany EKW: Imię przed Nazwiskiem", () => {

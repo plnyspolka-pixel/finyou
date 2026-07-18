@@ -11,6 +11,14 @@ export interface PerplexityValuationInput {
   buildingAreaM2?: number | null;
   landAreaM2?: number | null;
   landAreaHa?: number | null;
+  /** Liczba izb/pokoi (z KW). */
+  roomCount?: number | null;
+  /** Piętro (0 = parter) — z KW. */
+  floorPietro?: number | null;
+  /** Sposób korzystania / rodzaj nieruchomości opisany w KW. */
+  landUse?: string | null;
+  /** Parametry i lokalizacja odczytane z księgi wieczystej. */
+  parametersFromKw?: boolean;
   declaredPropertyValuePln?: number | null;
 }
 
@@ -55,14 +63,22 @@ function buildPrompt(input: PerplexityValuationInput): string {
   const declared = input.declaredPropertyValuePln
     ? `Wartość deklarowana przez właściciela: ${input.declaredPropertyValuePln.toLocaleString("pl-PL")} PLN.`
     : "";
+  const extraParams = [
+    input.landUse ? `- Rodzaj/sposób korzystania: ${input.landUse}` : null,
+    input.roomCount != null ? `- Liczba izb/pokoi: ${input.roomCount}` : null,
+    input.floorPietro != null ? `- Kondygnacja: ${input.floorPietro === 0 ? "parter" : input.floorPietro + ". piętro"}` : null,
+  ].filter(Boolean).join("\n");
+  const sourceNote = input.parametersFromKw
+    ? "\n\nParametry nieruchomości oraz lokalizacja pochodzą z księgi wieczystej (dział I-O — oznaczenie nieruchomości). Wyceniaj DOKŁADNIE taką nieruchomość o tych parametrach, położoną w podanej lokalizacji."
+    : "";
 
-  return `Jesteś rzeczoznawcą i analitykiem rynku nieruchomości w Polsce. Wykonaj możliwie najdokładniejszą analizę porównawczą i wycenę dla konkretnej nieruchomości.
+  return `Jesteś rzeczoznawcą i analitykiem rynku nieruchomości w Polsce. Odpowiedz na pytanie: ile może kosztować za m² (a dla gruntów rolnych — za hektar) nieruchomość o poniższych parametrach, położona w podanej lokalizacji. Wykonaj analizę porównawczą.
 
 NIERUCHOMOŚĆ:
 - Typ: ${typeLabel}
 - Lokalizacja: ${loc}
 - Powierzchnia: ${area}
-${declared}
+${extraParams ? extraParams + "\n" : ""}${declared}${sourceNote}
 
 ZADANIE:
 Przeszukaj aktualne (ostatnie 6–12 miesięcy) publicznie dostępne źródła i ustal:

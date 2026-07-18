@@ -14,6 +14,16 @@ export interface MasterValuationInput {
   voivodeship: string | null;
   areaM2: number | null;
   landAreaHa: number | null;
+  /** Rodzaj/przeznaczenie nieruchomości z KW (dział I-O). */
+  kwKind?: string | null;
+  /** Liczba izb/pokoi z KW. */
+  roomCount?: number | null;
+  /** Piętro (0 = parter) z KW. */
+  floorPietro?: number | null;
+  /** Sposób korzystania z gruntu z KW. */
+  landUse?: string | null;
+  /** Parametry i lokalizacja pochodzą z księgi wieczystej. */
+  parametersFromKw?: boolean;
   declaredValuePln: number | null;
   requestedLoanPln: number | null;
   collateral: PropertyAnalysisResult | null;
@@ -48,6 +58,13 @@ function buildDossier(i: MasterValuationInput): string {
     ? `\n0) DANE RZĄDOWE — KOTWICA WYCENY (priorytet: ${gov.primarySource}):${rcnLine}${gov.pricePerHa != null ? `\n- Cena gruntu rolnego (przyjęta): ${gov.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${gov.soilCategory})${gov.landValuePln ? `, wartość działki ≈ ${gov.landValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.pricePerM2Median != null ? `\n- Cena lokali (przyjęta): ${gov.pricePerM2Median.toLocaleString("pl-PL")} zł/m²${gov.dwellingValuePln ? `, wartość ≈ ${gov.dwellingValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.gusPricePerHa != null && gov.primarySource === "RCN" ? `\n- (GUS porównawczo: ${gov.gusPricePerHa.toLocaleString("pl-PL")} zł/ha)` : ""}\n- Jednostka: ${gov.unitName ?? "—"} (${gov.unitLevel ?? "—"}), okres ${gov.period ?? "—"}${gov.fallbackUsed ? " [dane zastępcze wyższego poziomu]" : ""}\n`
     : `\n0) DANE RZĄDOWE (RCN/GUS): brak danych (RCN: ${gov?.rcnStatusMessage ?? "—"}).\n`;
 
+  const kwParamsLine = [
+    i.kwKind ? `rodzaj: ${i.kwKind}` : null,
+    i.landUse ? `sposób korzystania: ${i.landUse}` : null,
+    i.roomCount != null ? `liczba izb/pokoi: ${i.roomCount}` : null,
+    i.floorPietro != null ? `kondygnacja: ${i.floorPietro === 0 ? "parter" : i.floorPietro + ". piętro"}` : null,
+  ].filter(Boolean).join(", ");
+
   const mc = i.marketComparables;
   const mcBlock = mc && (mc.status === "success" || mc.status === "partial")
     ? `\n0b) RYNEK PORÓWNAWCZY (deweloperuch.pl transakcje + otodom.pl oferty):\n- Mediana: ${mc.pricePerM2Median ? mc.pricePerM2Median.toLocaleString("pl-PL") + " zł/m²" : "—"} (zakres ${mc.pricePerM2Min ?? "—"}–${mc.pricePerM2Max ?? "—"})\n- Transakcji: ${mc.transactionsCount}, ofert: ${mc.offersCount}${mc.street ? `, rejon: ${mc.street}, ${mc.city}` : mc.city ? `, ${mc.city}` : ""}\n- Próbki: ${mc.sample.slice(0, 5).map((s) => `${s.source}${s.date ? ` ${s.date}` : ""} ${s.address ?? s.title ?? ""} ${s.pricePerM2 ?? "—"} zł/m²`).join(" | ") || "—"}\n`
@@ -55,11 +72,10 @@ function buildDossier(i: MasterValuationInput): string {
 
   return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
 ${govBlock}${mcBlock}
-
-1) NIERUCHOMOŚĆ
+1) NIERUCHOMOŚĆ${i.parametersFromKw ? " (parametry i lokalizacja odczytane z księgi wieczystej — dział I-O)" : ""}
 - Typ: ${i.propertyType}
 - Lokalizacja: ${loc}
-- Powierzchnia: ${area}
+- Powierzchnia: ${area}${kwParamsLine ? `\n- Parametry z KW: ${kwParamsLine}` : ""}
 - Wartość deklarowana: ${fmt(i.declaredValuePln)}
 - Wnioskowana kwota pożyczki: ${fmt(i.requestedLoanPln)}
 
@@ -81,6 +97,7 @@ ${govBlock}${mcBlock}
 - Wiek: ${i.owner.age ?? "nieznany"}, płeć: ${i.owner.sex ?? "nieznana"}
 - Dalsze trwanie życia (GUS): ${i.owner.lifeExpectancy.remainingYears ?? "brak"} lat, ryzyko sukcesji: ${i.owner.lifeExpectancy.longevityRiskBand}
 - Dożycie dla pożyczek 1–5 lat (P przeżycia okresu): ${i.owner.lifeExpectancy.survivalByLoanYear.length ? i.owner.lifeExpectancy.survivalByLoanYear.map((s) => `${s.years}l: ${Math.round(s.probability * 100)}%`).join(", ") : "brak danych"}
+- Działalność gospodarcza (CEIDG): ${i.owner.businessActivity?.isEntrepreneur ? `TAK — przedsiębiorca${i.owner.businessActivity.company?.startDate ? `, od ${i.owner.businessActivity.company.startDate}` : ""} (czynnik obniżający ryzyko)` : i.owner.businessActivity?.available ? "nie znaleziono aktywnej działalności" : "nie sprawdzono"}
 - Zgodność z właścicielem w KW: ${i.owner.matchesKwOwner === null ? "nieustalona" : i.owner.matchesKwOwner ? "zgodny" : "NIEZGODNY"}
 
 5) KORESPONDENCJA Z KLIENTEM — TWARDE FAKTY (bez oceny zaangażowania/sentymentu)

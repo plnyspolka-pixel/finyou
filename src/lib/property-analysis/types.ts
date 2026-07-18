@@ -37,6 +37,14 @@ export interface PropertyAnalysisInput {
   buildingAreaM2?: number | null;
   landAreaM2?: number | null;
   landAreaHa?: number | null;
+  /** Liczba izb/pokoi (np. z działu I-O KW). */
+  roomCount?: number | null;
+  /** Piętro (0 = parter) — z działu I-O KW. */
+  floorPietro?: number | null;
+  /** Sposób korzystania z gruntu / rodzaj nieruchomości (opis z KW). */
+  landUse?: string | null;
+  /** Parametry i lokalizacja pochodzą z księgi wieczystej (wpływa na framing wyceny). */
+  parametersFromKw?: boolean;
   soilClass?: string | null;
   declaredPropertyValuePln?: number | null;
   requestedLoanAmountPln?: number | null;

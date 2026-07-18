@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parsePesel, type PeselInfo } from "./pesel";
 import { estimateLifeExpectancy } from "./life-expectancy";
 import { extractKwOwnerPesels } from "./kw-parser.server";
+import { lookupCeidgActivity, emptyCeidg } from "./ceidg-lookup.server";
 import type { OwnerProfile, KwLegalAnalysis } from "./types";
 
 function normalizeName(s: string): string {
@@ -66,6 +67,9 @@ export async function analyzeOwner(args: {
   kwLegal?: KwLegalAnalysis | null;
   /** Znormalizowany numer KW — źródło zapasowe PESEL (dział II). */
   kwNumber?: string | null;
+  /** Lokalizacja nieruchomości/klienta — pomaga dopasować wpis w CEIDG. */
+  city?: string | null;
+  voivodeship?: string | null;
 }): Promise<OwnerProfile> {
   const emptyLE = estimateLifeExpectancy({ age: null, sex: null, loanTermYears: args.loanTermYears ?? null });
   const base: OwnerProfile = {
@@ -76,6 +80,7 @@ export async function analyzeOwner(args: {
     peselValid: false,
     lifeExpectancy: emptyLE,
     matchesKwOwner: null,
+    businessActivity: emptyCeidg("Nie sprawdzono działalności w CEIDG (brak danych właściciela)."),
     notes: [],
   };
 
@@ -86,7 +91,7 @@ export async function analyzeOwner(args: {
 
   const { data: client } = await supabaseAdmin
     .from("clients")
-    .select("first_name, last_name, pesel")
+    .select("first_name, last_name, pesel, nip, city")
     .eq("id", args.clientId)
     .maybeSingle();
 
@@ -147,6 +152,20 @@ export async function analyzeOwner(args: {
     notes.push("Zaawansowany wiek właściciela — istotne ryzyko sukcesji/spadkobrania na zabezpieczeniu.");
   }
 
+  // CEIDG — czy właściciel jest już przedsiębiorcą (JDG). Aktywna działalność obniża ryzyko.
+  const businessActivity = await lookupCeidgActivity({
+    firstName: client.first_name ?? null,
+    lastName: client.last_name ?? null,
+    nip: (client as any).nip ?? null,
+    city: args.city ?? (client as any).city ?? null,
+    voivodeship: args.voivodeship ?? null,
+  }).catch((e: any) => emptyCeidg(`Błąd sprawdzenia CEIDG: ${e?.message ?? "nieznany"}.`));
+  if (businessActivity.isEntrepreneur) {
+    notes.push(
+      `Właściciel jest przedsiębiorcą (aktywny wpis w CEIDG${businessActivity.company?.startDate ? `, od ${businessActivity.company.startDate}` : ""}) — czynnik obniżający ryzyko.`,
+    );
+  }
+
   return {
     fullName,
     birthDate: pesel.birthDate,
@@ -156,6 +175,7 @@ export async function analyzeOwner(args: {
     peselError: pesel.valid ? undefined : pesel.error,
     lifeExpectancy,
     matchesKwOwner,
+    businessActivity,
     notes,
   };
 }

@@ -5,7 +5,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseKwAddress } from "@/lib/kw-address-core";
 import { parsePesel } from "./pesel";
-import type { KwLegalAnalysis } from "./types";
+import type { KwLegalAnalysis, KwPropertyParams } from "./types";
 
 function stripHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -218,6 +218,76 @@ function parseFloorInfo(dzial1o: string | null | undefined): { kondygnacja: numb
   return { kondygnacja, floorsInBuilding };
 }
 
+// Granica wartości pola działu I-O — lookahead na kolejną etykietę EKW lub koniec.
+const IO_FIELD_BOUNDARY =
+  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b)|[.;]|$)";
+
+// Parsuje liczbę w formacie PL („45,50" / „1 250,00" / „0,0450") na Number.
+function parsePlNumber(raw: string): number | null {
+  const n = Number(raw.replace(/\s/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// Dział I-O (oznaczenie nieruchomości): parametry do wyceny — rodzaj, powierzchnia,
+// obszar działki, liczba izb, sposób korzystania. Czytane z JSON-a KW Engine
+// (renderowanego do tabel HTML działów), robustnie po etykietach.
+export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPropertyParams {
+  const empty: KwPropertyParams = {
+    kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null,
+  };
+  const text = stripHtml(dzial1o);
+  if (!text) return empty;
+  const low = text.toLowerCase();
+
+  // Powierzchnia użytkowa lokalu (np. „Pole powierzchni użytkowej lokalu 45,50 m2").
+  let usableAreaM2: number | null = null;
+  const puM = low.match(/(?:pole\s+powierzchni\s+u[żz]ytkowej[^0-9]{0,20}|powierzchni[ai]\s+u[żz]ytkow\w*[^0-9]{0,20})(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
+  if (puM) usableAreaM2 = parsePlNumber(puM[1]);
+
+  // Obszar: „45,50 M2" (lokal/budynek) lub „0,0450 HA" (działka).
+  let landAreaHa: number | null = null;
+  let landAreaM2: number | null = null;
+  const obszarHa = low.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*ha\b/);
+  const obszarM2 = low.match(/obszar[^0-9]{0,20}(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
+  if (obszarHa) landAreaHa = parsePlNumber(obszarHa[1]);
+  if (obszarM2) {
+    const v = parsePlNumber(obszarM2[1]);
+    if (v != null) {
+      landAreaM2 = v;
+      // Dla lokalu obszar w m² bywa jego powierzchnią użytkową.
+      if (usableAreaM2 == null && /lokal/.test(low)) usableAreaM2 = v;
+    }
+  }
+  if (landAreaHa != null && landAreaM2 == null) landAreaM2 = Math.round(landAreaHa * 10_000);
+
+  // Liczba izb / pokoi.
+  let roomCount: number | null = null;
+  const izbM = low.match(/liczba\s+(?:izb|pokoi)[^0-9]{0,12}(\d{1,2})/);
+  if (izbM) {
+    const k = Number(izbM[1]);
+    if (Number.isFinite(k) && k >= 1 && k <= 30) roomCount = k;
+  }
+
+  // Rodzaj / przeznaczenie nieruchomości lub lokalu. Wartość wyłuskujemy leniwie
+  // aż do kolejnej etykiety EKW (pola I-O bywają CAPS lub mieszane).
+  let kind: string | null = null;
+  const kindM = text.match(new RegExp(`(?:przeznaczenie|rodzaj)\\s+(?:lokalu|nieruchomo[śs]ci|budynku)\\s*(?:\\([^)]*\\))?[:\\s]{0,4}([\\s\\S]{2,60}?)${IO_FIELD_BOUNDARY}`, "i"));
+  if (kindM) {
+    const v = kindM[1].trim().replace(/\s+/g, " ").replace(/[.,;]+$/, "");
+    if (v && !/^brak\b/i.test(v)) kind = v.toLowerCase();
+  }
+
+  // Sposób korzystania z gruntu (dla działek), np. „B - tereny mieszkaniowe".
+  let landUse: string | null = null;
+  const useM = text.match(new RegExp(`spos[óo]b\\s+korzystania\\s*(?:\\([^)]*\\))?[:\\s]{0,4}([\\s\\S]{1,60}?)${IO_FIELD_BOUNDARY}`, "i"));
+  if (useM) {
+    const v = useM[1].trim().replace(/\s+/g, " ").replace(/[.,;]+$/, "");
+    if (v && !/^brak\b/i.test(v)) landUse = v;
+  }
+
+  return { kind, usableAreaM2, landAreaM2, landAreaHa, roomCount, landUse };
+}
+
 // Klasa bonitacyjna gruntu z działu I-O (np. „R IVa", „PsIII", „ŁIV").
 function parseSoilClass(dzial1o: string | null | undefined): string | null {
   const text = stripHtml(dzial1o);
@@ -333,10 +403,14 @@ export async function analyzeKwLegal(args: {
   hasCoOwners?: boolean | null;
   hasMortgageFlag?: boolean | null;
 }): Promise<KwLegalAnalysis> {
+  const emptyParams: KwPropertyParams = {
+    kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null,
+  };
   const empty: KwLegalAnalysis = {
     available: false,
     kwNumber: args.kwNumber ?? null,
     address: null,
+    propertyParams: emptyParams,
     owners: [],
     encumbrances: [],
     mortgages: [],
@@ -369,6 +443,7 @@ export async function analyzeKwLegal(args: {
 
   const owners = parseOwners(row.dzial_2);
   const address = parseKwAddress(row.dzial_1o);
+  const propertyParams = parseKwPropertyParams(row.dzial_1o);
   const { encumbrances, hasEnforcement, hasUsufruct } = parseEncumbrances(row.dzial_3);
   const mortgages = parseMortgages(row.dzial_4);
   const { kondygnacja, floorsInBuilding } = parseFloorInfo(row.dzial_1o);
@@ -418,6 +493,7 @@ export async function analyzeKwLegal(args: {
     available: true,
     kwNumber: kw,
     address,
+    propertyParams,
     owners,
     encumbrances,
     mortgages,
