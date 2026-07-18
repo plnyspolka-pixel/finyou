@@ -491,24 +491,8 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
             </CardContent>
           </Card>
 
-          {/* OCR dokumentów */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileScan className="h-4 w-4" /> OCR dokumentów</CardTitle></CardHeader>
-            <CardContent className="text-sm space-y-2">
-              {result.ocr.documentsProcessed > 0 ? (
-                <div className="space-y-1">
-                  {result.ocr.documents.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      {statusIcon(d.status)}
-                      <span className="font-medium">{d.fileName ?? d.documentId}</span>
-                      <Badge variant="outline" className="text-[10px]">{d.docKind}</Badge>
-                      {d.rawTextSnippet && <span className="text-muted-foreground text-xs truncate max-w-[40ch]">{d.rawTextSnippet}</span>}
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-muted-foreground">Brak dokumentów do OCR.</p>}
-            </CardContent>
-          </Card>
+          {/* Sekcja „OCR dokumentów" wyłączona — moduł OCR został usunięty. */}
+
 
           {/* Wykorzystane źródła danych */}
           <UsedSources sources={result.dataSources} />
