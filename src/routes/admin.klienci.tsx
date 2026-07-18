@@ -42,10 +42,30 @@ type Row = {
     loan_amount: number | null;
     preferred_period_months: number | null;
     completeness_percent: number | null;
-    properties: { property_type: string; city: string | null; estimated_value: number | null }[];
+    properties: { property_type: string; city: string | null; estimated_value: number | null; land_register_number: string | null; photos: string[] | null }[];
   } | null;
-  comms: { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null };
+  docCount?: number;
+  comms: { calls: number; sms: number; emails: number; messenger?: number; notes: number; lastAt: string | null; lastChannel: string | null; inboundAttachments?: { name: string }[] };
 };
+
+// Wniosek = coś więcej niż same dane leada (imię/nazwisko/email/telefon).
+function isApplication(r: Row): boolean {
+  if (r.loan?.loan_amount != null) return true;
+  if ((r.docCount ?? 0) > 0) return true;
+  for (const p of r.loan?.properties ?? []) {
+    if (p.land_register_number && p.land_register_number.trim().length > 0) return true;
+    if (Array.isArray(p.photos) && p.photos.length > 0) return true;
+    if (p.estimated_value != null) return true;
+  }
+  return false;
+}
+
+function filesCount(r: Row): number {
+  const photos = (r.loan?.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
+  const docs = r.docCount ?? 0;
+  const inboundAtt = r.comms.inboundAttachments?.length ?? 0;
+  return photos + docs + inboundAtt;
+}
 
 function KlienciPage() {
   const fn = useServerFn(listLeads);
