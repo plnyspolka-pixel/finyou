@@ -190,8 +190,11 @@ function KlienciPage() {
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
-                      <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>
+                      {isApplication(r)
+                        ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Wniosek</Badge>
+                        : <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>}
                     </div>
+
                   </div>
                   {(r.loan || p) && (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs pl-6">
