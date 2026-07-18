@@ -634,45 +634,17 @@ export const getInvestorValuationSummary = createServerFn({ method: "GET" })
     }
   });
 
-// Diagnostyka RCN „na żywo" — administrator/operator może sprawdzić DOKŁADNIE, na
-// którym etapie pobieranie z Geoportalu zawodzi (capabilities / warstwy / brak transakcji
-// / odfiltrowane). Zwraca pełną RcnDiagnostics dla danego wniosku.
+// Diagnostyka RCN — moduł wyłączony. Stub zachowany, aby nie łamać importów w UI.
 export const diagnoseRcnForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertAdminOrOperator(context.userId);
-    const { rcnBenchmark } = await import("@/lib/property-analysis/rcn-geoportal.server");
-    const { geocode } = await import("@/lib/property-analysis/location-score.server");
-
-    const { data: props } = await supabaseAdmin
-      .from("properties")
-      .select("property_type, address, city, voivodeship")
-      .eq("loan_application_id", data.applicationId);
-    const property = props?.[0] ?? null;
-    if (!property) return { ok: false as const, message: "Brak nieruchomości dla wniosku." };
-
-    const geo = property.address
-      ? await geocode([property.address, property.city, property.voivodeship, "Polska"].filter(Boolean).join(", "), {
-          expectedCity: property.city,
-          expectedVoivodeship: property.voivodeship,
-        })
-      : null;
-    if (!geo) return { ok: false as const, message: "Nie udało się zgeokodować adresu — RCN wymaga współrzędnych." };
-
-    const res = await rcnBenchmark({ lat: geo.lat, lng: geo.lng, propertyType: property.property_type ?? "inna" });
+  .handler(async () => {
     return {
-      ok: true as const,
-      coordinates: { lat: geo.lat, lng: geo.lng },
-      propertyType: property.property_type,
-      status: res.diagnostics.status,
-      statusMessage: res.diagnostics.statusMessage,
-      transactionsCount: res.transactionsCount,
-      radiusKm: res.radiusKm,
-      stats: res.stats,
-      diagnostics: res.diagnostics,
+      ok: false as const,
+      message: "Moduł RCN/GUS został wyłączony — bazujemy na rynku porównawczym (deweloperuch + otodom).",
     };
   });
+
 
 /** Buduje bezpieczny (bez PII) podzbiór dla inwestora z pełnego dossier. */
 export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): InvestorValuationSummary {
