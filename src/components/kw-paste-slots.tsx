@@ -201,7 +201,7 @@ export function KwPasteSlotsDialog({
     try {
       const res: any = await doOcrImport({ data: { loanApplicationId, images, dryRun: true } });
       if (res?.debug) {
-        setDebug({ transcript: res.debug.transcript || "", rawJson: res.debug.rawJson || "", parsed: res.debug.parsed });
+        setDebug({ transcript: res.debug.transcript || "" });
         toast.success("Podgląd OCR gotowy");
       } else {
         toast.error("Brak danych debug w odpowiedzi");
