@@ -26,8 +26,12 @@ export async function downloadAndStore(opts: {
     if (!res.ok) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
     const ext = guessExt(opts.filename, opts.mime, res.headers.get("content-type"));
-    const safeName = (opts.filename ?? `file-${Date.now()}`).replace(/[^\w.\-]+/g, "_");
-    const path = `leads/${opts.leadId}/${Date.now()}-${safeName}${safeName.includes(".") ? "" : ext}`;
+    // Rozszerzenie także w NAZWIE (nie tylko w ścieżce) — file_name bez ".jpg"
+    // sprawiał, że UI nie rozpoznawał obrazka i nie pokazywał miniatury.
+    const safeName =
+      (opts.filename ?? `file-${Date.now()}`).replace(/[^\w.\-]+/g, "_") +
+      ((opts.filename ?? "").includes(".") ? "" : ext);
+    const path = `leads/${opts.leadId}/${Date.now()}-${safeName}`;
     const mime = opts.mime ?? res.headers.get("content-type") ?? "application/octet-stream";
     const { error } = await admin().storage.from(CLIENT_FILES_BUCKET).upload(path, buf, {
       contentType: mime,

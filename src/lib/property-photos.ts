@@ -15,8 +15,11 @@ import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 export const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i;
 
-/** Buckety, w których mogą leżeć zdjęcia nieruchomości (kolejność = priorytet). */
-const PHOTO_BUCKETS = [CLIENT_FILES_BUCKET] as const;
+/** Buckety, w których mogą leżeć zdjęcia nieruchomości (kolejność = priorytet).
+ *  Legacy "documents"/"property-photos" — pliki wgrane przez starszą wersję
+ *  serwera po migracji na wspólny bucket lądowały jeszcze w starych bucketach;
+ *  bez fallbacku podpisywanie kończyło się "Nie udało się otworzyć pliku". */
+const PHOTO_BUCKETS = [CLIENT_FILES_BUCKET, "documents", "property-photos"] as const;
 
 /** Typy dokumentów z tabeli `documents`, które są faktycznie zdjęciami nieruchomości. */
 export const PROPERTY_PHOTO_TYPES = new Set([

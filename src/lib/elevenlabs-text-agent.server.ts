@@ -10,6 +10,7 @@
 //   - mark_ready_for_human({ reason }) — zapisywane, ale prompt instruuje pełną autonomię
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { normalizeKwNumber } from "./kw";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -203,9 +204,15 @@ export async function runAgentTurn(opts: {
   const missing: string[] = [];
   const mark = (ok: boolean, label: string) => (ok ? known : missing).push(label);
   mark(appData.loan_amount != null, "kwota pożyczki");
+  // Imię i nazwisko wysoko na liście — bot zbierał komplet dokumentów,
+  // a wniosek trafiał do inwestorów podpisany "Klient z leada".
+  mark(!!(lead.first_name && lead.last_name), "imię i nazwisko");
   mark(!!appData.typ_nieruchomosci, "rodzaj nieruchomości");
+  // Tylko POPRAWNY numer KW (format XXXX/NNNNNNNN/C) — status typu
+  // "przesłany" nie kończy dopytywania o właściwy numer.
   mark(
-    (Array.isArray(appData.kw_numbers) && appData.kw_numbers.length > 0) || !!appData.numer_kw,
+    (Array.isArray(appData.kw_numbers) && appData.kw_numbers.some((k: unknown) => normalizeKwNumber(k))) ||
+      !!normalizeKwNumber(appData.numer_kw),
     "numer księgi wieczystej",
   );
   mark(
@@ -214,7 +221,6 @@ export async function runAgentTurn(opts: {
   );
   mark(!!(lead.phone_raw || lead.phone_normalized || appData.phone), "numer telefonu");
   mark(!!(lead.email || appData.email), "adres e-mail");
-  mark(!!(lead.first_name && lead.last_name), "imię i nazwisko");
   const checklistBlock =
     missing.length === 0
       ? `\n\n[STAN DANYCH — sprawdzony w bazie]\nKOMPLET: mamy wszystkie dane (${known.join(", ")}). Nie dopytuj o nic z tej listy. Sprawa przechodzi do analizy — poinformuj o tym klienta, jeśli jeszcze tego nie zrobiłeś. NIE wysyłaj linku do formularza ani financeyou.pl i NIE wywołuj send_application_link — nie ma już czego dokańczać.`
@@ -339,9 +345,14 @@ function normalizePatch(raw: Record<string, any>): Record<string, any> {
         continue;
       }
     }
-    // Numer KW → dopisz też do kw_numbers (czyta je promocja do wniosku)
+    // Numer KW → dopisz też do kw_numbers (czyta je promocja do wniosku).
+    // TYLKO poprawny format XXXX/NNNNNNNN/C — bot potrafi zapisać tu status
+    // ("przesłany", "na zdjęciu"), który wcześniej lądował w bazie jako
+    // rzekomy numer księgi. Taki opis trafia do status_numeru_kw.
     if (key === "numer_kw" && typeof v === "string" && v.trim()) {
-      out.numer_kw = v.trim().toUpperCase();
+      const kw = normalizeKwNumber(v);
+      if (kw) out.numer_kw = kw;
+      else out.status_numeru_kw = v.trim();
       continue;
     }
     out[key] = v;

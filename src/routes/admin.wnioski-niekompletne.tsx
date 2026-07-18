@@ -11,6 +11,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as 
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { containsValidKw } from "@/lib/kw";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -41,6 +42,16 @@ const COMPLETE_STATUSES = [
   "notariusz",
   "zamkniete",
 ];
+
+// Placeholdery wpisywane automatycznie, gdy klient powstał z leada bez danych
+// — nie liczą się jako prawdziwe imię i nazwisko.
+const PLACEHOLDER_NAMES = new Set(["z leada", "(brak nazwiska)", "—", "-", "brak"]);
+function hasRealClientName(c: Row["client"]): boolean {
+  const first = (c?.first_name ?? "").trim();
+  const last = (c?.last_name ?? "").trim();
+  if (!first || !last) return false;
+  return !PLACEHOLDER_NAMES.has(last.toLowerCase()) && !PLACEHOLDER_NAMES.has(first.toLowerCase());
+}
 
 function fmtPLN(n: number | null) {
   if (n == null) return "—";
@@ -140,14 +151,16 @@ function ApplicationsPage() {
         for (const r of list) r.docCount = counts[r.id] ?? 0;
       }
 
-      // Auto-promocja: numer KW + (zdjęcia nieruchomości ALBO dokumenty) => szukamy_inwestora.
-      // Taki wniosek nie jest już nowym leadem — mamy komplet do rozmowy z inwestorem.
+      // Auto-promocja: POPRAWNY numer KW + imię i nazwisko klienta
+      // + (zdjęcia nieruchomości ALBO dokumenty) => szukamy_inwestora.
+      // Bez nazwiska albo z KW-śmieciem ("PRZESŁANY") wniosek zostaje
+      // w kompletowaniu danych — inwestor nie dostanie anonimowej sprawy.
       const toPromote = list.filter((r) => {
         if (!INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) return false;
-        const hasKw = (r.properties ?? []).some((p) => !!p.land_register_number && p.land_register_number.trim().length > 0);
+        const hasKw = (r.properties ?? []).some((p) => containsValidKw(p.land_register_number));
         const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
         const hasDocs = (r.docCount ?? 0) > 0;
-        return hasKw && (hasPhotos || hasDocs);
+        return hasKw && hasRealClientName(r.client) && (hasPhotos || hasDocs);
       });
       if (toPromote.length > 0) {
         await supabase
@@ -219,7 +232,7 @@ function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Wnioski</h1>
           <p className="text-sm text-muted-foreground">
-            Wszystkie wnioski — kompletne i niekompletne. Po dodaniu numeru KW oraz zdjęć wniosek zostaje automatycznie oznaczony jako kompletny.
+            Wszystkie wnioski — kompletne i niekompletne. Po dodaniu imienia i nazwiska, poprawnego numeru KW oraz zdjęć wniosek zostaje automatycznie oznaczony jako kompletny.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>

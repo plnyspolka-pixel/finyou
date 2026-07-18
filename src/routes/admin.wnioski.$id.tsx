@@ -26,10 +26,27 @@ export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
 });
 
+// Etykiety kanałów/kierunków z lead_communications (inne wartości niż contact_events).
+const commChannelLabels: Record<string, string> = {
+  messenger: "Messenger",
+  instagram: "Instagram",
+  email: "E-mail",
+  sms: "SMS",
+  phone: "Telefon",
+  call: "Telefon",
+  voicebot: "Voicebot",
+  whatsapp: "WhatsApp",
+};
+const commDirectionLabels: Record<string, string> = {
+  inbound: "Przychodzący",
+  outbound: "Wychodzący",
+};
+
 function WniosekDetail() {
   const { id } = Route.useParams();
   const [app, setApp] = useState<any | null>(null);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [comms, setComms] = useState<any[]>([]);
   const [docs, setDocs] = useState<any[]>([]);
   const [offers, setOffers] = useState<any[]>([]);
   const [audit, setAudit] = useState<any[]>([]);
@@ -50,6 +67,23 @@ function WniosekDetail() {
     ]);
     setApp(a.data); setContacts(c.data ?? []); setDocs(d.data ?? []); setOffers(o.data ?? []);
     setAudit(au.data ?? []); setAutomations(am.data ?? []); setDistributions(di.data ?? []);
+
+    // Historia kontaktu obejmuje też komunikację z fazy leada (Messenger/IG,
+    // e-mail, SMS, voicebot) — bez tego wnioski z inbound miały pustą zakładkę,
+    // mimo że cała rozmowa z klientem jest zapisana w lead_communications.
+    const { data: leadRows } = await supabase.from("leads").select("id").eq("loan_application_id", id);
+    const leadIds = (leadRows ?? []).map((l: any) => l.id);
+    if (leadIds.length > 0) {
+      const { data: lc } = await supabase
+        .from("lead_communications")
+        .select("id, channel, direction, subject, content, created_at, status")
+        .in("lead_id", leadIds)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      setComms(lc ?? []);
+    } else {
+      setComms([]);
+    }
   };
   useEffect(() => { void load(); }, [id]);
 
@@ -112,7 +146,7 @@ function WniosekDetail() {
           <TabsTrigger value="zabezpieczenie">Zabezpieczenie</TabsTrigger>
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({docs.length})</TabsTrigger>
-          <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length + comms.length})</TabsTrigger>
           <TabsTrigger value="selekcja">Selekcja</TabsTrigger>
           <TabsTrigger value="dystrybucja">Dystrybucja ({distributions.length})</TabsTrigger>
           <TabsTrigger value="oferty">Oferty ({offers.length})</TabsTrigger>
@@ -213,15 +247,19 @@ function WniosekDetail() {
               <Button onClick={addContact} className="md:col-span-1">Dodaj</Button>
             </CardContent></Card>
           <div className="space-y-2">
-            {contacts.map((e) => (
-              <Card key={e.id}><CardContent className="py-3 text-sm">
+            {[...contacts.map((e) => ({ ...e, _kind: "event" as const })),
+              ...comms.map((c) => ({ ...c, _kind: "comm" as const }))]
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .map((e) => (
+              <Card key={`${e._kind}-${e.id}`}><CardContent className="py-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{contactChannelLabels[e.channel]}</Badge>
-                  <Badge variant="outline">{contactDirectionLabels[e.direction]}</Badge>
+                  <Badge variant="outline">{(e._kind === "event" ? contactChannelLabels[e.channel] : commChannelLabels[e.channel]) ?? e.channel}</Badge>
+                  <Badge variant="outline">{(e._kind === "event" ? contactDirectionLabels[e.direction] : commDirectionLabels[e.direction]) ?? e.direction}</Badge>
+                  {e._kind === "comm" && <Badge variant="secondary" className="text-[10px]">z rozmowy (lead)</Badge>}
                   <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(e.created_at)}</span>
                 </div>
                 {e.subject && <div className="font-medium mt-1">{e.subject}</div>}
-                {e.content && <div className="text-muted-foreground mt-1">{e.content}</div>}
+                {e.content && <div className="text-muted-foreground mt-1 whitespace-pre-wrap">{e.content}</div>}
               </CardContent></Card>
             ))}
           </div>
