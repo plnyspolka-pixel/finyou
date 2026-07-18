@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanelBase } from "@/lib/panel-base";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
@@ -13,13 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   ArrowLeft, FileText, Image as ImageIcon, Home, Wallet, CalendarClock,
   MapPin, Landmark, Ruler, User, Building2, UserRound, StickyNote, Save,
-  Calculator, Send, ArrowRight,
+  Calculator, Send, ArrowRight, Upload,
 } from "lucide-react";
+import { uploadFile } from "@/lib/uploads/unified-upload";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
 import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { FileThumb } from "@/components/media/FileThumb";
+import { ClientFilesManager } from "@/components/media/ClientFilesManager";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
@@ -38,6 +40,7 @@ type Row = {
   created_at: string;
   client: { first_name?: string; last_name?: string; city?: string; phone?: string; email?: string } | null;
   properties: Array<{
+    id?: string;
     property_type?: string;
     address?: string;
     street?: string;
@@ -87,31 +90,62 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      setLoading(true);
-      const [{ data: app }, { data: d }] = await Promise.all([
-        supabase
-          .from("loan_applications")
-          .select(
-            "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
-          )
-          .eq("id", id)
-          .maybeSingle(),
-        supabase
-          .from("documents")
-          .select("id, document_type, file_name, file_path, file_url, created_at")
-          .eq("loan_application_id", id)
-          .order("created_at", { ascending: false }),
-      ]);
-      const appRow = (app as any) ?? null;
-      setRow(appRow);
-      setNotes(appRow?.broker_notes ?? "");
-      setDocs((d as any) ?? []);
-      setLoading(false);
-    })();
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [{ data: app }, { data: d }] = await Promise.all([
+      supabase
+        .from("loan_applications")
+        .select(
+          "id, status, broker_notes, loan_amount, preferred_period_months, created_at, client:clients(first_name,last_name,city,phone,email), properties(id,property_type,address,street,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)"
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("documents")
+        .select("id, document_type, file_name, file_path, file_url, created_at")
+        .eq("loan_application_id", id)
+        .order("created_at", { ascending: false }),
+    ]);
+    const appRow = (app as any) ?? null;
+    setRow(appRow);
+    setNotes(appRow?.broker_notes ?? "");
+    setDocs((d as any) ?? []);
+    if (!silent) setLoading(false);
   }, [id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  // Operator dosyła pliki klienta (np. zdjęcia utracone przy migracji storage).
+  // Wgrywamy do bucketu `pliki-klienta` (prefiks property/<appId>/…) i dopinamy
+  // ścieżki do properties.photos, żeby weszły do sekcji „Pliki klienta".
+  const addFiles = async (files: FileList | null) => {
+    if (!files || !files.length || !row) return;
+    setUploading(true);
+    try {
+      const paths: string[] = [];
+      for (const file of Array.from(files)) {
+        const res = await uploadFile(file, { context: "property", applicationId: row.id });
+        paths.push(res.path);
+      }
+      const prop = Array.isArray(row.properties) ? row.properties[0] : (row.properties as any);
+      if (prop?.id) {
+        const existing = Array.isArray(prop.photos) ? (prop.photos as string[]) : [];
+        const { error } = await supabase.from("properties").update({ photos: [...existing, ...paths] } as any).eq("id", prop.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("properties").insert({ loan_application_id: row.id, property_type: "inna", photos: paths } as any);
+        if (error) throw error;
+      }
+      toast.success(`Dodano ${paths.length} plik(ów)`);
+      await load(true);
+    } catch (e: any) {
+      toast.error("Nie udało się wgrać plików", { description: e?.message ?? String(e) });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Wszystkie pliki klienta w jednym worku (zdjęcia + wpisy z tabeli documents).
   const clientFiles = useMemo(() => {
@@ -251,43 +285,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
 
       {/* Pliki klienta — jeden worek: zdjęcia, skany, załączniki. Wszystko jako miniatury. */}
       <FancyCard tone="light">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><ImageIcon className="h-4 w-4" /></div>
-            <div>
-              <div className="text-sm font-bold">{CLIENT_FILES_LABEL}</div>
-              <div className="text-xs text-muted-foreground">Kliknij, aby powiększyć lub otworzyć</div>
-            </div>
-          </div>
-          <Badge variant="outline" className="text-sm">{clientFiles.length}</Badge>
-        </div>
-        {clientFiles.length === 0 ? (
-          <div className="rounded-xl border border-dashed py-14 text-center text-sm text-muted-foreground">Brak plików.</div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {clientFiles.map((f) => (
-              f.path ? (
-                <FileThumb
-                  key={f.key}
-                  path={f.path}
-                  name={f.name}
-                  aspect="video"
-                  showName
-                  onClick={() => void openClientFile(f)}
-                />
-              ) : (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => void openClientFile(f)}
-                  className="group relative aspect-video overflow-hidden rounded-lg border bg-muted transition hover:shadow-lg"
-                >
-                  <img src={f.externalUrl ?? ""} alt={f.name} loading="lazy" className="h-full w-full object-cover" />
-                </button>
-              )
-            ))}
-          </div>
-        )}
+        <ClientFilesManager loanApplicationId={row.id} onChanged={() => void load(true)} />
       </FancyCard>
 
       {/* Nieruchomość + klient */}

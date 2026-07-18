@@ -2,9 +2,10 @@
 // dossier: nieruchomość + KW + właściciel + korespondencja + dane rządowe + OCR.
 // To ostateczna warstwa, która domyka wycenę.
 
-import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, GovBenchmark } from "./types";
+import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, GovBenchmark, MarketComparablesResult } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import { valuationBasisLabel, buyerPoolLabel, plotCategoryLabel, type PlotBuildabilityResult } from "./plot-buildability";
+
 
 export interface MasterValuationInput {
   propertyType: string;
@@ -32,7 +33,9 @@ export interface MasterValuationInput {
   ocr: OcrSummary;
   plotBuildability?: PlotBuildabilityResult | null;
   govBenchmark?: GovBenchmark | null;
+  marketComparables?: MarketComparablesResult | null;
 }
+
 
 function fmt(n: number | null | undefined): string {
   return n != null && Number.isFinite(n) ? n.toLocaleString("pl-PL") + " PLN" : "brak";
@@ -62,8 +65,13 @@ function buildDossier(i: MasterValuationInput): string {
     i.floorPietro != null ? `kondygnacja: ${i.floorPietro === 0 ? "parter" : i.floorPietro + ". piętro"}` : null,
   ].filter(Boolean).join(", ");
 
+  const mc = i.marketComparables;
+  const mcBlock = mc && (mc.status === "success" || mc.status === "partial")
+    ? `\n0b) RYNEK PORÓWNAWCZY (deweloperuch.pl transakcje + otodom.pl oferty):\n- Mediana: ${mc.pricePerM2Median ? mc.pricePerM2Median.toLocaleString("pl-PL") + " zł/m²" : "—"} (zakres ${mc.pricePerM2Min ?? "—"}–${mc.pricePerM2Max ?? "—"})\n- Transakcji: ${mc.transactionsCount}, ofert: ${mc.offersCount}${mc.street ? `, rejon: ${mc.street}, ${mc.city}` : mc.city ? `, ${mc.city}` : ""}\n- Próbki: ${mc.sample.slice(0, 5).map((s) => `${s.source}${s.date ? ` ${s.date}` : ""} ${s.address ?? s.title ?? ""} ${s.pricePerM2 ?? "—"} zł/m²`).join(" | ") || "—"}\n`
+    : mc ? `\n0b) RYNEK PORÓWNAWCZY: brak danych (${mc.message}).\n` : "";
+
   return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
-${govBlock}
+${govBlock}${mcBlock}
 1) NIERUCHOMOŚĆ${i.parametersFromKw ? " (parametry i lokalizacja odczytane z księgi wieczystej — dział I-O)" : ""}
 - Typ: ${i.propertyType}
 - Lokalizacja: ${loc}

@@ -18,6 +18,8 @@ import { assessPlotBuildability } from "./plot-buildability";
 import { fetchGovBenchmark } from "./gov-benchmark.server";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
+import { fetchMarketComparables } from "./market-comparables.server";
+
 import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
 import type { InvestmentRiskAssessment } from "./types";
@@ -205,6 +207,19 @@ export async function runInvestmentRiskAssessmentCore(
     longitude: collateral?.property?.longitude ?? null,
   });
 
+  // 5d) Rynek porównawczy — deweloperuch.pl (rzeczywiste transakcje domów/mieszkań przy ulicy)
+  //      + otodom.pl (aktywne oferty działek). Uzupełnia RCN, gdy WFS milczy, i dostarcza
+  //      Perplexity twarde zł/m² wprost z rynku.
+  const marketComparables = await fetchMarketComparables({
+    propertyType: property?.property_type ?? "inna",
+    city: effCity,
+    street: (property as any)?.street ?? kwLegal.address?.street ?? null,
+    voivodeship: effVoivodeship,
+  }).catch((e) => {
+    warnings.push(`Rynek porównawczy (deweloperuch/otodom): ${e?.message ?? "błąd"}.`);
+    return null;
+  });
+
   // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
   //    Parametry i lokalizacja z KW mają pierwszeństwo w wycenie.
   const areaM2 = kwParams.usableAreaM2 ?? property?.area_sqm ?? null;
@@ -229,8 +244,10 @@ export async function runInvestmentRiskAssessmentCore(
     ocr,
     plotBuildability,
     govBenchmark,
+    marketComparables,
   });
   if (master.status !== "success") warnings.push(`Nadrzędna wycena Perplexity: ${master.errorMessage ?? "brak danych"}.`);
+
 
   // 7) Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze).
   //    Podstawa: mediana wyceny nadrzędnej → wycena zabezpieczenia → wartość deklarowana.
@@ -272,7 +289,8 @@ export async function runInvestmentRiskAssessmentCore(
   const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, plotBuildability, master });
 
   // 9) Rejestr wykorzystanych źródeł danych.
-  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, govBenchmark, collateral, master });
+  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, govBenchmark, collateral, master, marketComparables });
+
 
   // 9) Executive summary.
   const valueStr = master.estimatedValueMidPln
@@ -305,7 +323,9 @@ export async function runInvestmentRiskAssessmentCore(
     saleability,
     plotBuildability,
     govBenchmark,
+    marketComparables,
     forcedSale,
+
     masterValuation: master,
     collateralAnalysis: collateral,
     componentScores: combined.componentScores,
@@ -357,7 +377,9 @@ function buildDataSources(a: {
   govBenchmark: InvestmentRiskAssessment["govBenchmark"];
   collateral: InvestmentRiskAssessment["collateralAnalysis"];
   master: InvestmentRiskAssessment["masterValuation"];
+  marketComparables?: InvestmentRiskAssessment["marketComparables"];
 }): DataSourceUsage[] {
+
   const sources: DataSourceUsage[] = [];
 
   // Government-first: RCN (rzeczywiste transakcje) — priorytetowe źródło rządowe.
@@ -386,6 +408,22 @@ function buildDataSources(a: {
     status: (gb.gusPricePerHa != null || gb.gusPricePerM2Median != null) ? "success" : "no_data",
     note: gb.fallbackUsed ? `dane zastępcze: ${gb.unitLevel ?? ""}` : undefined,
   });
+
+  const mc = a.marketComparables;
+  sources.push({
+    source: "Rynek porównawczy — deweloperuch.pl (transakcje) + otodom.pl (oferty działek)",
+    used: !!mc && (mc.status === "success" || mc.status === "partial"),
+    purpose: "twarde zł/m² z rynku: rzeczywiste transakcje domów/mieszkań przy ulicy oraz aktywne oferty działek",
+    dataLevel: mc
+      ? [mc.pricePerM2Median != null ? `mediana ${mc.pricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
+         `${mc.transactionsCount} transakcji`, `${mc.offersCount} ofert`,
+         mc.street ? `rejon: ${mc.street}` : mc.city ? mc.city : null].filter(Boolean).join(", ")
+      : "—",
+    period: "aktualne / ostatnie 12–24 mies.",
+    status: mc?.status === "success" ? "success" : mc?.status === "partial" ? "partial" : mc?.status === "error" ? "error" : "no_data",
+    note: mc && mc.status !== "success" ? mc.message : undefined,
+  });
+
 
   sources.push({
     source: "Skany dokumentów (OCR — Gemini)",

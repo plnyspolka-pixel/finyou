@@ -13,7 +13,9 @@ import { normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { renderKwSections, type KwExtraction } from "@/lib/kw-render";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = "google/gemini-2.5-pro";
+const STRUCTURE_MODEL = "openai/gpt-5.5";
+
 const MAX_FILES = 12;
 const MAX_FILE_B64 = 9_000_000; // ~6,5 MB pliku
 const MAX_TOTAL_B64 = 40_000_000;
@@ -22,7 +24,19 @@ const SYSTEM_PROMPT =
   "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Przepisujesz treść DOSŁOWNIE — niczego nie zgadujesz " +
   "ani nie uzupełniasz. Pole, którego nie widać na obrazach, zwracasz jako null. Odpowiadasz WYŁĄCZNIE poprawnym JSON-em.";
 
-const USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z przeglądarki EKW (ekw.ms.gov.pl) — mogą obejmować okładkę oraz działy I-O, I-Sp, II, III i IV, w dowolnej kolejności, także we fragmentach. Połącz treść ze WSZYSTKICH obrazów i zwróć jeden JSON:
+const TRANSCRIBE_SYSTEM_PROMPT =
+  "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Twoim jedynym zadaniem jest DOSŁOWNE przepisanie tekstu " +
+  "widocznego na obrazach — bez interpretacji, bez zgadywania, bez pomijania. Zachowujesz układ sekcji i wersaliki.";
+
+const TRANSCRIBE_USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z przeglądarki EKW (ekw.ms.gov.pl) — okładka i/lub działy I-O, I-Sp, II, III, IV, w dowolnej kolejności, także we fragmentach.
+
+Przepisz DOSŁOWNIE cały widoczny tekst ze wszystkich obrazów. Zasady:
+- Rozdziel sekcje nagłówkami typu "=== OKŁADKA ===", "=== DZIAŁ I-O ===", "=== DZIAŁ I-SP ===", "=== DZIAŁ II ===", "=== DZIAŁ III ===", "=== DZIAŁ IV ===" — tak jak wynika to z obrazów.
+- Zachowaj tabele w formie tekstowej (rubryki / wartości linia po linii).
+- Nie tłumacz, nie skracaj, nie zgaduj brakujących liter — nieczytelne fragmenty zaznacz jako [nieczytelne].
+- Nie zwracaj JSON-a, nie dodawaj komentarzy — tylko surowa treść KW.`;
+
+const USER_PROMPT = `Poniżej masz DOSŁOWNĄ transkrypcję treści księgi wieczystej (może obejmować okładkę i działy I-O, I-Sp, II, III, IV — w dowolnej kolejności, także we fragmentach). Twoim zadaniem jest wyłącznie uporządkować te dane w JSON — niczego nie dopisuj i nie zgaduj. Zwróć JEDEN JSON:
 
 {
   "kwNumber": "numer KW w formacie AA1A/00000000/0 lub null",
@@ -47,10 +61,14 @@ const USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z 
 }
 
 ZASADY:
-- Cały dział nieobecny na obrazach → null (NIE {"brakWpisu": true} — to oznacza dział widoczny i pusty).
-- "brakWpisu": true tylko, gdy na obrazie wyraźnie widać pusty dział (np. "BRAK WPISU").
+- Cały dział nieobecny w transkrypcji → null (NIE {"brakWpisu": true} — to oznacza dział widoczny i pusty).
+- "brakWpisu": true tylko, gdy w transkrypcji wyraźnie widać pusty dział (np. "BRAK WPISU").
 - Kwoty hipotek jako liczby (300000.00), waluta osobno.
-- Nazwiska i nazwy przepisuj dokładnie (wersaliki jak w EKW).`;
+- Nazwiska i nazwy przepisuj dokładnie tak jak w transkrypcji.
+
+=== TRANSKRYPCJA ===
+{{TRANSCRIPT}}`;
+
 
 const ImageSchema = z.object({
   dataUrl: z.string().min(50).max(MAX_FILE_B64),
@@ -59,10 +77,18 @@ const ImageSchema = z.object({
 });
 
 function tryParseJson(s: string): KwExtraction | null {
-  const m = s.match(/\{[\s\S]*\}/);
-  if (!m) return null;
+  if (!s) return null;
+  // Strip ```json fences if present.
+  let text = s.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   try {
-    return JSON.parse(m[0]) as KwExtraction;
+    return JSON.parse(text) as KwExtraction;
+  } catch {}
+  // Fallback: grab widest {...} block.
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first === -1 || last <= first) return null;
+  try {
+    return JSON.parse(text.slice(first, last + 1)) as KwExtraction;
   } catch {
     return null;
   }
@@ -97,37 +123,88 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const totalSize = data.images.reduce((acc, i) => acc + i.dataUrl.length, 0);
     if (totalSize > MAX_TOTAL_B64) throw new Error("Łączny rozmiar plików przekracza limit — wgraj mniej/mniejsze screeny.");
 
-    // 1) OCR — wszystkie obrazy w jednym wywołaniu (model sam scala fragmenty).
-    const userContent: unknown[] = [{ type: "text", text: USER_PROMPT }];
+    // 1a) Transkrypcja — surowy OCR wszystkich obrazów (bez struktury).
+    const transcribeContent: unknown[] = [{ type: "text", text: TRANSCRIBE_USER_PROMPT }];
     for (const img of data.images) {
       if (img.mimeType === "application/pdf" || /\.pdf$/i.test(img.fileName ?? "")) {
-        userContent.push({ type: "file", file: { filename: img.fileName ?? "kw.pdf", file_data: img.dataUrl } });
+        transcribeContent.push({ type: "file", file: { filename: img.fileName ?? "kw.pdf", file_data: img.dataUrl } });
       } else if (img.mimeType.startsWith("image/")) {
-        userContent.push({ type: "image_url", image_url: { url: img.dataUrl } });
+        transcribeContent.push({ type: "image_url", image_url: { url: img.dataUrl } });
       } else {
         throw new Error(`Nieobsługiwany typ pliku: ${img.mimeType} (dozwolone: obrazy i PDF).`);
       }
     }
 
+    async function runTranscribe(model: string) {
+      const r = await fetch(AI_GATEWAY, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
+            { role: "user", content: transcribeContent },
+          ],
+          max_tokens: 8000,
+        }),
+      });
+      if (r.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
+      if (r.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
+      if (!r.ok) {
+        const body = await r.text().catch(() => "");
+        console.error("KW OCR transcribe HTTP error", { model, status: r.status, body: body.slice(0, 500) });
+        throw new Error(`Błąd OCR — transkrypcja (HTTP ${r.status}): ${body.slice(0, 200)}`);
+      }
+      const j: any = await r.json();
+      const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
+      const finish = j?.choices?.[0]?.finish_reason;
+      console.log("KW OCR transcribe result", { model, len: content.length, finish });
+      return content;
+    }
+
+    let transcript = await runTranscribe(MODEL);
+    if (!transcript || transcript.length < 40) {
+      console.warn("KW OCR: pusta transkrypcja z", MODEL, "— fallback na openai/gpt-5.5");
+      transcript = await runTranscribe("openai/gpt-5.5");
+    }
+    if (!transcript || transcript.length < 40) {
+      throw new Error("OCR nie odczytał tekstu ze screenów — sprawdź, czy obrazy są czytelne.");
+    }
+
+
+    // 1b) Strukturyzacja — mapowanie transkrypcji do JSON-a KW.
     const resp = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
+        model: STRUCTURE_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent },
+          { role: "user", content: USER_PROMPT.replace("{{TRANSCRIPT}}", transcript) },
         ],
-        temperature: 0,
+        response_format: { type: "json_object" },
       }),
     });
     if (resp.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
     if (resp.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
-    if (!resp.ok) throw new Error(`Błąd OCR (HTTP ${resp.status}).`);
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => "");
+      console.error("KW OCR structuring HTTP error", { status: resp.status, body: errBody.slice(0, 800), model: STRUCTURE_MODEL });
+      throw new Error(`Błąd OCR — strukturyzacja (HTTP ${resp.status}): ${errBody.slice(0, 200)}`);
+    }
+
     const json: any = await resp.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const extraction = tryParseJson(content);
-    if (!extraction) throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
+    if (!extraction) {
+      console.error("KW OCR: nie sparsowano odpowiedzi modelu", {
+        model: MODEL,
+        preview: content.slice(0, 500),
+        transcriptPreview: transcript.slice(0, 500),
+      });
+      throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
+    }
+
 
     // 2) Numer KW: ręczny > OCR > numer z nieruchomości wniosku.
     const warnings: string[] = [];

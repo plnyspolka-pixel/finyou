@@ -7,6 +7,36 @@ import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
 
+export type MarketCompStatus = "success" | "partial" | "no_data" | "error" | "skipped";
+export interface MarketCompRecord {
+  source: "deweloperuch.pl" | "otodom.pl";
+  kind: "transaction" | "offer";
+  url: string | null;
+  title: string | null;
+  address: string | null;
+  pricePln: number | null;
+  areaM2: number | null;
+  pricePerM2: number | null;
+  date: string | null;
+}
+export interface MarketComparablesResult {
+  status: MarketCompStatus;
+  message: string;
+  query: string;
+  city: string | null;
+  street: string | null;
+  transactionsCount: number;
+  offersCount: number;
+  pricePerM2Median: number | null;
+  pricePerM2Average: number | null;
+  pricePerM2Min: number | null;
+  pricePerM2Max: number | null;
+  sample: MarketCompRecord[];
+  summaryLine: string;
+}
+
+
+
 export type RiskGrade = "A" | "B" | "C" | "D" | "E";
 
 export type Recommendation =
@@ -295,7 +325,9 @@ export interface InvestmentRiskAssessment {
   saleability: SaleabilityForecast;
   plotBuildability: PlotBuildabilityResult;
   govBenchmark: GovBenchmark;
+  marketComparables?: MarketComparablesResult | null;
   forcedSale: ForcedSaleEstimate;
+
   masterValuation: MasterValuation;
 
   /** Wynik istniejącej analizy zabezpieczenia (wycena Perplexity + lokalizacja + powódź). */
