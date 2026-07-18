@@ -154,6 +154,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <Toaster />
+        <PreviewBypassToggle />
       </AuthProvider>
     </QueryClientProvider>
   );
