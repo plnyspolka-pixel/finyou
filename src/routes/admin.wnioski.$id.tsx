@@ -190,7 +190,7 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
-              <KwContentSection applicationId={id} canFetch showKwNumber />
+              <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>

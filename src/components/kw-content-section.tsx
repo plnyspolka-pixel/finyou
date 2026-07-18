@@ -51,12 +51,15 @@ export function KwContentSection({
   applicationId,
   canFetch,
   showKwNumber = false,
+  canImportOcr = false,
 }: {
   applicationId: string;
   /** Whether the user can trigger a fetch / refresh (admin only). */
   canFetch: boolean;
   /** Whether to display the KW number itself (admin only). */
   showKwNumber?: boolean;
+  /** Whether the user can import KW content from screenshots via OCR (admin only). */
+  canImportOcr?: boolean;
 }) {
   const getKw = useServerFn(getKwForApplication);
   const doFetch = useServerFn(fetchKwForApplication);
@@ -147,7 +150,7 @@ export function KwContentSection({
     }
   };
 
-  const ocrUploadControls = canFetch ? (
+  const ocrUploadControls = canImportOcr ? (
     <>
       <input
         ref={fileInputRef}
@@ -175,8 +178,8 @@ export function KwContentSection({
             <div>
               <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść KW</CardTitle>
               <CardDescription>
-                Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości albo wgraj screeny
-                treści KW (OCR odczyta numer i zapisze go na wniosku).
+                Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości
+                {canImportOcr ? " albo wgraj screeny treści KW (OCR odczyta numer i zapisze go na wniosku)" : ""}.
               </CardDescription>
             </div>
             {ocrUploadControls}
