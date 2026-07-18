@@ -12,7 +12,7 @@ import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from 
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { isShowablePropertyPhoto, isPropertyPhotoDocument } from "@/lib/property-photos";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/inwestor/")({
   component: InwestorList,
