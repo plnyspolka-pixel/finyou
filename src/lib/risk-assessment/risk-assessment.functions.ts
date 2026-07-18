@@ -608,10 +608,10 @@ export interface InvestorValuationSummary {
 export const getInvestorValuationSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data }): Promise<InvestorValuationSummary | null> => {
+  .handler(async ({ data, context }): Promise<InvestorValuationSummary | null> => {
+    const db = context.supabase as unknown as SupabaseLike;
     try {
-      // Bramka: udostępniamy wyłącznie dla tematów dostępnych dla inwestorów.
-      const { data: app } = await supabaseAdmin
+      const { data: app } = await db
         .from("loan_applications")
         .select("id, available_to_investors")
         .eq("id", data.applicationId)
