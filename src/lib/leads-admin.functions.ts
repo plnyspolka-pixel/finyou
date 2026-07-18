@@ -195,10 +195,14 @@ export const listLeads = createServerFn({ method: "GET" })
     }
 
     const brokerIds = Array.from(new Set(Object.values(brokerByLead).flatMap((m) => Object.keys(m))));
+    const revealIds = Array.from(new Set(
+      Object.values(revealsByLead).flatMap((m) => [...Object.keys(m.phone), ...Object.keys(m.email), ...Object.keys(m.messenger)])
+    ));
     const callerIds = Array.from(new Set([
       ...Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean),
       ...Object.values(commsByLead).map((c) => c.lastNoteById).filter(Boolean),
       ...brokerIds,
+      ...revealIds,
     ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
@@ -215,6 +219,14 @@ export const listLeads = createServerFn({ method: "GET" })
         c.brokerCalls = Object.entries(bMap)
           .map(([id, v]) => ({ id, name: callerNames[id] ?? "Pośrednik", count: v.count, lastAt: v.lastAt }))
           .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+      }
+      const rMap = revealsByLead[leadId];
+      if (rMap) {
+        const toArr = (bucket: Record<string, { count: number; lastAt: string }>) =>
+          Object.entries(bucket)
+            .map(([id, v]) => ({ id, name: callerNames[id] ?? "Pośrednik", count: v.count, lastAt: v.lastAt }))
+            .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+        c.reveals = { phone: toArr(rMap.phone), email: toArr(rMap.email), messenger: toArr(rMap.messenger) };
       }
     }
 
