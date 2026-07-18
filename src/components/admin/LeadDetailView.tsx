@@ -484,11 +484,16 @@ function EmailExtras({ comm, qc, leadId }: { comm: any; qc: any; leadId: string 
   const openAttachment = async (path: string) => {
     try {
       const r = await urlFn({ data: { path } });
+      if (!r.url) {
+        toast.error("Plik niedostępny (nie znaleziono w storage)");
+        return;
+      }
       window.open(r.url, "_blank", "noopener");
     } catch (e: any) {
       toast.error(e.message ?? "Błąd pobierania");
     }
   };
+
 
   return (
     <div className="space-y-2 pt-1">

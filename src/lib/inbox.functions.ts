@@ -149,12 +149,16 @@ export const getCommAttachmentUrl = createServerFn({ method: "POST" })
     ]);
     if (!isAdmin && !isOperator) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Wszystkie załączniki (inbound i outbound) leżą w buckecie "pliki-klienta".
-    const { data: signed, error } = await supabaseAdmin.storage
-      .from(CLIENT_FILES_BUCKET)
-      .createSignedUrl(data.path, 3600);
-    if (error) throw error;
-    return { url: signed.signedUrl };
+    // Załączniki mogą leżeć w "pliki-klienta" (nowe) lub "documents" (legacy).
+    const buckets = [CLIENT_FILES_BUCKET, "documents"];
+    for (const bucket of buckets) {
+      const { data: signed, error } = await supabaseAdmin.storage
+        .from(bucket)
+        .createSignedUrl(data.path, 3600);
+      if (!error && signed?.signedUrl) return { url: signed.signedUrl };
+    }
+    return { url: null as string | null, missing: true };
+
   });
 
 /**
