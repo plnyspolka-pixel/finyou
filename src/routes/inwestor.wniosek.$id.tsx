@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Eye, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, ExternalLink, Eye, AlertTriangle, FolderOpen } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
@@ -19,7 +19,7 @@ import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { formatPLN } from "@/lib/loan-math";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -39,31 +39,6 @@ function maxMonthsForAmount(amount: number): number {
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
   component: InwestorWniosek,
 });
-
-const docTypeLabels: Record<string, string> = {
-  dochod: "Dokumenty dochodowe",
-  dokument_wlasnosci: "Prawa do nieruchomości",
-  prawo_wlasnosci: "Prawa do nieruchomości",
-  zdjecia_pomieszczen: "Zdjęcia pomieszczeń",
-  zdjecia_bryly: "Zdjęcia bryły budynku",
-  zdjecia_lokalu: "Zdjęcia lokalu",
-  mpzp: "MPZP / warunki zabudowy",
-  wypis_rejestru: "Wypis z rejestru gruntów",
-  inne: "Inne dokumenty",
-  klient_upload: "Pozostałe",
-};
-
-const PROPERTY_PHOTO_TYPES = new Set([
-  "zdjecie_nieruchomosci",
-  "zdjecia_nieruchomosci",
-  "zdjecia_pomieszczen",
-  "zdjecia_bryly",
-  "zdjecia_lokalu",
-  "zdjecie_wewnetrzne",
-  "zdjecie_zewnetrzne",
-  "property_photos",
-  "klient_upload",
-]);
 
 function isImage(name: string) {
   return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(name);
@@ -101,21 +76,19 @@ function InwestorWniosek() {
     const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", id).order("created_at", { ascending: false });
     const list = ds ?? [];
     setDocs(list);
-    const imgs = list.filter((d: any) => d.file_path && isImage(d.file_name ?? ""));
+    // Podpisane URL-e dla każdego pliku klienta (obrazy pokazujemy jako miniaturki, reszta jako kafle).
     const next: Record<string, string> = {};
-    await Promise.all(imgs.map(async (d: any) => {
+    await Promise.all(list.map(async (d: any) => {
+      if (!d.file_path) return;
       const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
       if (u?.signedUrl) next[d.id] = u.signedUrl;
     }));
     setDocUrls(next);
 
-    // Resolve property photos (mix of http URLs, property-photos paths and document uploads).
-    const rawPhotos: string[] = [
-      ...(((data?.properties?.[0]?.photos ?? []) as string[]).filter((src) => isImage(src))),
-      ...list
-        .filter((d: any) => d.file_path && PROPERTY_PHOTO_TYPES.has(d.document_type ?? "") && isImage(d.file_name ?? d.file_path))
-        .map((d: any) => d.file_path),
-    ].filter((src, index, arr) => src && arr.indexOf(src) === index);
+    // Zdjęcia z properties.photos (starszy format, luźne URL-e/ścieżki) — nie duplikujemy tych, które są już w documents.
+    const knownDocPaths = new Set(list.map((d: any) => d.file_path).filter(Boolean));
+    const rawPhotos: string[] = ((data?.properties?.[0]?.photos ?? []) as string[])
+      .filter((src) => isImage(src) && !knownDocPaths.has(src));
     const resolved = await Promise.all(rawPhotos.map(async (src) => {
       if (!src || typeof src !== "string") return null;
       if (/^https?:\/\//i.test(src)) return src;
@@ -158,15 +131,10 @@ function InwestorWniosek() {
   if (!app) return <div className="text-muted-foreground">Ładowanie…</div>;
   const p = app.properties?.[0];
 
-  // Group docs
-  const incomeDocs = docs.filter((d) => d.document_type === "dochod");
-  const propertyDocs = docs.filter((d) => d.document_type !== "dochod");
-  const propGroups: Record<string, any[]> = {};
-  propertyDocs.forEach((d) => {
-    const t = d.document_type ?? "inne";
-    if (!propGroups[t]) propGroups[t] = [];
-    propGroups[t].push(d);
-  });
+  // Wszystkie pliki klienta w jednym worku — bez dzielenia na "zdjęcia" / "dokumenty".
+  const imageDocs = docs.filter((d) => d.file_path && isImage(d.file_name ?? d.file_path));
+  const otherDocs = docs.filter((d) => d.file_path && !isImage(d.file_name ?? d.file_path));
+  const totalFiles = imageDocs.length + otherDocs.length + photoUrls.length;
 
   const renderDocCard = (d: any) => {
     const url = docUrls[d.id];
@@ -174,7 +142,7 @@ function InwestorWniosek() {
     return (
       <button key={d.id} onClick={() => void openFile(d)} className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
         <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
-          {img ? <img src={url} alt={d.file_name} className="h-full w-full object-cover group-hover:scale-105 transition" />
+          {img ? <img src={url} alt={d.file_name} className="h-full w-full object-cover group-hover:scale-105 transition" loading="lazy" />
             : <FileText className="h-10 w-10 text-muted-foreground" />}
         </div>
         <div className="px-2 py-1.5 text-xs flex items-center justify-between gap-1">
@@ -211,21 +179,6 @@ function InwestorWniosek() {
         <Card>
           <CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {photoUrls.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {photoUrls.map((src, i) => (
-                  <a key={i} href={src} target="_blank" rel="noreferrer">
-                    <img
-                      src={src}
-                      alt=""
-                      className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition"
-                      loading="lazy"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
             {(() => {
               const loc = [p.city, p.voivodeship].filter(Boolean).join(", ");
               return (
@@ -261,14 +214,29 @@ function InwestorWniosek() {
 
       <InvestorValuationCard applicationId={id} />
 
-      {incomeDocs.length > 0 && (
+      {(totalFiles > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ImageIcon className="h-5 w-5" />Dokumenty dochodowe <span className="text-xs font-normal text-muted-foreground">(bonus)</span></CardTitle>
-            <CardDescription>Wyciągi bankowe, PIT, zaświadczenia o dochodzie.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><FolderOpen className="h-5 w-5" />{CLIENT_FILES_LABEL} <span className="text-xs font-normal text-muted-foreground">({totalFiles})</span></CardTitle>
+            <CardDescription>Zdjęcia nieruchomości, skany dokumentów i wszystkie inne załączniki wgrane przez klienta — w jednym miejscu.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{incomeDocs.map(renderDocCard)}</div>
+          <CardContent className="space-y-4">
+            {(imageDocs.length > 0 || photoUrls.length > 0) && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {imageDocs.map(renderDocCard)}
+                {photoUrls.map((src, i) => (
+                  <a key={`ph-${i}`} href={src} target="_blank" rel="noreferrer" className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
+                    <div className="aspect-[4/3] bg-muted overflow-hidden">
+                      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+            {otherDocs.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{otherDocs.map(renderDocCard)}</div>
+            )}
           </CardContent>
         </Card>
       )}

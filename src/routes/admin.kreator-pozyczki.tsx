@@ -552,11 +552,11 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Załączniki nieruchomości</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Pliki klienta</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Załączone zdjęcia i dokumenty: <strong>{profile.uploadedPhotos.length + profile.uploadedDocuments.length}</strong>.
-                Uploadem plików można zarządzać z poziomu modułu „Dokumenty”.
+                Wgrane pliki: <strong>{profile.uploadedPhotos.length + profile.uploadedDocuments.length}</strong>.
+                Uploadem plików można zarządzać z poziomu modułu „Pliki klienta".
               </p>
             </CardContent>
           </Card>

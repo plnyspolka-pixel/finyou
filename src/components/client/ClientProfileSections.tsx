@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Download, FileText, Image as ImageIcon, Loader2, Lock, Phone, ShieldCheck, ShieldAlert, Trash2, Upload, Wallet } from "lucide-react";
+import { Download, FileText, FolderOpen, Loader2, Lock, Phone, ShieldCheck, ShieldAlert, Trash2, Upload } from "lucide-react";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
 import { verifyBankAccountDocument } from "@/lib/bank-account-ocr.functions";
@@ -456,18 +456,11 @@ export function ClientProfileSections({ showPasswordCard = true, includePersonal
       </Card>
       )}
 
-      {has("photos") && (
-      <PropertyDocsCard userId={user?.id ?? null} kind="photos_all"
-        title="Zdjęcia nieruchomości (wnętrza i z zewnątrz)"
-        icon={<ImageIcon className="h-4 w-4" />}
-        description="Wrzuć tutaj wszystkie zdjęcia w jednym miejscu — z zewnątrz i każdego pomieszczenia. Możesz wybrać wiele plików na raz." />
-      )}
-
-      {has("income") && (
-      <PropertyDocsCard userId={user?.id ?? null} kind="income_docs"
-        title="Dokumenty dochodowe"
-        icon={<Wallet className="h-4 w-4" />}
-        description="PIT, zaświadczenia o dochodach, wyciągi — wszystko, co pokazuje inwestorowi Twoją zdolność spłaty. Niewymagane, ale mocno zwiększa szanse." />
+      {(has("photos") || has("income")) && (
+      <PropertyDocsCard userId={user?.id ?? null} kind="klient_upload"
+        title="Pliki klienta"
+        icon={<FolderOpen className="h-4 w-4" />}
+        description="Wrzuć tu wszystko w jednym miejscu — zdjęcia nieruchomości, skany dokumentów własności, PIT/zaświadczenia o dochodach, wyciągi bankowe. Nie musisz nic sortować, my to poukładamy." />
       )}
 
       {(!filtered || has("company") || has("bank") || has("phone")) && (
@@ -531,10 +524,10 @@ function PropertyDocsCard({ userId, kind, title, icon, description }: {
       .eq("client_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (!la) return;
     setLoanId(la.id);
+    // "Pliki klienta" = wszystkie pliki wniosku, bez podziału na kategorie.
     const { data: ds } = await supabase.from("documents")
       .select("id, file_name, file_path, uploaded_at")
       .eq("loan_application_id", la.id)
-      .eq("document_type", kind)
       .order("uploaded_at", { ascending: false });
     setDocs((ds as any) ?? []);
   })(); }, [userId, kind, refresh]);
@@ -583,7 +576,7 @@ function PropertyDocsCard({ userId, kind, title, icon, description }: {
         ) : (
           <>
             <label className="inline-flex">
-              <input type="file" multiple accept={kind === "photos_all" ? "image/*" : "image/*,application/pdf"}
+              <input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
                 className="hidden" onChange={(e) => { const fs = e.target.files; e.target.value = ""; void upload(fs); }} />
               <Button asChild size="sm" variant="cta" disabled={busy}>
                 <span>{busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</> : <><Upload className="mr-2 h-4 w-4" />Wybierz pliki</>}</span>
