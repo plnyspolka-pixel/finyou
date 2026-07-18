@@ -80,9 +80,11 @@ export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
  * (świadome przeliczenie przez administratora/operatora).
  */
 export async function runInvestmentRiskAssessmentCore(
+  supabase: SupabaseLike,
   applicationId: string,
   opts: { force?: boolean } = {},
 ): Promise<InvestmentRiskAssessment> {
+  const db = supabase;
   // Idempotencja: jeśli ocena już istnieje i nie wymuszono przeliczenia — zwróć zapis.
   if (!opts.force) {
     try {
