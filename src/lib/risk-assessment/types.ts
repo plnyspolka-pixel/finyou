@@ -6,7 +6,35 @@ import type { KwAddress } from "@/lib/kw-address-core";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
-import type { MarketComparablesResult } from "./market-comparables.server";
+
+export type MarketCompStatus = "success" | "partial" | "no_data" | "error" | "skipped";
+export interface MarketCompRecord {
+  source: "deweloperuch.pl" | "otodom.pl";
+  kind: "transaction" | "offer";
+  url: string | null;
+  title: string | null;
+  address: string | null;
+  pricePln: number | null;
+  areaM2: number | null;
+  pricePerM2: number | null;
+  date: string | null;
+}
+export interface MarketComparablesResult {
+  status: MarketCompStatus;
+  message: string;
+  query: string;
+  city: string | null;
+  street: string | null;
+  transactionsCount: number;
+  offersCount: number;
+  pricePerM2Median: number | null;
+  pricePerM2Average: number | null;
+  pricePerM2Min: number | null;
+  pricePerM2Max: number | null;
+  sample: MarketCompRecord[];
+  summaryLine: string;
+}
+
 
 
 export type RiskGrade = "A" | "B" | "C" | "D" | "E";
