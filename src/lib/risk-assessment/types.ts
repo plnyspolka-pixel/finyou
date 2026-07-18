@@ -6,6 +6,8 @@ import type { KwAddress } from "@/lib/kw-address-core";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
+import type { MarketComparablesResult } from "./market-comparables.server";
+
 
 export type RiskGrade = "A" | "B" | "C" | "D" | "E";
 
