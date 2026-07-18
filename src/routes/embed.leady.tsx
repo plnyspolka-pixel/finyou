@@ -2,19 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { formatPLN } from "@/lib/labels";
 import { fetchPublicLeads } from "@/lib/public-leads.functions";
-import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
-
-const PROPERTY_EMOJI: Record<string, string> = {
-  apartment: "🏢",
-  mieszkanie: "🏢",
-  house: "🏠",
-  dom: "🏠",
-  plot_building: "🌳",
-  dzialka: "🌳",
-  commercial: "🏬",
-  lokal_uslugowy: "🏬",
-  inna: "🏗️",
-};
+import { property3dIcon, propertyLabel } from "@/lib/property-3d-icons";
 
 const leadsQO = queryOptions({
   queryKey: ["embed", "public-leads"],
