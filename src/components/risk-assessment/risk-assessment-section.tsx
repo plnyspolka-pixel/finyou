@@ -207,62 +207,8 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
             </Card>
           </div>
 
-          {/* Dane rządowe — RCN (transakcje) + GUS BDL */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4 text-blue-600" /> Dane rządowe — RCN + GUS BDL (kotwica wyceny)</CardTitle>
-                  <CardDescription>
-                    {result.govBenchmark?.available
-                      ? <>Priorytet: <b>{result.govBenchmark.primarySource}</b> · {result.govBenchmark.unitName} · {result.govBenchmark.period}{result.govBenchmark.fallbackUsed ? " (dane zastępcze)" : ""}</>
-                      : "Priorytetowe źródła urzędowe (RCN/GUS)"}
-                  </CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={runRcnDiag} disabled={rcnDiagLoading}>
-                  {rcnDiagLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Landmark className="h-4 w-4 mr-1" />}
-                  Diagnostyka RCN
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm space-y-1">
-              {result.govBenchmark?.available ? (
-                <>
-                  {result.govBenchmark.rcnAvailable && (
-                    <div className="flex items-center gap-2">
-                      {statusIcon("success")}
-                      <span><b>RCN (transakcje):</b> {result.govBenchmark.rcnPricePerHa != null && <>{result.govBenchmark.rcnPricePerHa.toLocaleString("pl-PL")} zł/ha </>}{result.govBenchmark.rcnPricePerM2 != null && <>{result.govBenchmark.rcnPricePerM2.toLocaleString("pl-PL")} zł/m² </>}· {result.govBenchmark.rcnTransactions} transakcji{result.govBenchmark.rcnRadiusKm ? ` (r=${result.govBenchmark.rcnRadiusKm} km)` : ""}</span>
-                    </div>
-                  )}
-                  {result.govBenchmark.pricePerHa != null && (
-                    <div><span className="text-muted-foreground">Przyjęta cena gruntu:</span> <b>{result.govBenchmark.pricePerHa.toLocaleString("pl-PL")} zł/ha</b> (klasa: {result.govBenchmark.soilCategory}){result.govBenchmark.landValuePln != null && <> → wartość ≈ <b>{fmtPln(result.govBenchmark.landValuePln)}</b></>}</div>
-                  )}
-                  {result.govBenchmark.pricePerM2Median != null && (
-                    <div><span className="text-muted-foreground">Przyjęta cena lokali:</span> <b>{result.govBenchmark.pricePerM2Median.toLocaleString("pl-PL")} zł/m²</b>{result.govBenchmark.dwellingValuePln != null && <> → wartość ≈ <b>{fmtPln(result.govBenchmark.dwellingValuePln)}</b></>}</div>
-                  )}
-                  {result.govBenchmark.gusPricePerHa != null && result.govBenchmark.primarySource === "RCN" && (
-                    <div className="text-xs text-muted-foreground">GUS porównawczo: {result.govBenchmark.gusPricePerHa.toLocaleString("pl-PL")} zł/ha</div>
-                  )}
-                  <p className="text-[11px] text-muted-foreground">{result.govBenchmark.summaryLine}</p>
-                </>
-              ) : (
-                <p className="text-muted-foreground">{result.govBenchmark?.summaryLine ?? "Brak danych rządowych."} <span className="text-xs">RCN: {result.govBenchmark?.rcnStatusMessage}</span></p>
-              )}
-              {rcnDiag && (
-                <Alert className="mt-2">
-                  <Landmark className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    <div><b>Diagnostyka RCN:</b> {rcnDiag.ok ? `${rcnDiag.status} — ${rcnDiag.statusMessage}` : rcnDiag.message}</div>
-                    {rcnDiag.ok && (
-                      <div className="mt-1 text-muted-foreground">
-                        Współrzędne: {rcnDiag.coordinates?.lat?.toFixed(5)}, {rcnDiag.coordinates?.lng?.toFixed(5)} · warstwy: {rcnDiag.diagnostics?.availableLayers?.join(", ") || "—"} · surowych: {rcnDiag.diagnostics?.featuresRawCount ?? 0} · po filtrach: {rcnDiag.transactionsCount ?? 0}
-                      </div>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+          {/* Sekcja „Dane rządowe (RCN + GUS BDL)" została wyłączona — bazujemy na rynku porównawczym. */}
+
 
           {/* Nadrzędna wycena Perplexity */}
           <Card>
