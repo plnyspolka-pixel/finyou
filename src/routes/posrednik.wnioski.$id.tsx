@@ -25,7 +25,9 @@ import { ClientFilesManager } from "@/components/media/ClientFilesManager";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
+import { EditableField } from "@/components/admin/EditableField";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/posrednik/wnioski/$id")({
   component: () => <BrokerApplicationDetail />,
