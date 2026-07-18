@@ -25,6 +25,7 @@ export type LoanStatus = (typeof LOAN_STATUS_ORDER)[number];
 export const LOAN_STATUS_SHORT_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead",
   brak_kontaktu: "Brak kontaktu",
+  brak_kwoty: "Brak kwoty pożyczki",
   brak_kw: "Brak numeru KW",
   brak_zdjec_dokumentow: "Brak zdjęć / dokumentów",
   kontakt: "Kontakt",
