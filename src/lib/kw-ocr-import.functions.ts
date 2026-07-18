@@ -59,10 +59,18 @@ const ImageSchema = z.object({
 });
 
 function tryParseJson(s: string): KwExtraction | null {
-  const m = s.match(/\{[\s\S]*\}/);
-  if (!m) return null;
+  if (!s) return null;
+  // Strip ```json fences if present.
+  let text = s.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
   try {
-    return JSON.parse(m[0]) as KwExtraction;
+    return JSON.parse(text) as KwExtraction;
+  } catch {}
+  // Fallback: grab widest {...} block.
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first === -1 || last <= first) return null;
+  try {
+    return JSON.parse(text.slice(first, last + 1)) as KwExtraction;
   } catch {
     return null;
   }
@@ -119,6 +127,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
           { role: "user", content: userContent },
         ],
         temperature: 0,
+        response_format: { type: "json_object" },
       }),
     });
     if (resp.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
@@ -127,7 +136,10 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const json: any = await resp.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const extraction = tryParseJson(content);
-    if (!extraction) throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
+    if (!extraction) {
+      console.error("KW OCR: nie sparsowano odpowiedzi modelu", { model: MODEL, preview: content.slice(0, 500) });
+      throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
+    }
 
     // 2) Numer KW: ręczny > OCR > numer z nieruchomości wniosku.
     const warnings: string[] = [];
