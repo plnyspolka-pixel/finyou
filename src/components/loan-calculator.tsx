@@ -968,15 +968,15 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
             </>
           )}
           {!hideFinanceYouFee && (
-            <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(koszt inwestora, płatna na wejściu)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+            <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(koszt klienta, FV od Finance You — kredytowana do kapitału)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
           )}
 
           {investorGuidance && (
-            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę (łączna spłata ÷ kwota na rękę). Prowizja Finance You nie występuje w przepływach klienta, więc nie wpływa na krotność." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
+            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę (łączna spłata ÷ kwota na rękę). Prowizje inwestora i Finance You są potrącane z góry z kwoty pożyczki i klient spłaca je w ratach — dlatego podnoszą krotność." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
-          <div className="flex justify-between"><span>Całkowity koszt pożyczki <span className="text-xs text-white/60">(po stronie klienta)</span></span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
-          <div className="flex justify-between"><span>Wkład gotówkowy inwestora <span className="text-xs text-white/60">(z prowizją FY)</span></span><b className="tabular-nums">{formatPLN(investorCashOut)}</b></div>
-          <div className="flex justify-between"><span>Zysk inwestora <span className="text-xs text-white/60">{hideFinanceYouFee ? "(odsetki + prowizja netto)" : "(odsetki + prowizja − prowizja FY)"}</span></span><b className="tabular-nums text-emerald-300">{formatPLN(investorProfit)}</b></div>
+          <div className="flex justify-between"><span>Całkowity koszt pożyczki <span className="text-xs text-white/60">(odsetki + prowizja inwestora{!hideFinanceYouFee && " + prowizja FY"})</span></span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
+          <div className="flex justify-between"><span>Wkład gotówkowy inwestora <span className="text-xs text-white/60">{hideFinanceYouFee ? "" : "(na rękę dla klienta + prowizja FY do Finance You)"}</span></span><b className="tabular-nums">{formatPLN(investorCashOut)}</b></div>
+          <div className="flex justify-between"><span>Zysk inwestora <span className="text-xs text-white/60">(odsetki + prowizja inwestora netto)</span></span><b className="tabular-nums text-emerald-300">{formatPLN(investorProfit)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2"><span>Łączna kwota do spłaty (raty z harmonogramu)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
       </Card></FancyShell>
