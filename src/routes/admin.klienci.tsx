@@ -284,8 +284,13 @@ function KlienciPage() {
                       </td>
                       <td className="px-3 py-2 text-xs space-y-1">
                         <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
-                        <div><Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge></div>
+                        <div>
+                          {isApplication(r)
+                            ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Wniosek</Badge>
+                            : <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>}
+                        </div>
                       </td>
+
                       <td className="px-3 py-2 text-xs">
                         {r.loan ? (
                           <>
