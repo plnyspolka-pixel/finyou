@@ -96,8 +96,9 @@ function InwestorWniosek() {
 
   const openFile = async (d: any) => {
     if (!d.file_path) return;
-    const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    const url = await signStoragePath(d.file_path, 3600);
+    if (url) window.open(url, "_blank");
+    else toast.error("Nie udało się otworzyć pliku");
   };
 
   const submit = async (status: "szkic" | "zlozona") => {
