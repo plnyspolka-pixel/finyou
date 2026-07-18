@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { Phone, MessageSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink, Paperclip } from "lucide-react";
 import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadStatusLabels, formatDateTime } from "@/lib/labels";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
@@ -42,10 +42,30 @@ type Row = {
     loan_amount: number | null;
     preferred_period_months: number | null;
     completeness_percent: number | null;
-    properties: { property_type: string; city: string | null; estimated_value: number | null }[];
+    properties: { property_type: string; city: string | null; estimated_value: number | null; land_register_number: string | null; photos: string[] | null }[];
   } | null;
-  comms: { calls: number; sms: number; emails: number; notes: number; lastAt: string | null; lastChannel: string | null };
+  docCount?: number;
+  comms: { calls: number; sms: number; emails: number; messenger?: number; notes: number; lastAt: string | null; lastChannel: string | null; inboundAttachments?: { name: string }[] };
 };
+
+// Wniosek = coś więcej niż same dane leada (imię/nazwisko/email/telefon).
+function isApplication(r: Row): boolean {
+  if (r.loan?.loan_amount != null) return true;
+  if ((r.docCount ?? 0) > 0) return true;
+  for (const p of r.loan?.properties ?? []) {
+    if (p.land_register_number && p.land_register_number.trim().length > 0) return true;
+    if (Array.isArray(p.photos) && p.photos.length > 0) return true;
+    if (p.estimated_value != null) return true;
+  }
+  return false;
+}
+
+function filesCount(r: Row): number {
+  const photos = (r.loan?.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
+  const docs = r.docCount ?? 0;
+  const inboundAtt = r.comms.inboundAttachments?.length ?? 0;
+  return photos + docs + inboundAtt;
+}
 
 function KlienciPage() {
   const fn = useServerFn(listLeads);
@@ -170,8 +190,11 @@ function KlienciPage() {
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
-                      <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>
+                      {isApplication(r)
+                        ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Wniosek</Badge>
+                        : <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>}
                     </div>
+
                   </div>
                   {(r.loan || p) && (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs pl-6">
@@ -192,13 +215,16 @@ function KlienciPage() {
                     </div>
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] pl-6">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{r.comms.calls}</span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{r.comms.emails}</span>
-                    {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                    {(r.comms.messenger ?? 0) > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Messenger/IG"><MessageSquare className="h-3 w-3" />{r.comms.messenger}</span>}
+                    {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                    {filesCount(r) > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-1.5 py-0.5" title="Pliki klienta"><Paperclip className="h-3 w-3" />{filesCount(r)}</span>}
                     <span className="text-muted-foreground">· {formatRelative(r.comms.lastAt)}</span>
                     <span className="ml-auto text-muted-foreground">{r.source ?? "—"}</span>
                   </div>
+
                 </button>
                 {isOpen && (
                   <div className="p-3 bg-muted/30 border-t">
@@ -258,8 +284,13 @@ function KlienciPage() {
                       </td>
                       <td className="px-3 py-2 text-xs space-y-1">
                         <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
-                        <div><Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge></div>
+                        <div>
+                          {isApplication(r)
+                            ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Wniosek</Badge>
+                            : <Badge variant="outline" className="text-[10px]">{statusLabel(r.status)}</Badge>}
+                        </div>
                       </td>
+
                       <td className="px-3 py-2 text-xs">
                         {r.loan ? (
                           <>
@@ -277,14 +308,21 @@ function KlienciPage() {
                         ) : "—"}
                       </td>
                       <td className="px-3 py-2 text-xs">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-1" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
                           <span className="inline-flex items-center gap-1" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
                           <span className="inline-flex items-center gap-1" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                          {(r.comms.messenger ?? 0) > 0 && <span className="inline-flex items-center gap-1" title="Messenger/IG"><MessageSquare className="h-3 w-3" />{r.comms.messenger}</span>}
                           {r.comms.notes > 0 && <span className="inline-flex items-center gap-1" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                          {filesCount(r) > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded bg-primary/10 text-primary px-1.5 py-0.5" title="Pliki klienta">
+                              <Paperclip className="h-3 w-3" />{filesCount(r)}
+                            </span>
+                          )}
                         </div>
                         <div className="text-muted-foreground">{formatRelative(r.comms.lastAt)}</div>
                       </td>
+
                       <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(r.created_at)}</td>
                     </tr>
