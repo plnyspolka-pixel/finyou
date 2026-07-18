@@ -135,7 +135,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
     mutationFn: () => backfillFn(),
     onSuccess: (r) => {
       toast.success(
-        `Uzupełniono: ${r.namesFromMeta + r.namesFromText} nazwisk (Meta: ${r.namesFromMeta}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
+        `Uzupełniono: ${r.namesFromMeta + r.namesFromText + r.namesFromOcr + r.namesFromKw} nazwisk (Meta: ${r.namesFromMeta}, OCR: ${r.namesFromOcr}, KW: ${r.namesFromKw}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
           (r.filesSkipped ? `, pominięto ${r.filesSkipped} plików bez dopasowania` : ""),
       );
       qc.invalidateQueries({ queryKey: ["messenger-inbox"] });

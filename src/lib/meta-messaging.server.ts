@@ -11,6 +11,7 @@ import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-a
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { replyToCommentPublic, sendPrivateReplyToComment } from "@/lib/meta-comments.server";
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
+import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
 
 async function findOrCreateLeadByPsid(opts: {
   senderId: string;
@@ -179,6 +180,18 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     errorMessage: send.ok ? null : send.error,
     agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
   });
+
+  // 4) Po odpowiedzi (żeby nie opóźniać repliki): OCR świeżych załączników
+  //    oraz imię/nazwisko właściciela z KW — tu tylko z cache kw_documents,
+  //    płatne pobranie z CMD zleca dopiero backfill/cron.
+  if (stored.length) {
+    try {
+      await ocrLeadAttachmentsAndEnrich({ leadId, attachments: stored });
+    } catch (e) { console.error("[messenger] attachment ocr error", e); }
+  }
+  try {
+    await fillLeadNameFromKw({ leadId, allowOrder: false });
+  } catch (e) { console.error("[messenger] kw name error", e); }
 }
 
 // Obsługa komentarzy pod postami fanpage'a (event: changes[].field === "feed").

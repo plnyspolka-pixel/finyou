@@ -54,6 +54,49 @@ function norm(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
 }
 
+export type KwOwnerPerson = { firstName: string; lastName: string };
+
+/**
+ * Wyciąga z działu II osoby fizyczne z rozdzielonym imieniem i nazwiskiem —
+ * do automatycznego podpisywania leada właścicielem nieruchomości.
+ * Kolejność pól w EKW bywa różna ("Imię: … Nazwisko: …" i odwrotnie),
+ * dlatego obsługujemy obie; fallbackiem są pary "Jan Kowalski" pisane
+ * mieszaną wielkością liter (pary CAPS pomijamy — kolejność nieznana).
+ */
+export function extractKwOwnerPersons(dzial2: string | null | undefined): KwOwnerPerson[] {
+  const text = stripHtml(dzial2);
+  if (!text) return [];
+  const out: KwOwnerPerson[] = [];
+  const seen = new Set<string>();
+  const push = (firstName: string, lastName: string) => {
+    const f = firstName.trim();
+    const l = lastName.trim();
+    if (!f || !l) return;
+    if (NAME_STOPWORDS.has(norm(f)) || NAME_STOPWORDS.has(norm(l))) return;
+    const key = norm(`${f} ${l}`);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ firstName: f, lastName: l });
+  };
+
+  const TOKEN = "[A-ZĄĆĘŁŃÓŚŹŻ][\\p{L}-]+";
+  // "Imię: JAN … Nazwisko: KOWALSKI"
+  for (const m of text.matchAll(new RegExp(`imi[eę][^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?nazwisk[^:]{0,20}:\\s*(${TOKEN})`, "giu"))) {
+    push(m[1], m[2]);
+  }
+  // "Nazwisko: KOWALSKI … Imię: JAN"
+  for (const m of text.matchAll(new RegExp(`nazwisk[^:]{0,20}:\\s*(${TOKEN})[\\s\\S]{0,60}?imi[eę][^:]{0,20}:\\s*(${TOKEN})`, "giu"))) {
+    push(m[2], m[1]);
+  }
+  if (out.length > 0) return out.slice(0, 6);
+
+  // Fallback: "Jan Kowalski" (mieszana wielkość liter → kolejność imię-nazwisko)
+  const personRe = /\b([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+(?:-[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)?)\b/gu;
+  let m: RegExpExecArray | null;
+  while ((m = personRe.exec(text)) !== null) push(m[1], m[2]);
+  return out.slice(0, 6);
+}
+
 function parseOwners(dzial2: string | null | undefined): string[] {
   const text = stripHtml(dzial2);
   if (!text) return [];
