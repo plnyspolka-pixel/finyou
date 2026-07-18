@@ -106,11 +106,11 @@ export async function runInvestmentRiskAssessmentCore(
   const warnings: string[] = [];
 
   // 0) Wczytaj wniosek, właściciela (client_id), nieruchomość, dokumenty.
-  const [{ data: app }, { data: props }, { data: docs }] = await Promise.all([
+  const [{ data: app }, { data: props }] = await Promise.all([
     supabaseAdmin.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
     supabaseAdmin.from("properties").select("*").eq("loan_application_id", applicationId),
-    supabaseAdmin.from("documents").select("id, file_name, document_type, file_url").eq("loan_application_id", applicationId),
   ]);
+
   if (!app) throw new Error("Wniosek nie znaleziony.");
   const property = props?.[0] ?? null;
   const clientId = (app as any).client_id ?? null;
