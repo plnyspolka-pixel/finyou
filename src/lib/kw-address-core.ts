@@ -86,10 +86,12 @@ export function parseKwAddress(dzial1o: string | null | undefined): KwAddress {
 
   // "Numer lokalu" (ostatnia z trzech etykiet w wierszu) — kolejne 3 komórki to Ulica, Nr bud., Nr lok.
   const addrCells = cellsAfter(dzial1o, /Numer lokalu/i, 3);
-  let street: string | null = addrCells[0] ?? null;
-  let buildingNumber: string | null = addrCells[1] ?? null;
-  let unitNumber: string | null = addrCells[2] ?? null;
-  if (street && /^BRAK\b/i.test(street)) street = null;
+  // Puste wartości EKW ("---", "BRAK") traktujemy jak brak danych.
+  const cleanCell = (v: string | undefined): string | null =>
+    v && !/^[-—\s]*$/.test(v) && !/^BRAK\b/i.test(v) ? v : null;
+  let street: string | null = cleanCell(addrCells[0]);
+  let buildingNumber: string | null = cleanCell(addrCells[1]);
+  let unitNumber: string | null = cleanCell(addrCells[2]);
 
   // 2) Fallback etykietowy (układ EKW) — uzupełnia brakujące pola.
   const text = stripTags(dzial1o);

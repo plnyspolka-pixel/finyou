@@ -257,7 +257,7 @@ function extractMortgageCreditor(block: string): string | null {
   const wIdx = block.search(/wierzyciel/i);
   if (wIdx >= 0) {
     const rest = block.slice(wIdx);
-    const nazwaM = rest.match(/nazwa(?:\s*\([^)]*\))?\s+([A-ZĄĆĘŁŃÓŚŹŻ][^;]{2,80}?)(?=\s+(?:siedziba|regon|kraj|lp\b|numer|$))/i);
+    const nazwaM = rest.match(/nazwa(?:\s*\([^)]*\))?\s+([A-ZĄĆĘŁŃÓŚŹŻ][^;]{2,80}?)(?=\s+(?:siedziba|regon|kraj|lp\b|numer|tre[śs][ćc]|$))/i);
     if (nazwaM) return nazwaM[1].trim();
     const orgM = rest.match(/((?:bank|sp[óo][łl]dzielcz\w+|kasa|fundusz|towarzystwo|sp[óo][łl]ka|s\.a\.|sp\.\s*z\s*o\.o\.|skarb pa[ńn]stwa)[^.,;]{0,60})/i);
     if (orgM) return orgM[1].trim();
