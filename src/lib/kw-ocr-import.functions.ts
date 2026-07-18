@@ -222,6 +222,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         dryRun: true as const,
         debug: {
           transcript,
+          model: usedModel,
           imagesMeta: data.images.map((i) => ({
             fileName: i.fileName ?? null,
             mimeType: i.mimeType,
