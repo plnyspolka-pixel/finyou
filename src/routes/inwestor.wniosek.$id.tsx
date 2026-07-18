@@ -204,7 +204,7 @@ function InwestorWniosek() {
         />
       )}
 
-      <CollateralAnalysisSection applicationId={id} readOnly />
+      
 
       <KwContentSection applicationId={id} canFetch={false} />
 
