@@ -215,13 +215,16 @@ function KlienciPage() {
                     </div>
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] pl-6">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Phone className="h-3 w-3" />{r.comms.calls}</span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
-                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><Mail className="h-3 w-3" />{r.comms.emails}</span>
-                    {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Telefony"><Phone className="h-3 w-3" />{r.comms.calls}</span>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="SMS"><MessageSquare className="h-3 w-3" />{r.comms.sms}</span>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="E-maile"><Mail className="h-3 w-3" />{r.comms.emails}</span>
+                    {(r.comms.messenger ?? 0) > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Messenger/IG"><MessageSquare className="h-3 w-3" />{r.comms.messenger}</span>}
+                    {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
+                    {filesCount(r) > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-1.5 py-0.5" title="Pliki klienta"><Paperclip className="h-3 w-3" />{filesCount(r)}</span>}
                     <span className="text-muted-foreground">· {formatRelative(r.comms.lastAt)}</span>
                     <span className="ml-auto text-muted-foreground">{r.source ?? "—"}</span>
                   </div>
+
                 </button>
                 {isOpen && (
                   <div className="p-3 bg-muted/30 border-t">
