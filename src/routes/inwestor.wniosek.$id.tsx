@@ -179,21 +179,6 @@ function InwestorWniosek() {
         <Card>
           <CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {photoUrls.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {photoUrls.map((src, i) => (
-                  <a key={i} href={src} target="_blank" rel="noreferrer">
-                    <img
-                      src={src}
-                      alt=""
-                      className="aspect-[4/3] w-full object-cover rounded-md hover:opacity-90 transition"
-                      loading="lazy"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
             {(() => {
               const loc = [p.city, p.voivodeship].filter(Boolean).join(", ");
               return (
