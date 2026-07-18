@@ -111,6 +111,10 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         images: z.array(ImageSchema).min(1).max(MAX_FILES),
         /** Pozwala nadpisać treść KW pobraną wcześniej (np. z CMD). */
         force: z.boolean().optional(),
+        /** Tryb debug — nie zapisuje do bazy, zwraca transkrypcję i surowy JSON z modelu. */
+        dryRun: z.boolean().optional(),
+        /** Dołącz transkrypcję i surowy JSON do odpowiedzi (także przy zapisie). */
+        includeDebug: z.boolean().optional(),
       })
       .parse(input),
   )
