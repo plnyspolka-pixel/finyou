@@ -33,7 +33,7 @@ type Row = {
   docCount?: number;
 };
 
-const INCOMPLETE_STATUSES = ["nowy_lead", "brak_kontaktu", "kontakt", "kompletowanie_danych"];
+const INCOMPLETE_STATUSES = ["nowy_lead", "brak_kontaktu", "brak_kw", "brak_zdjec_dokumentow", "kontakt", "kompletowanie_danych"];
 const COMPLETE_STATUSES = [
   "szukamy_inwestora",
   "warunki_zaakceptowane",
