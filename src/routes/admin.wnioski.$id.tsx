@@ -268,6 +268,28 @@ function WniosekDetail() {
                 </div>
                 {e.subject && <div className="font-medium mt-1">{e.subject}</div>}
                 {e.content && <div className="text-muted-foreground mt-1 whitespace-pre-wrap">{e.content}</div>}
+                {e._kind === "comm" && Array.isArray(e.attachments) && e.attachments.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {e.attachments.map((att: any, i: number) => {
+                      const path = att?.storage_path ?? att?.path;
+                      const url = att?.url ?? att?.public_url;
+                      if (!path && !url) return null;
+                      return (
+                        <FileThumb
+                          key={i}
+                          path={path ?? url}
+                          name={att?.name ?? att?.file_name ?? `plik-${i + 1}`}
+                          thumbnailPath={att?.thumbnail_path ?? null}
+                          aspect="square"
+                          onClick={async () => {
+                            const u = url ?? (path ? await signStoragePath(path, 3600) : null);
+                            if (u) window.open(u, "_blank", "noopener");
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent></Card>
             ))}
           </div>
