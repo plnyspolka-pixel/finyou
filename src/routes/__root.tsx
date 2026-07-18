@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { getMetaAppId } from "@/lib/meta-app-id.functions";
 import faviconAsset from "@/assets/favicon.png.asset.json";
 import { AuthProvider } from "@/hooks/use-auth";
+import { PreviewBypassToggle } from "@/components/preview-bypass-toggle";
 import { Toaster } from "@/components/ui/sonner";
 import { FacebookPixel } from "@/lib/fb-pixel";
 import { GoogleAnalytics } from "@/lib/google-analytics";
@@ -153,6 +154,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <Toaster />
+        <PreviewBypassToggle />
       </AuthProvider>
     </QueryClientProvider>
   );
