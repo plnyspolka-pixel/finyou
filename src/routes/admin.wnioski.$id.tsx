@@ -206,9 +206,8 @@ function WniosekDetail() {
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>
 
-        <TabsContent value="zabezpieczenie" className="space-y-4">
-          <CollateralAnalysisSection applicationId={id} />
-        </TabsContent>
+
+
 
         <TabsContent value="ryzyko" className="space-y-4">
           <RiskAssessmentSection applicationId={id} />
