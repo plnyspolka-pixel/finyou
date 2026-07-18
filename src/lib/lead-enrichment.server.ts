@@ -2,6 +2,7 @@
 // oraz automatyczna promocja leada do loan_application, gdy zebrane są
 // minimalne dane: KW + kwota + jakikolwiek załącznik/dokument.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { normalizeKwNumber } from "./kw";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -338,7 +339,11 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
   if (!lead || lead.loan_application_id) return null;
 
   const appData = (lead.application_data as Record<string, any>) ?? {};
-  const kwNumbers: string[] = Array.isArray(appData.kw_numbers) ? appData.kw_numbers : [];
+  // Tylko poprawne numery KW — bot potrafił zapisać status ("PRZESŁANY")
+  // zamiast numeru i taki tekst trafiał do properties.land_register_number.
+  const kwNumbers: string[] = (Array.isArray(appData.kw_numbers) ? appData.kw_numbers : [])
+    .map((k: unknown) => normalizeKwNumber(k))
+    .filter((k: string | null): k is string => !!k);
   // Bot potrafi zapisać kwotę jako string ("60000") — akceptuj też liczbę w tekście.
   const rawAmount = appData.loan_amount;
   const loanAmount: number | null =
@@ -365,8 +370,10 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     const { data: c, error: cErr } = await s
       .from("clients")
       .insert({
+        // Bez zmyślonego nazwiska "z leada" — jawny brak danych, do
+        // uzupełnienia przez bota/admina zanim wniosek pójdzie do inwestorów.
         first_name: lead.first_name ?? "Klient",
-        last_name: lead.last_name ?? "z leada",
+        last_name: lead.last_name ?? "(brak nazwiska)",
         email: lead.email ?? null,
         phone: lead.phone_normalized ?? lead.phone_raw ?? null,
         phone_raw: lead.phone_raw ?? null,

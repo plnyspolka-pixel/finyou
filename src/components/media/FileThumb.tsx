@@ -16,6 +16,8 @@ const VIDEO_EXT = /\.(mp4|mov|webm|mkv)$/i;
 // Buckety w ktorych szukamy sciezek (wszystkie pliki klienta w pliki-klienta, legacy w innych)
 const CANDIDATE_BUCKETS = [
   CLIENT_FILES_BUCKET,
+  "documents",
+  "property-photos",
   "marketing-materials",
   "avatars",
   "ad-creatives",
@@ -93,6 +95,10 @@ export function FileThumb({
   showName = false,
 }: FileThumbProps) {
   const displayName = name ?? path.split("/").pop() ?? "plik";
+  // Nazwa do detekcji typu pliku — file_name z bazy bywa bez rozszerzenia
+  // (załączniki z Messengera: "file-123"), podczas gdy ścieżka w Storage
+  // kończy się ".jpg". Bez tego obrazek dostawał szarą ikonę zamiast miniatury.
+  const typeName = /\.[a-z0-9]{2,5}$/i.test(displayName) ? displayName : path;
   const [url, setUrl] = useState<string | null>(null);
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
@@ -113,9 +119,9 @@ export function FileThumb({
         }
       }
       // 2. Dla obrazow podpisz oryginal (HEIC konwertujemy w locie do JPEG)
-      if (isImage(displayName, mimeType)) {
+      if (isImage(typeName, mimeType)) {
         const signed = await signPath(path);
-        const u = signed ? await toDisplayableImageUrl(signed, displayName) : null;
+        const u = signed ? await toDisplayableImageUrl(signed, typeName) : null;
         if (!cancelled) {
           setUrl(u);
           setBusy(false);
@@ -123,7 +129,7 @@ export function FileThumb({
         return;
       }
       // 3. Dla PDF sproboj konwencji `<path>.thumb.png`
-      if (isPdf(displayName, mimeType)) {
+      if (isPdf(typeName, mimeType)) {
         const u = await signPath(`${path}.thumb.png`);
         if (!cancelled && u) {
           setThumbUrl(u);
@@ -146,13 +152,13 @@ export function FileThumb({
     return () => {
       cancelled = true;
     };
-  }, [path, thumbnailPath, mimeType, displayName]);
+  }, [path, thumbnailPath, mimeType, typeName]);
 
   const aspectClass =
     aspect === "square" ? "aspect-square" : aspect === "portrait" ? "aspect-[3/4]" : "aspect-video";
 
-  const Icon = iconFor(displayName, mimeType);
-  const badge = badgeFor(displayName, mimeType);
+  const Icon = iconFor(typeName, mimeType);
+  const badge = badgeFor(typeName, mimeType);
   const src = imgFailed ? null : thumbUrl ?? url;
 
   return (
@@ -174,7 +180,7 @@ export function FileThumb({
       ) : src ? (
         <>
           <img src={src} alt={displayName} className="h-full w-full object-cover" loading="lazy" onError={() => setImgFailed(true)} />
-          {!isImage(displayName, mimeType) && (
+          {!isImage(typeName, mimeType) && (
             <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
               {badge}
             </span>
