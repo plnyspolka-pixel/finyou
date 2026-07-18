@@ -81,7 +81,35 @@ export async function runInvestmentRiskAssessmentCore(
   const declaredValue = property?.estimated_value ?? null;
   const loanAmount = app.loan_amount ?? null;
 
-  // 1) Analiza zabezpieczenia (reuse: wycena Perplexity + lokalizacja + powódź + scoring).
+  // 1) KW (stan prawny) — NAJPIERW, bo dział I-O daje adres nieruchomości,
+  //    którym uzupełniamy braki w danych wniosku dla wszystkich dalszych analiz.
+  const kwLegal = await analyzeKwLegal({
+    kwNumber: property?.land_register_number ?? null,
+    hasCoOwners: property?.has_co_owners ?? null,
+    hasMortgageFlag: property?.has_mortgage ?? null,
+  });
+
+  // Adres efektywny: dane wniosku → fallback z działu I-O KW.
+  const kwAddr = kwLegal.address;
+  const effAddress = property?.address || kwAddr?.fullAddress || null;
+  const effCity = property?.city || kwAddr?.city || null;
+  const effVoivodeship = property?.voivodeship || kwAddr?.voivodeship || null;
+  if (property && kwAddr) {
+    // Uzupełnij puste pola rekordu nieruchomości (adres z KW jest urzędowy) —
+    // dzięki temu widzi go też analiza zabezpieczenia i diagnostyka RCN.
+    const patch: { address?: string; street?: string; city?: string; voivodeship?: string } = {};
+    if (!property.address && kwAddr.fullAddress) patch.address = kwAddr.fullAddress;
+    if (!property.street && kwAddr.street) patch.street = kwAddr.street;
+    if (!property.city && kwAddr.city) patch.city = kwAddr.city;
+    if (!property.voivodeship && kwAddr.voivodeship) patch.voivodeship = kwAddr.voivodeship;
+    if (Object.keys(patch).length > 0) {
+      const { error: patchError } = await supabaseAdmin.from("properties").update(patch).eq("id", property.id);
+      if (patchError) console.error("[risk-assessment] property address backfill failed:", patchError.message);
+      else Object.assign(property, patch);
+    }
+  }
+
+  // 2) Analiza zabezpieczenia (reuse: wycena Perplexity + lokalizacja + powódź + scoring).
   //    Nie przerywamy oceny, gdy padnie — degradujemy się miękko.
   let collateral = null as InvestmentRiskAssessment["collateralAnalysis"];
   try {
@@ -90,27 +118,23 @@ export async function runInvestmentRiskAssessmentCore(
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
 
-  // 2) OCR dokumentów, 3) KW (stan prawny), 5) korespondencja, 6) łatwość sprzedaży — równolegle.
+  // 3) OCR dokumentów, korespondencja, łatwość sprzedaży — równolegle.
   const documents = (docs ?? []).map((d) => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name }));
-  const [ocr, kwLegal, correspondence, saleabilityRaw] = await Promise.all([
+  const [ocr, correspondence, saleabilityRaw] = await Promise.all([
     ocrDocuments({ applicationId, documents }),
-    analyzeKwLegal({
-      kwNumber: property?.land_register_number ?? null,
-      hasCoOwners: property?.has_co_owners ?? null,
-      hasMortgageFlag: property?.has_mortgage ?? null,
-    }),
-    analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: property?.city ?? null }),
+    analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity }),
     analyzeSaleability({
       propertyType: property?.property_type ?? "inna",
-      address: property?.address ?? null,
-      city: property?.city ?? null,
-      voivodeship: property?.voivodeship ?? null,
+      address: effAddress,
+      city: effCity,
+      voivodeship: effVoivodeship,
       areaM2: property?.area_sqm ?? null,
     }),
   ]);
 
-  // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska.
-  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal });
+  // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
+  //    zapasowo odczytywany z działu II KW, gdy brak w rekordzie klienta.
+  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal, kwNumber: kwLegal.kwNumber });
   warnings.push(...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)));
 
   // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
@@ -144,8 +168,8 @@ export async function runInvestmentRiskAssessmentCore(
   //     zł/ha (wg klasy bonitacyjnej) oraz lokali zł/m². Zawsze próbujemy najpierw.
   const govBenchmark = await fetchGovBenchmark({
     propertyType: property?.property_type ?? "inna",
-    city: property?.city ?? null,
-    voivodeship: property?.voivodeship ?? null,
+    city: effCity,
+    voivodeship: effVoivodeship,
     county: null,
     soilClass: kwLegal.soilClass,
     areaSqm: property?.area_sqm ?? null,
@@ -158,9 +182,9 @@ export async function runInvestmentRiskAssessmentCore(
   const areaM2 = property?.area_sqm ?? null;
   const master = await perplexityMasterValuation({
     propertyType: property?.property_type ?? "inna",
-    address: property?.address ?? null,
-    city: property?.city ?? null,
-    voivodeship: property?.voivodeship ?? null,
+    address: effAddress,
+    city: effCity,
+    voivodeship: effVoivodeship,
     areaM2,
     landAreaHa: null,
     declaredValuePln: declaredValue,
@@ -341,8 +365,10 @@ function buildDataSources(a: {
   sources.push({
     source: "Księga wieczysta (EKW / CMD KW Engine)",
     used: a.kwLegal.available,
-    purpose: "stan prawny: własność (dz. II), obciążenia (dz. III), hipoteki (dz. IV)",
-    dataLevel: a.kwLegal.kwNumber ? `KW ${a.kwLegal.kwNumber}` : "—",
+    purpose: "stan prawny: adres (dz. I-O), własność (dz. II), obciążenia (dz. III), hipoteki (dz. IV)",
+    dataLevel: [a.kwLegal.kwNumber ? `KW ${a.kwLegal.kwNumber}` : null, a.kwLegal.address?.fullAddress ?? null]
+      .filter(Boolean)
+      .join(" · ") || "—",
     period: "",
     status: a.kwLegal.available ? "success" : "no_data",
   });
