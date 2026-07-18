@@ -294,23 +294,47 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
       {/* Nieruchomość + klient */}
       <div className="grid gap-4 lg:grid-cols-2">
         <FancyCard tone="light" title="Nieruchomość i KW" icon={<Landmark className="h-4 w-4" />}>
-          <div className="space-y-3 text-sm">
-            <InfoRow icon={<MapPin className="h-4 w-4" />} label="Adres" value={fullAddress || "—"} />
-            <InfoRow icon={<FileText className="h-4 w-4" />} label="Numer KW" value={p?.land_register_number || "—"} mono />
-            {additionalKw.length > 0 && (<InfoRow icon={<FileText className="h-4 w-4" />} label="Dodatkowe KW" value={additionalKw.join(", ")} mono />)}
-            <InfoRow icon={<Ruler className="h-4 w-4" />} label="Powierzchnia" value={p?.area_sqm ? `${p.area_sqm} m²` : "—"} />
-            <InfoRow icon={<Wallet className="h-4 w-4" />} label="Szacowana wartość" value={p?.estimated_value ? formatPLN(Number(p.estimated_value)) : "—"} />
-          </div>
+          {p?.id ? (
+            <div className="space-y-3 text-sm">
+              <EditableField label="Ulica" value={p.street ?? p.address ?? ""} table="properties" rowId={p.id} column="street" onSaved={() => void load(true)} />
+              <EditableField label="Miasto" value={p.city ?? ""} table="properties" rowId={p.id} column="city" onSaved={() => void load(true)} />
+              <EditableField label="Województwo" value={p.voivodeship ?? ""} table="properties" rowId={p.id} column="voivodeship" onSaved={() => void load(true)} />
+              <EditableField label="Numer KW" value={p.land_register_number ?? ""} table="properties" rowId={p.id} column="land_register_number" onSaved={() => void load(true)} />
+              <EditableField label="Powierzchnia (m²)" value={p.area_sqm ?? ""} table="properties" rowId={p.id} column="area_sqm" type="number" onSaved={() => void load(true)} />
+              <EditableField label="Szacowana wartość" value={p.estimated_value ?? ""} table="properties" rowId={p.id} column="estimated_value" type="number" display={(v) => v ? formatPLN(Number(v)) : "—"} onSaved={() => void load(true)} />
+            </div>
+          ) : (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">Brak danych nieruchomości.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const { error } = await supabase.from("properties").insert({ loan_application_id: row.id, property_type: "inna" } as any);
+                  if (error) toast.error("Nie udało się utworzyć", { description: error.message });
+                  else { toast.success("Utworzono — możesz edytować"); await load(true); }
+                }}
+              >
+                Dodaj dane nieruchomości
+              </Button>
+            </div>
+          )}
         </FancyCard>
         <FancyCard tone="light" title="Klient" icon={<User className="h-4 w-4" />}>
-          <div className="space-y-3 text-sm">
-            <InfoRow label="Imię i nazwisko" value={clientName} />
-            <InfoRow label="Miasto" value={row.client?.city || "—"} />
-            <InfoRow label="Telefon" value={row.client?.phone || "—"} />
-            <InfoRow label="E-mail" value={row.client?.email || "—"} />
-          </div>
+          {row.client?.id ? (
+            <div className="space-y-3 text-sm">
+              <EditableField label="Imię" value={row.client.first_name ?? ""} table="clients" rowId={row.client.id} column="first_name" onSaved={() => void load(true)} />
+              <EditableField label="Nazwisko" value={row.client.last_name ?? ""} table="clients" rowId={row.client.id} column="last_name" onSaved={() => void load(true)} />
+              <EditableField label="Miasto" value={row.client.city ?? ""} table="clients" rowId={row.client.id} column="city" onSaved={() => void load(true)} />
+              <EditableField label="Telefon" value={row.client.phone ?? ""} table="clients" rowId={row.client.id} column="phone" type="tel" onSaved={() => void load(true)} />
+              <EditableField label="E-mail" value={row.client.email ?? ""} table="clients" rowId={row.client.id} column="email" type="email" onSaved={() => void load(true)} />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Brak przypisanego klienta.</p>
+          )}
         </FancyCard>
       </div>
+
 
       {p?.description && (
         <FancyCard tone="light" title="Opis">
