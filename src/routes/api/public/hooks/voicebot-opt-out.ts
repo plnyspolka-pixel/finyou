@@ -59,13 +59,17 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-opt-out")({
           if (data?.client_id) clientIds.add(data.client_id);
         }
         if (phone) {
-          // Normalizacja minimalna — usuń spacje, myślniki.
-          const normalized = phone.replace(/[\s-]/g, "");
-          const { data } = await supabase
-            .from("clients")
-            .select("id")
-            .or(`phone_normalized.eq.${normalized},phone.eq.${normalized},phone.eq.${phone}`);
-          for (const c of data ?? []) clientIds.add(c.id);
+          // Twarda sanityzacja: tylko cyfry i „+". Usuwa `,`/`(`/`)`/`.` itp.,
+          // które w PostgREST `.or()` mogłyby wstrzyknąć dodatkowe filtry
+          // i dopasować/wyłączyć dowolnych (lub wszystkich) klientów.
+          const safe = phone.replace(/[^\d+]/g, "");
+          if (safe) {
+            const { data } = await supabase
+              .from("clients")
+              .select("id")
+              .or(`phone_normalized.eq.${safe},phone.eq.${safe}`);
+            for (const c of data ?? []) clientIds.add(c.id);
+          }
         }
 
         if (clientIds.size === 0) {

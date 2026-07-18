@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp, Paperclip, Download, Code2 } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 const channelLabel: Record<string, string> = {
   voicebot_call: "Rozmowa voicebot",
@@ -360,7 +361,7 @@ function EmailSequenceTab({ data }: { data: any }) {
           {nextVariant.preview_text && <div className="text-xs text-muted-foreground italic">{nextVariant.preview_text}</div>}
           <details className="text-xs">
             <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Podgląd HTML</summary>
-            <div className="mt-2 border rounded p-2 bg-muted/30" dangerouslySetInnerHTML={{ __html: nextVariant.body_html }} />
+            <div className="mt-2 border rounded p-2 bg-muted/30" dangerouslySetInnerHTML={{ __html: sanitizeHtml(nextVariant.body_html) }} />
           </details>
         </Card>
       )}

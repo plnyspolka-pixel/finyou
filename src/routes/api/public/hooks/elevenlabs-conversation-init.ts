@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { loanStatusLabel } from "@/lib/loan-status";
+import { requireWebhookSecret } from "@/lib/cron-auth.server";
 
 /**
  * Conversation Initiation Webhook dla ElevenLabs.
@@ -56,6 +57,12 @@ const STEP_LABELS: Record<number, string> = {
 };
 
 async function handler({ request }: { request: Request }) {
+  // Endpoint zwraca PII klienta po numerze telefonu (caller_id) — wymaga
+  // sekretu webhooka ElevenLabs, tak jak sąsiedni voicebot-inbound. Bez tego
+  // każdy mógłby enumerować bazę klientów po numerze.
+  const denied = requireWebhookSecret(request, "ELEVENLABS_WEBHOOK_SECRET");
+  if (denied) return denied;
+
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   let payload: any = {};

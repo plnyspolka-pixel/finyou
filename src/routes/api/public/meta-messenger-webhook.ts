@@ -25,10 +25,12 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
         const mode = url.searchParams.get("hub.mode");
         const token = url.searchParams.get("hub.verify_token");
         const challenge = url.searchParams.get("hub.challenge");
+        // Do handshake używamy wyłącznie dedykowanych tokenów weryfikacyjnych.
+        // META_APP_SECRET to sekret do podpisu HMAC — nie może pełnić roli
+        // tokenu echo-wanego w query stringu.
         const accepted = [
           process.env.META_WEBHOOK_VERIFY_TOKEN,
           process.env.META_IG_WEBHOOK_VERIFY_TOKEN,
-          process.env.META_APP_SECRET,
         ].filter(Boolean);
         if (mode === "subscribe" && token && accepted.includes(token) && challenge) {
           return new Response(challenge, { status: 200 });
@@ -39,13 +41,15 @@ export const Route = createFileRoute("/api/public/meta-messenger-webhook")({
         const raw = await request.text();
         const sig = request.headers.get("x-hub-signature-256");
         const secret = process.env.META_APP_SECRET;
-        if (secret) {
-          if (!verifySig(raw, sig, secret)) {
-            console.warn("[meta-messenger-webhook] invalid signature");
-            return new Response("Forbidden", { status: 403 });
-          }
-        } else {
-          console.warn("[meta-messenger-webhook] META_APP_SECRET not set — skipping signature verification");
+        // Fail-closed: bez skonfigurowanego sekretu nie przetwarzamy
+        // niepodpisanych wiadomości (mogłyby wywołać wysyłkę odpowiedzi).
+        if (!secret) {
+          console.error("[meta-messenger-webhook] META_APP_SECRET not set — rejecting");
+          return new Response("Server misconfigured", { status: 500 });
+        }
+        if (!verifySig(raw, sig, secret)) {
+          console.warn("[meta-messenger-webhook] invalid signature");
+          return new Response("Forbidden", { status: 403 });
         }
         let body: any;
         try { body = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
