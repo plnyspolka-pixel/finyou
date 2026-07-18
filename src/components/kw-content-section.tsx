@@ -68,7 +68,15 @@ export function KwContentSection({
   const [kwNumber, setKwNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [pasteOpen, setPasteOpen] = useState(false);
+  const pasteOpenKey = `kw-paste-open:${applicationId}`;
+  const [pasteOpen, _setPasteOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return sessionStorage.getItem(pasteOpenKey) === "1"; } catch { return false; }
+  });
+  const setPasteOpen = (v: boolean) => {
+    _setPasteOpen(v);
+    try { v ? sessionStorage.setItem(pasteOpenKey, "1") : sessionStorage.removeItem(pasteOpenKey); } catch {}
+  };
 
   const reload = async () => {
     try {
