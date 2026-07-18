@@ -52,23 +52,8 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
   const [row, setRow] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
-  const diagRcn = useServerFn(diagnoseRcnForApplication);
-  const [rcnDiag, setRcnDiag] = useState<any | null>(null);
-  const [rcnDiagLoading, setRcnDiagLoading] = useState(false);
+  // Diagnostyka RCN wyłączona (moduł RCN/GUS został usunięty z pipeline).
 
-  const runRcnDiag = async () => {
-    setRcnDiagLoading(true);
-    try {
-      const d = await diagRcn({ data: { applicationId } });
-      setRcnDiag(d);
-      if (d.ok) toast.success(`RCN: ${d.status}`, { description: d.statusMessage });
-      else toast.error("RCN", { description: d.message });
-    } catch (e: any) {
-      toast.error("Błąd diagnostyki RCN", { description: e?.message ?? String(e) });
-    } finally {
-      setRcnDiagLoading(false);
-    }
-  };
 
   const load = async () => {
     setLoading(true);
