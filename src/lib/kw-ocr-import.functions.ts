@@ -330,5 +330,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       mortgages: kwLegal.mortgages.length,
       totalMortgageAmountPln: kwLegal.totalMortgageAmountPln,
       address: kwLegal.address?.fullAddress ?? null,
+      debug: data.includeDebug ? { transcript, rawJson: rawStructuredJson } : undefined,
     };
   });
