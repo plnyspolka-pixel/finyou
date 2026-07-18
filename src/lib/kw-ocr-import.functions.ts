@@ -1,28 +1,22 @@
 // Własny moduł ekstrakcji treści KW ze screenów (OCR) — alternatywa dla CMD
 // KW Engine. Operator wgrywa zrzuty ekranu (lub PDF) przeglądarki EKW, Gemini
-// odczytuje treść działów, a wynik zapisujemy w kw_documents w DOKŁADNIE tej
-// samej strukturze co pobranie z CMD (HTML per dział, status "ready").
-// Dzięki temu parsery analizy ryzyka, parser adresu i podgląd treści KW
-// działają bez żadnych zmian.
+// robi DOSŁOWNĄ transkrypcję treści i zapisujemy ją bez pośredniego JSON-a
+// w kw_documents (per dział, jako <pre>). Podgląd treści KW w UI działa
+// bez zmian; parsery strukturalne (adres/analiza ryzyka) na takim wejściu
+// nie działają — świadomy wybór, aby uniknąć fałszywej strukturyzacji.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeKwNumber } from "@/lib/kw-fetch.server";
-import { renderKwSections, type KwExtraction } from "@/lib/kw-render";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
-const STRUCTURE_MODEL = "openai/gpt-5.5";
 
 const MAX_FILES = 12;
-const MAX_FILE_B64 = 9_000_000; // ~6,5 MB pliku
+const MAX_FILE_B64 = 9_000_000;
 const MAX_TOTAL_B64 = 40_000_000;
-
-const SYSTEM_PROMPT =
-  "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Przepisujesz treść DOSŁOWNIE — niczego nie zgadujesz " +
-  "ani nie uzupełniasz. Pole, którego nie widać na obrazach, zwracasz jako null. Odpowiadasz WYŁĄCZNIE poprawnym JSON-em.";
 
 const TRANSCRIBE_SYSTEM_PROMPT =
   "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Twoim jedynym zadaniem jest DOSŁOWNE przepisanie tekstu " +
@@ -31,44 +25,10 @@ const TRANSCRIBE_SYSTEM_PROMPT =
 const TRANSCRIBE_USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z przeglądarki EKW (ekw.ms.gov.pl) — okładka i/lub działy I-O, I-Sp, II, III, IV, w dowolnej kolejności, także we fragmentach.
 
 Przepisz DOSŁOWNIE cały widoczny tekst ze wszystkich obrazów. Zasady:
-- Rozdziel sekcje nagłówkami typu "=== OKŁADKA ===", "=== DZIAŁ I-O ===", "=== DZIAŁ I-SP ===", "=== DZIAŁ II ===", "=== DZIAŁ III ===", "=== DZIAŁ IV ===" — tak jak wynika to z obrazów.
+- Rozdziel sekcje nagłówkami DOKŁADNIE w formacie: "=== OKŁADKA ===", "=== DZIAŁ I-O ===", "=== DZIAŁ I-SP ===", "=== DZIAŁ II ===", "=== DZIAŁ III ===", "=== DZIAŁ IV ===" — tak jak wynika to z obrazów.
 - Zachowaj tabele w formie tekstowej (rubryki / wartości linia po linii).
 - Nie tłumacz, nie skracaj, nie zgaduj brakujących liter — nieczytelne fragmenty zaznacz jako [nieczytelne].
 - Nie zwracaj JSON-a, nie dodawaj komentarzy — tylko surowa treść KW.`;
-
-const USER_PROMPT = `Poniżej masz DOSŁOWNĄ transkrypcję treści księgi wieczystej (może obejmować okładkę i działy I-O, I-Sp, II, III, IV — w dowolnej kolejności, także we fragmentach). Twoim zadaniem jest wyłącznie uporządkować te dane w JSON — niczego nie dopisuj i nie zgaduj. Zwróć JEDEN JSON:
-
-{
-  "kwNumber": "numer KW w formacie AA1A/00000000/0 lub null",
-  "sadRejonowy": "... lub null",
-  "typKsiegi": "... lub null",
-  "dzial1o": {
-    "wojewodztwo": "...", "powiat": "...", "gmina": "...", "miejscowosc": "...",
-    "ulica": "... lub null", "numerBudynku": "... lub null", "numerLokalu": "... lub null",
-    "przeznaczenie": "... lub null", "obszar": "np. 45,5000 M2 albo 0,0450 HA — dosłownie, lub null",
-    "kondygnacja": <liczba lub null>, "liczbaKondygnacji": <liczba lub null>,
-    "dzialki": [{"numer": "...", "obreb": "...", "polozenie": "...", "sposobKorzystania": "np. R IVa"}],
-    "inne": ["inne istotne informacje z działu I-O"]
-  },
-  "dzial1sp": {"wpisy": ["treść wpisów działu I-Sp"]},
-  "dzial2": {"wlasciciele": [
-    {"imiePierwsze": "...", "imieDrugie": "... lub null", "nazwisko": "...", "imieOjca": "... lub null", "imieMatki": "... lub null", "pesel": "11 cyfr lub null", "udzial": "np. 1/1 lub null"},
-    {"nazwa": "nazwa osoby prawnej/instytucji", "siedziba": "...", "regon": "...", "udzial": "..."}
-  ]},
-  "dzial3": {"brakWpisu": <true gdy dział pusty>, "wpisy": [{"rodzaj": "np. OSTRZEŻENIE / SŁUŻEBNOŚĆ / ROSZCZENIE", "tresc": "pełna treść wpisu"}]},
-  "dzial4": {"brakWpisu": <true gdy dział pusty>, "hipoteki": [{"numer": "...", "rodzaj": "np. HIPOTEKA UMOWNA", "sumaKwota": <liczba, np. 300000.00>, "walutaSumy": "ZŁ/EUR/CHF/USD", "wierzyciel": "nazwa wierzyciela hipotecznego", "tresc": "pełna treść wpisu"}]},
-  "uwagi": ["zastrzeżenia OCR: nieczytelne fragmenty, ucięte sekcje itp."]
-}
-
-ZASADY:
-- Cały dział nieobecny w transkrypcji → null (NIE {"brakWpisu": true} — to oznacza dział widoczny i pusty).
-- "brakWpisu": true tylko, gdy w transkrypcji wyraźnie widać pusty dział (np. "BRAK WPISU").
-- Kwoty hipotek jako liczby (300000.00), waluta osobno.
-- Nazwiska i nazwy przepisuj dokładnie tak jak w transkrypcji.
-
-=== TRANSKRYPCJA ===
-{{TRANSCRIPT}}`;
-
 
 const ImageSchema = z.object({
   dataUrl: z.string().min(50).max(MAX_FILE_B64),
@@ -76,28 +36,79 @@ const ImageSchema = z.object({
   fileName: z.string().max(200).optional(),
 });
 
-function tryParseJson(s: string): KwExtraction | null {
-  if (!s) return null;
-  // Strip ```json fences if present.
-  let text = s.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-  try {
-    return JSON.parse(text) as KwExtraction;
-  } catch {}
-  // Fallback: grab widest {...} block.
-  const first = text.indexOf("{");
-  const last = text.lastIndexOf("}");
-  if (first === -1 || last <= first) return null;
-  try {
-    return JSON.parse(text.slice(first, last + 1)) as KwExtraction;
-  } catch {
-    return null;
-  }
-}
-
 async function assertAdmin(userId: string) {
   const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
   const allowed = (roles ?? []).some((r) => r.role === "administrator");
   if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator).");
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function wrapSection(title: string, body: string): string {
+  const trimmed = body.trim();
+  if (!trimmed) return "";
+  return `<div class="kw-ocr-section"><h3>${escapeHtml(title)}</h3><pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5">${escapeHtml(trimmed)}</pre></div>`;
+}
+
+/** Rozbija transkrypcję na sekcje po nagłówkach `=== ... ===`. */
+function splitTranscript(transcript: string): {
+  okladka: string | null;
+  dzial_1o: string | null;
+  dzial_1s: string | null;
+  dzial_2: string | null;
+  dzial_3: string | null;
+  dzial_4: string | null;
+} {
+  const buckets: Record<string, string[]> = {
+    okladka: [],
+    dzial_1o: [],
+    dzial_1s: [],
+    dzial_2: [],
+    dzial_3: [],
+    dzial_4: [],
+  };
+  let current: keyof typeof buckets | null = null;
+  const headerRe = /^===\s*(.+?)\s*===\s*$/i;
+  for (const line of transcript.split(/\r?\n/)) {
+    const m = line.match(headerRe);
+    if (m) {
+      const h = m[1].toUpperCase().replace(/\s+/g, " ");
+      if (h.includes("OKŁAD") || h.includes("OKLAD")) current = "okladka";
+      else if (h.includes("I-O") || h.includes("I O")) current = "dzial_1o";
+      else if (h.includes("I-SP") || h.includes("I SP")) current = "dzial_1s";
+      else if (/DZIA[ŁL]\s*II\b|=\s*II\s*=/.test(h) || h.endsWith(" II")) current = "dzial_2";
+      else if (/DZIA[ŁL]\s*III\b|=\s*III\s*=/.test(h) || h.endsWith(" III")) current = "dzial_3";
+      else if (/DZIA[ŁL]\s*IV\b|=\s*IV\s*=/.test(h) || h.endsWith(" IV")) current = "dzial_4";
+      else current = null;
+      continue;
+    }
+    if (current) buckets[current].push(line);
+  }
+  const anyContent = Object.values(buckets).some((b) => b.join("").trim().length > 0);
+  if (!anyContent) {
+    // Brak nagłówków — wrzuć wszystko do okładki, żeby operator miał podgląd.
+    buckets.okladka = [transcript];
+  }
+  const pick = (k: keyof typeof buckets) => {
+    const s = buckets[k].join("\n").trim();
+    return s ? wrapSection(k === "okladka" ? "OKŁADKA" : k.replace("dzial_", "Dział ").toUpperCase(), s) : null;
+  };
+  return {
+    okladka: pick("okladka") || wrapSection("OKŁADKA", "(brak treści okładki na screenach)"),
+    dzial_1o: pick("dzial_1o"),
+    dzial_1s: pick("dzial_1s"),
+    dzial_2: pick("dzial_2"),
+    dzial_3: pick("dzial_3"),
+    dzial_4: pick("dzial_4"),
+  };
+}
+
+function extractKwNumberFromText(t: string): string | null {
+  const m = t.match(/\b([A-Z]{2}\d[A-Z])\s*\/?\s*(\d{8})\s*\/?\s*(\d)\b/i);
+  if (!m) return null;
+  return normalizeKwNumber(`${m[1]}/${m[2]}/${m[3]}`);
 }
 
 export const importKwFromScreenshots = createServerFn({ method: "POST" })
@@ -106,14 +117,10 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     z
       .object({
         loanApplicationId: z.string().uuid().optional(),
-        /** Numer KW podany ręcznie — nadpisuje odczyt OCR z okładki. */
         kwNumber: z.string().max(20).optional(),
         images: z.array(ImageSchema).min(1).max(MAX_FILES),
-        /** Pozwala nadpisać treść KW pobraną wcześniej (np. z CMD). */
         force: z.boolean().optional(),
-        /** Tryb debug — nie zapisuje do bazy, zwraca transkrypcję i surowy JSON z modelu. */
         dryRun: z.boolean().optional(),
-        /** Dołącz transkrypcję i surowy JSON do odpowiedzi (także przy zapisie). */
         includeDebug: z.boolean().optional(),
       })
       .parse(input),
@@ -127,7 +134,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const totalSize = data.images.reduce((acc, i) => acc + i.dataUrl.length, 0);
     if (totalSize > MAX_TOTAL_B64) throw new Error("Łączny rozmiar plików przekracza limit — wgraj mniej/mniejsze screeny.");
 
-    // 1a) Transkrypcja — surowy OCR wszystkich obrazów (bez struktury).
     const transcribeContent: unknown[] = [{ type: "text", text: TRANSCRIBE_USER_PROMPT }];
     for (const img of data.images) {
       if (img.mimeType === "application/pdf" || /\.pdf$/i.test(img.fileName ?? "")) {
@@ -161,8 +167,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       }
       const j: any = await r.json();
       const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
-      const finish = j?.choices?.[0]?.finish_reason;
-      console.log("KW OCR transcribe result", { model, len: content.length, finish });
+      console.log("KW OCR transcribe result", { model, len: content.length, finish: j?.choices?.[0]?.finish_reason });
       return content;
     }
 
@@ -175,41 +180,12 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       throw new Error("OCR nie odczytał tekstu ze screenów — sprawdź, czy obrazy są czytelne.");
     }
 
-
-    // 1b) Strukturyzacja — mapowanie transkrypcji do JSON-a KW.
-    const resp = await fetch(AI_GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: STRUCTURE_MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: USER_PROMPT.replace("{{TRANSCRIPT}}", transcript) },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (resp.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
-    if (resp.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
-    if (!resp.ok) {
-      const errBody = await resp.text().catch(() => "");
-      console.error("KW OCR structuring HTTP error", { status: resp.status, body: errBody.slice(0, 800), model: STRUCTURE_MODEL });
-      throw new Error(`Błąd OCR — strukturyzacja (HTTP ${resp.status}): ${errBody.slice(0, 200)}`);
-    }
-
-    const json: any = await resp.json();
-    const content: string = json?.choices?.[0]?.message?.content ?? "";
-    const extraction = tryParseJson(content);
-
-    // Debug/dry-run: zwróć transkrypcję i surowy JSON, nie zapisuj do bazy.
     if (data.dryRun) {
       return {
         ok: true as const,
         dryRun: true as const,
         debug: {
           transcript,
-          rawJson: content,
-          parsed: extraction ?? null,
           imagesMeta: data.images.map((i) => ({
             fileName: i.fileName ?? null,
             mimeType: i.mimeType,
@@ -219,21 +195,9 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       };
     }
 
-    if (!extraction) {
-      console.error("KW OCR: nie sparsowano odpowiedzi modelu", {
-        model: MODEL,
-        preview: content.slice(0, 500),
-        transcriptPreview: transcript.slice(0, 500),
-      });
-      throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
-    }
-    const rawStructuredJson = content;
-
-
-    // 2) Numer KW: ręczny > OCR > numer z nieruchomości wniosku.
     const warnings: string[] = [];
     let kw = data.kwNumber ? normalizeKwNumber(data.kwNumber) : null;
-    const ocrKw = extraction.kwNumber ? normalizeKwNumber(extraction.kwNumber) : null;
+    const ocrKw = extractKwNumberFromText(transcript);
     if (!kw) kw = ocrKw;
     else if (ocrKw && ocrKw !== kw) {
       warnings.push(`Numer KW odczytany ze screenów (${ocrKw}) różni się od podanego (${kw}) — zapisano pod podanym numerem.`);
@@ -258,14 +222,8 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       throw new Error("Nie udało się ustalić numeru KW (nieczytelny na screenach) — podaj numer ręcznie.");
     }
 
-    // 3) Render sekcji w formacie kw_documents (identycznym jak z CMD).
-    const sections = renderKwSections(extraction, { importedAt: new Date().toLocaleString("pl-PL") });
-    warnings.push(...sections.warnings);
-    if (!sections.dzial_1o && !sections.dzial_2 && !sections.dzial_3 && !sections.dzial_4) {
-      throw new Error("Na screenach nie rozpoznano żadnego działu KW — upewnij się, że to treść księgi z EKW.");
-    }
+    const sections = splitTranscript(transcript);
 
-    // 4) Zapis — nie nadpisujemy po cichu treści pobranej wcześniej (np. z EKW).
     const { data: existing } = await supabaseAdmin
       .from("kw_documents")
       .select("status")
@@ -298,7 +256,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     );
     if (upsertError) throw new Error(`Nie udało się zapisać treści KW: ${upsertError.message}`);
 
-    // 5) Uzupełnij numer KW na nieruchomości wniosku, jeśli go brakowało.
     if (propertyId) {
       const { data: prop } = await supabaseAdmin.from("properties").select("land_register_number").eq("id", propertyId).maybeSingle();
       if (prop && !prop.land_register_number) {
@@ -307,17 +264,12 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       }
     }
 
-    // 6) Podgląd przez te same parsery, które konsumują treść z CMD —
-    //    natychmiastowa walidacja, że import „czyta się" poprawnie.
-    const { analyzeKwLegal } = await import("@/lib/risk-assessment/kw-parser.server");
-    const kwLegal = await analyzeKwLegal({ kwNumber: kw });
-
     return {
       ok: true as const,
       needsForce: false as const,
       kwNumber: kw,
       imported: {
-        okladka: true,
+        okladka: !!sections.okladka,
         dzial_1o: !!sections.dzial_1o,
         dzial_1s: !!sections.dzial_1s,
         dzial_2: !!sections.dzial_2,
@@ -325,11 +277,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         dzial_4: !!sections.dzial_4,
       },
       warnings,
-      summary: kwLegal.summary,
-      owners: kwLegal.owners,
-      mortgages: kwLegal.mortgages.length,
-      totalMortgageAmountPln: kwLegal.totalMortgageAmountPln,
-      address: kwLegal.address?.fullAddress ?? null,
-      debug: data.includeDebug ? { transcript, rawJson: rawStructuredJson } : undefined,
+      debug: data.includeDebug ? { transcript } : undefined,
     };
   });
