@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { normalizeLoanStatus } from "@/lib/loan-status";
-import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
@@ -194,13 +194,6 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
-              <PropertyLocationAnalysis
-                propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address}
-                city={p.city}
-                postalCode={p.postal_code}
-                propertyType={p.property_type}
-                kwNumber={p.land_register_number}
-              />
               <KwContentSection applicationId={id} canFetch showKwNumber />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
