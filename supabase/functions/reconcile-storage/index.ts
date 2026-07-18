@@ -63,12 +63,16 @@ serve(async (req) => {
   const { data: userData, error: userErr } = await supabase.auth.getUser(token);
   const uid = userData?.user?.id;
   if (userErr || !uid) return json({ error: "Nieautoryzowane." }, 401);
-  const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
-    _user_id: uid,
-    _role: "administrator",
-  });
+  // Rolę sprawdzamy bezpośrednim odczytem user_roles (service_role omija RLS).
+  // Nie przez rpc has_role — ta funkcja ma EXECUTE tylko dla anon/authenticated.
+  const { data: roleRow, error: roleErr } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", uid)
+    .eq("role", "administrator")
+    .maybeSingle();
   if (roleErr) return json({ error: `Kontrola roli: ${roleErr.message}` }, 500);
-  if (isAdmin !== true) return json({ error: "Wymagana rola administrator." }, 403);
+  if (!roleRow) return json({ error: "Wymagana rola administrator." }, 403);
 
   // Parametry z body (functions.invoke) lub z query (curl/dashboard).
   const url = new URL(req.url);

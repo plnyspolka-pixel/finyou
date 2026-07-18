@@ -47,7 +47,18 @@ function UstawieniaPage() {
         });
       }
     } catch (e: any) {
-      toast.error("Błąd naprawy plików", { description: e?.message ?? String(e) });
+      // supabase-js zwraca FunctionsHttpError bez treści — dociągnij body,
+      // żeby zobaczyć właściwy powód (np. „Wymagana rola administrator").
+      let detail = e?.message ?? String(e);
+      try {
+        if (e?.context && typeof e.context.json === "function") {
+          const b = await e.context.json();
+          if (b?.error) detail = b.error;
+        }
+      } catch {
+        /* zostaje detail z message */
+      }
+      toast.error("Błąd naprawy plików", { description: detail });
     } finally {
       setBusy(null);
     }
