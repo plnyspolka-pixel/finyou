@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import { propertyTypeLabels } from "@/lib/labels";
-import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+
 
 import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
