@@ -66,9 +66,17 @@ Twoim celem jest:
 3. Każdą nową informację natychmiast zapisuj wywołując tool update_lead_data({ patch: {...} }).
 4. ROZRÓŻNIAJ kwotę pożyczki od wartości nieruchomości. Gdy klient pisze "dom jest wart 600 tys., potrzebuję 360 tys." — loan_amount to 360000, property_value to 600000. Zapisuj obie osobno i potwierdzaj klientowi kwotę POŻYCZKI.
 5. Gdy klient się przedstawi ("jestem Jan Kowalski", podpis "pozdrawiam…"), zapisz first_name i last_name.
-6. Gdy masz minimum: imię, email LUB telefon, kwota, cel → wywołaj send_application_link() aby wysłać link do dokończenia wniosku.
+6. Gdy masz minimum: imię, email LUB telefon, kwota, cel → MOŻESZ wywołać send_application_link() aby wysłać link do dokończenia wniosku — ale NIGDY, jeśli klient przesyła dane w rozmowie lub poprosił o załatwienie sprawy na czacie (patrz zasada niżej).
 7. NIGDY nie eskaluj do człowieka. Działasz w pełnej autonomii. Nawet jeśli klient poprosi o człowieka — wyjaśnij grzecznie, że jesteś asystentem Finance You i pomożesz mu od ręki.
 8. Jeśli klient przesłał załącznik (np. dowód, wyciąg, KW) — podziękuj i potwierdź, że dokument trafił do jego sprawy.
+
+KLIENT WYBRAŁ CZAT — KONIEC Z LINKIEM DO FORMULARZA:
+- Jeżeli klient napisał, że chce przesłać dane lub dokumenty "tutaj" / w rozmowie, ALBO już przesłał w rozmowie cokolwiek (zdjęcia, numer KW, dokumenty) — od tego momentu NIE wspominaj o formularzu ani financeyou.pl, NIE wysyłaj linku i NIE wywołuj send_application_link. Zbieraj wszystko bezpośrednio w rozmowie.
+- Gdy dane są kompletne — poinformuj tylko, że sprawa przechodzi do analizy i analityk się odezwie. Zero linków.
+
+NIE FINANSUJEMY ZAKUPU NIERUCHOMOŚCI:
+- Finance You udziela pożyczek WYŁĄCZNIE pod zastaw nieruchomości, którą klient JUŻ POSIADA. Nie pomagamy w uzyskaniu pożyczki na zakup nieruchomości (mieszkania, domu, działki, lokalu); kupowana nieruchomość nie może być zabezpieczeniem.
+- Gdy klient pisze, że potrzebuje pieniędzy na zakup nieruchomości: nie potwierdzaj takiego celu i nie prowadź zbierania danych. Wyjaśnij krótko, że nie finansujemy zakupu, i zapytaj, czy posiada już inną nieruchomość, która mogłaby być zabezpieczeniem. Jeśli tak — prowadź standardowy proces z tą nieruchomością jako zabezpieczeniem. Jeśli nie — grzecznie poinformuj, że nie będziemy w stanie pomóc; nie zbieraj danych i nie wysyłaj linku.
 
 STYL — pisz jak człowiek na czacie:
 - Po polsku, ciepło i konkretnie, maks 2-3 krótkie zdania.
@@ -106,7 +114,9 @@ const TOOLS = [
     type: "function",
     function: {
       name: "send_application_link",
-      description: "Wyślij klientowi spersonalizowany link do dokończenia wniosku online. Wywołaj gdy masz minimum: imię, email LUB telefon, kwota, cel.",
+      description:
+        "Wyślij klientowi spersonalizowany link do dokończenia wniosku online. Wywołaj TYLKO gdy masz minimum (imię, email LUB telefon, kwota, cel) I klient nie przesyła danych w rozmowie. " +
+        "NIE wywołuj, jeżeli klient chce przesłać dane/dokumenty na czacie („tutaj”), już przesłał w rozmowie zdjęcia/numer KW/dokumenty, dane są kompletne, albo klient chce pożyczkę na zakup nieruchomości.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
@@ -157,6 +167,27 @@ export async function runAgentTurn(opts: {
 
   const { prompt: systemPrompt } = await fetchAgentPrompt();
 
+  // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
+  // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
+  // placeholdera {{MAGIC_LINK_KLIENT}} — podstawiamy go poniżej.
+  let applicationLink = "https://financeyou.pl/klient";
+  if (lead.email) {
+    try {
+      const { ensureKlientAccountAndMagicLink } = await import("./client-magic-link.server");
+      const r = await ensureKlientAccountAndMagicLink(lead.email, {
+        firstName: lead.first_name ?? null,
+        lastName: lead.last_name ?? null,
+        source: "text_agent",
+      });
+      if (r.magicLink) applicationLink = r.magicLink;
+      if (r.userId && lead.client_id) {
+        await s.from("clients").update({ user_id: r.userId }).eq("id", lead.client_id).is("user_id", null);
+      }
+    } catch (e) {
+      console.error("[el-text-agent] magic link failed", e);
+    }
+  }
+
   const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nNazwisko: ${lead.last_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
 
   // Checklist braków liczona z BAZY (lead + application_data + załączniki),
@@ -186,7 +217,7 @@ export async function runAgentTurn(opts: {
   mark(!!(lead.first_name && lead.last_name), "imię i nazwisko");
   const checklistBlock =
     missing.length === 0
-      ? `\n\n[STAN DANYCH — sprawdzony w bazie]\nKOMPLET: mamy wszystkie dane (${known.join(", ")}). Nie dopytuj o nic z tej listy. Sprawa przechodzi do analizy — poinformuj o tym klienta, jeśli jeszcze tego nie zrobiłeś.`
+      ? `\n\n[STAN DANYCH — sprawdzony w bazie]\nKOMPLET: mamy wszystkie dane (${known.join(", ")}). Nie dopytuj o nic z tej listy. Sprawa przechodzi do analizy — poinformuj o tym klienta, jeśli jeszcze tego nie zrobiłeś. NIE wysyłaj linku do formularza ani financeyou.pl i NIE wywołuj send_application_link — nie ma już czego dokańczać.`
       : `\n\n[STAN DANYCH — sprawdzony w bazie]\nMamy już: ${known.length ? known.join(", ") : "nic"}.\nBrakuje: ${missing.join(", ")}.\nNIE pytaj o nic z listy "mamy już". Dopytuj naturalnie o PIERWSZĄ brakującą pozycję (jedno pytanie na wiadomość), najpierw odpowiadając na pytanie klienta.`;
 
   // RAG: pobierz fragmenty bazy wiedzy najbardziej pasujące do wiadomości klienta.
@@ -204,7 +235,11 @@ export async function runAgentTurn(opts: {
   }
 
   const messages: EmittedMessage[] = [
-    { role: "system", content: systemPrompt + leadContext + checklistBlock + knowledgeBlock },
+    {
+      role: "system",
+      content: (systemPrompt + leadContext + checklistBlock + knowledgeBlock)
+        .replaceAll("{{MAGIC_LINK_KLIENT}}", applicationLink),
+    },
   ];
   for (const m of history ?? []) {
     if (!m.content) continue;
@@ -258,7 +293,7 @@ export async function runAgentTurn(opts: {
       const name = c.function?.name;
       let args: any = {};
       try { args = JSON.parse(c.function?.arguments ?? "{}"); } catch { /* noop */ }
-      const result = await executeTool(opts.leadId, opts.channel, name, args);
+      const result = await executeTool(opts.leadId, opts.channel, name, args, { applicationLink });
       toolResults.push({ name, args, result });
       messages.push({
         role: "tool",
@@ -314,7 +349,13 @@ function normalizePatch(raw: Record<string, any>): Record<string, any> {
   return out;
 }
 
-async function executeTool(leadId: string, channel: string, name: string, args: any): Promise<any> {
+async function executeTool(
+  leadId: string,
+  channel: string,
+  name: string,
+  args: any,
+  ctx: { applicationLink: string } = { applicationLink: "https://financeyou.pl/klient" },
+): Promise<any> {
   const s = admin();
   if (name === "update_lead_data") {
     const patch = normalizePatch(args?.patch ?? {});
@@ -345,7 +386,7 @@ async function executeTool(leadId: string, channel: string, name: string, args: 
     return { ok: true, saved: Object.keys(patch) };
   }
   if (name === "send_application_link") {
-    const link = "https://financeyou.pl";
+    const link = ctx.applicationLink;
     await s.from("leads").update({ return_link: link }).eq("id", leadId);
     return { ok: true, link, instruction: `Wyślij klientowi w odpowiedzi tekst typu: "Twój link do dokończenia wniosku: ${link}"` };
   }

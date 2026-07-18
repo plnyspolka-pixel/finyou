@@ -106,7 +106,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         // 4) Pobierz statusy leadów hurtowo, żeby pominąć "zamknięte".
         const leadIds = Array.from(new Set(candidates.map((c) => c.leadId)));
         const { data: leadsRows } = await supabaseAdmin
-          .from("leads").select("id, status, email, messenger_psid, instagram_igsid, application_data")
+          .from("leads").select("id, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id")
           .in("id", leadIds);
         const leadMap = new Map<string, any>();
         for (const l of leadsRows ?? []) leadMap.set(l.id, l);
@@ -118,6 +118,9 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           if (!lead) continue;
           if (lead.status && TERMINAL_STATUSES.has(String(lead.status))) continue;
           if (lead.application_data?.followup_paused) continue;
+          // Lead z utworzonym wnioskiem (komplet danych zebrany, np. na czacie)
+          // nie dostaje już „dokończ wniosek" — sprawą zajmuje się analityk.
+          if (lead.loan_application_id) continue;
 
           // Dokładny step: licz outboundy PO ostatnim inboundzie (lub wszystkie, jeśli inboundu nie było).
           const sinceIso = g.lastInboundAt > 0 ? new Date(g.lastInboundAt).toISOString() : "1970-01-01T00:00:00Z";
@@ -140,11 +143,13 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           const nudgePrompt =
             `[SYSTEM FOLLOW-UP nr ${step} z ${MAX_OUTBOUND - 1}] Klient nie odpisał od ostatniej Twojej wiadomości ` +
             `(${Math.round((now - g.lastOutboundAt) / 3600_000)} h temu). Napisz KRÓTKĄ, ciepłą wiadomość follow-up po polsku ` +
-            `(2-3 zdania, bez nachalności). CEL: skłonić klienta, żeby KLIKNĄŁ link i DOKOŃCZYŁ wniosek na stronie ` +
-            `financeyou.pl — NIE proś o odpowiedź na maila, nie zadawaj pytań. Podkreśl konkretną korzyść (np. długi okres spłaty, ` +
-            `niska rata, wybór z wielu inwestorów, indywidualne warunki) i zaproś do wejścia na wniosek. ` +
-            `Dostosuj ton: pierwsze follow-upy lekkie i pomocne, kolejne bardziej "ostatnia szansa, ale bez presji". ` +
-            `Zawsze wywołaj narzędzie send_application_link, żeby wkleić link do wniosku. ` +
+            `(2-3 zdania, bez nachalności). Kieruj się blokiem [STAN DANYCH]: ` +
+            `jeżeli czegoś brakuje — przypomnij się i zapytaj o PIERWSZĄ brakującą rzecz, do przesłania tutaj, na czacie. ` +
+            `Jeżeli KOMPLET — napisz krótko, że mamy wszystko i analityk się odezwie; NIE wysyłaj żadnego linku. ` +
+            `Link do formularza (narzędzie send_application_link) możesz dodać WYŁĄCZNIE, gdy klient nie przesłał dotąd ` +
+            `żadnych danych ani dokumentów w rozmowie i nie prosił o załatwienie sprawy na czacie — ` +
+            `kto wybrał czat, tego NIE odsyłaj na financeyou.pl. ` +
+            `Dostosuj ton: pierwsze follow-upy lekkie i pomocne, kolejne spokojniejsze, bez presji. ` +
             `Nie powtarzaj dosłownie poprzednich wiadomości. Nie używaj emoji.`;
 
           let replyText = "";
