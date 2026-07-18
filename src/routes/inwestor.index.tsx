@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from "lucide-react";
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
-import { isShowablePropertyPhoto, isPropertyPhotoDocument } from "@/lib/property-photos";
 import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
 
 export const Route = createFileRoute("/inwestor/")({
