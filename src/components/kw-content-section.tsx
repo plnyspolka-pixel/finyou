@@ -114,55 +114,20 @@ export function KwContentSection({
     }
   };
 
-  const onOcrFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const list = Array.from(files).slice(0, MAX_UPLOAD_FILES);
-    const oversize = list.find((f) => f.size > MAX_UPLOAD_BYTES);
-    if (oversize) {
-      toast.error(`Plik ${oversize.name} jest za duży (limit ~6 MB na plik)`);
-      return;
-    }
-    setOcrBusy(true);
-    try {
-      const images = await Promise.all(
-        list.map(async (f) => ({ dataUrl: await readAsDataUrl(f), mimeType: f.type || "image/png", fileName: f.name })),
-      );
-      let res = await doOcrImport({ data: { loanApplicationId: applicationId, images } });
-      if (!res.ok && res.needsForce) {
-        if (!window.confirm("Treść tej KW jest już zapisana (np. pobrana z EKW). Nadpisać ją danymi z OCR?")) return;
-        res = await doOcrImport({ data: { loanApplicationId: applicationId, images, force: true } });
-      }
-      if (res.ok) {
-        toast.success(`Treść KW ${res.kwNumber} zaimportowana ze screenów`, { description: res.summary });
-        for (const w of res.warnings.slice(0, 4)) toast.info(w);
-        setHasKw(true);
-        await reload();
-      } else {
-        toast.error(res.message || "Import screenów nie powiódł się");
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Import screenów nie powiódł się");
-    } finally {
-      setOcrBusy(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
   const ocrUploadControls = canImportOcr ? (
-    <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,application/pdf"
-        multiple
-        className="hidden"
-        onChange={(e) => void onOcrFiles(e.target.files)}
-      />
-      <Button size="sm" variant="outline" disabled={ocrBusy || busy} onClick={() => fileInputRef.current?.click()}>
-        {ocrBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanText className="mr-2 h-4 w-4" />}
-        Wgraj screeny KW
-      </Button>
-    </>
+    <Button size="sm" variant="outline" disabled={busy} onClick={() => setPasteOpen(true)}>
+      <ScanText className="mr-2 h-4 w-4" />
+      Wgraj screeny KW
+    </Button>
+  ) : null;
+
+  const pasteDialog = canImportOcr ? (
+    <KwPasteSlotsDialog
+      open={pasteOpen}
+      onOpenChange={setPasteOpen}
+      loanApplicationId={applicationId}
+      onImported={() => { setHasKw(true); void reload(); }}
+    />
   ) : null;
 
   if (loading) return null;
