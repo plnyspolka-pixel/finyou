@@ -200,6 +200,7 @@ function InwestorWniosek() {
           city={p.city}
           postalCode={p.postal_code}
           propertyType={p.property_type}
+          kwNumber={p.land_register_number}
         />
       )}
 
