@@ -13,6 +13,16 @@ export interface MasterValuationInput {
   voivodeship: string | null;
   areaM2: number | null;
   landAreaHa: number | null;
+  /** Rodzaj/przeznaczenie nieruchomości z KW (dział I-O). */
+  kwKind?: string | null;
+  /** Liczba izb/pokoi z KW. */
+  roomCount?: number | null;
+  /** Piętro (0 = parter) z KW. */
+  floorPietro?: number | null;
+  /** Sposób korzystania z gruntu z KW. */
+  landUse?: string | null;
+  /** Parametry i lokalizacja pochodzą z księgi wieczystej. */
+  parametersFromKw?: boolean;
   declaredValuePln: number | null;
   requestedLoanPln: number | null;
   collateral: PropertyAnalysisResult | null;
@@ -45,12 +55,19 @@ function buildDossier(i: MasterValuationInput): string {
     ? `\n0) DANE RZĄDOWE — KOTWICA WYCENY (priorytet: ${gov.primarySource}):${rcnLine}${gov.pricePerHa != null ? `\n- Cena gruntu rolnego (przyjęta): ${gov.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${gov.soilCategory})${gov.landValuePln ? `, wartość działki ≈ ${gov.landValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.pricePerM2Median != null ? `\n- Cena lokali (przyjęta): ${gov.pricePerM2Median.toLocaleString("pl-PL")} zł/m²${gov.dwellingValuePln ? `, wartość ≈ ${gov.dwellingValuePln.toLocaleString("pl-PL")} zł` : ""}` : ""}${gov.gusPricePerHa != null && gov.primarySource === "RCN" ? `\n- (GUS porównawczo: ${gov.gusPricePerHa.toLocaleString("pl-PL")} zł/ha)` : ""}\n- Jednostka: ${gov.unitName ?? "—"} (${gov.unitLevel ?? "—"}), okres ${gov.period ?? "—"}${gov.fallbackUsed ? " [dane zastępcze wyższego poziomu]" : ""}\n`
     : `\n0) DANE RZĄDOWE (RCN/GUS): brak danych (RCN: ${gov?.rcnStatusMessage ?? "—"}).\n`;
 
+  const kwParamsLine = [
+    i.kwKind ? `rodzaj: ${i.kwKind}` : null,
+    i.landUse ? `sposób korzystania: ${i.landUse}` : null,
+    i.roomCount != null ? `liczba izb/pokoi: ${i.roomCount}` : null,
+    i.floorPietro != null ? `kondygnacja: ${i.floorPietro === 0 ? "parter" : i.floorPietro + ". piętro"}` : null,
+  ].filter(Boolean).join(", ");
+
   return `DOSSIER NIERUCHOMOŚCI I RYZYKA:
 ${govBlock}
-1) NIERUCHOMOŚĆ
+1) NIERUCHOMOŚĆ${i.parametersFromKw ? " (parametry i lokalizacja odczytane z księgi wieczystej — dział I-O)" : ""}
 - Typ: ${i.propertyType}
 - Lokalizacja: ${loc}
-- Powierzchnia: ${area}
+- Powierzchnia: ${area}${kwParamsLine ? `\n- Parametry z KW: ${kwParamsLine}` : ""}
 - Wartość deklarowana: ${fmt(i.declaredValuePln)}
 - Wnioskowana kwota pożyczki: ${fmt(i.requestedLoanPln)}
 

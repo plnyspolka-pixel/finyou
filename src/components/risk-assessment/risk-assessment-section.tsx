@@ -484,6 +484,16 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                       <span><span className="text-muted-foreground">Adres z KW (dz. I-O):</span> <b>{result.kwLegal.address.fullAddress}</b></span>
                     </div>
                   )}
+                  {result.kwLegal.propertyParams && (result.kwLegal.propertyParams.kind || result.kwLegal.propertyParams.usableAreaM2 != null || result.kwLegal.propertyParams.landAreaHa != null || result.kwLegal.propertyParams.roomCount != null || result.kwLegal.propertyParams.landUse) && (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <span className="text-muted-foreground">Parametry z KW (dz. I-O) — podstawa wyceny:</span>
+                      {result.kwLegal.propertyParams.kind && <span>rodzaj: <b>{result.kwLegal.propertyParams.kind}</b></span>}
+                      {result.kwLegal.propertyParams.usableAreaM2 != null && <span>pow. użytkowa: <b>{result.kwLegal.propertyParams.usableAreaM2} m²</b></span>}
+                      {result.kwLegal.propertyParams.landAreaHa != null && <span>obszar: <b>{result.kwLegal.propertyParams.landAreaHa} ha</b></span>}
+                      {result.kwLegal.propertyParams.roomCount != null && <span>izby/pokoje: <b>{result.kwLegal.propertyParams.roomCount}</b></span>}
+                      {result.kwLegal.propertyParams.landUse && <span>sposób korzystania: <b>{result.kwLegal.propertyParams.landUse}</b></span>}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {result.kwLegal.hasEnforcement && <Badge variant="destructive">Egzekucja / zajęcie</Badge>}
                     {result.kwLegal.hasUsufruct && <Badge variant="secondary">Służebność / dożywocie</Badge>}

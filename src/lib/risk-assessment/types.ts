@@ -30,12 +30,32 @@ export interface OwnerProfile {
   notes: string[];
 }
 
+// ---- KW: parametry nieruchomości z działu I-O (oznaczenie) ----
+// Odczytane wprost z JSON-a zwracanego przez KW Engine — używane jako źródło
+// parametrów do wyceny (pytanie do Perplexity o cenę za m²).
+export interface KwPropertyParams {
+  /** Rodzaj / przeznaczenie nieruchomości lub lokalu (np. „lokal mieszkalny", „budynek", „działka"). */
+  kind: string | null;
+  /** Powierzchnia użytkowa / obszar lokalu w m². */
+  usableAreaM2: number | null;
+  /** Obszar gruntu/działki w m². */
+  landAreaM2: number | null;
+  /** Obszar gruntu/działki w ha. */
+  landAreaHa: number | null;
+  /** Liczba izb / pokoi (jeśli podana w dziale I-O). */
+  roomCount: number | null;
+  /** Sposób korzystania z gruntu (np. „R — grunty orne", „B — tereny mieszkaniowe"). */
+  landUse: string | null;
+}
+
 // ---- KW: analiza prawna ----
 export interface KwLegalAnalysis {
   available: boolean;
   kwNumber: string | null;
   /** Adres nieruchomości odczytany z działu I-O KW (fallback, gdy brak w danych wniosku). */
   address: KwAddress | null;
+  /** Parametry nieruchomości odczytane z działu I-O KW (oznaczenie). */
+  propertyParams: KwPropertyParams;
   owners: string[];
   /** Dział III — prawa, roszczenia, ograniczenia. */
   encumbrances: string[];
