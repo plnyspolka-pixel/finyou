@@ -97,22 +97,22 @@ serve(async (req) => {
     errors: [] as { name: string; error: string }[],
   };
 
-  // Czy fizyczny blob istnieje pod danym bucketem/nazwą? Lekki test: podpisz URL
-  // i pobierz PIERWSZY bajt (Range). 206/200 → jest, 404/416 → osierocony wpis
-  // metadanych (brak bajtów w S3). Nie ściągamy całego pliku przy sprawdzaniu.
+  // Czy fizyczny blob istnieje pod danym bucketem/nazwą? Podpisujemy URL i robimy
+  // zwykły GET (tak jak przeglądarka renderująca miniaturę) — 200 → plik jest,
+  // 404 → osierocony wpis metadanych (brak bajtów w S3). Strumień przerywamy
+  // zaraz po nagłówkach, więc nie ściągamy całego pliku.
   async function exists(bucket: string, name: string): Promise<boolean> {
     const { data, error } = await supabase.storage.from(bucket).createSignedUrl(name, 120);
     if (error || !data?.signedUrl) return false;
     try {
-      const res = await fetch(data.signedUrl, { headers: { Range: "bytes=0-0" } });
-      // 206 (partial) lub 200 → plik jest; wszystko inne (404/400/416) → brak.
-      if (res.status === 200 || res.status === 206) {
-        // domknij strumień
-        await res.arrayBuffer().catch(() => {});
-        return true;
+      const res = await fetch(data.signedUrl);
+      const ok = res.ok; // 200–299
+      try {
+        await res.body?.cancel();
+      } catch {
+        /* ignoruj */
       }
-      await res.body?.cancel().catch(() => {});
-      return false;
+      return ok;
     } catch {
       return false;
     }
