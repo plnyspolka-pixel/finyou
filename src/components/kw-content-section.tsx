@@ -135,20 +135,23 @@ export function KwContentSection({
   if (hasKw === false) {
     if (!canFetch) return null;
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść KW</CardTitle>
-              <CardDescription>
-                Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości
-                {canImportOcr ? " albo wgraj screeny treści KW (OCR odczyta numer i zapisze go na wniosku)" : ""}.
-              </CardDescription>
+      <>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść KW</CardTitle>
+                <CardDescription>
+                  Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości
+                  {canImportOcr ? " albo wgraj screeny treści KW (OCR odczyta numer i zapisze go na wniosku)" : ""}.
+                </CardDescription>
+              </div>
+              {ocrUploadControls}
             </div>
-            {ocrUploadControls}
-          </div>
-        </CardHeader>
-      </Card>
+          </CardHeader>
+        </Card>
+        {pasteDialog}
+      </>
     );
   }
 
