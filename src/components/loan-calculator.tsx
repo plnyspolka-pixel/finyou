@@ -177,16 +177,37 @@ export function LoanCalculator({
   const [operatorCommissionPct, setOperatorCommissionPct] = useState(3);
 
   // ŹRÓDŁO PRAWDY: kwota do wypłaty na rękę dla klienta (to, o co wnioskuje).
-  // Kwota nominalna pożyczki jest z niej WYPROWADZANA: prowizja inwestora jest potrącana z góry,
-  // więc nominał = onHand / (1 − prowizja%). Prowizja Finance You jest kosztem inwestora
-  // płatnym na wejściu (poza umową pożyczki), więc nie wchodzi do tego przeliczenia.
-  // Dzięki temu, co użytkownik wpisze w polu „na rękę", pozostaje nadrzędne i stabilne.
+  // Kwota nominalna pożyczki jest z niej WYPROWADZANA: z góry potrącane są obie prowizje —
+  // inwestora oraz Finance You (koszt klienta, kredytowany do kapitału pożyczki).
+  // Nominał = onHand / (1 − prowizja_inwestora% − prowizja_FY%).
   const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
-  const commissionFactor = Math.max(0.01, 1 - commissionPct / 100);
-  const amount = onHand / commissionFactor;
+
+  // Prowizja Finance You — koszt POŻYCZKOBIORCY (klient dostaje na nią fakturę VAT
+  // od Finance You). Jest potrącana z kwoty udzielonej pożyczki, powiększa kapitał
+  // pożyczki, klient ją spłaca w ratach (odsetki liczą się także od niej), a przez raty
+  // wraca ona do inwestora — dlatego podnosi jego wkład gotówkowy na starcie
+  // (inwestor wykłada onHand + prowizję FY), ale jest neutralna dla jego zysku.
+  // Skala liniowa od 10% (przy 20 000 zł) do 4% (przy 1 000 000 zł) kwoty nominalnej.
+  // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
+  // Ponieważ % FY zależy od nominału, a nominał zależy od %, iterujemy do punktu stałego.
+  const { amount, financeYouFeePct } = useMemo(() => {
+    let amt = onHand / Math.max(0.01, 1 - commissionPct / 100);
+    let fyPct = 0;
+    for (let i = 0; i < 6; i++) {
+      const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
+      fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * 10) / 10;
+      const factor = Math.max(0.01, 1 - (commissionPct + fyPct) / 100);
+      amt = onHand / factor;
+    }
+    return { amount: amt, financeYouFeePct: fyPct };
+  }, [onHand, commissionPct, hideFinanceYouFee]);
+
   // Ustawienie kwoty nominalnej przelicza z powrotem na kwotę na rękę (na rękę pozostaje spójne).
-  const setAmount = (nominal: number) =>
-    setOnHand(Math.min(1_000_000, Math.max(20_000, nominal || 0)) * commissionFactor);
+  const setAmount = (nominal: number) => {
+    const clamped = Math.min(1_000_000, Math.max(20_000, nominal || 0));
+    const factor = Math.max(0.01, 1 - (commissionPct + financeYouFeePct) / 100);
+    setOnHand(clamped * factor);
+  };
   const rateTouched = useRef(false);
   const commissionTouched = useRef(false);
   const setAnnualRateTouched = (v: number) => { rateTouched.current = true; setAnnualRate(v); };
@@ -225,18 +246,9 @@ export function LoanCalculator({
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You — wynagrodzenie operatora, które INWESTOR WYKŁADA Z WŁASNEJ KIESZENI
-  // przy uruchomieniu pożyczki (koszt wejścia w inwestycję). Skala liniowa od 10% (przy 20 000 zł)
-  // do 4% (przy 1 000 000 zł) kwoty nominalnej. NIE jest kredytowana do kapitału pożyczki:
-  // klient jej nie spłaca, nie nalicza się od niej odsetek i nie wraca do inwestora —
-  // pomniejsza zysk inwestora i powiększa jego wkład gotówkowy na starcie.
-  // Umowa pożyczki (kreator dokumentów) zna tylko: nominał = netto dla klienta + prowizja
-  // kredytowana inwestora — dlatego kapitał odsetkowy tutaj MUSI równać się nominałowi.
-  // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
-  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-  const financeYouFeePct = hideFinanceYouFee ? 0 : Math.round((10 - feeT * 6) * 10) / 10;
-  const financeYouFeePln = hideFinanceYouFee ? 0 : Math.round((amount * financeYouFeePct) / 100);
-  // Kapitał, od którego liczone są odsetki i raty = kwota nominalna umowy (bez prowizji FY).
+  const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
+  // Kapitał, od którego liczone są odsetki i raty = kwota nominalna umowy
+  // (zawiera prowizję inwestora ORAZ prowizję Finance You — obie są kredytowane).
   const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
@@ -244,6 +256,7 @@ export function LoanCalculator({
   // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
   const commissionPln = (amount * commissionPct) / 100;
   const effectiveCommissionPct = commissionPct;
+
 
   // Prowizja wewnętrzna operatora — część prowizji inwestora (2–5%).
   const operatorCommissionPctClamped = Math.min(5, Math.max(2, operatorCommissionPct));
