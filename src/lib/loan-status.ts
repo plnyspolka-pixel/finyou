@@ -112,6 +112,24 @@ export function describeLoanStatusForAgent(status: string): {
         is_completed: false,
         is_rejected: false,
       };
+    case "brak_kw":
+      return {
+        status_label: label,
+        status_message: "Mamy Twoje dane kontaktowe. Czekamy na numer księgi wieczystej nieruchomości.",
+        client_action: "Uzupełnij numer KW w panelu klienta.",
+        is_decision_available: false,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "brak_zdjec_dokumentow":
+      return {
+        status_label: label,
+        status_message: "Brakuje jeszcze zdjęć nieruchomości lub innych dokumentów.",
+        client_action: "Dodaj zdjęcia nieruchomości lub dokumenty w panelu klienta.",
+        is_decision_available: false,
+        is_completed: false,
+        is_rejected: false,
+      };
     case "kontakt":
       return {
         status_label: label,
