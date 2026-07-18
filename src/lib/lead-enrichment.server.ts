@@ -248,8 +248,63 @@ export async function enrichLeadFromInbound(opts: {
     await s.from("leads").update({ ...namePatch, application_data: appData as any }).eq("id", leadId);
   }
 
+  // Jeśli lead ma już wniosek, dopisz nowe KW / kwotę bezpośrednio do niego.
+  if (lead.loan_application_id) {
+    await backfillApplicationFromFacts(lead.loan_application_id, appData, facts);
+    return { updated: touched, promoted: null };
+  }
+
   const promoted = await maybePromoteLeadToApplication(leadId);
   return { updated: touched, promoted };
+}
+
+/**
+ * Dopisuje do istniejącego wniosku pożyczkowego dane wyekstrahowane z rozmowy:
+ * brakującą kwotę pożyczki oraz nowe numery KW (jako properties).
+ */
+async function backfillApplicationFromFacts(
+  loanId: string,
+  appData: Record<string, any>,
+  facts: ExtractedFacts,
+) {
+  const s = admin();
+  const { data: loan } = await s
+    .from("loan_applications")
+    .select("id, loan_amount")
+    .eq("id", loanId)
+    .maybeSingle();
+  if (!loan) return;
+
+  if (facts.loanAmount && !loan.loan_amount) {
+    await s.from("loan_applications").update({ loan_amount: facts.loanAmount }).eq("id", loanId);
+  }
+
+  const allKws: string[] = Array.isArray(appData.kw_numbers) ? appData.kw_numbers : [];
+  const kwsToAdd = new Set([...(facts.kwNumbers ?? []), ...allKws]);
+  if (kwsToAdd.size === 0) return;
+  const { data: existingProps } = await s
+    .from("properties")
+    .select("land_register_number")
+    .eq("loan_application_id", loanId);
+  const existing = new Set(
+    (existingProps ?? [])
+      .map((p: any) => (p.land_register_number ?? "").trim().toUpperCase())
+      .filter(Boolean),
+  );
+  const fresh = Array.from(kwsToAdd).filter((k) => !existing.has(k.trim().toUpperCase()));
+  if (fresh.length === 0) return;
+  const propertyType = mapPropertyType(appData.typ_nieruchomosci ?? appData.property_type);
+  const estimatedValue: number | null =
+    typeof appData.property_value === "number" ? appData.property_value : null;
+  const rows = fresh.map((kw) => ({
+    loan_application_id: loanId,
+    property_type: propertyType as any,
+    city: (appData.city as string | null) ?? null,
+    land_register_number: kw,
+    estimated_value: estimatedValue,
+  }));
+  const { error } = await s.from("properties").insert(rows as any);
+  if (error) console.error("[lead-enrichment] backfill properties error", error);
 }
 
 /**
