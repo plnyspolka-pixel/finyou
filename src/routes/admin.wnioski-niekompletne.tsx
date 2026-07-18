@@ -11,7 +11,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as 
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { signStoragePaths, IMAGE_EXT } from "@/lib/property-photos";
 import { containsValidKw } from "@/lib/kw";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
@@ -33,6 +33,7 @@ type Row = {
   client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
   properties: Property[] | null;
   docCount?: number;
+  docImagePaths?: string[];
 };
 
 const INCOMPLETE_STATUSES = ["nowy_lead", "brak_kontaktu", "brak_kw", "brak_zdjec_dokumentow", "kontakt", "kompletowanie_danych"];
@@ -66,17 +67,20 @@ type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_perce
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete";
 
-function MediaThumbs({ photoPaths, docCount, onOpen }: { photoPaths: string[]; docCount: number; onOpen: () => void }) {
+function MediaThumbs({ photoPaths, docImagePaths, docCount, onOpen }: { photoPaths: string[]; docImagePaths: string[]; docCount: number; onOpen: () => void }) {
   const [urls, setUrls] = useState<string[]>([]);
+  // Miniatury: zdjęcia z properties.photos + obrazki z tabeli documents,
+  // podpisywane z fallbackiem na legacy buckety ("documents"/"property-photos").
+  const thumbPaths = [...new Set([...photoPaths, ...docImagePaths])].slice(0, 3);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (photoPaths.length === 0) { setUrls([]); return; }
-      const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrls(photoPaths.slice(0, 3), 60 * 60);
-      if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+      if (thumbPaths.length === 0) { setUrls([]); return; }
+      const urlByPath = await signStoragePaths(thumbPaths, 60 * 60);
+      if (!cancelled) setUrls(thumbPaths.map((p) => urlByPath.get(p)).filter(Boolean) as string[]);
     })();
     return () => { cancelled = true; };
-  }, [photoPaths.join("|")]);
+  }, [thumbPaths.join("|")]);
   const total = photoPaths.length + docCount;
   if (total === 0) return (
     <button type="button" onClick={onOpen} className="text-xs text-muted-foreground hover:text-foreground">
@@ -147,13 +151,22 @@ function ApplicationsPage() {
       if (ids.length > 0) {
         const { data: docs } = await supabase
           .from("documents")
-          .select("loan_application_id")
+          .select("loan_application_id,file_name,file_path,file_url")
           .in("loan_application_id", ids);
         const counts: Record<string, number> = {};
-        for (const d of (docs ?? []) as { loan_application_id: string }[]) {
+        const imagePaths: Record<string, string[]> = {};
+        for (const d of (docs ?? []) as { loan_application_id: string; file_name: string | null; file_path: string | null; file_url: string | null }[]) {
           counts[d.loan_application_id] = (counts[d.loan_application_id] ?? 0) + 1;
+          // Starsze rekordy trzymają w file_url ścieżkę Storage zamiast URL-a
+          const path = d.file_url && /^https?:\/\//i.test(d.file_url) ? null : (d.file_path || d.file_url || null);
+          if (path && (IMAGE_EXT.test(d.file_name ?? "") || IMAGE_EXT.test(path))) {
+            (imagePaths[d.loan_application_id] ??= []).push(path);
+          }
         }
-        for (const r of list) r.docCount = counts[r.id] ?? 0;
+        for (const r of list) {
+          r.docCount = counts[r.id] ?? 0;
+          r.docImagePaths = (imagePaths[r.id] ?? []).slice(0, 3);
+        }
       }
 
       // Auto-promocja: POPRAWNY numer KW + imię i nazwisko klienta + kontakt
@@ -345,7 +358,7 @@ function ApplicationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
+                      <MediaThumbs photoPaths={allPhotos} docImagePaths={r.docImagePaths ?? []} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                     </TableCell>
                     <TableCell className="text-xs" title={r.source ?? undefined}>{leadSourceLabel(r.source)}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>

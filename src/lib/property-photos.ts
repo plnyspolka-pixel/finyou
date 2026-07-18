@@ -64,17 +64,16 @@ export async function signStoragePath(path: string, expiresIn = 3600): Promise<s
   return null;
 }
 
-/** Filtruje ścieżki do faktycznych zdjęć i podpisuje je (obie buckety, batch).
- *  Zachowuje kolejność wejściową, pomija zdjęcia, których nie udało się rozwiązać. */
-export async function resolveShowablePhotoUrls(
-  paths: string[] | null | undefined,
+/** Podpisuje wiele ścieżek naraz (batch per bucket, z fallbackiem na legacy
+ *  buckety). Zwraca mapę ścieżka → URL; zewnętrzne URL-e wracają bez zmian. */
+export async function signStoragePaths(
+  paths: string[],
   expiresIn = 3600,
-): Promise<string[]> {
-  const showable = (paths ?? []).filter(Boolean).filter(isShowablePropertyPhoto);
-  if (showable.length === 0) return [];
-
+): Promise<Map<string, string>> {
   const urlByPath = new Map<string, string>();
-  let remaining = showable.filter((p) => !isExternalUrl(p));
+  const unique = [...new Set(paths.filter(Boolean))];
+  for (const p of unique) if (isExternalUrl(p)) urlByPath.set(p, p);
+  let remaining = unique.filter((p) => !urlByPath.has(p));
   for (const bucket of PHOTO_BUCKETS) {
     if (remaining.length === 0) break;
     const { data } = await supabase.storage.from(bucket).createSignedUrls(remaining, expiresIn);
@@ -83,8 +82,19 @@ export async function resolveShowablePhotoUrls(
     });
     remaining = remaining.filter((p) => !urlByPath.has(p));
   }
+  return urlByPath;
+}
 
+/** Filtruje ścieżki do faktycznych zdjęć i podpisuje je (obie buckety, batch).
+ *  Zachowuje kolejność wejściową, pomija zdjęcia, których nie udało się rozwiązać. */
+export async function resolveShowablePhotoUrls(
+  paths: string[] | null | undefined,
+  expiresIn = 3600,
+): Promise<string[]> {
+  const showable = (paths ?? []).filter(Boolean).filter(isShowablePropertyPhoto);
+  if (showable.length === 0) return [];
+  const urlByPath = await signStoragePaths(showable, expiresIn);
   return showable
-    .map((p) => (isExternalUrl(p) ? p : urlByPath.get(p)))
+    .map((p) => urlByPath.get(p))
     .filter((u): u is string => !!u);
 }

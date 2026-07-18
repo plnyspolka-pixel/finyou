@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { signStoragePaths } from "@/lib/property-photos";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, FileText, Image as ImageIcon, Loader2, File as FileIcon } from "lucide-react";
+import { Download, ExternalLink, FileText, Image as ImageIcon, ImageOff, Loader2, File as FileIcon } from "lucide-react";
 
 type Doc = {
   id: string;
@@ -20,17 +21,14 @@ type Kind = "image" | "pdf" | "other";
 type MediaItem = {
   key: string;
   name: string;
-  url: string;
+  /** null = plik jest w bazie, ale nie udało się go rozwiązać w Storage */
+  url: string | null;
   kind: Kind;
   source: "photo" | "document";
   docType?: string | null;
 };
 
-// Wszystkie pliki klienta leżą w jednym buckecie "pliki-klienta".
-async function signDocument(path: string): Promise<string | null> {
-  const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(path, 60 * 60);
-  return data?.signedUrl ?? null;
-}
+const isExternalUrl = (s: string) => /^https?:\/\//i.test(s);
 
 function inferKind(name: string): Kind {
   const n = name.toLowerCase();
@@ -61,39 +59,50 @@ export function MediaPreviewDialog({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const all: MediaItem[] = [];
 
-      // Zdjęcia z properties.photos
-      if (photoPaths.length > 0) {
-        const { data } = await supabase.storage
-          .from(CLIENT_FILES_BUCKET)
-          .createSignedUrls(photoPaths, 60 * 60);
-        (data ?? []).forEach((d, i) => {
-          if (d.signedUrl) {
-            const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
-            all.push({
-              key: `photo:${photoPaths[i]}`,
-              name,
-              url: d.signedUrl,
-              kind: inferKind(name) === "other" ? "image" : inferKind(name),
-              source: "photo",
-            });
-          }
-        });
-      }
-
-      // Documents
       const { data: docRows } = await supabase
         .from("documents")
         .select("id,file_name,file_path,file_url,document_type,created_at")
         .eq("loan_application_id", loanApplicationId)
         .order("created_at", { ascending: false });
+      const docs = (docRows ?? []) as Doc[];
 
-      for (const d of (docRows ?? []) as Doc[]) {
-        let url = d.file_url ?? null;
-        if (!url && d.file_path) url = await signDocument(d.file_path);
-        if (!url) continue;
-        const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
+      // Starsze rekordy mają w file_url ścieżkę Storage zamiast pełnego URL-a —
+      // jako gotowy URL traktujemy go tylko, gdy zaczyna się od http(s).
+      const docStoragePath = (d: Doc): string | null => {
+        if (d.file_url && isExternalUrl(d.file_url)) return null;
+        return d.file_path || d.file_url || null;
+      };
+
+      // Jedno zbiorcze podpisanie wszystkiego (zdjęcia + dokumenty) —
+      // z fallbackiem na legacy buckety "documents"/"property-photos".
+      const toSign = [
+        ...photoPaths.filter((p) => !isExternalUrl(p)),
+        ...docs.map(docStoragePath).filter((p): p is string => !!p),
+      ];
+      const urlByPath = await signStoragePaths(toSign, 60 * 60);
+
+      const all: MediaItem[] = [];
+
+      // Zdjęcia z properties.photos
+      const photoSet = new Set(photoPaths);
+      photoPaths.forEach((p, i) => {
+        const name = p.split("/").pop() ?? `zdjęcie-${i + 1}`;
+        all.push({
+          key: `photo:${p}`,
+          name,
+          url: isExternalUrl(p) ? p : urlByPath.get(p) ?? null,
+          kind: inferKind(name) === "other" ? "image" : inferKind(name),
+          source: "photo",
+        });
+      });
+
+      // Dokumenty (bez duplikatów zdjęć, które są już w properties.photos)
+      for (const d of docs) {
+        const path = docStoragePath(d);
+        if (path && photoSet.has(path)) continue;
+        const url = path ? urlByPath.get(path) ?? null : d.file_url;
+        const name = d.file_name || path?.split("/").pop() || "dokument";
         all.push({
           key: `doc:${d.id}`,
           name,
@@ -106,7 +115,7 @@ export function MediaPreviewDialog({
 
       if (!cancelled) {
         setItems(all);
-        setActive(all[0] ?? null);
+        setActive(all.find((it) => it.url) ?? all[0] ?? null);
         setLoading(false);
       }
     })();
@@ -148,16 +157,18 @@ export function MediaPreviewDialog({
                       }`}
                       title={it.name}
                     >
-                      {it.kind === "image" ? (
+                      {it.url && it.kind === "image" ? (
                         <img src={it.url} alt={it.name} loading="lazy" className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full flex flex-col items-center justify-center gap-1 p-2 bg-muted">
-                          {it.kind === "pdf" ? (
+                          {!it.url ? (
+                            <ImageOff className="h-8 w-8 text-muted-foreground/60" />
+                          ) : it.kind === "pdf" ? (
                             <FileText className="h-8 w-8 text-red-500" />
                           ) : (
                             <FileIcon className="h-8 w-8 text-muted-foreground" />
                           )}
-                          <span className="text-[9px] uppercase text-muted-foreground">{it.kind}</span>
+                          <span className="text-[9px] uppercase text-muted-foreground">{it.url ? it.kind : "brak pliku"}</span>
                         </div>
                       )}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
@@ -180,27 +191,34 @@ export function MediaPreviewDialog({
                       <Badge variant="outline" className="text-[10px] uppercase">{active.kind}</Badge>
                       {active.docType && <Badge variant="outline" className="text-[10px]">{active.docType}</Badge>}
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button asChild size="sm" variant="ghost">
-                        <a href={active.url} target="_blank" rel="noreferrer" aria-label="Otwórz w nowej karcie">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                      <Button asChild size="sm" variant="ghost">
-                        <a href={active.url} download={active.name} aria-label="Pobierz">
-                          <Download className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                    </div>
+                    {active.url && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button asChild size="sm" variant="ghost">
+                          <a href={active.url} target="_blank" rel="noreferrer" aria-label="Otwórz w nowej karcie">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                        <Button asChild size="sm" variant="ghost">
+                          <a href={active.url} download={active.name} aria-label="Pobierz">
+                            <Download className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-h-0 overflow-auto bg-black/5">
-                    {active.kind === "image" && (
+                    {!active.url && (
+                      <div className="p-8 text-sm text-muted-foreground text-center">
+                        Nie udało się otworzyć pliku — brak obiektu w Storage.
+                      </div>
+                    )}
+                    {active.url && active.kind === "image" && (
                       <img src={active.url} alt={active.name} className="max-h-full max-w-full w-auto mx-auto object-contain" />
                     )}
-                    {active.kind === "pdf" && (
+                    {active.url && active.kind === "pdf" && (
                       <iframe src={active.url} title={active.name} className="w-full h-full min-h-[70vh] bg-white" />
                     )}
-                    {active.kind === "other" && (
+                    {active.url && active.kind === "other" && (
                       <div className="p-8 text-sm text-muted-foreground text-center">
                         Format niepodglądowy — otwórz lub pobierz plik.
                       </div>
