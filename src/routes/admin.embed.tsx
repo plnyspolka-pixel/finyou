@@ -11,6 +11,7 @@ import { Copy } from "lucide-react";
 import { formatDate, formatPLN } from "@/lib/labels";
 import { fetchPublicInvoices } from "@/lib/public-invoices.functions";
 import { fetchPublicLeads } from "@/lib/public-leads.functions";
+import { property3dIcon, propertyLabel } from "@/lib/property-3d-icons";
 
 export const Route = createFileRoute("/admin/embed")({
   component: EmbedPage,
@@ -263,16 +264,22 @@ function LeadsInlinePreview() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {data.map((l) => (
+          {data.map((l) => {
+            const icon = property3dIcon(l.property_type);
+            const label = propertyLabel(l.property_type);
+            const city = l.city && l.city.trim().length > 0 ? l.city : "Polska";
+            const ltv = l.ltv != null ? `${l.ltv}%` : "do 60%";
+            const period = l.period_months != null ? `${l.period_months} mies.` : "12–36 mies.";
+            return (
             <article key={l.id} className="group relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)]">
               <div className="flex items-start justify-between gap-3 p-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/30 via-indigo-500/25 to-emerald-400/20 ring-1 ring-white/15 text-3xl leading-none">
-                    <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]">{emojis[l.property_type] ?? "🏗️"}</span>
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/20 via-indigo-500/15 to-emerald-400/10 ring-1 ring-white/10">
+                    <img src={icon} alt="" className="h-14 w-14 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="truncate text-base font-bold text-white">{labels[l.property_type] ?? l.property_type}</h3>
-                    {l.city && <p className="mt-0.5 truncate text-sm text-slate-400">{l.city}</p>}
+                    <h3 className="truncate text-base font-bold text-white">{label}</h3>
+                    <p className="mt-0.5 truncate text-sm text-slate-400">📍 {city}</p>
                   </div>
                 </div>
                 {l.is_new ? (
@@ -288,11 +295,11 @@ function LeadsInlinePreview() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">LTV</p>
-                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{l.ltv != null ? `${l.ltv}%` : "—"}</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{ltv}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Okres</p>
-                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{l.period_months != null ? `${l.period_months} mies.` : "—"}</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{period}</p>
                 </div>
               </div>
               <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3">
@@ -302,7 +309,8 @@ function LeadsInlinePreview() {
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
