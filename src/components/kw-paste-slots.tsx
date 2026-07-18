@@ -40,18 +40,38 @@ export function KwPasteSlotsDialog({
   onImported: () => void;
 }) {
   const doOcrImport = useServerFn(importKwFromScreenshots);
-  const [slots, setSlots] = useState<Slot[]>(() => SLOTS.map(() => null));
+  const storageKey = `kw-paste-slots:${loanApplicationId}`;
+  const [slots, setSlots] = useState<Slot[]>(() => {
+    if (typeof window === "undefined") return SLOTS.map(() => null);
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Slot[];
+        if (Array.isArray(parsed) && parsed.length === SLOTS.length) return parsed;
+      }
+    } catch {}
+    return SLOTS.map(() => null);
+  });
   const [activeIdx, setActiveIdx] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const boxRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+  // Persist slots so switching Chrome tabs (which may remount this component) doesn't lose work.
+  useEffect(() => {
+    try {
+      if (slots.some(Boolean)) sessionStorage.setItem(storageKey, JSON.stringify(slots));
+      else sessionStorage.removeItem(storageKey);
+    } catch {}
+  }, [slots, storageKey]);
+
   useEffect(() => {
     if (open) {
-      setSlots(SLOTS.map(() => null));
-      setActiveIdx(0);
-      // focus first slot so Ctrl+V works immediately
-      setTimeout(() => boxRefs.current[0]?.focus(), 50);
+      // focus first empty slot so Ctrl+V works immediately
+      const firstEmpty = Math.max(0, slots.findIndex((s) => !s));
+      setActiveIdx(firstEmpty < 0 ? 0 : firstEmpty);
+      setTimeout(() => boxRefs.current[firstEmpty < 0 ? 0 : firstEmpty]?.focus(), 50);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const setSlot = async (idx: number, file: File) => {
