@@ -200,6 +200,25 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const json: any = await resp.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const extraction = tryParseJson(content);
+
+    // Debug/dry-run: zwróć transkrypcję i surowy JSON, nie zapisuj do bazy.
+    if (data.dryRun) {
+      return {
+        ok: true as const,
+        dryRun: true as const,
+        debug: {
+          transcript,
+          rawJson: content,
+          parsed: extraction ?? null,
+          imagesMeta: data.images.map((i) => ({
+            fileName: i.fileName ?? null,
+            mimeType: i.mimeType,
+            sizeBytes: i.dataUrl.length,
+          })),
+        },
+      };
+    }
+
     if (!extraction) {
       console.error("KW OCR: nie sparsowano odpowiedzi modelu", {
         model: MODEL,
@@ -208,6 +227,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       });
       throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
     }
+    const rawStructuredJson = content;
 
 
     // 2) Numer KW: ręczny > OCR > numer z nieruchomości wniosku.
