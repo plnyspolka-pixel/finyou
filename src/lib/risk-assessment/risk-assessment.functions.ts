@@ -6,7 +6,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
 import { analyzeKwLegal } from "./kw-parser.server";
@@ -23,6 +22,8 @@ import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
 import type { InvestmentRiskAssessment, GovBenchmark, OcrSummary } from "./types";
 import { recommendationLabel } from "./types";
+
+type SupabaseLike = { from: (t: string) => any };
 
 const EMPTY_OCR: OcrSummary = { status: "no_data", documentsProcessed: 0, documents: [] };
 
@@ -58,16 +59,9 @@ function emptyGovBenchmark(propertyType: string): GovBenchmark {
   };
 }
 
-
-// Tabela investment_risk_assessments nie jest jeszcze w wygenerowanych typach —
-// dostęp przez rzutowanie (typy regenerują się w pipeline Supabase/Lovable).
-const db = supabaseAdmin as unknown as {
-  from: (t: string) => any;
-};
-
-async function assertAdminOrOperator(userId: string) {
-  const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
-  const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
+async function assertAdminOrOperator(supabase: SupabaseLike, userId: string) {
+  const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const allowed = (roles ?? []).some((r: { role: string }) => r.role === "administrator" || r.role === "operator");
   if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 }
 
@@ -75,8 +69,9 @@ export const runInvestmentRiskAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid(), force: z.boolean().optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertAdminOrOperator(context.userId);
-    return runInvestmentRiskAssessmentCore(data.applicationId, { force: data.force ?? false });
+    const supabase = context.supabase as unknown as SupabaseLike;
+    await assertAdminOrOperator(supabase, context.userId);
+    return runInvestmentRiskAssessmentCore(supabase, data.applicationId, { force: data.force ?? false });
   });
 
 /**
