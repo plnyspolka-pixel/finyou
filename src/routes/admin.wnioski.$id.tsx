@@ -157,7 +157,7 @@ function WniosekDetail() {
       <ApplicationInfoBadges app={app} client={c} loanApplicationId={id} />
 
       <Tabs
-        value={(typeof window !== "undefined" && sessionStorage.getItem(`wniosek-tab:${id}`)) || tabValue}
+        value={tabValue}
         onValueChange={(v) => { setTabValue(v); try { sessionStorage.setItem(`wniosek-tab:${id}`, v); } catch {} }}
       >
         <TabsList className="flex-wrap h-auto">
