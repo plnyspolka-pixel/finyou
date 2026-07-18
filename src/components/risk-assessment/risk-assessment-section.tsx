@@ -14,8 +14,8 @@ import { toast } from "sonner";
 import {
   runInvestmentRiskAssessment,
   getInvestmentRiskAssessment,
-  diagnoseRcnForApplication,
 } from "@/lib/risk-assessment/risk-assessment.functions";
+
 import { ensureKwReady } from "@/lib/kw-ensure";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 import { recommendationLabel } from "@/lib/risk-assessment/types";
