@@ -167,6 +167,27 @@ export async function runAgentTurn(opts: {
 
   const { prompt: systemPrompt } = await fetchAgentPrompt();
 
+  // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
+  // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
+  // placeholdera {{MAGIC_LINK_KLIENT}} — podstawiamy go poniżej.
+  let applicationLink = "https://financeyou.pl/klient";
+  if (lead.email) {
+    try {
+      const { ensureKlientAccountAndMagicLink } = await import("./client-magic-link.server");
+      const r = await ensureKlientAccountAndMagicLink(lead.email, {
+        firstName: lead.first_name ?? null,
+        lastName: lead.last_name ?? null,
+        source: "text_agent",
+      });
+      if (r.magicLink) applicationLink = r.magicLink;
+      if (r.userId && lead.client_id) {
+        await s.from("clients").update({ user_id: r.userId }).eq("id", lead.client_id).is("user_id", null);
+      }
+    } catch (e) {
+      console.error("[el-text-agent] magic link failed", e);
+    }
+  }
+
   const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nNazwisko: ${lead.last_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
 
   // Checklist braków liczona z BAZY (lead + application_data + załączniki),
@@ -214,7 +235,11 @@ export async function runAgentTurn(opts: {
   }
 
   const messages: EmittedMessage[] = [
-    { role: "system", content: systemPrompt + leadContext + checklistBlock + knowledgeBlock },
+    {
+      role: "system",
+      content: (systemPrompt + leadContext + checklistBlock + knowledgeBlock)
+        .replaceAll("{{MAGIC_LINK_KLIENT}}", applicationLink),
+    },
   ];
   for (const m of history ?? []) {
     if (!m.content) continue;
@@ -268,7 +293,7 @@ export async function runAgentTurn(opts: {
       const name = c.function?.name;
       let args: any = {};
       try { args = JSON.parse(c.function?.arguments ?? "{}"); } catch { /* noop */ }
-      const result = await executeTool(opts.leadId, opts.channel, name, args);
+      const result = await executeTool(opts.leadId, opts.channel, name, args, { applicationLink });
       toolResults.push({ name, args, result });
       messages.push({
         role: "tool",
@@ -324,7 +349,13 @@ function normalizePatch(raw: Record<string, any>): Record<string, any> {
   return out;
 }
 
-async function executeTool(leadId: string, channel: string, name: string, args: any): Promise<any> {
+async function executeTool(
+  leadId: string,
+  channel: string,
+  name: string,
+  args: any,
+  ctx: { applicationLink: string } = { applicationLink: "https://financeyou.pl/klient" },
+): Promise<any> {
   const s = admin();
   if (name === "update_lead_data") {
     const patch = normalizePatch(args?.patch ?? {});
@@ -355,7 +386,7 @@ async function executeTool(leadId: string, channel: string, name: string, args: 
     return { ok: true, saved: Object.keys(patch) };
   }
   if (name === "send_application_link") {
-    const link = "https://financeyou.pl";
+    const link = ctx.applicationLink;
     await s.from("leads").update({ return_link: link }).eq("id", leadId);
     return { ok: true, link, instruction: `Wyślij klientowi w odpowiedzi tekst typu: "Twój link do dokończenia wniosku: ${link}"` };
   }
