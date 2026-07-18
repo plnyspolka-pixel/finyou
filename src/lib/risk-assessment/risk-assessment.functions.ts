@@ -1,6 +1,7 @@
 // Orkiestrator „Wycena i ocena ryzyka inwestycji".
-// Pipeline: OCR → KW (stan prawny) → właściciel (PESEL, trwanie życia) →
-// korespondencja → dane rządowe/analiza zabezpieczenia → nadrzędna wycena Perplexity.
+// Pipeline: KW (stan prawny) → właściciel (PESEL, trwanie życia) →
+// korespondencja → rynek porównawczy (deweloperuch + otodom) → nadrzędna wycena Perplexity.
+// Uwaga: moduły RCN/GUS oraz OCR dokumentów zostały wyłączone.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -8,22 +9,55 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
-import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
 import { analyzeSaleability, applyFloorToSaleability, applyPlotBuildabilityToSaleability } from "./saleability.server";
 import { assessFloor } from "./floor-factor";
 import { assessPlotBuildability } from "./plot-buildability";
-import { fetchGovBenchmark } from "./gov-benchmark.server";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
 import { fetchMarketComparables } from "./market-comparables.server";
 
 import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
-import type { InvestmentRiskAssessment } from "./types";
+import type { InvestmentRiskAssessment, GovBenchmark, OcrSummary } from "./types";
 import { recommendationLabel } from "./types";
+
+const EMPTY_OCR: OcrSummary = { status: "no_data", documentsProcessed: 0, documents: [] };
+
+function emptyGovBenchmark(propertyType: string): GovBenchmark {
+  return {
+    source: "GUS BDL",
+    available: false,
+    propertyType,
+    primarySource: "brak",
+    pricePerHa: null,
+    pricePerM2Median: null,
+    pricePerM2Average: null,
+    soilClass: null,
+    soilCategory: "ogolem",
+    areaHa: null,
+    landValuePln: null,
+    dwellingValuePln: null,
+    gusPricePerHa: null,
+    gusPricePerM2Median: null,
+    rcnAvailable: false,
+    rcnPricePerHa: null,
+    rcnPricePerM2: null,
+    rcnTransactions: 0,
+    rcnRadiusKm: null,
+    rcnStatus: "disabled",
+    rcnStatusMessage: "Moduł RCN wyłączony.",
+    unitName: null,
+    unitLevel: null,
+    period: null,
+    fallbackUsed: false,
+    summaryLine: "Dane rządowe (RCN/GUS) wyłączone — bazujemy na rynku porównawczym.",
+    warnings: [],
+  };
+}
+
 
 // Tabela investment_risk_assessments nie jest jeszcze w wygenerowanych typach —
 // dostęp przez rzutowanie (typy regenerują się w pipeline Supabase/Lovable).
@@ -72,11 +106,11 @@ export async function runInvestmentRiskAssessmentCore(
   const warnings: string[] = [];
 
   // 0) Wczytaj wniosek, właściciela (client_id), nieruchomość, dokumenty.
-  const [{ data: app }, { data: props }, { data: docs }] = await Promise.all([
+  const [{ data: app }, { data: props }] = await Promise.all([
     supabaseAdmin.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
     supabaseAdmin.from("properties").select("*").eq("loan_application_id", applicationId),
-    supabaseAdmin.from("documents").select("id, file_name, document_type, file_url").eq("loan_application_id", applicationId),
   ]);
+
   if (!app) throw new Error("Wniosek nie znaleziony.");
   const property = props?.[0] ?? null;
   const clientId = (app as any).client_id ?? null;
@@ -146,10 +180,9 @@ export async function runInvestmentRiskAssessmentCore(
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
 
-  // 3) OCR dokumentów, korespondencja, łatwość sprzedaży — równolegle.
-  const documents = (docs ?? []).map((d) => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name }));
-  const [ocr, correspondence, saleabilityRaw] = await Promise.all([
-    ocrDocuments({ applicationId, documents }),
+  // 3) Korespondencja + łatwość sprzedaży — równolegle. OCR dokumentów wyłączony.
+  const ocr = EMPTY_OCR;
+  const [correspondence, saleabilityRaw] = await Promise.all([
     analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity }),
     analyzeSaleability({
       propertyType: property?.property_type ?? "inna",
@@ -174,38 +207,20 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 5b) Prawo zabudowy działki (RM/siedlisko/grunt rolny) — ograniczony krąg nabywców
   //     (budowa zasadniczo tylko dla rolnika) obniża płynność i sugeruje wycenę rolną.
-  const ocrText = (ocr.documents ?? [])
-    .flatMap((d) => {
-      const f = d.fields as any;
-      return [f?.landUse, ...(Array.isArray(f?.keyFindings) ? f.keyFindings : [])];
-    })
-    .filter(Boolean)
-    .join(" ");
   const plotBuildability = assessPlotBuildability({
     propertyType: property?.property_type ?? "inna",
     mpzpInfo: (property as any)?.mpzp_info ?? null,
     landRegistryExtract: (property as any)?.land_registry_extract ?? null,
-    ocrText: ocrText || null,
+    ocrText: null,
   });
   const saleability = plotBuildability.applicable
     ? applyPlotBuildabilityToSaleability(saleabilityFloor, plotBuildability)
     : saleabilityFloor;
   if (plotBuildability.onlyFarmerCanBuild) warnings.push(...plotBuildability.warnings);
 
-  // 5c) Dane rządowe — GUS BDL (priorytetowe źródło wyceny): ceny gruntów rolnych
-  //     zł/ha (wg klasy bonitacyjnej) oraz lokali zł/m². Zawsze próbujemy najpierw.
-  const govBenchmark = await fetchGovBenchmark({
-    propertyType: property?.property_type ?? "inna",
-    address: effAddress,
-    city: effCity,
-    voivodeship: effVoivodeship,
-    county: null,
-    soilClass: kwLegal.soilClass,
-    areaSqm: property?.area_sqm ?? null,
-    landAreaHa: null,
-    latitude: collateral?.property?.latitude ?? null,
-    longitude: collateral?.property?.longitude ?? null,
-  });
+  // 5c) Dane rządowe (RCN/GUS) — wyłączone. Stub jako „unavailable".
+  const govBenchmark = emptyGovBenchmark(property?.property_type ?? "inna");
+
 
   // 5d) Rynek porównawczy — deweloperuch.pl (rzeczywiste transakcje domów/mieszkań przy ulicy)
   //      + otodom.pl (aktywne oferty działek). Uzupełnia RCN, gdy WFS milczy, i dostarcza
@@ -619,45 +634,17 @@ export const getInvestorValuationSummary = createServerFn({ method: "GET" })
     }
   });
 
-// Diagnostyka RCN „na żywo" — administrator/operator może sprawdzić DOKŁADNIE, na
-// którym etapie pobieranie z Geoportalu zawodzi (capabilities / warstwy / brak transakcji
-// / odfiltrowane). Zwraca pełną RcnDiagnostics dla danego wniosku.
+// Diagnostyka RCN — moduł wyłączony. Stub zachowany, aby nie łamać importów w UI.
 export const diagnoseRcnForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertAdminOrOperator(context.userId);
-    const { rcnBenchmark } = await import("@/lib/property-analysis/rcn-geoportal.server");
-    const { geocode } = await import("@/lib/property-analysis/location-score.server");
-
-    const { data: props } = await supabaseAdmin
-      .from("properties")
-      .select("property_type, address, city, voivodeship")
-      .eq("loan_application_id", data.applicationId);
-    const property = props?.[0] ?? null;
-    if (!property) return { ok: false as const, message: "Brak nieruchomości dla wniosku." };
-
-    const geo = property.address
-      ? await geocode([property.address, property.city, property.voivodeship, "Polska"].filter(Boolean).join(", "), {
-          expectedCity: property.city,
-          expectedVoivodeship: property.voivodeship,
-        })
-      : null;
-    if (!geo) return { ok: false as const, message: "Nie udało się zgeokodować adresu — RCN wymaga współrzędnych." };
-
-    const res = await rcnBenchmark({ lat: geo.lat, lng: geo.lng, propertyType: property.property_type ?? "inna" });
+  .handler(async () => {
     return {
-      ok: true as const,
-      coordinates: { lat: geo.lat, lng: geo.lng },
-      propertyType: property.property_type,
-      status: res.diagnostics.status,
-      statusMessage: res.diagnostics.statusMessage,
-      transactionsCount: res.transactionsCount,
-      radiusKm: res.radiusKm,
-      stats: res.stats,
-      diagnostics: res.diagnostics,
+      ok: false as const,
+      message: "Moduł RCN/GUS został wyłączony — bazujemy na rynku porównawczym (deweloperuch + otodom).",
     };
   });
+
 
 /** Buduje bezpieczny (bez PII) podzbiór dla inwestora z pełnego dossier. */
 export function buildInvestorValuationSummary(r: InvestmentRiskAssessment): InvestorValuationSummary {
