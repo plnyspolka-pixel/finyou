@@ -120,12 +120,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const bypass = isPreviewBypassActive();
   const value: AuthState = {
-    user,
-    session,
-    roles,
-    loading,
+    user: bypass ? FAKE_USER : user,
+    session: bypass ? ({ user: FAKE_USER } as unknown as Session) : session,
+    roles: bypass ? ALL_ROLES : roles,
+    loading: bypass ? false : loading,
     signOut: async () => {
+      if (bypass) {
+        setPreviewBypass(false);
+        return;
+      }
       await supabase.auth.signOut();
     },
     refreshRoles: async () => loadRoles(user?.id),
