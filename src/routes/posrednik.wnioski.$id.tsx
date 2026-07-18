@@ -53,14 +53,37 @@ type Doc = { id: string; document_type: string | null; file_name: string | null;
 
 function SmartImg({ src, alt, className }: { src: string; alt?: string; className?: string }) {
   const [broken, setBroken] = useState(false);
-  if (broken || !src) {
+  const [resolvedSrc, setResolvedSrc] = useState(src);
+  const isHeic = /\.heic(\?|$)/i.test(src);
+
+  useEffect(() => {
+    setBroken(false);
+    setResolvedSrc(src);
+    if (!isHeic) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(src);
+        const blob = await res.blob();
+        const heic2any = (await import("heic2any")).default;
+        const out = await heic2any({ blob, toType: "image/jpeg", quality: 0.8 });
+        const outBlob = Array.isArray(out) ? out[0] : (out as Blob);
+        if (!cancelled) setResolvedSrc(URL.createObjectURL(outBlob));
+      } catch {
+        if (!cancelled) setBroken(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [src, isHeic]);
+
+  if (broken || !resolvedSrc) {
     return (
       <div className={`flex items-center justify-center bg-muted text-muted-foreground ${className ?? ""}`}>
         <ImageOff className="h-8 w-8" />
       </div>
     );
   }
-  return <img src={src} alt={alt ?? ""} loading="lazy" className={className} onError={() => setBroken(true)} />;
+  return <img src={resolvedSrc} alt={alt ?? ""} loading="lazy" className={className} onError={() => setBroken(true)} />;
 }
 
 export function BrokerApplicationDetail({ showInternalOffer = false }: { showInternalOffer?: boolean } = {}) {
