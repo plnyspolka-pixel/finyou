@@ -135,26 +135,42 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       }
     }
 
-    const transcribeResp = await fetch(AI_GATEWAY, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
-          { role: "user", content: transcribeContent },
-        ],
-        temperature: 0,
-      }),
-    });
-    if (transcribeResp.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
-    if (transcribeResp.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
-    if (!transcribeResp.ok) throw new Error(`Błąd OCR — transkrypcja (HTTP ${transcribeResp.status}).`);
-    const transcribeJson: any = await transcribeResp.json();
-    const transcript: string = (transcribeJson?.choices?.[0]?.message?.content ?? "").trim();
+    async function runTranscribe(model: string) {
+      const r = await fetch(AI_GATEWAY, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
+            { role: "user", content: transcribeContent },
+          ],
+          max_tokens: 8000,
+        }),
+      });
+      if (r.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
+      if (r.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
+      if (!r.ok) {
+        const body = await r.text().catch(() => "");
+        console.error("KW OCR transcribe HTTP error", { model, status: r.status, body: body.slice(0, 500) });
+        throw new Error(`Błąd OCR — transkrypcja (HTTP ${r.status}): ${body.slice(0, 200)}`);
+      }
+      const j: any = await r.json();
+      const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
+      const finish = j?.choices?.[0]?.finish_reason;
+      console.log("KW OCR transcribe result", { model, len: content.length, finish });
+      return content;
+    }
+
+    let transcript = await runTranscribe(MODEL);
+    if (!transcript || transcript.length < 40) {
+      console.warn("KW OCR: pusta transkrypcja z", MODEL, "— fallback na openai/gpt-5.5");
+      transcript = await runTranscribe("openai/gpt-5.5");
+    }
     if (!transcript || transcript.length < 40) {
       throw new Error("OCR nie odczytał tekstu ze screenów — sprawdź, czy obrazy są czytelne.");
     }
+
 
     // 1b) Strukturyzacja — mapowanie transkrypcji do JSON-a KW.
     const resp = await fetch(AI_GATEWAY, {
