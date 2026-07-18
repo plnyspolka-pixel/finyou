@@ -155,7 +155,7 @@ function InwestorWniosek() {
       <Link to="/inwestor" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-1 h-4 w-4" />Wróć</Link>
       <FancyPageHeader
         eyebrow="Wniosek inwestycyjny"
-        title={<>Wniosek {formatPLN(app.loan_amount)} · {app.preferred_period_months} mies.</>}
+        title={<>Wniosek {formatPLN(app.loan_amount)}{p?.land_register_number ? <> · <span className="font-mono">{p.land_register_number}</span></> : null}</>}
         subtitle={p ? [propertyTypeLabels[p.property_type], [p.city, p.voivodeship].filter(Boolean).join(", ")].filter(Boolean).join(" · ") : undefined}
         actions={
           <Badge className="bg-white/15 text-white border-white/20 backdrop-blur"><Eye className="mr-1 h-3 w-3" />{app.view_count ?? 0} odsłon</Badge>
