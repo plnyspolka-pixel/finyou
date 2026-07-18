@@ -23,7 +23,7 @@ export type CrbrStatus =
   | "found" // wpis znaleziony, lista beneficjentów pobrana
   | "not_found" // spółka podlega wpisowi, ale brak wpisu w CRBR (rozbieżność!)
   | "not_applicable" // podmiot nie podlega wpisowi do CRBR (JDG, spółka cywilna)
-  | "not_configured" // brak konfiguracji CRBR_SEARCH_URL
+  | "not_configured" // historyczne wpisy sprzed przejścia na oficjalną bramkę MF
   | "error";
 
 export interface CrbrBeneficiary {
@@ -51,7 +51,8 @@ export interface CrbrDiscrepancy {
     | "BENEFICJENT_SPOZA_KRS"
     | "WSPOLNIK_KRS_POZA_CRBR"
     | "ROZBIEZNY_PESEL"
-    | "BRAK_BENEFICJENTOW";
+    | "BRAK_BENEFICJENTOW"
+    | "ROZBIEZNOSC_ZGLOSZONA_W_CRBR";
   message: string;
 }
 
@@ -59,6 +60,8 @@ export interface CrbrResult {
   status: CrbrStatus;
   beneficiaries: CrbrBeneficiary[];
   message?: string;
+  /** Rozbieżności zgłoszone do CRBR i zwracane przez API w ListaInformacjiORozbieznosciach. */
+  reportedDiscrepancies?: string[];
 }
 
 // ─── Screening PEP / sankcje ──────────────────────────────────────────

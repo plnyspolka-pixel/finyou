@@ -1,16 +1,12 @@
 // Screening AML: CRBR (beneficjenci rzeczywiści) + PEP/sankcje przez OpenSanctions/yente.
 //
+// CRBR: oficjalne, publiczne API przeglądowe MF (bez klucza) — SOAP 1.2,
+// operacja PobierzInformacjeOSpolkachIBeneficjentach, zapytanie po NIP.
+// Specyfikacja: „Usługa API do udostępniania danych z systemu CRBR" v3.0.2 (MF, 2022).
+//
 // Konfiguracja (zmienne środowiskowe, wyłącznie po stronie serwera):
-//  - CRBR_SEARCH_URL        URL wyszukiwarki CRBR z placeholderem {nip},
-//                           np. endpoint publicznej wyszukiwarki MF (crbr.podatki.gov.pl)
-//                           albo komercyjnego proxy zwracającego surową odpowiedź CRBR.
-//                           Parser szuka w odpowiedzi pola `listaBeneficjentow`
-//                           (pola beneficjenta wg schematu MF: imiePierwsze, nazwisko,
-//                           pesel, dataUrodzenia, obywatelstwo, panstwoZamieszkania,
-//                           informacjeOUdzialeLubUprawnieniach, ...).
-//                           Uwaga: wyszukiwarka MF stoi za ochroną anty-botową — jeśli
-//                           bezpośrednie wywołania są odrzucane, należy wskazać tu proxy.
-//  - CRBR_API_KEY           opcjonalny nagłówek Authorization dla powyższego URL.
+//  - CRBR_API_URL           opcjonalne nadpisanie adresu bramki CRBR (domyślnie
+//                           https://bramka-crbr.mf.gov.pl:5058/uslugiBiznesowe/uslugiESB/AP/ApiPrzegladoweCRBR/2022/02/01).
 //  - YENTE_API_URL          baza API yente / OpenSanctions (domyślnie https://api.opensanctions.org;
 //                           dla self-hosted yente np. http://yente.internal:8000).
 //  - OPENSANCTIONS_API_KEY  klucz API OpenSanctions (zbędny przy self-hosted yente).
@@ -65,25 +61,6 @@ function normalizeName(s: string): string {
     .trim();
 }
 
-/** Spłaszcza wartości z odpowiedzi CRBR (słowniki MF: {wartosc}/{opis}/{nazwa}/{kod}, tablice). */
-function asText(v: any): string | undefined {
-  if (v == null) return undefined;
-  if (typeof v === "string") return v.trim() || undefined;
-  if (typeof v === "number" || typeof v === "boolean") return String(v);
-  if (Array.isArray(v)) {
-    const joined = v.map(asText).filter(Boolean).join(", ");
-    return joined || undefined;
-  }
-  if (typeof v === "object") {
-    for (const k of ["wartosc", "opis", "nazwa", "kod"]) {
-      if (v[k] != null) return asText(v[k]);
-    }
-    const joined = Object.values(v).map(asText).filter(Boolean).join(", ");
-    return joined || undefined;
-  }
-  return undefined;
-}
-
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -105,85 +82,183 @@ async function logExternalCall(provider: string, queryType: string, queryValue: 
   }
 }
 
-// ─── CRBR ─────────────────────────────────────────────────────────────
+// ─── CRBR (API przeglądowe MF, SOAP 1.2) ──────────────────────────────
 
-/** Szuka w drzewie odpowiedzi pierwszej niepustej tablicy pod kluczem `listaBeneficjentow`. */
-function findBeneficiariesNode(root: any): any[] | null {
-  const queue: any[] = [root];
-  let guard = 0;
-  while (queue.length > 0 && guard < 5000) {
-    guard++;
-    const node = queue.shift();
-    if (node == null || typeof node !== "object") continue;
-    if (Array.isArray(node)) {
-      queue.push(...node);
-      continue;
-    }
-    const lista = node.listaBeneficjentow ?? node.beneficjenci;
-    if (Array.isArray(lista) && lista.length > 0) return lista;
-    queue.push(...Object.values(node));
-  }
-  return null;
+const CRBR_DEFAULT_URL =
+  "https://bramka-crbr.mf.gov.pl:5058/uslugiBiznesowe/uslugiESB/AP/ApiPrzegladoweCRBR/2022/02/01";
+
+function crbrRequestEnvelope(nip: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ns="http://www.mf.gov.pl/uslugiBiznesowe/uslugiESB/AP/ApiPrzegladoweCRBR/2022/02/01" xmlns:ns1="http://www.mf.gov.pl/schematy/AP/ApiPrzegladoweCRBR/2022/02/01">
+   <soap:Header/>
+   <soap:Body>
+      <ns:PobierzInformacjeOSpolkachIBeneficjentach>
+         <PobierzInformacjeOSpolkachIBeneficjentachDane>
+            <ns1:SzczegolyWniosku>
+               <ns1:NIP>${nip}</ns1:NIP>
+            </ns1:SzczegolyWniosku>
+         </PobierzInformacjeOSpolkachIBeneficjentachDane>
+      </ns:PobierzInformacjeOSpolkachIBeneficjentach>
+   </soap:Body>
+</soap:Envelope>`;
 }
 
-function mapBeneficiary(b: any): CrbrBeneficiary {
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/** Usuwa prefiksy przestrzeni nazw (in10:, ns1:, NS2: …), by parsować po samych nazwach elementów. */
+function stripXmlNamespaces(xml: string): string {
+  return xml.replace(/<(\/?)[A-Za-z0-9_]+:/g, "<$1");
+}
+
+function xmlText(xml: string, tag: string): string | undefined {
+  const m = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([^<]*)</${tag}>`));
+  return m ? decodeXmlEntities(m[1]).trim() || undefined : undefined;
+}
+
+function xmlBlocks(xml: string, tag: string): string[] {
+  const out: string[] = [];
+  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "g");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) out.push(m[1]);
+  return out;
+}
+
+function formatIlosc(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const n = Number(raw); // spec zwraca notację wykładniczą, np. "1E+0"
+  return Number.isFinite(n) ? String(n) : raw;
+}
+
+/** Buduje czytelny opis udziału/uprawnień z ListaInformacjiOUdzialach. */
+function summarizeRights(beneficiaryXml: string): string | undefined {
+  const parts: string[] = [];
+  for (const info of xmlBlocks(beneficiaryXml, "InformacjaOUdzialach")) {
+    const kinds: Array<[string, string]> = [
+      ["UprawnieniaWlascicielskieBezposrednie", "bezpośrednio"],
+      ["UprawnieniaWlascicielskiePosrednie", "pośrednio"],
+      ["InneUprawnienia", "inne"],
+    ];
+    for (const [tag, label] of kinds) {
+      for (const block of xmlBlocks(info, tag)) {
+        const rodzaj = xmlText(block, "RodzajUprawnienWlascicielskich") ?? xmlText(block, "RodzajUprawnien");
+        const ilosc = formatIlosc(xmlText(block, "Ilosc"));
+        const jednostka = xmlText(block, "JednostkaMiary");
+        const przywilej = xmlText(block, "OpisUprzywilejowania");
+        const desc = [
+          rodzaj,
+          ilosc ? `${ilosc}${jednostka ? ` ${jednostka}` : ""}` : undefined,
+          przywilej ? `uprzywilejowanie: ${przywilej}` : undefined,
+        ].filter(Boolean).join(", ");
+        if (desc) parts.push(`${label}: ${desc}`);
+      }
+    }
+  }
+  return parts.length > 0 ? parts.join(" | ") : undefined;
+}
+
+function mapBeneficiaryXml(xml: string): CrbrBeneficiary {
   return {
-    firstName: asText(b?.imiePierwsze ?? b?.imie),
-    middleNames: asText(b?.imieDrugieINastepne ?? b?.imieDrugie),
-    lastName: asText(b?.nazwisko),
-    pesel: asText(b?.pesel),
-    birthDate: asText(b?.dataUrodzenia),
-    citizenship: asText(b?.obywatelstwo ?? b?.obywatelstwa),
-    residenceCountry: asText(b?.panstwoZamieszkania),
-    groupName: asText(b?.nazwaBeneficjentaGrupowego),
-    rights: asText(b?.informacjeOUdzialeLubUprawnieniach),
-    trustRights: asText(b?.informacjeOUprawnieniachTrust),
+    firstName: xmlText(xml, "PierwszeImie"),
+    middleNames: xmlText(xml, "KolejneImiona"),
+    lastName: xmlText(xml, "Nazwisko"),
+    pesel: xmlText(xml, "PESEL"),
+    birthDate: xmlText(xml, "DataUrodzenia"),
+    citizenship: xmlText(xml, "Obywatelstwo"),
+    residenceCountry: xmlText(xml, "KrajZamieszkania"),
+    groupName: xmlText(xml, "NazwaBeneficjentaGrupowego"),
+    rights: summarizeRights(xml),
+    trustRights: xmlText(xml, "InformacjeOUprawnieniachPrzyslugujacychBeneficjentowiGrupowemuTrust"),
+  };
+}
+
+/** Parsuje kopertę odpowiedzi SOAP API przeglądowego CRBR. Czysta funkcja — eksport na potrzeby testów. */
+export function parseCrbrEnvelope(rawXml: string): CrbrResult {
+  const xml = stripXmlNamespaces(rawXml);
+
+  if (xml.includes("<Fault")) {
+    const fault = xmlText(xml, "Text") ?? xmlText(xml, "Reason") ?? xmlText(xml, "faultstring");
+    return { status: "error", beneficiaries: [], message: `Błąd bramki CRBR: ${fault ?? "SOAP Fault"}.` };
+  }
+
+  const status = xmlText(xml, "Status");
+  if (status === "BrakInformacji") {
+    return { status: "not_found", beneficiaries: [], message: "Brak wpisu w CRBR dla podanego NIP." };
+  }
+  if (status === "BladFormalny") {
+    return { status: "error", beneficiaries: [], message: "CRBR: błąd formalny zapytania (sprawdź NIP)." };
+  }
+  if (status !== "IstniejaInformacje") {
+    return {
+      status: "error",
+      beneficiaries: [],
+      message: `CRBR zwrócił nieoczekiwany status: ${status ?? "brak statusu w odpowiedzi"}.`,
+    };
+  }
+
+  // Beneficjenci ze wszystkich bloków SpolkaIBeneficjenci, z deduplikacją.
+  const seen = new Set<string>();
+  const beneficiaries: CrbrBeneficiary[] = [];
+  for (const spolka of xmlBlocks(xml, "SpolkaIBeneficjenci")) {
+    for (const benXml of xmlBlocks(spolka, "BeneficjentRzeczywisty")) {
+      const b = mapBeneficiaryXml(benXml);
+      const key = `${b.pesel ?? ""}|${normalizeName(`${b.firstName ?? ""} ${b.lastName ?? ""}${b.groupName ?? ""}`)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      beneficiaries.push(b);
+    }
+  }
+
+  // Rozbieżności zgłoszone bezpośrednio w CRBR (ListaInformacjiORozbieznosciach).
+  const reportedDiscrepancies = xmlBlocks(xml, "InformacjaORozbieznosciach")
+    .map((d) => xmlText(d, "InformacjaDlaZainteresowanego"))
+    .filter((s): s is string => Boolean(s));
+
+  return {
+    status: "found",
+    beneficiaries,
+    reportedDiscrepancies: reportedDiscrepancies.length > 0 ? reportedDiscrepancies : undefined,
   };
 }
 
 async function crbrLookupByNip(nip: string): Promise<CrbrResult> {
-  const template = process.env.CRBR_SEARCH_URL;
-  if (!template) {
-    return {
-      status: "not_configured",
-      beneficiaries: [],
-      message: "Integracja CRBR nie jest skonfigurowana — ustaw zmienną CRBR_SEARCH_URL (URL wyszukiwarki z placeholderem {nip}).",
-    };
-  }
-  const url = template.includes("{nip}")
-    ? template.replace("{nip}", encodeURIComponent(nip))
-    : `${template}${template.includes("?") ? "&" : "?"}nip=${encodeURIComponent(nip)}`;
-
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (process.env.CRBR_API_KEY) headers.Authorization = process.env.CRBR_API_KEY;
-
+  const url = process.env.CRBR_API_URL || CRBR_DEFAULT_URL;
   const t0 = Date.now();
   try {
-    const res = await fetchWithTimeout(url, { headers }, CRBR_TIMEOUT_MS);
+    const res = await fetchWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/soap+xml; charset=utf-8" },
+        body: crbrRequestEnvelope(nip),
+      },
+      CRBR_TIMEOUT_MS,
+    );
     const elapsed = Date.now() - t0;
-    if (res.status === 404) {
-      await logExternalCall("CRBR", "nip", nip, true, "NOT_FOUND", elapsed);
-      return { status: "not_found", beneficiaries: [], message: "Brak wpisu w CRBR dla podanego NIP." };
-    }
-    if (!res.ok) {
+    const rawXml = await res.text();
+
+    if (!res.ok && !rawXml.includes("Fault")) {
       await logExternalCall("CRBR", "nip", nip, false, `HTTP_${res.status}`, elapsed);
-      return { status: "error", beneficiaries: [], message: `Błąd CRBR: HTTP ${res.status}.` };
+      return { status: "error", beneficiaries: [], message: `Błąd bramki CRBR: HTTP ${res.status}.` };
     }
-    const json: any = await res.json().catch(() => null);
-    if (!json) {
-      await logExternalCall("CRBR", "nip", nip, false, "INVALID_JSON", elapsed);
-      return { status: "error", beneficiaries: [], message: "CRBR zwrócił odpowiedź w nieoczekiwanym formacie (brak JSON)." };
-    }
-    const lista = findBeneficiariesNode(json);
-    if (!lista) {
-      await logExternalCall("CRBR", "nip", nip, true, "EMPTY", elapsed);
-      return { status: "not_found", beneficiaries: [], message: "Brak wpisu w CRBR dla podanego NIP (lub odpowiedź bez listy beneficjentów)." };
-    }
-    await logExternalCall("CRBR", "nip", nip, true, null, elapsed);
-    return { status: "found", beneficiaries: lista.map(mapBeneficiary) };
+
+    const result = parseCrbrEnvelope(rawXml);
+    await logExternalCall(
+      "CRBR", "nip", nip,
+      result.status !== "error",
+      result.status === "error" ? "PARSE_OR_SERVICE" : result.status === "not_found" ? "NOT_FOUND" : null,
+      elapsed,
+    );
+    return result;
   } catch (e: any) {
     await logExternalCall("CRBR", "nip", nip, false, e?.name === "AbortError" ? "TIMEOUT" : "NETWORK", Date.now() - t0);
-    return { status: "error", beneficiaries: [], message: `Błąd połączenia z CRBR: ${String(e?.message ?? e)}` };
+    return { status: "error", beneficiaries: [], message: `Błąd połączenia z bramką CRBR: ${String(e?.message ?? e)}` };
   }
 }
 
@@ -219,6 +294,14 @@ function compareCrbrWithKrs(crbr: CrbrResult, krs: KrsCompany | null): CrbrDiscr
     return out;
   }
   if (crbr.status !== "found") return out;
+
+  for (const reported of crbr.reportedDiscrepancies ?? []) {
+    out.push({
+      level: "warning",
+      code: "ROZBIEZNOSC_ZGLOSZONA_W_CRBR",
+      message: `W CRBR widnieje zgłoszona rozbieżność: ${reported}`,
+    });
+  }
 
   if (crbr.beneficiaries.length === 0) {
     out.push({
