@@ -98,11 +98,15 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     if (tplErr) throw new Error(tplErr.message);
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
-    // 2. Pobierz plik z Storage
-    const { data: file, error: dlErr } = await supabase.storage
-      .from(CLIENT_FILES_BUCKET)
-      .download(tpl.template_file_path);
-    if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
+    // 2. Pobierz plik z Storage (fallback do starego bucketa „documents")
+    let file: Blob | null = null;
+    let dlErr: { message: string } | null = null;
+    for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
+      const res = await supabase.storage.from(bucket).download(tpl.template_file_path);
+      if (!res.error && res.data) { file = res.data as Blob; dlErr = null; break; }
+      dlErr = res.error ?? { message: "brak pliku" };
+    }
+    if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
     const arrayBuf = await file.arrayBuffer();
 
     // 3. Podstaw wartości pozycyjnie w word/document.xml
