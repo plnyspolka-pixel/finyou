@@ -57,6 +57,10 @@ function WniosekDetail() {
   const [audit, setAudit] = useState<any[]>([]);
   const [automations, setAutomations] = useState<any[]>([]);
   const [distributions, setDistributions] = useState<any[]>([]);
+  const [tabValue, setTabValue] = useState<string>(() => {
+    if (typeof window === "undefined") return "dane";
+    try { return sessionStorage.getItem(`wniosek-tab:${id}`) || "dane"; } catch { return "dane"; }
+  });
   const [contact, setContact] = useState({ channel: "telefon", direction: "wychodzacy", subject: "", content: "" });
   const [reason, setReason] = useState("");
 
@@ -152,7 +156,10 @@ function WniosekDetail() {
 
       <ApplicationInfoBadges app={app} client={c} loanApplicationId={id} />
 
-      <Tabs defaultValue="dane">
+      <Tabs
+        value={tabValue}
+        onValueChange={(v) => { setTabValue(v); try { sessionStorage.setItem(`wniosek-tab:${id}`, v); } catch {} }}
+      >
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>

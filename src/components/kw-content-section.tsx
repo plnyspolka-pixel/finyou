@@ -9,9 +9,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { BookOpenCheck, RefreshCw, AlertCircle, Loader2, ScanText } from "lucide-react";
 import { toast } from "sonner";
 import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
-import { importKwFromScreenshots } from "@/lib/kw-ocr-import.functions";
 import { ensureKwReady } from "@/lib/kw-ensure";
 import { sanitizeHtml } from "@/lib/sanitize-html";
+import { KwPasteSlotsDialog } from "@/components/kw-paste-slots";
 
 const MAX_UPLOAD_FILES = 12;
 const MAX_UPLOAD_BYTES = 6_500_000;
@@ -63,14 +63,12 @@ export function KwContentSection({
 }) {
   const getKw = useServerFn(getKwForApplication);
   const doFetch = useServerFn(fetchKwForApplication);
-  const doOcrImport = useServerFn(importKwFromScreenshots);
   const [doc, setDoc] = useState<KwDoc>(null);
   const [hasKw, setHasKw] = useState<boolean | null>(null);
   const [kwNumber, setKwNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [ocrBusy, setOcrBusy] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
 
   const reload = async () => {
     try {
@@ -116,55 +114,20 @@ export function KwContentSection({
     }
   };
 
-  const onOcrFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const list = Array.from(files).slice(0, MAX_UPLOAD_FILES);
-    const oversize = list.find((f) => f.size > MAX_UPLOAD_BYTES);
-    if (oversize) {
-      toast.error(`Plik ${oversize.name} jest za duży (limit ~6 MB na plik)`);
-      return;
-    }
-    setOcrBusy(true);
-    try {
-      const images = await Promise.all(
-        list.map(async (f) => ({ dataUrl: await readAsDataUrl(f), mimeType: f.type || "image/png", fileName: f.name })),
-      );
-      let res = await doOcrImport({ data: { loanApplicationId: applicationId, images } });
-      if (!res.ok && res.needsForce) {
-        if (!window.confirm("Treść tej KW jest już zapisana (np. pobrana z EKW). Nadpisać ją danymi z OCR?")) return;
-        res = await doOcrImport({ data: { loanApplicationId: applicationId, images, force: true } });
-      }
-      if (res.ok) {
-        toast.success(`Treść KW ${res.kwNumber} zaimportowana ze screenów`, { description: res.summary });
-        for (const w of res.warnings.slice(0, 4)) toast.info(w);
-        setHasKw(true);
-        await reload();
-      } else {
-        toast.error(res.message || "Import screenów nie powiódł się");
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Import screenów nie powiódł się");
-    } finally {
-      setOcrBusy(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
   const ocrUploadControls = canImportOcr ? (
-    <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,application/pdf"
-        multiple
-        className="hidden"
-        onChange={(e) => void onOcrFiles(e.target.files)}
-      />
-      <Button size="sm" variant="outline" disabled={ocrBusy || busy} onClick={() => fileInputRef.current?.click()}>
-        {ocrBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanText className="mr-2 h-4 w-4" />}
-        Wgraj screeny KW
-      </Button>
-    </>
+    <Button size="sm" variant="outline" disabled={busy} onClick={() => setPasteOpen(true)}>
+      <ScanText className="mr-2 h-4 w-4" />
+      Wgraj screeny KW
+    </Button>
+  ) : null;
+
+  const pasteDialog = canImportOcr ? (
+    <KwPasteSlotsDialog
+      open={pasteOpen}
+      onOpenChange={setPasteOpen}
+      loanApplicationId={applicationId}
+      onImported={() => { setHasKw(true); void reload(); }}
+    />
   ) : null;
 
   if (loading) return null;
@@ -172,20 +135,23 @@ export function KwContentSection({
   if (hasKw === false) {
     if (!canFetch) return null;
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść KW</CardTitle>
-              <CardDescription>
-                Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości
-                {canImportOcr ? " albo wgraj screeny treści KW (OCR odczyta numer i zapisze go na wniosku)" : ""}.
-              </CardDescription>
+      <>
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5" />Treść KW</CardTitle>
+                <CardDescription>
+                  Brak numeru księgi wieczystej na nieruchomości — uzupełnij w danych nieruchomości
+                  {canImportOcr ? " albo wgraj screeny treści KW (OCR odczyta numer i zapisze go na wniosku)" : ""}.
+                </CardDescription>
+              </div>
+              {ocrUploadControls}
             </div>
-            {ocrUploadControls}
-          </div>
-        </CardHeader>
-      </Card>
+          </CardHeader>
+        </Card>
+        {pasteDialog}
+      </>
     );
   }
 
@@ -197,6 +163,7 @@ export function KwContentSection({
   if (!doc && !canFetch) return null;
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -214,7 +181,7 @@ export function KwContentSection({
             {error && <Badge variant="destructive">{doc?.status === "not_found" ? "Nie znaleziono" : "Błąd"}</Badge>}
             {ocrUploadControls}
             {canFetch && (
-              <Button size="sm" variant={ready ? "outline" : "default"} disabled={busy || ocrBusy} onClick={() => void onFetch(ready)}>
+              <Button size="sm" variant={ready ? "outline" : "default"} disabled={busy} onClick={() => void onFetch(ready)}>
                 {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 {ready ? "Odśwież" : processing ? "Sprawdź status" : "Pobierz treść KW"}
               </Button>
@@ -265,5 +232,7 @@ export function KwContentSection({
         )}
       </CardContent>
     </Card>
+    {pasteDialog}
+    </>
   );
 }
