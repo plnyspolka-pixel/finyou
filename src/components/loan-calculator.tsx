@@ -819,7 +819,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
 
           {!hideFinanceYouFee && (
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Prowizja Finance You ({financeYouFeePct}%, płatna przez inwestora na wejściu){investorGuidance && <InfoTip text="Wynagrodzenie operatora za doprowadzenie do transakcji. Inwestor wykłada ją z własnych środków przy uruchomieniu pożyczki. Nie jest kredytowana — klient jej nie spłaca i nie nalicza się od niej odsetek; pomniejsza zysk inwestora." />}</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Prowizja Finance You ({financeYouFeePct}%, koszt klienta — FV od Finance You){investorGuidance && <InfoTip text="Wynagrodzenie operatora. Klient dostaje na nią fakturę VAT od Finance You. Prowizja jest potrącana z kwoty udzielonej pożyczki — powiększa kapitał (odsetki liczą się także od niej), klient spłaca ją w ratach, a przez to wraca do inwestora. Podnosi wkład gotówkowy inwestora na starcie, ale jest neutralna dla jego zysku." />}</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Kapitał pożyczki (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
             </div>
           )}
