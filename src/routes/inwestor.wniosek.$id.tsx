@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, FileText, Image as ImageIcon, ExternalLink, Eye, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, FileText, ExternalLink, Eye, AlertTriangle, FolderOpen } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
