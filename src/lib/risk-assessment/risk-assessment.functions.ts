@@ -160,7 +160,7 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
   //    zapasowo odczytywany z działu II KW, gdy brak w rekordzie klienta.
-  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal, kwNumber: kwLegal.kwNumber });
+  const owner = await analyzeOwner({ clientId, loanTermYears, kwLegal, kwNumber: kwLegal.kwNumber, city: effCity, voivodeship: effVoivodeship });
   warnings.push(...owner.notes.filter((n) => /nieprawidłowy|niezgod|brak PESEL|brak powiązanego/i.test(n)));
 
   // 5) Czynnik kondygnacji (mieszkania) — 1. piętro najlepiej, ostatnie w niskim
@@ -412,6 +412,17 @@ function buildDataSources(a: {
     dataLevel: a.owner.age != null ? `wiek ${a.owner.age}, e(x) ${a.owner.lifeExpectancy.remainingYears ?? "—"} lat` : "brak PESEL",
     period: "GUS 2022",
     status: a.owner.peselValid ? "success" : "no_data",
+  });
+  sources.push({
+    source: "CEIDG — działalność gospodarcza właściciela",
+    used: a.owner.businessActivity?.available ?? false,
+    purpose: "czy właściciel jest przedsiębiorcą (JDG) — czynnik obniżający ryzyko",
+    dataLevel: a.owner.businessActivity?.isEntrepreneur
+      ? `przedsiębiorca (${a.owner.businessActivity.status}, dopasowanie: ${a.owner.businessActivity.matchConfidence})`
+      : a.owner.businessActivity?.available ? "brak aktywnej działalności" : "—",
+    period: "",
+    status: a.owner.businessActivity?.available ? "success" : "no_data",
+    note: a.owner.businessActivity?.note,
   });
   sources.push({
     source: "Korespondencja z klientem (e-mail / DM / transkrypcje)",

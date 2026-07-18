@@ -101,6 +101,14 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     );
   let investmentScore = Math.round(weighted);
 
+  // Właściciel-przedsiębiorca (aktywny wpis w CEIDG) obniża ryzyko — premia zależna
+  // od pewności dopasowania (NIP > imię+nazwisko+miasto > samo nazwisko).
+  const biz = i.owner.businessActivity;
+  if (biz?.isEntrepreneur) {
+    const bonus = biz.matchConfidence === "high" ? 8 : biz.matchConfidence === "medium" ? 5 : 3;
+    investmentScore = Math.min(100, investmentScore + bonus);
+  }
+
   // Twarde ograniczenia (hard caps) niezależne od średniej ważonej.
   const hardCaps: string[] = [];
   if (i.kwLegal.hasEnforcement) { investmentScore = Math.min(investmentScore, 39); hardCaps.push("egzekucja w KW"); }
@@ -161,6 +169,12 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (componentScores.legal >= 80) keyStrengths.push("Czysty stan prawny nieruchomości (KW).");
   if (componentScores.collateral >= 70) keyStrengths.push("Dobra jakość zabezpieczenia.");
   if (i.owner.lifeExpectancy.longevityRiskBand === "niskie") keyStrengths.push("Niskie ryzyko dożycia/sukcesji właściciela.");
+  if (i.owner.businessActivity?.isEntrepreneur) {
+    const c = i.owner.businessActivity.company;
+    keyStrengths.push(
+      `Właściciel jest przedsiębiorcą — aktywna działalność w CEIDG${c?.name ? ` (${c.name})` : ""}${c?.startDate ? `, od ${c.startDate}` : ""}; obniża ryzyko.`,
+    );
+  }
   if (i.correspondence.available && i.correspondence.redFlags.length === 0 && i.correspondence.inconsistencies.length === 0)
     keyStrengths.push("Korespondencja bez twardych sygnałów ryzyka i rozbieżności z wnioskiem/KW.");
   if (i.saleability.available && (i.saleability.band === "bardzo_latwa" || i.saleability.band === "latwa"))

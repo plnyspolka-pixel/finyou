@@ -101,6 +101,16 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
   },
   // 5. Instytucje rządowe / rejestry
   {
+    key: "ceidg",
+    name: "CEIDG — działalność gospodarcza",
+    category: "instytucja_rzadowa",
+    governmental: true,
+    purpose: "Czy właściciel jest przedsiębiorcą (JDG) — czynnik obniżający ryzyko",
+    provides: "Status działalności (aktywna/zawieszona/wykreślona), NIP, REGON, data rozpoczęcia, PKD",
+    provider: "CEIDG API v3 (hurtownia danych biznes.gov.pl)",
+    envKey: "CEIDG_JWT_TOKEN",
+  },
+  {
     key: "gus_regon_bir",
     name: "GUS REGON BIR",
     category: "instytucja_rzadowa",

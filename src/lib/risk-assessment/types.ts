@@ -15,6 +15,31 @@ export type Recommendation =
   | "do_weryfikacji"
   | "odradzana";
 
+// ---- CEIDG: działalność gospodarcza właściciela ----
+// Sprawdzenie, czy właściciel (zidentyfikowany po PESEL) jest już przedsiębiorcą
+// (JDG w CEIDG). Aktywna działalność istotnie OBNIŻA ryzyko (dochód, wiarygodność).
+// UWAGA: publiczne API CEIDG wyszukuje po NIP/nazwisku, nie po PESEL (dane chronione),
+// dlatego zapytanie kotwiczymy na właścicielu z PESEL i pytamy po NIP (dokładnie)
+// lub po imieniu i nazwisku (+lokalizacja).
+export interface CeidgActivity {
+  available: boolean;
+  queried: "nip" | "name" | "none";
+  /** Znaleziono aktywną działalność gospodarczą. */
+  isEntrepreneur: boolean;
+  status: "aktywny" | "zawieszony" | "wykreslony" | "brak" | "nieznany";
+  /** Pewność dopasowania: nip=wysoka, imię+nazwisko+miasto=średnia, samo nazwisko=niska. */
+  matchConfidence: "high" | "medium" | "low" | "none";
+  activeCount: number;
+  company: {
+    name: string | null;
+    nip: string | null;
+    regon: string | null;
+    startDate: string | null;
+    pkdMain: string | null;
+  } | null;
+  note: string;
+}
+
 // ---- Właściciel / kredytobiorca ----
 export interface OwnerProfile {
   fullName: string | null;
@@ -27,6 +52,8 @@ export interface OwnerProfile {
   lifeExpectancy: LifeExpectancyResult;
   /** Zgodność właściciela z wpisem w dziale II KW. */
   matchesKwOwner: boolean | null;
+  /** Działalność gospodarcza właściciela (CEIDG) — czynnik obniżający ryzyko. */
+  businessActivity: CeidgActivity;
   notes: string[];
 }
 

@@ -466,6 +466,20 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                 </>
               )}
               <div><span className="text-muted-foreground">Zgodność z właścicielem w KW:</span> {result.owner.matchesKwOwner === null ? "nieustalona" : result.owner.matchesKwOwner ? <span className="text-emerald-600">zgodny</span> : <span className="text-destructive font-medium">NIEZGODNY</span>}</div>
+              {result.owner.businessActivity && (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Działalność gospodarcza (CEIDG):</span>
+                  {result.owner.businessActivity.isEntrepreneur ? (
+                    <Badge variant="default">
+                      przedsiębiorca{result.owner.businessActivity.company?.startDate ? ` od ${result.owner.businessActivity.company.startDate}` : ""} · obniża ryzyko
+                    </Badge>
+                  ) : result.owner.businessActivity.available ? (
+                    <span>brak aktywnej działalności</span>
+                  ) : (
+                    <span className="text-muted-foreground">nie sprawdzono</span>
+                  )}
+                </div>
+              )}
               {result.owner.notes.length > 0 && <ul className="list-disc pl-5 text-muted-foreground text-xs mt-1">{result.owner.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
               <p className="text-[11px] text-muted-foreground italic mt-1">{result.owner.lifeExpectancy.disclaimer}</p>
             </CardContent>

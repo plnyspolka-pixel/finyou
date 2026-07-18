@@ -89,6 +89,7 @@ ${govBlock}
 - Wiek: ${i.owner.age ?? "nieznany"}, płeć: ${i.owner.sex ?? "nieznana"}
 - Dalsze trwanie życia (GUS): ${i.owner.lifeExpectancy.remainingYears ?? "brak"} lat, ryzyko sukcesji: ${i.owner.lifeExpectancy.longevityRiskBand}
 - Dożycie dla pożyczek 1–5 lat (P przeżycia okresu): ${i.owner.lifeExpectancy.survivalByLoanYear.length ? i.owner.lifeExpectancy.survivalByLoanYear.map((s) => `${s.years}l: ${Math.round(s.probability * 100)}%`).join(", ") : "brak danych"}
+- Działalność gospodarcza (CEIDG): ${i.owner.businessActivity?.isEntrepreneur ? `TAK — przedsiębiorca${i.owner.businessActivity.company?.startDate ? `, od ${i.owner.businessActivity.company.startDate}` : ""} (czynnik obniżający ryzyko)` : i.owner.businessActivity?.available ? "nie znaleziono aktywnej działalności" : "nie sprawdzono"}
 - Zgodność z właścicielem w KW: ${i.owner.matchesKwOwner === null ? "nieustalona" : i.owner.matchesKwOwner ? "zgodny" : "NIEZGODNY"}
 
 5) KORESPONDENCJA Z KLIENTEM — TWARDE FAKTY (bez oceny zaangażowania/sentymentu)
