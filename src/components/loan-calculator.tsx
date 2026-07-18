@@ -318,7 +318,7 @@ export function LoanCalculator({
   //    do kapitału), więc wraca do inwestora — jest neutralna dla zysku, ale podnosi wkład startowy,
   //  • w ofercie wewnętrznej dodatkowo prowizja operatora pośrednika (z własnych środków inwestora);
   //    tam prowizja FY = 0.
-  const investorCashOut = Math.max(0, amount - commissionPln - financeYouFeePln + operatorCommissionPln + financeYouFeePln);
+  const investorCashOut = Math.max(0, disbursedOnHand + financeYouFeePln + operatorCommissionPln);
   // Inwestor odbiera łącznie = wszystkie raty z harmonogramu (zwrot nominału + odsetki).
   // Prowizja FY spłacana przez klienta wraca do inwestora w ratach — dlatego nie odejmujemy jej z zysku.
   const investorTotalIn = totalToRepay;
