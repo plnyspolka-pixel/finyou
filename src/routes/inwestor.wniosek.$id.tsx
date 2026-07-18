@@ -172,37 +172,6 @@ function InwestorWniosek() {
         </Card>
       )}
 
-      {p && (
-        <Card>
-          <CardHeader><CardTitle>Nieruchomość</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {(() => {
-              const loc = [p.city, p.voivodeship].filter(Boolean).join(", ");
-              return (
-                <div className="text-sm grid gap-1 md:grid-cols-2">
-                  <div><span className="text-muted-foreground">Typ:</span> {propertyTypeLabels[p.property_type]}</div>
-                  {loc && <div><span className="text-muted-foreground">Lokalizacja:</span> {loc}</div>}
-                  {p.area_sqm && <div><span className="text-muted-foreground">Powierzchnia:</span> {p.area_sqm} m²</div>}
-                  {p.estimated_value && <div><span className="text-muted-foreground">Wartość:</span> {formatPLN(p.estimated_value)}</div>}
-                  {p.land_register_number && (
-                    <div className="md:col-span-2"><span className="text-muted-foreground">Numer KW:</span> <span className="font-mono font-medium">{p.land_register_number}</span></div>
-                  )}
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      )}
-
-
-      
-
-      <KwContentSection applicationId={id} canFetch={false} />
-
-      <InvestorSummaryCard applicationId={id} />
-
-      <InvestorValuationCard applicationId={id} />
-
       {(totalFiles > 0) && (
         <Card>
           <CardHeader>
@@ -229,6 +198,16 @@ function InwestorWniosek() {
           </CardContent>
         </Card>
       )}
+
+
+      
+
+      <KwContentSection applicationId={id} canFetch={false} />
+
+      <InvestorSummaryCard applicationId={id} />
+
+      <InvestorValuationCard applicationId={id} />
+
 
 
       <LoanCalculator
