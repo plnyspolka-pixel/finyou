@@ -275,7 +275,7 @@ export async function fillLeadNameFromKw(opts: {
 }): Promise<boolean> {
   const { data: lead } = await supabaseAdmin
     .from("leads")
-    .select("id, first_name, last_name, application_data")
+    .select("id, first_name, last_name, application_data, loan_application_id")
     .eq("id", opts.leadId)
     .maybeSingle();
   if (!lead) return false;
@@ -327,6 +327,15 @@ export async function fillLeadNameFromKw(opts: {
       .from("leads")
       .update(patch as any)
       .eq("id", opts.leadId);
+    // Uzupełnione nazwisko mogło domknąć komplet wniosku — sprawdź, czy
+    // można już odpalić automatyczną analizę ryzyka.
+    if (lead.loan_application_id) {
+      void import("@/lib/risk-assessment/auto-risk.server")
+        .then(({ maybeAutoRunRiskAssessment }) =>
+          maybeAutoRunRiskAssessment(lead.loan_application_id as string),
+        )
+        .catch((e) => console.warn("[lead-kw] auto risk failed", e));
+    }
     return Object.keys(patch).length > 1;
   }
   return false;

@@ -252,6 +252,9 @@ export async function enrichLeadFromInbound(opts: {
   // Jeśli lead ma już wniosek, dopisz nowe KW / kwotę bezpośrednio do niego.
   if (lead.loan_application_id) {
     await backfillApplicationFromFacts(lead.loan_application_id, appData, facts);
+    // Nowe dane mogły domknąć komplet — sprawdź automatyczną analizę ryzyka
+    // (dociągnie też imię/nazwisko z KW, gdy tylko ich brakuje).
+    void pokeAutoRisk(lead.loan_application_id, "lead-enrichment backfill");
     return { updated: touched, promoted: null };
   }
 
@@ -466,5 +469,21 @@ export async function maybePromoteLeadToApplication(leadId: string): Promise<str
     }
   }
 
+  // Świeżo wypromowany wniosek często ma komplet poza nazwiskiem (klient
+  // z placeholderem "Klient (brak nazwiska)") — auto-analiza dociągnie
+  // właściciela z działu II KW i policzy ocenę ryzyka.
+  void pokeAutoRisk(loan.id, "lead promotion");
+
   return loan.id;
+}
+
+// Fire-and-forget wywołanie automatycznej analizy ryzyka — dynamiczny import,
+// żeby webhooki nie płaciły kosztu ładowania pipeline'u ryzyka na starcie.
+function pokeAutoRisk(loanApplicationId: string, source: string): Promise<void> {
+  return import("@/lib/risk-assessment/auto-risk.server")
+    .then(({ maybeAutoRunRiskAssessment }) => maybeAutoRunRiskAssessment(loanApplicationId))
+    .then(() => undefined)
+    .catch((e) => {
+      console.error(`[lead-enrichment] auto risk (${source}) failed`, e);
+    });
 }

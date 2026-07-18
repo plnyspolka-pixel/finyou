@@ -12,6 +12,7 @@ import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { containsValidKw } from "@/lib/kw";
+import { pokeAutoRiskAssessment } from "@/lib/risk-assessment/auto-risk.functions";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -171,6 +172,10 @@ function ApplicationsPage() {
         for (const p of toPromote) {
           const r = list.find((x) => x.id === p.id);
           if (r) { r.status = "szukamy_inwestora"; r.completeness_percent = 100; }
+        }
+        // Kompletny wniosek → automatyczna analiza ryzyka (idempotentna po stronie serwera).
+        for (const p of toPromote) {
+          void pokeAutoRiskAssessment({ data: { applicationId: p.id } }).catch(() => {});
         }
       }
       setRows(list);

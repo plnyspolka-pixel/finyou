@@ -210,6 +210,14 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       console.error("[landing-application] collateral analysis failed", err);
     });
 
+    // Wniosek z landing page bywa kompletny od ręki (dane + KW + zdjęcia) —
+    // wtedy automatyczna analiza ryzyka rusza bez udziału operatora.
+    void import("@/lib/risk-assessment/auto-risk.server")
+      .then(({ maybeAutoRunRiskAssessment }) => maybeAutoRunRiskAssessment(loan.id))
+      .catch((err) => {
+        console.error("[landing-application] auto risk assessment failed", err);
+      });
+
     // Uwaga: wniosek z formularza NIE odpala natychmiastowego telefonu Ani.
     // Kontakt telefoniczny prowadzą sekwencje przypomnień; telefon „od razu po
     // wejściu leada" jest włączony wyłącznie dla leadów z Meta (patrz meta-leads-sync).

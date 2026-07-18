@@ -131,6 +131,14 @@ export const Route = createFileRoute("/api/public/loan-application")({
             console.error("[loan-application] collateral analysis failed", err);
           });
 
+          // Jeśli wniosek od razu jest kompletny (lub brakuje tylko nazwiska,
+          // które dociągniemy z KW) — odpal automatyczną analizę ryzyka.
+          void import("@/lib/risk-assessment/auto-risk.server")
+            .then(({ maybeAutoRunRiskAssessment }) => maybeAutoRunRiskAssessment(loan.id))
+            .catch((err) => {
+              console.error("[loan-application] auto risk assessment failed", err);
+            });
+
           return new Response(JSON.stringify({ ok: true, id: loan.id }), {
             status: 200,
             headers: corsHeaders,

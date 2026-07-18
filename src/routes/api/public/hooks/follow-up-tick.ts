@@ -50,6 +50,17 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] messenger backfill error", e);
         }
 
+        // Siatka bezpieczeństwa auto-analizy ryzyka: kompletne wnioski bez
+        // oceny (np. domknięte uploadem z panelu klienta) dostają ją tutaj.
+        // Limit 2/tick trzyma koszty (Perplexity/OCR/CMD KW) w ryzach.
+        try {
+          const { sweepAutoRiskAssessments } = await import("@/lib/risk-assessment/auto-risk.server");
+          const ar = await sweepAutoRiskAssessments({ limit: 2 });
+          if (ar.checked > 0) console.log("[follow-up-tick] auto-risk sweep", JSON.stringify(ar));
+        } catch (e) {
+          console.error("[follow-up-tick] auto-risk sweep error", e);
+        }
+
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 

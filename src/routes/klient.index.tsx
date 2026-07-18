@@ -19,6 +19,7 @@ import { ClientProfileSections } from "@/components/client/ClientProfileSections
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
+import { pokeAutoRiskAssessment } from "@/lib/risk-assessment/auto-risk.functions";
 
 import { toast } from "sonner";
 
@@ -120,6 +121,9 @@ function KlientDashboard() {
         .eq("id", loanRow.id);
       if (error) throw error;
       setForceUnlock(true);
+      // Kompletny wniosek → automatyczna analiza ryzyka (serwer sam zweryfikuje
+      // komplet danych i w razie potrzeby dociągnie nazwisko z KW).
+      void pokeAutoRiskAssessment({ data: { applicationId: loanRow.id } }).catch(() => {});
       toast.success("Wniosek oznaczony jako kompletny — kalkulator odblokowany");
       void qc.invalidateQueries({ queryKey: ["client-loan", clientRow?.id] });
       // płynne przewinięcie do kalkulatora

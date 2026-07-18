@@ -21,6 +21,7 @@ import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { pokeAutoRiskAssessment } from "@/lib/risk-assessment/auto-risk.functions";
 
 export const Route = createFileRoute("/admin/wnioski/$id")({
   component: WniosekDetail,
@@ -92,6 +93,9 @@ function WniosekDetail() {
     const { error } = await supabase.from("loan_applications").update({ status: newStatus as any }).eq("id", id);
     if (error) { toast.error("Błąd", { description: error.message }); return; }
     await supabase.from("audit_logs").insert({ object_type: "loan_application", object_id: id, action: "status_change", previous_value: { status: prev }, new_value: { status: newStatus } });
+    if (newStatus === "szukamy_inwestora") {
+      void pokeAutoRiskAssessment({ data: { applicationId: id } }).catch(() => {});
+    }
     toast.success("Zmieniono status"); void load();
   };
 
@@ -102,6 +106,9 @@ function WniosekDetail() {
       available_to_investors: decision === "szukamy_inwestora",
     }).eq("id", id);
     if (error) { toast.error("Błąd", { description: error.message }); return; }
+    if (decision === "szukamy_inwestora") {
+      void pokeAutoRiskAssessment({ data: { applicationId: id } }).catch(() => {});
+    }
     toast.success("Zapisano decyzję"); setReason(""); void load();
   };
 
