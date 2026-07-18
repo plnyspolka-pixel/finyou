@@ -180,10 +180,9 @@ export async function runInvestmentRiskAssessmentCore(
     warnings.push(`Analiza zabezpieczenia nie powiodła się: ${e?.message ?? "błąd"}.`);
   }
 
-  // 3) OCR dokumentów, korespondencja, łatwość sprzedaży — równolegle.
-  const documents = (docs ?? []).map((d) => ({ id: d.id, url: d.file_url, type: d.document_type, name: d.file_name }));
-  const [ocr, correspondence, saleabilityRaw] = await Promise.all([
-    ocrDocuments({ applicationId, documents }),
+  // 3) Korespondencja + łatwość sprzedaży — równolegle. OCR dokumentów wyłączony.
+  const ocr = EMPTY_OCR;
+  const [correspondence, saleabilityRaw] = await Promise.all([
     analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity }),
     analyzeSaleability({
       propertyType: property?.property_type ?? "inna",
@@ -208,38 +207,20 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 5b) Prawo zabudowy działki (RM/siedlisko/grunt rolny) — ograniczony krąg nabywców
   //     (budowa zasadniczo tylko dla rolnika) obniża płynność i sugeruje wycenę rolną.
-  const ocrText = (ocr.documents ?? [])
-    .flatMap((d) => {
-      const f = d.fields as any;
-      return [f?.landUse, ...(Array.isArray(f?.keyFindings) ? f.keyFindings : [])];
-    })
-    .filter(Boolean)
-    .join(" ");
   const plotBuildability = assessPlotBuildability({
     propertyType: property?.property_type ?? "inna",
     mpzpInfo: (property as any)?.mpzp_info ?? null,
     landRegistryExtract: (property as any)?.land_registry_extract ?? null,
-    ocrText: ocrText || null,
+    ocrText: null,
   });
   const saleability = plotBuildability.applicable
     ? applyPlotBuildabilityToSaleability(saleabilityFloor, plotBuildability)
     : saleabilityFloor;
   if (plotBuildability.onlyFarmerCanBuild) warnings.push(...plotBuildability.warnings);
 
-  // 5c) Dane rządowe — GUS BDL (priorytetowe źródło wyceny): ceny gruntów rolnych
-  //     zł/ha (wg klasy bonitacyjnej) oraz lokali zł/m². Zawsze próbujemy najpierw.
-  const govBenchmark = await fetchGovBenchmark({
-    propertyType: property?.property_type ?? "inna",
-    address: effAddress,
-    city: effCity,
-    voivodeship: effVoivodeship,
-    county: null,
-    soilClass: kwLegal.soilClass,
-    areaSqm: property?.area_sqm ?? null,
-    landAreaHa: null,
-    latitude: collateral?.property?.latitude ?? null,
-    longitude: collateral?.property?.longitude ?? null,
-  });
+  // 5c) Dane rządowe (RCN/GUS) — wyłączone. Stub jako „unavailable".
+  const govBenchmark = emptyGovBenchmark(property?.property_type ?? "inna");
+
 
   // 5d) Rynek porównawczy — deweloperuch.pl (rzeczywiste transakcje domów/mieszkań przy ulicy)
   //      + otodom.pl (aktywne oferty działek). Uzupełnia RCN, gdy WFS milczy, i dostarcza
