@@ -1,6 +1,7 @@
 // Orkiestrator „Wycena i ocena ryzyka inwestycji".
-// Pipeline: OCR → KW (stan prawny) → właściciel (PESEL, trwanie życia) →
-// korespondencja → dane rządowe/analiza zabezpieczenia → nadrzędna wycena Perplexity.
+// Pipeline: KW (stan prawny) → właściciel (PESEL, trwanie życia) →
+// korespondencja → rynek porównawczy (deweloperuch + otodom) → nadrzędna wycena Perplexity.
+// Uwaga: moduły RCN/GUS oraz OCR dokumentów zostały wyłączone.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -8,22 +9,55 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
-import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
 import { analyzeSaleability, applyFloorToSaleability, applyPlotBuildabilityToSaleability } from "./saleability.server";
 import { assessFloor } from "./floor-factor";
 import { assessPlotBuildability } from "./plot-buildability";
-import { fetchGovBenchmark } from "./gov-benchmark.server";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
 import { fetchMarketComparables } from "./market-comparables.server";
 
 import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
-import type { InvestmentRiskAssessment } from "./types";
+import type { InvestmentRiskAssessment, GovBenchmark, OcrSummary } from "./types";
 import { recommendationLabel } from "./types";
+
+const EMPTY_OCR: OcrSummary = { status: "no_data", documentsProcessed: 0, documents: [] };
+
+function emptyGovBenchmark(propertyType: string): GovBenchmark {
+  return {
+    source: "GUS BDL",
+    available: false,
+    propertyType,
+    primarySource: "brak",
+    pricePerHa: null,
+    pricePerM2Median: null,
+    pricePerM2Average: null,
+    soilClass: null,
+    soilCategory: "ogolem",
+    areaHa: null,
+    landValuePln: null,
+    dwellingValuePln: null,
+    gusPricePerHa: null,
+    gusPricePerM2Median: null,
+    rcnAvailable: false,
+    rcnPricePerHa: null,
+    rcnPricePerM2: null,
+    rcnTransactions: 0,
+    rcnRadiusKm: null,
+    rcnStatus: "disabled",
+    rcnStatusMessage: "Moduł RCN wyłączony.",
+    unitName: null,
+    unitLevel: null,
+    period: null,
+    fallbackUsed: false,
+    summaryLine: "Dane rządowe (RCN/GUS) wyłączone — bazujemy na rynku porównawczym.",
+    warnings: [],
+  };
+}
+
 
 // Tabela investment_risk_assessments nie jest jeszcze w wygenerowanych typach —
 // dostęp przez rzutowanie (typy regenerują się w pipeline Supabase/Lovable).
