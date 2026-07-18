@@ -127,6 +127,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
           { role: "user", content: userContent },
         ],
         temperature: 0,
+        response_format: { type: "json_object" },
       }),
     });
     if (resp.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
@@ -135,7 +136,10 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const json: any = await resp.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const extraction = tryParseJson(content);
-    if (!extraction) throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
+    if (!extraction) {
+      console.error("KW OCR: nie sparsowano odpowiedzi modelu", { model: MODEL, preview: content.slice(0, 500) });
+      throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
+    }
 
     // 2) Numer KW: ręczny > OCR > numer z nieruchomości wniosku.
     const warnings: string[] = [];
