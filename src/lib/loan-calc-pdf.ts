@@ -121,9 +121,9 @@ function buildLines(p: LoanCalcPayload): string[] {
   L.push(`  Rata miesieczna:            ${PLN(p.monthlyPayment)} zl`);
   if (p.balloon > 0) L.push(`  Rata balonowa (ostatnia):   ${PLN(p.balloon)} zl`);
   L.push(`  Prowizja inwestora:         ${PLN(p.commissionPln)} zl (${PLN(p.commissionPct)}%)`);
-  L.push(`  Prowizja Finance You:       ${PLN(p.financeYouFeePln)} zl`);
+  L.push(`  Prowizja Finance You:       ${PLN(p.financeYouFeePln)} zl (koszt inwestora, platna na wejsciu)`);
   L.push(`  Suma odsetek:               ${PLN(p.totalInterest)} zl`);
-  L.push(`  Calkowity koszt pozyczki:   ${PLN(p.totalCost)} zl`);
+  L.push(`  Calkowity koszt pozyczki:   ${PLN(p.totalCost)} zl (po stronie klienta)`);
   L.push(`  Laczna kwota do splaty:     ${PLN(p.totalToRepay)} zl`);
   L.push("");
   L.push("ZABEZPIECZENIA (PROPONOWANE)");

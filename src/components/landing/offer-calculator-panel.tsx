@@ -46,10 +46,10 @@ export function OfferCalculatorPanel({
   locked = false,
   lockedMessage = "Uzupełnij powyższe pola, żeby odblokować kalkulator.",
 }: OfferCalculatorPanelProps) {
-  const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
-  const FINANCEYOU_FEE_PCT = Math.round((10 - feeT * 6) * 10) / 10;
-  const financeYouFee = Math.round((amount * FINANCEYOU_FEE_PCT) / 100);
-  const grossPrincipal = amount + financeYouFee;
+  // Kapitał pożyczki = kwota, o którą wnioskuje klient. Prowizja Finance You jest kosztem
+  // INWESTORA (wykłada ją na wejściu operatorowi) — nie jest kredytowana do kapitału klienta
+  // i nie powiększa jego rat. Spójne z kalkulatorem inwestora i kreatorem dokumentów.
+  const grossPrincipal = amount;
 
   // Reguły kosztu:
   // - okres ≤ 36 mies. → min. wynagrodzenie inwestora 24% rocznie, ale klient może płacić tylko odsetki (rata balonowa dopuszczalna)
@@ -207,7 +207,7 @@ export function OfferCalculatorPanel({
               <p className="mt-0.5 text-lg font-extrabold tabular-nums text-white">{months} mies.</p>
             </div>
             <div className="rounded-xl bg-white/10 p-3 sm:col-span-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Łączna spłata (z prowizją FY)</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Łączna spłata</p>
               <p className="mt-0.5 text-xl font-extrabold tabular-nums text-white">{formatPLN(fig.total)}</p>
             </div>
           </div>
@@ -243,12 +243,12 @@ export function OfferCalculatorPanel({
             </table>
           </div>
           <p className="px-4 py-3 text-[11px] text-white/70">
-            Kapitał startowy: {formatPLN(grossPrincipal)} = kwota pożyczki {formatPLN(amount)} + prowizja Finance You {formatPLN(financeYouFee)} ({FINANCEYOU_FEE_PCT}%, kredytowana zgodnie z regulaminem).
+            Kapitał pożyczki: {formatPLN(grossPrincipal)} — odsetki liczone są wyłącznie od kwoty pożyczki. Prowizja Finance You obciąża inwestora i nie jest doliczana do Twojej spłaty.
           </p>
         </details>
 
         <p className="text-[11px] text-white/70">
-          Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie i prowizji Finance You {FINANCEYOU_FEE_PCT}%. Ostateczne warunki ustalisz indywidualnie z inwestorem.
+          Wyliczenia poglądowe przy wynagrodzeniu inwestora {annualRate}% rocznie. Ostateczne warunki ustalisz indywidualnie z inwestorem.
         </p>
         </div>
         </div>

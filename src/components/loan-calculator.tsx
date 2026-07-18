@@ -15,7 +15,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins, Printer, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatPLN } from "@/lib/labels";
+import { formatPLN, propertyTypeLabels } from "@/lib/labels";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
@@ -176,8 +178,8 @@ export function LoanCalculator({
 
   // ŹRÓDŁO PRAWDY: kwota do wypłaty na rękę dla klienta (to, o co wnioskuje).
   // Kwota nominalna pożyczki jest z niej WYPROWADZANA: prowizja inwestora jest potrącana z góry,
-  // więc nominał = onHand / (1 − prowizja%). Prowizja Finance You jest kredytowana do kapitału
-  // (nie pomniejsza wypłaty), więc nie wchodzi do tego przeliczenia.
+  // więc nominał = onHand / (1 − prowizja%). Prowizja Finance You jest kosztem inwestora
+  // płatnym na wejściu (poza umową pożyczki), więc nie wchodzi do tego przeliczenia.
   // Dzięki temu, co użytkownik wpisze w polu „na rękę", pozostaje nadrzędne i stabilne.
   const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
   const commissionFactor = Math.max(0.01, 1 - commissionPct / 100);
@@ -207,6 +209,11 @@ export function LoanCalculator({
   const [mortgageOverride, setMortgageOverride] = useState<number | null>(null);
   const [art777Override, setArt777Override] = useState<number | null>(null);
 
+  // Nieruchomość stanowiąca zabezpieczenie — rodzaj i suma oszacowania (0 = nie podano).
+  // Pozwala na żywo sprawdzić próg 5% (art. 952¹ § 2 KPC) i wartość „po komorniku".
+  const [propertyType, setPropertyType] = useState<string>("mieszkanie");
+  const [propertyValue, setPropertyValue] = useState<number>(0);
+
   // Wysyłka harmonogramu do klienta
   const sendSchedule = useServerFn(sendLoanScheduleToClient);
   const [sendOpen, setSendOpen] = useState(false);
@@ -218,13 +225,19 @@ export function LoanCalculator({
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You — liczona ZAWSZE tak samo, jak w kalkulatorze na /klient:
-  // skala liniowa od 10% (przy 20 000 zł) do 4% (przy 1 000 000 zł), kredytowana do kapitału startowego.
+  // Prowizja Finance You — wynagrodzenie operatora, które INWESTOR WYKŁADA Z WŁASNEJ KIESZENI
+  // przy uruchomieniu pożyczki (koszt wejścia w inwestycję). Skala liniowa od 10% (przy 20 000 zł)
+  // do 4% (przy 1 000 000 zł) kwoty nominalnej. NIE jest kredytowana do kapitału pożyczki:
+  // klient jej nie spłaca, nie nalicza się od niej odsetek i nie wraca do inwestora —
+  // pomniejsza zysk inwestora i powiększa jego wkład gotówkowy na starcie.
+  // Umowa pożyczki (kreator dokumentów) zna tylko: nominał = netto dla klienta + prowizja
+  // kredytowana inwestora — dlatego kapitał odsetkowy tutaj MUSI równać się nominałowi.
   // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
   const feeT = Math.min(1, Math.max(0, (amount - 20_000) / (1_000_000 - 20_000)));
   const financeYouFeePct = hideFinanceYouFee ? 0 : Math.round((10 - feeT * 6) * 10) / 10;
   const financeYouFeePln = hideFinanceYouFee ? 0 : Math.round((amount * financeYouFeePct) / 100);
-  const grossPrincipal = amount + financeYouFeePln;
+  // Kapitał, od którego liczone są odsetki i raty = kwota nominalna umowy (bez prowizji FY).
+  const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
 
@@ -272,40 +285,38 @@ export function LoanCalculator({
     };
   }, [grossPrincipal, months, annualRate, maxPayment]);
 
-  // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You jest osobnym wynagrodzeniem operatora i nie jest kosztem pozaodsetkowym po stronie pożyczki.
+  // MPKK obejmuje wyłącznie prowizję inwestora. Prowizja Finance You nie jest kosztem pożyczki
+  // po stronie klienta w ogóle — to koszt inwestora płacony operatorowi.
   const nonInterestTotal = commissionPln;
-  const totalCost = schedule.totalOds + commissionPln + financeYouFeePln;
-  // Na rękę = kwota nominalna − prowizja inwestora (potrącana z góry). Prowizja Finance You jest
-  // KREDYTOWANA do kapitału startowego (klient spłaca ją w ratach), więc NIE pomniejsza wypłaty.
+  // Całkowity koszt pożyczki PO STRONIE KLIENTA = odsetki + prowizja inwestora.
+  // Prowizja Finance You nie obciąża klienta (płaci ją inwestor), więc nie jest tu wliczana.
+  const totalCost = schedule.totalOds + commissionPln;
+  // Na rękę = kwota nominalna − prowizja inwestora (potrącana z góry).
   // Z konstrukcji (nominał = onHand / (1 − prowizja%)) wartość ta jest równa onHand.
   const disbursedOnHand = Math.max(0, onHand);
 
-  // Łączna kwota spłacana przez pożyczkobiorcę = raty z harmonogramu (zwrot kapitału startowego + odsetki).
-  // Prowizja inwestora jest potrącana z góry, a prowizja Finance You jest już zawarta w kapitale startowym,
-  // więc obu NIE dolicza się ponownie do spłaty (wcześniej były liczone podwójnie).
+  // Łączna kwota spłacana przez pożyczkobiorcę = raty z harmonogramu (zwrot nominału + odsetki).
+  // Prowizja inwestora jest potrącana z góry (zawarta w nominale), więc NIE dolicza się jej ponownie.
   const totalToRepay = schedule.totalRata;
 
   // Inwestor: realny wkład gotówkowy = środki wychodzące z jego konta na starcie:
   //  • wypłata na rękę dla klienta (nominał − prowizja inwestora potrącona z góry),
-  //  • prowizja Finance You — inwestor WYKŁADA ją od razu (jest wypłacana Finance You
-  //    jako część kapitału pożyczki). Dla inwestora jest dalej oprocentowana i wraca
-  //    w ratach jako część kapitału, więc nie zmienia zysku — ale podnosi wkład.
+  //  • prowizja Finance You — inwestor WYKŁADA ją na wejściu jako wynagrodzenie operatora;
+  //    NIE wraca w ratach (klient jej nie spłaca) — to bezzwrotny koszt wejścia,
   //  • w ofercie wewnętrznej dodatkowo prowizja operatora (z własnych środków inwestora);
   //    tam prowizja FY = 0.
   const investorCashOut = Math.max(0, amount - commissionPln + operatorCommissionPln + financeYouFeePln);
-  // Zysk = odsetki + prowizja inwestora (NETTO). Prowizja FY jest neutralna dla zysku
-  // (wyłożona na starcie, odzyskiwana w ratach jako część kapitału).
-  const investorProfit = schedule.totalOds + investorNetCommissionPln;
-  // Inwestor odbiera łącznie = wkład + zysk = pełne raty z harmonogramu (zwrot całego
-  // kapitału startowego wraz z prowizją FY + odsetki).
-  const investorTotalIn = investorCashOut + investorProfit;
+  // Inwestor odbiera łącznie = wszystkie raty z harmonogramu (zwrot nominału + odsetki).
+  const investorTotalIn = totalToRepay;
+  // Zysk = to, co wraca, minus to, co wyszło z konta:
+  // odsetki + prowizja inwestora (netto) − prowizja Finance You wyłożona na wejściu.
+  const investorProfit = investorTotalIn - investorCashOut;
   const investorRoiPct = investorCashOut > 0 ? (investorProfit / investorCashOut) * 100 : 0;
   const investorRoiAnnualPct = months > 0 ? (investorRoiPct * 12) / months : 0;
   // Krotność: ile razy klient oddaje względem kwoty otrzymanej na rękę.
-  // Prowizja Finance You jest wynagrodzeniem operatora (poza MPKK) i NIE wlicza się do tego limitu —
-  // wyłączamy ją zarówno z licznika (łączna spłata), jak i z mianownika (kwota na rękę).
+  // Prowizja Finance You w ogóle nie występuje w przepływach klienta, więc nic tu nie korygujemy.
   const krotnoscBasis = Math.max(0, amount - commissionPln);
-  const krotnoscRepay = totalToRepay - financeYouFeePln;
+  const krotnoscRepay = totalToRepay;
   const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
 
   // Proponowane zabezpieczenia: domyślnie dwukrotność sumy wszystkich należności
@@ -313,6 +324,18 @@ export function LoanCalculator({
   const proposedSecurityDefault = Math.round(totalToRepay * 2);
   const mortgageAmount = mortgageOverride ?? proposedSecurityDefault;
   const art777Amount = art777Override ?? proposedSecurityDefault;
+
+  // Wycena „po komorniku" (KPC): cena wywołania I licytacji = 3/4 sumy oszacowania (art. 965),
+  // II licytacji = 2/3 (art. 983); po bezskutecznej II licytacji wierzyciel może przejąć za 2/3
+  // (art. 984). Ostrożny odzysk z egzekucji przyjmujemy na poziomie 2/3.
+  const firstAuctionPln = Math.round(propertyValue * 0.75);
+  const secondAuctionPln = Math.round(propertyValue * (2 / 3));
+  // Próg 5% dla nieruchomości mieszkaniowej (art. 952¹ § 2 KPC): licytacji mieszkania/domu
+  // nie można wyznaczyć, gdy egzekwowana należność główna < 1/20 sumy oszacowania.
+  const auctionBlock = residentialAuctionBlockRisk({ propertyType, loanAmountPln: amount, propertyValuePln: propertyValue });
+  const ltvPct = propertyValue > 0 ? (amount / propertyValue) * 100 : 0;
+  const collateralCoveragePct = propertyValue > 0 && totalToRepay > 0 ? (secondAuctionPln / totalToRepay) * 100 : 0;
+  const collateralShortfall = propertyValue > 0 && totalToRepay > secondAuctionPln + 1e-9;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
   const nonInterestExceeds = nonInterestTotal > maxNonInterest + 1e-9;
@@ -413,7 +436,6 @@ export function LoanCalculator({
         ${sum("Rata miesięczna", m(schedule.cappedRata))}
         ${schedule.balloon > 0 ? sum("Rata balonowa (ostatnia)", m(schedule.balloon)) : ""}
         ${sum("Prowizja inwestora", m(commissionPln))}
-        ${!hideFinanceYouFee ? sum("Prowizja Finance You (kredytowana)", m(financeYouFeePln)) : ""}
         ${sum("Całkowity koszt pożyczki", m(totalCost))}
         ${sum("Łączna kwota do spłaty", m(totalToRepay), true)}
         ${sum("Proponowana kwota hipoteki", m(mortgageAmount))}
@@ -585,7 +607,7 @@ export function LoanCalculator({
                 ? "gotówka z konta inwestora (wypłata dla klienta + prowizja operatora)"
                 : hideFinanceYouFee
                   ? "gotówka z konta inwestora (kwota nominalna − prowizja potrącona z góry)"
-                  : `gotówka z konta inwestora: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} wyłożona na start (wraca w ratach)`}</p>
+                  : `gotówka z konta inwestora na wejściu: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} (bezzwrotny koszt wejścia)`}</p>
             </div>
 
             {/* Investor cash in */}
@@ -596,7 +618,7 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorTotalIn)}</p>
               <p className="mt-1 text-xs text-emerald-100/80">
-                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
+                zysk{!hideFinanceYouFee && " (po prowizji FY)"} <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
               </p>
             </div>
 
@@ -608,7 +630,7 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(disbursedOnHand)}</p>
               <p className="mt-1 text-xs text-amber-100/80">
-kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> (prowizja FY {formatPLN(financeYouFeePln)} kredytowana — nie pomniejsza wypłaty)</>}
+kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> (prowizja FY {formatPLN(financeYouFeePln)} obciąża inwestora — nie dotyczy klienta)</>}
               </p>
 
             </div>
@@ -631,7 +653,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o prowizję inwestora; odsetki liczone są od kapitału startowego (kwota nominalna + kredytowana prowizja Finance You)." />}</Label>
+              <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o prowizję inwestora; odsetki liczone są od kwoty nominalnej. Prowizja Finance You nie powiększa kapitału — inwestor płaci ją osobno na wejściu." />}</Label>
               <NumberField value={Math.round(amount)} onCommit={(n) => setAmount(n || 0)} className="w-40" />
             </div>
             <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
@@ -652,7 +674,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora jest potrącana z góry; prowizja Finance You jest kredytowana do kapitału i nie pomniejsza wypłaty." />}</Label>
+              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora jest potrącana z góry; prowizję Finance You inwestor wykłada osobno na wejściu — nie wpływa ona na wypłatę ani dług klienta." />}</Label>
               <NumberField
                 value={Math.round(onHand)}
                 onCommit={(target) => setOnHand(Math.min(1_000_000, Math.max(1_000, target || 0)))}
@@ -781,8 +803,8 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
 
           {!hideFinanceYouFee && (
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Prowizja Finance You ({financeYouFeePct}%, kredytowana)</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał startowy (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Prowizja Finance You ({financeYouFeePct}%, płatna przez inwestora na wejściu){investorGuidance && <InfoTip text="Wynagrodzenie operatora za doprowadzenie do transakcji. Inwestor wykłada ją z własnych środków przy uruchomieniu pożyczki. Nie jest kredytowana — klient jej nie spłaca i nie nalicza się od niej odsetek; pomniejsza zysk inwestora." />}</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał pożyczki (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
             </div>
           )}
 
@@ -797,7 +819,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
             <Slider min={500} max={50000} step={100} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
             <div className="flex justify-between text-xs text-muted-foreground"><span>500 zł</span><span>50 000 zł</span></div>
             <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata nominalna (annuitet){investorGuidance && <InfoTip text="Pełna rata annuitetowa wyliczona od kapitału startowego i oprocentowania." />}</span><b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b></div>
+              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata nominalna (annuitet){investorGuidance && <InfoTip text="Pełna rata annuitetowa wyliczona od kwoty nominalnej pożyczki i oprocentowania." />}</span><b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b></div>
               <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata balonowa (ostatnia nadwyżka){investorGuidance && <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />}</span><b className="tabular-nums">{formatPLN(schedule.balloon)}</b></div>
             </div>
             {schedule.balloon > 0 && (
@@ -930,13 +952,15 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
             </>
           )}
           {!hideFinanceYouFee && (
-            <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(poza MPKK)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
+            <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(koszt inwestora, płatna na wejściu)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
           )}
 
           {investorGuidance && (
-            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę. Prowizja Finance You (poza MPKK) nie wlicza się do tego limitu — jest pomijana po obu stronach wyliczenia." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
+            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę (łączna spłata ÷ kwota na rękę). Prowizja Finance You nie występuje w przepływach klienta, więc nie wpływa na krotność." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
           )}
-          <div className="flex justify-between"><span>Całkowity koszt pożyczki</span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
+          <div className="flex justify-between"><span>Całkowity koszt pożyczki <span className="text-xs text-white/60">(po stronie klienta)</span></span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
+          <div className="flex justify-between"><span>Wkład gotówkowy inwestora <span className="text-xs text-white/60">(z prowizją FY)</span></span><b className="tabular-nums">{formatPLN(investorCashOut)}</b></div>
+          <div className="flex justify-between"><span>Zysk inwestora <span className="text-xs text-white/60">{hideFinanceYouFee ? "(odsetki + prowizja netto)" : "(odsetki + prowizja − prowizja FY)"}</span></span><b className="tabular-nums text-emerald-300">{formatPLN(investorProfit)}</b></div>
           <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2"><span>Łączna kwota do spłaty (raty z harmonogramu)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
         </CardContent>
       </Card></FancyShell>
@@ -947,7 +971,56 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2"><Scale className="h-4 w-4" /> Proponowane zabezpieczenia</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">Rodzaj nieruchomości (zabezpieczenie) <InfoTip text="Dla mieszkania i domu obowiązuje próg z art. 952¹ § 2 KPC: wierzyciel może wyznaczyć licytację dopiero, gdy należność główna wynosi co najmniej 5% (1/20) sumy oszacowania." /></Label>
+              <Select value={propertyType} onValueChange={setPropertyType}>
+                <SelectTrigger className="w-full bg-white text-slate-900"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(propertyTypeLabels).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">Wartość nieruchomości (suma oszacowania) <InfoTip text="Szacunkowa wartość rynkowa przyjmowana jako suma oszacowania w egzekucji. Od niej liczone są ceny wywołania licytacji (3/4 i 2/3) oraz próg 5% dla mieszkań i domów. Zostaw 0, aby pominąć analizę zabezpieczenia." /></Label>
+              <NumberField value={propertyValue} onCommit={(n) => setPropertyValue(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
+              <p className="text-xs text-white/60">0 = pomiń analizę zabezpieczenia.</p>
+            </div>
+          </div>
+
+          {propertyValue > 0 && (
+            <>
+              <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+                <div className="flex justify-between"><span className="text-white/70">LTV (kwota nominalna / wartość)</span><b className="tabular-nums">{ltvPct.toFixed(1)}%</b></div>
+                <div className="flex justify-between"><span className="text-white/70">Próg 5% licytacji (art. 952¹ § 2 KPC)</span><b className="tabular-nums">{auctionBlock.applicable ? formatPLN(auctionBlock.thresholdPln ?? 0) : "nie dotyczy"}</b></div>
+                <div className="flex justify-between"><span className="text-white/70">I licytacja — cena wywołania (3/4)</span><b className="tabular-nums">{formatPLN(firstAuctionPln)}</b></div>
+                <div className="flex justify-between"><span className="text-white/70">Wartość „po komorniku" (2/3 — II licytacja / przejęcie)</span><b className="tabular-nums">{formatPLN(secondAuctionPln)}</b></div>
+                <div className="flex justify-between sm:col-span-2 border-t border-white/15 pt-1.5"><span className="text-white/70">Pokrycie łącznej należności ({formatPLN(totalToRepay)}) wartością „po komorniku"</span><b className={`tabular-nums ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}>{collateralCoveragePct.toFixed(0)}%</b></div>
+              </div>
+
+              {auctionBlock.blocked && (
+                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                  <ShieldAlert className="h-4 w-4" />
+                  <AlertTitle>Możliwa blokada licytacji — kwota poniżej 5% wartości (art. 952¹ § 2 KPC)</AlertTitle>
+                  <AlertDescription className="text-xs">{auctionBlock.message}</AlertDescription>
+                </Alert>
+              )}
+              {collateralShortfall && (
+                <Alert className="py-2 border-amber-400/60 bg-amber-950/60 text-amber-50">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Wartość „po komorniku" ({formatPLN(secondAuctionPln)} = 2/3 sumy oszacowania) nie pokrywa łącznej należności {formatPLN(totalToRepay)}.
+                    W razie egzekucji odzysk z samej nieruchomości może być niepełny — rozważ niższą kwotę pożyczki, krótszy okres lub dodatkowe zabezpieczenie.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">Proponowana kwota hipoteki <InfoTip text="Kwota wpisu hipoteki umownej. Domyślnie dwukrotność sumy wszystkich należności inwestora (łącznej kwoty do spłaty). Wpisz własną wartość, aby nadpisać." /></Label>
               <div className="flex items-center gap-2">
@@ -968,6 +1041,7 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
               </div>
               <p className="text-xs text-white/60">Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}).</p>
             </div>
+          </div>
           </CardContent>
         </Card></FancyShell>
       )}
