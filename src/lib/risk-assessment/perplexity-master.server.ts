@@ -71,13 +71,14 @@ ${govBlock}
 4) WŁAŚCICIEL / KREDYTOBIORCA
 - Wiek: ${i.owner.age ?? "nieznany"}, płeć: ${i.owner.sex ?? "nieznana"}
 - Dalsze trwanie życia (GUS): ${i.owner.lifeExpectancy.remainingYears ?? "brak"} lat, ryzyko sukcesji: ${i.owner.lifeExpectancy.longevityRiskBand}
+- Dożycie dla pożyczek 1–5 lat (P przeżycia okresu): ${i.owner.lifeExpectancy.survivalByLoanYear.length ? i.owner.lifeExpectancy.survivalByLoanYear.map((s) => `${s.years}l: ${Math.round(s.probability * 100)}%`).join(", ") : "brak danych"}
 - Zgodność z właścicielem w KW: ${i.owner.matchesKwOwner === null ? "nieustalona" : i.owner.matchesKwOwner ? "zgodny" : "NIEZGODNY"}
 
-5) KORESPONDENCJA Z KLIENTEM
+5) KORESPONDENCJA Z KLIENTEM — TWARDE FAKTY (bez oceny zaangażowania/sentymentu)
 - Przeanalizowano wiadomości: ${i.correspondence.messagesAnalyzed} (${i.correspondence.channels.join(", ") || "brak"})
-- Sentyment: ${i.correspondence.sentiment}, współpraca: ${i.correspondence.cooperationLevel}
-- Sygnały ostrzegawcze: ${i.correspondence.redFlags.join("; ") || "brak"}
-- Niespójności: ${i.correspondence.inconsistencies.join("; ") || "brak"}
+- Fakty podane przez klienta: ${i.correspondence.statedFacts.join("; ") || "brak"}
+- Twarde sygnały ryzyka: ${i.correspondence.redFlags.join("; ") || "brak"}
+- Niespójności z wnioskiem/KW: ${i.correspondence.inconsistencies.join("; ") || "brak"}
 
 6) OCR DOKUMENTÓW
 - Kluczowe ustalenia: ${ocrFindings.join("; ") || "brak przetworzonych dokumentów"}
@@ -88,7 +89,7 @@ ${govBlock}
 }
 
 function buildPrompt(i: MasterValuationInput): string {
-  return `Jesteś doświadczonym rzeczoznawcą i analitykiem ryzyka kredytowego zabezpieczonego nieruchomością w Polsce. Otrzymujesz kompletne dossier. Wykonaj NADRZĘDNĄ wycenę i ocenę ryzyka inwestycji, uwzględniając WSZYSTKIE przekazane dane (stan prawny KW, ryzyko dożycia właściciela, sygnały z korespondencji, wyniki OCR) oraz aktualne dane rynkowe, które sam wyszukasz.
+  return `Jesteś doświadczonym rzeczoznawcą i analitykiem ryzyka kredytowego zabezpieczonego nieruchomością w Polsce. Otrzymujesz kompletne dossier. Wykonaj NADRZĘDNĄ wycenę i ocenę ryzyka inwestycji, uwzględniając WSZYSTKIE przekazane dane (stan prawny KW, ryzyko dożycia właściciela dla pożyczek 1–5 lat, twarde fakty z korespondencji, wyniki OCR) oraz aktualne dane rynkowe, które sam wyszukasz.
 
 ${buildDossier(i)}
 

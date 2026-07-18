@@ -95,7 +95,7 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     name: "Korespondencja z klientem",
     category: "korespondencja",
     governmental: false,
-    purpose: "Analiza behawioralna, wykrycie sygnałów ostrzegawczych i niespójności",
+    purpose: "Ekstrakcja twardych faktów, rozbieżności z wnioskiem/KW i sygnałów ryzyka (bez oceny zaangażowania/sentymentu)",
     provides: "E-maile, wiadomości DM/Messenger, transkrypcje rozmów (voicebot)",
     provider: "lead_communications (Gmail, Messenger, ElevenLabs)",
   },
@@ -152,13 +152,13 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
   },
   {
     key: "local_market_offers",
-    name: "Oferty sprzedaży w okolicy — biura nieruchomości",
+    name: "Oferty sprzedaży w okolicy — ceny ofertowe",
     category: "rynek_nieruchomosci",
     governmental: false,
-    purpose: "realna podaż i obsługa rynku przez biura — sygnał płynności zbycia",
+    purpose: "realna podaż i ceny ofertowe w okolicy — sygnał płynności zbycia",
     provides: "aktywne ogłoszenia sprzedaży w okolicy (~10 km), udział ofert biur vs prywatnych, mediana ceny/m²",
-    provider: "Firecrawl (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
-    envKey: "FIRECRAWL_API_KEY",
+    provider: "Perplexity (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
+    envKey: "PERPLEXITY_API_KEY",
   },
   // 8. Rynek nieruchomości + wycena nadrzędna
   {

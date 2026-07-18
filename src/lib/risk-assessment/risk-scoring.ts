@@ -45,6 +45,17 @@ function valuationConfidenceScore(collateral: PropertyAnalysisResult | null, mas
   return Math.max(0, Math.min(100, score));
 }
 
+// Ocena komponentu korespondencji WYŁĄCZNIE z twardych faktów — bez oceny
+// zaangażowania/sentymentu. Startujemy wysoko i odejmujemy za twarde sygnały
+// ryzyka i rozbieżności z wnioskiem/KW.
+function correspondenceFactsScore(c: CorrespondenceIntel): number {
+  if (!c.available) return 60; // brak korespondencji — neutralnie
+  let score = 85;
+  score -= Math.min(45, c.redFlags.length * 15);        // twarde sygnały ryzyka
+  score -= Math.min(30, c.inconsistencies.length * 12); // rozbieżności z wnioskiem/KW
+  return Math.max(0, Math.min(100, score));
+}
+
 function documentCompletenessScore(ocr: OcrSummary): number {
   if (ocr.documentsProcessed === 0) return 30;
   const ok = ocr.documents.filter((d) => d.status === "success").length;
@@ -78,7 +89,7 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     valuationConfidence: valuationConfidenceScore(i.collateral, i.master),
     legal: i.kwLegal.available ? i.kwLegal.legalRiskScore : 55,
     borrowerLongevity: longevityToScore(i.owner.lifeExpectancy.longevityRiskBand),
-    correspondence: i.correspondence.available ? i.correspondence.behavioralRiskScore : 60,
+    correspondence: correspondenceFactsScore(i.correspondence),
     documentCompleteness: documentCompletenessScore(i.ocr),
     exitLiquidity: i.saleability.available ? i.saleability.score : 45,
   };
@@ -122,7 +133,7 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   keyRisks.push(...i.kwLegal.warnings);
   if (i.owner.lifeExpectancy.longevityRiskBand === "wysokie" || i.owner.lifeExpectancy.longevityRiskBand === "podwyzszone")
     keyRisks.push(`Ryzyko dożycia/sukcesji właściciela: ${i.owner.lifeExpectancy.longevityRiskBand}.`);
-  keyRisks.push(...i.correspondence.redFlags.map((r) => `Korespondencja: ${r}`));
+  keyRisks.push(...i.correspondence.redFlags.map((r) => `Korespondencja (fakt): ${r}`));
   keyRisks.push(...i.correspondence.inconsistencies.map((r) => `Niespójność: ${r}`));
   if (i.saleability.available) {
     if (i.saleability.band === "bardzo_trudna" || i.saleability.band === "trudna")
@@ -150,7 +161,8 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (componentScores.legal >= 80) keyStrengths.push("Czysty stan prawny nieruchomości (KW).");
   if (componentScores.collateral >= 70) keyStrengths.push("Dobra jakość zabezpieczenia.");
   if (i.owner.lifeExpectancy.longevityRiskBand === "niskie") keyStrengths.push("Niskie ryzyko dożycia/sukcesji właściciela.");
-  if (i.correspondence.cooperationLevel === "wysoki") keyStrengths.push("Wysoki poziom współpracy klienta.");
+  if (i.correspondence.available && i.correspondence.redFlags.length === 0 && i.correspondence.inconsistencies.length === 0)
+    keyStrengths.push("Korespondencja bez twardych sygnałów ryzyka i rozbieżności z wnioskiem/KW.");
   if (i.saleability.available && (i.saleability.band === "bardzo_latwa" || i.saleability.band === "latwa"))
     keyStrengths.push(`Dobra prognozowana łatwość sprzedaży (${i.saleability.band.replace(/_/g, " ")}) — sprawne wyjście z inwestycji.`);
   if (i.saleability.localMarketOffers.agencyListings >= 4)

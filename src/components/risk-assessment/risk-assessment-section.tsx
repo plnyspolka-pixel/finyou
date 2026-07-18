@@ -451,6 +451,18 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                       <span className="text-muted-foreground ml-2">P(przeżycia okresu) ≈ {Math.round(result.owner.lifeExpectancy.survivalProbabilityOverTerm * 100)}%</span>
                     )}
                   </div>
+                  {result.owner.lifeExpectancy.survivalByLoanYear?.length > 0 && (
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">Dożycie dla pożyczek 1–5 lat (P przeżycia okresu):</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {result.owner.lifeExpectancy.survivalByLoanYear.map((s) => (
+                          <Badge key={s.years} variant="outline" className="text-[10px]">
+                            {s.years} {s.years === 1 ? "rok" : "lat"}: {Math.round(s.probability * 100)}%
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
               <div><span className="text-muted-foreground">Zgodność z właścicielem w KW:</span> {result.owner.matchesKwOwner === null ? "nieustalona" : result.owner.matchesKwOwner ? <span className="text-emerald-600">zgodny</span> : <span className="text-destructive font-medium">NIEZGODNY</span>}</div>
@@ -488,25 +500,31 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
             </CardContent>
           </Card>
 
-          {/* Korespondencja */}
+          {/* Korespondencja — wyłącznie twarde fakty */}
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><MessagesSquare className="h-4 w-4" /> Analiza korespondencji</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><MessagesSquare className="h-4 w-4" /> Korespondencja — twarde fakty</CardTitle>
+              <CardDescription>Tylko konkretne fakty, rozbieżności i sygnały ryzyka z treści — bez oceny zaangażowania czy sentymentu.</CardDescription>
+            </CardHeader>
             <CardContent className="text-sm space-y-2">
               {result.correspondence.available || result.correspondence.messagesAnalyzed > 0 ? (
                 <>
                   <div className="flex flex-wrap gap-x-6 gap-y-1">
                     <div><span className="text-muted-foreground">Wiadomości:</span> {result.correspondence.messagesAnalyzed}</div>
                     <div><span className="text-muted-foreground">Kanały:</span> {result.correspondence.channels.join(", ") || "—"}</div>
-                    <div><span className="text-muted-foreground">Sentyment:</span> {result.correspondence.sentiment}</div>
-                    <div><span className="text-muted-foreground">Współpraca:</span> {result.correspondence.cooperationLevel}</div>
                   </div>
+                  {result.correspondence.statedFacts.length > 0 && (
+                    <div><span className="font-medium">Fakty podane przez klienta:</span>
+                      <ul className="list-disc pl-5">{result.correspondence.statedFacts.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                    </div>
+                  )}
                   {result.correspondence.redFlags.length > 0 && (
-                    <div><span className="text-destructive font-medium">Sygnały ostrzegawcze:</span>
+                    <div><span className="text-destructive font-medium">Twarde sygnały ryzyka:</span>
                       <ul className="list-disc pl-5">{result.correspondence.redFlags.map((r, i) => <li key={i}>{r}</li>)}</ul>
                     </div>
                   )}
                   {result.correspondence.inconsistencies.length > 0 && (
-                    <div><span className="text-amber-700 dark:text-amber-400 font-medium">Niespójności:</span>
+                    <div><span className="text-amber-700 dark:text-amber-400 font-medium">Niespójności z wnioskiem/KW:</span>
                       <ul className="list-disc pl-5">{result.correspondence.inconsistencies.map((r, i) => <li key={i}>{r}</li>)}</ul>
                     </div>
                   )}
