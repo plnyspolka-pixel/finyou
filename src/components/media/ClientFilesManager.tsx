@@ -8,7 +8,8 @@ import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { uploadFile, deleteStoragePath } from "@/lib/uploads/unified-upload";
 import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
-import { Image as ImageIcon, Upload, Trash2, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Upload, Trash2, Loader2, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // Wspólna sekcja plików klienta z uploadem i kasowaniem — dla operatora /
@@ -41,6 +42,8 @@ export function ClientFilesManager({
   const [uploading, setUploading] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!loanApplicationId) { setProperty(null); setDocs([]); setLoading(false); return; }
@@ -121,6 +124,49 @@ export function ClientFilesManager({
     }
   };
 
+  const toggleSel = (key: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  const selectAll = () => setSelected(new Set(files.map((f) => f.key)));
+  const clearSel = () => setSelected(new Set());
+
+  // Kasowanie wielu naraz: zdjęcia jednym UPDATE properties, dokumenty jednym
+  // DELETE .in(id), a bloki ze Storage best-effort równolegle.
+  const removeSelected = async () => {
+    const chosen = files.filter((f) => selected.has(f.key));
+    if (!chosen.length) return;
+    if (typeof window !== "undefined" && !window.confirm(`Usunąć ${chosen.length} plik(ów)? Tej operacji nie można cofnąć.`)) return;
+    setBulkBusy(true);
+    try {
+      const photoPaths = chosen.filter((f) => f.source.kind === "photo").map((f) => (f.source as { path: string }).path);
+      const docIds = chosen.filter((f) => f.source.kind === "doc").map((f) => (f.source as { id: string }).id);
+      if (photoPaths.length && property?.id) {
+        const next = (property.photos ?? []).filter((p) => !photoPaths.includes(p));
+        const { error } = await supabase.from("properties").update({ photos: next } as any).eq("id", property.id);
+        if (error) throw error;
+      }
+      if (docIds.length) {
+        const { error } = await supabase.from("documents").delete().in("id", docIds);
+        if (error) throw error;
+      }
+      const storagePaths = chosen
+        .map((f) => f.path)
+        .filter((p): p is string => !!p && !/^https?:\/\//i.test(p));
+      await Promise.all(storagePaths.map((p) => deleteStoragePath(p)));
+      toast.success(`Usunięto ${chosen.length} plik(ów)`);
+      clearSel();
+      await load();
+      onChanged?.();
+    } catch (e: any) {
+      toast.error("Nie udało się usunąć plików", { description: e?.message ?? String(e) });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const removeFile = async (f: FileEntry) => {
     if (!canManage) return;
     if (typeof window !== "undefined" && !window.confirm(`Usunąć plik „${f.name}”? Tej operacji nie można cofnąć.`)) return;
@@ -156,7 +202,20 @@ export function ClientFilesManager({
             <div className="text-xs text-muted-foreground">Kliknij, aby powiększyć lub otworzyć{canManage ? " · najedź, aby usunąć" : ""}</div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {canManage && files.length > 0 && (
+            selected.size > 0 ? (
+              <>
+                <Button variant="destructive" size="sm" onClick={() => void removeSelected()} disabled={bulkBusy}>
+                  {bulkBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Usuń zaznaczone ({selected.size})
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearSel} disabled={bulkBusy}>Odznacz</Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={selectAll}>Zaznacz wszystkie</Button>
+            )
+          )}
           {canManage && loanApplicationId && (
             <Button variant="outline" size="sm" asChild disabled={uploading}>
               <label className="cursor-pointer">
@@ -188,7 +247,22 @@ export function ClientFilesManager({
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {files.map((f) => (
-            <div key={f.key} className="group relative">
+            <div key={f.key} className={cn("group relative rounded-lg", selected.has(f.key) && "ring-2 ring-primary ring-offset-1")}>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggleSel(f.key); }}
+                  title="Zaznacz"
+                  className={cn(
+                    "absolute left-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded border transition",
+                    selected.has(f.key)
+                      ? "border-primary bg-primary text-white"
+                      : "border-white/70 bg-black/50 text-transparent opacity-0 group-hover:opacity-100",
+                  )}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+              )}
               {f.path ? (
                 <FileThumb path={f.path} name={f.name} aspect="video" showName onClick={() => void openFile(f)} />
               ) : (
