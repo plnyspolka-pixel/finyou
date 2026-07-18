@@ -121,12 +121,12 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
   },
   {
     key: "rcn_geoportal",
-    name: "RCN — Geoportal",
+    name: "RCN — Rejestr Cen Nieruchomości (dane lokalne)",
     category: "instytucja_rzadowa",
     governmental: true,
-    purpose: "Rejestr Cen Nieruchomości — transakcje porównawcze",
-    provides: "Ceny transakcyjne nieruchomości w okolicy",
-    provider: "Geoportal / RCN (WFS)",
+    purpose: "rzeczywiste transakcje porównawcze — priorytetowe źródło cenowe",
+    provides: "ceny transakcyjne nieruchomości w okolicy (wybrane miasta), odpytywane po współrzędnych",
+    provider: "Zbiór CC0 deweloperuch/rejestr-cen-nieruchomosci (GML) → Supabase (rcn_transactions)",
   },
   // 6. Dane geoprzestrzenne
   {
