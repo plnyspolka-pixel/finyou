@@ -193,10 +193,14 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     if (tplErr) throw new Error(tplErr.message);
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
-    const { data: file, error: dlErr } = await context.supabase.storage
-      .from(CLIENT_FILES_BUCKET)
-      .download(tpl.template_file_path);
-    if (dlErr || !file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
+    let file: Blob | null = null;
+    let dlErr: { message: string } | null = null;
+    for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
+      const res = await context.supabase.storage.from(bucket).download(tpl.template_file_path);
+      if (!res.error && res.data) { file = res.data as Blob; dlErr = null; break; }
+      dlErr = res.error ?? { message: "brak pliku" };
+    }
+    if (!file) throw new Error(`Pobranie wzoru: ${dlErr?.message ?? "brak pliku"}`);
 
     const arrayBuf = await file.arrayBuffer();
     const { default: PizZip } = await import("pizzip");
