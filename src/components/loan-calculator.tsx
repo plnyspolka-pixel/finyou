@@ -623,7 +623,7 @@ export function LoanCalculator({
                 ? "gotówka z konta inwestora (wypłata dla klienta + prowizja operatora)"
                 : hideFinanceYouFee
                   ? "gotówka z konta inwestora (kwota nominalna − prowizja potrącona z góry)"
-                  : `gotówka z konta inwestora na wejściu: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} (bezzwrotny koszt wejścia)`}</p>
+                  : `gotówka z konta inwestora: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} (przelotowa — klient spłaca ją w ratach, wraca do inwestora)`}</p>
             </div>
 
             {/* Investor cash in */}
@@ -634,7 +634,7 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorTotalIn)}</p>
               <p className="mt-1 text-xs text-emerald-100/80">
-                zysk{!hideFinanceYouFee && " (po prowizji FY)"} <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
+                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
               </p>
             </div>
 
@@ -646,7 +646,7 @@ export function LoanCalculator({
               </div>
               <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(disbursedOnHand)}</p>
               <p className="mt-1 text-xs text-amber-100/80">
-kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> (prowizja FY {formatPLN(financeYouFeePln)} obciąża inwestora — nie dotyczy klienta)</>}
+kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> − prowizja Finance You <b className="text-white">{formatPLN(financeYouFeePln)}</b> (FV od Finance You dla klienta)</>}
               </p>
 
             </div>
