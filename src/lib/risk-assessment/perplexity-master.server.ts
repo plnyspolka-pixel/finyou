@@ -2,9 +2,10 @@
 // dossier: nieruchomość + KW + właściciel + korespondencja + dane rządowe + OCR.
 // To ostateczna warstwa, która domyka wycenę.
 
-import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, GovBenchmark } from "./types";
+import type { MasterValuation, OwnerProfile, KwLegalAnalysis, CorrespondenceIntel, OcrSummary, GovBenchmark, MarketComparablesResult } from "./types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import { valuationBasisLabel, buyerPoolLabel, plotCategoryLabel, type PlotBuildabilityResult } from "./plot-buildability";
+
 
 export interface MasterValuationInput {
   propertyType: string;
