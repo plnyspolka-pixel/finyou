@@ -18,9 +18,42 @@ async function findOrCreateLeadByPsid(opts: {
   platform: "messenger" | "instagram";
 }): Promise<string | null> {
   const col = opts.platform === "messenger" ? "messenger_psid" : "instagram_igsid";
+  // 1) Istniejący lead z tym PSID/IGSID
   const { data: existing } = await supabaseAdmin
     .from("leads").select("id").eq(col, opts.senderId).maybeSingle();
   if (existing?.id) return existing.id;
+
+  // 2) Spróbuj scalić z istniejącym leadem po imieniu i nazwisku (np. Meta ad
+  //    lead ma first_name+last_name, ale jeszcze bez PSID). Dzięki temu
+  //    rozmowa z Messengera trafia do tego samego leada co reklama, a nie
+  //    tworzy osobnego duplikatu.
+  try {
+    const profile = await fetchMetaUserProfile({ userId: opts.senderId, platform: opts.platform });
+    const fn = profile?.firstName?.trim();
+    const ln = profile?.lastName?.trim();
+    if (fn && ln) {
+      const { data: match } = await supabaseAdmin
+        .from("leads")
+        .select("id")
+        .is(col, null)
+        .ilike("first_name", fn)
+        .ilike("last_name", ln)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (match?.id) {
+        const patch = col === "messenger_psid"
+          ? { messenger_psid: opts.senderId }
+          : { instagram_igsid: opts.senderId };
+        await supabaseAdmin.from("leads").update(patch as any).eq("id", match.id);
+        return match.id;
+      }
+    }
+  } catch (e) {
+    console.warn("[meta-messaging] profile merge lookup failed", e);
+  }
+
+  // 3) Fallback: utwórz nowego leada z tym PSID
   return await upsertLeadFromSource({
     source: opts.platform === "messenger" ? "messenger" : "instagram",
     applicationData: { [col]: opts.senderId },
