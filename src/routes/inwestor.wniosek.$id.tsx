@@ -81,21 +81,16 @@ function InwestorWniosek() {
     const next: Record<string, string> = {};
     await Promise.all(list.map(async (d: any) => {
       if (!d.file_path) return;
-      const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
-      if (u?.signedUrl) next[d.id] = u.signedUrl;
+      const url = await signStoragePath(d.file_path, 3600);
+      if (url) next[d.id] = url;
     }));
     setDocUrls(next);
 
-    // Zdjęcia z properties.photos (starszy format, luźne URL-e/ścieżki) — nie duplikujemy tych, które są już w documents.
+    // Zdjęcia z properties.photos (starszy format) — nie duplikujemy tych, które są już w documents.
     const knownDocPaths = new Set(list.map((d: any) => d.file_path).filter(Boolean));
     const rawPhotos: string[] = ((data?.properties?.[0]?.photos ?? []) as string[])
       .filter((src) => isImage(src) && !knownDocPaths.has(src));
-    const resolved = await Promise.all(rawPhotos.map(async (src) => {
-      if (!src || typeof src !== "string") return null;
-      if (/^https?:\/\//i.test(src)) return src;
-      const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(src, 3600);
-      return u?.signedUrl ?? null;
-    }));
+    const resolved = await Promise.all(rawPhotos.map((src) => signStoragePath(src, 3600)));
     setPhotoUrls(resolved.filter((s): s is string => !!s));
   })(); }, [id, user]);
 
