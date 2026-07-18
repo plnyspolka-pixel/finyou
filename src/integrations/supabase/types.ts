@@ -7508,6 +7508,20 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reconcile_object_names: {
+        Args: { p_limit: number; p_offset: number }
+        Returns: {
+          name: string
+        }[]
+      }
+      reconcile_shadow_delete: {
+        Args: { p_name: string; p_src_bucket: string }
+        Returns: undefined
+      }
+      reconcile_shadow_upsert: {
+        Args: { p_name: string; p_src_bucket: string }
+        Returns: boolean
+      }
       redeem_operator_invite: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
