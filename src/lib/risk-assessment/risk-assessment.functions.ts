@@ -296,7 +296,9 @@ export async function runInvestmentRiskAssessmentCore(
     saleability,
     plotBuildability,
     govBenchmark,
+    marketComparables,
     forcedSale,
+
     masterValuation: master,
     collateralAnalysis: collateral,
     componentScores: combined.componentScores,
