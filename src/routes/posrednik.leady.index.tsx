@@ -127,7 +127,16 @@ export function OperatorLeadsList() {
                   )}
                   <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-2 min-w-0">
                     <RevealContact leadId={r.id} field="email" value={r.email} onRevealed={() => q.refetch()} />
-                    <RevealContact leadId={r.id} field="phone" value={phone} onRevealed={() => q.refetch()} />
+                    <RevealContact
+                      leadId={r.id}
+                      field="phone"
+                      value={phone}
+                      onRevealed={() => q.refetch()}
+                      onUse={() => {
+                        logCall.mutate({ leadId: r.id, phone });
+                        setOutcome({ leadId: r.id, name });
+                      }}
+                    />
                   </div>
                   <RevealsList reveals={r.comms.reveals} />
                   <div className="text-xs text-white/70 mt-1 flex flex-wrap gap-x-3 gap-y-1">
