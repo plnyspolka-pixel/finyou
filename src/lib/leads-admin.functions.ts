@@ -377,6 +377,33 @@ export const logBrokerCall = createServerFn({ method: "POST" })
     return { ok: true, at: new Date().toISOString() };
   });
 
+export const logLeadReveal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z.object({
+      leadId: z.string().uuid(),
+      field: z.enum(["phone", "email", "messenger"]),
+    }).parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const label =
+      data.field === "phone" ? "Pośrednik odsłonił numer telefonu"
+      : data.field === "email" ? "Pośrednik odsłonił adres e-mail"
+      : "Pośrednik odsłonił kanał Messenger/IG/WA";
+    const { error } = await context.supabase.from("lead_communications").insert({
+      lead_id: data.leadId,
+      channel: "reveal",
+      direction: "outbound",
+      status: "revealed",
+      content: label,
+      created_by: context.userId,
+      metadata: { source: "broker_reveal_click", field: data.field },
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, at: new Date().toISOString() };
+  });
+
 export const addManualNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
