@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzePropertyLocation } from "@/lib/property-location-analysis.functions";
+import { useKwAddress } from "@/lib/kw-address";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ type Props = {
   city?: string | null;
   postalCode?: string | null;
   propertyType?: string | null;
+  /** Numer KW — jeśli podany, brakujący adres/miasto zostaną uzupełnione z treści KW (cache kw_documents). */
+  kwNumber?: string | null;
   readOnly?: boolean;
   initial?: any;
   onAnalyzed?: (result: any) => void;
@@ -25,14 +28,18 @@ function scoreColor(score: number) {
 }
 
 export function PropertyLocationAnalysis({
-  propertyAddress, city, postalCode, propertyType, readOnly, initial, onAnalyzed,
+  propertyAddress, city, postalCode, propertyType, kwNumber, readOnly, initial, onAnalyzed,
 }: Props) {
   const analyze = useServerFn(analyzePropertyLocation);
   const [result, setResult] = useState<any>(initial ?? null);
   const [loading, setLoading] = useState(false);
+  const kwAddr = useKwAddress(kwNumber);
+
+  const effectiveAddress = propertyAddress || kwAddr?.fullAddress || null;
+  const effectiveCity = city || kwAddr?.city || null;
 
   const run = async (forceRefresh = false) => {
-    if (!propertyAddress && !city) {
+    if (!effectiveAddress && !effectiveCity) {
       toast.error("Brak adresu nieruchomości do analizy.");
       return;
     }
@@ -40,8 +47,8 @@ export function PropertyLocationAnalysis({
     try {
       const res = (await analyze({
         data: {
-          propertyAddress: propertyAddress ?? null,
-          city: city ?? null,
+          propertyAddress: effectiveAddress,
+          city: effectiveCity,
           postalCode: postalCode ?? null,
           propertyType: propertyType ?? "inne",
           forceRefresh,
