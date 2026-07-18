@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FileThumb } from "@/components/media/FileThumb";
+import { ClientFilesManager } from "@/components/media/ClientFilesManager";
 import { signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { PhoneCall, MessageSquare, Mail, MessageCircle, StickyNote, FileText, ThumbsUp, ThumbsDown, RefreshCw, TrendingUp, Paperclip, Download, Code2 } from "lucide-react";
@@ -197,31 +198,10 @@ export function LeadDetailView({ id, compact = false, hideAdvancedTabs = false }
 
         <TabsContent value="dokumenty">
           <Card className="p-4">
-            {documents.length === 0 ? (
-              <div className="text-muted-foreground text-sm">Brak plików.</div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                {documents.map((d: any) => {
-                  const src = d.file_path ?? d.file_url;
-                  if (!src) return null;
-                  const open = async () => {
-                    const url = /^https?:\/\//i.test(src) ? src : await signStoragePath(src, 3600);
-                    if (url) window.open(url, "_blank", "noopener");
-                    else toast.error("Nie udało się otworzyć pliku");
-                  };
-                  return (
-                    <FileThumb
-                      key={d.id}
-                      path={src}
-                      name={d.file_name ?? d.document_type ?? "plik"}
-                      aspect="video"
-                      showName
-                      onClick={() => void open()}
-                    />
-                  );
-                })}
-              </div>
-            )}
+            <ClientFilesManager
+              loanApplicationId={lead.loan_application_id}
+              onChanged={() => qc.invalidateQueries({ queryKey: ["lead", id] })}
+            />
           </Card>
         </TabsContent>
 

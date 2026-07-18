@@ -21,6 +21,7 @@ import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalize
 import { IMAGE_EXT, signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 import { FileThumb } from "@/components/media/FileThumb";
+import { ClientFilesManager } from "@/components/media/ClientFilesManager";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
@@ -284,61 +285,7 @@ export function BrokerApplicationDetail({ showInternalOffer = false }: { showInt
 
       {/* Pliki klienta — jeden worek: zdjęcia, skany, załączniki. Wszystko jako miniatury. */}
       <FancyCard tone="light">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><ImageIcon className="h-4 w-4" /></div>
-            <div>
-              <div className="text-sm font-bold">{CLIENT_FILES_LABEL}</div>
-              <div className="text-xs text-muted-foreground">Kliknij, aby powiększyć lub otworzyć</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" asChild disabled={uploading}>
-              <label className="cursor-pointer">
-                <Upload className="mr-2 h-4 w-4" />
-                {uploading ? "Wgrywanie…" : "Dodaj pliki"}
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  disabled={uploading}
-                  onChange={(e) => { void addFiles(e.target.files); e.currentTarget.value = ""; }}
-                />
-              </label>
-            </Button>
-            <Badge variant="outline" className="text-sm">{clientFiles.length}</Badge>
-          </div>
-        </div>
-        {clientFiles.length === 0 ? (
-          <div className="rounded-xl border border-dashed py-14 text-center text-sm text-muted-foreground">
-            Brak plików. Użyj „Dodaj pliki”, aby wgrać zdjęcia/dokumenty do tego wniosku.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {clientFiles.map((f) => (
-              f.path ? (
-                <FileThumb
-                  key={f.key}
-                  path={f.path}
-                  name={f.name}
-                  aspect="video"
-                  showName
-                  onClick={() => void openClientFile(f)}
-                />
-              ) : (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => void openClientFile(f)}
-                  className="group relative aspect-video overflow-hidden rounded-lg border bg-muted transition hover:shadow-lg"
-                >
-                  <img src={f.externalUrl ?? ""} alt={f.name} loading="lazy" className="h-full w-full object-cover" />
-                </button>
-              )
-            ))}
-          </div>
-        )}
+        <ClientFilesManager loanApplicationId={row.id} onChanged={() => void load(true)} />
       </FancyCard>
 
       {/* Nieruchomość + klient */}
