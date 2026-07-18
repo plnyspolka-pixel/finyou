@@ -151,6 +151,18 @@ export const listLeads = createServerFn({ method: "GET" })
           else if (ev.channel === "messenger" || ev.channel === "instagram" || ev.channel === "whatsapp") {
             s.messenger++;
             if (isInbound) s.inboundMessenger++;
+            if (Array.isArray(ev.attachments)) {
+              for (const a of ev.attachments as any[]) {
+                if (!a) continue;
+                s.messengerAttachments.push({
+                  name: a.name ?? a.file_name ?? "załącznik",
+                  mime: a.mime ?? a.content_type ?? undefined,
+                  size: typeof a.size === "number" ? a.size : undefined,
+                  path: a.path ?? undefined,
+                  at: ev.created_at,
+                });
+              }
+            }
           }
           else if (ev.channel === "email") {
             s.emails++;
