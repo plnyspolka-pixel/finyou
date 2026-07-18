@@ -576,7 +576,7 @@ function PropertyDocsCard({ userId, kind, title, icon, description }: {
         ) : (
           <>
             <label className="inline-flex">
-              <input type="file" multiple accept={kind === "photos_all" ? "image/*" : "image/*,application/pdf"}
+              <input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
                 className="hidden" onChange={(e) => { const fs = e.target.files; e.target.value = ""; void upload(fs); }} />
               <Button asChild size="sm" variant="cta" disabled={busy}>
                 <span>{busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Wysyłam…</> : <><Upload className="mr-2 h-4 w-4" />Wybierz pliki</>}</span>
