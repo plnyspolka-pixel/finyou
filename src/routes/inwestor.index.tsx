@@ -75,8 +75,8 @@ function InwestorList() {
       if (!first) continue;
       if (/^https?:\/\//i.test(first)) { next[a.id] = first; continue; }
       tasks.push((async () => {
-        const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(first, 3600);
-        if (u?.signedUrl) next[a.id] = u.signedUrl;
+        const url = await signStoragePath(first, 3600);
+        if (url) next[a.id] = url;
       })());
     }
     await Promise.all(tasks);
