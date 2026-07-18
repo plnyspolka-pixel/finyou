@@ -43,7 +43,7 @@ function UstawieniaPage() {
         });
       } else {
         toast.success(`Podgląd gotowy`, {
-          description: `${rep.recoverable} do odzyskania, ${rep.stillMissing} bez szans.`,
+          description: `Przeskanowano ${rep.scanned}, działa ${rep.alreadyOk}, do odzyskania ${rep.recoverable}, bez szans ${rep.stillMissing}.`,
         });
       }
     } catch (e: any) {
