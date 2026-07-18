@@ -13,6 +13,7 @@ import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { usePanelBase } from "@/lib/panel-base";
+import { RevealContact, RevealsList } from "@/components/broker/reveal-contact";
 
 export const Route = createFileRoute("/posrednik/moje-leady")({
   component: MyBrokerLeads,
@@ -110,18 +111,20 @@ export function MyBrokerLeads() {
                     <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">{leadStatusLabels[r.status] ?? r.status}</Badge>
                     {r.source && <Badge className="bg-sky-500/25 text-sky-100 border-sky-300/30">{r.source}</Badge>}
                   </div>
-                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                    {r.email && (
-                      <a
-                        href={`mailto:${r.email}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 hover:text-white underline-offset-2 hover:underline"
-                      >
-                        <Mail className="h-3 w-3" /> {r.email}
-                      </a>
-                    )}
-                    {phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {phone}</span>}
+                  <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-2">
+                    <RevealContact leadId={r.id} field="email" value={r.email} onRevealed={() => q.refetch()} />
+                    <RevealContact
+                      leadId={r.id}
+                      field="phone"
+                      value={phone}
+                      onRevealed={() => q.refetch()}
+                      onUse={() => {
+                        logCall.mutate({ leadId: r.id, phone });
+                        setOutcome({ leadId: r.id, name });
+                      }}
+                    />
                   </div>
+                  <RevealsList reveals={r.comms?.reveals} />
                   <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-1 text-white/70">
                     <span>📅 {formatRelative(r.created_at)}</span>
                     {r.comms?.lastCallAt && <span>· ostatnio dzwoniono {formatRelative(r.comms.lastCallAt)}</span>}
@@ -134,21 +137,6 @@ export function MyBrokerLeads() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  {phone && (
-                    <a
-                      href={`tel:${phone}`}
-                      onClick={() => {
-                        logCall.mutate({ leadId: r.id, phone });
-                        setOutcome({ leadId: r.id, name });
-                      }}
-                      className="inline-flex items-center gap-2 rounded-md bg-emerald-500 text-white px-3 h-9 text-sm font-medium hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
-                      aria-label={`Zadzwoń ${phone}`}
-                      title={`Zadzwoń: ${phone}`}
-                    >
-                      <Phone className="h-4 w-4" />
-                      <span className="hidden sm:inline">Zadzwoń</span>
-                    </a>
-                  )}
                   <MetaRateButtons
                     leadId={r.id}
                     markedBad={r.marked_bad_lead}

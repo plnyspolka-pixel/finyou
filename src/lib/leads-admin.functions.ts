@@ -72,10 +72,12 @@ export const listLeads = createServerFn({ method: "GET" })
     const emailsLower = Array.from(new Set(list.map((l) => (l.email ?? "").toLowerCase()).filter(Boolean))) as string[];
 
     type BrokerCall = { id: string; name?: string | null; count: number; lastAt: string };
+    type Reveal = { id: string; name?: string | null; count: number; lastAt: string };
     type InboundAttachment = { name: string; mime?: string; size?: number; path?: string; at: string };
-    type Comm = { calls: number; sms: number; emails: number; messenger: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[] };
+    type Comm = { calls: number; sms: number; emails: number; messenger: number; notes: number; inboundCalls: number; inboundSms: number; inboundMessenger: number; inboundEmails: number; lastInboundAt: string | null; lastInboundEmailAt: string | null; lastInboundEmailSubject: string | null; inboundAttachments: InboundAttachment[]; lastAt: string | null; lastChannel: string | null; lastCallAt: string | null; lastCallById: string | null; lastCallByName?: string | null; lastNoteAt: string | null; lastNoteContent: string | null; lastNoteById: string | null; lastNoteByName?: string | null; brokerCalls?: BrokerCall[]; reveals?: { phone: Reveal[]; email: Reveal[]; messenger: Reveal[] } };
     const commsByLead: Record<string, Comm> = {};
     const brokerByLead: Record<string, Record<string, { count: number; lastAt: string }>> = {};
+    const revealsByLead: Record<string, { phone: Record<string, { count: number; lastAt: string }>; email: Record<string, { count: number; lastAt: string }>; messenger: Record<string, { count: number; lastAt: string }> }> = {};
     const ensure = (id: string): Comm => (commsByLead[id] ??= { calls: 0, sms: 0, emails: 0, messenger: 0, notes: 0, inboundCalls: 0, inboundSms: 0, inboundMessenger: 0, inboundEmails: 0, lastInboundAt: null, lastInboundEmailAt: null, lastInboundEmailSubject: null, inboundAttachments: [], lastAt: null, lastChannel: null, lastCallAt: null, lastCallById: null, lastNoteAt: null, lastNoteContent: null, lastNoteById: null });
 
     // Index leads by lowercase email for case-insensitive matching (inbound emails often differ in case).
@@ -86,7 +88,7 @@ export const listLeads = createServerFn({ method: "GET" })
       (leadsByEmailLower[k] ??= []).push(l);
     }
 
-    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments";
+    const COLS = "lead_id, phone_normalized, email, channel, direction, subject, created_at, created_by, content, attachments, metadata";
     // Liczniki kontaktu czytamy SERVICE-ROLEM (endpoint jest już za assertAdmin) —
     // dzięki temu panel pokazuje realną liczbę maili/SMS/telefonów niezależnie od
     // tego, jakie wiersze lead_communications widzi sesja operatora przez RLS.
@@ -171,6 +173,16 @@ export const listLeads = createServerFn({ method: "GET" })
               s.lastNoteById = ev.created_by ?? null;
             }
           }
+          else if (ev.channel === "reveal" && ev.created_by) {
+            const field = (ev.metadata?.field as string) || "phone";
+            if (field === "phone" || field === "email" || field === "messenger") {
+              const rMap = (revealsByLead[l.id] ??= { phone: {}, email: {}, messenger: {} });
+              const bucket = rMap[field as "phone" | "email" | "messenger"];
+              const entry = (bucket[ev.created_by] ??= { count: 0, lastAt: ev.created_at });
+              entry.count++;
+              if (new Date(ev.created_at) > new Date(entry.lastAt)) entry.lastAt = ev.created_at;
+            }
+          }
           if (!s.lastAt || new Date(ev.created_at) > new Date(s.lastAt)) {
             s.lastAt = ev.created_at;
             s.lastChannel = ev.channel;
@@ -183,10 +195,14 @@ export const listLeads = createServerFn({ method: "GET" })
     }
 
     const brokerIds = Array.from(new Set(Object.values(brokerByLead).flatMap((m) => Object.keys(m))));
+    const revealIds = Array.from(new Set(
+      Object.values(revealsByLead).flatMap((m) => [...Object.keys(m.phone), ...Object.keys(m.email), ...Object.keys(m.messenger)])
+    ));
     const callerIds = Array.from(new Set([
       ...Object.values(commsByLead).map((c) => c.lastCallById).filter(Boolean),
       ...Object.values(commsByLead).map((c) => c.lastNoteById).filter(Boolean),
       ...brokerIds,
+      ...revealIds,
     ])) as string[];
     const callerNames: Record<string, string> = {};
     if (callerIds.length) {
@@ -203,6 +219,14 @@ export const listLeads = createServerFn({ method: "GET" })
         c.brokerCalls = Object.entries(bMap)
           .map(([id, v]) => ({ id, name: callerNames[id] ?? "Pośrednik", count: v.count, lastAt: v.lastAt }))
           .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+      }
+      const rMap = revealsByLead[leadId];
+      if (rMap) {
+        const toArr = (bucket: Record<string, { count: number; lastAt: string }>) =>
+          Object.entries(bucket)
+            .map(([id, v]) => ({ id, name: callerNames[id] ?? "Pośrednik", count: v.count, lastAt: v.lastAt }))
+            .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+        c.reveals = { phone: toArr(rMap.phone), email: toArr(rMap.email), messenger: toArr(rMap.messenger) };
       }
     }
 
@@ -372,6 +396,33 @@ export const logBrokerCall = createServerFn({ method: "POST" })
       content: "Pośrednik wybrał numer telefonu (klik tel:)",
       created_by: context.userId,
       metadata: { source: "broker_phone_click" },
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, at: new Date().toISOString() };
+  });
+
+export const logLeadReveal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) =>
+    z.object({
+      leadId: z.string().uuid(),
+      field: z.enum(["phone", "email", "messenger"]),
+    }).parse(i)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const label =
+      data.field === "phone" ? "Pośrednik odsłonił numer telefonu"
+      : data.field === "email" ? "Pośrednik odsłonił adres e-mail"
+      : "Pośrednik odsłonił kanał Messenger/IG/WA";
+    const { error } = await context.supabase.from("lead_communications").insert({
+      lead_id: data.leadId,
+      channel: "reveal",
+      direction: "outbound",
+      status: "revealed",
+      content: label,
+      created_by: context.userId,
+      metadata: { source: "broker_reveal_click", field: data.field },
     });
     if (error) throw new Error(error.message);
     return { ok: true, at: new Date().toISOString() };
