@@ -5,6 +5,3 @@ verify_jwt = false
 
 [functions.tpay-proxy]
 verify_jwt = false
-
-[functions.reconcile-storage]
-verify_jwt = true
