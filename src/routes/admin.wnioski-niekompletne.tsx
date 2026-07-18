@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
+import { leadSourceLabel } from "@/lib/lead-source";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { containsValidKw } from "@/lib/kw";
 
@@ -155,16 +156,18 @@ function ApplicationsPage() {
         for (const r of list) r.docCount = counts[r.id] ?? 0;
       }
 
-      // Auto-promocja: POPRAWNY numer KW + imię i nazwisko klienta
-      // + (zdjęcia nieruchomości ALBO dokumenty) => szukamy_inwestora.
-      // Bez nazwiska albo z KW-śmieciem ("PRZESŁANY") wniosek zostaje
-      // w kompletowaniu danych — inwestor nie dostanie anonimowej sprawy.
+      // Auto-promocja: POPRAWNY numer KW + imię i nazwisko klienta + kontakt
+      // (telefon lub e-mail) + (zdjęcia nieruchomości ALBO dokumenty)
+      // => szukamy_inwestora. Bez nazwiska, bez kontaktu albo z KW-śmieciem
+      // ("PRZESŁANY") wniosek zostaje w kompletowaniu danych — inwestor nie
+      // dostanie anonimowej sprawy, do której nie da się zadzwonić.
       const toPromote = list.filter((r) => {
         if (!INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) return false;
         const hasKw = (r.properties ?? []).some((p) => containsValidKw(p.land_register_number));
         const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
         const hasDocs = (r.docCount ?? 0) > 0;
-        return hasKw && hasRealClientName(r.client) && (hasPhotos || hasDocs);
+        const hasContact = !!(r.client?.phone?.trim() || r.client?.email?.trim());
+        return hasKw && hasRealClientName(r.client) && hasContact && (hasPhotos || hasDocs);
       });
       if (toPromote.length > 0) {
         await supabase
@@ -344,7 +347,7 @@ function ApplicationsPage() {
                     <TableCell>
                       <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                     </TableCell>
-                    <TableCell className="text-xs">{r.source ?? "—"}</TableCell>
+                    <TableCell className="text-xs" title={r.source ?? undefined}>{leadSourceLabel(r.source)}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.updated_at)}</TableCell>
                     <TableCell className="text-right">
