@@ -55,7 +55,7 @@ export function KwPasteSlotsDialog({
   const [activeIdx, setActiveIdx] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
-  const [debug, setDebug] = useState<{ transcript: string; rawJson: string; parsed: any } | null>(null);
+  const [debug, setDebug] = useState<{ transcript: string } | null>(null);
   const boxRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   // Persist slots so switching Chrome tabs (which may remount this component) doesn't lose work.
@@ -172,7 +172,7 @@ export function KwPasteSlotsDialog({
         res = await doOcrImport({ data: { loanApplicationId, images, force: true } });
       }
       if (res.ok) {
-        toast.success(`Treść KW ${res.kwNumber} zaimportowana`, { description: res.summary });
+        toast.success(`Treść KW ${res.kwNumber} zaimportowana`);
         for (const w of (res.warnings ?? []).slice(0, 4)) toast.info(w);
         try { sessionStorage.removeItem(storageKey); } catch {}
         setSlots(SLOTS.map(() => null));
@@ -201,7 +201,7 @@ export function KwPasteSlotsDialog({
     try {
       const res: any = await doOcrImport({ data: { loanApplicationId, images, dryRun: true } });
       if (res?.debug) {
-        setDebug({ transcript: res.debug.transcript || "", rawJson: res.debug.rawJson || "", parsed: res.debug.parsed });
+        setDebug({ transcript: res.debug.transcript || "" });
         toast.success("Podgląd OCR gotowy");
       } else {
         toast.error("Brak danych debug w odpowiedzi");
@@ -332,14 +332,10 @@ export function KwPasteSlotsDialog({
                   </pre>
                 </div>
 
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground mb-1">
-                    JSON po strukturyzacji {debug.parsed ? "" : <span className="text-destructive">(nie sparsowano)</span>}
-                  </div>
-                  <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-background border rounded p-2 max-h-64 overflow-auto">
-                    {debug.rawJson || <span className="text-muted-foreground italic">(pusta)</span>}
-                  </pre>
+                <div className="text-[11px] text-muted-foreground italic">
+                  Strukturyzacja JSON wyłączona — zapisujemy dosłowną transkrypcję sekcji KW.
                 </div>
+
               </>
             )}
           </div>
