@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, ClipboardPaste, X, Upload } from "lucide-react";
+import { Loader2, ClipboardPaste, X, Upload, Bug, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { importKwFromScreenshots } from "@/lib/kw-ocr-import.functions";
 import { cn } from "@/lib/utils";
