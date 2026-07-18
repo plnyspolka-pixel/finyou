@@ -21,6 +21,7 @@ import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessm
 import { KwContentSection } from "@/components/kw-content-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
+import { ClientFilesManager } from "@/components/media/ClientFilesManager";
 import { signStoragePath } from "@/lib/property-photos";
 import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
 
@@ -209,27 +210,7 @@ function WniosekDetail() {
 
 
         <TabsContent value="dokumenty">
-          {docs.length === 0 ? <p className="text-sm text-muted-foreground">Brak plików.</p> :
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{docs.map((d) => {
-              const src = d.file_path ?? d.file_url;
-              if (!src) return null;
-              const open = async () => {
-                const url = /^https?:\/\//i.test(src) ? src : await signStoragePath(src, 3600);
-                if (url) window.open(url, "_blank", "noopener");
-                else toast.error("Nie udało się otworzyć pliku");
-              };
-              return (
-                <FileThumb
-                  key={d.id}
-                  path={src}
-                  name={d.file_name ?? d.document_type ?? "plik"}
-                  thumbnailPath={d.thumbnail_path ?? null}
-                  aspect="video"
-                  showName
-                  onClick={() => void open()}
-                />
-              );
-            })}</div>}
+          <ClientFilesManager loanApplicationId={id} onChanged={() => void load()} />
         </TabsContent>
 
         <TabsContent value="kontakt" className="space-y-4">
