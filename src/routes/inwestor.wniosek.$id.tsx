@@ -208,32 +208,6 @@ function InwestorWniosek() {
 
       <InvestorValuationCard applicationId={id} />
 
-      {(totalFiles > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FolderOpen className="h-5 w-5" />{CLIENT_FILES_LABEL} <span className="text-xs font-normal text-muted-foreground">({totalFiles})</span></CardTitle>
-            <CardDescription>Zdjęcia nieruchomości, skany dokumentów i wszystkie inne załączniki wgrane przez klienta — w jednym miejscu.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {(imageDocs.length > 0 || photoUrls.length > 0) && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {imageDocs.map(renderDocCard)}
-                {photoUrls.map((src, i) => (
-                  <a key={`ph-${i}`} href={src} target="_blank" rel="noreferrer" className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
-                    <div className="aspect-[4/3] bg-muted overflow-hidden">
-                      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                    </div>
-                  </a>
-                ))}
-              </div>
-            )}
-            {otherDocs.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{otherDocs.map(renderDocCard)}</div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
 
       <LoanCalculator
