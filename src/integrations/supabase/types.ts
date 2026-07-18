@@ -7370,6 +7370,13 @@ export type Database = {
         Args: { _loan_id: string }
         Returns: Database["public"]["Enums"]["loan_status"]
       }
+      dedup_leads: {
+        Args: never
+        Returns: {
+          merged_pairs: number
+          remaining_leads: number
+        }[]
+      }
       dedup_loan_applications: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
