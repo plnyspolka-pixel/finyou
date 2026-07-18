@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { LOAN_STATUS_ORDER, LOAN_STATUS_SHORT_LABELS, loanStatusLabel, normalizeLoanStatus } from "@/lib/loan-status";
-import { resolveShowablePhotoUrls } from "@/lib/property-photos";
+import { resolveShowablePhotoUrls, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { toast } from "sonner";
