@@ -41,6 +41,7 @@ import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
+import { Route as PosrednikSzkoleniaRouteImport } from './routes/posrednik.szkolenia'
 import { Route as PosrednikStrukturaRouteImport } from './routes/posrednik.struktura'
 import { Route as PosrednikSkrzynkaRouteImport } from './routes/posrednik.skrzynka'
 import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.rozliczenia'
@@ -344,6 +345,11 @@ const PropozycjeIdRoute = PropozycjeIdRouteImport.update({
 const PosrednikWniosekRoute = PosrednikWniosekRouteImport.update({
   id: '/wniosek',
   path: '/wniosek',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikSzkoleniaRoute = PosrednikSzkoleniaRouteImport.update({
+  id: '/szkolenia',
+  path: '/szkolenia',
   getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednikStrukturaRoute = PosrednikStrukturaRouteImport.update({
@@ -1205,6 +1211,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
+  '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1375,6 +1382,7 @@ export interface FileRoutesByTo {
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
+  '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1554,6 +1562,7 @@ export interface FileRoutesById {
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
+  '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
@@ -1734,6 +1743,7 @@ export interface FileRouteTypes {
     | '/posrednik/rozliczenia'
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
+    | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/propozycje/$id'
     | '/r/$code'
@@ -1904,6 +1914,7 @@ export interface FileRouteTypes {
     | '/posrednik/rozliczenia'
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
+    | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/propozycje/$id'
     | '/r/$code'
@@ -2082,6 +2093,7 @@ export interface FileRouteTypes {
     | '/posrednik/rozliczenia'
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
+    | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/propozycje/$id'
     | '/r/$code'
@@ -2468,6 +2480,13 @@ declare module '@tanstack/react-router' {
       path: '/wniosek'
       fullPath: '/posrednik/wniosek'
       preLoaderRoute: typeof PosrednikWniosekRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/szkolenia': {
+      id: '/posrednik/szkolenia'
+      path: '/szkolenia'
+      fullPath: '/posrednik/szkolenia'
+      preLoaderRoute: typeof PosrednikSzkoleniaRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednik/struktura': {
@@ -3771,6 +3790,7 @@ interface PosrednikRouteChildren {
   PosrednikRozliczeniaRoute: typeof PosrednikRozliczeniaRoute
   PosrednikSkrzynkaRoute: typeof PosrednikSkrzynkaRoute
   PosrednikStrukturaRoute: typeof PosrednikStrukturaRoute
+  PosrednikSzkoleniaRoute: typeof PosrednikSzkoleniaRoute
   PosrednikWniosekRoute: typeof PosrednikWniosekRoute
   PosrednikIndexRoute: typeof PosrednikIndexRoute
   PosrednikWnioskiIdRoute: typeof PosrednikWnioskiIdRoute
@@ -3787,6 +3807,7 @@ const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikRozliczeniaRoute: PosrednikRozliczeniaRoute,
   PosrednikSkrzynkaRoute: PosrednikSkrzynkaRoute,
   PosrednikStrukturaRoute: PosrednikStrukturaRoute,
+  PosrednikSzkoleniaRoute: PosrednikSzkoleniaRoute,
   PosrednikWniosekRoute: PosrednikWniosekRoute,
   PosrednikIndexRoute: PosrednikIndexRoute,
   PosrednikWnioskiIdRoute: PosrednikWnioskiIdRoute,
