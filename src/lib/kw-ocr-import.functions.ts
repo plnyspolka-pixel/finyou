@@ -111,6 +111,10 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         images: z.array(ImageSchema).min(1).max(MAX_FILES),
         /** Pozwala nadpisać treść KW pobraną wcześniej (np. z CMD). */
         force: z.boolean().optional(),
+        /** Tryb debug — nie zapisuje do bazy, zwraca transkrypcję i surowy JSON z modelu. */
+        dryRun: z.boolean().optional(),
+        /** Dołącz transkrypcję i surowy JSON do odpowiedzi (także przy zapisie). */
+        includeDebug: z.boolean().optional(),
       })
       .parse(input),
   )
@@ -196,6 +200,25 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const json: any = await resp.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const extraction = tryParseJson(content);
+
+    // Debug/dry-run: zwróć transkrypcję i surowy JSON, nie zapisuj do bazy.
+    if (data.dryRun) {
+      return {
+        ok: true as const,
+        dryRun: true as const,
+        debug: {
+          transcript,
+          rawJson: content,
+          parsed: extraction ?? null,
+          imagesMeta: data.images.map((i) => ({
+            fileName: i.fileName ?? null,
+            mimeType: i.mimeType,
+            sizeBytes: i.dataUrl.length,
+          })),
+        },
+      };
+    }
+
     if (!extraction) {
       console.error("KW OCR: nie sparsowano odpowiedzi modelu", {
         model: MODEL,
@@ -204,6 +227,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       });
       throw new Error("OCR nie zwrócił poprawnej struktury danych — spróbuj z wyraźniejszymi screenami.");
     }
+    const rawStructuredJson = content;
 
 
     // 2) Numer KW: ręczny > OCR > numer z nieruchomości wniosku.
@@ -306,5 +330,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       mortgages: kwLegal.mortgages.length,
       totalMortgageAmountPln: kwLegal.totalMortgageAmountPln,
       address: kwLegal.address?.fullAddress ?? null,
+      debug: data.includeDebug ? { transcript, rawJson: rawStructuredJson } : undefined,
     };
   });

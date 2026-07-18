@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, ClipboardPaste, X, Upload } from "lucide-react";
+import { Loader2, ClipboardPaste, X, Upload, Bug, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { importKwFromScreenshots } from "@/lib/kw-ocr-import.functions";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,8 @@ export function KwPasteSlotsDialog({
   });
   const [activeIdx, setActiveIdx] = useState<number>(0);
   const [busy, setBusy] = useState(false);
+  const [debugBusy, setDebugBusy] = useState(false);
+  const [debug, setDebug] = useState<{ transcript: string; rawJson: string; parsed: any } | null>(null);
   const boxRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   // Persist slots so switching Chrome tabs (which may remount this component) doesn't lose work.
@@ -186,6 +188,31 @@ export function KwPasteSlotsDialog({
     }
   };
 
+  const runDebug = async () => {
+    const images = slots
+      .map((s, i) => (s ? { ...s, fileName: s.fileName || `${SLOTS[i].key}.png` } : null))
+      .filter(Boolean) as Array<{ dataUrl: string; mimeType: string; fileName: string }>;
+    if (images.length === 0) {
+      toast.error("Wgraj przynajmniej jeden screen");
+      return;
+    }
+    setDebugBusy(true);
+    setDebug(null);
+    try {
+      const res: any = await doOcrImport({ data: { loanApplicationId, images, dryRun: true } });
+      if (res?.debug) {
+        setDebug({ transcript: res.debug.transcript || "", rawJson: res.debug.rawJson || "", parsed: res.debug.parsed });
+        toast.success("Podgląd OCR gotowy");
+      } else {
+        toast.error("Brak danych debug w odpowiedzi");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Debug OCR nie powiódł się");
+    } finally {
+      setDebugBusy(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && filledCount > 0 && !busy) { if (!window.confirm("Zamknąć okno? Wgrane screeny zostaną utracone.")) return; } onOpenChange(v); }}>
       <DialogContent
@@ -260,10 +287,77 @@ export function KwPasteSlotsDialog({
           })}
         </div>
 
+        {(debugBusy || debug) && (
+          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-3 max-h-[50vh] overflow-auto">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <Bug className="h-4 w-4 text-amber-600" /> Debug OCR
+              </div>
+              {debug && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { void navigator.clipboard.writeText(debug.transcript); toast.success("Transkrypcja skopiowana"); }}
+                >
+                  <Copy className="h-3 w-3 mr-1" /> Kopiuj transkrypcję
+                </Button>
+              )}
+            </div>
+
+            {debugBusy && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Uruchamiam OCR (transkrypcja + strukturyzacja)…
+              </div>
+            )}
+
+            {debug && (
+              <>
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Przetworzone obrazy ({slots.filter(Boolean).length})</div>
+                  <div className="flex flex-wrap gap-2">
+                    {slots.map((s, i) => s && (
+                      <div key={i} className="border rounded p-1 bg-background">
+                        <div className="text-[10px] text-muted-foreground mb-0.5">{SLOTS[i].label}</div>
+                        <img src={s.dataUrl} alt={SLOTS[i].label} className="max-h-32 w-auto object-contain rounded" />
+                        <div className="text-[10px] text-muted-foreground mt-0.5">{Math.round(s.dataUrl.length / 1024)} KB · {s.mimeType}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Surowa transkrypcja (Gemini)</div>
+                  <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-background border rounded p-2 max-h-64 overflow-auto">
+                    {debug.transcript || <span className="text-muted-foreground italic">(pusta)</span>}
+                  </pre>
+                </div>
+
+                <div>
+                  <div className="text-xs font-medium text-muted-foreground mb-1">
+                    JSON po strukturyzacji {debug.parsed ? "" : <span className="text-destructive">(nie sparsowano)</span>}
+                  </div>
+                  <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-background border rounded p-2 max-h-64 overflow-auto">
+                    {debug.rawJson || <span className="text-muted-foreground italic">(pusta)</span>}
+                  </pre>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <div className="text-xs text-muted-foreground mr-auto">
             Wypełnione: <b>{filledCount}</b> / {SLOTS.length}
           </div>
+          <Button
+            variant="ghost"
+            onClick={() => void runDebug()}
+            disabled={busy || debugBusy || filledCount === 0}
+            title="Uruchom OCR bez zapisu — pokaż transkrypcję i JSON"
+          >
+            {debugBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bug className="mr-2 h-4 w-4" />}
+            Podgląd OCR
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Anuluj</Button>
           <Button onClick={() => void submit()} disabled={busy || filledCount === 0}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
