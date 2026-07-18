@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzePropertyLocation } from "@/lib/property-location-analysis.functions";
+import { useKwAddress } from "@/lib/kw-address";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ type Props = {
   city?: string | null;
   postalCode?: string | null;
   propertyType?: string | null;
+  /** Numer KW — jeśli podany, brakujący adres/miasto zostaną uzupełnione z treści KW (cache kw_documents). */
+  kwNumber?: string | null;
   readOnly?: boolean;
   initial?: any;
   onAnalyzed?: (result: any) => void;
