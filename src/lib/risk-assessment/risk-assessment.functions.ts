@@ -18,6 +18,8 @@ import { assessPlotBuildability } from "./plot-buildability";
 import { fetchGovBenchmark } from "./gov-benchmark.server";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
+import { fetchMarketComparables } from "./market-comparables.server";
+
 import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
 import type { InvestmentRiskAssessment } from "./types";
