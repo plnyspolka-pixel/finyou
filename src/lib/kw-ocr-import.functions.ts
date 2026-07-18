@@ -161,7 +161,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
+        model: STRUCTURE_MODEL,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: USER_PROMPT.replace("{{TRANSCRIPT}}", transcript) },
