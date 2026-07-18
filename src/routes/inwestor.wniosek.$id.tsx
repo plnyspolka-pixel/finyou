@@ -131,17 +131,9 @@ function InwestorWniosek() {
   if (!app) return <div className="text-muted-foreground">Ładowanie…</div>;
   const p = app.properties?.[0];
 
-  // Group docs
-  const incomeDocs = docs.filter((d) => d.document_type === "dochod");
-  const propertyDocs = docs.filter((d) => d.document_type !== "dochod");
-  const propGroups: Record<string, any[]> = {};
-  propertyDocs.forEach((d) => {
-    const t = d.document_type ?? "inne";
-    if (!propGroups[t]) propGroups[t] = [];
-    propGroups[t].push(d);
-  });
-
-  const renderDocCard = (d: any) => {
+  // Wszystkie pliki klienta w jednym worku — bez dzielenia na "zdjęcia" / "dokumenty".
+  const imageDocs = docs.filter((d) => d.file_path && isImage(d.file_name ?? d.file_path));
+  const otherDocs = docs.filter((d) => d.file_path && !isImage(d.file_name ?? d.file_path));
     const url = docUrls[d.id];
     const img = url && isImage(d.file_name ?? "");
     return (
