@@ -111,7 +111,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><ShieldAlert className="h-5 w-5" /> Wycena i ocena ryzyka inwestycji</h3>
-          <p className="text-xs text-muted-foreground">Pełny pipeline: OCR → KW → właściciel (PESEL/GUS) → korespondencja → dane rządowe → nadrzędna wycena Perplexity.</p>
+          <p className="text-xs text-muted-foreground">Pipeline: KW → właściciel (PESEL/KRS) → korespondencja → rynek porównawczy (deweloperuch + otodom) → nadrzędna wycena Perplexity.</p>
         </div>
         <Button onClick={run} disabled={running} size="sm">
           {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
