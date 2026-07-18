@@ -104,8 +104,8 @@ export async function runInvestmentRiskAssessmentCore(
 
   // 0) Wczytaj wniosek, właściciela (client_id), nieruchomość, dokumenty.
   const [{ data: app }, { data: props }] = await Promise.all([
-    supabaseAdmin.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
-    supabaseAdmin.from("properties").select("*").eq("loan_application_id", applicationId),
+    db.from("loan_applications").select("*").eq("id", applicationId).maybeSingle(),
+    db.from("properties").select("*").eq("loan_application_id", applicationId),
   ]);
 
   if (!app) throw new Error("Wniosek nie znaleziony.");
@@ -148,7 +148,7 @@ export async function runInvestmentRiskAssessmentCore(
     if (!property.voivodeship && kwAddr?.voivodeship) patch.voivodeship = kwAddr.voivodeship;
     if (property.area_sqm == null && kwAreaSqm != null) patch.area_sqm = kwAreaSqm;
     if (Object.keys(patch).length > 0) {
-      const { error: patchError } = await supabaseAdmin.from("properties").update(patch).eq("id", property.id);
+      const { error: patchError } = await db.from("properties").update(patch).eq("id", property.id);
       if (patchError) console.error("[risk-assessment] property KW backfill failed:", patchError.message);
       else Object.assign(property, patch);
     }
