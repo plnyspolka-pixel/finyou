@@ -262,7 +262,8 @@ export async function runInvestmentRiskAssessmentCore(
   const combined = combineRiskAssessment({ collateral, owner, kwLegal, correspondence, ocr, saleability, plotBuildability, master });
 
   // 9) Rejestr wykorzystanych źródeł danych.
-  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, govBenchmark, collateral, master });
+  const dataSources = buildDataSources({ ocr, kwLegal, owner, correspondence, saleability, govBenchmark, collateral, master, marketComparables });
+
 
   // 9) Executive summary.
   const valueStr = master.estimatedValueMidPln
