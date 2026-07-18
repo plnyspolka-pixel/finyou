@@ -151,7 +151,7 @@ function WniosekDetail() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
-          <TabsTrigger value="zabezpieczenie">Zabezpieczenie</TabsTrigger>
+          
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length + comms.length})</TabsTrigger>
