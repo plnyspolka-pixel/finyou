@@ -1,16 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { Home, Building2, Trees, Store } from "lucide-react";
 import { formatPLN, formatRelative } from "@/lib/labels";
 import { fetchPublicLeads } from "@/lib/public-leads.functions";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
-const PROPERTY_ICONS: Record<string, typeof Home> = {
-  apartment: Building2,
-  house: Home,
-  plot_building: Trees,
-  commercial: Store,
+const PROPERTY_EMOJI: Record<string, string> = {
+  apartment: "🏢",
+  mieszkanie: "🏢",
+  house: "🏠",
+  dom: "🏠",
+  plot_building: "🌳",
+  dzialka: "🌳",
+  commercial: "🏬",
+  lokal_uslugowy: "🏬",
+  inna: "🏗️",
 };
+
 
 const leadsQO = queryOptions({
   queryKey: ["embed", "public-leads"],
