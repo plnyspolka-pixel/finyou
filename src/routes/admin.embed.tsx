@@ -264,36 +264,35 @@ function LeadsInlinePreview() {
         </div>
       ) : (
         <ul className="max-h-[560px] space-y-2 overflow-auto pr-1">
-          {data.map((l) => (
-            <li key={l.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sm font-semibold text-sky-100 ring-1 ring-white/10">
-                {l.initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span className="tabular-nums">{formatRelative(l.created_at)}</span>
-                  <span className="opacity-40">•</span>
-                  <span className="truncate">{l.source_label}</span>
+          {data.map((l) => {
+            const labels: Record<string, string> = {
+              apartment: "Mieszkanie",
+              house: "Dom",
+              plot_building: "Działka",
+              commercial: "Lokal",
+            };
+            return (
+              <li key={l.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sky-100 ring-1 ring-white/10 text-xs font-semibold">
+                  {(labels[l.property_type] ?? "?").slice(0, 2)}
                 </div>
-                <div className="mt-0.5 truncate text-sm text-slate-200">
-                  Klient <span className="font-mono">{l.initials}</span>
-                  {l.city ? <span className="text-slate-400"> · {l.city}</span> : null}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm text-slate-200">{labels[l.property_type] ?? l.property_type}</div>
+                  <div className="mt-0.5 text-xs text-slate-400 tabular-nums">{formatRelative(l.created_at)}</div>
                 </div>
-              </div>
-              <div className="shrink-0 text-right">
-                {l.loan_amount != null ? (
-                  <>
+                <div className="shrink-0 text-right">
+                  {l.loan_amount != null ? (
                     <div className="text-sm font-semibold tabular-nums text-emerald-300 sm:text-base">{formatPLN(l.loan_amount)}</div>
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">wnioskowana kwota</div>
-                  </>
-                ) : (
-                  <div className="text-[11px] uppercase tracking-wider text-slate-500">nowe zgłoszenie</div>
-                )}
-              </div>
-            </li>
-          ))}
+                  ) : (
+                    <div className="text-[11px] uppercase tracking-wider text-slate-500">—</div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
+
     </div>
   );
 }

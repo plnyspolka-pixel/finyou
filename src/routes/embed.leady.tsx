@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { Home, Building2, Trees, Store } from "lucide-react";
 import { formatPLN, formatRelative } from "@/lib/labels";
 import { fetchPublicLeads } from "@/lib/public-leads.functions";
+import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
-// Publiczny embed z anonimizowaną listą ostatnich wniosków / leadów Finance You.
-// Pokazuje: inicjały, miasto (jeśli jest), kwota wnioskowana, źródło, kiedy.
+const PROPERTY_ICONS: Record<string, typeof Home> = {
+  apartment: Building2,
+  house: Home,
+  plot_building: Trees,
+  commercial: Store,
+};
 
 const leadsQO = queryOptions({
   queryKey: ["embed", "public-leads"],
@@ -16,8 +22,8 @@ export const Route = createFileRoute("/embed/leady")({
   loader: ({ context }) => context.queryClient.ensureQueryData(leadsQO),
   head: () => ({
     meta: [
-      { title: "Ostatnie leady — Finance You" },
-      { name: "description", content: "Zanonimizowana lista ostatnich leadów, które wpadły do Finance You." },
+      { title: "Ostatnie okazje inwestycyjne — Finance You" },
+      { name: "description", content: "Zanonimizowana lista ostatnich okazji inwestycyjnych Finance You." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -35,14 +41,14 @@ function EmbedLeads() {
         <header className="flex items-end justify-between gap-3 border-b border-white/10 pb-4">
           <div>
             <p className="text-[11px] uppercase tracking-widest text-sky-300/80">Finance You</p>
-            <h1 className="text-xl sm:text-2xl font-semibold">Ostatnie leady</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold">Ostatnie okazje inwestycyjne</h1>
             <p className="mt-1 text-xs text-slate-400">
-              Dane zanonimizowane — {data.length} najnowszych leadów.
+              {data.length} najnowszych wniosków.
             </p>
           </div>
           {withAmount > 0 && (
             <div className="text-right">
-              <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma zapytań</p>
+              <p className="text-[11px] uppercase tracking-widest text-slate-400">Suma</p>
               <p className="text-lg sm:text-xl font-semibold tabular-nums text-emerald-300">
                 {formatPLN(total)}
               </p>
@@ -52,43 +58,39 @@ function EmbedLeads() {
 
         {data.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-slate-300">
-            Brak leadów do wyświetlenia.
+            Brak okazji do wyświetlenia.
           </div>
         ) : (
           <ul className="space-y-2">
-            {data.map((l) => (
-              <li
-                key={l.id}
-                className="rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur px-3 py-3 sm:px-4 sm:py-3 flex items-center gap-3 hover:bg-white/[0.07] transition"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sm font-semibold text-sky-100 ring-1 ring-white/10">
-                  {l.initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="tabular-nums">{formatRelative(l.created_at)}</span>
-                    <span className="opacity-40">•</span>
-                    <span className="truncate">{l.source_label}</span>
+            {data.map((l) => {
+              const Icon = PROPERTY_ICONS[l.property_type] ?? Home;
+              const label = PROPERTY_TYPE_LABELS[l.property_type] ?? l.property_type;
+              return (
+                <li
+                  key={l.id}
+                  className="rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur px-3 py-3 sm:px-4 sm:py-3 flex items-center gap-3 hover:bg-white/[0.07] transition"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sky-100 ring-1 ring-white/10">
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <div className="mt-0.5 truncate text-sm text-slate-200">
-                    Klient <span className="font-mono">{l.initials}</span>
-                    {l.city ? <span className="text-slate-400"> · {l.city}</span> : null}
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm text-slate-200">{label}</div>
+                    <div className="mt-0.5 text-xs text-slate-400 tabular-nums">
+                      {formatRelative(l.created_at)}
+                    </div>
                   </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  {l.loan_amount != null ? (
-                    <>
+                  <div className="shrink-0 text-right">
+                    {l.loan_amount != null ? (
                       <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
                         {formatPLN(l.loan_amount)}
                       </div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500">zapytanie</div>
-                    </>
-                  ) : (
-                    <div className="text-[11px] uppercase tracking-wider text-slate-500">nowy lead</div>
-                  )}
-                </div>
-              </li>
-            ))}
+                    ) : (
+                      <div className="text-[11px] uppercase tracking-wider text-slate-500">—</div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -99,3 +101,4 @@ function EmbedLeads() {
     </div>
   );
 }
+
