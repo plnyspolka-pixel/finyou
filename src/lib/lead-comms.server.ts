@@ -54,6 +54,7 @@ export type LogCommArgs = {
   agentId?: string | null;
   metadata?: Record<string, any>;
   errorMessage?: string | null;
+  attachments?: any[] | null;
 };
 
 export async function logLeadCommunication(args: LogCommArgs): Promise<string | null> {
@@ -86,6 +87,7 @@ export async function logLeadCommunication(args: LogCommArgs): Promise<string | 
       agent_id: args.agentId ?? null,
       metadata: args.metadata ?? {},
       error_message: args.errorMessage ?? null,
+      attachments: args.attachments ?? null,
     })
     .select("id")
     .maybeSingle();

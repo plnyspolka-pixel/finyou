@@ -20,6 +20,8 @@ export async function sendResendEmail(opts: {
   noBranding?: boolean;
   unsubscribeUrl?: string;
   showReplyHint?: boolean;
+  /** Prawdziwe załączniki maila (base64) — a nie linki w treści. */
+  attachments?: Array<{ filename: string; content: string; contentType?: string }>;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const connKey = process.env.RESEND_API_KEY;
@@ -68,6 +70,13 @@ export async function sendResendEmail(opts: {
   };
   if (opts.replyTo) body.reply_to = opts.replyTo;
   if (Object.keys(headers).length) body.headers = headers;
+  if (opts.attachments?.length) {
+    body.attachments = opts.attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      ...(a.contentType ? { content_type: a.contentType } : {}),
+    }));
+  }
 
   const res = await fetch(`${GATEWAY}/emails`, {
     method: "POST",
@@ -90,7 +99,12 @@ export async function sendResendEmail(opts: {
       recipient_email: opts.to,
       status: res.ok ? "sent" : "failed",
       error_message: res.ok ? null : `${res.status}: ${JSON.stringify(json).slice(0, 500)}`,
-      metadata: { subject: opts.subject, from_name: opts.fromName ?? null, reply_to: opts.replyTo ?? null },
+      metadata: {
+        subject: opts.subject,
+        from_name: opts.fromName ?? null,
+        reply_to: opts.replyTo ?? null,
+        attachments: opts.attachments?.map((a) => a.filename) ?? null,
+      },
     });
   } catch (logErr) {
     console.error("[resend-send] failed to log email_send_log", logErr);

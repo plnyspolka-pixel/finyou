@@ -112,6 +112,7 @@ export function SendToInvestorsDialog({
             to: draft.recipients.join(", "),
             subject: draft.subject,
             body: draft.bodyText,
+            attachments: draft.attachments ?? [],
           }),
         );
       } catch {}
