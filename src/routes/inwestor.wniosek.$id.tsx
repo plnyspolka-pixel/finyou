@@ -76,21 +76,19 @@ function InwestorWniosek() {
     const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", id).order("created_at", { ascending: false });
     const list = ds ?? [];
     setDocs(list);
-    const imgs = list.filter((d: any) => d.file_path && isImage(d.file_name ?? ""));
+    // Podpisane URL-e dla każdego pliku klienta (obrazy pokazujemy jako miniaturki, reszta jako kafle).
     const next: Record<string, string> = {};
-    await Promise.all(imgs.map(async (d: any) => {
+    await Promise.all(list.map(async (d: any) => {
+      if (!d.file_path) return;
       const { data: u } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(d.file_path, 3600);
       if (u?.signedUrl) next[d.id] = u.signedUrl;
     }));
     setDocUrls(next);
 
-    // Resolve property photos (mix of http URLs, property-photos paths and document uploads).
-    const rawPhotos: string[] = [
-      ...(((data?.properties?.[0]?.photos ?? []) as string[]).filter((src) => isImage(src))),
-      ...list
-        .filter((d: any) => d.file_path && PROPERTY_PHOTO_TYPES.has(d.document_type ?? "") && isImage(d.file_name ?? d.file_path))
-        .map((d: any) => d.file_path),
-    ].filter((src, index, arr) => src && arr.indexOf(src) === index);
+    // Zdjęcia z properties.photos (starszy format, luźne URL-e/ścieżki) — nie duplikujemy tych, które są już w documents.
+    const knownDocPaths = new Set(list.map((d: any) => d.file_path).filter(Boolean));
+    const rawPhotos: string[] = ((data?.properties?.[0]?.photos ?? []) as string[])
+      .filter((src) => isImage(src) && !knownDocPaths.has(src));
     const resolved = await Promise.all(rawPhotos.map(async (src) => {
       if (!src || typeof src !== "string") return null;
       if (/^https?:\/\//i.test(src)) return src;
