@@ -134,12 +134,15 @@ function InwestorWniosek() {
   // Wszystkie pliki klienta w jednym worku — bez dzielenia na "zdjęcia" / "dokumenty".
   const imageDocs = docs.filter((d) => d.file_path && isImage(d.file_name ?? d.file_path));
   const otherDocs = docs.filter((d) => d.file_path && !isImage(d.file_name ?? d.file_path));
+  const totalFiles = imageDocs.length + otherDocs.length + photoUrls.length;
+
+  const renderDocCard = (d: any) => {
     const url = docUrls[d.id];
     const img = url && isImage(d.file_name ?? "");
     return (
       <button key={d.id} onClick={() => void openFile(d)} className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
         <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
-          {img ? <img src={url} alt={d.file_name} className="h-full w-full object-cover group-hover:scale-105 transition" />
+          {img ? <img src={url} alt={d.file_name} className="h-full w-full object-cover group-hover:scale-105 transition" loading="lazy" />
             : <FileText className="h-10 w-10 text-muted-foreground" />}
         </div>
         <div className="px-2 py-1.5 text-xs flex items-center justify-between gap-1">
