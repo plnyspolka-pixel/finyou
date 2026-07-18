@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Phone, MessageSquare, MessagesSquare, Mail, StickyNote, Download, RefreshCw, ChevronDown, ChevronRight, ExternalLink, Paperclip } from "lucide-react";
 import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadStatusLabels, formatDateTime } from "@/lib/labels";
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
+import { leadSourceLabel } from "@/lib/lead-source";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
 
 
@@ -101,7 +102,7 @@ function KlienciPage() {
     const header = ["ID","Imię","Nazwisko","Telefon","E-mail","Typ","Status","Źródło","Kwota","Okres","Kompl.%","Tel.","SMS","E-mail#","Ostatni kontakt","Utworzono"];
     const lines = rows.map((r) => [
       r.id, r.first_name ?? "", r.last_name ?? "", r.phone_normalized ?? "", r.email ?? "",
-      r.type, statusLabel(r.status), r.source ?? "",
+      r.type, statusLabel(r.status), leadSourceLabel(r.source),
       r.loan?.loan_amount ?? "", r.loan?.preferred_period_months ?? "", r.loan?.completeness_percent ?? "",
       r.comms.calls, r.comms.sms, r.comms.emails, r.comms.lastAt ?? "", r.created_at,
     ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
@@ -160,7 +161,7 @@ function KlienciPage() {
             <SelectTrigger className="h-9 text-xs col-span-2 sm:col-auto"><SelectValue placeholder="Źródło" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie źródła</SelectItem>
-              {sources.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {sources.map((s) => <SelectItem key={s} value={s}>{leadSourceLabel(s)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -222,7 +223,7 @@ function KlienciPage() {
                     {r.comms.notes > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5" title="Notatki"><StickyNote className="h-3 w-3" />{r.comms.notes}</span>}
                     {filesCount(r) > 0 && <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-1.5 py-0.5" title="Pliki klienta"><Paperclip className="h-3 w-3" />{filesCount(r)}</span>}
                     <span className="text-muted-foreground">· {formatRelative(r.comms.lastAt)}</span>
-                    <span className="ml-auto text-muted-foreground">{r.source ?? "—"}</span>
+                    <span className="ml-auto text-muted-foreground" title={r.source ?? undefined}>{leadSourceLabel(r.source)}</span>
                   </div>
 
                 </button>
@@ -323,7 +324,7 @@ function KlienciPage() {
                         <div className="text-muted-foreground">{formatRelative(r.comms.lastAt)}</div>
                       </td>
 
-                      <td className="px-3 py-2 text-xs">{r.source ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs" title={r.source ?? undefined}>{leadSourceLabel(r.source)}</td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(r.created_at)}</td>
                     </tr>
                     {isOpen && (

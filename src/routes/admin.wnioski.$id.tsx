@@ -14,6 +14,7 @@ import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import { useAuth } from "@/hooks/use-auth";
+import { leadSourceLabel } from "@/lib/lead-source";
 
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
@@ -171,7 +172,7 @@ function WniosekDetail() {
               <div><span className="text-muted-foreground">Imię i nazwisko:</span> <b>{c?.first_name} {c?.last_name}</b></div>
               <div><span className="text-muted-foreground">Telefon:</span> {c?.phone ?? "—"}</div>
               <div><span className="text-muted-foreground">E-mail:</span> {c?.email ?? "—"}</div>
-              <div><span className="text-muted-foreground">Źródło:</span> {c?.source ?? "—"}</div>
+              <div><span className="text-muted-foreground">Źródło:</span> <span title={c?.source ?? undefined}>{leadSourceLabel(c?.source)}</span></div>
               <div><span className="text-muted-foreground">Zgody:</span> RODO {c?.consent_rodo ? "✓" : "✗"} · e-mail {c?.consent_email ? "✓" : "✗"} · tel {c?.consent_phone ? "✓" : "✗"} · SMS {c?.consent_sms ? "✓" : "✗"}</div>
             </CardContent></Card>
             <Card><CardHeader><CardTitle>Wniosek</CardTitle></CardHeader><CardContent className="text-sm space-y-1">

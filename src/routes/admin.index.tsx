@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { loanStatusLabels } from "@/lib/labels";
+import { leadSourceLabel } from "@/lib/lead-source";
 import { FOLLOW_UP_ENGINES, type FollowUpChannel } from "@/lib/follow-up-config";
 import {
   Users,
@@ -75,7 +76,9 @@ function AdminDashboard() {
       const src: Record<string, number> = {};
       (apps ?? []).forEach((a) => {
         c[a.status] = (c[a.status] ?? 0) + 1;
-        const k = a.source ?? "brak";
+        // Grupuj po ujednoliconej etykiecie kanału — "messenger" i
+        // "inbound_enrichment:messenger" to ten sam kanał wejścia.
+        const k = leadSourceLabel(a.source);
         src[k] = (src[k] ?? 0) + 1;
       });
       const ch: Record<string, number> = {};
