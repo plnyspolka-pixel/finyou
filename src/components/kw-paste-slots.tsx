@@ -55,7 +55,7 @@ export function KwPasteSlotsDialog({
   const [activeIdx, setActiveIdx] = useState<number>(0);
   const [busy, setBusy] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
-  const [debug, setDebug] = useState<{ transcript: string; rawJson: string; parsed: any } | null>(null);
+  const [debug, setDebug] = useState<{ transcript: string } | null>(null);
   const boxRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   // Persist slots so switching Chrome tabs (which may remount this component) doesn't lose work.
