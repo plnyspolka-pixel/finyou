@@ -30,6 +30,24 @@ function baseUrl(): string {
   return raw.replace(/\/(docs|swagger|swagger-ui|openapi)(\/.*)?$/i, "");
 }
 
+function isDevEnvironment(): boolean {
+  return !process.env.CMD_KW_BASE_URL || /\bdev\./i.test(baseUrl());
+}
+
+// CMD zwraca 403 z "Usage type: TECH_IN_ORDER limit exceeded" gdy wyczerpie
+// się dzienny limit zleceń — na koncie demo limit jest wspólny dla całej
+// grupy kont (limitGroup), więc może być wyczerpany mimo niskiego własnego
+// zużycia. Zamieniamy to na komunikat zrozumiały dla admina.
+function describeCmdError(status: number, body: string): string | null {
+  if (status === 403 && /limit exceeded/i.test(body)) {
+    const env = isDevEnvironment()
+      ? "środowisko TESTOWE CMD (dev.monitoringdanych.io) — limit wspólny dla grupy kont demo"
+      : `konto CMD (${new URL(baseUrl()).host})`;
+    return `Dzienny limit pobrań KW wyczerpany: ${env}. Aby korzystać z konta produkcyjnego, ustaw CMD_KW_BASE_URL oraz CMD_KW_USER/CMD_KW_PASSWORD na dane produkcyjne z dokumentacji CMD. Szczegóły: ${body.slice(0, 200)}`;
+  }
+  return null;
+}
+
 export function decodeMaybeBase64(v: unknown): string | null {
   if (v == null) return null;
   if (typeof v !== "string") return null;
@@ -69,7 +87,9 @@ async function fetchKwHtml(kw: string): Promise<{
   if (res.status === 404)
     return { ok: false, status: 404, error: "Księga nie znaleziona w bazie EKW" };
   const text = await res.text().catch(() => "");
-  return { ok: false, status: res.status, error: text || `HTTP ${res.status}` };
+  const limitMsg = describeCmdError(res.status, text);
+  if (limitMsg) console.error("[kw] fetchKwHtml limit", { host: new URL(baseUrl()).host, text });
+  return { ok: false, status: res.status, error: limitMsg ?? text ?? `HTTP ${res.status}` };
 }
 
 async function orderKw(kw: string): Promise<{ status: string; reason?: string }> {
@@ -86,7 +106,11 @@ async function orderKw(kw: string): Promise<{ status: string; reason?: string }>
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     console.error("[kw] orderKw failed", { url, status: res.status, body: t.slice(0, 300) });
-    return { status: "NOT_ENQUEUED", reason: `HTTP ${res.status}: ${t || res.statusText}` };
+    const limitMsg = describeCmdError(res.status, t);
+    return {
+      status: "NOT_ENQUEUED",
+      reason: limitMsg ?? `HTTP ${res.status}: ${t || res.statusText}`,
+    };
   }
   const json: any = await res.json();
   if (json?.notEnqueued?.length) {
