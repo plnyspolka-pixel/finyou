@@ -28,7 +28,8 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
   });
   const { data, error } = await client
     .from("loan_applications")
-    .select("id, created_at, loan_amount, preferred_period_months, properties(property_type, city, estimated_value)")
+    .select("id, created_at, status, loan_amount, preferred_period_months, properties(property_type, city, estimated_value)")
+    .in("status", ["szukamy_inwestora", "warunki_zaakceptowane", "dokumenty_przygotowanie_umowy", "notariusz", "zamkniete"])
     .order("created_at", { ascending: false })
     .limit(80);
   if (error) throw new Error(error.message);
