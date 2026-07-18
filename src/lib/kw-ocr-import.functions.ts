@@ -172,14 +172,49 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       return content;
     }
 
-    let transcript = await runTranscribe(MODEL);
+    async function runTranscribePerplexity(model: string) {
+      const pk = process.env.PERPLEXITY_API_KEY;
+      if (!pk) return "";
+      const r = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${pk}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
+            { role: "user", content: transcribeContent },
+          ],
+          max_tokens: 8000,
+        }),
+      });
+      if (!r.ok) {
+        const body = await r.text().catch(() => "");
+        console.error("KW OCR Perplexity HTTP error", { model, status: r.status, body: body.slice(0, 500) });
+        return "";
+      }
+      const j: any = await r.json();
+      const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
+      console.log("KW OCR Perplexity result", { model, len: content.length });
+      return content;
+    }
+
+    // Kolejność: Perplexity sonar-pro (vision) → Gemini 2.5 Pro → GPT-5.5.
+    let transcript = await runTranscribePerplexity("sonar-pro");
+    let usedModel = "perplexity/sonar-pro";
     if (!transcript || transcript.length < 40) {
-      console.warn("KW OCR: pusta transkrypcja z", MODEL, "— fallback na openai/gpt-5.5");
+      console.warn("KW OCR: pusto z Perplexity — fallback na Gemini");
+      transcript = await runTranscribe(MODEL);
+      usedModel = MODEL;
+    }
+    if (!transcript || transcript.length < 40) {
+      console.warn("KW OCR: pusto z Gemini — fallback na GPT-5.5");
       transcript = await runTranscribe("openai/gpt-5.5");
+      usedModel = "openai/gpt-5.5";
     }
     if (!transcript || transcript.length < 40) {
       throw new Error("OCR nie odczytał tekstu ze screenów — sprawdź, czy obrazy są czytelne.");
     }
+    console.log("KW OCR: użyty model transkrypcji =", usedModel);
 
     if (data.dryRun) {
       return {
