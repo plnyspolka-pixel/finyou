@@ -23,11 +23,12 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     const pt = props?.property_type;
     if (!pt) continue;
     const amt = r.loan_amount != null ? Number(r.loan_amount) : null;
+    if (amt == null || Number.isNaN(amt) || amt <= 0) continue;
     rows.push({
       id: r.id,
       created_at: r.created_at,
       property_type: String(pt),
-      loan_amount: amt != null && !Number.isNaN(amt) ? amt : null,
+      loan_amount: amt,
     });
     if (rows.length >= 30) break;
   }
