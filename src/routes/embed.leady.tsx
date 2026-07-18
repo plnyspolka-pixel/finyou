@@ -1,16 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { Home, Building2, Trees, Store } from "lucide-react";
 import { formatPLN, formatRelative } from "@/lib/labels";
 import { fetchPublicLeads } from "@/lib/public-leads.functions";
 import { PROPERTY_TYPE_LABELS } from "@/lib/property-documents";
 
-const PROPERTY_ICONS: Record<string, typeof Home> = {
-  apartment: Building2,
-  house: Home,
-  plot_building: Trees,
-  commercial: Store,
+const PROPERTY_EMOJI: Record<string, string> = {
+  apartment: "🏢",
+  mieszkanie: "🏢",
+  house: "🏠",
+  dom: "🏠",
+  plot_building: "🌳",
+  dzialka: "🌳",
+  commercial: "🏬",
+  lokal_uslugowy: "🏬",
+  inna: "🏗️",
 };
+
 
 const leadsQO = queryOptions({
   queryKey: ["embed", "public-leads"],
@@ -63,15 +68,15 @@ function EmbedLeads() {
         ) : (
           <ul className="space-y-2">
             {data.map((l) => {
-              const Icon = PROPERTY_ICONS[l.property_type] ?? Home;
+              const emoji = PROPERTY_EMOJI[l.property_type] ?? "🏗️";
               const label = PROPERTY_TYPE_LABELS[l.property_type] ?? l.property_type;
               return (
                 <li
                   key={l.id}
                   className="rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur px-3 py-3 sm:px-4 sm:py-3 flex items-center gap-3 hover:bg-white/[0.07] transition"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500/30 to-emerald-500/20 text-sky-100 ring-1 ring-white/10">
-                    <Icon className="h-5 w-5" />
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400/30 via-indigo-500/20 to-emerald-400/20 ring-1 ring-white/15 shadow-[0_6px_20px_-6px_rgba(56,189,248,0.5)] text-2xl leading-none">
+                    <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]">{emoji}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="truncate text-sm text-slate-200">{label}</div>
@@ -80,13 +85,9 @@ function EmbedLeads() {
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    {l.loan_amount != null ? (
-                      <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
-                        {formatPLN(l.loan_amount)}
-                      </div>
-                    ) : (
-                      <div className="text-[11px] uppercase tracking-wider text-slate-500">—</div>
-                    )}
+                    <div className="text-sm sm:text-base font-semibold tabular-nums text-emerald-300">
+                      {formatPLN(l.loan_amount ?? 0)}
+                    </div>
                   </div>
                 </li>
               );
