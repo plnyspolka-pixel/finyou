@@ -7,6 +7,7 @@
 export const LOAN_STATUS_ORDER = [
   "nowy_lead",
   "brak_kontaktu",
+  "brak_kwoty",
   "brak_kw",
   "brak_zdjec_dokumentow",
   "kontakt",
