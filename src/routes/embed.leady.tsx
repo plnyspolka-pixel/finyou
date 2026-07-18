@@ -79,7 +79,12 @@ function EmbedLeads() {
                     <span aria-hidden className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]">{emoji}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm text-slate-200">{label}</div>
+                    <div className="truncate text-sm text-slate-200">
+                      {label}
+                      {l.voivodeship ? (
+                        <span className="text-slate-400"> · {l.voivodeship}</span>
+                      ) : null}
+                    </div>
                     <div className="mt-0.5 text-xs text-slate-400 tabular-nums">
                       {formatRelative(l.created_at)}
                     </div>
