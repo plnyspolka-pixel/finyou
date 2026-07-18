@@ -278,7 +278,9 @@ export interface InvestmentRiskAssessment {
   saleability: SaleabilityForecast;
   plotBuildability: PlotBuildabilityResult;
   govBenchmark: GovBenchmark;
+  marketComparables?: MarketComparablesResult | null;
   forcedSale: ForcedSaleEstimate;
+
   masterValuation: MasterValuation;
 
   /** Wynik istniejącej analizy zabezpieczenia (wycena Perplexity + lokalizacja + powódź). */
