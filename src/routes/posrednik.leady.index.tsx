@@ -19,6 +19,7 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
 import { FileThumb } from "@/components/media/FileThumb";
+import { RevealContact, RevealsList } from "@/components/broker/reveal-contact";
 
 
 export const Route = createFileRoute("/posrednik/leady/")({
