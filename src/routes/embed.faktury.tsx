@@ -60,10 +60,9 @@ function EmbedInvoices() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="tabular-nums">{inv.issue_date ? formatDate(inv.issue_date) : "—"}</span>
-                    <span className="opacity-40">•</span>
                     <span className="truncate font-mono">{inv.invoice_number ?? "—"}</span>
                   </div>
+
                   <div className="mt-0.5 truncate text-sm">
                     <span className="text-slate-200">{inv.item_label}</span>
                   </div>
