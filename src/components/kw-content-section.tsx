@@ -125,7 +125,7 @@ export function KwContentSection({
   const ocrUploadControls = canImportOcr ? (
     <Button size="sm" variant="outline" disabled={busy} onClick={() => setPasteOpen(true)}>
       <ScanText className="mr-2 h-4 w-4" />
-      Wgraj screeny KW
+      Wklej treść KW
     </Button>
   ) : null;
 

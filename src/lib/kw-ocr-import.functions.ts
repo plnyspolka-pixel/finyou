@@ -1,41 +1,41 @@
-// Własny moduł ekstrakcji treści KW ze screenów (OCR) — alternatywa dla CMD
-// KW Engine. Operator wgrywa zrzuty ekranu (lub PDF) przeglądarki EKW, Gemini
-// robi DOSŁOWNĄ transkrypcję treści i zapisujemy ją bez pośredniego JSON-a
-// w kw_documents (per dział, jako <pre>). Podgląd treści KW w UI działa
-// bez zmian; parsery strukturalne (adres/analiza ryzyka) na takim wejściu
-// nie działają — świadomy wybór, aby uniknąć fałszywej strukturyzacji.
+// Import treści KW z dosłownego tekstu wklejonego przez operatora z EKW.
+// Bez OCR — operator kopiuje tekst ze strony ekw.ms.gov.pl i wkleja tutaj.
+// AI (Lovable AI Gateway, Gemini 2.5 Flash z JSON mode) dzieli tekst na
+// sekcje: okladka + działy I-O, I-Sp, II, III, IV. Zapis do kw_documents.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeKwNumber } from "@/lib/kw-fetch.server";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-pro";
+const MODEL = "google/gemini-2.5-flash";
+const MAX_TEXT = 200_000;
 
-const MAX_FILES = 12;
-const MAX_FILE_B64 = 9_000_000;
-const MAX_TOTAL_B64 = 40_000_000;
+const SYSTEM_PROMPT =
+  "Jesteś parserem treści polskich ksiąg wieczystych (EKW). Otrzymujesz surowy tekst " +
+  "skopiowany z ekw.ms.gov.pl (dowolne fragmenty, w dowolnej kolejności). Twoim zadaniem " +
+  "jest podzielić go DOSŁOWNIE na sekcje księgi — bez interpretacji, bez skracania, bez " +
+  "zgadywania. Zachowaj oryginalne brzmienie, wielkość liter i układ linii. Nie tłumacz.";
 
-const TRANSCRIBE_SYSTEM_PROMPT =
-  "Jesteś ekspertem OCR polskich ksiąg wieczystych (EKW). Twoim jedynym zadaniem jest DOSŁOWNE przepisanie tekstu " +
-  "widocznego na obrazach — bez interpretacji, bez zgadywania, bez pomijania. Zachowujesz układ sekcji i wersaliki.";
+const USER_PROMPT = (text: string) => `Rozdziel poniższy tekst KW na sekcje i zwróć JSON z kluczami:
+- "kw_number": numer KW w formacie XX0X/00000000/0 jeśli występuje (lub null)
+- "okladka": tekst okładki (numer, sąd, typ) lub null
+- "dzial_1o": tekst działu I-O (Oznaczenie nieruchomości) lub null
+- "dzial_1s": tekst działu I-Sp (Spis praw związanych) lub null
+- "dzial_2": tekst działu II (Własność) lub null
+- "dzial_3": tekst działu III (Prawa, roszczenia i ograniczenia) lub null
+- "dzial_4": tekst działu IV (Hipoteka) lub null
 
-const TRANSCRIBE_USER_PROMPT = `Na obrazach są zrzuty ekranu treści księgi wieczystej z przeglądarki EKW (ekw.ms.gov.pl) — okładka i/lub działy I-O, I-Sp, II, III, IV, w dowolnej kolejności, także we fragmentach.
+Zasady:
+- Kopiuj tekst DOSŁOWNIE — bez parafrazowania.
+- Jeśli w tekście brakuje danego działu, ustaw wartość na null.
+- Nie dodawaj żadnych komentarzy poza JSON-em.
 
-Przepisz DOSŁOWNIE cały widoczny tekst ze wszystkich obrazów. Zasady:
-- Rozdziel sekcje nagłówkami DOKŁADNIE w formacie: "=== OKŁADKA ===", "=== DZIAŁ I-O ===", "=== DZIAŁ I-SP ===", "=== DZIAŁ II ===", "=== DZIAŁ III ===", "=== DZIAŁ IV ===" — tak jak wynika to z obrazów.
-- Zachowaj tabele w formie tekstowej (rubryki / wartości linia po linii).
-- Nie tłumacz, nie skracaj, nie zgaduj brakujących liter — nieczytelne fragmenty zaznacz jako [nieczytelne].
-- Nie zwracaj JSON-a, nie dodawaj komentarzy — tylko surowa treść KW.`;
-
-const ImageSchema = z.object({
-  dataUrl: z.string().min(50).max(MAX_FILE_B64),
-  mimeType: z.string().min(3).max(100),
-  fileName: z.string().max(200).optional(),
-});
+--- SUROWY TEKST KW ---
+${text}
+--- KONIEC ---`;
 
 async function assertAdmin(userId: string) {
   const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
@@ -47,69 +47,29 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function wrapSection(title: string, body: string): string {
-  const trimmed = body.trim();
-  if (!trimmed) return "";
+function wrapSection(title: string, body: string | null | undefined): string | null {
+  const trimmed = (body ?? "").trim();
+  if (!trimmed) return null;
   return `<div class="kw-ocr-section"><h3>${escapeHtml(title)}</h3><pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;line-height:1.5">${escapeHtml(trimmed)}</pre></div>`;
-}
-
-/** Rozbija transkrypcję na sekcje po nagłówkach `=== ... ===`. */
-function splitTranscript(transcript: string): {
-  okladka: string | null;
-  dzial_1o: string | null;
-  dzial_1s: string | null;
-  dzial_2: string | null;
-  dzial_3: string | null;
-  dzial_4: string | null;
-} {
-  const buckets: Record<string, string[]> = {
-    okladka: [],
-    dzial_1o: [],
-    dzial_1s: [],
-    dzial_2: [],
-    dzial_3: [],
-    dzial_4: [],
-  };
-  let current: keyof typeof buckets | null = null;
-  const headerRe = /^===\s*(.+?)\s*===\s*$/i;
-  for (const line of transcript.split(/\r?\n/)) {
-    const m = line.match(headerRe);
-    if (m) {
-      const h = m[1].toUpperCase().replace(/\s+/g, " ");
-      if (h.includes("OKŁAD") || h.includes("OKLAD")) current = "okladka";
-      else if (h.includes("I-O") || h.includes("I O")) current = "dzial_1o";
-      else if (h.includes("I-SP") || h.includes("I SP")) current = "dzial_1s";
-      else if (/DZIA[ŁL]\s*II\b|=\s*II\s*=/.test(h) || h.endsWith(" II")) current = "dzial_2";
-      else if (/DZIA[ŁL]\s*III\b|=\s*III\s*=/.test(h) || h.endsWith(" III")) current = "dzial_3";
-      else if (/DZIA[ŁL]\s*IV\b|=\s*IV\s*=/.test(h) || h.endsWith(" IV")) current = "dzial_4";
-      else current = null;
-      continue;
-    }
-    if (current) buckets[current].push(line);
-  }
-  const anyContent = Object.values(buckets).some((b) => b.join("").trim().length > 0);
-  if (!anyContent) {
-    // Brak nagłówków — wrzuć wszystko do okładki, żeby operator miał podgląd.
-    buckets.okladka = [transcript];
-  }
-  const pick = (k: keyof typeof buckets) => {
-    const s = buckets[k].join("\n").trim();
-    return s ? wrapSection(k === "okladka" ? "OKŁADKA" : k.replace("dzial_", "Dział ").toUpperCase(), s) : null;
-  };
-  return {
-    okladka: pick("okladka") || wrapSection("OKŁADKA", "(brak treści okładki na screenach)"),
-    dzial_1o: pick("dzial_1o"),
-    dzial_1s: pick("dzial_1s"),
-    dzial_2: pick("dzial_2"),
-    dzial_3: pick("dzial_3"),
-    dzial_4: pick("dzial_4"),
-  };
 }
 
 function extractKwNumberFromText(t: string): string | null {
   const m = t.match(/\b([A-Z]{2}\d[A-Z])\s*\/?\s*(\d{8})\s*\/?\s*(\d)\b/i);
   if (!m) return null;
   return normalizeKwNumber(`${m[1]}/${m[2]}/${m[3]}`);
+}
+
+function tryParseJson(raw: string): any | null {
+  if (!raw) return null;
+  let s = raw.trim();
+  s = s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "");
+  try { return JSON.parse(s); } catch {}
+  const first = s.indexOf("{");
+  const last = s.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    try { return JSON.parse(s.slice(first, last + 1)); } catch {}
+  }
+  return null;
 }
 
 export const importKwFromScreenshots = createServerFn({ method: "POST" })
@@ -119,7 +79,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       .object({
         loanApplicationId: z.string().uuid().optional(),
         kwNumber: z.string().max(20).optional(),
-        images: z.array(ImageSchema).min(1).max(MAX_FILES),
+        text: z.string().min(20).max(MAX_TEXT),
         force: z.boolean().optional(),
         dryRun: z.boolean().optional(),
         includeDebug: z.boolean().optional(),
@@ -132,113 +92,49 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Brak konfiguracji AI (LOVABLE_API_KEY).");
 
-    const totalSize = data.images.reduce((acc, i) => acc + i.dataUrl.length, 0);
-    if (totalSize > MAX_TOTAL_B64) throw new Error("Łączny rozmiar plików przekracza limit — wgraj mniej/mniejsze screeny.");
-
-    const transcribeContent: unknown[] = [{ type: "text", text: TRANSCRIBE_USER_PROMPT }];
-    for (const img of data.images) {
-      if (img.mimeType === "application/pdf" || /\.pdf$/i.test(img.fileName ?? "")) {
-        transcribeContent.push({ type: "file", file: { filename: img.fileName ?? "kw.pdf", file_data: img.dataUrl } });
-      } else if (img.mimeType.startsWith("image/")) {
-        transcribeContent.push({ type: "image_url", image_url: { url: img.dataUrl } });
-      } else {
-        throw new Error(`Nieobsługiwany typ pliku: ${img.mimeType} (dozwolone: obrazy i PDF).`);
-      }
+    const r = await fetch(AI_GATEWAY, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: USER_PROMPT(data.text) },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (r.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
+    if (r.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      console.error("KW parse HTTP error", { status: r.status, body: body.slice(0, 500) });
+      throw new Error(`Błąd AI (HTTP ${r.status}): ${body.slice(0, 200)}`);
     }
-
-    async function runTranscribe(model: string) {
-      const r = await fetch(AI_GATEWAY, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
-            { role: "user", content: transcribeContent },
-          ],
-          max_tokens: 8000,
-        }),
-      });
-      if (r.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
-      if (r.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
-      if (!r.ok) {
-        const body = await r.text().catch(() => "");
-        console.error("KW OCR transcribe HTTP error", { model, status: r.status, body: body.slice(0, 500) });
-        throw new Error(`Błąd OCR — transkrypcja (HTTP ${r.status}): ${body.slice(0, 200)}`);
-      }
-      const j: any = await r.json();
-      const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
-      console.log("KW OCR transcribe result", { model, len: content.length, finish: j?.choices?.[0]?.finish_reason });
-      return content;
+    const j: any = await r.json();
+    const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
+    const parsed = tryParseJson(content);
+    if (!parsed || typeof parsed !== "object") {
+      console.error("KW parse: bad JSON", content.slice(0, 500));
+      throw new Error("AI nie zwróciło poprawnego JSON-a — spróbuj ponownie.");
     }
-
-    async function runTranscribePerplexity(model: string) {
-      const pk = process.env.PERPLEXITY_API_KEY;
-      if (!pk) return "";
-      const r = await fetch("https://api.perplexity.ai/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${pk}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: TRANSCRIBE_SYSTEM_PROMPT },
-            { role: "user", content: transcribeContent },
-          ],
-          max_tokens: 8000,
-        }),
-      });
-      if (!r.ok) {
-        const body = await r.text().catch(() => "");
-        console.error("KW OCR Perplexity HTTP error", { model, status: r.status, body: body.slice(0, 500) });
-        return "";
-      }
-      const j: any = await r.json();
-      const content: string = (j?.choices?.[0]?.message?.content ?? "").trim();
-      console.log("KW OCR Perplexity result", { model, len: content.length });
-      return content;
-    }
-
-    // Kolejność: Perplexity sonar-pro (vision) → Gemini 2.5 Pro → GPT-5.5.
-    let transcript = await runTranscribePerplexity("sonar-pro");
-    let usedModel = "perplexity/sonar-pro";
-    if (!transcript || transcript.length < 40) {
-      console.warn("KW OCR: pusto z Perplexity — fallback na Gemini");
-      transcript = await runTranscribe(MODEL);
-      usedModel = MODEL;
-    }
-    if (!transcript || transcript.length < 40) {
-      console.warn("KW OCR: pusto z Gemini — fallback na GPT-5.5");
-      transcript = await runTranscribe("openai/gpt-5.5");
-      usedModel = "openai/gpt-5.5";
-    }
-    if (!transcript || transcript.length < 40) {
-      throw new Error("OCR nie odczytał tekstu ze screenów — sprawdź, czy obrazy są czytelne.");
-    }
-    console.log("KW OCR: użyty model transkrypcji =", usedModel);
 
     if (data.dryRun) {
       return {
         ok: true as const,
         dryRun: true as const,
-        debug: {
-          transcript,
-          model: usedModel,
-          imagesMeta: data.images.map((i) => ({
-            fileName: i.fileName ?? null,
-            mimeType: i.mimeType,
-            sizeBytes: i.dataUrl.length,
-          })),
-        },
+        debug: { parsed, model: MODEL, textLength: data.text.length },
       };
     }
 
     const warnings: string[] = [];
     let kw = data.kwNumber ? normalizeKwNumber(data.kwNumber) : null;
-    const ocrKw = extractKwNumberFromText(transcript);
-    if (!kw) kw = ocrKw;
-    else if (ocrKw && ocrKw !== kw) {
-      warnings.push(`Numer KW odczytany ze screenów (${ocrKw}) różni się od podanego (${kw}) — zapisano pod podanym numerem.`);
+    const parsedKw = parsed.kw_number ? normalizeKwNumber(String(parsed.kw_number)) : extractKwNumberFromText(data.text);
+    if (!kw) kw = parsedKw;
+    else if (parsedKw && parsedKw !== kw) {
+      warnings.push(`Numer KW z tekstu (${parsedKw}) różni się od podanego (${kw}) — zapisano pod podanym numerem.`);
     }
+
     let propertyId: string | null = null;
     if (data.loanApplicationId) {
       const { data: prop } = await supabaseAdmin
@@ -255,11 +151,16 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         warnings.push(`Numer KW z importu (${kw}) różni się od numeru na nieruchomości wniosku (${propKw}).`);
       }
     }
-    if (!kw) {
-      throw new Error("Nie udało się ustalić numeru KW (nieczytelny na screenach) — podaj numer ręcznie.");
-    }
+    if (!kw) throw new Error("Nie udało się ustalić numeru KW — podaj numer ręcznie w polu KW na nieruchomości.");
 
-    const sections = splitTranscript(transcript);
+    const sections = {
+      okladka: wrapSection("OKŁADKA", parsed.okladka),
+      dzial_1o: wrapSection("Dział I-O — Oznaczenie nieruchomości", parsed.dzial_1o),
+      dzial_1s: wrapSection("Dział I-Sp — Spis praw związanych", parsed.dzial_1s),
+      dzial_2: wrapSection("Dział II — Własność", parsed.dzial_2),
+      dzial_3: wrapSection("Dział III — Prawa, roszczenia, ograniczenia", parsed.dzial_3),
+      dzial_4: wrapSection("Dział IV — Hipoteka", parsed.dzial_4),
+    };
 
     const { data: existing } = await supabaseAdmin
       .from("kw_documents")
@@ -271,14 +172,14 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         ok: false as const,
         needsForce: true as const,
         kwNumber: kw,
-        message: "Treść tej KW jest już zapisana. Wgraj ponownie z opcją nadpisania, jeśli chcesz ją zastąpić danymi z OCR.",
+        message: "Treść tej KW jest już zapisana. Nadpisać danymi z wklejonego tekstu?",
       };
     }
     const { error: upsertError } = await supabaseAdmin.from("kw_documents").upsert(
       {
         kw_number: kw,
         status: "ready",
-        okladka: sections.okladka,
+        okladka: sections.okladka ?? wrapSection("OKŁADKA", `KW: ${kw}`),
         dzial_1o: sections.dzial_1o,
         dzial_1s: sections.dzial_1s,
         dzial_2: sections.dzial_2,
@@ -292,45 +193,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       { onConflict: "kw_number" },
     );
     if (upsertError) throw new Error(`Nie udało się zapisać treści KW: ${upsertError.message}`);
-
-    // Zapisz screeny do plików klienta (bucket `pliki-klienta` + wpis w `documents`),
-    // żeby były widoczne w sekcji „Pliki klienta" wniosku od razu po imporcie.
-    if (data.loanApplicationId) {
-      let uploaded = 0;
-      for (let i = 0; i < data.images.length; i++) {
-        const img = data.images[i];
-        try {
-          const m = /^data:([^;]+);base64,(.*)$/.exec(img.dataUrl);
-          if (!m) continue;
-          const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
-          const contentType = img.mimeType || m[1] || "image/png";
-          const extFromMime = contentType.split("/")[1]?.split("+")[0] || "png";
-          const baseName = (img.fileName || `kw-screen-${i + 1}.${extFromMime}`).replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-          const path = `property/${data.loanApplicationId}/kw-screens/${Date.now()}-${i + 1}-${baseName}`;
-          const { error: upErr } = await supabaseAdmin.storage
-            .from(CLIENT_FILES_BUCKET)
-            .upload(path, bytes, { contentType, upsert: false });
-          if (upErr) {
-            console.warn("[kw-ocr] upload screenu KW nie powiódł się", upErr.message);
-            continue;
-          }
-          await supabaseAdmin.from("documents").insert({
-            loan_application_id: data.loanApplicationId,
-            property_id: propertyId,
-            document_type: "kw_screen",
-            file_name: baseName,
-            file_path: path,
-            visibility_level: "pelne",
-            status: "received",
-          });
-          uploaded++;
-        } catch (e) {
-          console.warn("[kw-ocr] błąd zapisu screenu KW", e);
-        }
-      }
-      if (uploaded > 0) warnings.push(`Zapisano ${uploaded} screen(ów) KW do plików klienta.`);
-    }
-
 
     if (propertyId) {
       const { data: prop } = await supabaseAdmin.from("properties").select("land_register_number").eq("id", propertyId).maybeSingle();
@@ -353,6 +215,6 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
         dzial_4: !!sections.dzial_4,
       },
       warnings,
-      debug: data.includeDebug ? { transcript } : undefined,
+      debug: data.includeDebug ? { parsed } : undefined,
     };
   });
