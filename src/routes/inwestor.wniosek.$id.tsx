@@ -194,15 +194,6 @@ function InwestorWniosek() {
         </Card>
       )}
 
-      {p && (
-        <PropertyLocationAnalysis
-          propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address || ""}
-          city={p.city}
-          postalCode={p.postal_code}
-          propertyType={p.property_type}
-          kwNumber={p.land_register_number}
-        />
-      )}
 
       
 
