@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   decodeMaybeBase64,
   fetchAndStoreKw,
@@ -9,8 +9,11 @@ import {
   normalizeKwNumber,
 } from "@/lib/kw-fetch.server";
 
-async function resolveKwForApplication(loanApplicationId: string): Promise<string | null> {
-  const { data, error } = await supabaseAdmin
+async function resolveKwForApplication(
+  supabase: SupabaseClient,
+  loanApplicationId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
     .from("properties")
     .select("land_register_number")
     .eq("loan_application_id", loanApplicationId)
@@ -26,10 +29,10 @@ async function resolveKwForApplication(loanApplicationId: string): Promise<strin
 export const getKwForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ loanApplicationId: z.string().uuid() }).parse(i))
-  .handler(async ({ data }) => {
-    const kw = await resolveKwForApplication(data.loanApplicationId);
+  .handler(async ({ data, context }) => {
+    const kw = await resolveKwForApplication(context.supabase, data.loanApplicationId);
     if (!kw) return { hasKw: false as const };
-    const { data: row, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("kw_documents")
       .select("status, okladka, dzial_1o, dzial_1s, dzial_2, dzial_3, dzial_4, fetched_at, last_error, ordered_at")
       .eq("kw_number", kw)
@@ -59,10 +62,10 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { userId } = context;
+    const { userId, supabase } = context;
 
-    // Role check
-    const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+    // Role check via authenticated client (RLS-safe)
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
     if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 
@@ -70,7 +73,7 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
       throw new Error("Brak konfiguracji CMD KW Engine (CMD_KW_USER / CMD_KW_PASSWORD).");
     }
 
-    const kw = await resolveKwForApplication(data.loanApplicationId);
+    const kw = await resolveKwForApplication(supabase, data.loanApplicationId);
     if (!kw) throw new Error("Wniosek nie ma poprawnego numeru KW na nieruchomości.");
 
     const out = await fetchAndStoreKw(kw, { orderedBy: userId, force: data.force });
