@@ -13,7 +13,7 @@ import { normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { renderKwSections, type KwExtraction } from "@/lib/kw-render";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = "google/gemini-2.5-pro";
 const MAX_FILES = 12;
 const MAX_FILE_B64 = 9_000_000; // ~6,5 MB pliku
 const MAX_TOTAL_B64 = 40_000_000;
