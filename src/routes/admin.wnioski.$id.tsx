@@ -69,18 +69,26 @@ function WniosekDetail() {
     setAudit(au.data ?? []); setAutomations(am.data ?? []); setDistributions(di.data ?? []);
 
     // Historia kontaktu obejmuje też komunikację z fazy leada (Messenger/IG,
-    // e-mail, SMS, voicebot) — bez tego wnioski z inbound miały pustą zakładkę,
-    // mimo że cała rozmowa z klientem jest zapisana w lead_communications.
+    // e-mail, SMS, voicebot) — także dopasowaną po telefonie/mailu klienta,
+    // bo Messenger/IG często ląduje na osobnym leadzie bez loan_application_id.
+    const client = (a.data as any)?.client;
     const { data: leadRows } = await supabase.from("leads").select("id").eq("loan_application_id", id);
     const leadIds = (leadRows ?? []).map((l: any) => l.id);
-    if (leadIds.length > 0) {
+
+    const orParts: string[] = [];
+    if (leadIds.length > 0) orParts.push(`lead_id.in.(${leadIds.join(",")})`);
+    if (client?.phone) orParts.push(`phone_normalized.eq.${client.phone}`);
+    if (client?.email) orParts.push(`email.eq.${client.email}`);
+
+    if (orParts.length > 0) {
       const { data: lc } = await supabase
         .from("lead_communications")
-        .select("id, channel, direction, subject, content, created_at, status")
-        .in("lead_id", leadIds)
+        .select("id, channel, direction, subject, content, created_at, status, attachments, recording_url")
+        .or(orParts.join(","))
         .order("created_at", { ascending: false })
-        .limit(500);
-      setComms(lc ?? []);
+        .limit(1000);
+      const seen = new Set<string>();
+      setComms((lc ?? []).filter((r: any) => (seen.has(r.id) ? false : (seen.add(r.id), true))));
     } else {
       setComms([]);
     }
