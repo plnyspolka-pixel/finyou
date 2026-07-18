@@ -177,7 +177,7 @@ export function KwContentSection({
             {error && <Badge variant="destructive">{doc?.status === "not_found" ? "Nie znaleziono" : "Błąd"}</Badge>}
             {ocrUploadControls}
             {canFetch && (
-              <Button size="sm" variant={ready ? "outline" : "default"} disabled={busy || ocrBusy} onClick={() => void onFetch(ready)}>
+              <Button size="sm" variant={ready ? "outline" : "default"} disabled={busy} onClick={() => void onFetch(ready)}>
                 {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 {ready ? "Odśwież" : processing ? "Sprawdź status" : "Pobierz treść KW"}
               </Button>
