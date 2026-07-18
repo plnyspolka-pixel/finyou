@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { normalizeLoanStatus } from "@/lib/loan-status";
+import { useAuth } from "@/hooks/use-auth";
 
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
@@ -44,6 +45,8 @@ const commDirectionLabels: Record<string, string> = {
 
 function WniosekDetail() {
   const { id } = Route.useParams();
+  const { roles } = useAuth();
+  const isAdmin = roles.includes("administrator");
   const [app, setApp] = useState<any | null>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [comms, setComms] = useState<any[]>([]);
@@ -190,7 +193,7 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
-              <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr />
+              <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr={isAdmin} />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>

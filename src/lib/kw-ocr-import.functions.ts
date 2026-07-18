@@ -68,10 +68,10 @@ function tryParseJson(s: string): KwExtraction | null {
   }
 }
 
-async function assertAdminOrOperator(userId: string) {
+async function assertAdmin(userId: string) {
   const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
-  const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
-  if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
+  const allowed = (roles ?? []).some((r) => r.role === "administrator");
+  if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator).");
 }
 
 export const importKwFromScreenshots = createServerFn({ method: "POST" })
@@ -89,7 +89,7 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdminOrOperator(context.userId);
+    await assertAdmin(context.userId);
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Brak konfiguracji AI (LOVABLE_API_KEY).");
