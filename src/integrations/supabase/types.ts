@@ -7556,6 +7556,7 @@ export type Database = {
         | "wyplacony"
         | "wniosek_odrzucony"
         | "brak_kontaktu"
+        | "brak_kwoty"
         | "kontakt"
         | "kompletowanie_danych"
         | "szukamy_inwestora"
@@ -7829,6 +7830,7 @@ export const Constants = {
         "wyplacony",
         "wniosek_odrzucony",
         "brak_kontaktu",
+        "brak_kwoty",
         "kontakt",
         "kompletowanie_danych",
         "szukamy_inwestora",
