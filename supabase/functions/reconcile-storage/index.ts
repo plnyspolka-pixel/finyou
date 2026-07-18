@@ -7,20 +7,15 @@
 // są szare. Ta funkcja odnajduje fizyczny blob w starym buckecie i kopiuje go
 // z powrotem do `pliki-klienta`, tak by metadane i plik znów się zgadzały.
 //
-// URUCHOMIENIE (po deployu funkcji + zastosowaniu migracji
-// 20260718120000_reconcile_storage_helpers.sql):
+// URUCHOMIENIE: przycisk „Napraw pliki" w panelu admina (Ustawienia →
+// Konserwacja plików) wywołuje tę funkcję przez supabase.functions.invoke.
+// Dostęp tylko dla zalogowanego administratora (verify_jwt = true + kontrola
+// roli w środku). Body: { apply?: boolean, max?: number }.
+//   - apply=false (domyślnie) → dry-run, NIC nie zapisuje, tylko raport.
+//   - apply=true             → kopiuje osierocone bloby do pliki-klienta.
 //
-//   # 1) Podgląd (dry-run) — NIC nie zapisuje, tylko raportuje co da się odzyskać:
-//   curl -s -X POST "https://<PROJECT>.functions.supabase.co/reconcile-storage" \
-//        -H "x-reconcile-secret: <RECONCILE_SECRET>"
-//
-//   # 2) Właściwa naprawa — kopiuje bloby:
-//   curl -s -X POST "https://<PROJECT>.functions.supabase.co/reconcile-storage?apply=1" \
-//        -H "x-reconcile-secret: <RECONCILE_SECRET>"
-//
-// Wymagane sekrety funkcji (Supabase → Edge Functions → Secrets):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  (zwykle wstrzykiwane automatycznie)
-//   RECONCILE_SECRET                          (dowolny długi losowy ciąg — bramka)
+// Wymagane sekrety funkcji (Supabase wstrzykuje je automatycznie):
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
 //
 // Funkcja jest idempotentna: pliki już działające pomija, a naprawione przy
 // kolejnym uruchomieniu również pomija. Można ją odpalać wielokrotnie.
@@ -34,7 +29,7 @@ const PAGE_SIZE = 500;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-reconcile-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -51,24 +46,41 @@ serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const SECRET = Deno.env.get("RECONCILE_SECRET");
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
     return json({ error: "Brak SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY w sekretach funkcji." }, 500);
   }
-  // Bramka: bez poprawnego sekretu nie ruszamy Storage.
-  if (!SECRET || req.headers.get("x-reconcile-secret") !== SECRET) {
-    return json({ error: "Nieautoryzowane (brak/niepoprawny x-reconcile-secret)." }, 401);
-  }
-
-  const url = new URL(req.url);
-  const apply = url.searchParams.get("apply") === "1";
-  // Bezpiecznik: maks. liczba plików do naprawy w jednym wywołaniu (0 = bez limitu).
-  const maxFix = Number(url.searchParams.get("max") ?? "0") || 0;
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Bramka: tylko zalogowany administrator. verify_jwt=true gwarantuje ważny
+  // token; tu dodatkowo wymuszamy rolę administrator.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return json({ error: "Brak tokenu." }, 401);
+  const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+  const uid = userData?.user?.id;
+  if (userErr || !uid) return json({ error: "Nieautoryzowane." }, 401);
+  const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
+    _user_id: uid,
+    _role: "administrator",
+  });
+  if (roleErr) return json({ error: `Kontrola roli: ${roleErr.message}` }, 500);
+  if (isAdmin !== true) return json({ error: "Wymagana rola administrator." }, 403);
+
+  // Parametry z body (functions.invoke) lub z query (curl/dashboard).
+  const url = new URL(req.url);
+  let body: { apply?: boolean; max?: number } = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+  const apply = body.apply === true || url.searchParams.get("apply") === "1";
+  // Bezpiecznik: maks. liczba plików do naprawy w jednym wywołaniu (0 = bez limitu).
+  const maxFix = Number(body.max ?? url.searchParams.get("max") ?? 0) || 0;
 
   const report = {
     mode: apply ? "apply" : "dry-run",
