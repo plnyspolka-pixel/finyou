@@ -173,11 +173,7 @@ function WniosekDetail() {
             </CardContent></Card>
             <Card><CardHeader><CardTitle>Wniosek</CardTitle></CardHeader><CardContent className="text-sm space-y-1">
               <div><span className="text-muted-foreground">Kwota:</span> <b>{formatPLN(app.loan_amount)}</b></div>
-              <div><span className="text-muted-foreground">Okres:</span> {app.preferred_period_months ? `${app.preferred_period_months} mies.` : "—"}</div>
-              <div><span className="text-muted-foreground">Szybka decyzja:</span> {app.fast_decision ? "Tak" : "Nie"}</div>
-              <div><span className="text-muted-foreground">Kompletność:</span> {app.completeness_percent}%</div>
-              <div><span className="text-muted-foreground">LTV:</span> {app.estimated_ltv ?? "—"}</div>
-              <div><span className="text-muted-foreground">Sytuacja:</span> {app.situation_description ?? "—"}</div>
+              <div><span className="text-muted-foreground">Numer KW:</span> {p?.land_register_number ?? "—"}</div>
             </CardContent></Card>
           </div>
         </TabsContent>
