@@ -194,12 +194,7 @@ function WniosekDetail() {
                   <div><span className="text-muted-foreground">Opis:</span> {p.description ?? "—"}</div>
                 </CardContent>
               </Card>
-              <PropertyLocationAnalysis
-                propertyAddress={[p.address, p.street].filter(Boolean).join(" ") || p.address}
-                city={p.city}
-                postalCode={p.postal_code}
-                propertyType={p.property_type}
-              />
+              <PropertyLocationAnalysisWithKwFallback property={p} />
               <KwContentSection applicationId={id} canFetch showKwNumber />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
