@@ -166,13 +166,17 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: USER_PROMPT.replace("{{TRANSCRIPT}}", transcript) },
         ],
-        temperature: 0,
         response_format: { type: "json_object" },
       }),
     });
     if (resp.status === 429) throw new Error("Limit zapytań AI chwilowo wyczerpany — spróbuj za chwilę.");
     if (resp.status === 402) throw new Error("Wyczerpany budżet AI (Lovable) — doładuj konto.");
-    if (!resp.ok) throw new Error(`Błąd OCR — strukturyzacja (HTTP ${resp.status}).`);
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => "");
+      console.error("KW OCR structuring HTTP error", { status: resp.status, body: errBody.slice(0, 800), model: STRUCTURE_MODEL });
+      throw new Error(`Błąd OCR — strukturyzacja (HTTP ${resp.status}): ${errBody.slice(0, 200)}`);
+    }
+
     const json: any = await resp.json();
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const extraction = tryParseJson(content);
