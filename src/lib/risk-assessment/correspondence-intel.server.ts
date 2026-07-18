@@ -1,6 +1,10 @@
 // Analiza korespondencji z klientem — e-maile, DM/Messenger, transkrypcje rozmów.
 // Zbiera wiadomości z lead_communications (powiązane przez leads → wniosek/klienta)
-// i wykonuje analizę behawioralną przy pomocy Gemini (Lovable AI Gateway).
+// i wyciąga WYŁĄCZNIE TWARDE FAKTY przy pomocy Gemini (Lovable AI Gateway).
+//
+// UWAGA: NIE oceniamy zaangażowania klienta w rozmowę, sentymentu, „poziomu współpracy"
+// ani pilności. Interesują nas tylko konkretne, weryfikowalne fakty, rozbieżności
+// względem wniosku/KW oraz twarde sygnały ryzyka wynikające z treści.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { CorrespondenceIntel } from "./types";
@@ -27,13 +31,9 @@ function emptyResult(summary: string): CorrespondenceIntel {
     available: false,
     messagesAnalyzed: 0,
     channels: [],
-    sentiment: "nieznany",
-    cooperationLevel: "nieznany",
-    urgency: "nieznana",
-    redFlags: [],
     statedFacts: [],
     inconsistencies: [],
-    behavioralRiskScore: 60,
+    redFlags: [],
     summary,
   };
 }
@@ -94,9 +94,14 @@ function buildPrompt(messages: GatheredMessage[], context: { declaredValue: numb
   const convo = messages
     .map((m, i) => `[${i + 1}] (${CHANNEL_LABELS[m.channel] ?? m.channel}, ${m.direction}) ${m.text}`)
     .join("\n");
-  return `Jesteś analitykiem ryzyka w firmie pożyczkowej zabezpieczonej nieruchomością. Przeanalizuj poniższą korespondencję z klientem pod kątem oceny ryzyka inwestycji.
+  return `Jesteś analitykiem ryzyka w firmie pożyczkowej zabezpieczonej nieruchomością. Z poniższej korespondencji z klientem wyciągnij WYŁĄCZNIE TWARDE FAKTY.
 
-KONTEKST WNIOSKU:
+BARDZO WAŻNE — CZEGO NIE ROBIĆ:
+- NIE oceniaj zaangażowania klienta w rozmowę, tonu, sentymentu, uprzejmości ani „poziomu współpracy".
+- NIE interpretuj emocji, motywacji ani pilności.
+- Podawaj tylko konkretne, weryfikowalne informacje wprost wynikające z treści (jeśli fakt nie jest wprost napisany — pomiń go).
+
+KONTEKST WNIOSKU (do wykrywania rozbieżności):
 - Deklarowana wartość nieruchomości: ${context.declaredValue ? context.declaredValue.toLocaleString("pl-PL") + " PLN" : "brak"}
 - Wnioskowana kwota: ${context.loanAmount ? context.loanAmount.toLocaleString("pl-PL") + " PLN" : "brak"}
 - Lokalizacja: ${context.city ?? "brak"}
@@ -104,23 +109,17 @@ KONTEKST WNIOSKU:
 KORESPONDENCJA (od najstarszej):
 ${convo}
 
-ZADANIE — oceń:
-1. sentiment ogólny klienta,
-2. poziom współpracy (czy odpowiada, dostarcza dokumenty, jest transparentny),
-3. pilność/nacisk czasowy zgłaszany przez klienta,
-4. sygnały ostrzegawcze (redFlags): presja czasu, ukrywanie informacji, niespójne kwoty, oznaki przymusu/desperacji, możliwe oszustwo, konflikt współwłaścicieli, problemy z tytułem prawnym,
-5. konkretne fakty o nieruchomości/sytuacji podane przez klienta (statedFacts),
-6. niespójności względem danych wniosku (inconsistencies).
+ZADANIE — wyciągnij:
+1. statedFacts — twarde fakty o nieruchomości i sytuacji prawno-finansowej podane wprost przez klienta (np. „nieruchomość jest wynajęta", „jest drugi współwłaściciel", „istnieje inna pożyczka/hipoteka", „trwa rozwód/spadek", „planowana sprzedaż", konkretne kwoty, daty, adresy).
+2. inconsistencies — twarde rozbieżności między treścią korespondencji a danymi wniosku/KW (inna kwota, inna wartość, inny adres, inny właściciel, sprzeczne informacje między wiadomościami).
+3. redFlags — twarde sygnały ryzyka wynikające z faktów (wzmianka o egzekucji/komorniku, zajęciu, innym wierzycielu, sporze o własność, braku zgody współwłaściciela, toczącym się postępowaniu, nieruchomości już wystawionej na sprzedaż lub obciążonej).
 
 ODPOWIEDŹ — wyłącznie poprawny JSON, bez markdown ani backticków:
 {
-  "sentiment": "pozytywny|neutralny|negatywny|mieszany",
-  "cooperationLevel": "wysoki|sredni|niski",
-  "urgency": "niska|srednia|wysoka",
-  "redFlags": ["..."],
   "statedFacts": ["..."],
   "inconsistencies": ["..."],
-  "riskCommentary": "1-3 zdania podsumowania ryzyka behawioralnego"
+  "redFlags": ["..."],
+  "factSummary": "1-3 zdania podsumowania wyłącznie na podstawie ustalonych faktów (bez ocen zaangażowania/sentymentu)"
 }`;
 }
 
@@ -128,25 +127,6 @@ function tryParseJson(s: string): any | null {
   const m = s.match(/\{[\s\S]*\}/);
   if (!m) return null;
   try { return JSON.parse(m[0]); } catch { return null; }
-}
-
-function computeBehavioralScore(p: {
-  sentiment: string;
-  cooperationLevel: string;
-  urgency: string;
-  redFlagsCount: number;
-  inconsistenciesCount: number;
-}): number {
-  let score = 75;
-  if (p.sentiment === "negatywny") score -= 15;
-  else if (p.sentiment === "mieszany") score -= 8;
-  if (p.cooperationLevel === "niski") score -= 20;
-  else if (p.cooperationLevel === "sredni") score -= 8;
-  else if (p.cooperationLevel === "wysoki") score += 5;
-  if (p.urgency === "wysoka") score -= 8;
-  score -= Math.min(30, p.redFlagsCount * 10);
-  score -= Math.min(15, p.inconsistenciesCount * 5);
-  return Math.max(0, Math.min(100, score));
 }
 
 export async function analyzeCorrespondence(args: {
@@ -164,7 +144,7 @@ export async function analyzeCorrespondence(args: {
 
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
-    const r = emptyResult(`Zebrano ${messages.length} wiadomości (${channels.join(", ")}), ale brak LOVABLE_API_KEY — analiza AI pominięta.`);
+    const r = emptyResult(`Zebrano ${messages.length} wiadomości (${channels.join(", ")}), ale brak LOVABLE_API_KEY — ekstrakcja faktów pominięta.`);
     r.messagesAnalyzed = messages.length;
     r.channels = channels;
     return r;
@@ -177,7 +157,7 @@ export async function analyzeCorrespondence(args: {
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: "system", content: "Jesteś analitykiem ryzyka. Odpowiadasz wyłącznie poprawnym JSON-em." },
+          { role: "system", content: "Jesteś analitykiem ryzyka. Wyciągasz wyłącznie twarde fakty (bez ocen zaangażowania czy sentymentu). Odpowiadasz wyłącznie poprawnym JSON-em." },
           { role: "user", content: buildPrompt(messages, { declaredValue: args.declaredValue ?? null, loanAmount: args.loanAmount ?? null, city: args.city ?? null }) },
         ],
         temperature: 0.1,
@@ -185,7 +165,7 @@ export async function analyzeCorrespondence(args: {
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      const r = emptyResult(`Analiza AI korespondencji nie powiodła się (HTTP ${res.status}: ${txt.slice(0, 120)}).`);
+      const r = emptyResult(`Ekstrakcja faktów z korespondencji nie powiodła się (HTTP ${res.status}: ${txt.slice(0, 120)}).`);
       r.messagesAnalyzed = messages.length;
       r.channels = channels;
       return r;
@@ -194,39 +174,27 @@ export async function analyzeCorrespondence(args: {
     const content = json?.choices?.[0]?.message?.content ?? "";
     const parsed = tryParseJson(content);
     if (!parsed) {
-      const r = emptyResult(`Nie udało się sparsować analizy AI (${messages.length} wiadomości).`);
+      const r = emptyResult(`Nie udało się sparsować ekstrakcji faktów (${messages.length} wiadomości).`);
       r.messagesAnalyzed = messages.length;
       r.channels = channels;
       return r;
     }
 
-    const sentiment = ["pozytywny", "neutralny", "negatywny", "mieszany"].includes(parsed.sentiment) ? parsed.sentiment : "nieznany";
-    const cooperationLevel = ["wysoki", "sredni", "niski"].includes(parsed.cooperationLevel) ? parsed.cooperationLevel : "nieznany";
-    const urgency = ["niska", "srednia", "wysoka"].includes(parsed.urgency) ? parsed.urgency : "nieznana";
-    const redFlags = Array.isArray(parsed.redFlags) ? parsed.redFlags.map(String).slice(0, 12) : [];
     const statedFacts = Array.isArray(parsed.statedFacts) ? parsed.statedFacts.map(String).slice(0, 12) : [];
     const inconsistencies = Array.isArray(parsed.inconsistencies) ? parsed.inconsistencies.map(String).slice(0, 12) : [];
-
-    const behavioralRiskScore = computeBehavioralScore({
-      sentiment, cooperationLevel, urgency,
-      redFlagsCount: redFlags.length, inconsistenciesCount: inconsistencies.length,
-    });
+    const redFlags = Array.isArray(parsed.redFlags) ? parsed.redFlags.map(String).slice(0, 12) : [];
 
     return {
       available: true,
       messagesAnalyzed: messages.length,
       channels,
-      sentiment: sentiment as CorrespondenceIntel["sentiment"],
-      cooperationLevel: cooperationLevel as CorrespondenceIntel["cooperationLevel"],
-      urgency: urgency as CorrespondenceIntel["urgency"],
-      redFlags,
       statedFacts,
       inconsistencies,
-      behavioralRiskScore,
-      summary: String(parsed.riskCommentary ?? `Przeanalizowano ${messages.length} wiadomości z kanałów: ${channels.join(", ")}.`),
+      redFlags,
+      summary: String(parsed.factSummary ?? `Wyodrębniono fakty z ${messages.length} wiadomości (kanały: ${channels.join(", ")}).`),
     };
   } catch (e: any) {
-    const r = emptyResult(`Błąd analizy korespondencji: ${e?.message ?? "nieznany"}.`);
+    const r = emptyResult(`Błąd ekstrakcji faktów z korespondencji: ${e?.message ?? "nieznany"}.`);
     r.messagesAnalyzed = messages.length;
     r.channels = channels;
     return r;

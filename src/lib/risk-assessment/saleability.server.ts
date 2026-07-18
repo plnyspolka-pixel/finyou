@@ -2,14 +2,15 @@
 // Łączy: badanie popytu z otoczenia przez Perplexity (zaludnienie, większe miasto,
 // zbiornik wodny, kurort/uzdrowisko, sanatorium, atrakcje turystyczne, dostępność
 // komunikacyjna, siła nabywcza, popyt na najem) + realne aktywne oferty sprzedaży
-// w okolicy wystawione przez biura nieruchomości (Firecrawl — portale ogłoszeniowe).
+// w okolicy wraz z cenami ofertowymi (Perplexity — portale ogłoszeniowe).
 
 import type { SaleabilityForecast, SaleabilityBand } from "./types";
-import { scrapeSimilarListings } from "@/lib/property-analysis/listings-scraping.server";
+import { perplexityLocalOffers } from "@/lib/property-analysis/perplexity-offers.server";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
 
 const LOCAL_OFFERS_RADIUS_KM = 10;
+const OFFERS_SOURCE = "Perplexity (portale ogłoszeniowe)";
 // Próg „rozsądnego/sprzedawalnego" rynku dla nieruchomości innych niż grunt rolny.
 const REASONABLE_POPULATION = 20000;
 
@@ -27,7 +28,20 @@ export function saleabilityBandFromScore(score: number): SaleabilityBand {
 
 type LocalOffers = SaleabilityForecast["localMarketOffers"];
 
-// ---- Aktywne oferty sprzedaży w okolicy wystawione przez biura (Firecrawl) ----
+function emptyLocalOffers(): LocalOffers {
+  return {
+    available: false,
+    totalActiveListings: 0,
+    agencyListings: 0,
+    privateListings: 0,
+    medianPricePerM2: null,
+    radiusKm: LOCAL_OFFERS_RADIUS_KM,
+    source: OFFERS_SOURCE,
+    sample: [],
+  };
+}
+
+// ---- Aktywne oferty sprzedaży w okolicy (Perplexity — ceny ofertowe z portali) ----
 async function gatherLocalOffers(args: {
   propertyType: string;
   city: string | null;
@@ -35,37 +49,24 @@ async function gatherLocalOffers(args: {
   voivodeship: string | null;
   areaM2: number | null;
 }): Promise<LocalOffers> {
-  const emptyOffers: LocalOffers = {
-    available: false,
-    totalActiveListings: 0,
-    agencyListings: 0,
-    privateListings: 0,
-    medianPricePerM2: null,
-    radiusKm: LOCAL_OFFERS_RADIUS_KM,
-    source: "Firecrawl (portale ogłoszeniowe)",
-    sample: [],
-  };
   try {
-    const res = await scrapeSimilarListings({
+    const res = await perplexityLocalOffers({
       propertyType: args.propertyType,
       city: args.city,
       district: args.district,
       voivodeship: args.voivodeship,
       areaM2: args.areaM2,
-      maxResults: 20,
-    });
-    const listings = res.listings ?? [];
-    const agencyListings = listings.filter((l) => l.postedBy === "agency").length;
-    const privateListings = listings.filter((l) => l.postedBy === "private").length;
-    return {
-      available: agencyListings > 0,
-      totalActiveListings: listings.length,
-      agencyListings,
-      privateListings,
-      medianPricePerM2: res.pricePerM2Median,
       radiusKm: LOCAL_OFFERS_RADIUS_KM,
-      source: "Firecrawl (portale ogłoszeniowe)",
-      sample: listings.slice(0, 6).map((l) => ({
+    });
+    return {
+      available: res.agencyListings > 0,
+      totalActiveListings: res.totalActiveListings,
+      agencyListings: res.agencyListings,
+      privateListings: res.privateListings,
+      medianPricePerM2: res.medianPricePerM2,
+      radiusKm: LOCAL_OFFERS_RADIUS_KM,
+      source: OFFERS_SOURCE,
+      sample: res.offers.slice(0, 6).map((l) => ({
         title: l.title,
         url: l.url,
         source: l.source,
@@ -75,7 +76,7 @@ async function gatherLocalOffers(args: {
       })),
     };
   } catch {
-    return emptyOffers;
+    return emptyLocalOffers();
   }
 }
 
@@ -359,11 +360,7 @@ export async function analyzeSaleability(args: {
       summary,
     };
   } catch (e: any) {
-    const offers = await offersPromise.catch<LocalOffers>(() => ({
-      available: false, totalActiveListings: 0, agencyListings: 0, privateListings: 0,
-      medianPricePerM2: null, radiusKm: LOCAL_OFFERS_RADIUS_KM,
-      source: "Firecrawl (portale ogłoszeniowe)", sample: [],
-    }));
+    const offers = await offersPromise.catch<LocalOffers>(() => emptyLocalOffers());
     return empty(`Błąd prognozy łatwości sprzedaży: ${e?.message ?? "nieznany"}.`, offers);
   }
 }

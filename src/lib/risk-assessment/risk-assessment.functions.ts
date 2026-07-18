@@ -18,6 +18,7 @@ import { assessPlotBuildability } from "./plot-buildability";
 import { fetchGovBenchmark } from "./gov-benchmark.server";
 import { estimateForcedSale } from "./forced-sale";
 import { perplexityMasterValuation } from "./perplexity-master.server";
+import { clampLoanTermYears } from "./life-expectancy";
 import { combineRiskAssessment } from "./risk-scoring";
 import type { InvestmentRiskAssessment } from "./types";
 import { recommendationLabel } from "./types";
@@ -77,7 +78,11 @@ export async function runInvestmentRiskAssessmentCore(
   if (!app) throw new Error("Wniosek nie znaleziony.");
   const property = props?.[0] ?? null;
   const clientId = (app as any).client_id ?? null;
-  const loanTermYears = app.preferred_period_months ? Math.round((app.preferred_period_months / 12) * 10) / 10 : null;
+  // Pożyczki udzielamy na 1–5 lat — dożycie liczymy dla tego zakresu (poza nim clamp do 1–5;
+  // brak deklaracji okresu → 5 lat, tj. najostrożniejszy horyzont).
+  const loanTermYears = clampLoanTermYears(
+    app.preferred_period_months ? app.preferred_period_months / 12 : null,
+  );
   const declaredValue = property?.estimated_value ?? null;
   const loanAmount = app.loan_amount ?? null;
 
@@ -168,6 +173,7 @@ export async function runInvestmentRiskAssessmentCore(
   //     zł/ha (wg klasy bonitacyjnej) oraz lokali zł/m². Zawsze próbujemy najpierw.
   const govBenchmark = await fetchGovBenchmark({
     propertyType: property?.property_type ?? "inna",
+    address: effAddress,
     city: effCity,
     voivodeship: effVoivodeship,
     county: null,
@@ -398,9 +404,9 @@ function buildDataSources(a: {
     status: a.saleability.available ? "success" : "no_data",
   });
   sources.push({
-    source: "Aktywne oferty sprzedaży w okolicy — biura nieruchomości (Firecrawl)",
+    source: "Aktywne oferty sprzedaży w okolicy — ceny ofertowe (Perplexity)",
     used: a.saleability.localMarketOffers.totalActiveListings > 0,
-    purpose: "realna podaż i obsługa rynku przez biura — sygnał płynności zbycia",
+    purpose: "realna podaż i ceny ofertowe w okolicy — sygnał płynności zbycia",
     dataLevel: `${a.saleability.localMarketOffers.agencyListings} ofert biur / ${a.saleability.localMarketOffers.totalActiveListings} ogółem (~${a.saleability.localMarketOffers.radiusKm} km)`,
     period: "oferty aktywne",
     status: a.saleability.localMarketOffers.totalActiveListings > 0 ? "success" : "no_data",

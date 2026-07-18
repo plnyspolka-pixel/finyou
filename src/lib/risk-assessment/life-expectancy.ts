@@ -23,6 +23,18 @@ const EX_WOMEN: Array<[age: number, ex: number]> = [
   [85, 5.9], [90, 4.1], [95, 3.0], [100, 2.2],
 ];
 
+// Pożyczki udzielamy na 1–5 lat — dożycie (prawdopodobieństwo przeżycia okresu)
+// liczymy dla całego tego zakresu, żeby analityk widział ryzyko dla każdego tenoru.
+export const LOAN_TERM_YEARS = [1, 2, 3, 4, 5] as const;
+export const MIN_LOAN_TERM_YEARS = 1;
+export const MAX_LOAN_TERM_YEARS = 5;
+
+/** Ogranicza okres pożyczki do oferowanego zakresu 1–5 lat (domyślnie 5 = najostrożniej). */
+export function clampLoanTermYears(years: number | null | undefined): number {
+  if (years == null || !Number.isFinite(years)) return MAX_LOAN_TERM_YEARS;
+  return Math.min(MAX_LOAN_TERM_YEARS, Math.max(MIN_LOAN_TERM_YEARS, Math.round(years * 10) / 10));
+}
+
 function interpolateEx(table: Array<[number, number]>, age: number): number {
   if (age <= table[0][0]) return table[0][1];
   const last = table[table.length - 1];
@@ -52,6 +64,8 @@ export interface LifeExpectancyResult {
   loanTermYears: number | null;
   /** Prawdopodobieństwo przeżycia całego okresu pożyczki (szacunek). */
   survivalProbabilityOverTerm: number | null;
+  /** Dożycie dla oferowanego zakresu pożyczek 1–5 lat: P(przeżycia) dla każdego tenoru. */
+  survivalByLoanYear: Array<{ years: number; probability: number }>;
   /** Pasmo ryzyka sukcesji/dożycia dla oceny zabezpieczenia. */
   longevityRiskBand: LongevityBand;
   /** Krótki opis dla analityka/oferty. */
@@ -122,6 +136,7 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
     projectedAgeAtDeath: null,
     loanTermYears: termYears,
     survivalProbabilityOverTerm: null,
+    survivalByLoanYear: [],
     source: "GUS — Tablice trwania życia 2022",
     disclaimer: DISCLAIMER,
   };
@@ -140,13 +155,23 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
   const survival = termYears != null ? Math.round(survivalProbability(remainingYears, termYears) * 100) / 100 : null;
   const band = classifyBand(remainingYears, termYears, age);
 
+  // Dożycie dla oferowanego zakresu pożyczek 1–5 lat.
+  const survivalByLoanYear = LOAN_TERM_YEARS.map((years) => ({
+    years,
+    probability: Math.round(survivalProbability(remainingYears, years) * 100) / 100,
+  }));
+  const survival5y = survivalByLoanYear[survivalByLoanYear.length - 1].probability;
+  const survival1y = survivalByLoanYear[0].probability;
+
   const termPart = termYears != null
     ? ` Dla horyzontu pożyczki ${termYears} lat szacunkowe prawdopodobieństwo przeżycia całego okresu wynosi ~${Math.round((survival ?? 0) * 100)}%.`
     : "";
+  const rangePart =
+    ` Dożycie dla pożyczek 1–5 lat: P(1 rok) ≈ ${Math.round(survival1y * 100)}%, P(5 lat) ≈ ${Math.round(survival5y * 100)}%.`;
   const summary =
     `Właściciel: ${sex === "M" ? "mężczyzna" : "kobieta"}, wiek ${age} lat. ` +
     `Dalsze przeciętne trwanie życia wg GUS ≈ ${remainingYears} lat (przewidywany wiek dożycia ≈ ${projectedAgeAtDeath}).` +
-    termPart;
+    termPart + rangePart;
 
   return {
     ...base,
@@ -154,6 +179,7 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
     remainingYears,
     projectedAgeAtDeath,
     survivalProbabilityOverTerm: survival,
+    survivalByLoanYear,
     longevityRiskBand: band,
     summary,
   };

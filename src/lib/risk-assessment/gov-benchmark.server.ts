@@ -6,6 +6,7 @@
 
 import { gusBenchmark, classifySoil } from "@/lib/property-analysis/gus-bdl.server";
 import { rcnBenchmarkCached, rcnStatusMessage } from "@/lib/property-analysis/rcn-geoportal.server";
+import { geocode } from "@/lib/property-analysis/location-score.server";
 import type { GovBenchmark } from "./types";
 
 function levelLabel(level: "powiat" | "wojewodztwo" | "krajowy" | undefined | null): string | null {
@@ -17,6 +18,8 @@ function levelLabel(level: "powiat" | "wojewodztwo" | "krajowy" | undefined | nu
 
 export async function fetchGovBenchmark(args: {
   propertyType: string;
+  /** Pełny adres nieruchomości (np. z działu I-O KW) — geokodowany, gdy brak współrzędnych, aby odpytać RCN. */
+  address?: string | null;
   city?: string | null;
   voivodeship?: string | null;
   county?: string | null;
@@ -59,10 +62,26 @@ export async function fetchGovBenchmark(args: {
     warnings: [],
   };
 
+  // Współrzędne do RCN: użyj przekazanych, a w razie braku — zgeokoduj pełny adres
+  // (np. z działu I-O KW). Dzięki temu RCN da się odpytać nawet gdy wcześniejsza
+  // analiza zabezpieczenia nie ustaliła współrzędnych.
+  let lat = Number.isFinite(args.latitude as number) ? (args.latitude as number) : null;
+  let lng = Number.isFinite(args.longitude as number) ? (args.longitude as number) : null;
+  let geocodedFromAddress = false;
+  if ((lat == null || lng == null) && args.address) {
+    const query = [args.address, args.city, args.voivodeship, "Polska"].filter(Boolean).join(", ");
+    const geo = await geocode(query, { expectedCity: args.city, expectedVoivodeship: args.voivodeship }).catch(() => null);
+    if (geo) {
+      lat = geo.lat;
+      lng = geo.lng;
+      geocodedFromAddress = true;
+    }
+  }
+
   // Odpytujemy oba źródła równolegle — RCN wymaga współrzędnych.
   const rcnP =
-    args.latitude != null && args.longitude != null && Number.isFinite(args.latitude) && Number.isFinite(args.longitude)
-      ? rcnBenchmarkCached({ lat: args.latitude, lng: args.longitude, propertyType: args.propertyType }).catch(() => null)
+    lat != null && lng != null
+      ? rcnBenchmarkCached({ lat, lng, propertyType: args.propertyType }).catch(() => null)
       : Promise.resolve(null);
   const gusP = gusBenchmark({
     propertyType: args.propertyType,
@@ -81,7 +100,8 @@ export async function fetchGovBenchmark(args: {
   let rcnPricePerM2: number | null = null;
   if (rcn) {
     base.rcnStatus = rcn.diagnostics.status;
-    base.rcnStatusMessage = rcnStatusMessage(rcn.diagnostics.status);
+    base.rcnStatusMessage = rcnStatusMessage(rcn.diagnostics.status)
+      + (geocodedFromAddress ? " (współrzędne z geokodowania adresu KW)" : "");
     base.rcnRadiusKm = rcn.radiusKm;
     base.rcnTransactions = rcn.transactionsCount ?? 0;
     if (rcn.stats) {
@@ -91,8 +111,16 @@ export async function fetchGovBenchmark(args: {
     base.rcnAvailable = rcnPricePerHa != null || rcnPricePerM2 != null;
     base.rcnPricePerHa = rcnPricePerHa;
     base.rcnPricePerM2 = rcnPricePerM2;
+  } else if (lat == null || lng == null) {
+    if (args.address) {
+      base.rcnStatus = "geocoding_failed";
+      base.rcnStatusMessage = "RCN nieodpytany — nie udało się zgeokodować adresu z KW do współrzędnych.";
+    } else {
+      base.rcnStatus = "missing_coordinates";
+      base.rcnStatusMessage = "RCN nieodpytany — brak adresu/współrzędnych nieruchomości.";
+    }
   } else {
-    base.rcnStatusMessage = "RCN niedostępny (brak współrzędnych lub błąd usługi).";
+    base.rcnStatusMessage = "RCN niedostępny (błąd usługi Geoportal).";
   }
 
   // --- GUS BDL (przeciętne) ---

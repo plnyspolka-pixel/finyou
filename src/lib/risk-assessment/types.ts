@@ -55,21 +55,19 @@ export interface KwLegalAnalysis {
   summary: string;
 }
 
-// ---- Korespondencja: analiza behawioralna ----
+// ---- Korespondencja: wyłącznie TWARDE FAKTY ----
+// Nie oceniamy zaangażowania klienta w rozmowę, sentymentu ani „poziomu współpracy" —
+// wyciągamy tylko konkretne, weryfikowalne fakty, rozbieżności i twarde sygnały ryzyka.
 export interface CorrespondenceIntel {
   available: boolean;
   messagesAnalyzed: number;
   channels: string[];
-  sentiment: "pozytywny" | "neutralny" | "negatywny" | "mieszany" | "nieznany";
-  cooperationLevel: "wysoki" | "sredni" | "niski" | "nieznany";
-  urgency: "niska" | "srednia" | "wysoka" | "nieznana";
-  /** Sygnały ostrzegawcze (nacisk czasowy, presja, niespójności, przymus, oznaki oszustwa). */
-  redFlags: string[];
-  /** Fakty o nieruchomości/sytuacji podane przez klienta. */
+  /** Twarde fakty o nieruchomości/sytuacji prawno-finansowej podane wprost przez klienta. */
   statedFacts: string[];
-  /** Niespójności względem danych z wniosku / KW. */
+  /** Niespójności względem danych z wniosku / KW (twarde rozbieżności, np. inna kwota, adres, właściciel). */
   inconsistencies: string[];
-  behavioralRiskScore: number; // 0–100 (wyżej = bezpieczniej)
+  /** Twarde sygnały ryzyka wynikające z faktów (np. wzmianka o egzekucji, innym wierzycielu, sporze o własność, planowanej sprzedaży). */
+  redFlags: string[];
   summary: string;
 }
 
