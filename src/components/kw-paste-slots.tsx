@@ -332,14 +332,10 @@ export function KwPasteSlotsDialog({
                   </pre>
                 </div>
 
-                <div>
-                  <div className="text-xs font-medium text-muted-foreground mb-1">
-                    JSON po strukturyzacji {debug.parsed ? "" : <span className="text-destructive">(nie sparsowano)</span>}
-                  </div>
-                  <pre className="text-[11px] leading-relaxed whitespace-pre-wrap font-mono bg-background border rounded p-2 max-h-64 overflow-auto">
-                    {debug.rawJson || <span className="text-muted-foreground italic">(pusta)</span>}
-                  </pre>
+                <div className="text-[11px] text-muted-foreground italic">
+                  Strukturyzacja JSON wyłączona — zapisujemy dosłowną transkrypcję sekcji KW.
                 </div>
+
               </>
             )}
           </div>
