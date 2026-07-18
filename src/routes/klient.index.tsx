@@ -444,7 +444,7 @@ function KlientDashboard() {
                   <div className="min-w-0 flex-1 leading-tight drop-shadow-[0_1px_8px_oklch(0.15_0.05_265/0.8)]">
                     <div className="text-base font-bold uppercase tracking-[0.18em] sm:text-lg">Twoje pliki</div>
                     <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/65">
-                      Zdjęcia nieruchomości i dokumenty
+                      Zdjęcia, dokumenty, wyciągi — wszystko w jednym miejscu
                     </div>
                   </div>
                   {isComplete && (
