@@ -173,6 +173,16 @@ export const listLeads = createServerFn({ method: "GET" })
               s.lastNoteById = ev.created_by ?? null;
             }
           }
+          else if (ev.channel === "reveal" && ev.created_by) {
+            const field = (ev.metadata?.field as string) || "phone";
+            if (field === "phone" || field === "email" || field === "messenger") {
+              const rMap = (revealsByLead[l.id] ??= { phone: {}, email: {}, messenger: {} });
+              const bucket = rMap[field as "phone" | "email" | "messenger"];
+              const entry = (bucket[ev.created_by] ??= { count: 0, lastAt: ev.created_at });
+              entry.count++;
+              if (new Date(ev.created_at) > new Date(entry.lastAt)) entry.lastAt = ev.created_at;
+            }
+          }
           if (!s.lastAt || new Date(ev.created_at) > new Date(s.lastAt)) {
             s.lastAt = ev.created_at;
             s.lastChannel = ev.channel;
