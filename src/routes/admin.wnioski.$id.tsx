@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
 import { normalizeLoanStatus } from "@/lib/loan-status";
-import { PropertyLocationAnalysis } from "@/components/property-location-analysis";
+
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
