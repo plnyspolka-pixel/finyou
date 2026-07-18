@@ -257,6 +257,45 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
     );
     if (upsertError) throw new Error(`Nie udało się zapisać treści KW: ${upsertError.message}`);
 
+    // Zapisz screeny do plików klienta (bucket `pliki-klienta` + wpis w `documents`),
+    // żeby były widoczne w sekcji „Pliki klienta" wniosku od razu po imporcie.
+    if (data.loanApplicationId) {
+      let uploaded = 0;
+      for (let i = 0; i < data.images.length; i++) {
+        const img = data.images[i];
+        try {
+          const m = /^data:([^;]+);base64,(.*)$/.exec(img.dataUrl);
+          if (!m) continue;
+          const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+          const contentType = img.mimeType || m[1] || "image/png";
+          const extFromMime = contentType.split("/")[1]?.split("+")[0] || "png";
+          const baseName = (img.fileName || `kw-screen-${i + 1}.${extFromMime}`).replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+          const path = `property/${data.loanApplicationId}/kw-screens/${Date.now()}-${i + 1}-${baseName}`;
+          const { error: upErr } = await supabaseAdmin.storage
+            .from(CLIENT_FILES_BUCKET)
+            .upload(path, bytes, { contentType, upsert: false });
+          if (upErr) {
+            console.warn("[kw-ocr] upload screenu KW nie powiódł się", upErr.message);
+            continue;
+          }
+          await supabaseAdmin.from("documents").insert({
+            loan_application_id: data.loanApplicationId,
+            property_id: propertyId,
+            document_type: "kw_screen",
+            file_name: baseName,
+            file_path: path,
+            visibility_level: "pelne",
+            status: "received",
+          });
+          uploaded++;
+        } catch (e) {
+          console.warn("[kw-ocr] błąd zapisu screenu KW", e);
+        }
+      }
+      if (uploaded > 0) warnings.push(`Zapisano ${uploaded} screen(ów) KW do plików klienta.`);
+    }
+
+
     if (propertyId) {
       const { data: prop } = await supabaseAdmin.from("properties").select("land_register_number").eq("id", propertyId).maybeSingle();
       if (prop && !prop.land_register_number) {
