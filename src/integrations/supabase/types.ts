@@ -7352,6 +7352,11 @@ export type Database = {
     }
     Functions: {
       affiliate_current_partner_id: { Args: never; Returns: string }
+      apply_loan_auto_status: { Args: { _loan_id: string }; Returns: undefined }
+      compute_loan_auto_status: {
+        Args: { _loan_id: string }
+        Returns: Database["public"]["Enums"]["loan_status"]
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -7558,6 +7563,8 @@ export type Database = {
         | "dokumenty_przygotowanie_umowy"
         | "notariusz"
         | "zamkniete"
+        | "brak_kw"
+        | "brak_zdjec_dokumentow"
       marketing_audience: "klient" | "inwestor" | "posrednik"
       marketing_media_type: "image" | "video"
       offer_status:
@@ -7829,6 +7836,8 @@ export const Constants = {
         "dokumenty_przygotowanie_umowy",
         "notariusz",
         "zamkniete",
+        "brak_kw",
+        "brak_zdjec_dokumentow",
       ],
       marketing_audience: ["klient", "inwestor", "posrednik"],
       marketing_media_type: ["image", "video"],

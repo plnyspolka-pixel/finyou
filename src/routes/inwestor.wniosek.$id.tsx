@@ -59,6 +59,9 @@ const PROPERTY_PHOTO_TYPES = new Set([
   "zdjecia_pomieszczen",
   "zdjecia_bryly",
   "zdjecia_lokalu",
+  "zdjecie_wewnetrzne",
+  "zdjecie_zewnetrzne",
+  "property_photos",
   "klient_upload",
 ]);
 

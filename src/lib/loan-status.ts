@@ -7,6 +7,8 @@
 export const LOAN_STATUS_ORDER = [
   "nowy_lead",
   "brak_kontaktu",
+  "brak_kw",
+  "brak_zdjec_dokumentow",
   "kontakt",
   "kompletowanie_danych",
   "szukamy_inwestora",
@@ -22,6 +24,8 @@ export type LoanStatus = (typeof LOAN_STATUS_ORDER)[number];
 export const LOAN_STATUS_SHORT_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead",
   brak_kontaktu: "Brak kontaktu",
+  brak_kw: "Brak numeru KW",
+  brak_zdjec_dokumentow: "Brak zdjęć / dokumentów",
   kontakt: "Kontakt",
   kompletowanie_danych: "Kompletowanie danych",
   szukamy_inwestora: "Szukamy inwestora / oferta",
@@ -73,7 +77,9 @@ export function loanStatusLabel(status: string | null | undefined): string {
 /** Pełne, opisowe komunikaty (voicebot / panel klienta). */
 export const LOAN_STATUS_LABELS: Record<string, string> = {
   nowy_lead: "Nowy lead — czekamy na pierwszy kontakt",
-  brak_kontaktu: "Brak kontaktu — nie udało się dodzwonić",
+  brak_kontaktu: "Brak kontaktu — brakuje imienia, nazwiska, telefonu lub e-maila",
+  brak_kw: "Brak numeru KW — mamy dane kontaktowe, czekamy na numer księgi wieczystej",
+  brak_zdjec_dokumentow: "Brak zdjęć / dokumentów — potrzebujemy zdjęć nieruchomości lub innych dokumentów",
   kontakt: "W kontakcie — pośrednik prowadzi rozmowę",
   kompletowanie_danych: "Kompletowanie danych i dokumentów",
   szukamy_inwestora: "Szukamy inwestora — wniosek w dystrybucji / oczekujemy na ofertę",
@@ -102,6 +108,24 @@ export function describeLoanStatusForAgent(status: string): {
         status_message:
           "Twój wniosek jest u nas — pośrednik wkrótce się skontaktuje, aby omówić szczegóły.",
         client_action: "Odbierz telefon od naszego pośrednika.",
+        is_decision_available: false,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "brak_kw":
+      return {
+        status_label: label,
+        status_message: "Mamy Twoje dane kontaktowe. Czekamy na numer księgi wieczystej nieruchomości.",
+        client_action: "Uzupełnij numer KW w panelu klienta.",
+        is_decision_available: false,
+        is_completed: false,
+        is_rejected: false,
+      };
+    case "brak_zdjec_dokumentow":
+      return {
+        status_label: label,
+        status_message: "Brakuje jeszcze zdjęć nieruchomości lub innych dokumentów.",
+        client_action: "Dodaj zdjęcia nieruchomości lub dokumenty w panelu klienta.",
         is_decision_available: false,
         is_completed: false,
         is_rejected: false,
