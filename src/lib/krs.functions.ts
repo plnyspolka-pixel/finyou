@@ -265,16 +265,8 @@ async function fetchKrs(krs: string): Promise<{ ok: true; body: any } | { ok: fa
 
 // ---------- Public server function ----------
 
-export const krsCompanyLookup = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({
-      krs: z.string().trim().min(1).max(20),
-      forceRefresh: z.boolean().optional(),
-    }).parse(input),
-  )
-  .handler(async ({ data }): Promise<KrsLookupResult> => {
-    const normalized = normalizeKrs(data.krs);
+export async function lookupKrsCompany(krsInput: string, forceRefresh?: boolean): Promise<KrsLookupResult> {
+    const normalized = normalizeKrs(krsInput);
     if (!normalized) {
       return { success: false, errorCode: "INVALID_KRS", message: "Numer KRS jest nieprawidłowy." };
     }
@@ -282,7 +274,7 @@ export const krsCompanyLookup = createServerFn({ method: "POST" })
     const t0 = Date.now();
 
     // Cache lookup
-    if (!data.forceRefresh) {
+    if (!forceRefresh) {
       const { data: cached } = await supabaseAdmin
         .from("krs_cache")
         .select("response_json, mapped_json, expires_at")
@@ -320,7 +312,7 @@ export const krsCompanyLookup = createServerFn({ method: "POST" })
     await supabaseAdmin
       .from("krs_cache")
       .upsert({
-        krs: data.krs,
+        krs: krsInput,
         normalized_krs: normalized,
         source: "KRS API Ministerstwo Sprawiedliwości",
         response_json: result.body,
@@ -341,4 +333,14 @@ export const krsCompanyLookup = createServerFn({ method: "POST" })
       cached: false,
       company,
     };
-  });
+}
+
+export const krsCompanyLookup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      krs: z.string().trim().min(1).max(20),
+      forceRefresh: z.boolean().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data }): Promise<KrsLookupResult> => lookupKrsCompany(data.krs, data.forceRefresh));

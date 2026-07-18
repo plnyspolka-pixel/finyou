@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      aml_screenings: {
+        Row: {
+          borrower_type: string | null
+          client_profile_id: string
+          crbr_data: Json | null
+          crbr_discrepancies: Json
+          crbr_status: string
+          created_at: string
+          created_by: string | null
+          id: string
+          nip: string | null
+          overall_status: string
+          screening_provider: string | null
+          screening_results: Json
+          warnings: Json
+        }
+        Insert: {
+          borrower_type?: string | null
+          client_profile_id: string
+          crbr_data?: Json | null
+          crbr_discrepancies?: Json
+          crbr_status: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nip?: string | null
+          overall_status: string
+          screening_provider?: string | null
+          screening_results?: Json
+          warnings?: Json
+        }
+        Update: {
+          borrower_type?: string | null
+          client_profile_id?: string
+          crbr_data?: Json | null
+          crbr_discrepancies?: Json
+          crbr_status?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nip?: string | null
+          overall_status?: string
+          screening_provider?: string | null
+          screening_results?: Json
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_screenings_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: false
+            referencedRelation: "client_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounting_documents: {
         Row: {
           counterparty_address: string | null

@@ -47,6 +47,7 @@ import {
   getClientProfile,
   fetchCompanyByNip,
 } from "@/lib/client-profile.functions";
+import { AmlScreeningPanel } from "@/components/admin/AmlScreeningPanel";
 
 export const Route = createFileRoute("/admin/kreator-pozyczki")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -445,6 +446,8 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
               <div><Label>PKD główny</Label><Input value={`${b.mainPkdCode ?? ""} ${b.mainPkdName ?? ""}`.trim()} onChange={(e) => set("borrowerData.mainPkdName")(e.target.value)} /></div>
             </CardContent>
           </Card>
+
+          <AmlScreeningPanel profileId={profile.id} isCompany={isCompany} />
 
           {!isCompany ? (
             <Card>
