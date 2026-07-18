@@ -62,11 +62,11 @@ export function RevealsList({
   reveals?: { phone: RevealEntry[]; email: RevealEntry[]; messenger: RevealEntry[] };
 }) {
   if (!reveals) return null;
-  const groups: { field: Field; items: RevealEntry[] }[] = [
+  const groups = ([
     { field: "phone", items: reveals.phone ?? [] },
     { field: "email", items: reveals.email ?? [] },
     { field: "messenger", items: reveals.messenger ?? [] },
-  ].filter((g) => g.items.length > 0);
+  ] as { field: Field; items: RevealEntry[] }[]).filter((g) => g.items.length > 0);
   if (groups.length === 0) return null;
   return (
     <div className="text-[11px] mt-1 flex flex-wrap gap-1">
