@@ -23,7 +23,9 @@ export interface MasterValuationInput {
   ocr: OcrSummary;
   plotBuildability?: PlotBuildabilityResult | null;
   govBenchmark?: GovBenchmark | null;
+  marketComparables?: MarketComparablesResult | null;
 }
+
 
 function fmt(n: number | null | undefined): string {
   return n != null && Number.isFinite(n) ? n.toLocaleString("pl-PL") + " PLN" : "brak";
