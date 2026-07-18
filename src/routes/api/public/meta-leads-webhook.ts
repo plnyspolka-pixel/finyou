@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { placeOutboundCallInternal, sendSmsInternal } from "@/lib/voicebot.functions";
-import { sendResendEmail } from "@/lib/resend-send.server";
+import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
 import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
 
 function verifyMetaSig(body: string, signature: string | null, secret: string): boolean {
@@ -297,9 +296,10 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               }, { onConflict: "meta_lead_id" }).select("id").single();
 
               // Upsert zunifikowanego leada (panel admina widzi wszystko z jednego miejsca)
+              let unifiedLeadId: string | null = null;
               try {
                 const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
-                await upsertLeadFromSource({
+                unifiedLeadId = await upsertLeadFromSource({
                   type: "pozyczkowy",
                   source: "meta_ads",
                   firstName: capture.firstName,
@@ -316,6 +316,21 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 });
               } catch (e) {
                 console.error("[meta-leads-webhook] unified lead upsert", e);
+              }
+
+              // TRIGGER NURTURE — cała sekwencja Ani (mail/SMS/call, 365 dni) startuje
+              // OD RAZU po wejściu leada, a nie po rozpoczęciu wniosku. Kotwicą (dzień 1)
+              // jest moment wpadnięcia leada. Idempotentne (unikalne lead_id,channel,step_index),
+              // więc równoległy pull-sync nie tworzy duplikatów.
+              // UWAGA: webhook to główna (real-time) ścieżka wejścia leada — pull-sync pomija
+              // leady już obecne w meta_leads (dedup), dlatego harmonogram MUSI ruszyć tutaj.
+              if (unifiedLeadId) {
+                try {
+                  const { scheduleFollowUpsForLead } = await import("@/lib/follow-up-plan.server");
+                  await scheduleFollowUpsForLead(unifiedLeadId);
+                } catch (e) {
+                  console.error("[meta-leads-webhook] schedule follow-ups", e);
+                }
               }
 
               const formId = v.form_id ?? details.form_id;
@@ -355,29 +370,10 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 console.error("[meta-leads-webhook] call block error", e);
               }
 
-              // 4) SMS z linkiem do dokończenia wniosku
-              if (phone && capture.returnLink) {
-                const smsBody = `Cześć ${capture.firstName ?? ""}! Dziękujemy za zainteresowanie pożyczką. Dokończ wniosek tutaj: ${capture.returnLink} — Finance You`.replace(/\s+/g, " ").trim();
-                await sendSmsInternal({
-                  phone,
-                  body: smsBody,
-                  source: "meta_lead_return_link",
-                }).catch((e) => console.error("[meta-leads-webhook] sms", e));
-              }
-
-              // 4b) E-mail z linkiem do dokończenia wniosku
-              if (email && capture.returnLink) {
-                const greeting = capture.firstName ? `Cześć ${capture.firstName}!` : "Cześć!";
-                const text = `${greeting}\n\nDziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w Finance You.\n\nDokończ wniosek tutaj: ${capture.returnLink}\n\nZajmie Ci to ok. 3 minut. W razie pytań — zadzwonimy lub odpisz na tego maila.\n\nZespół Finance You`;
-                const html = `<p>${greeting}</p><p>Dziękujemy za zainteresowanie pożyczką pod zastaw nieruchomości w <b>Finance You</b>.</p><p><a href="${capture.returnLink}" style="display:inline-block;padding:12px 20px;background:#0f3460;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Dokończ wniosek</a></p><p style="color:#666;font-size:13px">Zajmie Ci to ok. 3 minut. W razie pytań — zadzwonimy lub odpisz na tego maila.</p><p>Zespół Finance You</p>`;
-                await sendResendEmail({
-                  to: email,
-                  subject: "Dokończ wniosek o pożyczkę — Finance You",
-                  text,
-                  html,
-                  fromName: "Ania z Finance You",
-                }).catch((e) => console.error("[meta-leads-webhook] email", e));
-              }
+              // 4) SMS + e-mail powitalny idą już PRZEZ sekwencję follow-up (krok 1 mail/SMS,
+              //    zaplanowany wyżej przez scheduleFollowUpsForLead z kotwicą na dzień wejścia leada).
+              //    Nie wysyłamy tu drugiego, ad-hoc SMS-a/maila — inaczej klient dostałby
+              //    dwie prawie identyczne wiadomości w ciągu minuty. Tak samo robi pull-sync.
 
               // 4c) Upsert formularza Meta (źródło prawdy dla przełączników w panelu Voicebot)
               if (formId) {
