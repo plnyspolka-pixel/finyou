@@ -154,6 +154,10 @@ export function CompanyLookupInline({
         Pobierz z GUS/KRS
       </Button>
     </div>
+      {showCrbr && lastNip && crbrData && (
+        <CrbrBeneficiariesCard nip={lastNip} initialData={crbrData} />
+      )}
+    </div>
   );
 }
 
