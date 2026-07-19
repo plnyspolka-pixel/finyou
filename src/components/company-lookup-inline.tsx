@@ -96,6 +96,17 @@ export function CompanyLookupInline({
       };
       onResolved(resolved);
       toast.success(krsFound ? "Dane z GUS + KRS zaciągnięte" : "Dane z GUS zaciągnięte", { id: t });
+
+      // Doczytaj CRBR (best-effort) — cache 90 dni po stronie serwera.
+      if (showCrbr && resolved.nip) {
+        setLastNip(resolved.nip);
+        try {
+          const cres: any = await crbrFn({ data: { nip: resolved.nip } });
+          setCrbrData(cres);
+        } catch (err) {
+          console.warn("[crbr] lookup failed", err);
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd pobierania danych firmy", { id: t });
     } finally {
