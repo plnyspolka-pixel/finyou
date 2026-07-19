@@ -50,6 +50,19 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] messenger backfill error", e);
         }
 
+        // Wysyłka zaplanowanych follow-upów (mail/SMS/telefon) z lead_follow_up_schedule.
+        // processDueFollowUps sam pilnuje okien godzinowych i statusów terminalnych.
+        try {
+          const { processDueFollowUps } = await import("@/lib/follow-up-plan.server");
+          const plan = await processDueFollowUps();
+          if (plan.processed || plan.sent || plan.skipped) {
+            console.log("[follow-up-tick] plan", JSON.stringify(plan));
+          }
+        } catch (e) {
+          console.error("[follow-up-tick] plan error", e);
+        }
+
+
         const now = Date.now();
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 
