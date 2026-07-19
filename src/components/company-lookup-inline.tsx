@@ -8,6 +8,8 @@ import { Loader2, Search, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
+import { getCrbrForCompany } from "@/lib/crbr.functions";
+import { CrbrBeneficiariesCard } from "@/components/crbr-beneficiaries";
 
 export type ResolvedCompany = {
   name: string;
