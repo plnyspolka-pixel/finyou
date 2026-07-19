@@ -125,7 +125,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.broker_soft_delete_application(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.broker_soft_delete_application(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.broker_soft_delete_application(uuid) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- Wykorzystanie limitu (dla UI: np. „3/5"). Użytkownik pyta o siebie,
@@ -154,7 +155,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.broker_offer_usage(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.broker_offer_usage(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.broker_offer_usage(uuid) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- Backfill autorstwa: wnioski utworzone z panelu pośrednika, których

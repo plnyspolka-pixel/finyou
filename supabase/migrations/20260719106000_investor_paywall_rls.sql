@@ -478,7 +478,8 @@ AS $$
   ORDER BY la.created_at DESC;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.investor_offer_teasers() TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.investor_offer_teasers() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.investor_offer_teasers() TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 12. PUBLICZNY WIDOK ZAJAWKOWY zastępuje szeroki dostęp anon do tabel.

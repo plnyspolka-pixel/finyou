@@ -109,12 +109,20 @@ AS $$
       OR public.has_active_paid_access(_user_id, 'broker');
 $$;
 
-GRANT EXECUTE ON FUNCTION public.is_external_partner(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.is_internal_staff(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.has_active_paid_access(uuid, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_access_state(uuid, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.investor_has_full_access(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.broker_has_paid_access(uuid) TO authenticated;
+-- EXECUTE: tylko zalogowani i service_role (anon nie może odpytywać stanu
+-- dostępu innych użytkowników).
+REVOKE EXECUTE ON FUNCTION public.is_external_partner(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.is_internal_staff(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.has_active_paid_access(uuid, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.get_access_state(uuid, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.investor_has_full_access(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.broker_has_paid_access(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_external_partner(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_internal_staff(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.has_active_paid_access(uuid, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_access_state(uuid, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.investor_has_full_access(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.broker_has_paid_access(uuid) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- ATOMOWE PRZETWORZENIE OPŁACONEJ PŁATNOŚCI (wywoływane z webhooka Tpay
@@ -247,6 +255,7 @@ $$;
 
 -- Wywoływana wyłącznie przez service_role (webhook) — bez EXECUTE dla klientów.
 REVOKE EXECUTE ON FUNCTION public.process_access_payment_paid(uuid, bigint, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.process_access_payment_paid(uuid, bigint, text) TO service_role;
 
 -- ---------------------------------------------------------------------
 -- RĘCZNA KOREKTA DOSTĘPU PRZEZ ADMINISTRATORA (z audytem).
@@ -317,7 +326,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.admin_adjust_access(uuid, text, timestamptz, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_adjust_access(uuid, text, timestamptz, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_adjust_access(uuid, text, timestamptz, text) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- MIGRACJA DANYCH: istniejące terminy inwestorów → access_entitlements.

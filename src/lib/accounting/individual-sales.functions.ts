@@ -68,6 +68,7 @@ export const issueInvoiceForIndividualSale = createServerFn({ method: "POST" })
     const { data: existingInvoice } = await (supabaseAdmin.from("sales_invoices") as any)
       .select("id")
       .in("payment_id", [String(row.transaction_id), `indiv-${row.transaction_id}`])
+      .limit(1)
       .maybeSingle();
     if (existingInvoice?.id) {
       await (supabaseAdmin.from("individual_sales_register") as any)
