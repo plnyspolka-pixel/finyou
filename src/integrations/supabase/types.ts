@@ -14,6 +14,309 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_audit_logs: {
+        Row: {
+          action: string
+          actor_role: string | null
+          actor_user_id: string | null
+          after: Json | null
+          audience: string | null
+          before: Json | null
+          created_at: string
+          id: string
+          reason: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          after?: Json | null
+          audience?: string | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          after?: Json | null
+          audience?: string | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      access_entitlements: {
+        Row: {
+          active_from: string | null
+          active_until: string | null
+          audience: string
+          created_at: string
+          id: string
+          last_payment_id: string | null
+          last_product_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_from?: string | null
+          active_until?: string | null
+          audience: string
+          created_at?: string
+          id?: string
+          last_payment_id?: string | null
+          last_product_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_from?: string | null
+          active_until?: string | null
+          audience?: string
+          created_at?: string
+          id?: string
+          last_payment_id?: string | null
+          last_product_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_entitlements_last_payment_fk"
+            columns: ["last_payment_id"]
+            isOneToOne: false
+            referencedRelation: "access_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_entitlements_last_product_id_fkey"
+            columns: ["last_product_id"]
+            isOneToOne: false
+            referencedRelation: "access_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_expiry_notifications: {
+        Row: {
+          active_until: string
+          audience: string
+          id: string
+          kind: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          active_until: string
+          audience: string
+          id?: string
+          kind: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          active_until?: string
+          audience?: string
+          id?: string
+          kind?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      access_payments: {
+        Row: {
+          affiliate_event_id: string | null
+          audience: string
+          buyer_city: string | null
+          buyer_country: string
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_nip: string | null
+          buyer_postal_code: string | null
+          buyer_street: string | null
+          buyer_type: string
+          consents: Json
+          created_at: string
+          currency: string
+          expected_amount_grosz: number
+          failure_reason: string | null
+          granted_from: string | null
+          granted_until: string | null
+          id: string
+          invoice_error: string | null
+          invoice_id: string | null
+          needs_review: boolean
+          paid_amount_grosz: number | null
+          processed_at: string | null
+          product_id: string
+          provider: string
+          provider_transaction_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_event_id?: string | null
+          audience: string
+          buyer_city?: string | null
+          buyer_country?: string
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          buyer_type: string
+          consents?: Json
+          created_at?: string
+          currency?: string
+          expected_amount_grosz: number
+          failure_reason?: string | null
+          granted_from?: string | null
+          granted_until?: string | null
+          id?: string
+          invoice_error?: string | null
+          invoice_id?: string | null
+          needs_review?: boolean
+          paid_amount_grosz?: number | null
+          processed_at?: string | null
+          product_id: string
+          provider?: string
+          provider_transaction_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          affiliate_event_id?: string | null
+          audience?: string
+          buyer_city?: string | null
+          buyer_country?: string
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_nip?: string | null
+          buyer_postal_code?: string | null
+          buyer_street?: string | null
+          buyer_type?: string
+          consents?: Json
+          created_at?: string
+          currency?: string
+          expected_amount_grosz?: number
+          failure_reason?: string | null
+          granted_from?: string | null
+          granted_until?: string | null
+          id?: string
+          invoice_error?: string | null
+          invoice_id?: string | null
+          needs_review?: boolean
+          paid_amount_grosz?: number | null
+          processed_at?: string | null
+          product_id?: string
+          provider?: string
+          provider_transaction_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "sales_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "access_payments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "access_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_products: {
+        Row: {
+          active: boolean
+          amount_grosz: number
+          audience: string
+          code: string
+          created_at: string
+          currency: string
+          duration_days: number
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          amount_grosz: number
+          audience: string
+          code: string
+          created_at?: string
+          currency?: string
+          duration_days: number
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          amount_grosz?: number
+          audience?: string
+          code?: string
+          created_at?: string
+          currency?: string
+          duration_days?: number
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      access_webhook_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          payload: Json | null
+          payment_id: string | null
+          provider: string
+          provider_transaction_id: string | null
+          result: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload?: Json | null
+          payment_id?: string | null
+          provider?: string
+          provider_transaction_id?: string | null
+          result?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload?: Json | null
+          payment_id?: string | null
+          provider?: string
+          provider_transaction_id?: string | null
+          result?: string | null
+        }
+        Relationships: []
+      }
       accounting_documents: {
         Row: {
           counterparty_address: string | null
@@ -369,6 +672,13 @@ export type Database = {
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "affiliate_commission_events_direct_partner_id_fkey"
+            columns: ["direct_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
+          },
         ]
       }
       affiliate_commission_rules: {
@@ -541,6 +851,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "affiliate_commissions_direct_partner_id_fkey"
+            columns: ["direct_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
+          },
+          {
             foreignKeyName: "affiliate_commissions_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -553,6 +870,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
           },
           {
             foreignKeyName: "affiliate_commissions_payout_batch_id_fkey"
@@ -624,6 +948,13 @@ export type Database = {
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "affiliate_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
+          },
         ]
       }
       affiliate_network_closure: {
@@ -654,11 +985,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "affiliate_network_closure_ancestor_partner_id_fkey"
+            columns: ["ancestor_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
+          },
+          {
             foreignKeyName: "affiliate_network_closure_descendant_partner_id_fkey"
             columns: ["descendant_partner_id"]
             isOneToOne: false
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_network_closure_descendant_partner_id_fkey"
+            columns: ["descendant_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
           },
         ]
       }
@@ -770,6 +1115,13 @@ export type Database = {
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "affiliate_partners_sponsor_partner_id_fkey"
+            columns: ["sponsor_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
+          },
         ]
       }
       affiliate_payout_batches: {
@@ -868,6 +1220,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payout_items_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
           },
           {
             foreignKeyName: "affiliate_payout_items_payout_batch_id_fkey"
@@ -2110,6 +2469,13 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "automation_events_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       avatar_faqs: {
@@ -2217,6 +2583,13 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "broker_settlements_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       call_queue: {
@@ -2296,6 +2669,13 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_queue_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -2435,6 +2815,13 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "chat_threads_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_profiles: {
@@ -2474,6 +2861,13 @@ export type Database = {
             columns: ["source_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_profiles_source_application_id_fkey"
+            columns: ["source_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -2743,6 +3137,13 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contact_events_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       document_templates: {
@@ -2851,6 +3252,13 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
           {
@@ -3536,6 +3944,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "generated_documents_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "generated_documents_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -3977,6 +4392,13 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investor_offers_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -4910,6 +5332,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leads_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leads_meta_lead_id_fkey"
             columns: ["meta_lead_id"]
             isOneToOne: false
@@ -4945,10 +5374,13 @@ export type Database = {
           contact_attempts_phone: number
           contact_attempts_sms: number
           created_at: string
+          created_by_partner_user_id: string | null
           current_form_step: number
           decision_at: string | null
           decision_by: string | null
           decision_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           estimated_ltv: number | null
           external_id: string | null
           fast_decision: boolean | null
@@ -5029,10 +5461,13 @@ export type Database = {
           contact_attempts_phone?: number
           contact_attempts_sms?: number
           created_at?: string
+          created_by_partner_user_id?: string | null
           current_form_step?: number
           decision_at?: string | null
           decision_by?: string | null
           decision_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           estimated_ltv?: number | null
           external_id?: string | null
           fast_decision?: boolean | null
@@ -5113,10 +5548,13 @@ export type Database = {
           contact_attempts_phone?: number
           contact_attempts_sms?: number
           created_at?: string
+          created_by_partner_user_id?: string | null
           current_form_step?: number
           decision_at?: string | null
           decision_by?: string | null
           decision_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           estimated_ltv?: number | null
           external_id?: string | null
           fast_decision?: boolean | null
@@ -5187,11 +5625,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "loan_applications_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "loan_applications_referred_by_partner_id_fkey"
             columns: ["referred_by_partner_id"]
             isOneToOne: false
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_applications_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
           },
         ]
       }
@@ -5282,6 +5734,13 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loan_proposals_source_application_id_fkey"
+            columns: ["source_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       loan_reminder_email_sends: {
@@ -5342,6 +5801,13 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_reminder_email_sends_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
           {
@@ -5938,6 +6404,13 @@ export type Database = {
             referencedRelation: "loan_applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "meta_leads_lead_application_id_fkey"
+            columns: ["lead_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       meta_sync_log: {
@@ -6044,6 +6517,13 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_distributions_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -6153,6 +6633,13 @@ export type Database = {
             referencedRelation: "affiliate_partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partner_operator_role_audit"
+            referencedColumns: ["partner_id"]
+          },
         ]
       }
       properties: {
@@ -6225,6 +6712,13 @@ export type Database = {
             columns: ["loan_application_id"]
             isOneToOne: false
             referencedRelation: "loan_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_loan_application_id_fkey"
+            columns: ["loan_application_id"]
+            isOneToOne: false
+            referencedRelation: "public_loan_teasers"
             referencedColumns: ["id"]
           },
         ]
@@ -6535,6 +7029,7 @@ export type Database = {
           buyer_nip: string | null
           buyer_postal_code: string | null
           buyer_street: string | null
+          buyer_user_id: string | null
           created_at: string
           created_by: string | null
           currency: string
@@ -6571,6 +7066,7 @@ export type Database = {
           buyer_nip?: string | null
           buyer_postal_code?: string | null
           buyer_street?: string | null
+          buyer_user_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -6607,6 +7103,7 @@ export type Database = {
           buyer_nip?: string | null
           buyer_postal_code?: string | null
           buyer_street?: string | null
+          buyer_user_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -7361,11 +7858,55 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      partner_operator_role_audit: {
+        Row: {
+          company_name: string | null
+          email: string | null
+          first_name: string | null
+          has_posrednik_role: boolean | null
+          last_name: string | null
+          operator_role_granted_at: string | null
+          partner_id: string | null
+          partner_status: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      public_loan_teasers: {
+        Row: {
+          annual_investor_rate: number | null
+          area_sqm: number | null
+          city: string | null
+          created_at: string | null
+          estimated_value: number | null
+          id: string | null
+          loan_amount: number | null
+          preferred_period_months: number | null
+          property_type: string | null
+          status: string | null
+          voivodeship: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      admin_adjust_access: {
+        Args: {
+          _audience: string
+          _new_until: string
+          _reason: string
+          _target_user_id: string
+        }
+        Returns: Json
+      }
       affiliate_current_partner_id: { Args: never; Returns: string }
       apply_loan_auto_status: { Args: { _loan_id: string }; Returns: undefined }
+      broker_has_paid_access: { Args: { _user_id: string }; Returns: boolean }
+      broker_offer_usage: { Args: { _user_id: string }; Returns: Json }
+      broker_soft_delete_application: {
+        Args: { _application_id: string }
+        Returns: Json
+      }
       compute_loan_auto_status: {
         Args: { _loan_id: string }
         Returns: Database["public"]["Enums"]["loan_status"]
@@ -7390,6 +7931,10 @@ export type Database = {
       exec_admin_any: { Args: { _sql: string }; Returns: Json }
       exec_admin_select: { Args: { _sql: string }; Returns: Json }
       exec_admin_write: { Args: { _sql: string }; Returns: Json }
+      get_access_state: {
+        Args: { _audience: string; _user_id: string }
+        Returns: Json
+      }
       get_operator_invite: {
         Args: { _token: string }
         Returns: {
@@ -7442,6 +7987,10 @@ export type Database = {
           track_subscribe: boolean
         }[]
       }
+      has_active_paid_access: {
+        Args: { _audience: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -7462,6 +8011,27 @@ export type Database = {
         Returns: undefined
       }
       increment_loan_view: { Args: { _loan_id: string }; Returns: undefined }
+      investor_has_full_access: { Args: { _user_id: string }; Returns: boolean }
+      investor_offer_teasers: {
+        Args: never
+        Returns: {
+          annual_investor_rate: number
+          area_sqm: number
+          city: string
+          created_at: string
+          description: string
+          estimated_ltv: number
+          estimated_value: number
+          id: string
+          loan_amount: number
+          photos: string[]
+          preferred_period_months: number
+          property_type: string
+          voivodeship: string
+        }[]
+      }
+      is_external_partner: { Args: { _user_id: string }; Returns: boolean }
+      is_internal_staff: { Args: { _user_id: string }; Returns: boolean }
       list_public_loan_proposals: {
         Args: never
         Returns: {
@@ -7505,8 +8075,24 @@ export type Database = {
         }
         Returns: number
       }
+      partner_owns_application: {
+        Args: { _application_id: string; _uid: string }
+        Returns: boolean
+      }
+      partner_owns_client: {
+        Args: { _client_id: string; _uid: string }
+        Returns: boolean
+      }
       pl_first_name_canonical: { Args: { _name: string }; Returns: string }
       pl_strip_diacritics: { Args: { _s: string }; Returns: string }
+      process_access_payment_paid: {
+        Args: {
+          _paid_amount_grosz: number
+          _payment_id: string
+          _provider_transaction_id?: string
+        }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -7539,6 +8125,7 @@ export type Database = {
         | "inwestor"
         | "ksiegowosc"
         | "operator_wewnetrzny"
+        | "posrednik"
       automation_status: "aktywna" | "wstrzymana" | "zakonczona" | "blad"
       consent_kind: "privacy" | "marketing" | "terms" | "terms_investor"
       contact_channel:
@@ -7809,6 +8396,7 @@ export const Constants = {
         "inwestor",
         "ksiegowosc",
         "operator_wewnetrzny",
+        "posrednik",
       ],
       automation_status: ["aktywna", "wstrzymana", "zakonczona", "blad"],
       consent_kind: ["privacy", "marketing", "terms", "terms_investor"],
