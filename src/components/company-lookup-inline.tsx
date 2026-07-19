@@ -115,7 +115,6 @@ export function CompanyLookupInline({
   };
 
   return (
-  return (
     <div className="space-y-2">
     <div className={compact ? "flex flex-wrap items-end gap-2" : "grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"}>
       <div className="space-y-1">
