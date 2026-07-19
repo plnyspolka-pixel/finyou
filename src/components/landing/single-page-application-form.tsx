@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 
 import { PropertyTypesShowcase, PROPERTY_SHOWCASE_KEY_TO_SECURITY, PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
@@ -18,7 +19,7 @@ import {
   securityTypeLabels,
   type SecurityType,
 } from "@/lib/loan-math";
-import { submitLandingLoanApplication } from "@/lib/landing-application.functions";
+import { submitLandingLoanApplication, submitBrokerLoanApplication } from "@/lib/landing-application.functions";
 import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
 import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
@@ -240,11 +241,14 @@ export function SinglePageApplicationForm({
   prefilledContact,
   brokerMode,
 }: { prefilledContact?: PrefilledContact; brokerMode?: BrokerMode } = {}) {
-  const submitFn = useServerFn(submitLandingLoanApplication);
+  const landingSubmitFn = useServerFn(submitLandingLoanApplication);
+  const brokerSubmitFn = useServerFn(submitBrokerLoanApplication);
   const navigate = useNavigate();
 
   const skipContact = Boolean(prefilledContact?.email) && !brokerMode;
   const isBroker = Boolean(brokerMode);
+  const submitFn = isBroker ? brokerSubmitFn : landingSubmitFn;
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
   
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
@@ -479,7 +483,13 @@ export function SinglePageApplicationForm({
           assigned_operator_id: brokerMode?.assignedOperatorId ?? null,
         },
       });
-      if (!res?.ok) throw new Error("submit failed");
+      if (!res?.ok) {
+        if ((res as { code?: string })?.code === "BROKER_OFFER_LIMIT") {
+          setLimitModalOpen(true);
+          return;
+        }
+        throw new Error("submit failed");
+      }
       // Meta: CompleteRegistration = "Ukończenie rejestracji" — po finalnym wysłaniu
       void trackEvent(
         "CompleteRegistration",
@@ -800,7 +810,30 @@ export function SinglePageApplicationForm({
         Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
       </p>
 
-
+      {/* Limit 5 ofert na darmowym koncie pośrednika (egzekwowany w bazie —
+          modal tylko komunikuje wynik). */}
+      <Dialog open={limitModalOpen} onOpenChange={setLimitModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Limit ofert darmowego konta</DialogTitle>
+            <DialogDescription>
+              W darmowym koncie możesz posiadać maksymalnie 5 ofert jednocześnie. Usuń jedną z
+              istniejących ofert albo wykup pełny dostęp.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => { setLimitModalOpen(false); void navigate({ to: "/posrednik/wnioski" }); }}>
+              Zobacz moje oferty
+            </Button>
+            <Button onClick={() => { setLimitModalOpen(false); void navigate({ to: "/posrednik/abonament" }); }}>
+              Wykup pełny dostęp
+            </Button>
+            <Button variant="ghost" onClick={() => setLimitModalOpen(false)}>
+              Anuluj
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

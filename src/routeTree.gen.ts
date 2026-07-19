@@ -48,9 +48,11 @@ import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.roz
 import { Route as PosrednikProwizjeRouteImport } from './routes/posrednik.prowizje'
 import { Route as PosrednikProgramRouteImport } from './routes/posrednik.program'
 import { Route as PosrednikProfilRouteImport } from './routes/posrednik.profil'
+import { Route as PosrednikPlatnosciRouteImport } from './routes/posrednik.platnosci'
 import { Route as PosrednikMojeLeadyRouteImport } from './routes/posrednik.moje-leady'
 import { Route as PosrednikMarketingRouteImport } from './routes/posrednik.marketing'
 import { Route as PosrednikLeadyRouteImport } from './routes/posrednik.leady'
+import { Route as PosrednikAbonamentRouteImport } from './routes/posrednik.abonament'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
@@ -68,6 +70,7 @@ import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windyk
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
+import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
@@ -87,6 +90,7 @@ import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
+import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
 import { Route as AdminOfertyRouteImport } from './routes/admin.oferty'
@@ -184,6 +188,7 @@ import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/ap
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/api/public/hooks/affiliate-events-tick'
+import { Route as ApiPublicHooksAccessExpiryTickRouteImport } from './routes/api/public/hooks/access-expiry-tick'
 import { Route as ApiPublicEmailOpenRouteImport } from './routes/api/public/email/open'
 import { Route as ApiPublicEmailClickRouteImport } from './routes/api/public/email/click'
 
@@ -382,6 +387,11 @@ const PosrednikProfilRoute = PosrednikProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const PosrednikPlatnosciRoute = PosrednikPlatnosciRouteImport.update({
+  id: '/platnosci',
+  path: '/platnosci',
+  getParentRoute: () => PosrednikRoute,
+} as any)
 const PosrednikMojeLeadyRoute = PosrednikMojeLeadyRouteImport.update({
   id: '/moje-leady',
   path: '/moje-leady',
@@ -395,6 +405,11 @@ const PosrednikMarketingRoute = PosrednikMarketingRouteImport.update({
 const PosrednikLeadyRoute = PosrednikLeadyRouteImport.update({
   id: '/leady',
   path: '/leady',
+  getParentRoute: () => PosrednikRoute,
+} as any)
+const PosrednikAbonamentRoute = PosrednikAbonamentRouteImport.update({
+  id: '/abonament',
+  path: '/abonament',
   getParentRoute: () => PosrednikRoute,
 } as any)
 const PosrednicyRejestracjaRoute = PosrednicyRejestracjaRouteImport.update({
@@ -481,6 +496,11 @@ const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
 const InwestorProfilRoute = InwestorProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorPlatnosciRoute = InwestorPlatnosciRouteImport.update({
+  id: '/platnosci',
+  path: '/platnosci',
   getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorOfertyRoute = InwestorOfertyRouteImport.update({
@@ -578,6 +598,11 @@ const AdminRoleRoute = AdminRoleRouteImport.update({
 const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
   id: '/przypomnienia',
   path: '/przypomnienia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlatnosciDostepRoute = AdminPlatnosciDostepRouteImport.update({
+  id: '/platnosci-dostep',
+  path: '/platnosci-dostep',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPixeleRoute = AdminPixeleRouteImport.update({
@@ -1107,6 +1132,12 @@ const ApiPublicHooksAffiliateEventsTickRoute =
     path: '/api/public/hooks/affiliate-events-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAccessExpiryTickRoute =
+  ApiPublicHooksAccessExpiryTickRouteImport.update({
+    id: '/api/public/hooks/access-expiry-tick',
+    path: '/api/public/hooks/access-expiry-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailOpenRoute = ApiPublicEmailOpenRouteImport.update({
   id: '/api/public/email/open',
   path: '/api/public/email/open',
@@ -1166,6 +1197,7 @@ export interface FileRoutesByFullPath {
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
@@ -1185,6 +1217,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
+  '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
@@ -1202,9 +1235,11 @@ export interface FileRoutesByFullPath {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
+  '/posrednik/abonament': typeof PosrednikAbonamentRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/platnosci': typeof PosrednikPlatnosciRoute
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
@@ -1273,6 +1308,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
@@ -1340,6 +1376,7 @@ export interface FileRoutesByTo {
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
@@ -1359,6 +1396,7 @@ export interface FileRoutesByTo {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
+  '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
@@ -1374,8 +1412,10 @@ export interface FileRoutesByTo {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
+  '/posrednik/abonament': typeof PosrednikAbonamentRoute
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/platnosci': typeof PosrednikPlatnosciRoute
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
@@ -1444,6 +1484,7 @@ export interface FileRoutesByTo {
   '/posrednik/wnioski': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
@@ -1517,6 +1558,7 @@ export interface FileRoutesById {
   '/admin/oferty': typeof AdminOfertyRoute
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
+  '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
@@ -1536,6 +1578,7 @@ export interface FileRoutesById {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
+  '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
@@ -1553,9 +1596,11 @@ export interface FileRoutesById {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
+  '/posrednik/abonament': typeof PosrednikAbonamentRoute
   '/posrednik/leady': typeof PosrednikLeadyRouteWithChildren
   '/posrednik/marketing': typeof PosrednikMarketingRoute
   '/posrednik/moje-leady': typeof PosrednikMojeLeadyRoute
+  '/posrednik/platnosci': typeof PosrednikPlatnosciRoute
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
@@ -1624,6 +1669,7 @@ export interface FileRoutesById {
   '/posrednik/wnioski/': typeof PosrednikWnioskiIndexRoute
   '/api/public/email/click': typeof ApiPublicEmailClickRoute
   '/api/public/email/open': typeof ApiPublicEmailOpenRoute
+  '/api/public/hooks/access-expiry-tick': typeof ApiPublicHooksAccessExpiryTickRoute
   '/api/public/hooks/affiliate-events-tick': typeof ApiPublicHooksAffiliateEventsTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
@@ -1698,6 +1744,7 @@ export interface FileRouteTypes {
     | '/admin/oferty'
     | '/admin/operatorzy'
     | '/admin/pixele'
+    | '/admin/platnosci-dostep'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
@@ -1717,6 +1764,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
+    | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
@@ -1734,9 +1782,11 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
+    | '/posrednik/abonament'
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/platnosci'
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
@@ -1805,6 +1855,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
@@ -1872,6 +1923,7 @@ export interface FileRouteTypes {
     | '/admin/oferty'
     | '/admin/operatorzy'
     | '/admin/pixele'
+    | '/admin/platnosci-dostep'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
@@ -1891,6 +1943,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
+    | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
@@ -1906,8 +1959,10 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
+    | '/posrednik/abonament'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/platnosci'
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
@@ -1976,6 +2031,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
@@ -2048,6 +2104,7 @@ export interface FileRouteTypes {
     | '/admin/oferty'
     | '/admin/operatorzy'
     | '/admin/pixele'
+    | '/admin/platnosci-dostep'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
@@ -2067,6 +2124,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
+    | '/inwestor/platnosci'
     | '/inwestor/profil'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
@@ -2084,9 +2142,11 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/wniosek'
     | '/posrednicy/rejestracja'
+    | '/posrednik/abonament'
     | '/posrednik/leady'
     | '/posrednik/marketing'
     | '/posrednik/moje-leady'
+    | '/posrednik/platnosci'
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
@@ -2155,6 +2215,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/'
     | '/api/public/email/click'
     | '/api/public/email/open'
+    | '/api/public/hooks/access-expiry-tick'
     | '/api/public/hooks/affiliate-events-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/daily-blog-tick'
@@ -2232,6 +2293,7 @@ export interface RootRouteChildren {
   EmbedLSlugRoute: typeof EmbedLSlugRoute
   ApiPublicEmailClickRoute: typeof ApiPublicEmailClickRoute
   ApiPublicEmailOpenRoute: typeof ApiPublicEmailOpenRoute
+  ApiPublicHooksAccessExpiryTickRoute: typeof ApiPublicHooksAccessExpiryTickRoute
   ApiPublicHooksAffiliateEventsTickRoute: typeof ApiPublicHooksAffiliateEventsTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
@@ -2531,6 +2593,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikProfilRouteImport
       parentRoute: typeof PosrednikRoute
     }
+    '/posrednik/platnosci': {
+      id: '/posrednik/platnosci'
+      path: '/platnosci'
+      fullPath: '/posrednik/platnosci'
+      preLoaderRoute: typeof PosrednikPlatnosciRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
     '/posrednik/moje-leady': {
       id: '/posrednik/moje-leady'
       path: '/moje-leady'
@@ -2550,6 +2619,13 @@ declare module '@tanstack/react-router' {
       path: '/leady'
       fullPath: '/posrednik/leady'
       preLoaderRoute: typeof PosrednikLeadyRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
+    '/posrednik/abonament': {
+      id: '/posrednik/abonament'
+      path: '/abonament'
+      fullPath: '/posrednik/abonament'
+      preLoaderRoute: typeof PosrednikAbonamentRouteImport
       parentRoute: typeof PosrednikRoute
     }
     '/posrednicy/rejestracja': {
@@ -2669,6 +2745,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/inwestor/profil'
       preLoaderRoute: typeof InwestorProfilRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/platnosci': {
+      id: '/inwestor/platnosci'
+      path: '/platnosci'
+      fullPath: '/inwestor/platnosci'
+      preLoaderRoute: typeof InwestorPlatnosciRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/oferty': {
@@ -2802,6 +2885,13 @@ declare module '@tanstack/react-router' {
       path: '/przypomnienia'
       fullPath: '/admin/przypomnienia'
       preLoaderRoute: typeof AdminPrzypomnieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/platnosci-dostep': {
+      id: '/admin/platnosci-dostep'
+      path: '/platnosci-dostep'
+      fullPath: '/admin/platnosci-dostep'
+      preLoaderRoute: typeof AdminPlatnosciDostepRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/pixele': {
@@ -3483,6 +3573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAffiliateEventsTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/access-expiry-tick': {
+      id: '/api/public/hooks/access-expiry-tick'
+      path: '/api/public/hooks/access-expiry-tick'
+      fullPath: '/api/public/hooks/access-expiry-tick'
+      preLoaderRoute: typeof ApiPublicHooksAccessExpiryTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/open': {
       id: '/api/public/email/open'
       path: '/api/public/email/open'
@@ -3550,6 +3647,7 @@ interface AdminRouteChildren {
   AdminOfertyRoute: typeof AdminOfertyRoute
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
+  AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
@@ -3608,6 +3706,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOfertyRoute: AdminOfertyRoute,
   AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
+  AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSkrzynkaRoute: AdminSkrzynkaRoute,
@@ -3676,6 +3775,7 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
+  InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
@@ -3690,6 +3790,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
+  InwestorPlatnosciRoute: InwestorPlatnosciRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
@@ -3781,9 +3882,11 @@ const PosrednikLeadyRouteWithChildren = PosrednikLeadyRoute._addFileChildren(
 )
 
 interface PosrednikRouteChildren {
+  PosrednikAbonamentRoute: typeof PosrednikAbonamentRoute
   PosrednikLeadyRoute: typeof PosrednikLeadyRouteWithChildren
   PosrednikMarketingRoute: typeof PosrednikMarketingRoute
   PosrednikMojeLeadyRoute: typeof PosrednikMojeLeadyRoute
+  PosrednikPlatnosciRoute: typeof PosrednikPlatnosciRoute
   PosrednikProfilRoute: typeof PosrednikProfilRoute
   PosrednikProgramRoute: typeof PosrednikProgramRoute
   PosrednikProwizjeRoute: typeof PosrednikProwizjeRoute
@@ -3798,9 +3901,11 @@ interface PosrednikRouteChildren {
 }
 
 const PosrednikRouteChildren: PosrednikRouteChildren = {
+  PosrednikAbonamentRoute: PosrednikAbonamentRoute,
   PosrednikLeadyRoute: PosrednikLeadyRouteWithChildren,
   PosrednikMarketingRoute: PosrednikMarketingRoute,
   PosrednikMojeLeadyRoute: PosrednikMojeLeadyRoute,
+  PosrednikPlatnosciRoute: PosrednikPlatnosciRoute,
   PosrednikProfilRoute: PosrednikProfilRoute,
   PosrednikProgramRoute: PosrednikProgramRoute,
   PosrednikProwizjeRoute: PosrednikProwizjeRoute,
@@ -3871,6 +3976,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLSlugRoute: EmbedLSlugRoute,
   ApiPublicEmailClickRoute: ApiPublicEmailClickRoute,
   ApiPublicEmailOpenRoute: ApiPublicEmailOpenRoute,
+  ApiPublicHooksAccessExpiryTickRoute: ApiPublicHooksAccessExpiryTickRoute,
   ApiPublicHooksAffiliateEventsTickRoute:
     ApiPublicHooksAffiliateEventsTickRoute,
   ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,

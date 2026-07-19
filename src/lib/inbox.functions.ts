@@ -29,11 +29,10 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
 
   )
   .handler(async ({ data, context }) => {
-    const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "administrator" }),
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operator" }),
-    ]);
-    if (!isAdmin && !isOperator) throw new Error("Forbidden");
+    // Skrzynka to narzędzie premium: personel wewnętrzny albo pośrednik
+    // z aktywnym płatnym pakietem.
+    const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
+    if (!(await brokerHasPaidAccess(context.userId))) throw new Error("Forbidden");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -143,11 +142,10 @@ export const getCommAttachmentUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { path: string }) => input)
   .handler(async ({ data, context }) => {
-    const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "administrator" }),
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operator" }),
-    ]);
-    if (!isAdmin && !isOperator) throw new Error("Forbidden");
+    // Skrzynka to narzędzie premium: personel wewnętrzny albo pośrednik
+    // z aktywnym płatnym pakietem.
+    const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
+    if (!(await brokerHasPaidAccess(context.userId))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Załączniki mogą leżeć w "pliki-klienta" (nowe) lub "documents" (legacy).
     const buckets = [CLIENT_FILES_BUCKET, "documents"];

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PropertyTypeEnum = z.enum([
   "mieszkanie",
@@ -33,12 +34,22 @@ const SubmitSchema = z.object({
   max_monthly_payment: z.number().min(0).max(1_000_000).optional().nullable(),
   photos: z.array(PhotoSchema).max(40).optional().default([]),
   source: z.string().max(120).optional().nullable(),
+  // Zachowane dla zgodności wstecznej wywołań publicznych; ignorowane —
+  // przypisanie pośrednika wykonuje wyłącznie uwierzytelniona funkcja
+  // submitBrokerLoanApplication (autor nie może pochodzić z przeglądarki).
   assigned_operator_id: z.string().uuid().optional().nullable(),
 });
 
-export const submitLandingLoanApplication = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => SubmitSchema.parse(input))
-  .handler(async ({ data }) => {
+type SubmitInput = z.infer<typeof SubmitSchema>;
+
+export type SubmitApplicationResult =
+  | { ok: true; id: string; token_hash: string | null; email: string }
+  | { ok: false; code: "BROKER_OFFER_LIMIT" | "ERROR"; message?: string };
+
+async function submitApplicationCore(
+  data: SubmitInput,
+  broker?: { userId: string },
+): Promise<SubmitApplicationResult> {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { normalizePolishPhone } = await import("@/lib/phone");
     const { runPropertyCollateralAnalysisCore } = await import(
@@ -46,7 +57,7 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
     );
 
     const { normalized, valid } = normalizePolishPhone(data.phone);
-    const source = data.source ?? "landing_single_page";
+    const source = data.source ?? (broker ? "posrednik_panel" : "landing_single_page");
 
     // Re-użyj istniejącego klienta po e-mailu zamiast tworzyć duplikat
     const { data: existingClient } = await supabaseAdmin
@@ -91,8 +102,8 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
       client = { id: created.id };
     }
 
-    const { data: loan, error: lErr } = await supabaseAdmin
-      .from("loan_applications")
+    const { data: loan, error: lErr } = await (supabaseAdmin
+      .from("loan_applications") as any)
       .insert({
         client_id: client.id,
         status: "nowy_lead",
@@ -102,11 +113,24 @@ export const submitLandingLoanApplication = createServerFn({ method: "POST" })
         annual_investor_rate: data.annual_investor_rate ?? null,
         max_monthly_payment: data.max_monthly_payment ?? null,
         source,
-        assigned_operator: data.assigned_operator_id ?? null,
+        assigned_operator: broker?.userId ?? null,
+        // Trwałe, niezmienne autorstwo oferty pośrednika (limit 5 na koncie
+        // darmowym egzekwuje trigger enforce_broker_offer_limit w bazie).
+        created_by_partner_user_id: broker?.userId ?? null,
       })
       .select("id")
       .single();
-    if (lErr || !loan) throw new Error(lErr?.message ?? "loan insert failed");
+    if (lErr || !loan) {
+      if (String(lErr?.message ?? "").includes("BROKER_OFFER_LIMIT")) {
+        return {
+          ok: false,
+          code: "BROKER_OFFER_LIMIT",
+          message:
+            "W darmowym koncie możesz posiadać maksymalnie 5 ofert jednocześnie. Usuń jedną z istniejących ofert albo wykup pełny dostęp.",
+        };
+      }
+      throw new Error(lErr?.message ?? "loan insert failed");
+    }
 
     // === Auto-utworzenie konta klienta + magiczny link do auto-loginu ===
     let tokenHash: string | null = null;
@@ -333,6 +357,24 @@ Podgląd w panelu: ${adminUrl}`;
     })();
 
     return { ok: true as const, id: loan.id, token_hash: tokenHash, email: data.email };
+}
+
+export const submitLandingLoanApplication = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => SubmitSchema.parse(input))
+  .handler(async ({ data }) => submitApplicationCore(data));
+
+// Utworzenie oferty przez pośrednika — wymaga zalogowania. Autor (autorstwo
+// niezmienne) i przypisany operator pochodzą z sesji, nigdy z przeglądarki.
+export const submitBrokerLoanApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => SubmitSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { assertBrokerOrStaff } = await import("@/lib/access/guards.server");
+    await assertBrokerOrStaff(context.userId);
+    return submitApplicationCore(
+      { ...data, source: data.source ?? "posrednik_panel" },
+      { userId: context.userId },
+    );
   });
 
 export type RecentLoanApplicationItem = {

@@ -267,14 +267,19 @@ export const getInvoiceForPrint = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const roles = await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
-    const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
-
     const { data: invRow } = await accountingDb.from("sales_invoices").select("*").eq("id", data.id).maybeSingle();
     if (!invRow) throw new Error("Nie znaleziono faktury.");
     const invoice = invRow as any;
-    if (!seeAll && invoice.created_by !== context.userId) {
-      throw new Error("Brak dostępu do tej faktury.");
+
+    // Nabywca (inwestor/pośrednik) może otworzyć wyłącznie fakturę przypisaną
+    // do jego konta (buyer_user_id) i już wystawioną. Personel wg ról jak dotąd.
+    const isBuyer = invoice.buyer_user_id === context.userId && invoice.status !== "draft";
+    if (!isBuyer) {
+      const roles = await assertRole(accountingDb, context.userId, [...INVOICING_ROLES]);
+      const seeAll = roles.includes("administrator") || roles.includes("ksiegowosc");
+      if (!seeAll && invoice.created_by !== context.userId) {
+        throw new Error("Brak dostępu do tej faktury.");
+      }
     }
 
     const { data: entRow } = await accountingDb

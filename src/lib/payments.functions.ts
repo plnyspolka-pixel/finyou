@@ -1,6 +1,11 @@
-import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
+// LEGACY: stare plany dostępu inwestora.
+//
+// Te identyfikatory są obsługiwane WYŁĄCZNIE przez webhook Tpay dla
+// transakcji rozpoczętych przed wdrożeniem katalogu `access_products`
+// (src/lib/access/*). Nie wolno tworzyć dla nich nowych płatności —
+// dawna funkcja `createInvestorAccessCheckout` została zastąpiona przez
+// `createAccessCheckout` (src/lib/access/checkout.functions.ts), która
+// pobiera cenę/czas trwania z zaufanego katalogu po stronie serwera.
 export const TPAY_PLANS = {
   investor_access_1d: { amount: 99, days: 1, label: "Dostęp inwestora — 1 dzień" },
   investor_access_1m: { amount: 399, days: 30, label: "Dostęp inwestora — 1 miesiąc" },
@@ -10,92 +15,3 @@ export const TPAY_PLANS = {
 export type TpayPlanId = keyof typeof TPAY_PLANS;
 
 export type BuyerType = "person" | "company";
-
-export interface BuyerInput {
-  buyerType: BuyerType;
-  buyerName?: string;
-  buyerEmail?: string;
-  buyerNip?: string;
-  buyerAddress?: string;
-  buyerCity?: string;
-  buyerPostalCode?: string;
-  buyerCountry?: string;
-}
-
-export const createInvestorAccessCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (data: { priceId: TpayPlanId; returnUrl: string } & BuyerInput) => {
-      if (!(data.priceId in TPAY_PLANS)) throw new Error("Invalid priceId");
-      if (!/^https?:\/\//.test(data.returnUrl)) throw new Error("Invalid returnUrl");
-      if (data.buyerType !== "person" && data.buyerType !== "company") {
-        throw new Error("Invalid buyerType");
-      }
-      if (data.buyerType === "company") {
-        if (!data.buyerName?.trim()) throw new Error("Brak nazwy firmy");
-        if (!data.buyerNip?.trim()) throw new Error("Brak numeru NIP");
-      }
-      return data;
-    },
-  )
-  .handler(async ({ data, context }) => {
-    try {
-      const { userId, supabase } = context;
-      const { data: userRes } = await supabase.auth.getUser();
-      const user = userRes?.user;
-      const email = data.buyerEmail?.trim() || user?.email || "no-reply@financeyou.pl";
-      const meta = (user?.user_metadata ?? {}) as Record<string, string | undefined>;
-      const personName =
-        [meta.first_name, meta.last_name].filter(Boolean).join(" ").trim() ||
-        meta.full_name ||
-        email;
-      const fullName =
-        data.buyerType === "company"
-          ? (data.buyerName?.trim() || personName)
-          : (data.buyerName?.trim() || personName);
-
-      const plan = TPAY_PLANS[data.priceId];
-      const origin = new URL(data.returnUrl).origin;
-      const successUrl = `${origin}/inwestor/abonament?tpay=success`;
-      const errorUrl = `${origin}/inwestor/abonament?tpay=error`;
-      const notifyUrl = `${origin}/api/public/payments/tpay-webhook`;
-
-      const { createTpayTransaction } = await import("@/lib/tpay.server");
-      const tx = await createTpayTransaction({
-        amount: plan.amount,
-        description: plan.label,
-        email,
-        name: fullName,
-        crc: `${userId}|${data.priceId}`,
-        notifyUrl,
-        successUrl,
-        errorUrl,
-      });
-
-      // Zapisz dane nabywcy, żeby webhook wystawił właściwą fakturę.
-      try {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await (supabaseAdmin.from("tpay_transaction_buyers") as any).upsert(
-          {
-            transaction_id: String(tx.transactionId),
-            user_id: userId,
-            buyer_type: data.buyerType,
-            buyer_name: fullName,
-            buyer_email: email,
-            buyer_nip: data.buyerType === "company" ? (data.buyerNip ?? null) : null,
-            buyer_address: data.buyerAddress ?? null,
-            buyer_city: data.buyerCity ?? null,
-            buyer_postal_code: data.buyerPostalCode ?? null,
-            buyer_country: data.buyerCountry ?? "PL",
-          },
-          { onConflict: "transaction_id" },
-        );
-      } catch (e) {
-        console.error("[payments] save buyer failed", (e as Error)?.message);
-      }
-
-      return { paymentUrl: tx.transactionPaymentUrl, transactionId: tx.transactionId };
-    } catch (e) {
-      return { error: e instanceof Error ? e.message : "Tpay error" };
-    }
-  });

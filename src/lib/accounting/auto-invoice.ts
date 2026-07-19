@@ -35,7 +35,14 @@ export async function createInvoiceFromPayment(
     buyerName?: string | null;
     buyerEmail?: string | null;
     buyerNip?: string | null;
-    sourceType?: "stripe_payment" | "affiliate_commission" | "other";
+    // Adres nabywcy trafia do właściwych kolumn faktury (nigdy do buyer_name).
+    buyerStreet?: string | null;
+    buyerPostalCode?: string | null;
+    buyerCity?: string | null;
+    buyerCountry?: string | null;
+    // Konto użytkownika-nabywcy — udostępnia fakturę w panelu (RLS).
+    buyerUserId?: string | null;
+    sourceType?: "stripe_payment" | "tpay_payment" | "affiliate_commission" | "other";
     sourceId?: string | null;
     entityId?: string | null;
     autoIssue?: boolean;
@@ -58,6 +65,11 @@ export async function createInvoiceFromPayment(
       buyer_name: input.buyerName ?? null,
       buyer_email: input.buyerEmail ?? null,
       buyer_nip: input.buyerNip ?? null,
+      buyer_street: input.buyerStreet ?? null,
+      buyer_postal_code: input.buyerPostalCode ?? null,
+      buyer_city: input.buyerCity ?? null,
+      buyer_country: input.buyerCountry ?? "PL",
+      buyer_user_id: input.buyerUserId ?? null,
       issue_date: new Date().toISOString().slice(0, 10),
       sale_date: new Date().toISOString().slice(0, 10),
       currency: input.currency ?? "PLN",
