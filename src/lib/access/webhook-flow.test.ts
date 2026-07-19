@@ -401,7 +401,49 @@ describe("webhook Tpay — program partnerski", () => {
   });
 });
 
+describe("webhook Tpay — zwroty i finalność płatności", () => {
+  it("po zwrocie ponowne powiadomienie 'correct' nie przywraca dostępu ani statusu paid", async () => {
+    const paymentId = seedPayment({ provider_transaction_id: "tr_ref" });
+    tpayCorrect("tr_ref", paymentId, 999);
+    await handleTpayNotification({ tr_id: "tr_ref" });
+    const untilAfterPaid = db().tables.access_entitlements[0].active_until;
+
+    // Zwrot środków.
+    tpayState.tx["tr_ref"] = {
+      transactionId: "tr_ref",
+      status: "refund",
+      amount: 999,
+      hiddenDescription: paymentId,
+    };
+    await handleTpayNotification({ tr_id: "tr_ref" });
+    expect(db().tables.access_payments[0].status).toBe("refunded");
+
+    // Ręcznie ponowione powiadomienie z panelu Tpay (API znów raportuje correct).
+    tpayCorrect("tr_ref", paymentId, 999);
+    await handleTpayNotification({ tr_id: "tr_ref" });
+
+    expect(db().tables.access_payments[0].status).toBe("refunded"); // finalny
+    expect(db().tables.access_entitlements[0].active_until).toBe(untilAfterPaid); // bez drugiego przedłużenia
+  });
+});
+
 describe("webhook Tpay — transakcje legacy (userId|plan)", () => {
+  it("transakcja rozliczona przez STARY webhook przed wdrożeniem nie jest przetwarzana ponownie", async () => {
+    // Ślad starego przepływu: wpis rejestru osób fizycznych dla tej transakcji.
+    db().tables.individual_sales_register = [
+      { id: fakeUuid(), transaction_id: "tr_old", user_id: USER, description: "x", gross_amount: 399 },
+    ];
+    tpayState.tx["tr_old"] = {
+      transactionId: "tr_old",
+      status: "correct",
+      amount: 399,
+      hiddenDescription: `${USER}|investor_access_1m`,
+    };
+    await handleTpayNotification({ tr_id: "tr_old" });
+    expect(db().tables.access_entitlements ?? []).toHaveLength(0);
+    expect(db().tables.access_payments ?? []).toHaveLength(0);
+  });
+
   it("rozpoczęta wcześniej transakcja investor_access_1m aktywuje 30 dni i jest idempotentna", async () => {
     tpayState.tx["tr_legacy"] = {
       transactionId: "tr_legacy",

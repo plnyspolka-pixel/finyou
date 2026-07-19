@@ -262,10 +262,13 @@ class FakeDbImpl implements FakeDb {
     const payment = (this.tables.access_payments ?? []).find((p) => p.id === params._payment_id);
     if (!payment) return { ok: false, reason: "payment_not_found" };
 
-    if (payment.processed_at && payment.status === "paid") {
+    // Każda przetworzona płatność (paid/refunded/chargeback) jest finalna.
+    if (payment.processed_at) {
       return {
-        ok: true,
+        ok: payment.status === "paid",
         alreadyProcessed: true,
+        status: payment.status,
+        reason: payment.status === "paid" ? null : `payment_${payment.status}`,
         grantedFrom: payment.granted_from,
         grantedUntil: payment.granted_until,
         userId: payment.user_id,

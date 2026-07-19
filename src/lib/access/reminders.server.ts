@@ -62,17 +62,21 @@ export async function runAccessExpiryReminders(): Promise<{
     if (!kind) continue;
 
     // Rezerwacja przed wysyłką: unikalny indeks gwarantuje jednorazowość.
-    const { error: insErr } = await db.from("access_expiry_notifications").insert({
-      user_id: ent.user_id,
-      audience: ent.audience,
-      kind,
-      active_until: ent.active_until,
-    });
-    if (insErr) continue; // już wysłane (albo wyścig z innym tickiem)
+    const { data: reservation, error: insErr } = await db
+      .from("access_expiry_notifications")
+      .insert({
+        user_id: ent.user_id,
+        audience: ent.audience,
+        kind,
+        active_until: ent.active_until,
+      })
+      .select("id")
+      .single();
+    if (insErr || !reservation) continue; // już wysłane (albo wyścig z innym tickiem)
 
     try {
       const email = await userEmail(ent.user_id);
-      if (!email) continue;
+      if (!email) continue; // konto bez e-maila — rezerwacja zostaje (nie ma dokąd wysłać)
       const { sendExpiryReminderEmail, sendAccessExpiredEmail } = await import("./emails.server");
       if (kind === "expired") {
         await sendAccessExpiredEmail({ to: email, audience: ent.audience });
@@ -89,6 +93,13 @@ export async function runAccessExpiryReminders(): Promise<{
     } catch (e) {
       errors += 1;
       console.error("[access-reminders] send failed", (e as Error).message);
+      // Przejściowa awaria wysyłki: zwolnij rezerwację, aby kolejny tick
+      // ponowił przypomnienie (inaczej przepadłoby dla całego okresu).
+      try {
+        await db.from("access_expiry_notifications").delete().eq("id", reservation.id);
+      } catch {
+        /* best effort */
+      }
     }
   }
 

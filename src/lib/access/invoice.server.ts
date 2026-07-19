@@ -79,6 +79,23 @@ export async function ensureInvoiceForAccessPayment(
       sourceId: payment.user_id,
     });
 
+    if (!res.invoiceId && res.deduped) {
+      // Przegrany wyścig z równoległym wystawieniem — faktura już istnieje;
+      // podepnij ją zamiast raportować błąd.
+      const { data: raced } = await db
+        .from("sales_invoices")
+        .select("id,invoice_number")
+        .eq("payment_id", dedupKey)
+        .maybeSingle();
+      if (raced?.id) {
+        await db
+          .from("access_payments")
+          .update({ invoice_id: raced.id, invoice_error: null })
+          .eq("id", paymentId);
+        return { ok: true, invoiceId: raced.id, invoiceNumber: raced.invoice_number ?? null, deduped: true };
+      }
+    }
+
     if (!res.invoiceId) {
       const message = res.message ?? "Nie udało się wystawić faktury";
       await db.from("access_payments").update({ invoice_error: message }).eq("id", paymentId);

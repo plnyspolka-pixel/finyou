@@ -175,7 +175,42 @@ WHERE la.created_by_partner_user_id IS NULL
 
 -- ---------------------------------------------------------------------
 -- RLS dla roli 'posrednik' — wyłącznie własne oferty (i ich dane).
+--
+-- Testy własności są opakowane w funkcje SECURITY DEFINER (omijają RLS),
+-- aby graf zależności polityk pozostał acykliczny: polityki loan_applications
+-- odwołują się do clients (loans_client_*), więc "goły" EXISTS na
+-- loan_applications w politykach clients tworzyłby cykl i błąd 42P17
+-- (infinite recursion detected in policy).
 -- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.partner_owns_client(_client_id uuid, _uid uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.loan_applications la
+    WHERE la.client_id = _client_id
+      AND la.created_by_partner_user_id = _uid
+      AND la.deleted_at IS NULL
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.partner_owns_application(_application_id uuid, _uid uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.loan_applications la
+    WHERE la.id = _application_id
+      AND la.created_by_partner_user_id = _uid
+      AND la.deleted_at IS NULL
+  );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.partner_owns_client(uuid, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.partner_owns_application(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.partner_owns_client(uuid, uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.partner_owns_application(uuid, uuid) TO authenticated, service_role;
+
 DROP POLICY IF EXISTS loans_partner_own_select ON public.loan_applications;
 CREATE POLICY loans_partner_own_select ON public.loan_applications
   FOR SELECT TO authenticated
@@ -190,54 +225,24 @@ CREATE POLICY loans_partner_own_update ON public.loan_applications
 DROP POLICY IF EXISTS clients_partner_own_select ON public.clients;
 CREATE POLICY clients_partner_own_select ON public.clients
   FOR SELECT TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.loan_applications la
-    WHERE la.client_id = clients.id
-      AND la.created_by_partner_user_id = auth.uid()
-      AND la.deleted_at IS NULL
-  ));
+  USING (public.partner_owns_client(clients.id, auth.uid()));
 
 DROP POLICY IF EXISTS clients_partner_own_update ON public.clients;
 CREATE POLICY clients_partner_own_update ON public.clients
   FOR UPDATE TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.loan_applications la
-    WHERE la.client_id = clients.id
-      AND la.created_by_partner_user_id = auth.uid()
-      AND la.deleted_at IS NULL
-  ));
+  USING (public.partner_owns_client(clients.id, auth.uid()));
 
 DROP POLICY IF EXISTS properties_partner_own ON public.properties;
 CREATE POLICY properties_partner_own ON public.properties
   FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.loan_applications la
-    WHERE la.id = properties.loan_application_id
-      AND la.created_by_partner_user_id = auth.uid()
-      AND la.deleted_at IS NULL
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.loan_applications la
-    WHERE la.id = properties.loan_application_id
-      AND la.created_by_partner_user_id = auth.uid()
-      AND la.deleted_at IS NULL
-  ));
+  USING (public.partner_owns_application(properties.loan_application_id, auth.uid()))
+  WITH CHECK (public.partner_owns_application(properties.loan_application_id, auth.uid()));
 
 DROP POLICY IF EXISTS documents_partner_own ON public.documents;
 CREATE POLICY documents_partner_own ON public.documents
   FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.loan_applications la
-    WHERE la.id = documents.loan_application_id
-      AND la.created_by_partner_user_id = auth.uid()
-      AND la.deleted_at IS NULL
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.loan_applications la
-    WHERE la.id = documents.loan_application_id
-      AND la.created_by_partner_user_id = auth.uid()
-      AND la.deleted_at IS NULL
-  ));
+  USING (public.partner_owns_application(documents.loan_application_id, auth.uid()))
+  WITH CHECK (public.partner_owns_application(documents.loan_application_id, auth.uid()));
 
 -- Storage: pośrednik czyta i dodaje pliki wyłącznie w kontekście własnych ofert.
 DROP POLICY IF EXISTS pliki_klienta_partner_own_read ON storage.objects;
@@ -246,12 +251,8 @@ CREATE POLICY pliki_klienta_partner_own_read ON storage.objects
   USING (
     bucket_id = 'pliki-klienta'
     AND (storage.foldername(name))[1] IN ('property','documents','property_photos','property-photos')
-    AND EXISTS (
-      SELECT 1 FROM public.loan_applications la
-      WHERE (la.id)::text = (storage.foldername(name))[2]
-        AND la.created_by_partner_user_id = auth.uid()
-        AND la.deleted_at IS NULL
-    )
+    AND (storage.foldername(name))[2] ~ '^[0-9a-fA-F-]{36}$'
+    AND public.partner_owns_application(((storage.foldername(name))[2])::uuid, auth.uid())
   );
 
 DROP POLICY IF EXISTS pliki_klienta_partner_own_write ON storage.objects;
@@ -260,10 +261,6 @@ CREATE POLICY pliki_klienta_partner_own_write ON storage.objects
   WITH CHECK (
     bucket_id = 'pliki-klienta'
     AND (storage.foldername(name))[1] IN ('property','documents')
-    AND EXISTS (
-      SELECT 1 FROM public.loan_applications la
-      WHERE (la.id)::text = (storage.foldername(name))[2]
-        AND la.created_by_partner_user_id = auth.uid()
-        AND la.deleted_at IS NULL
-    )
+    AND (storage.foldername(name))[2] ~ '^[0-9a-fA-F-]{36}$'
+    AND public.partner_owns_application(((storage.foldername(name))[2])::uuid, auth.uid())
   );

@@ -152,10 +152,14 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'payment_not_found');
   END IF;
 
-  -- Idempotencja: już przetworzona i opłacona → zwróć istniejący wynik.
-  IF v_pay.processed_at IS NOT NULL AND v_pay.status = 'paid' THEN
+  -- Idempotencja: każda już przetworzona płatność (paid, ale też refunded/
+  -- chargeback) nie może zostać przetworzona ponownie — ponowne powiadomienie
+  -- „correct" nie przedłuża dostępu ani nie przywraca statusu po zwrocie.
+  IF v_pay.processed_at IS NOT NULL THEN
     RETURN jsonb_build_object(
-      'ok', true, 'alreadyProcessed', true,
+      'ok', v_pay.status = 'paid', 'alreadyProcessed', true,
+      'status', v_pay.status,
+      'reason', CASE WHEN v_pay.status = 'paid' THEN NULL ELSE 'payment_' || v_pay.status END,
       'grantedFrom', v_pay.granted_from, 'grantedUntil', v_pay.granted_until,
       'userId', v_pay.user_id, 'audience', v_pay.audience
     );

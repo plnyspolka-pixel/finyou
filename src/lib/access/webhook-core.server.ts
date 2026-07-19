@@ -37,8 +37,13 @@ async function logWebhook(entry: {
 }
 
 /** Post-processing po przyznaniu dostępu: faktura + afiliacja + e-maile.
- *  Każdy krok niezależnie best-effort; wywoływane też przez akcje admina. */
-export async function runPaidPostProcessing(paymentId: string): Promise<void> {
+ *  Każdy krok niezależnie best-effort; wywoływane też przez akcje admina.
+ *  `skipConfirmationEmail` — przy wznowieniu po awarii (retry webhooka po
+ *  przyznaniu dostępu) nie wysyłamy drugiego potwierdzenia. */
+export async function runPaidPostProcessing(
+  paymentId: string,
+  opts: { skipConfirmationEmail?: boolean } = {},
+): Promise<void> {
   const { data: payment } = await db
     .from("access_payments")
     .select(
@@ -57,7 +62,7 @@ export async function runPaidPostProcessing(paymentId: string): Promise<void> {
   const amountGrosz = Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz);
 
   // 1) Potwierdzenie płatności e-mailem.
-  if (payment.buyer_email) {
+  if (payment.buyer_email && !opts.skipConfirmationEmail) {
     try {
       const { sendPaymentConfirmedEmail } = await import("./emails.server");
       await sendPaymentConfirmedEmail({
@@ -147,6 +152,17 @@ async function handleAccessPayment(
         payload,
         result: "already_processed",
       });
+      // Wznowienie po awarii: dostęp mógł zostać przyznany, a worker paść
+      // przed fakturą/afiliacją. Kroki są idempotentne — dokończ brakujące
+      // (bez drugiego e-maila potwierdzenia).
+      const { data: paid } = await db
+        .from("access_payments")
+        .select("invoice_id,affiliate_event_id,status")
+        .eq("id", paymentId)
+        .maybeSingle();
+      if (paid?.status === "paid" && (!paid.invoice_id || !paid.affiliate_event_id)) {
+        await runPaidPostProcessing(paymentId, { skipConfirmationEmail: true });
+      }
       return;
     }
     await logWebhook({ transactionId: tx.transactionId, paymentId, payload, result: "paid" });
@@ -173,6 +189,8 @@ async function handleAccessPayment(
   }
 
   // Płatność nieukończona/odrzucona — oznacz, jeżeli nadal oczekuje.
+  // Guard statusu w WHERE (nie na odczytanej wartości): równoległe
+  // powiadomienie 'correct' nie może zostać nadpisane na 'cancelled'.
   if (
     ["created", "pending"].includes(payment.status) &&
     ["error", "declined", "cancelled"].includes(tx.status)
@@ -180,7 +198,8 @@ async function handleAccessPayment(
     await db
       .from("access_payments")
       .update({ status: "cancelled", failure_reason: `tpay_status:${tx.status}` })
-      .eq("id", paymentId);
+      .eq("id", paymentId)
+      .in("status", ["created", "pending"]);
   }
   await logWebhook({
     transactionId: tx.transactionId,
@@ -216,8 +235,7 @@ async function handleLegacyPlanPayment(
     return;
   }
 
-  // Idempotencja legacy: jeżeli ta transakcja została już rozliczona w
-  // access_payments (wpis backfill), nie przedłużaj ponownie.
+  // Idempotencja legacy (1): transakcja rozliczona już przez nowy przepływ.
   const { data: alreadyProcessed } = await db
     .from("access_payments")
     .select("id")
@@ -231,6 +249,32 @@ async function handleLegacyPlanPayment(
       paymentId: alreadyProcessed.id,
       payload,
       result: "legacy_already_processed",
+    });
+    return;
+  }
+
+  // Idempotencja legacy (2): transakcja rozliczona przez STARY webhook przed
+  // wdrożeniem (ślady: wpis rejestru osób fizycznych albo faktura firmowa
+  // z payment_id = tr_id). Ponowione powiadomienie nie może przedłużyć
+  // dostępu drugi raz.
+  const [{ data: oldRegister }, { data: oldInvoice }] = await Promise.all([
+    db
+      .from("individual_sales_register")
+      .select("id")
+      .eq("transaction_id", String(tx.transactionId))
+      .maybeSingle(),
+    db
+      .from("sales_invoices")
+      .select("id")
+      .eq("payment_id", String(tx.transactionId))
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (oldRegister || oldInvoice) {
+    await logWebhook({
+      transactionId: tx.transactionId,
+      payload,
+      result: "legacy_already_processed_old_webhook",
     });
     return;
   }
@@ -270,8 +314,19 @@ async function handleLegacyPlanPayment(
     product = createdProduct;
   }
   if (!product) {
+    // Wyścig na UNIQUE(code) — inny webhook właśnie utworzył produkt.
+    const { data: raced } = await db
+      .from("access_products")
+      .select("id")
+      .eq("code", `legacy_${planId}`)
+      .maybeSingle();
+    product = raced;
+  }
+  if (!product) {
+    // Opłacona transakcja nie może przepaść: zgłoś błąd, aby route zwrócił
+    // FALSE/500 i Tpay ponowił powiadomienie.
     await logWebhook({ transactionId: tx.transactionId, payload, result: "legacy_no_product" });
-    return;
+    throw new Error(`legacy_no_product: ${planId}`);
   }
 
   const expectedGrosz = Math.round(planCfg.amount * 100);
