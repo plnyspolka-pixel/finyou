@@ -8,6 +8,8 @@ import { Loader2, Search, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { gusCompanyLookup } from "@/lib/gus-bir.functions";
 import { krsCompanyLookup } from "@/lib/krs.functions";
+import { getCrbrForCompany } from "@/lib/crbr.functions";
+import { CrbrBeneficiariesCard } from "@/components/crbr-beneficiaries";
 
 export type ResolvedCompany = {
   name: string;
@@ -38,10 +40,14 @@ export function CompanyLookupInline({
   compact = false,
   showRegon = true,
   showKrs = true,
-}: Props) {
+  showCrbr = true,
+}: Props & { showCrbr?: boolean }) {
   const gusFn = useServerFn(gusCompanyLookup);
   const krsFn = useServerFn(krsCompanyLookup);
+  const crbrFn = useServerFn(getCrbrForCompany);
   const [busy, setBusy] = useState(false);
+  const [crbrData, setCrbrData] = useState<any>(null);
+  const [lastNip, setLastNip] = useState<string>("");
 
   const run = async () => {
     const nip = (value.nip || "").replace(/\D/g, "");
@@ -90,6 +96,17 @@ export function CompanyLookupInline({
       };
       onResolved(resolved);
       toast.success(krsFound ? "Dane z GUS + KRS zaciągnięte" : "Dane z GUS zaciągnięte", { id: t });
+
+      // Doczytaj CRBR (best-effort) — cache 90 dni po stronie serwera.
+      if (showCrbr && resolved.nip) {
+        setLastNip(resolved.nip);
+        try {
+          const cres: any = await crbrFn({ data: { nip: resolved.nip } });
+          setCrbrData(cres);
+        } catch (err) {
+          console.warn("[crbr] lookup failed", err);
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Błąd pobierania danych firmy", { id: t });
     } finally {
@@ -98,6 +115,7 @@ export function CompanyLookupInline({
   };
 
   return (
+    <div className="space-y-2">
     <div className={compact ? "flex flex-wrap items-end gap-2" : "grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]"}>
       <div className="space-y-1">
         <label className="text-[11px] text-muted-foreground">NIP</label>
@@ -134,6 +152,10 @@ export function CompanyLookupInline({
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
         Pobierz z GUS/KRS
       </Button>
+    </div>
+      {showCrbr && lastNip && crbrData && (
+        <CrbrBeneficiariesCard nip={lastNip} initialData={crbrData} />
+      )}
     </div>
   );
 }

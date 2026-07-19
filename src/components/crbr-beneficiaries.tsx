@@ -1,0 +1,147 @@
+// Widok beneficjentów rzeczywistych z CRBR + przycisk odświeżenia.
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, RefreshCw, ShieldCheck, ShieldAlert, ShieldOff, Users } from "lucide-react";
+import { toast } from "sonner";
+import { getCrbrForCompany, refreshCrbrForCompany } from "@/lib/crbr.functions";
+
+type Beneficiary = {
+  firstName: string;
+  lastName: string;
+  pesel?: string | null;
+  dateOfBirth?: string | null;
+  citizenships?: string[];
+  role?: string | null;
+  sharePercent?: number | null;
+};
+
+type CrbrData =
+  | { status: "ok"; cached: boolean; fetchedAt: string; expiresAt: string; spolka: any; beneficjenci: Beneficiary[] }
+  | { status: "not_found"; cached: boolean; fetchedAt: string; message: string }
+  | { status: "not_configured"; message: string }
+  | { status: "error"; code: string; message: string }
+  | null;
+
+export function CrbrBeneficiariesCard({
+  nip,
+  canRefresh = false,
+  initialData,
+}: {
+  nip: string;
+  canRefresh?: boolean;
+  initialData?: CrbrData;
+}) {
+  const getFn = useServerFn(getCrbrForCompany);
+  const refreshFn = useServerFn(refreshCrbrForCompany);
+  const [data, setData] = useState<CrbrData>(initialData ?? null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async (force = false) => {
+    if (!nip) return;
+    setBusy(true);
+    try {
+      const res = force ? await refreshFn({ data: { nip } }) : await getFn({ data: { nip } });
+      setData(res as CrbrData);
+      if (force) toast.success("Odświeżono CRBR");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd CRBR");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!data && !busy) {
+    return (
+      <div className="rounded-lg border border-dashed p-3 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-2 text-muted-foreground">
+            <Users className="h-4 w-4" /> CRBR — beneficjenci rzeczywiści
+          </span>
+          <Button size="sm" variant="secondary" onClick={() => void load(false)} disabled={!nip}>
+            Sprawdź CRBR
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (busy && !data) {
+    return (
+      <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Sprawdzam CRBR…
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const badge =
+    data.status === "ok" ? (
+      <Badge className="gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><ShieldCheck className="h-3 w-3" /> CRBR OK</Badge>
+    ) : data.status === "not_found" ? (
+      <Badge variant="secondary" className="gap-1"><ShieldAlert className="h-3 w-3" /> Brak wpisu w CRBR</Badge>
+    ) : data.status === "not_configured" ? (
+      <Badge variant="outline" className="gap-1"><ShieldOff className="h-3 w-3" /> CRBR nieskonfigurowany</Badge>
+    ) : (
+      <Badge variant="destructive" className="gap-1"><ShieldAlert className="h-3 w-3" /> Błąd CRBR</Badge>
+    );
+
+  return (
+    <div className="rounded-lg border p-3 text-sm space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">CRBR — beneficjenci rzeczywiści</span>
+          {badge}
+        </div>
+        {canRefresh && (
+          <Button size="sm" variant="ghost" onClick={() => void load(true)} disabled={busy}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
+        )}
+      </div>
+
+      {data.status === "ok" && (
+        <>
+          {data.beneficjenci.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Brak zgłoszonych beneficjentów w aktualnym wpisie.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {data.beneficjenci.map((b, i) => (
+                <li key={i} className="rounded-md bg-muted/40 px-2 py-1.5">
+                  <div className="font-medium">{b.firstName} {b.lastName}</div>
+                  <div className="text-[11px] text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
+                    {b.role && <span>{b.role}</span>}
+                    {typeof b.sharePercent === "number" && <span>Udział: {b.sharePercent}%</span>}
+                    {b.citizenships?.length ? <span>Obywatelstwa: {b.citizenships.join(", ")}</span> : null}
+                    {b.dateOfBirth && <span>Ur.: {b.dateOfBirth}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            Cache 90 dni · pobrano {new Date(data.fetchedAt).toLocaleDateString("pl-PL")}
+            {data.cached ? " (z cache)" : ""}
+          </p>
+        </>
+      )}
+
+      {data.status === "not_found" && (
+        <p className="text-xs text-muted-foreground">{data.message}</p>
+      )}
+
+      {data.status === "not_configured" && (
+        <p className="text-xs text-muted-foreground">
+          Wymagany certyfikat kwalifikowany MF + proxy pod <code>CRBR_PROXY_URL</code>. Do czasu konfiguracji CRBR działa tylko w trybie odczytu z cache.
+        </p>
+      )}
+
+      {data.status === "error" && (
+        <p className="text-xs text-destructive">{data.code}: {data.message}</p>
+      )}
+    </div>
+  );
+}

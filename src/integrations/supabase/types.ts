@@ -3146,6 +3146,54 @@ export type Database = {
           },
         ]
       }
+      crbr_cache: {
+        Row: {
+          beneficjenci: Json
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          expires_at: string
+          fetched_at: string
+          forma_organizacyjna: string | null
+          id: string
+          krs: string | null
+          nazwa_spolki: string | null
+          nip: string
+          raw_response: Json | null
+          updated_at: string
+        }
+        Insert: {
+          beneficjenci?: Json
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          expires_at?: string
+          fetched_at?: string
+          forma_organizacyjna?: string | null
+          id?: string
+          krs?: string | null
+          nazwa_spolki?: string | null
+          nip: string
+          raw_response?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          beneficjenci?: Json
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          expires_at?: string
+          fetched_at?: string
+          forma_organizacyjna?: string | null
+          id?: string
+          krs?: string | null
+          nazwa_spolki?: string | null
+          nip?: string
+          raw_response?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       document_templates: {
         Row: {
           audience: string[] | null
@@ -5356,6 +5404,8 @@ export type Database = {
           accepted_terms: Json | null
           accepted_terms_at: string | null
           admin_decision: string | null
+          aml_checked_at: string | null
+          aml_status: string | null
           annual_investor_rate: number | null
           archived_at: string | null
           assigned_operator: string | null
@@ -5443,6 +5493,8 @@ export type Database = {
           accepted_terms?: Json | null
           accepted_terms_at?: string | null
           admin_decision?: string | null
+          aml_checked_at?: string | null
+          aml_status?: string | null
           annual_investor_rate?: number | null
           archived_at?: string | null
           assigned_operator?: string | null
@@ -5530,6 +5582,8 @@ export type Database = {
           accepted_terms?: Json | null
           accepted_terms_at?: string | null
           admin_decision?: string | null
+          aml_checked_at?: string | null
+          aml_status?: string | null
           annual_investor_rate?: number | null
           archived_at?: string | null
           assigned_operator?: string | null
