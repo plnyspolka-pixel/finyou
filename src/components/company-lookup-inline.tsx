@@ -40,10 +40,14 @@ export function CompanyLookupInline({
   compact = false,
   showRegon = true,
   showKrs = true,
-}: Props) {
+  showCrbr = true,
+}: Props & { showCrbr?: boolean }) {
   const gusFn = useServerFn(gusCompanyLookup);
   const krsFn = useServerFn(krsCompanyLookup);
+  const crbrFn = useServerFn(getCrbrForCompany);
   const [busy, setBusy] = useState(false);
+  const [crbrData, setCrbrData] = useState<any>(null);
+  const [lastNip, setLastNip] = useState<string>("");
 
   const run = async () => {
     const nip = (value.nip || "").replace(/\D/g, "");
