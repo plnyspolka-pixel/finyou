@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { usePanelBase } from "@/lib/panel-base";
@@ -8,10 +10,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FilePlus2, ImageOff, Search, MapPin, FileText, Calendar, Hash } from "lucide-react";
+import { FilePlus2, ImageOff, Search, MapPin, FileText, Calendar, Hash, Trash2, Loader2 } from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
 import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
+import {
+  getMyBrokerOfferUsage,
+  softDeleteMyApplication,
+  type BrokerOfferUsage,
+} from "@/lib/access/state.functions";
 
 export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
@@ -49,27 +56,63 @@ function SmartImg({ src, alt, className }: { src: string; alt?: string; classNam
 }
 
 export function MojeWnioski() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const navigate = useNavigate();
   const base = usePanelBase();
+  const usageFn = useServerFn(getMyBrokerOfferUsage);
+  const deleteFn = useServerFn(softDeleteMyApplication);
   const [rows, setRows] = useState<Row[]>([]);
   const [heroByApp, setHeroByApp] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [usage, setUsage] = useState<BrokerOfferUsage | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Zewnętrzny pośrednik widzi wyłącznie własne oferty (wszystkie statusy);
+  // personel wewnętrzny — pulę „szukamy inwestora" jak dotąd.
+  const isExternalBroker =
+    roles.includes("posrednik") && !roles.includes("operator") && !roles.includes("administrator");
+
+  const load = async () => {
+    if (!user) return;
+    setLoading(true);
+    let query = supabase
+      .from("loan_applications")
+      .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, document_type, file_name)")
+      .order("created_at", { ascending: false });
+    query = isExternalBroker
+      ? (query as any).eq("created_by_partner_user_id", user.id)
+      : query.eq("status", "szukamy_inwestora");
+    const { data } = await query;
+    const all = ((data as any) as Row[]) ?? [];
+    setRows(all);
+    setLoading(false);
+    try {
+      setUsage(await usageFn());
+    } catch {
+      setUsage(null);
+    }
+    return all;
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Usunąć tę ofertę? Zwolni to miejsce w limicie darmowego konta. Oferta nie będzie już widoczna.")) return;
+    setDeletingId(id);
+    try {
+      await deleteFn({ data: { applicationId: id } });
+      toast.success("Oferta została usunięta");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nie udało się usunąć oferty");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      setLoading(true);
-      // Wszystkie wnioski „szukamy inwestora" — to jest pula do pracy pośrednika.
-      const { data } = await supabase
-        .from("loan_applications")
-        .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, document_type, file_name)")
-        .eq("status", "szukamy_inwestora")
-        .order("created_at", { ascending: false });
-      const all = ((data as any) as Row[]) ?? [];
-      setRows(all);
-      setLoading(false);
+      const all = (await load()) ?? [];
 
       // Miniaturka (hero) per wniosek: pierwsze faktyczne zdjęcie nieruchomości,
       // podpisane w Storage. Fallback: zdjęcie z tabeli `documents`.
@@ -115,13 +158,24 @@ export function MojeWnioski() {
   return (
     <div className="space-y-6">
       <FancyPageHeader
-        eyebrow="Szukamy inwestora"
-        title="Wnioski szukające inwestora"
-        subtitle="Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
+        eyebrow={isExternalBroker ? "Moje oferty" : "Szukamy inwestora"}
+        title={isExternalBroker ? "Moje oferty" : "Wnioski szukające inwestora"}
+        subtitle={
+          isExternalBroker
+            ? "Twoje oferty wprowadzone do Finance You. Usunięcie oferty zwalnia miejsce w limicie darmowego konta."
+            : "Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
+        }
         actions={
-          <Button asChild>
-            <Link to={`${base}/wniosek` as any}><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            {usage && !usage.hasPaidAccess && !usage.isBypass && (
+              <Badge variant={usage.activeCount >= usage.freeLimit ? "destructive" : "secondary"}>
+                Limit ofert: {usage.activeCount}/{usage.freeLimit}
+              </Badge>
+            )}
+            <Button asChild>
+              <Link to={`${base}/wniosek` as any}><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -159,11 +213,15 @@ export function MojeWnioski() {
             const docCount = r.documents?.length ?? 0;
 
             return (
-              <button
+              <div
                 key={r.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate({ to: `${base}/wnioski/${r.id}` as any })}
-                className="group flex flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition hover:border-primary hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") navigate({ to: `${base}/wnioski/${r.id}` as any });
+                }}
+                className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-sm transition hover:border-primary hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
                   <SmartImg
@@ -174,11 +232,32 @@ export function MojeWnioski() {
                     <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
                       {loanStatusLabels[r.status as keyof typeof loanStatusLabels] ?? r.status}
                     </Badge>
-                    {photoCount > 1 && (
-                      <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
-                        +{photoCount - 1} zdj.
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {photoCount > 1 && (
+                        <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm">
+                          +{photoCount - 1} zdj.
+                        </Badge>
+                      )}
+                      {isExternalBroker && (
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="h-7 w-7"
+                          title="Usuń ofertę"
+                          disabled={deletingId === r.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(r.id);
+                          }}
+                        >
+                          {deletingId === r.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-3">
                     <div className="text-xs text-white/80 truncate">{clientName}</div>
@@ -211,7 +290,7 @@ export function MojeWnioski() {
                     <span>{new Date(r.created_at).toLocaleDateString("pl-PL")}</span>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

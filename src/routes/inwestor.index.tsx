@@ -12,10 +12,35 @@ import { Search, MapPin, Ruler, Calendar, Percent, Wallet, TrendingUp, X } from 
 import { formatPLN, propertyTypeLabels, visibilityLabels } from "@/lib/labels";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
+import { useAccessState } from "@/hooks/use-access";
+import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 
 export const Route = createFileRoute("/inwestor/")({
-  component: InwestorList,
+  component: InwestorListGate,
 });
+
+// Bez aktywnego płatnego dostępu inwestor widzi wyłącznie anonimowe zajawki
+// z bezpiecznej funkcji serwerowej (pełne rekordy nie trafiają do przeglądarki;
+// RLS blokuje je niezależnie od UI).
+function InwestorListGate() {
+  const { loading, hasFullAccess } = useAccessState("investor");
+  if (loading) {
+    return <div className="py-10 text-center text-muted-foreground">Ładowanie…</div>;
+  }
+  if (!hasFullAccess) {
+    return (
+      <div className="space-y-6">
+        <FancyPageHeader
+          eyebrow="Oferty"
+          title="Dostępne oferty inwestycyjne"
+          subtitle="Anonimowe zajawki — pełne dane odblokujesz po wykupieniu dostępu."
+        />
+        <InvestorTeaserList />
+      </div>
+    );
+  }
+  return <InwestorList />;
+}
 
 const PROPERTY_TYPES = Object.keys(propertyTypeLabels);
 

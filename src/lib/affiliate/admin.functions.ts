@@ -139,10 +139,12 @@ export const adminApprovePartner = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(affiliateDb, context.userId);
     await setPartnerStatus(affiliateDb, { partnerId: data.id, status: "active", adminUserId: context.userId, actorRole: "administrator" });
-    // Nadaj rolę operatora, aby partner uzyskał dostęp do panelu pośrednika.
+    // Zewnętrzny partner dostaje dedykowaną rolę 'posrednik' (dostęp do panelu
+    // pośrednika w zakresie darmowy/płatny). Roli pracowniczej 'operator' nie
+    // nadajemy — dawała pełne uprawnienia personelu do danych klientów.
     const { data: partner } = await affiliateDb.from("affiliate_partners").select("user_id").eq("id", data.id).maybeSingle();
     if ((partner as any)?.user_id) {
-      await affiliateDb.from("user_roles").upsert({ user_id: (partner as any).user_id, role: "operator" }, { onConflict: "user_id,role" });
+      await affiliateDb.from("user_roles").upsert({ user_id: (partner as any).user_id, role: "posrednik" } as any, { onConflict: "user_id,role" });
     }
     return { ok: true };
   });

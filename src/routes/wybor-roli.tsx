@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { selectAccountRole } from "@/lib/account-role.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, LineChart, Briefcase } from "lucide-react";
@@ -15,6 +16,7 @@ type Pick = "klient" | "inwestor" | "posrednik";
 function RolePickerPage() {
   const navigate = useNavigate();
   const { user, loading, refreshRoles } = useAuth();
+  const selectRoleFn = useServerFn(selectAccountRole);
   const [submitting, setSubmitting] = useState<Pick | null>(null);
 
   if (loading) {
@@ -27,29 +29,8 @@ function RolePickerPage() {
   const pick = async (role: Pick) => {
     setSubmitting(role);
     try {
-      if (role === "inwestor") {
-        await supabase.from("user_roles").insert({ user_id: user.id, role: "inwestor" });
-        await supabase.from("investors").insert({
-          user_id: user.id,
-          investor_type: "indywidualny",
-          first_name: user.user_metadata?.first_name ?? user.user_metadata?.full_name ?? null,
-          last_name: user.user_metadata?.last_name ?? null,
-          email: user.email ?? null,
-          subscription_status: "nieaktywny",
-        });
-        await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("role", "klient");
-      } else if (role === "posrednik") {
-        await supabase.from("user_roles").insert({ user_id: user.id, role: "operator" });
-        await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("role", "klient");
-      }
+      // Rolę zapisuje serwer — wybór "pośrednik" nadaje rolę 'posrednik'.
+      await selectRoleFn({ data: { role } });
       try {
         localStorage.removeItem("pending_role_selection");
       } catch {}
@@ -93,8 +74,18 @@ function RolePickerPage() {
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
           {tile("klient", Building2, "Klient", "Złóż wniosek o pożyczkę pod zastaw nieruchomości.")}
-          {tile("inwestor", LineChart, "Inwestor", "Przeglądaj oferty i inwestuj w zabezpieczone pożyczki.")}
-          {tile("posrednik", Briefcase, "Pośrednik", "Wprowadzaj wnioski klientów i zarabiaj na prowizjach.")}
+          {tile(
+            "inwestor",
+            LineChart,
+            "Inwestor",
+            "Przeglądaj oferty i inwestuj w zabezpieczone pożyczki.",
+          )}
+          {tile(
+            "posrednik",
+            Briefcase,
+            "Pośrednik",
+            "Wprowadzaj wnioski klientów i zarabiaj na prowizjach.",
+          )}
         </CardContent>
       </Card>
     </div>

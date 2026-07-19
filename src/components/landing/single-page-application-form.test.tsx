@@ -15,6 +15,11 @@ vi.mock("@/lib/fb-pixel", () => ({
 
 vi.mock("@/lib/landing-application.functions", () => ({
   submitLandingLoanApplication: submitMock,
+  submitBrokerLoanApplication: submitMock,
+}));
+
+vi.mock("@/lib/uploads/landing-upload.functions", () => ({
+  uploadLandingAttachment: vi.fn(async () => ({ ok: true, storagePath: "mock/path" })),
 }));
 
 vi.mock("@tanstack/react-start", () => ({

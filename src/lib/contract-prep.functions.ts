@@ -75,6 +75,13 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
     if (!isStaff) throw new Error("Brak uprawnień do tej oferty");
     side = "client"; // staff może edytować obie sekcje przez osobne wywołania
   }
+
+  // Strona inwestorska przygotowania umowy wymaga aktywnego płatnego dostępu
+  // (po wygaśnięciu dane pozostają, ale wracają dopiero po opłaceniu).
+  if (side === "investor") {
+    const { assertInvestorFullAccess } = await import("@/lib/access/guards.server");
+    await assertInvestorFullAccess(userId);
+  }
   return { offer, side };
 }
 

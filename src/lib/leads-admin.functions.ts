@@ -3,11 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-async function assertAdmin(supabase: any, userId: string) {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  const roles = (data ?? []).map((r: any) => r.role);
-  if (!roles.some((r: string) => ["administrator", "operator"].includes(r))) {
-    throw new Error("Brak uprawnień");
+// Pula leadów Finance You to narzędzie premium: personel wewnętrzny ma dostęp
+// operacyjny, a zewnętrzny pośrednik (rola 'posrednik' albo historyczny
+// 'operator' powiązany z partnerem) wyłącznie z aktywnym płatnym pakietem.
+async function assertAdmin(_supabase: any, userId: string) {
+  const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
+  if (!(await brokerHasPaidAccess(userId))) {
+    throw new Error("PAYWALL_BROKER: Leady Finance You są dostępne w pełnym (płatnym) pakiecie pośrednika.");
   }
 }
 

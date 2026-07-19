@@ -70,7 +70,7 @@ export type TpayCreateInput = {
   description: string;
   email: string;
   name: string;
-  crc: string;               // own correlation id (we'll encode `${userId}|${plan}`)
+  crc: string;               // wewnętrzny UUID płatności (access_payments.id); legacy: `${userId}|${plan}`
   notifyUrl: string;
   successUrl: string;
   errorUrl: string;

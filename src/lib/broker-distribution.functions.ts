@@ -15,22 +15,25 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const [{ data: isAdmin }, { data: isOperator }] = await Promise.all([
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "administrator" }),
-      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "operator" }),
-    ]);
-    if (!isAdmin && !isOperator) throw new Error("Forbidden");
+    // Dystrybucja jest dostępna dla personelu wewnętrznego (dowolny wniosek)
+    // oraz dla pośrednika — także darmowego — ale wyłącznie dla JEGO ofert.
+    const { assertBrokerOrStaff } = await import("@/lib/access/guards.server");
+    const { staff } = await assertBrokerOrStaff(context.userId);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: app, error: appErr } = await supabaseAdmin
-      .from("loan_applications")
+    const { data: app, error: appErr } = await (supabaseAdmin
+      .from("loan_applications") as any)
       .select(
-        "id, loan_amount, preferred_period_months, client:clients(first_name,last_name,city), properties(property_type,street,address,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)",
+        "id, created_by_partner_user_id, deleted_at, loan_amount, preferred_period_months, client:clients(first_name,last_name,city), properties(property_type,street,address,city,voivodeship,land_register_number,additional_land_register_numbers,area_sqm,estimated_value,photos,description)",
       )
       .eq("id", data.applicationId)
       .maybeSingle();
     if (appErr || !app) throw new Error("Nie znaleziono wniosku");
+    if ((app as any).deleted_at) throw new Error("Ta oferta została usunięta");
+    if (!staff && (app as any).created_by_partner_user_id !== context.userId) {
+      throw new Error("Możesz dystrybuować wyłącznie własne oferty");
+    }
 
     const { data: docs } = await supabaseAdmin
       .from("documents")

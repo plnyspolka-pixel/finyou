@@ -7,7 +7,8 @@ export type AppRole =
   | "operator"
   | "klient"
   | "inwestor"
-  | "ksiegowosc";
+  | "ksiegowosc"
+  | "posrednik";
 
 interface AuthState {
   user: User | null;
@@ -56,7 +57,7 @@ const FAKE_USER = {
   aud: "authenticated",
   created_at: new Date().toISOString(),
 } as unknown as User;
-const ALL_ROLES: AppRole[] = ["administrator", "operator", "klient", "inwestor", "ksiegowosc"];
+const ALL_ROLES: AppRole[] = ["administrator", "operator", "klient", "inwestor", "ksiegowosc", "posrednik"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!pending) return;
       const needsFix =
         (pending === "inwestor" && !next.includes("inwestor") && !next.includes("administrator")) ||
-        (pending === "posrednik" && !next.includes("operator") && !next.includes("administrator")) ||
+        (pending === "posrednik" && !next.includes("posrednik") && !next.includes("operator") && !next.includes("administrator")) ||
         (pending === "klient" && next.length > 0 && !next.includes("klient"));
       const path = typeof window !== "undefined" ? window.location.pathname : "";
       if (needsFix && typeof window !== "undefined" && !path.startsWith("/wybor-roli") && !path.startsWith("/embed")) {
@@ -149,6 +150,7 @@ export function defaultPathForRoles(roles: AppRole[]): string {
   if (roles.includes("administrator")) return "/admin";
   if (roles.includes("operator")) return "/operator/leady";
   if (roles.includes("ksiegowosc")) return "/admin/ksiegowosc";
+  if (roles.includes("posrednik")) return "/posrednik";
   if (roles.includes("inwestor")) return "/inwestor";
   return "/klient";
 }

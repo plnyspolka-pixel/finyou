@@ -57,6 +57,7 @@ const groups: Group[] = [
   {
     label: "Księgowość",
     items: [
+      { to: "/admin/platnosci-dostep", label: "Płatności za dostęp", icon: Wallet },
       { to: "/admin/ksiegowosc", label: "Pulpit księgowości", icon: Receipt, exact: true },
       { to: "/admin/ksiegowosc/faktury", label: "Faktury sprzedaży", icon: FileText },
       { to: "/admin/ksiegowosc/podmioty", label: "Podmioty gospodarcze", icon: Building2 },
