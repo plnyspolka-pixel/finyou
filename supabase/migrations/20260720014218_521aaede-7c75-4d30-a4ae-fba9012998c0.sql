@@ -1,0 +1,1 @@
+COMMENT ON COLUMN public.training_videos.free_lesson IS 'Czy lekcja jest dostępna za darmo (bez subskrypcji).';
