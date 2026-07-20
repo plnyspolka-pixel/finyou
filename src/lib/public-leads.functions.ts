@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
+export type RiskGrade = "A" | "B" | "C" | "D" | "E";
+
 export type PublicLead = {
   id: string;
   created_at: string;
@@ -11,7 +13,30 @@ export type PublicLead = {
   is_new: boolean;
   first_name: string | null;
   kw_masked: string | null;
+  score: number;
+  grade: RiskGrade;
 };
+
+function gradeFromScore(score: number): RiskGrade {
+  if (score >= 85) return "A";
+  if (score >= 70) return "B";
+  if (score >= 55) return "C";
+  if (score >= 40) return "D";
+  return "E";
+}
+
+// Fallback scoring z LTV gdy nie ma zapisanej oceny ryzyka.
+// Trzyma się skali z modułu risk-assessment (0–100, klasy A–E).
+function fallbackScoreFromLtv(ltv: number | null): number {
+  if (ltv == null || Number.isNaN(ltv)) return 60;
+  if (ltv <= 25) return 88;
+  if (ltv <= 35) return 80;
+  if (ltv <= 45) return 72;
+  if (ltv <= 55) return 62;
+  if (ltv <= 65) return 52;
+  if (ltv <= 75) return 44;
+  return 35;
+}
 
 // Zanonimizuj numer KW: zachowaj kod sądu (przed "/") i ostatnią cyfrę,
 // resztę zamień na kropki. Np. "WA1M/00123456/7" -> "WA1M/••••••••/7".
