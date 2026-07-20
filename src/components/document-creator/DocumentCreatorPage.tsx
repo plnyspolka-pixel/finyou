@@ -264,16 +264,22 @@ export function DocumentCreatorPage() {
   }, [templates, search]);
 
   // Po wyborze wzoru — wczytaj podgląd, wyzeruj formularz
+  const [previewError, setPreviewError] = useState<string | null>(null);
   useEffect(() => {
     if (!selected) return;
     setValues({});
     setPreviewText("");
+    setPreviewError(null);
     setShowCalc(false);
     setImportedSchedule(null);
     setPreviewLoading(true);
     _preview({ data: { templateId: selected.id } })
       .then((r) => setPreviewText(r.text))
-      .catch((e: any) => toast.error(`Podgląd wzoru: ${e?.message ?? "błąd"}`))
+      .catch((e: any) => {
+        const msg = String(e?.message ?? "błąd");
+        setPreviewError(msg);
+        if (!/not found|nie istnieje/i.test(msg)) toast.error(`Podgląd wzoru: ${msg}`);
+      })
       .finally(() => setPreviewLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
