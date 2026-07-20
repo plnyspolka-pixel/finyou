@@ -390,8 +390,6 @@ function InvoicesInlinePreview() {
             <li key={inv.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span className="tabular-nums">{inv.issue_date ? formatDate(inv.issue_date) : "—"}</span>
-                  <span className="opacity-40">•</span>
                   <span className="truncate font-mono">{inv.invoice_number ?? "—"}</span>
                 </div>
                 <div className="mt-0.5 truncate text-sm text-slate-200">{inv.item_label}</div>
