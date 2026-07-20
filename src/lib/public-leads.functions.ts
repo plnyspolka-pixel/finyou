@@ -92,7 +92,6 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
       scoresByApp.set(row.application_id, { score: Math.round(s), grade: g });
     }
   }
-  if (error) throw new Error(error.message);
 
   const now = Date.now();
   const rows: PublicLead[] = [];
@@ -108,6 +107,9 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     const ageDays = (now - new Date(r.created_at).getTime()) / 86400000;
     const clientRow = Array.isArray(r.clients) ? r.clients[0] : r.clients;
     const firstName = clientRow?.first_name ? String(clientRow.first_name).trim() : null;
+    const stored = scoresByApp.get(r.id);
+    const score = stored?.score ?? fallbackScoreFromLtv(ltv);
+    const grade = stored?.grade ?? gradeFromScore(score);
     rows.push({
       id: r.id,
       created_at: r.created_at,
@@ -119,6 +121,8 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
       is_new: ageDays <= 3,
       first_name: firstName && firstName.length > 0 ? firstName : null,
       kw_masked: maskKw(props?.land_register_number),
+      score,
+      grade,
     });
     if (rows.length >= 30) break;
   }
