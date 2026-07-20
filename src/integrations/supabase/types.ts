@@ -2391,6 +2391,930 @@ export type Database = {
           },
         ]
       }
+      aml_attachments: {
+        Row: {
+          case_id: string | null
+          content_type: string | null
+          created_at: string
+          file_name: string
+          id: string
+          report_id: string | null
+          sha256: string | null
+          size_bytes: number | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          case_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          file_name: string
+          id?: string
+          report_id?: string | null
+          sha256?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          file_name?: string
+          id?: string
+          report_id?: string | null
+          sha256?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_attachments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "aml_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aml_attachments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "aml_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string
+          id?: never
+          user_id?: string
+        }
+        Relationships: []
+      }
+      aml_case_transactions: {
+        Row: {
+          case_id: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          case_id: string
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          case_id?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_case_transactions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "aml_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aml_case_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "aml_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_cases: {
+        Row: {
+          accounts: Json
+          amounts: Json
+          case_no: string
+          chronology: Json
+          contract_ref: string | null
+          created_at: string
+          customer_id: string | null
+          decisions: Json
+          description: string | null
+          id: string
+          justification: string | null
+          origin: string
+          parties: Json
+          risk_assessment_id: string | null
+          screening_id: string | null
+          status: Database["public"]["Enums"]["aml_case_status"]
+          threshold_entry_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accounts?: Json
+          amounts?: Json
+          case_no: string
+          chronology?: Json
+          contract_ref?: string | null
+          created_at?: string
+          customer_id?: string | null
+          decisions?: Json
+          description?: string | null
+          id?: string
+          justification?: string | null
+          origin?: string
+          parties?: Json
+          risk_assessment_id?: string | null
+          screening_id?: string | null
+          status?: Database["public"]["Enums"]["aml_case_status"]
+          threshold_entry_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accounts?: Json
+          amounts?: Json
+          case_no?: string
+          chronology?: Json
+          contract_ref?: string | null
+          created_at?: string
+          customer_id?: string | null
+          decisions?: Json
+          description?: string | null
+          id?: string
+          justification?: string | null
+          origin?: string
+          parties?: Json
+          risk_assessment_id?: string | null
+          screening_id?: string | null
+          status?: Database["public"]["Enums"]["aml_case_status"]
+          threshold_entry_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_cases_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "aml_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aml_cases_risk_assessment_id_fkey"
+            columns: ["risk_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "aml_risk_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aml_cases_screening_id_fkey"
+            columns: ["screening_id"]
+            isOneToOne: false
+            referencedRelation: "aml_screenings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aml_cases_threshold_entry_id_fkey"
+            columns: ["threshold_entry_id"]
+            isOneToOne: false
+            referencedRelation: "aml_threshold_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_certificates: {
+        Row: {
+          certificate_pem: string | null
+          created_at: string
+          csr_pem: string
+          environment: string
+          id: string
+          kms_key_ref: string
+          matches_csr: boolean | null
+          mtls_tested_at: string | null
+          serial_number: string | null
+          status: string
+          subject_dn: string | null
+          updated_at: string
+          user_id: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          certificate_pem?: string | null
+          created_at?: string
+          csr_pem: string
+          environment?: string
+          id?: string
+          kms_key_ref: string
+          matches_csr?: boolean | null
+          mtls_tested_at?: string | null
+          serial_number?: string | null
+          status?: string
+          subject_dn?: string | null
+          updated_at?: string
+          user_id: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          certificate_pem?: string | null
+          created_at?: string
+          csr_pem?: string
+          environment?: string
+          id?: string
+          kms_key_ref?: string
+          matches_csr?: boolean | null
+          mtls_tested_at?: string | null
+          serial_number?: string | null
+          status?: string
+          subject_dn?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
+      aml_customers: {
+        Row: {
+          address: string | null
+          beneficial_owners: Json
+          citizenship: string | null
+          client_id: string | null
+          company_name: string | null
+          country_activity: string
+          country_residence: string
+          crbr_data: Json | null
+          crbr_discrepancies: Json
+          crbr_fetched_at: string | null
+          created_at: string
+          dob: string | null
+          document_number: string | null
+          document_type: string | null
+          entity_type: string
+          financing_purpose: string | null
+          first_name: string | null
+          id: string
+          krs: string | null
+          last_name: string | null
+          loan_application_id: string | null
+          nip: string | null
+          pep_status: boolean | null
+          pesel: string | null
+          regon: string | null
+          repayment_source: string | null
+          representatives: Json
+          risk_assessed_at: string | null
+          risk_level: Database["public"]["Enums"]["aml_risk_level"] | null
+          sanction_hit: boolean | null
+          screening_fingerprint: string | null
+          screening_status: Database["public"]["Enums"]["aml_screening_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          beneficial_owners?: Json
+          citizenship?: string | null
+          client_id?: string | null
+          company_name?: string | null
+          country_activity?: string
+          country_residence?: string
+          crbr_data?: Json | null
+          crbr_discrepancies?: Json
+          crbr_fetched_at?: string | null
+          created_at?: string
+          dob?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          entity_type?: string
+          financing_purpose?: string | null
+          first_name?: string | null
+          id?: string
+          krs?: string | null
+          last_name?: string | null
+          loan_application_id?: string | null
+          nip?: string | null
+          pep_status?: boolean | null
+          pesel?: string | null
+          regon?: string | null
+          repayment_source?: string | null
+          representatives?: Json
+          risk_assessed_at?: string | null
+          risk_level?: Database["public"]["Enums"]["aml_risk_level"] | null
+          sanction_hit?: boolean | null
+          screening_fingerprint?: string | null
+          screening_status?: Database["public"]["Enums"]["aml_screening_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          beneficial_owners?: Json
+          citizenship?: string | null
+          client_id?: string | null
+          company_name?: string | null
+          country_activity?: string
+          country_residence?: string
+          crbr_data?: Json | null
+          crbr_discrepancies?: Json
+          crbr_fetched_at?: string | null
+          created_at?: string
+          dob?: string | null
+          document_number?: string | null
+          document_type?: string | null
+          entity_type?: string
+          financing_purpose?: string | null
+          first_name?: string | null
+          id?: string
+          krs?: string | null
+          last_name?: string | null
+          loan_application_id?: string | null
+          nip?: string | null
+          pep_status?: boolean | null
+          pesel?: string | null
+          regon?: string | null
+          repayment_source?: string | null
+          representatives?: Json
+          risk_assessed_at?: string | null
+          risk_level?: Database["public"]["Enums"]["aml_risk_level"] | null
+          sanction_hit?: boolean | null
+          screening_fingerprint?: string | null
+          screening_status?: Database["public"]["Enums"]["aml_screening_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      aml_report_versions: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          payload: Json
+          pdf_sha256: string | null
+          pdf_storage_path: string | null
+          report_id: string
+          user_id: string
+          version: number
+          xml_sha256: string | null
+          xml_storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          payload: Json
+          pdf_sha256?: string | null
+          pdf_storage_path?: string | null
+          report_id: string
+          user_id: string
+          version: number
+          xml_sha256?: string | null
+          xml_storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          payload?: Json
+          pdf_sha256?: string | null
+          pdf_storage_path?: string | null
+          report_id?: string
+          user_id?: string
+          version?: number
+          xml_sha256?: string | null
+          xml_storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_report_versions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "aml_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_reports: {
+        Row: {
+          case_id: string | null
+          completeness: Json
+          content_approved_at: string | null
+          content_approved_by: string | null
+          created_at: string
+          current_version: number
+          encryption_cert_fingerprint: string | null
+          giif_response: Json | null
+          giif_status: string | null
+          giif_status_checked_at: string | null
+          giif_submission_id: string | null
+          id: string
+          payload: Json
+          pdf_sha256: string | null
+          pdf_storage_path: string | null
+          report_type: Database["public"]["Enums"]["aml_report_type"]
+          signature_verified_at: string | null
+          signed_sha256: string | null
+          signed_storage_path: string | null
+          signer_subject: string | null
+          status: Database["public"]["Enums"]["aml_report_status"]
+          submitted_at: string | null
+          threshold_entry_id: string | null
+          updated_at: string
+          upo_received_at: string | null
+          upo_storage_path: string | null
+          user_id: string
+          xml_sha256: string | null
+          xml_storage_path: string | null
+        }
+        Insert: {
+          case_id?: string | null
+          completeness?: Json
+          content_approved_at?: string | null
+          content_approved_by?: string | null
+          created_at?: string
+          current_version?: number
+          encryption_cert_fingerprint?: string | null
+          giif_response?: Json | null
+          giif_status?: string | null
+          giif_status_checked_at?: string | null
+          giif_submission_id?: string | null
+          id?: string
+          payload?: Json
+          pdf_sha256?: string | null
+          pdf_storage_path?: string | null
+          report_type: Database["public"]["Enums"]["aml_report_type"]
+          signature_verified_at?: string | null
+          signed_sha256?: string | null
+          signed_storage_path?: string | null
+          signer_subject?: string | null
+          status?: Database["public"]["Enums"]["aml_report_status"]
+          submitted_at?: string | null
+          threshold_entry_id?: string | null
+          updated_at?: string
+          upo_received_at?: string | null
+          upo_storage_path?: string | null
+          user_id: string
+          xml_sha256?: string | null
+          xml_storage_path?: string | null
+        }
+        Update: {
+          case_id?: string | null
+          completeness?: Json
+          content_approved_at?: string | null
+          content_approved_by?: string | null
+          created_at?: string
+          current_version?: number
+          encryption_cert_fingerprint?: string | null
+          giif_response?: Json | null
+          giif_status?: string | null
+          giif_status_checked_at?: string | null
+          giif_submission_id?: string | null
+          id?: string
+          payload?: Json
+          pdf_sha256?: string | null
+          pdf_storage_path?: string | null
+          report_type?: Database["public"]["Enums"]["aml_report_type"]
+          signature_verified_at?: string | null
+          signed_sha256?: string | null
+          signed_storage_path?: string | null
+          signer_subject?: string | null
+          status?: Database["public"]["Enums"]["aml_report_status"]
+          submitted_at?: string | null
+          threshold_entry_id?: string | null
+          updated_at?: string
+          upo_received_at?: string | null
+          upo_storage_path?: string | null
+          user_id?: string
+          xml_sha256?: string | null
+          xml_storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "aml_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aml_reports_threshold_entry_id_fkey"
+            columns: ["threshold_entry_id"]
+            isOneToOne: false
+            referencedRelation: "aml_threshold_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_risk_assessments: {
+        Row: {
+          created_at: string
+          customer_id: string
+          decided_by: string
+          final_level: Database["public"]["Enums"]["aml_risk_level"]
+          id: string
+          override_justification: string | null
+          proposed_factors: Json
+          proposed_level: Database["public"]["Enums"]["aml_risk_level"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          decided_by: string
+          final_level: Database["public"]["Enums"]["aml_risk_level"]
+          id?: string
+          override_justification?: string | null
+          proposed_factors?: Json
+          proposed_level: Database["public"]["Enums"]["aml_risk_level"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          decided_by?: string
+          final_level?: Database["public"]["Enums"]["aml_risk_level"]
+          id?: string
+          override_justification?: string | null
+          proposed_factors?: Json
+          proposed_level?: Database["public"]["Enums"]["aml_risk_level"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_risk_assessments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "aml_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_screenings: {
+        Row: {
+          created_at: string
+          customer_id: string
+          error_message: string | null
+          fingerprint: string | null
+          hit_resolution:
+            | Database["public"]["Enums"]["aml_hit_resolution"]
+            | null
+          id: string
+          invalidated_at: string | null
+          invalidated_reason: string | null
+          query: Json
+          raw_result: Json | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          search_type: string
+          status: Database["public"]["Enums"]["aml_screening_status"]
+          subject_dob: string | null
+          subject_kind: string
+          subject_name: string
+          total_hits: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          error_message?: string | null
+          fingerprint?: string | null
+          hit_resolution?:
+            | Database["public"]["Enums"]["aml_hit_resolution"]
+            | null
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          query: Json
+          raw_result?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          search_type: string
+          status?: Database["public"]["Enums"]["aml_screening_status"]
+          subject_dob?: string | null
+          subject_kind?: string
+          subject_name: string
+          total_hits?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          error_message?: string | null
+          fingerprint?: string | null
+          hit_resolution?:
+            | Database["public"]["Enums"]["aml_hit_resolution"]
+            | null
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          query?: Json
+          raw_result?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          search_type?: string
+          status?: Database["public"]["Enums"]["aml_screening_status"]
+          subject_dob?: string | null
+          subject_kind?: string
+          subject_name?: string
+          total_hits?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_screenings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "aml_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_settings: {
+        Row: {
+          additional_person: Json | null
+          created_at: string
+          giif_connection_status: Database["public"]["Enums"]["aml_giif_connection_status"]
+          giif_environment: string
+          giif_institution_id: string | null
+          id: string
+          institution: Json
+          responsible_person: Json
+          signer_person: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          additional_person?: Json | null
+          created_at?: string
+          giif_connection_status?: Database["public"]["Enums"]["aml_giif_connection_status"]
+          giif_environment?: string
+          giif_institution_id?: string | null
+          id?: string
+          institution?: Json
+          responsible_person?: Json
+          signer_person?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          additional_person?: Json | null
+          created_at?: string
+          giif_connection_status?: Database["public"]["Enums"]["aml_giif_connection_status"]
+          giif_environment?: string
+          giif_institution_id?: string | null
+          id?: string
+          institution?: Json
+          responsible_person?: Json
+          signer_person?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      aml_submission_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          last_http_status: number | null
+          max_attempts: number
+          next_attempt_at: string
+          report_id: string
+          state: Database["public"]["Enums"]["aml_queue_state"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          last_http_status?: number | null
+          max_attempts?: number
+          next_attempt_at?: string
+          report_id: string
+          state?: Database["public"]["Enums"]["aml_queue_state"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          last_http_status?: number | null
+          max_attempts?: number
+          next_attempt_at?: string
+          report_id?: string
+          state?: Database["public"]["Enums"]["aml_queue_state"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_submission_queue_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "aml_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_threshold_entries: {
+        Row: {
+          created_at: string
+          deadline_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["aml_threshold_decision"] | null
+          decision_note: string | null
+          eur_equivalent: number
+          id: string
+          nbp_rate: number
+          nbp_table_date: string
+          nbp_table_no: string
+          report_id: string | null
+          reported_by_bank: boolean
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline_at: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?:
+            | Database["public"]["Enums"]["aml_threshold_decision"]
+            | null
+          decision_note?: string | null
+          eur_equivalent: number
+          id?: string
+          nbp_rate: number
+          nbp_table_date: string
+          nbp_table_no: string
+          report_id?: string | null
+          reported_by_bank?: boolean
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deadline_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?:
+            | Database["public"]["Enums"]["aml_threshold_decision"]
+            | null
+          decision_note?: string | null
+          eur_equivalent?: number
+          id?: string
+          nbp_rate?: number
+          nbp_table_date?: string
+          nbp_table_no?: string
+          report_id?: string | null
+          reported_by_bank?: boolean
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_threshold_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "aml_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aml_transactions: {
+        Row: {
+          above_threshold: boolean
+          amount: number
+          contract_ref: string | null
+          counterparty_name: string | null
+          created_at: string
+          currency: string
+          customer_id: string | null
+          description: string | null
+          eur_equivalent: number | null
+          executed: boolean
+          execution_confirmed_at: string | null
+          execution_confirmed_by: string | null
+          id: string
+          loan_application_id: string | null
+          nbp_rate: number | null
+          nbp_table_date: string | null
+          nbp_table_no: string | null
+          receiver_account: string | null
+          sender_account: string | null
+          source: Database["public"]["Enums"]["aml_transaction_source"]
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["aml_transaction_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          above_threshold?: boolean
+          amount: number
+          contract_ref?: string | null
+          counterparty_name?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          description?: string | null
+          eur_equivalent?: number | null
+          executed?: boolean
+          execution_confirmed_at?: string | null
+          execution_confirmed_by?: string | null
+          id?: string
+          loan_application_id?: string | null
+          nbp_rate?: number | null
+          nbp_table_date?: string | null
+          nbp_table_no?: string | null
+          receiver_account?: string | null
+          sender_account?: string | null
+          source?: Database["public"]["Enums"]["aml_transaction_source"]
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["aml_transaction_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          above_threshold?: boolean
+          amount?: number
+          contract_ref?: string | null
+          counterparty_name?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          description?: string | null
+          eur_equivalent?: number | null
+          executed?: boolean
+          execution_confirmed_at?: string | null
+          execution_confirmed_by?: string | null
+          id?: string
+          loan_application_id?: string | null
+          nbp_rate?: number | null
+          nbp_table_date?: string | null
+          nbp_table_no?: string | null
+          receiver_account?: string | null
+          sender_account?: string | null
+          source?: Database["public"]["Enums"]["aml_transaction_source"]
+          transaction_date?: string
+          transaction_type?: Database["public"]["Enums"]["aml_transaction_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aml_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "aml_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -7993,6 +8917,7 @@ export type Database = {
         Returns: Json
       }
       affiliate_current_partner_id: { Args: never; Returns: string }
+      aml_next_case_no: { Args: { _user_id: string }; Returns: string }
       apply_loan_auto_status: { Args: { _loan_id: string }; Returns: undefined }
       broker_has_paid_access: { Args: { _user_id: string }; Returns: boolean }
       broker_offer_usage: { Args: { _user_id: string }; Returns: Json }
@@ -8212,6 +9137,93 @@ export type Database = {
       redeem_operator_invite: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
+      aml_case_status:
+        | "new"
+        | "in_analysis"
+        | "awaiting_information"
+        | "no_basis_for_report"
+        | "suspicion_confirmed"
+        | "report_in_preparation"
+        | "ready_for_signature"
+        | "signed"
+        | "submitted"
+        | "upo_received"
+        | "rejected"
+        | "correction_required"
+        | "closed"
+      aml_giif_connection_status:
+        | "not_connected"
+        | "registration_in_progress"
+        | "csr_generated"
+        | "documents_signed"
+        | "submitted_to_giif"
+        | "certificate_issued"
+        | "mtls_verified"
+        | "active"
+        | "expired"
+        | "error"
+      aml_hit_resolution:
+        | "false_positive"
+        | "confirmed_pep"
+        | "confirmed_sanction"
+        | "confirmed_criminal"
+        | "unresolved"
+      aml_queue_state:
+        | "pending"
+        | "in_flight"
+        | "retry_scheduled"
+        | "delivered"
+        | "failed"
+        | "cancelled"
+      aml_report_status:
+        | "draft"
+        | "complete"
+        | "content_approved"
+        | "awaiting_signature"
+        | "signed"
+        | "encrypted"
+        | "queued"
+        | "submitted"
+        | "status_pending"
+        | "accepted"
+        | "upo_received"
+        | "rejected"
+        | "correction_required"
+        | "error"
+      aml_report_type:
+        | "transakcja_ponadprogowa"
+        | "okolicznosci_podejrzane"
+        | "planowana_transakcja_podejrzana"
+        | "transakcja_przeprowadzona"
+      aml_risk_level: "low" | "standard" | "high" | "unacceptable"
+      aml_screening_status:
+        | "not_started"
+        | "in_progress"
+        | "clear"
+        | "review_required"
+        | "approved_after_review"
+        | "blocked"
+        | "error"
+        | "invalidated"
+      aml_threshold_decision:
+        | "reportable"
+        | "not_reportable"
+        | "verification_required"
+        | "report_prepared"
+        | "submitted"
+        | "accepted"
+        | "correction_required"
+      aml_transaction_source: "auto" | "manual" | "bank_integration"
+      aml_transaction_type:
+        | "wyplata_finansowania"
+        | "splata_kapitalu"
+        | "odsetki"
+        | "oplaty"
+        | "wplata_gotowkowa"
+        | "wyplata_gotowkowa"
+        | "przelew_przychodzacy"
+        | "przelew_wychodzacy"
+        | "inna_operacja"
       app_role:
         | "administrator"
         | "operator"
@@ -8483,6 +9495,102 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      aml_case_status: [
+        "new",
+        "in_analysis",
+        "awaiting_information",
+        "no_basis_for_report",
+        "suspicion_confirmed",
+        "report_in_preparation",
+        "ready_for_signature",
+        "signed",
+        "submitted",
+        "upo_received",
+        "rejected",
+        "correction_required",
+        "closed",
+      ],
+      aml_giif_connection_status: [
+        "not_connected",
+        "registration_in_progress",
+        "csr_generated",
+        "documents_signed",
+        "submitted_to_giif",
+        "certificate_issued",
+        "mtls_verified",
+        "active",
+        "expired",
+        "error",
+      ],
+      aml_hit_resolution: [
+        "false_positive",
+        "confirmed_pep",
+        "confirmed_sanction",
+        "confirmed_criminal",
+        "unresolved",
+      ],
+      aml_queue_state: [
+        "pending",
+        "in_flight",
+        "retry_scheduled",
+        "delivered",
+        "failed",
+        "cancelled",
+      ],
+      aml_report_status: [
+        "draft",
+        "complete",
+        "content_approved",
+        "awaiting_signature",
+        "signed",
+        "encrypted",
+        "queued",
+        "submitted",
+        "status_pending",
+        "accepted",
+        "upo_received",
+        "rejected",
+        "correction_required",
+        "error",
+      ],
+      aml_report_type: [
+        "transakcja_ponadprogowa",
+        "okolicznosci_podejrzane",
+        "planowana_transakcja_podejrzana",
+        "transakcja_przeprowadzona",
+      ],
+      aml_risk_level: ["low", "standard", "high", "unacceptable"],
+      aml_screening_status: [
+        "not_started",
+        "in_progress",
+        "clear",
+        "review_required",
+        "approved_after_review",
+        "blocked",
+        "error",
+        "invalidated",
+      ],
+      aml_threshold_decision: [
+        "reportable",
+        "not_reportable",
+        "verification_required",
+        "report_prepared",
+        "submitted",
+        "accepted",
+        "correction_required",
+      ],
+      aml_transaction_source: ["auto", "manual", "bank_integration"],
+      aml_transaction_type: [
+        "wyplata_finansowania",
+        "splata_kapitalu",
+        "odsetki",
+        "oplaty",
+        "wplata_gotowkowa",
+        "wyplata_gotowkowa",
+        "przelew_przychodzacy",
+        "przelew_wychodzacy",
+        "inna_operacja",
+      ],
       app_role: [
         "administrator",
         "operator",
