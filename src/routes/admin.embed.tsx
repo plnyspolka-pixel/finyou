@@ -32,6 +32,7 @@ function EmbedPage() {
   const [showFormPreview, setShowFormPreview] = useState(false);
   const [showInvoicesPreview, setShowInvoicesPreview] = useState(false);
   const [showLeadsPreview, setShowLeadsPreview] = useState(false);
+  const [showBlogPreview, setShowBlogPreview] = useState(false);
 
   const url = useMemo(() => {
     const u = new URL("/embed/wniosek", origin);
