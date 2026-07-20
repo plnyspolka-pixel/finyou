@@ -164,6 +164,8 @@ function DokumentyPage() {
                         <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditing(t)}><Pencil className="mr-2 h-3 w-3" />Edytuj</Button>
                         <Button size="sm" variant="ghost" onClick={() => void remove(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
+                      <DocxTemplateActions template={t} onChange={load} />
+
                     </CardContent>
                   </Card>
                 ))}
