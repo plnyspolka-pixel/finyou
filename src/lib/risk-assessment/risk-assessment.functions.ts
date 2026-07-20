@@ -1,13 +1,16 @@
 // Orkiestrator „Wycena i ocena ryzyka inwestycji".
-// Pipeline: KW (stan prawny) → właściciel (PESEL, trwanie życia) →
-// korespondencja → rynek porównawczy (deweloperuch + otodom) → nadrzędna wycena Perplexity.
-// Uwaga: moduły RCN/GUS oraz OCR dokumentów zostały wyłączone.
+// Pipeline: BRAMKA KW (KW Engine — bez poprawnie pobranej księgi ocena nie startuje)
+// → stan prawny KW → właściciel (PESEL, trwanie życia) → korespondencja →
+// → scraping rynku (deweloperuch.pl transakcje + otodom.pl oferty, Firecrawl) →
+// → deterministyczna wycena rynkowa (GUS BDL pomocniczo — grunty rolne zł/ha).
+// Perplexity usunięta z toru wyceny. Moduły RCN oraz OCR dokumentów wyłączone.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { runPropertyCollateralAnalysisCore } from "@/lib/property-analysis/property-collateral-analysis.functions";
 import type { DataSourceUsage } from "@/lib/property-analysis/types";
+import { fetchAndStoreKw, normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
 import { analyzeCorrespondence } from "./correspondence-intel.server";
@@ -15,7 +18,8 @@ import { analyzeSaleability, applyFloorToSaleability, applyPlotBuildabilityToSal
 import { assessFloor } from "./floor-factor";
 import { assessPlotBuildability } from "./plot-buildability";
 import { estimateForcedSale } from "./forced-sale";
-import { perplexityMasterValuation } from "./perplexity-master.server";
+import { computeMarketValuation } from "./market-valuation";
+import { fetchGusAuxiliaryBenchmark } from "./gov-benchmark.server";
 import { fetchMarketComparables } from "./market-comparables.server";
 
 import { clampLoanTermYears } from "./life-expectancy";
@@ -27,6 +31,8 @@ type SupabaseLike = { from: (t: string) => any };
 
 const EMPTY_OCR: OcrSummary = { status: "no_data", documentsProcessed: 0, documents: [] };
 
+// Fallback, gdy pomocnicze zapytanie GUS BDL zawiedzie — ocena liczy się dalej
+// na scrapingu rynku (deweloperuch + otodom).
 function emptyGovBenchmark(propertyType: string): GovBenchmark {
   return {
     source: "GUS BDL",
@@ -54,7 +60,7 @@ function emptyGovBenchmark(propertyType: string): GovBenchmark {
     unitLevel: null,
     period: null,
     fallbackUsed: false,
-    summaryLine: "Dane rządowe (RCN/GUS) wyłączone — bazujemy na rynku porównawczym.",
+    summaryLine: "GUS BDL (pomocniczo): brak danych — wycena bazuje na scrapingu rynku (deweloperuch + otodom).",
     warnings: [],
   };
 }
@@ -119,13 +125,36 @@ export async function runInvestmentRiskAssessmentCore(
   const declaredValue = property?.estimated_value ?? null;
   const loanAmount = app.loan_amount ?? null;
 
-  // 1) KW (stan prawny) — NAJPIERW, bo dział I-O daje adres nieruchomości,
-  //    którym uzupełniamy braki w danych wniosku dla wszystkich dalszych analiz.
+  // 1) BRAMKA KW — ocena NIE startuje bez poprawnie pobranej treści księgi
+  //    wieczystej z KW Engine (CMD). Najpierw upewniamy się, że dane KW są
+  //    pobrane i czytelne; dopiero potem ruszają dalsze analizy i wycena.
+  const kwNumber = normalizeKwNumber(property?.land_register_number ?? "");
+  if (!kwNumber) {
+    throw new Error(
+      "Ocena przerwana: wniosek nie ma poprawnego numeru księgi wieczystej (KW). Uzupełnij numer KW i uruchom ocenę ponownie.",
+    );
+  }
+  const kwFetch = await fetchAndStoreKw(kwNumber, { pollMaxMs: 60_000 });
+  if (!kwFetch.ok) {
+    const reason =
+      kwFetch.status === "processing"
+        ? "pobieranie treści KW nadal trwa — spróbuj ponownie za chwilę"
+        : kwFetch.error ?? `status: ${kwFetch.status}`;
+    throw new Error(`Ocena przerwana: nie udało się poprawnie pobrać treści KW ${kwNumber} z KW Engine (${reason}).`);
+  }
+
+  // 1a) Stan prawny KW — dział I-O daje też adres i parametry nieruchomości,
+  //     którymi uzupełniamy braki w danych wniosku dla wszystkich dalszych analiz.
   const kwLegal = await analyzeKwLegal({
-    kwNumber: property?.land_register_number ?? null,
+    kwNumber,
     hasCoOwners: property?.has_co_owners ?? null,
     hasMortgageFlag: property?.has_mortgage ?? null,
   });
+  if (!kwLegal.available) {
+    throw new Error(
+      `Ocena przerwana: treść KW ${kwNumber} została pobrana, ale nie udało się odczytać jej działów. Zweryfikuj treść KW i uruchom ponownie.`,
+    );
+  }
 
   // Adres efektywny: dane wniosku → fallback z działu I-O KW.
   const kwAddr = kwLegal.address;
@@ -154,7 +183,7 @@ export async function runInvestmentRiskAssessmentCore(
     }
   }
 
-  // KW-parametry przekazywane do wyceny (Perplexity): mają pierwszeństwo, bo
+  // KW-parametry przekazywane do analizy zabezpieczenia: mają pierwszeństwo, bo
   // wycena ma dotyczyć nieruchomości o parametrach i lokalizacji z księgi wieczystej.
   const kwValuationOpts = {
     kw: {
@@ -168,7 +197,9 @@ export async function runInvestmentRiskAssessmentCore(
     },
   };
 
-  // 2) Analiza zabezpieczenia (reuse: wycena Perplexity + lokalizacja + powódź + scoring).
+  // 2) Analiza zabezpieczenia (reuse: lokalizacja + ryzyko powodziowe + scoring).
+  //    Pozostawiona bez zmian („reszta systemu"); jej wewnętrzna wycena nie jest
+  //    już podstawą — podstawą jest wycena ze scrapingu rynku (krok 6).
   //    Nie przerywamy oceny, gdy padnie — degradujemy się miękko.
   let collateral = null as InvestmentRiskAssessment["collateralAnalysis"];
   try {
@@ -215,13 +246,24 @@ export async function runInvestmentRiskAssessmentCore(
     : saleabilityFloor;
   if (plotBuildability.onlyFarmerCanBuild) warnings.push(...plotBuildability.warnings);
 
-  // 5c) Dane rządowe (RCN/GUS) — wyłączone. Stub jako „unavailable".
-  const govBenchmark = emptyGovBenchmark(property?.property_type ?? "inna");
+  // 5c) GUS BDL — wyłącznie POMOCNICZO: dla gruntu rolnego podstawa wyceny
+  //     (ceny zł/ha wg klasy bonitacyjnej z KW), dla pozostałych typów fallback.
+  //     RCN pozostaje wyłączony.
+  const govBenchmark = await fetchGusAuxiliaryBenchmark({
+    propertyType: property?.property_type ?? "inna",
+    city: effCity,
+    voivodeship: effVoivodeship,
+    soilClass: kwLegal.soilClass,
+    areaSqm: property?.area_sqm ?? null,
+    landAreaHa: kwParams.landAreaHa,
+  }).catch((e) => {
+    warnings.push(`GUS BDL (pomocniczo): ${e?.message ?? "błąd"}.`);
+    return emptyGovBenchmark(property?.property_type ?? "inna");
+  });
 
-
-  // 5d) Rynek porównawczy — deweloperuch.pl (rzeczywiste transakcje domów/mieszkań przy ulicy)
-  //      + otodom.pl (aktywne oferty działek). Uzupełnia RCN, gdy WFS milczy, i dostarcza
-  //      Perplexity twarde zł/m² wprost z rynku.
+  // 5d) PODSTAWA WYCENY — scraping rynku (Firecrawl):
+  //     deweloperuch.pl: miasto/miejscowość + rodzaj (tylko DOMY i MIESZKANIA — transakcje),
+  //     otodom.pl: MIESZKANIA, DOMY i DZIAŁKI (aktywne oferty).
   const marketComparables = await fetchMarketComparables({
     propertyType: property?.property_type ?? "inna",
     city: effCity,
@@ -232,33 +274,26 @@ export async function runInvestmentRiskAssessmentCore(
     return null;
   });
 
-  // 6) Nadrzędna wycena Perplexity — „naładowana" pełnym dossier.
-  //    Parametry i lokalizacja z KW mają pierwszeństwo w wycenie.
-  const areaM2 = kwParams.usableAreaM2 ?? property?.area_sqm ?? null;
-  const master = await perplexityMasterValuation({
+  // 6) Deterministyczna wycena rynkowa — mediana zł/m² ze scrapingu × powierzchnia
+  //    z KW; grunt rolny: ceny GUS zł/ha × ha. Bez udziału LLM.
+  const isPlotType = /dzialka|działka|grunt|siedlisk/.test((property?.property_type ?? "").toLowerCase());
+  const areaM2 = isPlotType
+    ? kwParams.landAreaM2 ?? property?.area_sqm ?? null
+    : kwParams.usableAreaM2 ?? property?.area_sqm ?? null;
+  const master = computeMarketValuation({
     propertyType: property?.property_type ?? "inna",
-    address: effAddress,
-    city: effCity,
-    voivodeship: effVoivodeship,
     areaM2,
     landAreaHa: kwParams.landAreaHa,
-    kwKind: kwParams.kind,
-    roomCount: kwParams.roomCount,
-    floorPietro: kwFloorPietro,
-    landUse: kwParams.landUse,
-    parametersFromKw: kwLegal.available,
     declaredValuePln: declaredValue,
     requestedLoanPln: loanAmount,
-    collateral,
-    owner,
-    kwLegal,
-    correspondence,
-    ocr,
-    plotBuildability,
-    govBenchmark,
     marketComparables,
+    govBenchmark,
+    kwLegal,
+    ownerMatchesKw: owner.matchesKwOwner,
+    saleabilityScore: saleability.available ? saleability.score : null,
+    onlyFarmerCanBuild: plotBuildability.applicable ? plotBuildability.onlyFarmerCanBuild : false,
   });
-  if (master.status !== "success") warnings.push(`Nadrzędna wycena Perplexity: ${master.errorMessage ?? "brak danych"}.`);
+  if (master.status !== "success") warnings.push(`Wycena rynkowa (deweloperuch/otodom + GUS): ${master.errorMessage ?? "brak danych"}.`);
 
 
   // 7) Cena sprzedaży i wymuszonej sprzedaży (licytacje komornicze).
@@ -268,13 +303,14 @@ export async function runInvestmentRiskAssessmentCore(
     (collateral?.perplexityValuation?.estimatedValueLowPln && collateral?.perplexityValuation?.estimatedValueHighPln
       ? Math.round((collateral.perplexityValuation.estimatedValueLowPln + collateral.perplexityValuation.estimatedValueHighPln) / 2)
       : null);
-  // Government-first: dla gruntu rolnego podstawą wyceny jest twarda wartość GUS BDL (zł/ha × ha).
+  // Dla gruntu rolnego podstawą wyceny są ceny gruntów rolnych GUS (zł/ha × ha) —
+  // wycena rynkowa (master) liczy to samo, ale zostawiamy jawny priorytet.
   const govLandValue = property?.property_type === "grunt_rolny" ? govBenchmark.landValuePln : null;
   const basisValue = govLandValue ?? master.estimatedValueMidPln ?? collateralMid ?? declaredValue ?? null;
   const basisSource = govLandValue
-    ? (govBenchmark.primarySource === "RCN" ? "RCN — rzeczywiste transakcje (Geoportal)" : "GUS BDL (ceny gruntów rolnych)")
+    ? "GUS BDL (ceny gruntów rolnych)"
     : master.estimatedValueMidPln
-      ? "Perplexity (wycena nadrzędna)"
+      ? `Wycena rynkowa — ${master.basisSource ?? "deweloperuch/otodom"}`
       : collateralMid
         ? "Analiza zabezpieczenia"
         : declaredValue
@@ -394,38 +430,12 @@ function buildDataSources(a: {
 
   const sources: DataSourceUsage[] = [];
 
-  // Government-first: RCN (rzeczywiste transakcje) — priorytetowe źródło rządowe.
-  const gb = a.govBenchmark;
-  sources.push({
-    source: "RCN / Geoportal — rejestr cen nieruchomości (dane rządowe, transakcje)",
-    used: gb.rcnAvailable,
-    purpose: "rzeczywiste ceny transakcyjne nieruchomości w okolicy (priorytet nad średnimi)",
-    dataLevel: gb.rcnAvailable
-      ? [gb.rcnPricePerHa != null ? `${gb.rcnPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
-         gb.rcnPricePerM2 != null ? `${gb.rcnPricePerM2.toLocaleString("pl-PL")} zł/m²` : null,
-         `${gb.rcnTransactions} transakcji`].filter(Boolean).join(", ")
-      : "—",
-    period: gb.rcnRadiusKm ? `promień ${gb.rcnRadiusKm} km` : "",
-    status: gb.rcnAvailable ? "success" : gb.rcnStatus === "not_started" ? "no_data" : "error",
-    note: gb.rcnAvailable ? undefined : gb.rcnStatusMessage,
-  });
-  sources.push({
-    source: "GUS BDL — przeciętne ceny gruntów rolnych / lokali (dane rządowe)",
-    used: gb.gusPricePerHa != null || gb.gusPricePerM2Median != null,
-    purpose: "przeciętne ceny urzędowe (zł/ha wg klasy, zł/m²) — wsparcie/fallback wobec RCN",
-    dataLevel: [gb.gusPricePerHa != null ? `${gb.gusPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
-         gb.gusPricePerM2Median != null ? `${gb.gusPricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
-         gb.unitName].filter(Boolean).join(", ") || "—",
-    period: gb.period ?? "",
-    status: (gb.gusPricePerHa != null || gb.gusPricePerM2Median != null) ? "success" : "no_data",
-    note: gb.fallbackUsed ? `dane zastępcze: ${gb.unitLevel ?? ""}` : undefined,
-  });
-
+  // PODSTAWA WYCENY: scraping rynku (Firecrawl) — deweloperuch + otodom.
   const mc = a.marketComparables;
   sources.push({
-    source: "Rynek porównawczy — deweloperuch.pl (transakcje) + otodom.pl (oferty działek)",
+    source: "Rynek porównawczy — deweloperuch.pl (transakcje domów/mieszkań) + otodom.pl (oferty mieszkań/domów/działek)",
     used: !!mc && (mc.status === "success" || mc.status === "partial"),
-    purpose: "twarde zł/m² z rynku: rzeczywiste transakcje domów/mieszkań przy ulicy oraz aktywne oferty działek",
+    purpose: "PODSTAWA WYCENY: twarde zł/m² ze scrapingu rynku (Firecrawl) — miasto/miejscowość + rodzaj nieruchomości",
     dataLevel: mc
       ? [mc.pricePerM2Median != null ? `mediana ${mc.pricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
          `${mc.transactionsCount} transakcji`, `${mc.offersCount} ofert`,
@@ -434,6 +444,20 @@ function buildDataSources(a: {
     period: "aktualne / ostatnie 12–24 mies.",
     status: mc?.status === "success" ? "success" : mc?.status === "partial" ? "partial" : mc?.status === "error" ? "error" : "no_data",
     note: mc && mc.status !== "success" ? mc.message : undefined,
+  });
+
+  // GUS BDL — pomocniczo (podstawa tylko dla gruntów rolnych: ceny zł/ha).
+  const gb = a.govBenchmark;
+  sources.push({
+    source: "GUS BDL — ceny gruntów rolnych / przeciętne ceny lokali (dane rządowe, pomocniczo)",
+    used: gb.gusPricePerHa != null || gb.gusPricePerM2Median != null,
+    purpose: "dane pomocnicze — dla gruntów rolnych podstawa wyceny (zł/ha wg klasy), dla pozostałych typów fallback",
+    dataLevel: [gb.gusPricePerHa != null ? `${gb.gusPricePerHa.toLocaleString("pl-PL")} zł/ha` : null,
+         gb.gusPricePerM2Median != null ? `${gb.gusPricePerM2Median.toLocaleString("pl-PL")} zł/m²` : null,
+         gb.unitName].filter(Boolean).join(", ") || "—",
+    period: gb.period ?? "",
+    status: (gb.gusPricePerHa != null || gb.gusPricePerM2Median != null) ? "success" : "no_data",
+    note: gb.fallbackUsed ? `dane zastępcze: ${gb.unitLevel ?? ""}` : undefined,
   });
 
 
@@ -503,17 +527,17 @@ function buildDataSources(a: {
   // Źródła z analizy zabezpieczenia (Google Maps, ISOK/Wody Polskie, Perplexity wstępna) — przenieś, by uniknąć duplikatów.
   if (a.collateral?.dataSourcesUsed?.length) {
     for (const s of a.collateral.dataSourcesUsed) {
-      if (/perplexity/i.test(s.source)) continue; // wycenę nadrzędną raportujemy osobno
+      if (/perplexity/i.test(s.source)) continue; // wycena raportowana osobno (scraping rynku)
       sources.push(s);
     }
   }
 
   sources.push({
-    source: "Perplexity (sonar-pro) — nadrzędna wycena i opinia o ryzyku",
+    source: "Wycena rynkowa (deterministyczna) — deweloperuch + otodom, GUS pomocniczo",
     used: a.master.status === "success",
-    purpose: "domknięcie wyceny i klasyfikacji ryzyka na bazie pełnego dossier + rynku",
-    dataLevel: a.master.citations.length ? `${a.master.citations.length} źródeł online` : "—",
-    period: "ostatnie 12 mies.",
+    purpose: "wyliczenie wartości low/mid/high z mediany zł/m² × powierzchnia z KW (grunt rolny: GUS zł/ha × ha)",
+    dataLevel: a.master.basisSource ?? "—",
+    period: "aktualne dane rynkowe",
     status: a.master.status === "success" ? "success" : a.master.status === "no_data" ? "no_data" : "error",
     note: a.master.status === "success" ? recommendationLabel(a.master.recommendation) : a.master.errorMessage,
   });

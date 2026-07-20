@@ -55,7 +55,7 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     name: "Księga wieczysta (EKW)",
     category: "rejestr_publiczny",
     governmental: true,
-    purpose: "Stan prawny nieruchomości: własność, obciążenia, hipoteki",
+    purpose: "BRAMKA pipeline'u — bez poprawnie pobranej treści KW ocena nie startuje. Stan prawny: własność, obciążenia, hipoteki",
     provides: "Działy I–IV KW (właściciele, prawa i roszczenia, hipoteki)",
     provider: "CMD KW Engine / EKW Ministerstwa Sprawiedliwości",
     envKey: "CMD_KW_USER",
@@ -72,10 +72,10 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
   },
   {
     key: "gus_bdl_prices",
-    name: "GUS BDL — ceny gruntów rolnych i lokali",
+    name: "GUS BDL — ceny gruntów rolnych i lokali (pomocniczo)",
     category: "instytucja_rzadowa",
     governmental: true,
-    purpose: "priorytetowa wycena z danych urzędowych (grunt rolny zł/ha wg klasy, lokale zł/m²)",
+    purpose: "dane pomocnicze wyceny — głównie działki rolne (ceny gruntów rolnych zł/ha wg klasy); dla pozostałych typów fallback",
     provides: "przeciętne ceny transakcyjne GUS (powiat → województwo → kraj)",
     provider: "GUS Bank Danych Lokalnych (API)",
     envKey: "GUS_BDL_API_KEY",
@@ -129,15 +129,6 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provides: "Mapy zagrożenia (MZP) i ryzyka (MRP) powodziowego",
     provider: "ISOK / Wody Polskie WMS/WFS",
   },
-  {
-    key: "rcn_geoportal",
-    name: "RCN — Rejestr Cen Nieruchomości (dane lokalne)",
-    category: "instytucja_rzadowa",
-    governmental: true,
-    purpose: "rzeczywiste transakcje porównawcze — priorytetowe źródło cenowe",
-    provides: "ceny transakcyjne nieruchomości w okolicy (wybrane miasta), odpytywane po współrzędnych",
-    provider: "Zbiór CC0 deweloperuch/rejestr-cen-nieruchomosci (GML) → Supabase (rcn_transactions)",
-  },
   // 6. Dane geoprzestrzenne
   {
     key: "google_maps",
@@ -170,26 +161,16 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provider: "Perplexity (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
     envKey: "PERPLEXITY_API_KEY",
   },
+  // 8. Rynek nieruchomości — PODSTAWA WYCENY (scraping).
   {
     key: "market_comparables_scrape",
-    name: "Rynek porównawczy — deweloperuch.pl + otodom.pl (scraping)",
+    name: "Rynek porównawczy — deweloperuch.pl + otodom.pl (scraping, podstawa wyceny)",
     category: "rynek_nieruchomosci",
     governmental: false,
-    purpose: "twarde zł/m² z rynku: transakcje domów/mieszkań przy ulicy (deweloperuch) i aktywne oferty działek (otodom)",
-    provides: "mediana/średnia zł/m², liczba transakcji, aktywne oferty w okolicy",
+    purpose: "PODSTAWA WYCENY: scraping miasto/miejscowość + rodzaj — deweloperuch (tylko domy i mieszkania, transakcje), otodom (mieszkania, domy i działki, oferty)",
+    provides: "mediana/kwartyle zł/m², liczba transakcji, aktywne oferty w okolicy",
     provider: "Firecrawl v2 (deweloperuch.pl, otodom.pl)",
     envKey: "FIRECRAWL_API_KEY",
-  },
-  // 8. Rynek nieruchomości + wycena nadrzędna
-  {
-    key: "perplexity",
-    name: "Perplexity (sonar-pro)",
-    category: "rynek_nieruchomosci",
-    governmental: false,
-    purpose: "Wycena porównawcza i nadrzędna analiza ryzyka inwestycji",
-    provides: "Ceny z aktualnych ogłoszeń i raportów, wycena, klasyfikacja ryzyka",
-    provider: "Perplexity API (sonar-pro)",
-    envKey: "PERPLEXITY_API_KEY",
   },
 ];
 

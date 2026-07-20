@@ -83,9 +83,11 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           else if (s === "ready") setStage("KW pobrana — analiza ryzyka…");
         },
       });
-      if (!kw.ok && kw.status !== "no_kw") {
-        toast.error("Nie udało się pobrać KW", { description: kw.message });
-        // mimo błędu KW pozwalamy uruchomić ocenę na dostępnych danych
+      if (!kw.ok) {
+        // BRAMKA KW: bez poprawnie pobranej treści księgi wieczystej ocena nie
+        // startuje (serwer i tak by ją odrzucił) — przerywamy z czytelnym błędem.
+        toast.error("Ocena przerwana — brak poprawnie pobranej KW", { description: kw.message });
+        return;
       }
       setStage("Analiza ryzyka i wycena…");
       const computed = await runRA({ data: { applicationId, force: !!row } });
@@ -111,7 +113,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2"><ShieldAlert className="h-5 w-5" /> Wycena i ocena ryzyka inwestycji</h3>
-          <p className="text-xs text-muted-foreground">Pipeline: KW → właściciel (PESEL/KRS) → korespondencja → rynek porównawczy (deweloperuch + otodom) → nadrzędna wycena Perplexity.</p>
+          <p className="text-xs text-muted-foreground">Pipeline: KW (bramka — wymagane poprawne pobranie z KW Engine) → właściciel (PESEL/KRS) → korespondencja → scraping rynku (deweloperuch + otodom) → wycena rynkowa (GUS pomocniczo — grunty rolne).</p>
         </div>
         <Button onClick={run} disabled={running} size="sm">
           {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
@@ -122,14 +124,15 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
       {running && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
-          <AlertDescription>{stage ?? "Trwa zaciąganie i analiza danych ze wszystkich źródeł."} To może potrwać kilka minut (KW + Perplexity + Gemini).</AlertDescription>
+          <AlertDescription>{stage ?? "Trwa zaciąganie i analiza danych ze wszystkich źródeł."} To może potrwać kilka minut (KW Engine + scraping rynku + Gemini).</AlertDescription>
         </Alert>
       )}
 
       {!result && !running && (
         <>
           <Card><CardContent className="py-6 text-sm text-muted-foreground">
-            Brak wyników. Uruchom ocenę, aby zebrać dane ze wszystkich źródeł i wygenerować nadrzędną wycenę oraz automatyczną klasyfikację ryzyka.
+            Brak wyników. Uruchom ocenę, aby zebrać dane ze wszystkich źródeł i wygenerować wycenę rynkową oraz automatyczną klasyfikację ryzyka.
+            Warunkiem startu jest poprawnie pobrana treść księgi wieczystej (KW Engine).
           </CardContent></Card>
           <RiskDisclaimer />
           <DataSourceCatalog />
@@ -197,11 +200,15 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           {/* Sekcja „Dane rządowe (RCN + GUS BDL)" została wyłączona — bazujemy na rynku porównawczym. */}
 
 
-          {/* Nadrzędna wycena Perplexity */}
+          {/* Wycena rynkowa — scraping deweloperuch + otodom, GUS pomocniczo */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> Nadrzędna wycena (Perplexity)</CardTitle>
-              <CardDescription>Wycena i klasyfikacja ryzyka na bazie pełnego dossier oraz aktualnego rynku.</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> Wycena rynkowa (deweloperuch + otodom)</CardTitle>
+              <CardDescription>
+                Wycena ze scrapingu rynku (Firecrawl): transakcje deweloperuch.pl (domy/mieszkania) + oferty otodom.pl (mieszkania/domy/działki).
+                Dane GUS pomocniczo — dla gruntów rolnych ceny zł/ha.
+                {result.masterValuation.basisSource ? <> Podstawa: <b>{result.masterValuation.basisSource}</b>.</> : null}
+              </CardDescription>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               {result.masterValuation.status === "success" ? (
@@ -230,7 +237,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
                   )}
                 </>
               ) : (
-                <p className="text-muted-foreground">{result.masterValuation.errorMessage ?? "Brak nadrzędnej wyceny — wymagana ręczna weryfikacja."}</p>
+                <p className="text-muted-foreground">{result.masterValuation.errorMessage ?? "Brak wyceny rynkowej — wymagana ręczna weryfikacja."}</p>
               )}
             </CardContent>
           </Card>
