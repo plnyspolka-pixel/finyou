@@ -41,6 +41,7 @@ type Template = {
   placeholders: string[];
   output_format: string;
   use_case: UseCase;
+  template_file_path: string | null;
   created_at: string;
   updated_at: string;
 };
