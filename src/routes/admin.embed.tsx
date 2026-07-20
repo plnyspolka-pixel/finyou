@@ -44,6 +44,8 @@ function EmbedPage() {
   const invoicesIframe = `<iframe src="${invoicesUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Faktury sprzedaży Finance You"></iframe>`;
   const leadsUrl = `${origin}/embed/leady`;
   const leadsIframe = `<iframe src="${leadsUrl}" width="100%" height="720" style="border:0;width:100%;min-height:600px;border-radius:16px;" loading="lazy" title="Ostatnie wnioski Finance You"></iframe>`;
+  const blogUrl = `${origin}/embed/blog`;
+  const blogIframe = `<iframe src="${blogUrl}" width="100%" height="900" style="border:0;width:100%;min-height:700px;border-radius:16px;" loading="lazy" title="Blog Finance You"></iframe>`;
 
   const iframeSnippet = `<iframe src="${url}" width="100%" height="${height}" style="border:0;width:100%;height:100%;min-height:600px;" loading="lazy" title="Wniosek o pożyczkę"></iframe>`;
 
