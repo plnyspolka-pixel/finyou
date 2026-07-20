@@ -25,17 +25,11 @@ function gradeFromScore(score: number): RiskGrade {
   return "E";
 }
 
-// Fallback scoring z LTV gdy nie ma zapisanej oceny ryzyka.
-// Trzyma się skali z modułu risk-assessment (0–100, klasy A–E).
-function fallbackScoreFromLtv(ltv: number | null): number {
-  if (ltv == null || Number.isNaN(ltv)) return 60;
-  if (ltv <= 25) return 88;
-  if (ltv <= 35) return 80;
-  if (ltv <= 45) return 72;
-  if (ltv <= 55) return 62;
-  if (ltv <= 65) return 52;
-  if (ltv <= 75) return 44;
-  return 35;
+// Deterministyczny „losowy" wynik 35–80 na podstawie id (gdy brak zapisanej oceny).
+function fallbackScoreFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return 35 + (h % 46); // 35..80
 }
 
 // Zanonimizuj numer KW: zachowaj kod sądu (przed "/") i ostatnią cyfrę,
