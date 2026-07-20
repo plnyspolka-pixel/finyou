@@ -28,6 +28,8 @@ import { openOrCreateThread } from "@/lib/chat.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
+import { useAccessState } from "@/hooks/use-access";
+import { FreeOfferDetail } from "@/components/access/FreeOfferDetail";
 
 // Reguły z kalkulatora na /klient: max okres maleje wraz z kwotą.
 function maxMonthsForAmount(amount: number): number {
@@ -38,8 +40,22 @@ function maxMonthsForAmount(amount: number): number {
 }
 
 export const Route = createFileRoute("/inwestor/wniosek/$id")({
-  component: InwestorWniosek,
+  component: InwestorWniosekGate,
 });
+
+// Darmowe konto inwestora dostaje bezpieczny widok (zdjęcia + zanonimizowana
+// treść KW + oferta w ramach limitów); pełny widok wymaga płatnego dostępu.
+function InwestorWniosekGate() {
+  const { id } = Route.useParams();
+  const { loading, hasFullAccess } = useAccessState("investor");
+  if (loading) {
+    return <div className="py-10 text-center text-muted-foreground">Ładowanie…</div>;
+  }
+  if (!hasFullAccess) {
+    return <FreeOfferDetail applicationId={id} />;
+  }
+  return <InwestorWniosek />;
+}
 
 function isImage(name: string) {
   return /\.(jpg|jpeg|png|gif|webp|heic|bmp)$/i.test(name);

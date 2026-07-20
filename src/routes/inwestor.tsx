@@ -35,12 +35,17 @@ const fullGroups: NavGroup[] = [
   },
 ];
 
-// Nawigacja bez aktywnego dostępu: zajawki, cennik, płatności, profil.
+// Nawigacja konta darmowego: przeglądanie ofert (zdjęcia + zanonimizowana KW),
+// składanie ofert w ramach limitów, kalkulator (tryb darmowy), 3 darmowe
+// lekcje Akademii, zakup, płatności, profil.
 const limitedGroups: NavGroup[] = [
   {
     items: [
-      { to: "/inwestor", label: "Dostępne oferty (zajawki)", icon: ListChecks, exact: true },
-      { to: "/inwestor/abonament", label: "Wykup dostęp", icon: CreditCard },
+      { to: "/inwestor", label: "Dostępne oferty", icon: ListChecks, exact: true },
+      { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+      { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
+      { to: "/inwestor/szkolenia", label: "Akademia (3 darmowe lekcje)", icon: GraduationCap },
+      { to: "/inwestor/abonament", label: "Pełny dostęp", icon: CreditCard },
       { to: "/inwestor/platnosci", label: "Płatności i faktury", icon: Receipt },
       { to: "/inwestor/profil", label: "Profil", icon: User },
     ],
@@ -49,7 +54,15 @@ const limitedGroups: NavGroup[] = [
 
 // Ścieżki dostępne bez płatnego dostępu (routing — pierwsza z trzech warstw
 // egzekwowania; server functions i RLS blokują resztę niezależnie).
-const FREE_PATHS = ["/inwestor/abonament", "/inwestor/platnosci", "/inwestor/profil"];
+const FREE_PATHS = [
+  "/inwestor/abonament",
+  "/inwestor/platnosci",
+  "/inwestor/profil",
+  "/inwestor/oferty",
+  "/inwestor/kalkulator",
+  "/inwestor/szkolenia",
+  "/inwestor/wniosek", // darmowy widok szczegółu oferty (zdjęcia + zanonimizowana KW)
+];
 
 function AccessRedirectGate() {
   const { state, loading, hasFullAccess } = useAccessState("investor");
