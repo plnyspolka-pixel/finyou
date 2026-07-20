@@ -12,6 +12,7 @@ import { formatDate, formatPLN } from "@/lib/labels";
 import { fetchPublicInvoices } from "@/lib/public-invoices.functions";
 import { fetchPublicLeads } from "@/lib/public-leads.functions";
 import { property3dIcon, propertyLabel } from "@/lib/property-3d-icons";
+import { ScoreRow } from "@/routes/embed.leady";
 
 export const Route = createFileRoute("/admin/embed")({
   component: EmbedPage,
