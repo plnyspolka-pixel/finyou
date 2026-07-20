@@ -102,7 +102,7 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     const clientRow = Array.isArray(r.clients) ? r.clients[0] : r.clients;
     const firstName = clientRow?.first_name ? String(clientRow.first_name).trim() : null;
     const stored = scoresByApp.get(r.id);
-    const score = stored?.score ?? fallbackScoreFromLtv(ltv);
+    const score = stored?.score ?? fallbackScoreFromId(r.id);
     const grade = stored?.grade ?? gradeFromScore(score);
     rows.push({
       id: r.id,
