@@ -3194,6 +3194,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dilisense_cache: {
+        Row: {
+          cache_key: string
+          error_code: string | null
+          error_message: string | null
+          expires_at: string
+          fetched_at: string
+          query: Json
+          result: Json | null
+          search_type: string
+          total_hits: number | null
+        }
+        Insert: {
+          cache_key: string
+          error_code?: string | null
+          error_message?: string | null
+          expires_at: string
+          fetched_at?: string
+          query: Json
+          result?: Json | null
+          search_type: string
+          total_hits?: number | null
+        }
+        Update: {
+          cache_key?: string
+          error_code?: string | null
+          error_message?: string | null
+          expires_at?: string
+          fetched_at?: string
+          query?: Json
+          result?: Json | null
+          search_type?: string
+          total_hits?: number | null
+        }
+        Relationships: []
+      }
       document_templates: {
         Row: {
           audience: string[] | null
