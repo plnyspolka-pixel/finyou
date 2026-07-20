@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
-import { formatPLN, formatDate } from "@/lib/labels";
+import { formatPLN } from "@/lib/labels";
 import { fetchPublicInvoices } from "@/lib/public-invoices.functions";
 
 // Publiczny embed z anonimizowaną listą faktur sprzedaży Finance You.
