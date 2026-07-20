@@ -174,6 +174,54 @@ export const getGeneratedDocSignedUrl = createServerFn({ method: "POST" })
     return { url: signed.signedUrl };
   });
 
+/** Signed URL pliku .docx wzoru + info czy fizycznie istnieje. */
+export const getDocxTemplateDownloadUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { templateId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: tpl, error: tplErr } = await context.supabase
+      .from("document_templates")
+      .select("name, template_file_path")
+      .eq("id", data.templateId)
+      .maybeSingle();
+    if (tplErr) throw new Error(tplErr.message);
+    if (!tpl?.template_file_path) return { url: null, exists: false, name: tpl?.name ?? null, reason: "Brak przypisanego pliku." };
+
+    for (const bucket of [CLIENT_FILES_BUCKET, "documents"]) {
+      const probe = await context.supabase.storage.from(bucket).download(tpl.template_file_path);
+      if (!probe.error && probe.data) {
+        const { data: signed } = await context.supabase.storage
+          .from(bucket)
+          .createSignedUrl(tpl.template_file_path, 300);
+        if (signed?.signedUrl) return { url: signed.signedUrl, exists: true, name: tpl.name, reason: null };
+      }
+    }
+    return { url: null, exists: false, name: tpl.name, reason: "Plik nie istnieje w Storage — wgraj ponownie." };
+  });
+
+/** Upload / zamiana pliku .docx wzoru (staff). Zapisuje template_file_path. */
+export const uploadDocxTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { templateId: string; fileName: string; base64: string }) => d)
+  .handler(async ({ data, context }) => {
+    if (!/\.docx$/i.test(data.fileName)) throw new Error("Wymagany plik .docx");
+    const bytes = Uint8Array.from(atob(data.base64), (c) => c.charCodeAt(0));
+    const safe = data.fileName.replace(/[^\p{L}\p{N}._-]+/gu, "_");
+    const path = `templates/${safe}`;
+    const { error: upErr } = await context.supabase.storage
+      .from(CLIENT_FILES_BUCKET)
+      .upload(path, new Blob([bytes], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }), { upsert: true, contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    if (upErr) throw new Error(`Upload: ${upErr.message}`);
+    const { error: updErr } = await context.supabase
+      .from("document_templates")
+      .update({ template_file_path: path })
+      .eq("id", data.templateId);
+    if (updErr) throw new Error(`Zapis ścieżki: ${updErr.message}`);
+    return { ok: true, path };
+  });
+
 /**
  * Podgląd treści wzoru — zwraca plain-text z placeholderami `[KLUCZ]`.
  *
