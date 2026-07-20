@@ -231,6 +231,54 @@ function EmbedPage() {
         </CardContent>
       </Card>
 
+      <div className="pt-6">
+        <h2 className="text-xl font-bold text-foreground">Blog Finance You</h2>
+        <p className="text-sm text-muted-foreground">
+          Najnowsze artykuły z bloga — kafelki w firmowej szacie graficznej, do wklejenia na stronę.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Kod HTML (iframe)</CardTitle>
+            <CardDescription>Wklej w dowolne miejsce strony.</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => copy(blogIframe, "Kod iframe bloga")}>
+            <Copy className="mr-2 h-4 w-4" /> Kopiuj
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Textarea readOnly value={blogIframe} rows={3} className="font-mono text-xs" />
+          <p className="mt-2 text-xs text-muted-foreground break-all">URL: {blogUrl}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Podgląd bloga</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setShowBlogPreview((v) => !v)}>
+            {showBlogPreview ? "Ukryj podgląd" : "Pokaż podgląd"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showBlogPreview ? (
+            <iframe
+              src={`${currentOrigin}/embed/blog`}
+              width="100%"
+              height={900}
+              style={{ border: 0, borderRadius: 16 }}
+              title="Podgląd bloga"
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Podgląd jest wyłączony domyślnie.</p>
+          )}
+          {showBlogPreview && currentOrigin !== PROD_ORIGIN && (
+            <p className="mt-2 text-xs text-amber-600">Podgląd używa bieżącego środowiska ({currentOrigin}). Snippet powyżej wskazuje na produkcję — zadziała po opublikowaniu.</p>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
