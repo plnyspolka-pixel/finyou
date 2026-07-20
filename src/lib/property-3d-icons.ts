@@ -2,7 +2,7 @@ import apartmentAsset from "@/assets/3d/apartment.png.asset.json";
 import houseAsset from "@/assets/3d/house.png.asset.json";
 import plotAsset from "@/assets/3d/plot.png.asset.json";
 import commercialAsset from "@/assets/3d/commercial.png.asset.json";
-import otherAsset from "@/assets/3d/other.png.asset.json";
+import otherAssetUrl from "@/assets/3d/other.png";
 
 export const PROPERTY_3D_ICON: Record<string, string> = {
   apartment: apartmentAsset.url,
