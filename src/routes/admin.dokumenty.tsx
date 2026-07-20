@@ -477,3 +477,49 @@ function GoogleDocsImportDialog({ onClose, onImported }: { onClose: () => void; 
     </Dialog>
   );
 }
+
+function DocxTemplateActions({ template, onChange }: { template: Template; onChange: () => void }) {
+  const [busy, setBusy] = React.useState<"dl" | "up" | null>(null);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const _dl = useServerFn(getDocxTemplateDownloadUrl);
+  const _up = useServerFn(uploadDocxTemplate);
+
+  const download = async () => {
+    setBusy("dl");
+    try {
+      const r = await _dl({ data: { templateId: template.id } });
+      if (!r.url) { toast.error(r.reason ?? "Plik niedostępny"); return; }
+      window.open(r.url, "_blank", "noopener");
+    } catch (e: any) { toast.error(e?.message ?? "Błąd pobierania"); }
+    finally { setBusy(null); }
+  };
+
+  const upload = async (file: File) => {
+    if (!/\.docx$/i.test(file.name)) { toast.error("Wybierz plik .docx"); return; }
+    setBusy("up");
+    try {
+      const buf = await file.arrayBuffer();
+      let bin = ""; const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const base64 = btoa(bin);
+      await _up({ data: { templateId: template.id, fileName: file.name, base64 } });
+      toast.success("Wgrano plik wzoru");
+      onChange();
+    } catch (e: any) { toast.error(e?.message ?? "Błąd uploadu"); }
+    finally { setBusy(null); if (inputRef.current) inputRef.current.value = ""; }
+  };
+
+  return (
+    <div className="flex gap-2 pt-1">
+      <Button size="sm" variant="outline" className="flex-1" disabled={busy !== null} onClick={download}>
+        {busy === "dl" ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Download className="mr-2 h-3 w-3" />}
+        Pobierz .docx
+      </Button>
+      <Button size="sm" variant="outline" className="flex-1" disabled={busy !== null} onClick={() => inputRef.current?.click()}>
+        {busy === "up" ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <FileUp className="mr-2 h-3 w-3" />}
+        {template.template_file_path ? "Zamień" : "Wgraj"} .docx
+      </Button>
+      <input ref={inputRef} type="file" accept=".docx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); }} />
+    </div>
+  );
+}
