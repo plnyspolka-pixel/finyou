@@ -76,6 +76,7 @@ function DokumentyPage() {
     placeholders: [],
     output_format: "pdf",
     use_case: "kreator_umow",
+    template_file_path: null,
     created_at: "",
     updated_at: "",
   });
