@@ -100,38 +100,56 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
   );
 }
 
-const GRADE_COLORS: Record<string, { ring: string; text: string; bg: string; bar: string }> = {
-  A: { ring: "ring-emerald-400/50", text: "text-emerald-300", bg: "bg-emerald-500/15", bar: "from-emerald-400 to-emerald-500" },
-  B: { ring: "ring-sky-400/50", text: "text-sky-300", bg: "bg-sky-500/15", bar: "from-sky-400 to-sky-500" },
-  C: { ring: "ring-amber-400/50", text: "text-amber-300", bg: "bg-amber-500/15", bar: "from-amber-400 to-amber-500" },
-  D: { ring: "ring-orange-400/50", text: "text-orange-300", bg: "bg-orange-500/15", bar: "from-orange-400 to-orange-500" },
-  E: { ring: "ring-rose-400/50", text: "text-rose-300", bg: "bg-rose-500/15", bar: "from-rose-400 to-rose-500" },
-};
+// Kolor od czerwonego (0) do zielonego (100) przez pomarańcz/żółć.
+function scoreColor(score: number): string {
+  const s = Math.max(0, Math.min(100, score));
+  const hue = Math.round((s / 100) * 130); // 0=red, 130=green
+  return `hsl(${hue} 85% 52%)`;
+}
 
 export function ScoreRow({ score, grade }: { score: number; grade: string }) {
-  const c = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
   const pct = Math.max(0, Math.min(100, score));
+  const color = scoreColor(pct);
+  const size = 96;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const dash = (pct / 100) * c;
   return (
-    <div className="border-t border-white/5 px-4 py-3 sm:px-5">
-      <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${c.bg} ring-1 ${c.ring}`}>
-          <span className={`text-xl font-black leading-none ${c.text}`}>{grade}</span>
+    <div className="border-t border-white/5 px-4 py-4 sm:px-5">
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0" style={{ width: size, height: size }}>
+          <svg width={size} height={size} className="-rotate-90">
+            <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} className="fill-none stroke-white/10" />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              fill="none"
+              stroke={color}
+              strokeDasharray={`${dash} ${c - dash}`}
+              style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-black leading-none" style={{ color }}>{grade}</span>
+            <span className="mt-0.5 text-[11px] font-bold tabular-nums text-white">
+              {pct}<span className="text-[9px] text-slate-400">/100</span>
+            </span>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Ocena inwestycyjna</p>
-            <p className={`text-sm font-bold tabular-nums ${c.text}`}>
-              {pct}<span className="text-[10px] font-semibold text-slate-500">/100</span>
-            </p>
-          </div>
-          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div className={`h-full rounded-full bg-gradient-to-r ${c.bar}`} style={{ width: `${pct}%` }} />
-          </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Ocena ryzyka</p>
+          <p className="mt-1 text-sm font-semibold text-white">Klasa {grade}</p>
+          <p className="mt-0.5 text-[11px] text-slate-400">Skala 0–100 · A–E</p>
         </div>
       </div>
     </div>
   );
 }
+
 
 
 function Stat({ label, value }: { label: string; value: string }) {
