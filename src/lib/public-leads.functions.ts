@@ -75,6 +75,25 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     .limit(80);
   if (error) throw new Error(error.message);
 
+  // Zaciągnij ostatnią zapisaną ocenę ryzyka per wniosek (jeśli istnieje).
+  const appIds = (data ?? []).map((r: any) => r.id).filter(Boolean);
+  const scoresByApp = new Map<string, { score: number; grade: RiskGrade }>();
+  if (appIds.length > 0) {
+    const { data: ras } = await client
+      .from("investment_risk_assessments")
+      .select("application_id, investment_score, risk_grade, updated_at")
+      .in("application_id", appIds)
+      .order("updated_at", { ascending: false });
+    for (const row of (ras ?? []) as any[]) {
+      if (scoresByApp.has(row.application_id)) continue;
+      const s = row.investment_score != null ? Number(row.investment_score) : null;
+      if (s == null || Number.isNaN(s)) continue;
+      const g = (row.risk_grade as RiskGrade) || gradeFromScore(s);
+      scoresByApp.set(row.application_id, { score: Math.round(s), grade: g });
+    }
+  }
+  if (error) throw new Error(error.message);
+
   const now = Date.now();
   const rows: PublicLead[] = [];
   for (const r of (data ?? []) as any[]) {
