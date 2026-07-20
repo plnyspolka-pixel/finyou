@@ -15,8 +15,8 @@ export const PROPERTY_3D_ICON: Record<string, string> = {
   grunt_rolny: plotAsset.url,
   commercial: commercialAsset.url,
   lokal_uslugowy: commercialAsset.url,
-  inna: otherAsset.url,
-  udzial_w_nieruchomosci: otherAsset.url,
+  inna: otherAssetUrl,
+  udzial_w_nieruchomosci: otherAssetUrl,
 };
 
 
