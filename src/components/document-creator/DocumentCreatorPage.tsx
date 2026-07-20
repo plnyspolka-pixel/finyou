@@ -915,6 +915,14 @@ export function DocumentCreatorPage() {
                         values={previewMode === "filled" ? values : null}
                       />
                     </div>
+                  ) : previewError ? (
+                    <div className="rounded-md border border-dashed p-6 text-center text-sm space-y-2">
+                      <p className="font-medium text-destructive">Nie można wczytać wzoru</p>
+                      <p className="text-muted-foreground">{previewError}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Wgraj plik .docx w <a href="/admin/dokumenty" className="underline">/admin/dokumenty</a> (przycisk „Wgraj/Zamień .docx" na karcie tego wzoru).
+                      </p>
+                    </div>
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-8">
                       Brak podglądu dla tego wzoru.
