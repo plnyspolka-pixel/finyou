@@ -47,9 +47,11 @@ function EmbedLeads() {
 function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").PublicLead }) {
   const icon = property3dIcon(lead.property_type);
   const label = propertyLabel(lead.property_type);
-  const city = lead.city && lead.city.trim().length > 0 ? lead.city : "Polska";
-  const ltv = lead.ltv != null ? `${lead.ltv}%` : "do 60%";
-  const period = lead.period_months != null ? `${lead.period_months} mies.` : "12–36 mies.";
+  const subtitle = lead.kw_masked ?? "KW w przygotowaniu";
+  const dateStr = new Date(lead.created_at).toLocaleDateString("pl-PL", {
+    day: "2-digit",
+    month: "short",
+  });
 
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)] transition hover:border-sky-400/40 hover:shadow-[0_12px_40px_-12px_rgba(56,189,248,0.55)]">
@@ -61,7 +63,10 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-base font-bold text-white sm:text-lg">{label}</h3>
-            <p className="mt-0.5 truncate text-sm text-slate-400">📍 {city}</p>
+            {lead.first_name && (
+              <p className="mt-0.5 truncate text-xs text-slate-300">Klient: <span className="font-semibold text-white">{lead.first_name}</span></p>
+            )}
+            <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400">{subtitle}</p>
           </div>
         </div>
         {lead.is_new ? (
@@ -76,10 +81,9 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 border-t border-white/5 px-4 py-4 sm:px-5">
+      <div className="grid grid-cols-2 gap-2 border-t border-white/5 px-4 py-4 sm:px-5">
         <Stat label="Kwota" value={formatPLN(lead.loan_amount ?? 0)} />
-        <Stat label="LTV" value={ltv} />
-        <Stat label="Okres" value={period} />
+        <Stat label="Dodano" value={dateStr} />
       </div>
 
       {/* CTA */}
@@ -92,6 +96,7 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
     </article>
   );
 }
+
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
