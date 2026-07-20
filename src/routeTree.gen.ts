@@ -79,6 +79,7 @@ import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
 import { Route as EmbedLeadyRouteImport } from './routes/embed.leady'
 import { Route as EmbedFakturyRouteImport } from './routes/embed.faktury'
+import { Route as EmbedBlogRouteImport } from './routes/embed.blog'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
@@ -542,6 +543,11 @@ const EmbedLeadyRoute = EmbedLeadyRouteImport.update({
 const EmbedFakturyRoute = EmbedFakturyRouteImport.update({
   id: '/embed/faktury',
   path: '/embed/faktury',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedBlogRoute = EmbedBlogRouteImport.update({
+  id: '/embed/blog',
+  path: '/embed/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -1209,6 +1215,7 @@ export interface FileRoutesByFullPath {
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/embed/blog': typeof EmbedBlogRoute
   '/embed/faktury': typeof EmbedFakturyRoute
   '/embed/leady': typeof EmbedLeadyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
@@ -1388,6 +1395,7 @@ export interface FileRoutesByTo {
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/embed/blog': typeof EmbedBlogRoute
   '/embed/faktury': typeof EmbedFakturyRoute
   '/embed/leady': typeof EmbedLeadyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
@@ -1570,6 +1578,7 @@ export interface FileRoutesById {
   '/admin/zgody': typeof AdminZgodyRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/embed/blog': typeof EmbedBlogRoute
   '/embed/faktury': typeof EmbedFakturyRoute
   '/embed/leady': typeof EmbedLeadyRoute
   '/embed/wniosek': typeof EmbedWniosekRoute
@@ -1756,6 +1765,7 @@ export interface FileRouteTypes {
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
+    | '/embed/blog'
     | '/embed/faktury'
     | '/embed/leady'
     | '/embed/wniosek'
@@ -1935,6 +1945,7 @@ export interface FileRouteTypes {
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
+    | '/embed/blog'
     | '/embed/faktury'
     | '/embed/leady'
     | '/embed/wniosek'
@@ -2116,6 +2127,7 @@ export interface FileRouteTypes {
     | '/admin/zgody'
     | '/blog/$slug'
     | '/email/unsubscribe'
+    | '/embed/blog'
     | '/embed/faktury'
     | '/embed/leady'
     | '/embed/wniosek'
@@ -2266,6 +2278,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BlogSlugRoute: typeof BlogSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  EmbedBlogRoute: typeof EmbedBlogRoute
   EmbedFakturyRoute: typeof EmbedFakturyRoute
   EmbedLeadyRoute: typeof EmbedLeadyRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
@@ -2808,6 +2821,13 @@ declare module '@tanstack/react-router' {
       path: '/embed/faktury'
       fullPath: '/embed/faktury'
       preLoaderRoute: typeof EmbedFakturyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/blog': {
+      id: '/embed/blog'
+      path: '/embed/blog'
+      fullPath: '/embed/blog'
+      preLoaderRoute: typeof EmbedBlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -3949,6 +3969,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BlogSlugRoute: BlogSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  EmbedBlogRoute: EmbedBlogRoute,
   EmbedFakturyRoute: EmbedFakturyRoute,
   EmbedLeadyRoute: EmbedLeadyRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
