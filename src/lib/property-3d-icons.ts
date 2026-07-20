@@ -2,6 +2,7 @@ import apartmentAsset from "@/assets/3d/apartment.png.asset.json";
 import houseAsset from "@/assets/3d/house.png.asset.json";
 import plotAsset from "@/assets/3d/plot.png.asset.json";
 import commercialAsset from "@/assets/3d/commercial.png.asset.json";
+import otherAssetUrl from "@/assets/3d/other.png";
 
 export const PROPERTY_3D_ICON: Record<string, string> = {
   apartment: apartmentAsset.url,
@@ -11,10 +12,13 @@ export const PROPERTY_3D_ICON: Record<string, string> = {
   plot_building: plotAsset.url,
   dzialka: plotAsset.url,
   dzialka_budowlana: plotAsset.url,
+  grunt_rolny: plotAsset.url,
   commercial: commercialAsset.url,
   lokal_uslugowy: commercialAsset.url,
-  inna: commercialAsset.url,
+  inna: otherAssetUrl,
+  udzial_w_nieruchomosci: otherAssetUrl,
 };
+
 
 export const PROPERTY_LABELS: Record<string, string> = {
   apartment: "Mieszkanie",

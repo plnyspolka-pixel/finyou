@@ -9,7 +9,23 @@ export type PublicLead = {
   period_months: number | null;
   ltv: number | null;
   is_new: boolean;
+  first_name: string | null;
+  kw_masked: string | null;
 };
+
+// Zanonimizuj numer KW: zachowaj kod sądu (przed "/") i ostatnią cyfrę,
+// resztę zamień na kropki. Np. "WA1M/00123456/7" -> "WA1M/••••••••/7".
+function maskKw(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim().toUpperCase();
+  const m = s.match(/^([A-Z0-9]{2,6})\/([0-9]+)\/([0-9])$/);
+  if (!m) {
+    // Fallback: pokaż pierwsze 4 znaki + kropki
+    const head = s.slice(0, 4);
+    return head ? `${head}/••••••••/•` : null;
+  }
+  return `${m[1]}/${"•".repeat(m[2].length)}/${m[3]}`;
+}
 
 export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async () => {
   const { createClient } = await import("@supabase/supabase-js");
@@ -28,7 +44,7 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
   });
   const { data, error } = await client
     .from("loan_applications")
-    .select("id, created_at, status, loan_amount, preferred_period_months, properties(property_type, city, estimated_value)")
+    .select("id, created_at, status, loan_amount, preferred_period_months, clients(first_name), properties(property_type, city, estimated_value, land_register_number)")
     .in("status", ["szukamy_inwestora", "warunki_zaakceptowane", "dokumenty_przygotowanie_umowy", "notariusz", "zamkniete"])
     .order("created_at", { ascending: false })
     .limit(80);
@@ -46,6 +62,8 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     const ltv = val && val > 0 ? Math.round((amt / val) * 100) : null;
     const period = r.preferred_period_months != null ? Number(r.preferred_period_months) : null;
     const ageDays = (now - new Date(r.created_at).getTime()) / 86400000;
+    const clientRow = Array.isArray(r.clients) ? r.clients[0] : r.clients;
+    const firstName = clientRow?.first_name ? String(clientRow.first_name).trim() : null;
     rows.push({
       id: r.id,
       created_at: r.created_at,
@@ -55,6 +73,8 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
       period_months: period,
       ltv,
       is_new: ageDays <= 3,
+      first_name: firstName && firstName.length > 0 ? firstName : null,
+      kw_masked: maskKw(props?.land_register_number),
     });
     if (rows.length >= 30) break;
   }

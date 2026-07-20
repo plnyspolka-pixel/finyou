@@ -241,21 +241,6 @@ function LeadsInlinePreview() {
   if (isLoading) return <div className="rounded-xl border bg-muted/30 p-6 text-sm text-muted-foreground">Ładowanie wniosków…</div>;
   if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">Nie udało się wczytać podglądu wniosków.</div>;
 
-  const labels: Record<string, string> = {
-    apartment: "Mieszkanie", mieszkanie: "Mieszkanie",
-    house: "Dom", dom: "Dom",
-    plot_building: "Działka", dzialka: "Działka",
-    commercial: "Lokal użytkowy", lokal_uslugowy: "Lokal użytkowy",
-    inna: "Inna",
-  };
-  const emojis: Record<string, string> = {
-    apartment: "🏢", mieszkanie: "🏢",
-    house: "🏠", dom: "🏠",
-    plot_building: "🌳", dzialka: "🌳",
-    commercial: "🏬", lokal_uslugowy: "🏬",
-    inna: "🏗️",
-  };
-
   return (
     <div className="rounded-2xl bg-[#0a1030] p-4 sm:p-6">
       {data.length === 0 ? (
@@ -267,9 +252,8 @@ function LeadsInlinePreview() {
           {data.map((l) => {
             const icon = property3dIcon(l.property_type);
             const label = propertyLabel(l.property_type);
-            const city = l.city && l.city.trim().length > 0 ? l.city : "Polska";
-            const ltv = l.ltv != null ? `${l.ltv}%` : "do 60%";
-            const period = l.period_months != null ? `${l.period_months} mies.` : "12–36 mies.";
+            const subtitle = l.kw_masked ?? "KW w przygotowaniu";
+            const dateStr = new Date(l.created_at).toLocaleDateString("pl-PL", { day: "2-digit", month: "short" });
             return (
             <article key={l.id} className="group relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-[#0f1846] via-[#0c1338] to-[#0a1030] shadow-[0_8px_30px_-12px_rgba(56,189,248,0.35)]">
               <div className="flex items-start justify-between gap-3 p-4">
@@ -279,7 +263,10 @@ function LeadsInlinePreview() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-bold text-white">{label}</h3>
-                    <p className="mt-0.5 truncate text-sm text-slate-400">📍 {city}</p>
+                    {l.first_name && (
+                      <p className="mt-0.5 truncate text-xs text-slate-300">Klient: <span className="font-semibold text-white">{l.first_name}</span></p>
+                    )}
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-slate-400">{subtitle}</p>
                   </div>
                 </div>
                 {l.is_new ? (
@@ -288,18 +275,14 @@ function LeadsInlinePreview() {
                   <span className="shrink-0 rounded-full border border-sky-400/40 bg-sky-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">Szuka inwestora</span>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2 border-t border-white/5 px-4 py-4">
+              <div className="grid grid-cols-2 gap-2 border-t border-white/5 px-4 py-4">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Kwota</p>
                   <p className="mt-1 text-sm font-bold tabular-nums text-white">{formatPLN(l.loan_amount ?? 0)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">LTV</p>
-                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{ltv}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Okres</p>
-                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{period}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Dodano</p>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-white">{dateStr}</p>
                 </div>
               </div>
               <div className="border-t border-white/5 bg-gradient-to-r from-sky-500/90 via-sky-500/80 to-indigo-500/80 px-4 py-3">
@@ -316,6 +299,7 @@ function LeadsInlinePreview() {
     </div>
   );
 }
+
 
 
 function InvoicesInlinePreview() {
