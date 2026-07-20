@@ -74,6 +74,7 @@ import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnos
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
+import { Route as InwestorAmlRouteImport } from './routes/inwestor.aml'
 import { Route as InwestorAbonamentRouteImport } from './routes/inwestor.abonament'
 import { Route as FakturaIdRouteImport } from './routes/faktura.$id'
 import { Route as EmbedWniosekRouteImport } from './routes/embed.wniosek'
@@ -124,6 +125,7 @@ import { Route as PosrednikLeadyIndexRouteImport } from './routes/posrednik.lead
 import { Route as OperatorWnioskiIndexRouteImport } from './routes/operator.wnioski.index'
 import { Route as OperatorLeadyIndexRouteImport } from './routes/operator.leady.index'
 import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.windykacja.index'
+import { Route as InwestorAmlIndexRouteImport } from './routes/inwestor.aml.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
 import { Route as PosrednikWnioskiIdRouteImport } from './routes/posrednik.wnioski.$id'
@@ -133,6 +135,14 @@ import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
+import { Route as InwestorAmlZgloszeniaRouteImport } from './routes/inwestor.aml.zgloszenia'
+import { Route as InwestorAmlUstawieniaRouteImport } from './routes/inwestor.aml.ustawienia'
+import { Route as InwestorAmlUpoRouteImport } from './routes/inwestor.aml.upo'
+import { Route as InwestorAmlTransakcjeRouteImport } from './routes/inwestor.aml.transakcje'
+import { Route as InwestorAmlSprawyRouteImport } from './routes/inwestor.aml.sprawy'
+import { Route as InwestorAmlRyzykoRouteImport } from './routes/inwestor.aml.ryzyko'
+import { Route as InwestorAmlPonadprogoweRouteImport } from './routes/inwestor.aml.ponadprogowe'
+import { Route as InwestorAmlKlienciRouteImport } from './routes/inwestor.aml.klienci'
 import { Route as EmbedLSlugRouteImport } from './routes/embed.l.$slug'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio-voice'
 import { Route as ApiPublicTwilioRecordingRouteImport } from './routes/api/public/twilio-recording'
@@ -520,6 +530,11 @@ const InwestorKalkulatorRoute = InwestorKalkulatorRouteImport.update({
   path: '/kalkulator',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorAmlRoute = InwestorAmlRouteImport.update({
+  id: '/aml',
+  path: '/aml',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorAbonamentRoute = InwestorAbonamentRouteImport.update({
   id: '/abonament',
   path: '/abonament',
@@ -773,6 +788,11 @@ const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
   path: '/',
   getParentRoute: () => InwestorWindykacjaRoute,
 } as any)
+const InwestorAmlIndexRoute = InwestorAmlIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
 const AdminProgramPosrednikowIndexRoute =
   AdminProgramPosrednikowIndexRouteImport.update({
     id: '/program-posrednikow/',
@@ -819,6 +839,46 @@ const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
   id: '/umowa/$offerId',
   path: '/umowa/$offerId',
   getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorAmlZgloszeniaRoute = InwestorAmlZgloszeniaRouteImport.update({
+  id: '/zgloszenia',
+  path: '/zgloszenia',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlUstawieniaRoute = InwestorAmlUstawieniaRouteImport.update({
+  id: '/ustawienia',
+  path: '/ustawienia',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlUpoRoute = InwestorAmlUpoRouteImport.update({
+  id: '/upo',
+  path: '/upo',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlTransakcjeRoute = InwestorAmlTransakcjeRouteImport.update({
+  id: '/transakcje',
+  path: '/transakcje',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlSprawyRoute = InwestorAmlSprawyRouteImport.update({
+  id: '/sprawy',
+  path: '/sprawy',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlRyzykoRoute = InwestorAmlRyzykoRouteImport.update({
+  id: '/ryzyko',
+  path: '/ryzyko',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlPonadprogoweRoute = InwestorAmlPonadprogoweRouteImport.update({
+  id: '/ponadprogowe',
+  path: '/ponadprogowe',
+  getParentRoute: () => InwestorAmlRoute,
+} as any)
+const InwestorAmlKlienciRoute = InwestorAmlKlienciRouteImport.update({
+  id: '/klienci',
+  path: '/klienci',
+  getParentRoute: () => InwestorAmlRoute,
 } as any)
 const EmbedLSlugRoute = EmbedLSlugRouteImport.update({
   id: '/embed/l/$slug',
@@ -1221,6 +1281,7 @@ export interface FileRoutesByFullPath {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
+  '/inwestor/aml': typeof InwestorAmlRouteWithChildren
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
@@ -1299,6 +1360,14 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
+  '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
+  '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
+  '/inwestor/aml/ryzyko': typeof InwestorAmlRyzykoRoute
+  '/inwestor/aml/sprawy': typeof InwestorAmlSprawyRoute
+  '/inwestor/aml/transakcje': typeof InwestorAmlTransakcjeRoute
+  '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
+  '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
+  '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
@@ -1308,6 +1377,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
+  '/inwestor/aml/': typeof InwestorAmlIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
   '/operator/leady/': typeof OperatorLeadyIndexRoute
   '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
@@ -1476,6 +1546,14 @@ export interface FileRoutesByTo {
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
+  '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
+  '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
+  '/inwestor/aml/ryzyko': typeof InwestorAmlRyzykoRoute
+  '/inwestor/aml/sprawy': typeof InwestorAmlSprawyRoute
+  '/inwestor/aml/transakcje': typeof InwestorAmlTransakcjeRoute
+  '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
+  '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
+  '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
@@ -1485,6 +1563,7 @@ export interface FileRoutesByTo {
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
+  '/inwestor/aml': typeof InwestorAmlIndexRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaIndexRoute
   '/operator/leady': typeof OperatorLeadyIndexRoute
   '/operator/wnioski': typeof OperatorWnioskiIndexRoute
@@ -1584,6 +1663,7 @@ export interface FileRoutesById {
   '/embed/wniosek': typeof EmbedWniosekRoute
   '/faktura/$id': typeof FakturaIdRoute
   '/inwestor/abonament': typeof InwestorAbonamentRoute
+  '/inwestor/aml': typeof InwestorAmlRouteWithChildren
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
@@ -1662,6 +1742,14 @@ export interface FileRoutesById {
   '/api/public/twilio-recording': typeof ApiPublicTwilioRecordingRoute
   '/api/public/twilio-voice': typeof ApiPublicTwilioVoiceRoute
   '/embed/l/$slug': typeof EmbedLSlugRoute
+  '/inwestor/aml/klienci': typeof InwestorAmlKlienciRoute
+  '/inwestor/aml/ponadprogowe': typeof InwestorAmlPonadprogoweRoute
+  '/inwestor/aml/ryzyko': typeof InwestorAmlRyzykoRoute
+  '/inwestor/aml/sprawy': typeof InwestorAmlSprawyRoute
+  '/inwestor/aml/transakcje': typeof InwestorAmlTransakcjeRoute
+  '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
+  '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
+  '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
@@ -1671,6 +1759,7 @@ export interface FileRoutesById {
   '/posrednik/wnioski/$id': typeof PosrednikWnioskiIdRoute
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
+  '/inwestor/aml/': typeof InwestorAmlIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
   '/operator/leady/': typeof OperatorLeadyIndexRoute
   '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
@@ -1771,6 +1860,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
+    | '/inwestor/aml'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
@@ -1849,6 +1939,14 @@ export interface FileRouteTypes {
     | '/api/public/twilio-recording'
     | '/api/public/twilio-voice'
     | '/embed/l/$slug'
+    | '/inwestor/aml/klienci'
+    | '/inwestor/aml/ponadprogowe'
+    | '/inwestor/aml/ryzyko'
+    | '/inwestor/aml/sprawy'
+    | '/inwestor/aml/transakcje'
+    | '/inwestor/aml/upo'
+    | '/inwestor/aml/ustawienia'
+    | '/inwestor/aml/zgloszenia'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
@@ -1858,6 +1956,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
+    | '/inwestor/aml/'
     | '/inwestor/windykacja/'
     | '/operator/leady/'
     | '/operator/wnioski/'
@@ -2026,6 +2125,14 @@ export interface FileRouteTypes {
     | '/api/public/twilio-recording'
     | '/api/public/twilio-voice'
     | '/embed/l/$slug'
+    | '/inwestor/aml/klienci'
+    | '/inwestor/aml/ponadprogowe'
+    | '/inwestor/aml/ryzyko'
+    | '/inwestor/aml/sprawy'
+    | '/inwestor/aml/transakcje'
+    | '/inwestor/aml/upo'
+    | '/inwestor/aml/ustawienia'
+    | '/inwestor/aml/zgloszenia'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
@@ -2035,6 +2142,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc'
     | '/admin/program-posrednikow'
+    | '/inwestor/aml'
     | '/inwestor/windykacja'
     | '/operator/leady'
     | '/operator/wnioski'
@@ -2133,6 +2241,7 @@ export interface FileRouteTypes {
     | '/embed/wniosek'
     | '/faktura/$id'
     | '/inwestor/abonament'
+    | '/inwestor/aml'
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/oferty'
@@ -2211,6 +2320,14 @@ export interface FileRouteTypes {
     | '/api/public/twilio-recording'
     | '/api/public/twilio-voice'
     | '/embed/l/$slug'
+    | '/inwestor/aml/klienci'
+    | '/inwestor/aml/ponadprogowe'
+    | '/inwestor/aml/ryzyko'
+    | '/inwestor/aml/sprawy'
+    | '/inwestor/aml/transakcje'
+    | '/inwestor/aml/upo'
+    | '/inwestor/aml/ustawienia'
+    | '/inwestor/aml/zgloszenia'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
@@ -2220,6 +2337,7 @@ export interface FileRouteTypes {
     | '/posrednik/wnioski/$id'
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
+    | '/inwestor/aml/'
     | '/inwestor/windykacja/'
     | '/operator/leady/'
     | '/operator/wnioski/'
@@ -2788,6 +2906,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorKalkulatorRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/inwestor/aml': {
+      id: '/inwestor/aml'
+      path: '/aml'
+      fullPath: '/inwestor/aml'
+      preLoaderRoute: typeof InwestorAmlRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/abonament': {
       id: '/inwestor/abonament'
       path: '/abonament'
@@ -3138,6 +3263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorWindykacjaIndexRouteImport
       parentRoute: typeof InwestorWindykacjaRoute
     }
+    '/inwestor/aml/': {
+      id: '/inwestor/aml/'
+      path: '/'
+      fullPath: '/inwestor/aml/'
+      preLoaderRoute: typeof InwestorAmlIndexRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
     '/admin/program-posrednikow/': {
       id: '/admin/program-posrednikow/'
       path: '/program-posrednikow'
@@ -3200,6 +3332,62 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/umowa/$offerId'
       preLoaderRoute: typeof InwestorUmowaOfferIdRouteImport
       parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/aml/zgloszenia': {
+      id: '/inwestor/aml/zgloszenia'
+      path: '/zgloszenia'
+      fullPath: '/inwestor/aml/zgloszenia'
+      preLoaderRoute: typeof InwestorAmlZgloszeniaRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/ustawienia': {
+      id: '/inwestor/aml/ustawienia'
+      path: '/ustawienia'
+      fullPath: '/inwestor/aml/ustawienia'
+      preLoaderRoute: typeof InwestorAmlUstawieniaRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/upo': {
+      id: '/inwestor/aml/upo'
+      path: '/upo'
+      fullPath: '/inwestor/aml/upo'
+      preLoaderRoute: typeof InwestorAmlUpoRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/transakcje': {
+      id: '/inwestor/aml/transakcje'
+      path: '/transakcje'
+      fullPath: '/inwestor/aml/transakcje'
+      preLoaderRoute: typeof InwestorAmlTransakcjeRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/sprawy': {
+      id: '/inwestor/aml/sprawy'
+      path: '/sprawy'
+      fullPath: '/inwestor/aml/sprawy'
+      preLoaderRoute: typeof InwestorAmlSprawyRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/ryzyko': {
+      id: '/inwestor/aml/ryzyko'
+      path: '/ryzyko'
+      fullPath: '/inwestor/aml/ryzyko'
+      preLoaderRoute: typeof InwestorAmlRyzykoRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/ponadprogowe': {
+      id: '/inwestor/aml/ponadprogowe'
+      path: '/ponadprogowe'
+      fullPath: '/inwestor/aml/ponadprogowe'
+      preLoaderRoute: typeof InwestorAmlPonadprogoweRouteImport
+      parentRoute: typeof InwestorAmlRoute
+    }
+    '/inwestor/aml/klienci': {
+      id: '/inwestor/aml/klienci'
+      path: '/klienci'
+      fullPath: '/inwestor/aml/klienci'
+      preLoaderRoute: typeof InwestorAmlKlienciRouteImport
+      parentRoute: typeof InwestorAmlRoute
     }
     '/embed/l/$slug': {
       id: '/embed/l/$slug'
@@ -3763,6 +3951,34 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface InwestorAmlRouteChildren {
+  InwestorAmlKlienciRoute: typeof InwestorAmlKlienciRoute
+  InwestorAmlPonadprogoweRoute: typeof InwestorAmlPonadprogoweRoute
+  InwestorAmlRyzykoRoute: typeof InwestorAmlRyzykoRoute
+  InwestorAmlSprawyRoute: typeof InwestorAmlSprawyRoute
+  InwestorAmlTransakcjeRoute: typeof InwestorAmlTransakcjeRoute
+  InwestorAmlUpoRoute: typeof InwestorAmlUpoRoute
+  InwestorAmlUstawieniaRoute: typeof InwestorAmlUstawieniaRoute
+  InwestorAmlZgloszeniaRoute: typeof InwestorAmlZgloszeniaRoute
+  InwestorAmlIndexRoute: typeof InwestorAmlIndexRoute
+}
+
+const InwestorAmlRouteChildren: InwestorAmlRouteChildren = {
+  InwestorAmlKlienciRoute: InwestorAmlKlienciRoute,
+  InwestorAmlPonadprogoweRoute: InwestorAmlPonadprogoweRoute,
+  InwestorAmlRyzykoRoute: InwestorAmlRyzykoRoute,
+  InwestorAmlSprawyRoute: InwestorAmlSprawyRoute,
+  InwestorAmlTransakcjeRoute: InwestorAmlTransakcjeRoute,
+  InwestorAmlUpoRoute: InwestorAmlUpoRoute,
+  InwestorAmlUstawieniaRoute: InwestorAmlUstawieniaRoute,
+  InwestorAmlZgloszeniaRoute: InwestorAmlZgloszeniaRoute,
+  InwestorAmlIndexRoute: InwestorAmlIndexRoute,
+}
+
+const InwestorAmlRouteWithChildren = InwestorAmlRoute._addFileChildren(
+  InwestorAmlRouteChildren,
+)
+
 interface InwestorWindykacjaCaseIdRouteChildren {
   InwestorWindykacjaCaseIdRaportRoute: typeof InwestorWindykacjaCaseIdRaportRoute
 }
@@ -3792,6 +4008,7 @@ const InwestorWindykacjaRouteWithChildren =
 
 interface InwestorRouteChildren {
   InwestorAbonamentRoute: typeof InwestorAbonamentRoute
+  InwestorAmlRoute: typeof InwestorAmlRouteWithChildren
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
@@ -3807,6 +4024,7 @@ interface InwestorRouteChildren {
 
 const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorAbonamentRoute: InwestorAbonamentRoute,
+  InwestorAmlRoute: InwestorAmlRouteWithChildren,
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,

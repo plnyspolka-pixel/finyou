@@ -10,6 +10,7 @@ import {
   User,
   Gavel,
   Receipt,
+  ShieldCheck,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
 import { useAccessState } from "@/hooks/use-access";
@@ -25,6 +26,7 @@ const fullGroups: NavGroup[] = [
       { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
+      { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
       { to: "/inwestor/kreator-dokumentow", label: "Kreator dokumentów", icon: FileSignature },
       { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
@@ -43,6 +45,7 @@ const limitedGroups: NavGroup[] = [
     items: [
       { to: "/inwestor", label: "Dostępne oferty", icon: ListChecks, exact: true },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+      { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
       { to: "/inwestor/szkolenia", label: "Akademia (3 darmowe lekcje)", icon: GraduationCap },
       { to: "/inwestor/abonament", label: "Pełny dostęp", icon: CreditCard },
@@ -55,6 +58,7 @@ const limitedGroups: NavGroup[] = [
 // Ścieżki dostępne bez płatnego dostępu (routing — pierwsza z trzech warstw
 // egzekwowania; server functions i RLS blokują resztę niezależnie).
 const FREE_PATHS = [
+  "/inwestor/aml", // moduł AML w całości dostępny od pierwszego wejścia, bez kłódek i planów
   "/inwestor/abonament",
   "/inwestor/platnosci",
   "/inwestor/profil",
