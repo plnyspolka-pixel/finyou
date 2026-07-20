@@ -12,9 +12,11 @@
 //  - klucz prywatny podpisu inwestora NIGDY nie trafia do Finance You —
 //    podpisuje lokalnie inwestor; my tylko weryfikujemy odebrany plik,
 //  - PIN nie jest nigdzie pobierany ani zapisywany,
-//  - klucze certyfikatów komunikacyjnych żyją wyłącznie w "KMS" (koperta
-//    AES-256-GCM na master-kluczu AML_KMS_MASTER_KEY z sekretów; w produkcji
-//    docelowo prawdziwy KMS/HSM) — nigdy w zwykłych tabelach ani frontendzie.
+//  - klucze certyfikatów komunikacyjnych są szyfrowane przez AmlKeyProvider
+//    (LocalEnvelopeKeyProvider = lokalna koperta AES-256-GCM na
+//    AML_ENVELOPE_MASTER_KEY, dopuszczona tylko do testów/developmentu;
+//    produkcyjnie ProductionKmsKeyProvider z prawdziwym KMS/HSM) — nigdy
+//    w zwykłych tabelach ani frontendzie.
 import {
   createCipheriv,
   createDecipheriv,
@@ -188,32 +190,38 @@ export function pemToDer(pem: string): Uint8Array {
   return new Uint8Array(Buffer.from(b64, "base64"));
 }
 
-// ── "KMS": koperta na klucz prywatny certyfikatu komunikacyjnego ─────
-// Produkcyjnie: prawdziwy KMS/HSM. Tutaj: AES-256-GCM na master-kluczu
-// z sekretów środowiska; zaszyfrowana koperta ląduje w prywatnym Storage,
-// w tabeli aml_certificates jest wyłącznie kms_key_ref.
-function kmsMasterKey(): Buffer {
-  const raw = process.env.AML_KMS_MASTER_KEY;
-  if (!raw) throw new Error("Brak AML_KMS_MASTER_KEY w sekretach środowiska.");
+// ── Koperta lokalna na klucz prywatny certyfikatu komunikacyjnego ────
+// UWAGA: to NIE jest KMS/HSM — to lokalne szyfrowanie AES-256-GCM na
+// master-kluczu AML_ENVELOPE_MASTER_KEY z sekretów środowiska. Wybór
+// mechanizmu (lokalna koperta vs produkcyjny KMS/HSM) robi AmlKeyProvider
+// (key-provider.server.ts); te funkcje to implementacja wariantu lokalnego.
+function envelopeMasterKey(): Buffer {
+  const raw = process.env.AML_ENVELOPE_MASTER_KEY ?? process.env.AML_KMS_MASTER_KEY;
+  if (!raw) throw new Error("Brak AML_ENVELOPE_MASTER_KEY w sekretach środowiska.");
+  if (!process.env.AML_ENVELOPE_MASTER_KEY && process.env.AML_KMS_MASTER_KEY) {
+    console.warn(
+      "[AML] AML_KMS_MASTER_KEY jest przestarzałe (to nie jest KMS) — zmień nazwę sekretu na AML_ENVELOPE_MASTER_KEY.",
+    );
+  }
   return createHash("sha256").update(raw).digest();
 }
 
-export function kmsWrapPrivateKey(privateKeyPem: string): { envelope: string; keyRef: string } {
+export function envelopeEncrypt(plaintext: string): { envelope: string; keyRef: string } {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", kmsMasterKey(), iv);
-  const ct = Buffer.concat([cipher.update(privateKeyPem, "utf8"), cipher.final()]);
+  const cipher = createCipheriv("aes-256-gcm", envelopeMasterKey(), iv);
+  const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   const envelope = Buffer.concat([iv, tag, ct]).toString("base64");
-  const keyRef = `kms:aml:${createHash("sha256").update(envelope).digest("hex").slice(0, 24)}`;
+  const keyRef = `envelope:local:${createHash("sha256").update(envelope).digest("hex").slice(0, 24)}`;
   return { envelope, keyRef };
 }
 
-export function kmsUnwrapPrivateKey(envelope: string): string {
+export function envelopeDecrypt(envelope: string): string {
   const buf = Buffer.from(envelope, "base64");
   const iv = buf.subarray(0, 12);
   const tag = buf.subarray(12, 28);
   const ct = buf.subarray(28);
-  const decipher = createDecipheriv("aes-256-gcm", kmsMasterKey(), iv);
+  const decipher = createDecipheriv("aes-256-gcm", envelopeMasterKey(), iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
 }
@@ -228,8 +236,9 @@ export interface CsrSubject {
 
 export interface GeneratedCsr {
   csrPem: string;
-  privateKeyEnvelope: string; // koperta KMS (do prywatnego Storage)
-  kmsKeyRef: string;
+  /** Surowy klucz prywatny PKCS#8 — NATYCHMIAST zaszyfruj przez AmlKeyProvider
+   *  i nadpisz; nigdy nie zapisuj w bazie, logach ani frontendzie. */
+  privateKeyPem: string;
   subjectDn: string;
   publicKeyPem: string;
 }
@@ -259,7 +268,6 @@ export function generateCsr(subject: CsrSubject): GeneratedCsr {
   );
 
   const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
-  const { envelope, keyRef } = kmsWrapPrivateKey(privateKeyPem);
   const subjectDn = [
     `C=${subject.country}`,
     `O=${subject.organization}`,
@@ -269,8 +277,7 @@ export function generateCsr(subject: CsrSubject): GeneratedCsr {
 
   return {
     csrPem: derToPem(csr, "CERTIFICATE REQUEST"),
-    privateKeyEnvelope: envelope,
-    kmsKeyRef: keyRef,
+    privateKeyPem,
     subjectDn,
     publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString(),
   };

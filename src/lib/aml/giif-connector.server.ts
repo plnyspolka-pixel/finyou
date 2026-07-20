@@ -4,23 +4,30 @@
 //  Środowisko testowe:  https://test.giif.mofnet.gov.pl/api/rest2018
 //  Produkcja:           https://www.giif.mofnet.gov.pl/api/rest2018
 //
+// Dokumentacja REST API SI*GIIF jest PUBLICZNA: https://giif.mofnet.gov.pl/api/
+//
 // Zasady:
-//  - mTLS certyfikatem komunikacyjnym instytucji: w Cloudflare Workers
-//    przez binding mTLS (wrangler "mtls_certificates", binding GIIF_MTLS);
-//    lokalnie/w testach przez zwykły fetch (środowisko testowe GIIF).
+//  - mTLS przez GiifMtlsProvider (giif-mtls.server.ts): mock w testach
+//    lokalnych, pojedynczy testowy certyfikat Finance You przez binding
+//    Cloudflare GIIF_MTLS na środowisku testowym, a produkcyjnie wydzielona
+//    usługa w UE z certyfikatem właściwym dla danej organizacji (jeden
+//    binding nie obsłuży wielu inwestorów z osobnymi certyfikatami).
 //  - Idempotency: każda wysyłka ma klucz idempotency w aml_submission_queue;
 //    ponowienie NIGDY nie wysyła drugi raz — nagłówek Idempotency-Key
 //    + obsługa 409 (duplikat = już dostarczone).
 //  - Ponowienia: wykładniczy backoff (2^n * 30 s, maks. 8 prób); 503 i
 //    timeouty planują kolejną próbę, błędy 4xx (poza 409/429) są trwałe.
-//  - Tryb MOCK (GIIF_MOCK=true) symuluje odpowiedzi SI*GIIF — pozwala
-//    przejść cały przepływ (wysyłka → status → UPO) bez realnego
-//    połączenia; nigdy nie używać na produkcji.
-//  - Ścieżki endpointów potwierdź z aktualną dokumentacją GIIF przed
-//    włączeniem produkcji (dokumentacja rest2018 jest dystrybuowana przez
-//    GIIF po rejestracji instytucji).
+//  - Tryb MOCK (GIIF_MOCK=true) symuluje odpowiedzi SI*GIIF — potwierdza
+//    WYŁĄCZNIE lokalny przepływ aplikacji (status local_mock_verified);
+//    nie testuje mTLS, zgodności endpointów, przyjęcia podpisu ani UPO.
+//  - Ścieżki endpointów: przed testem live porównaj GIIF_PATHS z publiczną
+//    dokumentacją. UWAGA: część ścieżek w dokumentacji zawiera literówkę
+//    „instutucje" — NIE poprawiamy jej ani nie wybieramy wariantu na
+//    podstawie założeń; właściwą ścieżkę potwierdza dopiero test na
+//    środowisku testowym SI*GIIF (do tego czasu status giif_test_pending).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { amlAudit } from "@/lib/aml/audit.server";
+import { getGiifMtlsProvider } from "@/lib/aml/giif-mtls.server";
 
 export const GIIF_TEST_BASE = "https://test.giif.mofnet.gov.pl/api/rest2018";
 export const GIIF_PROD_BASE = "https://www.giif.mofnet.gov.pl/api/rest2018";
@@ -32,11 +39,38 @@ export function giifBaseUrl(environment: "test" | "production"): string {
   return environment === "production" ? GIIF_PROD_BASE : GIIF_TEST_BASE;
 }
 
+// Ścieżki wg publicznej dokumentacji https://giif.mofnet.gov.pl/api/ —
+// do POTWIERDZENIA testem na środowisku testowym SI*GIIF (dokumentacja
+// zawiera m.in. literówkę „instutucje" w części ścieżek; nie zgadujemy,
+// który wariant jest właściwy). Wartości można nadpisać env GIIF_PATH_*.
+export const GIIF_PATHS = {
+  submit: process.env.GIIF_PATH_SUBMIT ?? "/zgloszenia",
+  status: (id: string) =>
+    (process.env.GIIF_PATH_STATUS ?? "/zgloszenia/{id}/status").replace(
+      "{id}",
+      encodeURIComponent(id),
+    ),
+  upo: (id: string) =>
+    (process.env.GIIF_PATH_UPO ?? "/zgloszenia/{id}/upo").replace("{id}", encodeURIComponent(id)),
+  register: process.env.GIIF_PATH_REGISTER ?? "/rejestracja",
+  // Publiczna dokumentacja używa w tej gałęzi pisowni „instutucje".
+  certificates: (institutionId: string) =>
+    (process.env.GIIF_PATH_CERTIFICATES ?? "/instytucje/{institutionId}/certyfikaty").replace(
+      "{institutionId}",
+      encodeURIComponent(institutionId),
+    ),
+  certificate: (institutionId: string, requestId: string) =>
+    (process.env.GIIF_PATH_CERTIFICATE ?? "/instytucje/{institutionId}/certyfikaty/{requestId}")
+      .replace("{institutionId}", encodeURIComponent(institutionId))
+      .replace("{requestId}", encodeURIComponent(requestId)),
+  ping: process.env.GIIF_PATH_PING ?? "/ping",
+} as const;
+
 function isMock(): boolean {
   return process.env.GIIF_MOCK === "true";
 }
 
-// ── Niskopoziomowe wywołanie (mTLS gdy dostępny binding) ─────────────
+// ── Niskopoziomowe wywołanie (mTLS przez GiifMtlsProvider) ───────────
 interface GiifHttpResult {
   status: number;
   body: string;
@@ -45,22 +79,26 @@ interface GiifHttpResult {
 
 async function giifFetch(
   environment: "test" | "production",
+  organizationId: string,
   path: string,
-  init: RequestInit & { idempotencyKey?: string } = {},
+  init: {
+    method: string;
+    body?: Uint8Array | string;
+    headers?: Record<string, string>;
+    idempotencyKey?: string;
+  },
 ): Promise<GiifHttpResult> {
   const url = `${giifBaseUrl(environment)}${path}`;
-  const headers = new Headers(init.headers);
-  headers.set("Accept", "application/json");
-  if (init.idempotencyKey) headers.set("Idempotency-Key", init.idempotencyKey);
+  const headers: Record<string, string> = { Accept: "application/json", ...(init.headers ?? {}) };
+  if (init.idempotencyKey) headers["Idempotency-Key"] = init.idempotencyKey;
 
-  // Cloudflare Workers: binding mTLS (globalThis.GIIF_MTLS.fetch) używa
-  // certyfikatu komunikacyjnego wgranego przez `wrangler mtls-certificate`.
-  const mtlsBinding = (globalThis as Record<string, unknown>).GIIF_MTLS as
-    | { fetch: typeof fetch }
-    | undefined;
-  const doFetch = mtlsBinding ? mtlsBinding.fetch.bind(mtlsBinding) : fetch;
-
-  const res = await doFetch(url, { ...init, headers });
+  const provider = getGiifMtlsProvider(environment);
+  const res = await provider.fetchForOrganization(organizationId, {
+    url,
+    method: init.method,
+    headers,
+    body: init.body,
+  });
   const body = await res.text();
   let json: unknown;
   try {
@@ -88,6 +126,7 @@ export interface GiifSubmitResult {
  */
 export async function giifSubmit(
   environment: "test" | "production",
+  organizationId: string,
   encryptedPayload: Uint8Array,
   idempotencyKey: string,
 ): Promise<GiifSubmitResult> {
@@ -101,9 +140,9 @@ export async function giifSubmit(
     };
   }
   try {
-    const res = await giifFetch(environment, "/zgloszenia", {
+    const res = await giifFetch(environment, organizationId, GIIF_PATHS.submit, {
       method: "POST",
-      body: encryptedPayload as unknown as BodyInit,
+      body: encryptedPayload,
       headers: { "Content-Type": "application/cms" },
       idempotencyKey,
     });
@@ -156,17 +195,14 @@ export interface GiifStatusResult {
 
 export async function giifGetStatus(
   environment: "test" | "production",
+  organizationId: string,
   submissionId: string,
 ): Promise<GiifStatusResult> {
   if (isMock()) return { status: "przyjete", raw: { mock: true } };
   try {
-    const res = await giifFetch(
-      environment,
-      `/zgloszenia/${encodeURIComponent(submissionId)}/status`,
-      {
-        method: "GET",
-      },
-    );
+    const res = await giifFetch(environment, organizationId, GIIF_PATHS.status(submissionId), {
+      method: "GET",
+    });
     if (res.status !== 200)
       return { status: "error", error: `HTTP ${res.status}: ${res.body.slice(0, 200)}` };
     const j = res.json as { status?: string } | undefined;
@@ -178,6 +214,7 @@ export async function giifGetStatus(
 
 export async function giifGetUpo(
   environment: "test" | "production",
+  organizationId: string,
   submissionId: string,
 ): Promise<{ ok: boolean; upoXml?: string; error?: string }> {
   if (isMock()) {
@@ -187,13 +224,9 @@ export async function giifGetUpo(
     };
   }
   try {
-    const res = await giifFetch(
-      environment,
-      `/zgloszenia/${encodeURIComponent(submissionId)}/upo`,
-      {
-        method: "GET",
-      },
-    );
+    const res = await giifFetch(environment, organizationId, GIIF_PATHS.upo(submissionId), {
+      method: "GET",
+    });
     if (res.status !== 200)
       return { ok: false, error: `HTTP ${res.status}: ${res.body.slice(0, 200)}` };
     return { ok: true, upoXml: res.body };
@@ -205,13 +238,14 @@ export async function giifGetUpo(
 // ── Rejestracja instytucji i certyfikat komunikacyjny ────────────────
 export async function giifRegisterInstitution(
   environment: "test" | "production",
+  organizationId: string,
   registrationCms: Uint8Array, // podpisany kwalifikowanie dokument rejestracyjny
 ): Promise<{ ok: boolean; institutionId?: string; error?: string }> {
   if (isMock()) return { ok: true, institutionId: `MOCK-INST-${Date.now() % 100000}` };
   try {
-    const res = await giifFetch(environment, "/rejestracja", {
+    const res = await giifFetch(environment, organizationId, GIIF_PATHS.register, {
       method: "POST",
-      body: registrationCms as unknown as BodyInit,
+      body: registrationCms,
       headers: { "Content-Type": "application/cms" },
     });
     if (res.status === 200 || res.status === 201) {
@@ -226,6 +260,7 @@ export async function giifRegisterInstitution(
 
 export async function giifSubmitCsr(
   environment: "test" | "production",
+  organizationId: string,
   institutionId: string,
   csrPem: string,
 ): Promise<{ ok: boolean; requestId?: string; error?: string }> {
@@ -233,7 +268,8 @@ export async function giifSubmitCsr(
   try {
     const res = await giifFetch(
       environment,
-      `/instytucje/${encodeURIComponent(institutionId)}/certyfikaty`,
+      organizationId,
+      GIIF_PATHS.certificates(institutionId),
       {
         method: "POST",
         body: csrPem,
@@ -252,6 +288,7 @@ export async function giifSubmitCsr(
 
 export async function giifFetchCertificate(
   environment: "test" | "production",
+  organizationId: string,
   institutionId: string,
   requestId: string,
 ): Promise<{ ok: boolean; certificatePem?: string; error?: string }> {
@@ -260,8 +297,11 @@ export async function giifFetchCertificate(
   try {
     const res = await giifFetch(
       environment,
-      `/instytucje/${encodeURIComponent(institutionId)}/certyfikaty/${encodeURIComponent(requestId)}`,
-      { method: "GET" },
+      organizationId,
+      GIIF_PATHS.certificate(institutionId, requestId),
+      {
+        method: "GET",
+      },
     );
     if (res.status === 200) return { ok: true, certificatePem: res.body };
     return { ok: false, error: `HTTP ${res.status}: ${res.body.slice(0, 300)}` };
@@ -273,10 +313,11 @@ export async function giifFetchCertificate(
 /** Test połączenia mTLS z SI*GIIF (ping). */
 export async function giifTestMtls(
   environment: "test" | "production",
+  organizationId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   if (isMock()) return { ok: true };
   try {
-    const res = await giifFetch(environment, "/ping", { method: "GET" });
+    const res = await giifFetch(environment, organizationId, GIIF_PATHS.ping, { method: "GET" });
     if (res.status === 200 || res.status === 204) return { ok: true };
     return { ok: false, error: `HTTP ${res.status}` };
   } catch (e) {
@@ -345,7 +386,7 @@ export async function processSubmissionQueue(limit = 10): Promise<{ processed: n
     }
     const payload = new Uint8Array(await file.arrayBuffer());
 
-    const result = await giifSubmit(environment, payload, item.idempotency_key);
+    const result = await giifSubmit(environment, report.user_id, payload, item.idempotency_key);
 
     if (result.ok) {
       await db()
@@ -431,7 +472,7 @@ export async function pollSubmittedReports(limit = 20): Promise<{ checked: numbe
       .maybeSingle();
     const environment = (settings?.giif_environment ?? "test") as "test" | "production";
 
-    const st = await giifGetStatus(environment, r.giif_submission_id);
+    const st = await giifGetStatus(environment, r.user_id, r.giif_submission_id);
     const now = new Date().toISOString();
 
     if (st.status === "error") {
@@ -478,7 +519,7 @@ export async function pollSubmittedReports(limit = 20): Promise<{ checked: numbe
     }
     // Przyjęte → pobierz UPO.
     if (st.status === "przyjete" || st.status === "accepted") {
-      const upo = await giifGetUpo(environment, r.giif_submission_id);
+      const upo = await giifGetUpo(environment, r.user_id, r.giif_submission_id);
       if (upo.ok && upo.upoXml) {
         const upoPath = `${r.user_id}/reports/${r.id}/upo.xml`;
         await supabaseAdmin.storage

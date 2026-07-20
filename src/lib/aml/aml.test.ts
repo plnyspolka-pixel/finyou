@@ -130,11 +130,11 @@ describe("PDF", () => {
   });
 });
 
-describe("kryptografia (CSR / KMS / CMS)", () => {
-  it("generuje CSR PKCS#10 i kopertę KMS, certyfikat obcy nie pasuje do CSR", async () => {
-    process.env.AML_KMS_MASTER_KEY = "test-master-key";
-    const { generateCsr, kmsUnwrapPrivateKey, pemToDer, parseDer } =
-      await import("@/lib/aml/crypto.server");
+describe("kryptografia (CSR / koperta / CMS)", () => {
+  it("generuje CSR PKCS#10, a AmlKeyProvider szyfruje i odszyfrowuje klucz", async () => {
+    process.env.AML_ENVELOPE_MASTER_KEY = "test-master-key";
+    const { generateCsr, pemToDer, parseDer } = await import("@/lib/aml/crypto.server");
+    const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
     const csr = generateCsr({
       commonName: "SI*GIIF Test",
       organization: "Testowy Inwestor Sp. z o.o.",
@@ -142,10 +142,16 @@ describe("kryptografia (CSR / KMS / CMS)", () => {
       serialNumber: "1234567890",
     });
     expect(csr.csrPem).toContain("BEGIN CERTIFICATE REQUEST");
-    expect(csr.kmsKeyRef.startsWith("kms:aml:")).toBe(true);
-    // Klucz prywatny odzyskiwalny wyłącznie przez KMS-unwrap.
-    const pem = kmsUnwrapPrivateKey(csr.privateKeyEnvelope);
-    expect(pem).toContain("BEGIN PRIVATE KEY");
+    expect(csr.privateKeyPem).toContain("BEGIN PRIVATE KEY");
+
+    const provider = getAmlKeyProvider();
+    expect(provider.info().productionApproved).toBe(false); // lokalna koperta ≠ KMS
+    const wrapped = await provider.encrypt("org-1", csr.privateKeyPem);
+    expect(wrapped.keyRef.startsWith("envelope:local:")).toBe(true);
+    expect(wrapped.ciphertext).not.toContain("PRIVATE KEY");
+    const roundtrip = await provider.decrypt("org-1", wrapped.ciphertext);
+    expect(roundtrip).toBe(csr.privateKeyPem);
+
     // Struktura DER CSR parsuje się: SEQ(cri, alg, sig).
     const root = parseDer(pemToDer(csr.csrPem));
     expect(root.children.length).toBe(3);

@@ -6,6 +6,20 @@ aktywacji, bez konfiguracji SI\*GIIF i bez podpisu kwalifikowanego. Podpis
 kwalifikowany jest potrzebny dopiero przy faktycznej wysyłce zgłoszenia do
 GIIF (przycisk „Podpisz i zgłoś do GIIF").
 
+## Status wdrożenia
+
+| Obszar | Status |
+|---|---|
+| Lokalny potok (przygotowanie → podpis → szyfrowanie → kolejka → status → UPO) | `local_mock_verified` — przetestowany z mockiem |
+| Rzeczywista integracja z testowym SI\*GIIF (mTLS, endpointy, walidacja, UPO) | `giif_test_pending` — wymaga testu na oficjalnym środowisku GIIF |
+| Migracja bazy (`supabase/migrations/20260720120000_aml_module.sql`) | `database_migration_pending` — do zastosowania + regeneracja typów |
+
+Lokalny potok został przetestowany z mockiem. mTLS, rzeczywiste endpointy,
+walidacja SI\*GIIF i UPO wymagają jeszcze testu na oficjalnym środowisku
+GIIF. Statusu `giif_test_verified` nie wolno ustawiać na podstawie mocka —
+wyłącznie po otrzymaniu rzeczywistej odpowiedzi testowego SI\*GIIF i
+pobraniu rzeczywistego testowego UPO (`scripts/giif-e2e-test.ts`).
+
 ## Ekrany
 
 | Ekran | Ścieżka | Zakres |
@@ -18,7 +32,7 @@ GIIF (przycisk „Podpisz i zgłoś do GIIF").
 | Sprawy AML | `/inwestor/aml/sprawy` | sprawy z klienta/screeningu/CRBR/ryzyka/transakcji/rejestru/ręcznie |
 | Zgłoszenia GIIF | `/inwestor/aml/zgloszenia` | przygotowanie, XML+PDF, wersje+hash, zatwierdzenie, pakiet, podpis i wysyłka |
 | UPO i odpowiedzi | `/inwestor/aml/upo` | statusy, odpowiedzi GIIF, pobieranie UPO |
-| Ustawienia AML | `/inwestor/aml/ustawienia` | osoba odpowiedzialna (auto z profilu), osoba podpisująca, instytucja, środowisko |
+| Ustawienia AML | `/inwestor/aml/ustawienia` | osoba odpowiedzialna (auto z profilu), osoba podpisująca, instytucja, środowisko, provider kluczy |
 
 ## Osoba odpowiedzialna
 
@@ -66,33 +80,76 @@ treści, pobranie pakietu.
 „Podpisz i zgłoś do GIIF":
 
 - **Wariant A** (aktywne połączenie): finalny dokument → podpis kwalifikowany
-  LOKALNIE (CAdES/PKCS#7) → weryfikacja podpisu → szyfrowanie certyfikatem
-  GIIF (CMS EnvelopedData) → wysyłka mTLS → identyfikator zgłoszenia → status
-  → UPO. **PIN i klucz podpisu nigdy nie są pobierane ani zapisywane.**
+  LOKALNIE (CAdES/PKCS#7) → weryfikacja podpisu → szyfrowanie aktualnym
+  certyfikatem GIIF (CMS EnvelopedData) → wysyłka mTLS → identyfikator
+  zgłoszenia → status → UPO. **PIN i klucz podpisu nigdy nie są pobierane
+  ani zapisywane.**
 - **Wariant B** (brak połączenia): kontekstowy kreator rejestracji SI\*GIIF
   bez opuszczania zgłoszenia — dane z profilu, dokument rejestracyjny, klucz
-  + CSR (klucz w kopercie „KMS"), podpis lokalny, wysyłka rejestracji,
-  pobranie certyfikatu, kontrola zgodności z CSR, test mTLS i automatyczny
-  powrót do przygotowanego zgłoszenia.
+  + CSR (klucz szyfrowany przez `AmlKeyProvider`), podpis lokalny, wysyłka
+  rejestracji, pobranie certyfikatu, kontrola zgodności z CSR, test mTLS
+  i automatyczny powrót do przygotowanego zgłoszenia.
 
 ## Infrastruktura
 
 `src/lib/aml/`: generator XML + walidator (`giif-xml.server.ts`), PDF
-(`giif-pdf.server.ts`), CSR/CMS/szyfrowanie/KMS (`crypto.server.ts`),
-GIIF Connector z kolejką wysyłek, idempotencją (nagłówek `Idempotency-Key` +
-obsługa 409), ponowieniami (backoff, 503/timeout), statusami (w tym „X") i
-UPO (`giif-connector.server.ts`), kurs EUR NBP (`nbp-eur.server.ts`),
+(`giif-pdf.server.ts`), CSR/CMS/szyfrowanie (`crypto.server.ts`),
+provider kluczy (`key-provider.server.ts`), provider mTLS
+(`giif-mtls.server.ts`), certyfikat szyfrujący GIIF
+(`giif-encryption-cert.server.ts`), GIIF Connector z kolejką wysyłek,
+idempotencją (nagłówek `Idempotency-Key` + obsługa 409), ponowieniami
+(backoff, 503/timeout), statusami (w tym „X") i UPO
+(`giif-connector.server.ts`), kurs EUR NBP (`nbp-eur.server.ts`),
 Dilisense (`dilisense.server.ts`), audyt (`audit.server.ts`).
+
+**Dokumentacja REST API SI\*GIIF jest publiczna:**
+<https://giif.mofnet.gov.pl/api/>. Ścieżki endpointów w `GIIF_PATHS`
+(`giif-connector.server.ts`) należy przed testem live porównać z tą
+dokumentacją; część ścieżek w dokumentacji zawiera literówkę „instutucje" —
+właściwego wariantu nie zgadujemy, potwierdza go dopiero test na środowisku
+testowym (do tego czasu ścieżki można nadpisać env `GIIF_PATH_*`).
+
+**Certyfikat szyfrujący GIIF** jest pobierany dynamicznie z publicznego,
+nieuwierzytelnianego `GET {GIIF_BASE_URL}/certyfikatSzyfrowania`
+(`Accept: application/x-pem-file`): walidacja PEM/X.509, fingerprint SHA-256,
+okres ważności, cache 6 h z wymuszonym odświeżeniem przed wysyłką, a
+fingerprint użyty dla konkretnego zgłoszenia jest zapisywany w
+`aml_reports.encryption_cert_fingerprint` i audycie; pełny certyfikat nie
+jest logowany. Sekret `GIIF_ENCRYPTION_CERT_PEM` to wyłącznie jawnie
+oznaczony fallback dla testów lokalnych z `GIIF_MOCK=true`.
+
+**mTLS — `GiifMtlsProvider`.** Każdy inwestor ma własny certyfikat
+komunikacyjny SI\*GIIF, więc jeden binding Cloudflare nie jest rozwiązaniem
+produkcyjnym dla wielu organizacji (bindingi mTLS konfiguruje się per
+Worker — <https://developers.cloudflare.com/workers/runtime-apis/bindings/mtls/>).
+Implementacje: `MockGiifMtlsProvider` (testy lokalne),
+`CloudflareTestGiifMtlsProvider` (jeden testowy certyfikat Finance You przez
+binding `GIIF_MTLS`, środowisko testowe), `ProductionGiifMtlsProvider`
+(wydzielona usługa backendowa w UE — `GIIF_MTLS_PROXY_URL` — dynamicznie
+wybierająca certyfikat kliencki dla `organizationId`; przed żądaniem
+walidowane są: organizacja, NIP, identyfikator/status/ważność certyfikatu
+i jego przynależność do organizacji). Frontend nigdy nie wskazuje
+certyfikatu ani bindingu.
+
+**Klucze certyfikatów — `AmlKeyProvider`.** `LocalEnvelopeKeyProvider`
+(lokalna koperta AES-256-GCM na `AML_ENVELOPE_MASTER_KEY`) **nie jest
+KMS-em** i nie jest dopuszczony do produkcyjnego przechowywania kluczy
+certyfikatów GIIF — ekran Ustawienia AML pokazuje to wprost. Produkcyjnie:
+`ProductionKmsKeyProvider` (`AML_KEY_PROVIDER=production`,
+`AML_KMS_ENDPOINT`, `AML_KMS_TOKEN`) z prawdziwym KMS/HSM.
 
 Sekrety środowiska:
 
 - `DILISENSE_API_KEY` — klucz Dilisense (tylko backend),
-- `AML_KMS_MASTER_KEY` — master-klucz koperty KMS dla kluczy certyfikatów
-  komunikacyjnych (produkcyjnie: prawdziwy KMS/HSM),
-- `GIIF_ENCRYPTION_CERT_PEM` — certyfikat GIIF do szyfrowania pakietów,
+- `AML_ENVELOPE_MASTER_KEY` — master-klucz lokalnej koperty (dev/test;
+  dawna nazwa `AML_KMS_MASTER_KEY` jest przestarzała),
+- `AML_KEY_PROVIDER` / `AML_KMS_ENDPOINT` / `AML_KMS_TOKEN` — produkcyjny
+  KMS/HSM,
+- `GIIF_MTLS_PROXY_URL` / `GIIF_MTLS_PROXY_TOKEN` — produkcyjna usługa mTLS,
+- `GIIF_ENCRYPTION_CERT_PEM` — fallback certyfikatu szyfrującego (tylko mock),
 - `GIIF_MOCK=true` — tryb symulacji SI\*GIIF (wyłącznie dev/test),
-- binding Cloudflare `GIIF_MTLS` (`wrangler mtls-certificate`) — certyfikat
-  komunikacyjny mTLS.
+- binding Cloudflare `GIIF_MTLS` (`wrangler mtls-certificate`) — jeden
+  testowy certyfikat Finance You (środowisko testowe).
 
 ## Bezpieczeństwo
 
@@ -103,11 +160,27 @@ Sekrety środowiska:
   UPDATE/DELETE) i rejestruje każdą zmianę statusu, decyzję, podpis, wysyłkę
   i odpowiedź GIIF,
 - prywatny bucket `aml-private` (ścieżki per `user_id`),
-- klucze certyfikatów komunikacyjnych wyłącznie w kopercie KMS
-  (w tabeli tylko `kms_key_ref`), nigdy we frontendzie,
+- klucze certyfikatów komunikacyjnych wyłącznie zaszyfrowane przez
+  `AmlKeyProvider` (w tabeli tylko `kms_key_ref`), nigdy we frontendzie,
 - Finance You nie przechowuje podpisu kwalifikowanego, PIN-u ani klucza
   prywatnego podpisu inwestora — każdy inwestor używa własnego podpisu
   i własnego certyfikatu.
+
+## Migracja bazy (status: `database_migration_pending`)
+
+Migracja `supabase/migrations/20260720120000_aml_module.sql` nie została
+jeszcze zastosowana. Kolejność wdrożenia:
+
+1. zastosuj migrację (`supabase db push` albo panel Lovable Cloud/Supabase),
+2. sprawdź, że wszystkie tabele `aml_*` istnieją i mają włączone RLS,
+3. przetestuj izolację organizacji (drugi użytkownik nie widzi cudzych
+   wierszy żadnej tabeli `aml_*` ani plików w `aml-private`),
+4. uruchom Supabase Security Advisor i popraw wykryte problemy,
+5. zregeneruj typy `Database` (`src/integrations/supabase/types.ts`),
+6. usuń luźny dostęp `any` dla tabel `aml_*` (nagłówkowe
+   `eslint-disable @typescript-eslint/no-explicit-any` w plikach AML) i
+   zastąp go wygenerowanymi typami — wzorzec `wind_*` nie jest
+   uzasadnieniem trwałego `any`.
 
 ## Środowiska SI\*GIIF i testy
 
@@ -117,10 +190,16 @@ Sekrety środowiska:
 Nigdy nie używaj testowych certyfikatów i danych w produkcji.
 
 Testy jednostkowe: `bun run test` (`src/lib/aml/aml.test.ts`).
-Testy integracyjne środowiska testowego: `bun scripts/giif-e2e-test.ts`
-(checklista: rejestracja, CSR, certyfikat, mTLS, syntetyczna transakcja
-ponadprogowa, syntetyczne zawiadomienie, załącznik, status, UPO, błędny XML,
-niepoprawny podpis, duplikat, 409, oczekiwanie 503, status X, ponowienie bez
-podwójnej wysyłki). Ścieżki endpointów rest2018 należy potwierdzić z aktualną
-dokumentacją dystrybuowaną przez GIIF po testowej rejestracji instytucji —
-do tego czasu pełny przebieg potoku można zweryfikować z `GIIF_MOCK=true`.
+
+Testy integracyjne: `bun scripts/giif-e2e-test.ts`
+
+- `GIIF_MOCK=true` — test lokalny; wynik co najwyżej `local_mock_verified`
+  (mock NIE testuje realnego mTLS, zgodności endpointów, przyjęcia podpisu
+  ani UPO),
+- `GIIF_MOCK=false GIIF_ENV=test` — prawdziwe testowe SI\*GIIF; wymaga
+  maszyny/CI z dostępem sieciowym do `test.giif.mofnet.gov.pl` i testowej
+  rejestracji Finance You; `giif_test_verified` wyłącznie po rzeczywistej
+  odpowiedzi i pobraniu rzeczywistego testowego UPO (skrypt zapisuje też
+  fingerprint certyfikatu szyfrującego i potwierdza brak podwójnej wysyłki),
+- produkcja jest w skrypcie zablokowana bez dodatkowego jawnego
+  zabezpieczenia.

@@ -534,12 +534,19 @@ export const uploadSignedGiifReport = createServerFn({ method: "POST" })
       .from("aml-private")
       .upload(signedPath, new Blob([signedCopy.buffer as ArrayBuffer]), { upsert: true });
 
-    // Szyfrowanie certyfikatem GIIF (env GIIF_ENCRYPTION_CERT_PEM).
-    const giifCert = process.env.GIIF_ENCRYPTION_CERT_PEM;
-    if (!giifCert)
-      throw new Error("Brak certyfikatu szyfrowania GIIF (GIIF_ENCRYPTION_CERT_PEM) w sekretach.");
+    // Szyfrowanie aktualnym certyfikatem GIIF pobranym z publicznego
+    // GET /certyfikatSzyfrowania (fingerprint zapisujemy przy zgłoszeniu;
+    // GIIF_ENCRYPTION_CERT_PEM to wyłącznie fallback dla trybu mock).
+    const { data: settingsRow } = await db
+      .from("aml_settings")
+      .select("giif_environment")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const environment = (settingsRow?.giif_environment ?? "test") as "test" | "production";
+    const { getGiifEncryptionCert } = await import("@/lib/aml/giif-encryption-cert.server");
+    const giifCert = await getGiifEncryptionCert(environment);
     const { encryptForGiif } = await import("@/lib/aml/crypto.server");
-    const encrypted = encryptForGiif(signedBytes, giifCert);
+    const encrypted = encryptForGiif(signedBytes, giifCert.pem);
     const encryptedCopy = new Uint8Array(encrypted);
     await supabaseAdmin.storage
       .from("aml-private")
@@ -569,6 +576,7 @@ export const uploadSignedGiifReport = createServerFn({ method: "POST" })
         signed_sha256: sha256Hex(signedBytes),
         signature_verified_at: new Date().toISOString(),
         signer_subject: verification.signerSubject ?? null,
+        encryption_cert_fingerprint: giifCert.fingerprintSha256,
       })
       .eq("id", report.id);
     if (report.case_id)
@@ -579,7 +587,13 @@ export const uploadSignedGiifReport = createServerFn({ method: "POST" })
       entityType: "report",
       entityId: report.id,
       action: "signed_and_queued",
-      details: { signer: verification.signerSubject, idempotencyKey },
+      details: {
+        signer: verification.signerSubject,
+        idempotencyKey,
+        encryptionCertFingerprint: giifCert.fingerprintSha256,
+        encryptionCertSource: giifCert.source,
+        encryptionCertValidTo: giifCert.validTo,
+      },
     });
 
     // Natychmiastowa próba wysyłki (kolejka obsłuży ewentualne ponowienia).
@@ -641,7 +655,9 @@ export const giifRegistrationPrepare = createServerFn({ method: "POST" })
       `Data przygotowania: ${new Date().toISOString()}`,
     ].join("\n");
 
-    // Bezpieczne wygenerowanie klucza + CSR.
+    // Bezpieczne wygenerowanie klucza + CSR. Klucz prywatny natychmiast
+    // szyfrujemy przez AmlKeyProvider (lokalna koperta w dev/testach,
+    // produkcyjnie KMS/HSM) — nigdy nie trafia do bazy ani frontendu.
     const { generateCsr } = await import("@/lib/aml/crypto.server");
     const csr = generateCsr({
       commonName: `SI*GIIF ${inst.name}`.slice(0, 64),
@@ -650,12 +666,16 @@ export const giifRegistrationPrepare = createServerFn({ method: "POST" })
       serialNumber: String(inst.nip).replace(/\D/g, ""),
     });
 
-    // Koperta KMS do prywatnego Storage; w tabeli tylko kms_key_ref.
+    const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
+    const keyProvider = getAmlKeyProvider();
+    const wrapped = await keyProvider.encrypt(context.userId, csr.privateKeyPem);
+    csr.privateKeyPem = ""; // nie trzymaj plaintextu dłużej niż to konieczne
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const envPath = `${context.userId}/kms/${csr.kmsKeyRef.replace(/[^\w-]/g, "_")}.enc`;
+    const envPath = `${context.userId}/keys/${wrapped.keyRef.replace(/[^\w-]/g, "_")}.enc`;
     await supabaseAdmin.storage
       .from("aml-private")
-      .upload(envPath, new Blob([csr.privateKeyEnvelope], { type: "text/plain" }), {
+      .upload(envPath, new Blob([wrapped.ciphertext], { type: "text/plain" }), {
         upsert: true,
       });
 
@@ -666,7 +686,7 @@ export const giifRegistrationPrepare = createServerFn({ method: "POST" })
         user_id: context.userId,
         environment,
         status: "csr_generated",
-        kms_key_ref: csr.kmsKeyRef,
+        kms_key_ref: wrapped.keyRef,
         csr_pem: csr.csrPem,
         subject_dn: csr.subjectDn,
       })
@@ -685,7 +705,12 @@ export const giifRegistrationPrepare = createServerFn({ method: "POST" })
       entityType: "certificate",
       entityId: cert.id,
       action: "csr_generated",
-      details: { subjectDn: csr.subjectDn, kmsKeyRef: csr.kmsKeyRef },
+      details: {
+        subjectDn: csr.subjectDn,
+        keyRef: wrapped.keyRef,
+        keyProvider: keyProvider.info().name,
+        keyProviderProductionApproved: keyProvider.info().productionApproved,
+      },
     });
 
     return {
@@ -745,7 +770,7 @@ export const giifRegistrationSubmit = createServerFn({ method: "POST" })
     const environment = (cert.environment ?? "test") as "test" | "production";
     const { giifRegisterInstitution, giifSubmitCsr } =
       await import("@/lib/aml/giif-connector.server");
-    const reg = await giifRegisterInstitution(environment, signedBytes);
+    const reg = await giifRegisterInstitution(environment, context.userId, signedBytes);
     if (!reg.ok) {
       await db
         .from("aml_settings")
@@ -757,7 +782,12 @@ export const giifRegistrationSubmit = createServerFn({ method: "POST" })
       };
     }
 
-    const csrRes = await giifSubmitCsr(environment, reg.institutionId ?? "", cert.csr_pem);
+    const csrRes = await giifSubmitCsr(
+      environment,
+      context.userId,
+      reg.institutionId ?? "",
+      cert.csr_pem,
+    );
     await db
       .from("aml_certificates")
       .update({ status: "requested", serial_number: csrRes.requestId ?? null })
@@ -818,6 +848,7 @@ export const giifRegistrationFinish = createServerFn({ method: "POST" })
       const { giifFetchCertificate } = await import("@/lib/aml/giif-connector.server");
       const fetched = await giifFetchCertificate(
         environment,
+        context.userId,
         settings?.giif_institution_id ?? "",
         cert.serial_number ?? "",
       );
@@ -845,7 +876,7 @@ export const giifRegistrationFinish = createServerFn({ method: "POST" })
 
     // 3. Test mTLS.
     const { giifTestMtls } = await import("@/lib/aml/giif-connector.server");
-    const mtls = await giifTestMtls(environment);
+    const mtls = await giifTestMtls(environment, context.userId);
     const now = new Date().toISOString();
     await db
       .from("aml_certificates")

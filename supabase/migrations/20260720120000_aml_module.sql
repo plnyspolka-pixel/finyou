@@ -344,6 +344,9 @@ CREATE TABLE IF NOT EXISTS public.aml_reports (
   signed_sha256 text,
   signature_verified_at timestamptz,
   signer_subject text,
+  -- Fingerprint SHA-256 certyfikatu szyfrującego GIIF użytego dla TEGO
+  -- zgłoszenia (certyfikat pobierany z GET /certyfikatSzyfrowania).
+  encryption_cert_fingerprint text,
   -- Wysyłka.
   giif_submission_id text,
   submitted_at timestamptz,

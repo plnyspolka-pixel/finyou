@@ -41,6 +41,8 @@ export interface AmlSettingsView {
   giifInstitutionId: string | null;
   giifEnvironment: "test" | "production";
   profileGaps: AmlProfileGaps;
+  /** Aktywny provider szyfrowania kluczy certyfikatów (KMS vs lokalna koperta). */
+  keyProvider: { name: string; productionApproved: boolean; description: string };
 }
 
 /** Braki danych wymaganych do finalnego zgłoszenia (ostrzegamy, nie blokujemy). */
@@ -103,10 +105,16 @@ async function buildDefaultsFromProfile(
   return { person, institution };
 }
 
-function toView(row: any): AmlSettingsView {
+async function keyProviderInfo() {
+  const { getAmlKeyProvider } = await import("@/lib/aml/key-provider.server");
+  return getAmlKeyProvider().info();
+}
+
+async function toView(row: any): Promise<AmlSettingsView> {
   const person = (row.responsible_person ?? {}) as AmlPerson;
   const institution = (row.institution ?? {}) as AmlInstitution;
   return {
+    keyProvider: await keyProviderInfo(),
     id: row.id,
     responsiblePerson: person,
     additionalPerson: (row.additional_person as AmlPerson | null) ?? null,
@@ -154,9 +162,9 @@ export const getAmlSettings = createServerFn({ method: "POST" })
           .eq("id", existing.id)
           .select("*")
           .single();
-        return toView(updated ?? { ...existing, ...merged });
+        return await toView(updated ?? { ...existing, ...merged });
       }
-      return toView(existing);
+      return await toView(existing);
     }
 
     const defaults = await buildDefaultsFromProfile(context.supabase, context.userId);
@@ -179,7 +187,7 @@ export const getAmlSettings = createServerFn({ method: "POST" })
       action: "auto_initialized_from_profile",
       details: { person: defaults.person as unknown as Record<string, unknown> },
     });
-    return toView(created);
+    return await toView(created);
   });
 
 const UpdateSettingsInput = z.object({
@@ -218,7 +226,7 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
       action: "settings_updated",
       details: { fields: Object.keys(patch) },
     });
-    return toView(updated);
+    return await toView(updated);
   });
 
 export interface AmlOverview {

@@ -343,6 +343,25 @@ function AmlSettingsScreen() {
               Rejestracja i certyfikat komunikacyjny są potrzebne dopiero przy wysyłce pierwszego
               zgłoszenia — kreator uruchomi się kontekstowo z ekranu zgłoszenia.
             </p>
+            <div className="rounded-md border p-2 text-xs">
+              <p className="font-medium">
+                Przechowywanie kluczy certyfikatów: {settings.keyProvider.name}{" "}
+                {settings.keyProvider.productionApproved ? (
+                  <Badge variant="outline">dopuszczony do produkcji</Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                    NIE dopuszczony do produkcji
+                  </Badge>
+                )}
+              </p>
+              <p className="text-muted-foreground mt-1">{settings.keyProvider.description}</p>
+              {!settings.keyProvider.productionApproved && (
+                <p className="text-amber-600 mt-1">
+                  Produkcyjne przechowywanie kluczy certyfikatów GIIF wymaga prawdziwego KMS/HSM
+                  (AML_KEY_PROVIDER=production).
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
