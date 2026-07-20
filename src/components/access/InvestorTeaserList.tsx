@@ -64,8 +64,9 @@ export function InvestorTeaserList() {
           <div className="flex items-center gap-3 text-sm">
             <Lock className="h-5 w-5 text-primary" />
             <span>
-              Przeglądasz <b>anonimowe zajawki</b>. Pełne dane ofert, dokumenty i kontakt
-              odblokujesz po wykupieniu dostępu.
+              <b>Konto darmowe:</b> przeglądasz oferty ze zdjęciami i zanonimizowaną treścią KW oraz
+              składasz oferty w ramach limitów (5 ofert / 2 pożyczki rocznie do 255 550 zł; powyżej
+              — bez limitu). Pełne dane, dokumenty i kontakt — w pełnym dostępie.
             </span>
           </div>
           <Button onClick={() => setPaywallOpen(true)}>Odblokuj pełny dostęp</Button>
@@ -77,7 +78,7 @@ export function InvestorTeaserList() {
           <Card
             key={t.id}
             className="group cursor-pointer overflow-hidden transition hover:shadow-md"
-            onClick={() => setPaywallOpen(true)}
+            onClick={() => void navigate({ to: "/inwestor/wniosek/$id", params: { id: t.id } })}
           >
             <div className="relative h-40 w-full bg-muted">
               {t.photoUrl ? (
@@ -140,7 +141,7 @@ export function InvestorTeaserList() {
                 <p className="line-clamp-2 text-muted-foreground">{t.description}</p>
               )}
               <Button variant="outline" size="sm" className="w-full">
-                <Lock className="mr-1 h-4 w-4" /> Odblokuj pełny dostęp
+                Zobacz szczegóły i złóż ofertę
               </Button>
             </CardContent>
           </Card>

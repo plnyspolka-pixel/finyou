@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -74,11 +75,20 @@ function SzkoleniaInwestor() {
           return (
             <Card key={v.id} className="overflow-hidden flex flex-col h-full">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg line-clamp-2 min-h-[3.5rem]">{v.title}</CardTitle>
+                <CardTitle className="text-lg line-clamp-2 min-h-[3.5rem]">
+                  {(v as { free_lesson?: boolean }).free_lesson && (
+                    <Badge variant="secondary" className="mr-2 align-middle">
+                      Darmowa lekcja
+                    </Badge>
+                  )}
+                  {v.title}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 flex flex-col flex-1">
                 {v.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{v.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                    {v.description}
+                  </p>
                 )}
                 <div className="mt-auto">
                   {url ? (
@@ -108,9 +118,10 @@ function SzkoleniaInwestor() {
             </Card>
           );
         })}
-        {videos.length === 0 && <div className="text-sm text-muted-foreground">Brak materiałów.</div>}
+        {videos.length === 0 && (
+          <div className="text-sm text-muted-foreground">Brak materiałów.</div>
+        )}
       </div>
     </div>
   );
 }
-

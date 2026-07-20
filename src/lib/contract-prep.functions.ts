@@ -76,11 +76,24 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
     side = "client"; // staff może edytować obie sekcje przez osobne wywołania
   }
 
-  // Strona inwestorska przygotowania umowy wymaga aktywnego płatnego dostępu
-  // (po wygaśnięciu dane pozostają, ale wracają dopiero po opłaceniu).
+  // Strona inwestorska przygotowania umowy: pełny (płatny) dostęp — bez
+  // ograniczeń; konto darmowe — w ramach limitu zawieranych pożyczek
+  // (maks. 2/365 dni dla kwot ≤ 255 550 zł; powyżej progu bez limitu).
   if (side === "investor") {
-    const { assertInvestorFullAccess } = await import("@/lib/access/guards.server");
-    await assertInvestorFullAccess(userId);
+    const { investorHasFullAccess } = await import("@/lib/access/guards.server");
+    if (!(await investorHasFullAccess(userId))) {
+      const { data: offerAmountRow } = await supabaseAdmin
+        .from("investor_offers")
+        .select("proposed_amount")
+        .eq("id", offerId)
+        .maybeSingle();
+      const { assertFreeInvestorCanConcludeLoan } = await import("@/lib/access/free-investor.functions");
+      await assertFreeInvestorCanConcludeLoan(
+        userId,
+        Number((offerAmountRow as any)?.proposed_amount ?? 0),
+        offerId,
+      );
+    }
   }
   return { offer, side };
 }

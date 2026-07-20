@@ -9,14 +9,53 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, CheckCircle2, Calculator, RefreshCw, Info, HelpCircle, Download, Copy, Scale, ShieldAlert, ExternalLink, TrendingUp, Wallet, HandCoins, Printer, Send, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Calculator,
+  RefreshCw,
+  Info,
+  HelpCircle,
+  Download,
+  Copy,
+  Scale,
+  ShieldAlert,
+  ExternalLink,
+  TrendingUp,
+  Wallet,
+  HandCoins,
+  Printer,
+  Send,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN, propertyTypeLabels } from "@/lib/labels";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
@@ -24,7 +63,8 @@ import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf"
 import { saveCalcHandoff } from "@/lib/loan-calc-handoff";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
-const FANCY_CARD_CLS = "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
+const FANCY_CARD_CLS =
+  "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
 
 /** Pole liczbowe z lokalnym stanem tekstu — nie nadpisuje wpisywanej wartości w trakcie edycji. */
 function NumberField({
@@ -80,7 +120,7 @@ function NumberField({
 // Maks. koszty pozaodsetkowe (art. 36a UoKK): MPKK = K·(10% + 10%·n/R), maks. 45% K.
 function maxNonInterestCosts(amount: number, months: number): number {
   if (!amount || !months) return 0;
-  const mpkk = amount * (0.10 + 0.10 * (months / 12));
+  const mpkk = amount * (0.1 + 0.1 * (months / 12));
   return Math.min(mpkk, amount * 0.45);
 }
 
@@ -124,12 +164,15 @@ type Props = {
   hideFinanceYouFee?: boolean;
   /** Włącza tryb prowizji wewnętrznej operatora (2–5% jako część prowizji inwestora). */
   internalOperatorMode?: boolean;
+  /** Tryb darmowego konta inwestora: oprocentowanie STAŁE równe odsetkom
+   *  maksymalnym (limit ustawowy z NBP), prowizja inwestora = 0 (zablokowana),
+   *  prowizja Finance You 2× wyższa niż w planie komercyjnym. */
+  freeTierMode?: boolean;
   /** Domyślny e-mail klienta (do wysyłki harmonogramu). */
   clientEmail?: string | null;
   /** Nazwa/nazwisko klienta (nagłówek harmonogramu i maila). */
   clientName?: string | null;
 };
-
 
 /** Tooltip ze słowniczkiem przy etykiecie pola. */
 function InfoTip({ text }: { text: string }) {
@@ -137,7 +180,11 @@ function InfoTip({ text }: { text: string }) {
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button type="button" className="inline-grid place-items-center text-muted-foreground hover:text-foreground align-middle" aria-label="Wyjaśnienie">
+          <button
+            type="button"
+            className="inline-grid place-items-center text-muted-foreground hover:text-foreground align-middle"
+            aria-label="Wyjaśnienie"
+          >
             <HelpCircle className="h-3.5 w-3.5" />
           </button>
         </TooltipTrigger>
@@ -158,10 +205,10 @@ export function LoanCalculator({
   investorGuidance = false,
   hideFinanceYouFee = false,
   internalOperatorMode = false,
+  freeTierMode = false,
   clientEmail = null,
   clientName = null,
 }: Props) {
-
   const fetchRates = useServerFn(getNbpRates);
   const ratesQ = useQuery({
     queryKey: ["nbp-rates"],
@@ -191,16 +238,18 @@ export function LoanCalculator({
   // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
   // Ponieważ % FY zależy od nominału, a nominał zależy od %, iterujemy do punktu stałego.
   const { amount, financeYouFeePct } = useMemo(() => {
+    // Konto darmowe inwestora: prowizja FY 2× wyższa niż w planie komercyjnym.
+    const fyMultiplier = freeTierMode ? 2 : 1;
     let amt = onHand / Math.max(0.01, 1 - commissionPct / 100);
     let fyPct = 0;
     for (let i = 0; i < 6; i++) {
       const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
-      fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * 10) / 10;
+      fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * fyMultiplier * 10) / 10;
       const factor = Math.max(0.01, 1 - (commissionPct + fyPct) / 100);
       amt = onHand / factor;
     }
     return { amount: amt, financeYouFeePct: fyPct };
-  }, [onHand, commissionPct, hideFinanceYouFee]);
+  }, [onHand, commissionPct, hideFinanceYouFee, freeTierMode]);
 
   // Ustawienie kwoty nominalnej przelicza z powrotem na kwotę na rękę (na rękę pozostaje spójne).
   const setAmount = (nominal: number) => {
@@ -210,9 +259,14 @@ export function LoanCalculator({
   };
   const rateTouched = useRef(false);
   const commissionTouched = useRef(false);
-  const setAnnualRateTouched = (v: number) => { rateTouched.current = true; setAnnualRate(v); };
-  const setCommissionPctTouched = (v: number) => { commissionTouched.current = true; setCommissionPct(v); };
-
+  const setAnnualRateTouched = (v: number) => {
+    rateTouched.current = true;
+    setAnnualRate(v);
+  };
+  const setCommissionPctTouched = (v: number) => {
+    commissionTouched.current = true;
+    setCommissionPct(v);
+  };
 
   // Tryb inwestora: ręczne nadpisanie stopy NBP, model prowizji, potwierdzenie stopy.
   const [nbpOverride, setNbpOverride] = useState<number | null>(null);
@@ -240,7 +294,9 @@ export function LoanCalculator({
   const [sendOpen, setSendOpen] = useState(false);
   const [recipient, setRecipient] = useState<string>(clientEmail ?? "");
   const [sending, setSending] = useState(false);
-  useEffect(() => { setRecipient(clientEmail ?? ""); }, [clientEmail]);
+  useEffect(() => {
+    setRecipient(clientEmail ?? "");
+  }, [clientEmail]);
 
   const effectiveRefRate = investorGuidance && nbpOverride != null ? nbpOverride : liveRefRate;
   const MAX_INTEREST_RATE = maxInterestRate(effectiveRefRate);
@@ -257,23 +313,32 @@ export function LoanCalculator({
   const commissionPln = (amount * commissionPct) / 100;
   const effectiveCommissionPct = commissionPct;
 
-
   // Prowizja wewnętrzna operatora — część prowizji inwestora (2–5%).
   const operatorCommissionPctClamped = Math.min(5, Math.max(2, operatorCommissionPct));
-  const operatorCommissionPln = internalOperatorMode ? (amount * operatorCommissionPctClamped) / 100 : 0;
+  const operatorCommissionPln = internalOperatorMode
+    ? (amount * operatorCommissionPctClamped) / 100
+    : 0;
   const investorNetCommissionPln = Math.max(0, commissionPln - operatorCommissionPln);
 
-
-
   const schedule = useMemo(() => {
-    if (!grossPrincipal || !months) return { rows: [] as any[], totalRata: 0, totalOds: 0, totalKap: 0, balloon: 0, nominalRata: 0, cappedRata: 0 };
+    if (!grossPrincipal || !months)
+      return {
+        rows: [] as any[],
+        totalRata: 0,
+        totalOds: 0,
+        totalKap: 0,
+        balloon: 0,
+        nominalRata: 0,
+        cappedRata: 0,
+      };
     const monthlyRate = annualRate / 100 / 12;
     const rows: any[] = [];
     const start = new Date();
 
-    const nominalRata = monthlyRate > 0
-      ? (grossPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
-      : grossPrincipal / months;
+    const nominalRata =
+      monthlyRate > 0
+        ? (grossPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
+        : grossPrincipal / months;
     const cappedRata = maxPayment > 0 ? Math.min(nominalRata, maxPayment) : nominalRata;
     const balloon = Math.max(0, (nominalRata - cappedRata) * months);
 
@@ -284,7 +349,8 @@ export function LoanCalculator({
       const rata = last ? cappedRata + balloon : cappedRata;
       const kap = rata - ods;
       saldo = Math.max(0, saldo - kap);
-      const d = new Date(start); d.setMonth(d.getMonth() + i);
+      const d = new Date(start);
+      d.setMonth(d.getMonth() + i);
       rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata, kap, ods, saldo });
     }
     return {
@@ -334,7 +400,6 @@ export function LoanCalculator({
   const krotnoscRepay = totalToRepay;
   const krotnosc = krotnoscBasis > 0 ? krotnoscRepay / krotnoscBasis : 0;
 
-
   // Proponowane zabezpieczenia: domyślnie dwukrotność sumy wszystkich należności
   // inwestora (łącznej kwoty do spłaty). Edytowalne — override ma pierwszeństwo.
   const proposedSecurityDefault = Math.round(totalToRepay * 2);
@@ -348,9 +413,14 @@ export function LoanCalculator({
   const secondAuctionPln = Math.round(propertyValue * (2 / 3));
   // Próg 5% dla nieruchomości mieszkaniowej (art. 952¹ § 2 KPC): licytacji mieszkania/domu
   // nie można wyznaczyć, gdy egzekwowana należność główna < 1/20 sumy oszacowania.
-  const auctionBlock = residentialAuctionBlockRisk({ propertyType, loanAmountPln: amount, propertyValuePln: propertyValue });
+  const auctionBlock = residentialAuctionBlockRisk({
+    propertyType,
+    loanAmountPln: amount,
+    propertyValuePln: propertyValue,
+  });
   const ltvPct = propertyValue > 0 ? (amount / propertyValue) * 100 : 0;
-  const collateralCoveragePct = propertyValue > 0 && totalToRepay > 0 ? (secondAuctionPln / totalToRepay) * 100 : 0;
+  const collateralCoveragePct =
+    propertyValue > 0 && totalToRepay > 0 ? (secondAuctionPln / totalToRepay) * 100 : 0;
   const collateralShortfall = propertyValue > 0 && totalToRepay > secondAuctionPln + 1e-9;
 
   const interestExceeds = annualRate > MAX_INTEREST_RATE + 1e-9;
@@ -371,13 +441,21 @@ export function LoanCalculator({
   }, [internalOperatorMode, months]);
 
   useEffect(() => {
-    if (!rateTouched.current) {
-      const rounded = Math.floor(MAX_INTEREST_RATE * 10) / 10;
+    if (freeTierMode || !rateTouched.current) {
+      // Konto darmowe: oprocentowanie STAŁE = odsetki maksymalne (śledzi NBP).
+      const rounded = freeTierMode
+        ? Math.floor(MAX_INTEREST_RATE * 100) / 100
+        : Math.floor(MAX_INTEREST_RATE * 10) / 10;
       if (Math.abs(annualRate - rounded) > 1e-9) setAnnualRate(rounded);
     }
-  }, [MAX_INTEREST_RATE, annualRate]);
+  }, [MAX_INTEREST_RATE, annualRate, freeTierMode]);
 
   useEffect(() => {
+    // Konto darmowe: inwestor nie pobiera prowizji.
+    if (freeTierMode) {
+      if (Math.abs(commissionPct) > 1e-9) setCommissionPct(0);
+      return;
+    }
     if (!commissionTouched.current) {
       // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty nominalnej),
       // przycięta do zakresu suwaka (0–30%).
@@ -385,19 +463,44 @@ export function LoanCalculator({
       const rounded = Math.floor(mpkkPct * 2) / 2; // krok 0,5%
       if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
     }
-  }, [months, commissionPct]);
+  }, [months, commissionPct, freeTierMode]);
 
   useEffect(() => {
     onChange?.({
-      amount, months, annualRate, commissionPct: effectiveCommissionPct, commissionPln,
-      financeYouFeePct, financeYouFeePln, grossPrincipal,
+      amount,
+      months,
+      annualRate,
+      commissionPct: effectiveCommissionPct,
+      commissionPln,
+      financeYouFeePct,
+      financeYouFeePln,
+      grossPrincipal,
       maxPayment,
-      nominalRata: schedule.nominalRata, cappedRata: schedule.cappedRata, balloon: schedule.balloon,
-      totalRata: schedule.totalRata, totalOds: schedule.totalOds, totalKap: schedule.totalKap,
-      totalCost, totalToRepay, schedule: schedule.rows,
+      nominalRata: schedule.nominalRata,
+      cappedRata: schedule.cappedRata,
+      balloon: schedule.balloon,
+      totalRata: schedule.totalRata,
+      totalOds: schedule.totalOds,
+      totalKap: schedule.totalKap,
+      totalCost,
+      totalToRepay,
+      schedule: schedule.rows,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount, months, annualRate, effectiveCommissionPct, commissionPln, financeYouFeePct, financeYouFeePln, grossPrincipal, maxPayment, schedule.balloon, schedule.totalRata, schedule.totalOds]);
+  }, [
+    amount,
+    months,
+    annualRate,
+    effectiveCommissionPct,
+    commissionPln,
+    financeYouFeePct,
+    financeYouFeePln,
+    grossPrincipal,
+    maxPayment,
+    schedule.balloon,
+    schedule.totalRata,
+    schedule.totalOds,
+  ]);
 
   const contractClause =
     `Pożyczka oprocentowana jest według stopy stanowiącej dwukrotność odsetek ustawowych, ` +
@@ -414,7 +517,16 @@ export function LoanCalculator({
     for (const r of schedule.rows) {
       lines.push([r.idx, r.date, fmt(r.rata), fmt(r.kap), fmt(r.ods), fmt(r.saldo)].join(";"));
     }
-    lines.push(["", "RAZEM", fmt(schedule.totalRata), fmt(schedule.totalKap), fmt(schedule.totalOds), ""].join(";"));
+    lines.push(
+      [
+        "",
+        "RAZEM",
+        fmt(schedule.totalRata),
+        fmt(schedule.totalKap),
+        fmt(schedule.totalOds),
+        "",
+      ].join(";"),
+    );
     const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -590,51 +702,101 @@ export function LoanCalculator({
 
   return (
     <div className="space-y-6">
-      <FancyShell><Card className={FANCY_CARD_CLS}>
-        <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-white">
-          <div className="flex items-center gap-2 font-semibold">
-            <RefreshCw className={`h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} />
-            Stopy NBP {ratesQ.data?.source === "fallback" && <span className="text-xs text-white/60">(dane offline)</span>}
-          </div>
-          <span className="text-white/80">Referencyjna: <b className="tabular-nums text-white">{effectiveRefRate.toFixed(2)}%</b>{investorGuidance && nbpOverride != null && <span className="text-xs text-amber-300"> (ręcznie)</span>}</span>
-          {ratesQ.data?.lombardRate != null && <span className="text-white/80">Lombardowa: <b className="tabular-nums text-white">{ratesQ.data.lombardRate.toFixed(2)}%</b></span>}
-          {ratesQ.data?.depositRate != null && <span className="text-white/80">Depozytowa: <b className="tabular-nums text-white">{ratesQ.data.depositRate.toFixed(2)}%</b></span>}
-          <span className="text-white/70">Maks. odsetki ustawowe: <b className="tabular-nums text-emerald-300">{MAX_INTEREST_RATE.toFixed(2)}%</b></span>
-          {ratesQ.data?.effectiveFrom && <span className="text-xs text-white/60 ml-auto">obowiązuje od {ratesQ.data.effectiveFrom}</span>}
-        </CardContent>
-      </Card></FancyShell>
+      <FancyShell>
+        <Card className={FANCY_CARD_CLS}>
+          <CardContent className="py-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-white">
+            <div className="flex items-center gap-2 font-semibold">
+              <RefreshCw className={`h-3.5 w-3.5 ${ratesQ.isFetching ? "animate-spin" : ""}`} />
+              Stopy NBP{" "}
+              {ratesQ.data?.source === "fallback" && (
+                <span className="text-xs text-white/60">(dane offline)</span>
+              )}
+            </div>
+            <span className="text-white/80">
+              Referencyjna:{" "}
+              <b className="tabular-nums text-white">{effectiveRefRate.toFixed(2)}%</b>
+              {investorGuidance && nbpOverride != null && (
+                <span className="text-xs text-amber-300"> (ręcznie)</span>
+              )}
+            </span>
+            {ratesQ.data?.lombardRate != null && (
+              <span className="text-white/80">
+                Lombardowa:{" "}
+                <b className="tabular-nums text-white">{ratesQ.data.lombardRate.toFixed(2)}%</b>
+              </span>
+            )}
+            {ratesQ.data?.depositRate != null && (
+              <span className="text-white/80">
+                Depozytowa:{" "}
+                <b className="tabular-nums text-white">{ratesQ.data.depositRate.toFixed(2)}%</b>
+              </span>
+            )}
+            <span className="text-white/70">
+              Maks. odsetki ustawowe:{" "}
+              <b className="tabular-nums text-emerald-300">{MAX_INTEREST_RATE.toFixed(2)}%</b>
+            </span>
+            {ratesQ.data?.effectiveFrom && (
+              <span className="text-xs text-white/60 ml-auto">
+                obowiązuje od {ratesQ.data.effectiveFrom}
+              </span>
+            )}
+          </CardContent>
+        </Card>
+      </FancyShell>
 
       {/* HERO — najważniejsze liczby (fancy) */}
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(ellipse_at_top_left,_hsl(220_70%_25%),_hsl(230_60%_12%)_60%,_hsl(235_50%_8%))] p-6 md:p-8 shadow-2xl">
-        <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-[conic-gradient(from_120deg,_#a78bfa,_#22d3ee,_#34d399,_#a78bfa)] opacity-25 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[conic-gradient(from_0deg,_#22d3ee,_#a78bfa,_#f472b6,_#22d3ee)] opacity-20 blur-3xl" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-[conic-gradient(from_120deg,_#a78bfa,_#22d3ee,_#34d399,_#a78bfa)] opacity-25 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[conic-gradient(from_0deg,_#22d3ee,_#a78bfa,_#f472b6,_#22d3ee)] opacity-20 blur-3xl"
+        />
         <div className="relative">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">Najważniejsze liczby</p>
-          <h2 className="mt-1 text-2xl font-black text-white md:text-3xl">Co realnie wchodzi i wychodzi z tej pożyczki</h2>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">
+            Najważniejsze liczby
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-white md:text-3xl">
+            Co realnie wchodzi i wychodzi z tej pożyczki
+          </h2>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {/* Investor cash out */}
             <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm transition hover:bg-white/[0.09]">
               <div className="flex items-center gap-2 text-white/70">
                 <Wallet className="h-4 w-4" />
-                <span className="text-[11px] font-bold uppercase tracking-widest">Inwestor wkłada</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest">
+                  Inwestor wkłada
+                </span>
               </div>
-              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorCashOut)}</p>
-              <p className="mt-1 text-xs text-white/65">{internalOperatorMode
-                ? "gotówka z konta inwestora (wypłata dla klienta + prowizja operatora)"
-                : hideFinanceYouFee
-                  ? "gotówka z konta inwestora (kwota nominalna − prowizja potrącona z góry)"
-                  : `gotówka z konta inwestora: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} (przelotowa — klient spłaca ją w ratach, wraca do inwestora)`}</p>
+              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">
+                {formatPLN(investorCashOut)}
+              </p>
+              <p className="mt-1 text-xs text-white/65">
+                {internalOperatorMode
+                  ? "gotówka z konta inwestora (wypłata dla klienta + prowizja operatora)"
+                  : hideFinanceYouFee
+                    ? "gotówka z konta inwestora (kwota nominalna − prowizja potrącona z góry)"
+                    : `gotówka z konta inwestora: wypłata dla klienta ${formatPLN(disbursedOnHand)} + prowizja Finance You ${formatPLN(financeYouFeePln)} (przelotowa — klient spłaca ją w ratach, wraca do inwestora)`}
+              </p>
             </div>
 
             {/* Investor cash in */}
             <div className="group relative overflow-hidden rounded-2xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/15 to-cyan-400/10 p-5 backdrop-blur-sm transition hover:from-emerald-400/20 hover:to-cyan-400/15">
               <div className="flex items-center gap-2 text-emerald-200/90">
                 <TrendingUp className="h-4 w-4" />
-                <span className="text-[11px] font-bold uppercase tracking-widest">Inwestor odbiera łącznie</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest">
+                  Inwestor odbiera łącznie
+                </span>
               </div>
-              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(investorTotalIn)}</p>
+              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">
+                {formatPLN(investorTotalIn)}
+              </p>
               <p className="mt-1 text-xs text-emerald-100/80">
-                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI <b className="text-white">{investorRoiPct.toFixed(1)}%</b> ({investorRoiAnnualPct.toFixed(1)}% / rok)
+                zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI{" "}
+                <b className="text-white">{investorRoiPct.toFixed(1)}%</b> (
+                {investorRoiAnnualPct.toFixed(1)}% / rok)
               </p>
             </div>
 
@@ -642,228 +804,456 @@ export function LoanCalculator({
             <div className="group relative overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-400/15 to-rose-400/10 p-5 backdrop-blur-sm transition hover:from-amber-400/20 hover:to-rose-400/15">
               <div className="flex items-center gap-2 text-amber-200/90">
                 <HandCoins className="h-4 w-4" />
-                <span className="text-[11px] font-bold uppercase tracking-widest">Klient dostaje na rękę</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest">
+                  Klient dostaje na rękę
+                </span>
               </div>
-              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">{formatPLN(disbursedOnHand)}</p>
-              <p className="mt-1 text-xs text-amber-100/80">
-kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja inwestora <b className="text-white">{formatPLN(commissionPln)}</b>{!hideFinanceYouFee && <> − prowizja Finance You <b className="text-white">{formatPLN(financeYouFeePln)}</b> (FV od Finance You dla klienta)</>}
+              <p className="mt-3 text-3xl font-black tabular-nums text-white md:text-4xl">
+                {formatPLN(disbursedOnHand)}
               </p>
-
+              <p className="mt-1 text-xs text-amber-100/80">
+                kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja
+                inwestora <b className="text-white">{formatPLN(commissionPln)}</b>
+                {!hideFinanceYouFee && (
+                  <>
+                    {" "}
+                    − prowizja Finance You{" "}
+                    <b className="text-white">{formatPLN(financeYouFeePln)}</b> (FV od Finance You
+                    dla klienta)
+                  </>
+                )}
+              </p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs text-white/75 md:grid-cols-4">
-            <div><span className="text-white/55">Rata miesięczna</span><div className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(schedule.cappedRata)}</div></div>
-            <div><span className="text-white/55">Okres</span><div className="mt-0.5 text-base font-bold tabular-nums text-white">{months} mies.</div></div>
-            <div><span className="text-white/55">Łączna spłata</span><div className="mt-0.5 text-base font-bold tabular-nums text-white">{formatPLN(totalToRepay)}</div></div>
-            <div><span className="text-white/55">Krotność spłaty</span><div className={`mt-0.5 text-base font-bold tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : "text-white"}`}>{krotnosc.toFixed(2)}×</div></div>
+            <div>
+              <span className="text-white/55">Rata miesięczna</span>
+              <div className="mt-0.5 text-base font-bold tabular-nums text-white">
+                {formatPLN(schedule.cappedRata)}
+              </div>
+            </div>
+            <div>
+              <span className="text-white/55">Okres</span>
+              <div className="mt-0.5 text-base font-bold tabular-nums text-white">
+                {months} mies.
+              </div>
+            </div>
+            <div>
+              <span className="text-white/55">Łączna spłata</span>
+              <div className="mt-0.5 text-base font-bold tabular-nums text-white">
+                {formatPLN(totalToRepay)}
+              </div>
+            </div>
+            <div>
+              <span className="text-white/55">Krotność spłaty</span>
+              <div
+                className={`mt-0.5 text-base font-bold tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : "text-white"}`}
+              >
+                {krotnosc.toFixed(2)}×
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <FancyShell><Card className={FANCY_CARD_CLS}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white"><Calculator className="h-5 w-5" /> Parametry pożyczki</CardTitle>
-          <CardDescription className="text-white/70">Suwaki działają tak samo, jak po stronie klienta.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Kwota nominalna pożyczki {investorGuidance && <InfoTip text="Kwota brutto wpisana w umowie. Zawiera prowizję inwestora ORAZ prowizję Finance You — obie potrącane z góry. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o obie prowizje; odsetki liczone są od całej kwoty nominalnej. Klient dostaje fakturę VAT od Finance You za prowizję FY." />}</Label>
-              <NumberField value={Math.round(amount)} onCommit={(n) => setAmount(n || 0)} className="w-40" />
-            </div>
-            <Slider min={20000} max={1_000_000} step={100} value={[Math.min(1_000_000, Math.max(20000, amount))]} onValueChange={(v) => setAmount(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>20 000 zł</span><span>1 000 000 zł</span></div>
-            {investorGuidance && (
-              <Alert className="py-2">
-                <Info className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  Klient otrzymuje na rękę <b>{formatPLN(disbursedOnHand)}</b> (kwota nominalna − prowizja inwestora). Kwota nominalna umowy (brutto) jest wyższa o prowizję i koszty.
-                </AlertDescription>
-              </Alert>
-            )}
-            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty klientowi (po prowizji inwestora)</span><b className="tabular-nums">{formatPLN(disbursedOnHand)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Realny wkład gotówkowy inwestora{internalOperatorMode && " (z prowizją operatora)"}</span><b className="tabular-nums text-primary">{formatPLN(investorCashOut)}</b></div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Klient otrzymuje na rękę {investorGuidance && <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora oraz prowizja Finance You są potrącane z góry — obie kredytowane do kapitału i spłacane przez klienta w ratach." />}</Label>
-              <NumberField
-                value={Math.round(onHand)}
-                onCommit={(target) => setOnHand(Math.min(1_000_000, Math.max(1_000, target || 0)))}
-                className="w-40"
-              />
-            </div>
-            <Slider
-              min={10_000}
-              max={1_000_000}
-              step={500}
-              value={[Math.min(1_000_000, Math.max(10_000, Math.round(onHand)))]}
-              onValueChange={(v) => setOnHand(v[0])}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>10 000 zł</span>
-              <span>Kwota nominalna: <b className="tabular-nums text-foreground">{formatPLN(amount)}</b></span>
-              <span>1 000 000 zł</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Okres (miesiące)</Label>
-              <span className="text-sm tabular-nums">{months} mies.</span>
-            </div>
-            <Slider min={internalOperatorMode ? 12 : 3} max={72} step={1} value={[Math.max(internalOperatorMode ? 12 : 3, months)]} onValueChange={(v) => setMonths(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>{internalOperatorMode ? "12 mies." : "3 mies."}</span><span>72 mies.</span></div>
-            {investorGuidance && periodWarn && (
-              <Alert className="py-2 border-amber-300 bg-amber-50 text-amber-900">
-                <Info className="h-4 w-4 !text-amber-600" />
-                <AlertDescription className="text-xs">
-                  Przy okresie powyżej 24 miesięcy referencyjna prowizja MPKK przekracza 30% kwoty, a roczna efektywność spada. Rozważ krótszy okres lub odnowienie umowy po 12–24 miesiącach.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Roczne oprocentowanie (odsetki) {investorGuidance && <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />}</Label>
-              <div className="flex items-center gap-2">
-                <NumberField step="0.1" value={annualRate} onCommit={(n) => setAnnualRateTouched(n || 0)} className="w-24" />
-                <span className="text-sm">%</span>
-              </div>
-            </div>
-            <Slider min={0} max={MAX_INTEREST_RATE} step={0.1} value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]} onValueChange={(v) => setAnnualRateTouched(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>0%</span>
-              <span className={interestExceeds ? "text-destructive font-medium" : ""}>
-                limit ustawowy: {MAX_INTEREST_RATE.toFixed(2)}%
-              </span>
-              <span>{MAX_INTEREST_RATE.toFixed(2)}%</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">Prowizja dla inwestora (jednorazowa, pozaodsetkowa) {investorGuidance && <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />}</Label>
-              <div className="flex items-center gap-2">
-                <NumberField step="0.5" value={commissionPct} onCommit={(n) => setCommissionPctTouched(n || 0)} className="w-24" />
-                <span className="text-sm">% ({formatPLN(commissionPln)})</span>
-              </div>
-            </div>
-            <Slider min={0} max={30} step={0.5} value={[Math.min(30, Math.max(0, commissionPct))]} onValueChange={(v) => setCommissionPctTouched(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>0%</span>
-              {nonInterestExceeds ? (
-                <span className="text-destructive font-medium">przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}</span>
-              ) : <span />}
-              <span>30%</span>
-            </div>
-          </div>
-
-          {internalOperatorMode && (
-            <div className="space-y-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4">
+      <FancyShell>
+        <Card className={FANCY_CARD_CLS}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Calculator className="h-5 w-5" /> Parametry pożyczki
+            </CardTitle>
+            <CardDescription className="text-white/70">
+              Suwaki działają tak samo, jak po stronie klienta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5 text-white">
-                  Prowizja wewnętrzna operatora (część prowizji inwestora)
-                  <InfoTip text="Wydzielona część prowizji inwestora, która trafia do operatora prowadzącego temat. Nie jest doliczana do kosztów pożyczki — stanowi wewnętrzny podział prowizji inwestora." />
+                <Label className="flex items-center gap-1.5">
+                  Kwota nominalna pożyczki{" "}
+                  {investorGuidance && (
+                    <InfoTip text="Kwota brutto wpisana w umowie. Zawiera prowizję inwestora ORAZ prowizję Finance You — obie potrącane z góry. Klient otrzymuje na rękę kwotę nominalną pomniejszoną o obie prowizje; odsetki liczone są od całej kwoty nominalnej. Klient dostaje fakturę VAT od Finance You za prowizję FY." />
+                  )}
                 </Label>
-                <div className="flex items-center gap-2">
-                  <NumberField step="0.1" value={operatorCommissionPctClamped} onCommit={(n) => setOperatorCommissionPct(Math.min(5, Math.max(2, n || 0)))} className="w-20" />
-                  <span className="text-sm text-white">% ({formatPLN(operatorCommissionPln)})</span>
+                <NumberField
+                  value={Math.round(amount)}
+                  onCommit={(n) => setAmount(n || 0)}
+                  className="w-40"
+                />
+              </div>
+              <Slider
+                min={20000}
+                max={1_000_000}
+                step={100}
+                value={[Math.min(1_000_000, Math.max(20000, amount))]}
+                onValueChange={(v) => setAmount(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>20 000 zł</span>
+                <span>1 000 000 zł</span>
+              </div>
+              {investorGuidance && (
+                <Alert className="py-2">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Klient otrzymuje na rękę <b>{formatPLN(disbursedOnHand)}</b> (kwota nominalna −
+                    prowizja inwestora). Kwota nominalna umowy (brutto) jest wyższa o prowizję i
+                    koszty.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Do wypłaty klientowi (po prowizji inwestora)
+                  </span>
+                  <b className="tabular-nums">{formatPLN(disbursedOnHand)}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Realny wkład gotówkowy inwestora
+                    {internalOperatorMode && " (z prowizją operatora)"}
+                  </span>
+                  <b className="tabular-nums text-primary">{formatPLN(investorCashOut)}</b>
                 </div>
               </div>
-              <Slider min={2} max={5} step={0.1} value={[operatorCommissionPctClamped]} onValueChange={(v) => setOperatorCommissionPct(v[0])} />
-              <div className="flex justify-between text-xs text-white/70"><span>2%</span><span>5%</span></div>
-              <div className="grid gap-1.5 border-t border-white/15 pt-2 text-sm sm:grid-cols-2">
-                <div className="flex justify-between text-white/80"><span>Prowizja operatora</span><b className="tabular-nums text-amber-200">{formatPLN(operatorCommissionPln)}</b></div>
-                <div className="flex justify-between text-white/80"><span>Prowizja netto dla inwestora</span><b className="tabular-nums text-emerald-200">{formatPLN(investorNetCommissionPln)}</b></div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5">
+                  Klient otrzymuje na rękę{" "}
+                  {investorGuidance && (
+                    <InfoTip text="Kwota faktycznie wypłacana klientowi (to, o co wnioskuje). Wartość NADRZĘDNA — wpisana ręcznie pozostaje stała, a kwota nominalna pożyczki dobierana jest automatycznie. Prowizja inwestora oraz prowizja Finance You są potrącane z góry — obie kredytowane do kapitału i spłacane przez klienta w ratach." />
+                  )}
+                </Label>
+                <NumberField
+                  value={Math.round(onHand)}
+                  onCommit={(target) =>
+                    setOnHand(Math.min(1_000_000, Math.max(1_000, target || 0)))
+                  }
+                  className="w-40"
+                />
               </div>
-              {operatorCommissionPln > commissionPln && (
-                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
-                  <AlertTriangle className="h-4 w-4" />
+              <Slider
+                min={10_000}
+                max={1_000_000}
+                step={500}
+                value={[Math.min(1_000_000, Math.max(10_000, Math.round(onHand)))]}
+                onValueChange={(v) => setOnHand(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>10 000 zł</span>
+                <span>
+                  Kwota nominalna:{" "}
+                  <b className="tabular-nums text-foreground">{formatPLN(amount)}</b>
+                </span>
+                <span>1 000 000 zł</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Okres (miesiące)</Label>
+                <span className="text-sm tabular-nums">{months} mies.</span>
+              </div>
+              <Slider
+                min={internalOperatorMode ? 12 : 3}
+                max={72}
+                step={1}
+                value={[Math.max(internalOperatorMode ? 12 : 3, months)]}
+                onValueChange={(v) => setMonths(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{internalOperatorMode ? "12 mies." : "3 mies."}</span>
+                <span>72 mies.</span>
+              </div>
+              {investorGuidance && periodWarn && (
+                <Alert className="py-2 border-amber-300 bg-amber-50 text-amber-900">
+                  <Info className="h-4 w-4 !text-amber-600" />
                   <AlertDescription className="text-xs">
-                    Prowizja operatora przekracza prowizję inwestora — zwiększ prowizję inwestora lub zmniejsz udział operatora.
-                  </AlertDescription>
-                </Alert>
-              )}
-              {internalCashOutExceeds && (
-                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Wkład inwestora <b>{formatPLN(investorCashOut)}</b> przekracza limit <b>100 000 zł</b> dla oferty wewnętrznej. Zmniejsz kwotę pożyczki lub zwiększ prowizję inwestora.
-                  </AlertDescription>
-                </Alert>
-              )}
-              {internalYieldTooLow && (
-                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Realny roczny zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> jest poniżej minimum <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora lub skróć okres.
-                  </AlertDescription>
-                </Alert>
-              )}
-              {internalPeriodTooShort && (
-                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Minimalny okres pożyczki dla oferty wewnętrznej to <b>12 miesięcy</b>.
+                    Przy okresie powyżej 24 miesięcy referencyjna prowizja MPKK przekracza 30%
+                    kwoty, a roczna efektywność spada. Rozważ krótszy okres lub odnowienie umowy po
+                    12–24 miesiącach.
                   </AlertDescription>
                 </Alert>
               )}
             </div>
-          )}
 
-          {!hideFinanceYouFee && (
-            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Prowizja Finance You ({financeYouFeePct}%, koszt klienta — FV od Finance You){investorGuidance && <InfoTip text="Wynagrodzenie operatora. Klient dostaje na nią fakturę VAT od Finance You. Prowizja jest potrącana z kwoty udzielonej pożyczki — powiększa kapitał (odsetki liczą się także od niej), klient spłaca ją w ratach, a przez to wraca do inwestora. Podnosi wkład gotówkowy inwestora na starcie, ale jest neutralna dla jego zysku." />}</span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Kapitał pożyczki (od którego liczone są odsetki)</span><b className="tabular-nums">{formatPLN(grossPrincipal)}</b></div>
-            </div>
-          )}
-
-
-
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Maksymalna rata dla klienta</Label>
-              <NumberField value={maxPayment} onCommit={(n) => setMaxPayment(n || 0)} className="w-40" />
-            </div>
-            <Slider min={500} max={50000} step={100} value={[Math.min(50000, Math.max(500, maxPayment))]} onValueChange={(v) => setMaxPayment(v[0])} />
-            <div className="flex justify-between text-xs text-muted-foreground"><span>500 zł</span><span>50 000 zł</span></div>
-            <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata nominalna (annuitet){investorGuidance && <InfoTip text="Pełna rata annuitetowa wyliczona od kwoty nominalnej pożyczki i oprocentowania." />}</span><b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b></div>
-              <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1">Rata balonowa (ostatnia nadwyżka){investorGuidance && <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />}</span><b className="tabular-nums">{formatPLN(schedule.balloon)}</b></div>
-            </div>
-            {schedule.balloon > 0 && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie balonowej na koniec okresu.</AlertDescription>
+            {freeTierMode && (
+              <Alert className="py-2">
+                <AlertDescription className="text-xs">
+                  <b>Konto darmowe inwestora:</b> oprocentowanie stałe w maksymalnej ustawowej
+                  wysokości — 2 × (stopa referencyjna NBP + 3,5 p.p.), aktualnie{" "}
+                  <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (liczone na bieżąco z danych NBP). Inwestor
+                  nie pobiera prowizji, a prowizja Finance You jest 2× wyższa niż w planie pełnym.
+                </AlertDescription>
               </Alert>
             )}
-          </div>
-        </CardContent>
-      </Card></FancyShell>
 
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5">
+                  Roczne oprocentowanie (odsetki){" "}
+                  {investorGuidance && (
+                    <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />
+                  )}
+                </Label>
+                <div className="flex items-center gap-2">
+                  {freeTierMode ? (
+                    <b className="tabular-nums">{annualRate.toFixed(2)}</b>
+                  ) : (
+                    <NumberField
+                      step="0.1"
+                      value={annualRate}
+                      onCommit={(n) => setAnnualRateTouched(n || 0)}
+                      className="w-24"
+                    />
+                  )}
+                  <span className="text-sm">%</span>
+                </div>
+              </div>
+              <Slider
+                disabled={freeTierMode}
+                min={0}
+                max={MAX_INTEREST_RATE}
+                step={0.1}
+                value={[Math.min(MAX_INTEREST_RATE, Math.max(0, annualRate))]}
+                onValueChange={(v) => !freeTierMode && setAnnualRateTouched(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0%</span>
+                <span className={interestExceeds ? "text-destructive font-medium" : ""}>
+                  {freeTierMode
+                    ? `konto darmowe: oprocentowanie stałe = odsetki maksymalne (${MAX_INTEREST_RATE.toFixed(2)}%)`
+                    : `limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
+                </span>
+                <span>{MAX_INTEREST_RATE.toFixed(2)}%</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5">
+                  Prowizja dla inwestora (jednorazowa, pozaodsetkowa){" "}
+                  {investorGuidance && (
+                    <InfoTip text="Jedyny koszt pozaodsetkowy. Ustawiana ręcznie suwakiem; potrącana z góry przy uruchomieniu." />
+                  )}
+                </Label>
+                <div className="flex items-center gap-2">
+                  {freeTierMode ? (
+                    <b className="tabular-nums">0</b>
+                  ) : (
+                    <NumberField
+                      step="0.5"
+                      value={commissionPct}
+                      onCommit={(n) => setCommissionPctTouched(n || 0)}
+                      className="w-24"
+                    />
+                  )}
+                  <span className="text-sm">% ({formatPLN(commissionPln)})</span>
+                </div>
+              </div>
+              <Slider
+                disabled={freeTierMode}
+                min={0}
+                max={30}
+                step={0.5}
+                value={[Math.min(30, Math.max(0, commissionPct))]}
+                onValueChange={(v) => !freeTierMode && setCommissionPctTouched(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0%</span>
+                {freeTierMode ? (
+                  <span>konto darmowe: inwestor nie pobiera prowizji</span>
+                ) : nonInterestExceeds ? (
+                  <span className="text-destructive font-medium">
+                    przekroczono limit MPKK (art. 36a UoKK): {formatPLN(maxNonInterest)}
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <span>30%</span>
+              </div>
+            </div>
+
+            {internalOperatorMode && (
+              <div className="space-y-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5 text-white">
+                    Prowizja wewnętrzna operatora (część prowizji inwestora)
+                    <InfoTip text="Wydzielona część prowizji inwestora, która trafia do operatora prowadzącego temat. Nie jest doliczana do kosztów pożyczki — stanowi wewnętrzny podział prowizji inwestora." />
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <NumberField
+                      step="0.1"
+                      value={operatorCommissionPctClamped}
+                      onCommit={(n) => setOperatorCommissionPct(Math.min(5, Math.max(2, n || 0)))}
+                      className="w-20"
+                    />
+                    <span className="text-sm text-white">
+                      % ({formatPLN(operatorCommissionPln)})
+                    </span>
+                  </div>
+                </div>
+                <Slider
+                  min={2}
+                  max={5}
+                  step={0.1}
+                  value={[operatorCommissionPctClamped]}
+                  onValueChange={(v) => setOperatorCommissionPct(v[0])}
+                />
+                <div className="flex justify-between text-xs text-white/70">
+                  <span>2%</span>
+                  <span>5%</span>
+                </div>
+                <div className="grid gap-1.5 border-t border-white/15 pt-2 text-sm sm:grid-cols-2">
+                  <div className="flex justify-between text-white/80">
+                    <span>Prowizja operatora</span>
+                    <b className="tabular-nums text-amber-200">
+                      {formatPLN(operatorCommissionPln)}
+                    </b>
+                  </div>
+                  <div className="flex justify-between text-white/80">
+                    <span>Prowizja netto dla inwestora</span>
+                    <b className="tabular-nums text-emerald-200">
+                      {formatPLN(investorNetCommissionPln)}
+                    </b>
+                  </div>
+                </div>
+                {operatorCommissionPln > commissionPln && (
+                  <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Prowizja operatora przekracza prowizję inwestora — zwiększ prowizję inwestora
+                      lub zmniejsz udział operatora.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {internalCashOutExceeds && (
+                  <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Wkład inwestora <b>{formatPLN(investorCashOut)}</b> przekracza limit{" "}
+                      <b>100 000 zł</b> dla oferty wewnętrznej. Zmniejsz kwotę pożyczki lub zwiększ
+                      prowizję inwestora.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {internalYieldTooLow && (
+                  <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Realny roczny zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> jest
+                      poniżej minimum <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora
+                      lub skróć okres.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {internalPeriodTooShort && (
+                  <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      Minimalny okres pożyczki dla oferty wewnętrznej to <b>12 miesięcy</b>.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {!hideFinanceYouFee && (
+              <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    Prowizja Finance You ({financeYouFeePct}%, koszt klienta — FV od Finance You)
+                    {investorGuidance && (
+                      <InfoTip text="Wynagrodzenie operatora. Klient dostaje na nią fakturę VAT od Finance You. Prowizja jest potrącana z kwoty udzielonej pożyczki — powiększa kapitał (odsetki liczą się także od niej), klient spłaca ją w ratach, a przez to wraca do inwestora. Podnosi wkład gotówkowy inwestora na starcie, ale jest neutralna dla jego zysku." />
+                    )}
+                  </span>
+                  <b className="tabular-nums">{formatPLN(financeYouFeePln)}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Kapitał pożyczki (od którego liczone są odsetki)
+                  </span>
+                  <b className="tabular-nums">{formatPLN(grossPrincipal)}</b>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Maksymalna rata dla klienta</Label>
+                <NumberField
+                  value={maxPayment}
+                  onCommit={(n) => setMaxPayment(n || 0)}
+                  className="w-40"
+                />
+              </div>
+              <Slider
+                min={500}
+                max={50000}
+                step={100}
+                value={[Math.min(50000, Math.max(500, maxPayment))]}
+                onValueChange={(v) => setMaxPayment(v[0])}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>500 zł</span>
+                <span>50 000 zł</span>
+              </div>
+              <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    Rata nominalna (annuitet)
+                    {investorGuidance && (
+                      <InfoTip text="Pełna rata annuitetowa wyliczona od kwoty nominalnej pożyczki i oprocentowania." />
+                    )}
+                  </span>
+                  <b className="tabular-nums">{formatPLN(schedule.nominalRata)}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    Rata balonowa (ostatnia nadwyżka)
+                    {investorGuidance && (
+                      <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />
+                    )}
+                  </span>
+                  <b className="tabular-nums">{formatPLN(schedule.balloon)}</b>
+                </div>
+              </div>
+              {schedule.balloon > 0 && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Część zobowiązania przekraczająca maksymalną ratę zostanie rozliczona w racie
+                    balonowej na koniec okresu.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </FancyShell>
 
       {nonInterestExceeds && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Upewnij się, że pożyczka jest w modelu B2B</AlertTitle>
           <AlertDescription className="pt-1">
-            Koszty pozaodsetkowe <b>{formatPLN(nonInterestTotal)}</b> przekraczają limit MPKK <b>{formatPLN(maxNonInterest)}</b> (art. 36a UoKK).
-            Limit ten dotyczy <b>kredytu konsumenckiego</b> — przy umowie z konsumentem nadwyżka będzie nienależna.
-            Aby kontynuować z tą prowizją, pożyczkobiorca musi być przedsiębiorcą, a pożyczka udzielona w <b>modelu B2B</b> (na cele związane z prowadzoną działalnością gospodarczą).
+            Koszty pozaodsetkowe <b>{formatPLN(nonInterestTotal)}</b> przekraczają limit MPKK{" "}
+            <b>{formatPLN(maxNonInterest)}</b> (art. 36a UoKK). Limit ten dotyczy{" "}
+            <b>kredytu konsumenckiego</b> — przy umowie z konsumentem nadwyżka będzie nienależna.
+            Aby kontynuować z tą prowizją, pożyczkobiorca musi być przedsiębiorcą, a pożyczka
+            udzielona w <b>modelu B2B</b> (na cele związane z prowadzoną działalnością gospodarczą).
           </AlertDescription>
         </Alert>
       )}
 
       {/* STATUSY — 3 niezależne składniki: Odsetki / MPKK / Krotność (fancy) */}
       {(() => {
-        const baseCls = "border-2 rounded-xl p-4 [&_b]:text-white [&_b]:font-bold [&>svg]:!top-4 [&>svg]:!left-4 [&>svg+div]:!pl-7 [&_[data-slot=alert-title]]:!text-base [&_[data-slot=alert-title]]:!font-bold [&_[data-slot=alert-title]]:!mb-1";
+        const baseCls =
+          "border-2 rounded-xl p-4 [&_b]:text-white [&_b]:font-bold [&>svg]:!top-4 [&>svg]:!left-4 [&>svg+div]:!pl-7 [&_[data-slot=alert-title]]:!text-base [&_[data-slot=alert-title]]:!font-bold [&_[data-slot=alert-title]]:!mb-1";
         const okCls = `${baseCls} border-emerald-400/70 bg-emerald-950/80 text-emerald-50 shadow-[0_0_40px_-12px_rgba(16,185,129,0.7)] [&_[data-slot=alert-description]]:!text-emerald-50/95`;
         const warnCls = `${baseCls} border-amber-400/70 bg-amber-950/80 text-amber-50 shadow-[0_0_40px_-12px_rgba(245,158,11,0.7)] [&_[data-slot=alert-description]]:!text-amber-50/95`;
         const dangerCls = `${baseCls} border-rose-400/80 bg-rose-950/80 text-rose-50 shadow-[0_0_40px_-10px_rgba(244,63,94,0.8)] [&_[data-slot=alert-description]]:!text-rose-50/95`;
@@ -875,8 +1265,10 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
                 <AlertTriangle className="h-4 w-4 !text-rose-300" />
                 <AlertTitle>Odsetki — przekroczony limit ustawowy</AlertTitle>
                 <AlertDescription className="pt-1 text-rose-100/90">
-                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (<b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2 × (stopa ref. NBP {effectiveRefRate.toFixed(2)}% + 3,5 p.p.), art. 359 §2¹ KC).
-                  Pożyczkobiorca może żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna.
+                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (
+                  <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2 × (stopa ref. NBP{" "}
+                  {effectiveRefRate.toFixed(2)}% + 3,5 p.p.), art. 359 §2¹ KC). Pożyczkobiorca może
+                  żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -884,19 +1276,28 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
                 <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
                 <AlertTitle>Odsetki w limicie ustawowym</AlertTitle>
                 <AlertDescription className="text-sm text-emerald-100/90">
-                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> ≤ limit <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (art. 359 §2¹ KC — odsetki maksymalne).
+                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> ≤ limit{" "}
+                  <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (art. 359 §2¹ KC — odsetki maksymalne).
                 </AlertDescription>
               </Alert>
             )}
 
             {/* 2) MPKK — zasady współżycia społecznego (art. 58 §2 KC) / wyzysk (art. 388 KC) */}
-            {investorGuidance && (
-              nonInterestExceeds || commissionOver45 ? (
+            {investorGuidance &&
+              (nonInterestExceeds || commissionOver45 ? (
                 <Alert className={dangerCls}>
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
                   <AlertTitle>MPKK — silne ryzyko zasad współżycia społecznego</AlertTitle>
                   <AlertDescription className="text-sm text-rose-100/90">
-                    Prowizja <b>{formatPLN(commissionPln)}</b> {commissionOver45 ? "przekracza 45% kwoty nominalnej — absolutne maksimum referencyjne MPKK" : <>przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b></>}. Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
+                    Prowizja <b>{formatPLN(commissionPln)}</b>{" "}
+                    {commissionOver45 ? (
+                      "przekracza 45% kwoty nominalnej — absolutne maksimum referencyjne MPKK"
+                    ) : (
+                      <>
+                        przekracza limit MPKK <b>{formatPLN(maxNonInterest)}</b>
+                      </>
+                    )}
+                    . Ryzyko nieważności postanowień (art. 58 §2 KC) i wyzysku (art. 388 KC).
                   </AlertDescription>
                 </Alert>
               ) : commissionPln > maxNonInterest + 1e-9 ? (
@@ -904,7 +1305,9 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
                   <AlertTriangle className="h-4 w-4 !text-amber-300" />
                   <AlertTitle>MPKK — prowizja powyżej referencyjnego limitu</AlertTitle>
                   <AlertDescription className="text-sm text-amber-100/90">
-                    Prowizja <b>{formatPLN(commissionPln)}</b> przekracza referencyjny limit MPKK <b>{formatPLN(maxNonInterest)}</b>. Sądy stosują MPKK przy ocenie zasad współżycia społecznego (art. 58 §2 KC) i wyzysku (art. 388 KC).
+                    Prowizja <b>{formatPLN(commissionPln)}</b> przekracza referencyjny limit MPKK{" "}
+                    <b>{formatPLN(maxNonInterest)}</b>. Sądy stosują MPKK przy ocenie zasad
+                    współżycia społecznego (art. 58 §2 KC) i wyzysku (art. 388 KC).
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -912,20 +1315,24 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
                   <AlertTitle>MPKK w limicie — zgodne z zasadami współżycia społecznego</AlertTitle>
                   <AlertDescription className="text-sm text-emerald-100/90">
-                    Koszty pozaodsetkowe <b>{formatPLN(commissionPln)}</b> ≤ <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
+                    Koszty pozaodsetkowe <b>{formatPLN(commissionPln)}</b> ≤{" "}
+                    <b>{formatPLN(maxNonInterest)}</b> (art. 58 §2 KC — referencyjny limit MPKK).
                   </AlertDescription>
                 </Alert>
-              )
-            )}
+              ))}
 
             {/* 3) Krotność spłaty — lichwa (art. 304 KK) */}
-            {investorGuidance && (
-              krotnoscDanger ? (
+            {investorGuidance &&
+              (krotnoscDanger ? (
                 <Alert className={dangerCls}>
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
-                  <AlertTitle>Krotność {krotnosc.toFixed(2)}× — ryzyko lichwy (art. 304 KK)</AlertTitle>
+                  <AlertTitle>
+                    Krotność {krotnosc.toFixed(2)}× — ryzyko lichwy (art. 304 KK)
+                  </AlertTitle>
                   <AlertDescription className="text-sm text-rose-100/90">
-                    Pożyczkobiorca oddaje <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną na rękę. Powyżej 2,0× rośnie ryzyko zakwalifikowania jako lichwa (art. 304 KK — kara do 3 lat) i wyzysk (art. 388 KC).
+                    Pożyczkobiorca oddaje <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną na rękę.
+                    Powyżej 2,0× rośnie ryzyko zakwalifikowania jako lichwa (art. 304 KK — kara do 3
+                    lat) i wyzysk (art. 388 KC).
                   </AlertDescription>
                 </Alert>
               ) : krotnoscWarn ? (
@@ -933,240 +1340,509 @@ kwota nominalna <b className="text-white">{formatPLN(amount)}</b> − prowizja i
                   <AlertTriangle className="h-4 w-4 !text-amber-300" />
                   <AlertTitle>Krotność {krotnosc.toFixed(2)}× — strefa ostrzegawcza</AlertTitle>
                   <AlertDescription className="text-sm text-amber-100/90">
-                    Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę, którą otrzymał. Powyżej 2,0× istnieje ryzyko zakwalifikowania jako lichwa (art. 304 KK).
+                    Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę, którą otrzymał.
+                    Powyżej 2,0× istnieje ryzyko zakwalifikowania jako lichwa (art. 304 KK).
                   </AlertDescription>
                 </Alert>
               ) : (
                 <Alert className={okCls}>
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
-                  <AlertTitle>Krotność {krotnosc.toFixed(2)}× — bezpieczna (brak ryzyka lichwy)</AlertTitle>
+                  <AlertTitle>
+                    Krotność {krotnosc.toFixed(2)}× — bezpieczna (brak ryzyka lichwy)
+                  </AlertTitle>
                   <AlertDescription className="text-sm text-emerald-100/90">
-                    Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną — poniżej progu 2,0× (art. 304 KK).
+                    Pożyczkobiorca spłaca <b>{krotnosc.toFixed(2)}×</b> kwotę otrzymaną — poniżej
+                    progu 2,0× (art. 304 KK).
                   </AlertDescription>
                 </Alert>
-              )
-            )}
+              ))}
           </div>
         );
       })()}
 
+      <FancyShell>
+        <Card
+          className={`${FANCY_CARD_CLS} ${investorGuidance && krotnoscDanger ? "ring-2 ring-rose-400/60" : ""}`}
+        >
+          <CardHeader>
+            <CardTitle className="text-white">Podsumowanie</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
+            <div className="flex justify-between">
+              <span>Kwota nominalna (kapitał)</span>
+              <b className="tabular-nums">{formatPLN(amount)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>Do wypłaty klientowi na rękę</span>
+              <b className="tabular-nums text-emerald-300">{formatPLN(disbursedOnHand)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>Odsetki razem</span>
+              <b className="tabular-nums">{formatPLN(schedule.totalOds)}</b>
+            </div>
 
-      <FancyShell><Card className={`${FANCY_CARD_CLS} ${investorGuidance && krotnoscDanger ? "ring-2 ring-rose-400/60" : ""}`}>
-        <CardHeader>
-          <CardTitle className="text-white">Podsumowanie</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 text-sm">
-          <div className="flex justify-between"><span>Kwota nominalna (kapitał)</span><b className="tabular-nums">{formatPLN(amount)}</b></div>
-          <div className="flex justify-between"><span>Do wypłaty klientowi na rękę</span><b className="tabular-nums text-emerald-300">{formatPLN(disbursedOnHand)}</b></div>
-          <div className="flex justify-between"><span>Odsetki razem</span><b className="tabular-nums">{formatPLN(schedule.totalOds)}</b></div>
+            <div className="flex justify-between">
+              <span>
+                Prowizja dla inwestora{" "}
+                <span className="text-xs text-white/60">(koszt pozaodsetkowy)</span>
+              </span>
+              <b className="tabular-nums">{formatPLN(commissionPln)}</b>
+            </div>
+            {internalOperatorMode && (
+              <>
+                <div className="flex justify-between">
+                  <span className="pl-3">
+                    ↳ prowizja operatora ({operatorCommissionPctClamped.toFixed(1)}%)
+                  </span>
+                  <b className="tabular-nums text-amber-200">{formatPLN(operatorCommissionPln)}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="pl-3">↳ prowizja netto inwestora</span>
+                  <b className="tabular-nums text-emerald-200">
+                    {formatPLN(investorNetCommissionPln)}
+                  </b>
+                </div>
+              </>
+            )}
+            {!hideFinanceYouFee && (
+              <div className="flex justify-between">
+                <span>
+                  Prowizja Finance You{" "}
+                  <span className="text-xs text-white/60">
+                    (koszt klienta, FV od Finance You — kredytowana do kapitału)
+                  </span>
+                </span>
+                <b className="tabular-nums">{formatPLN(financeYouFeePln)}</b>
+              </div>
+            )}
 
-          <div className="flex justify-between"><span>Prowizja dla inwestora <span className="text-xs text-white/60">(koszt pozaodsetkowy)</span></span><b className="tabular-nums">{formatPLN(commissionPln)}</b></div>
-          {internalOperatorMode && (
-            <>
-              <div className="flex justify-between"><span className="pl-3">↳ prowizja operatora ({operatorCommissionPctClamped.toFixed(1)}%)</span><b className="tabular-nums text-amber-200">{formatPLN(operatorCommissionPln)}</b></div>
-              <div className="flex justify-between"><span className="pl-3">↳ prowizja netto inwestora</span><b className="tabular-nums text-emerald-200">{formatPLN(investorNetCommissionPln)}</b></div>
-            </>
-          )}
-          {!hideFinanceYouFee && (
-            <div className="flex justify-between"><span>Prowizja Finance You <span className="text-xs text-white/60">(koszt klienta, FV od Finance You — kredytowana do kapitału)</span></span><b className="tabular-nums">{formatPLN(financeYouFeePln)}</b></div>
-          )}
-
-          {investorGuidance && (
-            <div className="flex justify-between"><span className="flex items-center gap-1">Krotność spłaty <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę (łączna spłata ÷ kwota na rękę). Prowizje inwestora i Finance You są potrącane z góry z kwoty pożyczki i klient spłaca je w ratach — dlatego podnoszą krotność." /></span><b className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}>{krotnosc.toFixed(2)}×</b></div>
-          )}
-          <div className="flex justify-between"><span>Całkowity koszt pożyczki <span className="text-xs text-white/60">(odsetki + prowizja inwestora{!hideFinanceYouFee && " + prowizja FY"})</span></span><b className="tabular-nums">{formatPLN(totalCost)}</b></div>
-          <div className="flex justify-between"><span>Wkład gotówkowy inwestora <span className="text-xs text-white/60">{hideFinanceYouFee ? "" : "(na rękę dla klienta + prowizja FY do Finance You)"}</span></span><b className="tabular-nums">{formatPLN(investorCashOut)}</b></div>
-          <div className="flex justify-between"><span>Zysk inwestora <span className="text-xs text-white/60">(odsetki + prowizja inwestora netto)</span></span><b className="tabular-nums text-emerald-300">{formatPLN(investorProfit)}</b></div>
-          <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2"><span>Łączna kwota do spłaty (raty z harmonogramu)</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
-        </CardContent>
-      </Card></FancyShell>
-
+            {investorGuidance && (
+              <div className="flex justify-between">
+                <span className="flex items-center gap-1">
+                  Krotność spłaty{" "}
+                  <InfoTip text="Ile razy pożyczkobiorca oddaje więcej niż otrzymał na rękę (łączna spłata ÷ kwota na rękę). Prowizje inwestora i Finance You są potrącane z góry z kwoty pożyczki i klient spłaca je w ratach — dlatego podnoszą krotność." />
+                </span>
+                <b
+                  className={`tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}
+                >
+                  {krotnosc.toFixed(2)}×
+                </b>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>
+                Całkowity koszt pożyczki{" "}
+                <span className="text-xs text-white/60">
+                  (odsetki + prowizja inwestora{!hideFinanceYouFee && " + prowizja FY"})
+                </span>
+              </span>
+              <b className="tabular-nums">{formatPLN(totalCost)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>
+                Wkład gotówkowy inwestora{" "}
+                <span className="text-xs text-white/60">
+                  {hideFinanceYouFee ? "" : "(na rękę dla klienta + prowizja FY do Finance You)"}
+                </span>
+              </span>
+              <b className="tabular-nums">{formatPLN(investorCashOut)}</b>
+            </div>
+            <div className="flex justify-between">
+              <span>
+                Zysk inwestora{" "}
+                <span className="text-xs text-white/60">(odsetki + prowizja inwestora netto)</span>
+              </span>
+              <b className="tabular-nums text-emerald-300">{formatPLN(investorProfit)}</b>
+            </div>
+            <div className="flex justify-between md:col-span-2 border-t border-white/15 pt-2">
+              <span>Łączna kwota do spłaty (raty z harmonogramu)</span>
+              <b className="tabular-nums">{formatPLN(totalToRepay)}</b>
+            </div>
+          </CardContent>
+        </Card>
+      </FancyShell>
 
       {investorGuidance && schedule.rows.length > 0 && (
-        <FancyShell><Card className={FANCY_CARD_CLS}>
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2"><Scale className="h-4 w-4" /> Proponowane zabezpieczenia</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">Rodzaj nieruchomości (zabezpieczenie) <InfoTip text="Dla mieszkania i domu obowiązuje próg z art. 952¹ § 2 KPC: wierzyciel może wyznaczyć licytację dopiero, gdy należność główna wynosi co najmniej 5% (1/20) sumy oszacowania." /></Label>
-              <Select value={propertyType} onValueChange={setPropertyType}>
-                <SelectTrigger className="w-full bg-white text-slate-900"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(propertyTypeLabels).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">Wartość nieruchomości (suma oszacowania) <InfoTip text="Szacunkowa wartość rynkowa przyjmowana jako suma oszacowania w egzekucji. Od niej liczone są ceny wywołania licytacji (3/4 i 2/3) oraz próg 5% dla mieszkań i domów. Zostaw 0, aby pominąć analizę zabezpieczenia." /></Label>
-              <NumberField value={propertyValue} onCommit={(n) => setPropertyValue(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
-              <p className="text-xs text-white/60">0 = pomiń analizę zabezpieczenia.</p>
-            </div>
-          </div>
-
-          {propertyValue > 0 && (
-            <>
-              <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-                <div className="flex justify-between"><span className="text-white/70">LTV (kwota nominalna / wartość)</span><b className="tabular-nums">{ltvPct.toFixed(1)}%</b></div>
-                <div className="flex justify-between"><span className="text-white/70">Próg 5% licytacji (art. 952¹ § 2 KPC)</span><b className="tabular-nums">{auctionBlock.applicable ? formatPLN(auctionBlock.thresholdPln ?? 0) : "nie dotyczy"}</b></div>
-                <div className="flex justify-between"><span className="text-white/70">I licytacja — cena wywołania (3/4)</span><b className="tabular-nums">{formatPLN(firstAuctionPln)}</b></div>
-                <div className="flex justify-between"><span className="text-white/70">Wartość „po komorniku" (2/3 — II licytacja / przejęcie)</span><b className="tabular-nums">{formatPLN(secondAuctionPln)}</b></div>
-                <div className="flex justify-between sm:col-span-2 border-t border-white/15 pt-1.5"><span className="text-white/70">Pokrycie łącznej należności ({formatPLN(totalToRepay)}) wartością „po komorniku"</span><b className={`tabular-nums ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}>{collateralCoveragePct.toFixed(0)}%</b></div>
+        <FancyShell>
+          <Card className={FANCY_CARD_CLS}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Scale className="h-4 w-4" /> Proponowane zabezpieczenia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    Rodzaj nieruchomości (zabezpieczenie){" "}
+                    <InfoTip text="Dla mieszkania i domu obowiązuje próg z art. 952¹ § 2 KPC: wierzyciel może wyznaczyć licytację dopiero, gdy należność główna wynosi co najmniej 5% (1/20) sumy oszacowania." />
+                  </Label>
+                  <Select value={propertyType} onValueChange={setPropertyType}>
+                    <SelectTrigger className="w-full bg-white text-slate-900">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(propertyTypeLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    Wartość nieruchomości (suma oszacowania){" "}
+                    <InfoTip text="Szacunkowa wartość rynkowa przyjmowana jako suma oszacowania w egzekucji. Od niej liczone są ceny wywołania licytacji (3/4 i 2/3) oraz próg 5% dla mieszkań i domów. Zostaw 0, aby pominąć analizę zabezpieczenia." />
+                  </Label>
+                  <NumberField
+                    value={propertyValue}
+                    onCommit={(n) => setPropertyValue(Math.max(0, Math.round(n || 0)))}
+                    className="w-full bg-white text-slate-900"
+                  />
+                  <p className="text-xs text-white/60">0 = pomiń analizę zabezpieczenia.</p>
+                </div>
               </div>
 
-              {auctionBlock.blocked && (
-                <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
-                  <ShieldAlert className="h-4 w-4" />
-                  <AlertTitle>Możliwa blokada licytacji — kwota poniżej 5% wartości (art. 952¹ § 2 KPC)</AlertTitle>
-                  <AlertDescription className="text-xs">{auctionBlock.message}</AlertDescription>
-                </Alert>
+              {propertyValue > 0 && (
+                <>
+                  <div className="rounded-md border border-white/15 bg-white/[0.05] p-3 text-sm grid gap-1.5 sm:grid-cols-2">
+                    <div className="flex justify-between">
+                      <span className="text-white/70">LTV (kwota nominalna / wartość)</span>
+                      <b className="tabular-nums">{ltvPct.toFixed(1)}%</b>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Próg 5% licytacji (art. 952¹ § 2 KPC)</span>
+                      <b className="tabular-nums">
+                        {auctionBlock.applicable
+                          ? formatPLN(auctionBlock.thresholdPln ?? 0)
+                          : "nie dotyczy"}
+                      </b>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/70">I licytacja — cena wywołania (3/4)</span>
+                      <b className="tabular-nums">{formatPLN(firstAuctionPln)}</b>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/70">
+                        Wartość „po komorniku" (2/3 — II licytacja / przejęcie)
+                      </span>
+                      <b className="tabular-nums">{formatPLN(secondAuctionPln)}</b>
+                    </div>
+                    <div className="flex justify-between sm:col-span-2 border-t border-white/15 pt-1.5">
+                      <span className="text-white/70">
+                        Pokrycie łącznej należności ({formatPLN(totalToRepay)}) wartością „po
+                        komorniku"
+                      </span>
+                      <b
+                        className={`tabular-nums ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}
+                      >
+                        {collateralCoveragePct.toFixed(0)}%
+                      </b>
+                    </div>
+                  </div>
+
+                  {auctionBlock.blocked && (
+                    <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
+                      <ShieldAlert className="h-4 w-4" />
+                      <AlertTitle>
+                        Możliwa blokada licytacji — kwota poniżej 5% wartości (art. 952¹ § 2 KPC)
+                      </AlertTitle>
+                      <AlertDescription className="text-xs">
+                        {auctionBlock.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {collateralShortfall && (
+                    <Alert className="py-2 border-amber-400/60 bg-amber-950/60 text-amber-50">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Wartość „po komorniku" ({formatPLN(secondAuctionPln)} = 2/3 sumy
+                        oszacowania) nie pokrywa łącznej należności {formatPLN(totalToRepay)}. W
+                        razie egzekucji odzysk z samej nieruchomości może być niepełny — rozważ
+                        niższą kwotę pożyczki, krótszy okres lub dodatkowe zabezpieczenie.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
               )}
-              {collateralShortfall && (
-                <Alert className="py-2 border-amber-400/60 bg-amber-950/60 text-amber-50">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Wartość „po komorniku" ({formatPLN(secondAuctionPln)} = 2/3 sumy oszacowania) nie pokrywa łącznej należności {formatPLN(totalToRepay)}.
-                    W razie egzekucji odzysk z samej nieruchomości może być niepełny — rozważ niższą kwotę pożyczki, krótszy okres lub dodatkowe zabezpieczenie.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </>
-          )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">Proponowana kwota hipoteki <InfoTip text="Kwota wpisu hipoteki umownej. Domyślnie dwukrotność sumy wszystkich należności inwestora (łącznej kwoty do spłaty). Wpisz własną wartość, aby nadpisać." /></Label>
-              <div className="flex items-center gap-2">
-                <NumberField value={mortgageAmount} onCommit={(n) => setMortgageOverride(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
-                {mortgageOverride != null && (
-                  <Button variant="ghost" size="icon" className="shrink-0 text-white/80 hover:text-white" title="Przywróć domyślną (2×)" onClick={() => setMortgageOverride(null)}><RefreshCw className="h-4 w-4" /></Button>
-                )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    Proponowana kwota hipoteki{" "}
+                    <InfoTip text="Kwota wpisu hipoteki umownej. Domyślnie dwukrotność sumy wszystkich należności inwestora (łącznej kwoty do spłaty). Wpisz własną wartość, aby nadpisać." />
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <NumberField
+                      value={mortgageAmount}
+                      onCommit={(n) => setMortgageOverride(Math.max(0, Math.round(n || 0)))}
+                      className="w-full bg-white text-slate-900"
+                    />
+                    {mortgageOverride != null && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-white/80 hover:text-white"
+                        title="Przywróć domyślną (2×)"
+                        onClick={() => setMortgageOverride(null)}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/60">
+                    Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}
+                    ).
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5">
+                    Kwota art. 777 k.p.c. (rygor egzekucji){" "}
+                    <InfoTip text="Kwota, do której pożyczkobiorca poddaje się egzekucji wprost z aktu notarialnego (art. 777 § 1 pkt 5 k.p.c.). Domyślnie dwukrotność sumy wszystkich należności inwestora." />
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <NumberField
+                      value={art777Amount}
+                      onCommit={(n) => setArt777Override(Math.max(0, Math.round(n || 0)))}
+                      className="w-full bg-white text-slate-900"
+                    />
+                    {art777Override != null && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-white/80 hover:text-white"
+                        title="Przywróć domyślną (2×)"
+                        onClick={() => setArt777Override(null)}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/60">
+                    Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}
+                    ).
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-white/60">Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}).</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">Kwota art. 777 k.p.c. (rygor egzekucji) <InfoTip text="Kwota, do której pożyczkobiorca poddaje się egzekucji wprost z aktu notarialnego (art. 777 § 1 pkt 5 k.p.c.). Domyślnie dwukrotność sumy wszystkich należności inwestora." /></Label>
-              <div className="flex items-center gap-2">
-                <NumberField value={art777Amount} onCommit={(n) => setArt777Override(Math.max(0, Math.round(n || 0)))} className="w-full bg-white text-slate-900" />
-                {art777Override != null && (
-                  <Button variant="ghost" size="icon" className="shrink-0 text-white/80 hover:text-white" title="Przywróć domyślną (2×)" onClick={() => setArt777Override(null)}><RefreshCw className="h-4 w-4" /></Button>
-                )}
-              </div>
-              <p className="text-xs text-white/60">Domyślnie 2× łącznej należności inwestora ({formatPLN(proposedSecurityDefault)}).</p>
-            </div>
-          </div>
-          </CardContent>
-        </Card></FancyShell>
+            </CardContent>
+          </Card>
+        </FancyShell>
       )}
 
-
-      <FancyShell><Card className={FANCY_CARD_CLS}>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-white">Harmonogram spłat</CardTitle>
-          {investorGuidance && schedule.rows.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={sendCalcToCreator} className="bg-white text-slate-900 hover:bg-white/90 border-white" title="Przekaż dane kalkulacji do kreatorów w aplikacji"><Send className="mr-2 h-3.5 w-3.5" /> Wyślij do kreatora</Button>
-            <Button variant="outline" size="sm" onClick={downloadCalcPdf} className="bg-white text-slate-900 hover:bg-white/90 border-white" title="PDF z danymi kalkulacji — Kreator dokumentów odczyta je automatycznie"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz PDF</Button>
-            <Button variant="outline" size="sm" onClick={printSchedulePdf} className="bg-white text-slate-900 hover:bg-white/90 border-white"><Printer className="mr-2 h-3.5 w-3.5" /> Drukuj</Button>
-            <Dialog open={sendOpen} onOpenChange={setSendOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Send className="mr-2 h-3.5 w-3.5" /> Wyślij do klienta</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Wyślij harmonogram do klienta</DialogTitle>
-                  <DialogDescription>Klient otrzyma e-mail z podsumowaniem oferty i pełnym harmonogramem spłat.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3 py-2">
-                  <div className="space-y-1.5">
-                    <Label>Adres e-mail klienta</Label>
-                    <Input type="email" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="klient@example.com" />
-                  </div>
-                  <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Do wypłaty na rękę</span><b className="tabular-nums">{formatPLN(onHand)}</b></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Rata miesięczna</span><b className="tabular-nums">{formatPLN(schedule.cappedRata)}</b></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Okres</span><b className="tabular-nums">{months} mies.</b></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Łączna kwota do spłaty</span><b className="tabular-nums">{formatPLN(totalToRepay)}</b></div>
-                  </div>
-                </div>
-                <DialogFooter className="gap-2 sm:gap-2">
-                  <Button variant="outline" onClick={printSchedulePdf}><Printer className="mr-2 h-4 w-4" /> Podgląd / PDF</Button>
-                  <Button onClick={handleSendToClient} disabled={sending || !recipient.trim()}>
-                    {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…</> : <><Send className="mr-2 h-4 w-4" /> Wyślij e-mail</>}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="bg-white text-slate-900 hover:bg-white/90 border-white"><Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Weryfikacja przed pobraniem harmonogramu</DialogTitle>
-                  <DialogDescription>Potwierdź założenia zanim wygenerujesz dokument.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3 py-2">
-                  <label className="flex items-start gap-2 text-sm">
-                    <Checkbox checked={checkRate} onCheckedChange={(c) => setCheckRate(Boolean(c))} className="mt-0.5" />
-                    <span>Potwierdzam aktualną stopę ref. NBP: <b>{effectiveRefRate.toFixed(2)}%</b> (limit odsetek: {MAX_INTEREST_RATE.toFixed(2)}%).</span>
-                  </label>
-                  <div className="flex items-center gap-2 text-sm pl-6">
-                    <span className="text-muted-foreground">Data zawarcia umowy:</span>
-                    <Input type="date" value={agreementDate} onChange={(e) => setAgreementDate(e.target.value)} className="w-44" />
-                  </div>
-                  <label className="flex items-start gap-2 text-sm">
-                    <Checkbox checked={checkCommission} onCheckedChange={(c) => setCheckCommission(Boolean(c))} className="mt-0.5" />
-                    <span>Prowizja <b>{formatPLN(commissionPln)}</b> mieści się w przyjętym limicie referencyjnym{commissionPln > maxNonInterest ? " (UWAGA: powyżej MPKK)" : ""}.</span>
-                  </label>
-                  <label className="flex items-start gap-2 text-sm">
-                    <Checkbox checked={checkKrotnosc} onCheckedChange={(c) => setCheckKrotnosc(Boolean(c))} className="mt-0.5" />
-                    <span>Krotność spłaty: <b>{krotnosc.toFixed(2)}×</b> — akceptuję ryzyko prawne.</span>
-                  </label>
-                </div>
-                <DialogFooter>
-                  <Button onClick={downloadScheduleCsv} disabled={!checkRate || !checkCommission || !checkKrotnosc || !agreementDate}>
-                    <Download className="mr-2 h-4 w-4" /> Pobierz harmonogram
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="max-h-96 overflow-y-auto rounded-lg border border-white/10">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/10 hover:bg-transparent">
-                  <TableHead className="text-white/80">#</TableHead><TableHead className="text-white/80">Termin</TableHead><TableHead className="text-white/80">Rata</TableHead><TableHead className="text-white/80">Kapitał</TableHead><TableHead className="text-white/80">Odsetki</TableHead><TableHead className="text-white/80">Saldo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {schedule.rows.map((r) => (
-                  <TableRow key={r.idx} className="border-white/10 hover:bg-white/5">
-                    <TableCell className="text-white/90">{r.idx}</TableCell>
-                    <TableCell className="text-white/90">{r.date}</TableCell>
-                    <TableCell className="tabular-nums text-white">{formatPLN(r.rata)}</TableCell>
-                    <TableCell className="tabular-nums text-white">{formatPLN(r.kap)}</TableCell>
-                    <TableCell className="tabular-nums text-white">{formatPLN(r.ods)}</TableCell>
-                    <TableCell className="tabular-nums text-white">{formatPLN(r.saldo)}</TableCell>
+      <FancyShell>
+        <Card className={FANCY_CARD_CLS}>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-white">Harmonogram spłat</CardTitle>
+            {investorGuidance && schedule.rows.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={sendCalcToCreator}
+                  className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                  title="Przekaż dane kalkulacji do kreatorów w aplikacji"
+                >
+                  <Send className="mr-2 h-3.5 w-3.5" /> Wyślij do kreatora
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadCalcPdf}
+                  className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                  title="PDF z danymi kalkulacji — Kreator dokumentów odczyta je automatycznie"
+                >
+                  <Download className="mr-2 h-3.5 w-3.5" /> Pobierz PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={printSchedulePdf}
+                  className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                >
+                  <Printer className="mr-2 h-3.5 w-3.5" /> Drukuj
+                </Button>
+                <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                    >
+                      <Send className="mr-2 h-3.5 w-3.5" /> Wyślij do klienta
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Wyślij harmonogram do klienta</DialogTitle>
+                      <DialogDescription>
+                        Klient otrzyma e-mail z podsumowaniem oferty i pełnym harmonogramem spłat.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                      <div className="space-y-1.5">
+                        <Label>Adres e-mail klienta</Label>
+                        <Input
+                          type="email"
+                          value={recipient}
+                          onChange={(e) => setRecipient(e.target.value)}
+                          placeholder="klient@example.com"
+                        />
+                      </div>
+                      <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Do wypłaty na rękę</span>
+                          <b className="tabular-nums">{formatPLN(onHand)}</b>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Rata miesięczna</span>
+                          <b className="tabular-nums">{formatPLN(schedule.cappedRata)}</b>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Okres</span>
+                          <b className="tabular-nums">{months} mies.</b>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Łączna kwota do spłaty</span>
+                          <b className="tabular-nums">{formatPLN(totalToRepay)}</b>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-2">
+                      <Button variant="outline" onClick={printSchedulePdf}>
+                        <Printer className="mr-2 h-4 w-4" /> Podgląd / PDF
+                      </Button>
+                      <Button onClick={handleSendToClient} disabled={sending || !recipient.trim()}>
+                        {sending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Wysyłam…
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-4 w-4" /> Wyślij e-mail
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white text-slate-900 hover:bg-white/90 border-white"
+                    >
+                      <Download className="mr-2 h-3.5 w-3.5" /> Pobierz jako CSV
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Weryfikacja przed pobraniem harmonogramu</DialogTitle>
+                      <DialogDescription>
+                        Potwierdź założenia zanim wygenerujesz dokument.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                      <label className="flex items-start gap-2 text-sm">
+                        <Checkbox
+                          checked={checkRate}
+                          onCheckedChange={(c) => setCheckRate(Boolean(c))}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          Potwierdzam aktualną stopę ref. NBP: <b>{effectiveRefRate.toFixed(2)}%</b>{" "}
+                          (limit odsetek: {MAX_INTEREST_RATE.toFixed(2)}%).
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-2 text-sm pl-6">
+                        <span className="text-muted-foreground">Data zawarcia umowy:</span>
+                        <Input
+                          type="date"
+                          value={agreementDate}
+                          onChange={(e) => setAgreementDate(e.target.value)}
+                          className="w-44"
+                        />
+                      </div>
+                      <label className="flex items-start gap-2 text-sm">
+                        <Checkbox
+                          checked={checkCommission}
+                          onCheckedChange={(c) => setCheckCommission(Boolean(c))}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          Prowizja <b>{formatPLN(commissionPln)}</b> mieści się w przyjętym limicie
+                          referencyjnym
+                          {commissionPln > maxNonInterest ? " (UWAGA: powyżej MPKK)" : ""}.
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-2 text-sm">
+                        <Checkbox
+                          checked={checkKrotnosc}
+                          onCheckedChange={(c) => setCheckKrotnosc(Boolean(c))}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          Krotność spłaty: <b>{krotnosc.toFixed(2)}×</b> — akceptuję ryzyko prawne.
+                        </span>
+                      </label>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        onClick={downloadScheduleCsv}
+                        disabled={
+                          !checkRate || !checkCommission || !checkKrotnosc || !agreementDate
+                        }
+                      >
+                        <Download className="mr-2 h-4 w-4" /> Pobierz harmonogram
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-96 overflow-y-auto rounded-lg border border-white/10">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-white/80">#</TableHead>
+                    <TableHead className="text-white/80">Termin</TableHead>
+                    <TableHead className="text-white/80">Rata</TableHead>
+                    <TableHead className="text-white/80">Kapitał</TableHead>
+                    <TableHead className="text-white/80">Odsetki</TableHead>
+                    <TableHead className="text-white/80">Saldo</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card></FancyShell>
+                </TableHeader>
+                <TableBody>
+                  {schedule.rows.map((r) => (
+                    <TableRow key={r.idx} className="border-white/10 hover:bg-white/5">
+                      <TableCell className="text-white/90">{r.idx}</TableCell>
+                      <TableCell className="text-white/90">{r.date}</TableCell>
+                      <TableCell className="tabular-nums text-white">{formatPLN(r.rata)}</TableCell>
+                      <TableCell className="tabular-nums text-white">{formatPLN(r.kap)}</TableCell>
+                      <TableCell className="tabular-nums text-white">{formatPLN(r.ods)}</TableCell>
+                      <TableCell className="tabular-nums text-white">
+                        {formatPLN(r.saldo)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </FancyShell>
 
       {investorGuidance && (
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Kalkulator ma charakter informacyjny. Nie stanowi porady prawnej ani finansowej. Limity odsetek zmieniają się z decyzjami RPP — weryfikuj je przed każdym podpisaniem umowy.
-          Finance You Sp. z o.o. zaleca konsultację prawną przy niestandardowych strukturach pożyczek. Podstawy prawne: art. 359 §2¹ KC (odsetki maksymalne), art. 36a UoKK (MPKK ref.),
-          art. 388 KC (wyzysk), art. 304 KK (lichwa), art. 58 §2 KC (zasady współżycia społecznego).
+          Kalkulator ma charakter informacyjny. Nie stanowi porady prawnej ani finansowej. Limity
+          odsetek zmieniają się z decyzjami RPP — weryfikuj je przed każdym podpisaniem umowy.
+          Finance You Sp. z o.o. zaleca konsultację prawną przy niestandardowych strukturach
+          pożyczek. Podstawy prawne: art. 359 §2¹ KC (odsetki maksymalne), art. 36a UoKK (MPKK
+          ref.), art. 388 KC (wyzysk), art. 304 KK (lichwa), art. 58 §2 KC (zasady współżycia
+          społecznego).
         </p>
       )}
     </div>
