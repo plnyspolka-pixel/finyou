@@ -76,8 +76,10 @@ ALTER TABLE public.training_videos
   ADD COLUMN IF NOT EXISTS free_lesson boolean NOT NULL DEFAULT false;
 
 -- Oznacz istniejące lekcje po tytule (bez duplikowania), a brakujące dodaj.
+-- Tytuły w katalogu mogą mieć numerację („1. Wprowadzenie…"), więc porównanie
+-- ignoruje wiodący prefiks „N. " / „N) ".
 UPDATE public.training_videos SET free_lesson = true
-WHERE lower(title) IN (
+WHERE regexp_replace(lower(btrim(title)), '^\d+[.)]\s*', '') IN (
   lower('Wprowadzenie do rynku pożyczek pod hipotekę'),
   lower('Interpretacja wyłączeń z ustawy o kredycie konsumenckim'),
   lower('Aspekty prawne udzielania pożyczek')
@@ -94,7 +96,8 @@ FROM (VALUES
    'Darmowa lekcja: umowa pożyczki, zabezpieczenia i odsetki maksymalne — ramy prawne dla inwestora prywatnego.', 3)
 ) AS t(title, description, sort_order)
 WHERE NOT EXISTS (
-  SELECT 1 FROM public.training_videos tv WHERE lower(tv.title) = lower(t.title)
+  SELECT 1 FROM public.training_videos tv
+  WHERE regexp_replace(lower(btrim(tv.title)), '^\d+[.)]\s*', '') = lower(t.title)
 );
 
 -- Katalog lekcji: darmowe lekcje widoczne dla każdego konta inwestora.
