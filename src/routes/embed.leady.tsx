@@ -80,6 +80,9 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
         )}
       </div>
 
+      {/* Score + Grade */}
+      <ScoreRow score={lead.score} grade={lead.grade} />
+
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2 border-t border-white/5 px-4 py-4 sm:px-5">
         <Stat label="Kwota" value={formatPLN(lead.loan_amount ?? 0)} />
@@ -94,6 +97,39 @@ function LeadCard({ lead }: { lead: import("@/lib/public-leads.functions").Publi
         </div>
       </div>
     </article>
+  );
+}
+
+const GRADE_COLORS: Record<string, { ring: string; text: string; bg: string; bar: string }> = {
+  A: { ring: "ring-emerald-400/50", text: "text-emerald-300", bg: "bg-emerald-500/15", bar: "from-emerald-400 to-emerald-500" },
+  B: { ring: "ring-sky-400/50", text: "text-sky-300", bg: "bg-sky-500/15", bar: "from-sky-400 to-sky-500" },
+  C: { ring: "ring-amber-400/50", text: "text-amber-300", bg: "bg-amber-500/15", bar: "from-amber-400 to-amber-500" },
+  D: { ring: "ring-orange-400/50", text: "text-orange-300", bg: "bg-orange-500/15", bar: "from-orange-400 to-orange-500" },
+  E: { ring: "ring-rose-400/50", text: "text-rose-300", bg: "bg-rose-500/15", bar: "from-rose-400 to-rose-500" },
+};
+
+export function ScoreRow({ score, grade }: { score: number; grade: string }) {
+  const c = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
+  const pct = Math.max(0, Math.min(100, score));
+  return (
+    <div className="border-t border-white/5 px-4 py-3 sm:px-5">
+      <div className="flex items-center gap-3">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${c.bg} ring-1 ${c.ring}`}>
+          <span className={`text-xl font-black leading-none ${c.text}`}>{grade}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Ocena inwestycyjna</p>
+            <p className={`text-sm font-bold tabular-nums ${c.text}`}>
+              {pct}<span className="text-[10px] font-semibold text-slate-500">/100</span>
+            </p>
+          </div>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div className={`h-full rounded-full bg-gradient-to-r ${c.bar}`} style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

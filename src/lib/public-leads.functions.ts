@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
+export type RiskGrade = "A" | "B" | "C" | "D" | "E";
+
 export type PublicLead = {
   id: string;
   created_at: string;
@@ -11,7 +13,30 @@ export type PublicLead = {
   is_new: boolean;
   first_name: string | null;
   kw_masked: string | null;
+  score: number;
+  grade: RiskGrade;
 };
+
+function gradeFromScore(score: number): RiskGrade {
+  if (score >= 85) return "A";
+  if (score >= 70) return "B";
+  if (score >= 55) return "C";
+  if (score >= 40) return "D";
+  return "E";
+}
+
+// Fallback scoring z LTV gdy nie ma zapisanej oceny ryzyka.
+// Trzyma się skali z modułu risk-assessment (0–100, klasy A–E).
+function fallbackScoreFromLtv(ltv: number | null): number {
+  if (ltv == null || Number.isNaN(ltv)) return 60;
+  if (ltv <= 25) return 88;
+  if (ltv <= 35) return 80;
+  if (ltv <= 45) return 72;
+  if (ltv <= 55) return 62;
+  if (ltv <= 65) return 52;
+  if (ltv <= 75) return 44;
+  return 35;
+}
 
 // Zanonimizuj numer KW: zachowaj kod sądu (przed "/") i ostatnią cyfrę,
 // resztę zamień na kropki. Np. "WA1M/00123456/7" -> "WA1M/••••••••/7".
@@ -50,6 +75,24 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     .limit(80);
   if (error) throw new Error(error.message);
 
+  // Zaciągnij ostatnią zapisaną ocenę ryzyka per wniosek (jeśli istnieje).
+  const appIds = (data ?? []).map((r: any) => r.id).filter(Boolean);
+  const scoresByApp = new Map<string, { score: number; grade: RiskGrade }>();
+  if (appIds.length > 0) {
+    const { data: ras } = await client
+      .from("investment_risk_assessments")
+      .select("application_id, investment_score, risk_grade, updated_at")
+      .in("application_id", appIds)
+      .order("updated_at", { ascending: false });
+    for (const row of (ras ?? []) as any[]) {
+      if (scoresByApp.has(row.application_id)) continue;
+      const s = row.investment_score != null ? Number(row.investment_score) : null;
+      if (s == null || Number.isNaN(s)) continue;
+      const g = (row.risk_grade as RiskGrade) || gradeFromScore(s);
+      scoresByApp.set(row.application_id, { score: Math.round(s), grade: g });
+    }
+  }
+
   const now = Date.now();
   const rows: PublicLead[] = [];
   for (const r of (data ?? []) as any[]) {
@@ -64,6 +107,9 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     const ageDays = (now - new Date(r.created_at).getTime()) / 86400000;
     const clientRow = Array.isArray(r.clients) ? r.clients[0] : r.clients;
     const firstName = clientRow?.first_name ? String(clientRow.first_name).trim() : null;
+    const stored = scoresByApp.get(r.id);
+    const score = stored?.score ?? fallbackScoreFromLtv(ltv);
+    const grade = stored?.grade ?? gradeFromScore(score);
     rows.push({
       id: r.id,
       created_at: r.created_at,
@@ -75,6 +121,8 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
       is_new: ageDays <= 3,
       first_name: firstName && firstName.length > 0 ? firstName : null,
       kw_masked: maskKw(props?.land_register_number),
+      score,
+      grade,
     });
     if (rows.length >= 30) break;
   }
