@@ -4118,6 +4118,66 @@ export type Database = {
         }
         Relationships: []
       }
+      didit_verifications: {
+        Row: {
+          aml_customer_id: string | null
+          created_at: string
+          decided_at: string | null
+          decision: Json | null
+          features: string | null
+          id: string
+          metadata: Json | null
+          session_id: string
+          session_number: number | null
+          status: string
+          updated_at: string
+          user_id: string
+          vendor_data: string | null
+          verification_url: string | null
+          warnings: Json
+          workflow_id: string | null
+          workflow_type: string | null
+        }
+        Insert: {
+          aml_customer_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision?: Json | null
+          features?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          session_number?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          vendor_data?: string | null
+          verification_url?: string | null
+          warnings?: Json
+          workflow_id?: string | null
+          workflow_type?: string | null
+        }
+        Update: {
+          aml_customer_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision?: Json | null
+          features?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          session_number?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vendor_data?: string | null
+          verification_url?: string | null
+          warnings?: Json
+          workflow_id?: string | null
+          workflow_type?: string | null
+        }
+        Relationships: []
+      }
       dilisense_cache: {
         Row: {
           cache_key: string
