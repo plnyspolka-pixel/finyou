@@ -216,21 +216,35 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   }, [conversations, q]);
 
   useEffect(() => {
-    if (!selectedLeadId && filteredConvs[0]) setSelectedLeadId(filteredConvs[0].leadId);
-  }, [filteredConvs, selectedLeadId]);
+    if (!selectedKey && filteredConvs[0]) setSelectedKey(filteredConvs[0].key);
+  }, [filteredConvs, selectedKey]);
+
+  const selectedConv = useMemo(
+    () => filteredConvs.find((c) => c.key === selectedKey) ?? null,
+    [filteredConvs, selectedKey],
+  );
+  const selectedLeadId = selectedConv?.leadId ?? null;
 
   const thread = useMemo(() => {
-    return (messages ?? [])
-      .filter((m) => m.lead_id === selectedLeadId)
+    if (!selectedKey) return [];
+    return ((messages ?? []) as (Msg & { thread_external_id: string | null })[])
+      .filter((m) => {
+        const meta = (m.metadata ?? {}) as Record<string, any>;
+        const psid = meta.psid ?? meta.sender_id ?? meta.recipient_id ?? null;
+        const igsid = meta.igsid ?? null;
+        const extId = m.thread_external_id ?? null;
+        const key = m.lead_id ?? (igsid ? `ig:${igsid}` : psid ? `msg:${psid}` : extId ? `ext:${extId}` : `orphan:${m.id}`);
+        return key === selectedKey;
+      })
       .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
-  }, [messages, selectedLeadId]);
+  }, [messages, selectedKey]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [thread.length, selectedLeadId]);
+  }, [thread.length, selectedKey]);
 
   const selectedLead = selectedLeadId ? leadMap.get(selectedLeadId) : null;
-  const canReply = !!(selectedLead && (selectedLead.messenger_psid || selectedLead.instagram_igsid));
+  const canReply = !!(selectedLeadId && selectedLead && (selectedLead.messenger_psid || selectedLead.instagram_igsid));
 
   const sendMut = useMutation({
     mutationFn: (body: string) => sendFn({ data: { leadId: selectedLeadId!, body } }),
