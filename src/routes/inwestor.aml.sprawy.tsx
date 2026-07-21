@@ -361,10 +361,10 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Transakcje w sprawie</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
-                  {detail.transactions.map((t: Record<string, unknown>) => (
-                    <li key={t.id}>
-                      {t.transaction_date} — {t.transaction_type} — {Number(t.amount).toFixed(2)}{" "}
-                      {t.currency}
+                  {(detail.transactions as Array<Record<string, string | number>>).map((t) => (
+                    <li key={String(t.id)}>
+                      {String(t.transaction_date)} — {String(t.transaction_type)} —{" "}
+                      {Number(t.amount).toFixed(2)} {String(t.currency)}
                     </li>
                   ))}
                 </ul>
@@ -374,7 +374,7 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Załączniki</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
-                  {detail.attachments.map((a: Record<string, unknown>) => (
+                  {(detail.attachments as Array<Record<string, string>>).map((a) => (
                     <li key={a.id}>{a.file_name}</li>
                   ))}
                 </ul>
@@ -384,9 +384,9 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Zgłoszenia GIIF w sprawie</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
-                  {detail.reports.map((r: Record<string, unknown>) => (
-                    <li key={r.id}>
-                      {r.report_type} — {r.status} (v{r.current_version})
+                  {(detail.reports as Array<Record<string, string | number>>).map((r) => (
+                    <li key={String(r.id)}>
+                      {String(r.report_type)} — {String(r.status)} (v{String(r.current_version)})
                     </li>
                   ))}
                 </ul>
@@ -396,7 +396,7 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Historia (audyt — nieusuwalny)</p>
                 <ul className="ml-1 text-xs text-muted-foreground space-y-0.5">
-                  {detail.audit.slice(0, 20).map((a: Record<string, unknown>) => (
+                  {(detail.audit.slice(0, 20) as Array<Record<string, string>>).map((a) => (
                     <li key={a.id}>
                       {new Date(a.created_at).toLocaleString("pl-PL")} — {a.action}
                     </li>
