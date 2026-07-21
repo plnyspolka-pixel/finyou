@@ -190,6 +190,14 @@ function KlienciPage() {
                       <div className="text-xs text-muted-foreground truncate">{r.phone_normalized ?? "—"} · {r.email ?? "—"}</div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Link
+                        to="/admin/klienci/$id"
+                        params={{ id: r.id }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90"
+                      >
+                        Otwórz <ExternalLink className="h-3 w-3" />
+                      </Link>
                       <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
                       {isApplication(r)
                         ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Wniosek</Badge>
@@ -197,6 +205,7 @@ function KlienciPage() {
                     </div>
 
                   </div>
+
                   {(r.loan || p) && (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs pl-6">
                       {r.loan && (
@@ -248,7 +257,7 @@ function KlienciPage() {
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground border-b">
               <tr>
-                <th className="px-2 py-2 w-6"></th>
+                <th className="px-2 py-2 w-[110px]"></th>
                 <th className="px-3 py-2">Klient</th>
                 <th className="px-3 py-2">Kontakt</th>
                 <th className="px-3 py-2">Typ / Status</th>
@@ -272,9 +281,20 @@ function KlienciPage() {
                       className={`border-b cursor-pointer ${isOpen ? "bg-muted/50" : "hover:bg-muted/40"}`}
                     >
 
-                      <td className="px-2 py-2 text-muted-foreground">
-                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            to="/admin/klienci/$id"
+                            params={{ id: r.id }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                          >
+                            Otwórz <ExternalLink className="h-3 w-3" />
+                          </Link>
+                          {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        </div>
                       </td>
+
                       <td className="px-3 py-2">
                         <div className="font-medium">{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</div>
                         <div className="text-[11px] text-muted-foreground">ID: {r.id.slice(0, 8)}</div>
