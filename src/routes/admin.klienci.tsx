@@ -257,7 +257,7 @@ function KlienciPage() {
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase text-muted-foreground border-b">
               <tr>
-                <th className="px-2 py-2 w-6"></th>
+                <th className="px-2 py-2 w-[110px]"></th>
                 <th className="px-3 py-2">Klient</th>
                 <th className="px-3 py-2">Kontakt</th>
                 <th className="px-3 py-2">Typ / Status</th>
