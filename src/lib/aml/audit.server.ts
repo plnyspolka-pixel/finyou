@@ -23,16 +23,14 @@ export async function amlAudit(entry: {
   action: string;
   details?: Record<string, unknown>;
 }): Promise<void> {
-  const { error } = await supabaseAdmin
-    .from("aml_audit_log")
-    .insert({
-      user_id: entry.userId,
-      actor_id: entry.actorId ?? entry.userId,
-      entity_type: entry.entityType,
-      entity_id: entry.entityId ?? null,
-      action: entry.action,
-      details: (entry.details ?? {}) as never,
-    });
+  const { error } = await supabaseAdmin.from("aml_audit_log").insert({
+    user_id: entry.userId,
+    actor_id: entry.actorId ?? entry.userId,
+    entity_type: entry.entityType,
+    entity_id: entry.entityId ?? null,
+    action: entry.action,
+    details: (entry.details ?? {}) as never,
+  });
   if (error) {
     // Audyt nie może wywrócić operacji biznesowej, ale brak wpisu logujemy głośno.
     console.error("[AML audit] nie zapisano wpisu:", error.message, entry);

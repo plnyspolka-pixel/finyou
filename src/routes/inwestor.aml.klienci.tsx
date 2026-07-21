@@ -355,7 +355,9 @@ function AmlCustomersScreen() {
             <Card key={c.id} className="cursor-pointer" onClick={() => void openDetails(c)}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center justify-between gap-2">
-                  <span className="truncate">{amlCustomerLabel(c as Parameters<typeof amlCustomerLabel>[0])}</span>
+                  <span className="truncate">
+                    {amlCustomerLabel(c as Parameters<typeof amlCustomerLabel>[0])}
+                  </span>
                   <ScreeningBadge status={c.screening_status} />
                 </CardTitle>
               </CardHeader>
