@@ -281,30 +281,27 @@ function ApplicationsPage() {
             className="max-w-xs"
           />
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table className="min-w-[1400px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_th]:text-xs">
+        <CardContent>
+          <Table className="w-full table-fixed text-sm [&_th]:text-xs">
             <TableHeader>
               <TableRow>
-                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} />
-                <TableHead>Kontakt</TableHead>
-                <SortHeader label="Status" k="status" sort={sort} setSort={setSort} />
-                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right" />
-                <SortHeader label="Kompletność" k="completeness_percent" sort={sort} setSort={setSort} className="text-center" />
-                <TableHead className="text-center">Krok</TableHead>
-                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} />
-                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} />
-                <TableHead>Źródło</TableHead>
-                <SortHeader label="Utworzono" k="created_at" sort={sort} setSort={setSort} />
-                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} />
-                <TableHead className="text-right">Akcje</TableHead>
+                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[18%]" />
+                <TableHead className="w-[16%]">Kontakt</TableHead>
+                <SortHeader label="Status" k="status" sort={sort} setSort={setSort} className="w-[11%]" />
+                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[9%]" />
+                <SortHeader label="Kompl." k="completeness_percent" sort={sort} setSort={setSort} className="text-center w-[10%]" />
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[12%]" />
+                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[10%]" />
+                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[8%]" />
+                <TableHead className="text-right w-[6%]">Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
@@ -315,52 +312,56 @@ function ApplicationsPage() {
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 return (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{name}</TableCell>
-                    <TableCell className="text-xs">
-                      <div>{r.client?.email ?? "—"}</div>
-                      <div className="text-muted-foreground">{r.client?.phone ?? "—"}</div>
+                    <TableCell className="font-medium align-top">
+                      <div className="truncate" title={name}>{name}</div>
+                      <div className="text-[10px] text-muted-foreground truncate" title={leadSourceLabel(r.source)}>
+                        {leadSourceLabel(r.source)}{r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
+                      </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"}>
+                    <TableCell className="text-xs align-top">
+                      <div className="truncate" title={r.client?.email ?? ""}>{r.client?.email ?? "—"}</div>
+                      <div className="text-muted-foreground truncate" title={r.client?.phone ?? ""}>{r.client?.phone ?? "—"}</div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Badge variant={isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"} className="whitespace-normal text-[11px] leading-tight">
                         {LOAN_STATUS_SHORT_LABELS[canonStatus]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{fmtPLN(r.loan_amount as any)}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-right tabular-nums align-top">{fmtPLN(r.loan_amount as any)}</TableCell>
+                    <TableCell className="text-center align-top">
                       <div className="flex items-center gap-2 justify-center">
-                        <div className="h-1.5 w-16 rounded bg-muted overflow-hidden">
+                        <div className="h-1.5 w-full max-w-[80px] rounded bg-muted overflow-hidden">
                           <div className="h-full bg-primary" style={{ width: `${Math.min(100, pct)}%` }} />
                         </div>
                         <span className="text-xs tabular-nums">{pct}%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center text-xs">{r.current_form_step ?? "—"}</TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-xs align-top">
                       {kwNums.length === 0 ? (
                         <Badge variant="outline" className="text-muted-foreground">brak</Badge>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          {kwNums.map((k, i) => <span key={i} className="font-mono">{k}</span>)}
+                          {kwNums.map((k, i) => <span key={i} className="font-mono truncate" title={k}>{k}</span>)}
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-top">
                       <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                     </TableCell>
-                    <TableCell className="text-xs" title={r.source ?? undefined}>{leadSourceLabel(r.source)}</TableCell>
-                    <TableCell className="text-xs">{fmtDate(r.created_at)}</TableCell>
-                    <TableCell className="text-xs">{fmtDate(r.updated_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => setPreview({ id: r.id, paths: allPhotos, name })} title="Podgląd dokumentów i zdjęć">
+                    <TableCell className="text-xs align-top" title={`Utworzono: ${fmtDate(r.created_at)}`}>
+                      {fmtDate(r.updated_at)}
+                    </TableCell>
+                    <TableCell className="text-right align-top">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setPreview({ id: r.id, paths: allPhotos, name })} title="Podgląd">
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button asChild size="sm" variant="ghost">
+                        <Button asChild size="sm" variant="ghost" className="h-8 px-2">
                           <Link to="/admin/wnioski/$id" params={{ id: r.id }}>Otwórz</Link>
                         </Button>
                         {r.return_link && (
-                          <Button asChild size="sm" variant="ghost">
-                            <a href={r.return_link} target="_blank" rel="noreferrer">
+                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <a href={r.return_link} target="_blank" rel="noreferrer" title="Link zwrotny">
                               <ExternalLink className="h-3.5 w-3.5" />
                             </a>
                           </Button>
