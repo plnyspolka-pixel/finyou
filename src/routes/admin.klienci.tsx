@@ -190,6 +190,14 @@ function KlienciPage() {
                       <div className="text-xs text-muted-foreground truncate">{r.phone_normalized ?? "—"} · {r.email ?? "—"}</div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Link
+                        to="/admin/klienci/$id"
+                        params={{ id: r.id }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90"
+                      >
+                        Otwórz <ExternalLink className="h-3 w-3" />
+                      </Link>
                       <Badge variant={r.type === "inwestorski" ? "secondary" : "default"} className="text-[10px]">{r.type}</Badge>
                       {isApplication(r)
                         ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Wniosek</Badge>
@@ -197,6 +205,7 @@ function KlienciPage() {
                     </div>
 
                   </div>
+
                   {(r.loan || p) && (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs pl-6">
                       {r.loan && (
