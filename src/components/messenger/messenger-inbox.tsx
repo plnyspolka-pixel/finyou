@@ -293,13 +293,13 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                 <div className="p-4 text-sm text-muted-foreground">Brak konwersacji.</div>
               )}
               {filteredConvs.map((c) => {
-                const active = c.leadId === selectedLeadId;
+                const active = c.key === selectedKey;
                 const name = `${c.lead?.first_name ?? ""} ${c.lead?.last_name ?? ""}`.trim() || "Nieznany klient";
-                const platform = c.lead?.instagram_igsid ? "Instagram" : "Messenger";
+                const platform = c.platform;
                 return (
                   <button
-                    key={c.leadId}
-                    onClick={() => setSelectedLeadId(c.leadId)}
+                    key={c.key}
+                    onClick={() => setSelectedKey(c.key)}
                     className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
                       active ? "bg-muted border-primary" : "hover:bg-muted/50"
                     }`}
@@ -319,6 +319,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                     <div className="flex items-center gap-1 mt-1">
                       <Badge variant="secondary" className="text-[10px] h-4">{platform}</Badge>
                       <Badge variant="outline" className="text-[10px] h-4">{c.count} wiad.</Badge>
+                      {!c.leadId && <Badge variant="outline" className="text-[10px] h-4">bez leada</Badge>}
                     </div>
                   </button>
                 );
@@ -328,8 +329,8 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
         </Card>
 
         <Card className="p-4 flex flex-col">
-          {!selectedLeadId && <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>}
-          {selectedLeadId && (
+          {!selectedKey && <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>}
+          {selectedKey && (
             <>
               <div className="flex items-center justify-between border-b pb-3 mb-3">
                 <div>
