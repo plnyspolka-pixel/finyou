@@ -19,6 +19,7 @@ import {
   AmlEmptyState,
   amlCustomerLabel,
 } from "@/components/aml/aml-ui";
+import { DiditKycPanel } from "@/components/aml/didit-kyc-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -445,6 +446,7 @@ function AmlCustomersScreen() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <DiditKycPanel customer={selected} />
             {screenings.length === 0 && (
               <AmlEmptyState>Brak screeningów dla tego klienta.</AmlEmptyState>
             )}
