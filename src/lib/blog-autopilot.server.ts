@@ -78,6 +78,10 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
     sys: "Jesteś senior analitykiem inwestycyjnym dla polskiego inwestora prywatnego (HNW, 100k–2M PLN kapitału). Po polsku, konkretnie, bez clickbaitu.",
     user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
   },
+  legal_market_monitor: {
+    sys: "Jesteś analitykiem prawno-rynkowym monitorującym polski rynek nieruchomości i finansów. Po polsku, konkretnie, bez spekulacji poza to co wynika ze źródeł.",
+    user: "Zbierz z ostatnich 7 dni KONKRETNE wiadomości (z datą, źródłem, liczbami) o zmianach lub propozycjach zmian mających wpływ na polski rynek nieruchomości i finansów. Obejmij WSZYSTKIE z poniższych obszarów, przynajmniej po 1 wiadomości z każdego jeśli są dostępne:\n(A) LEGISLACJA PL: projekty ustaw i rozporządzeń (Sejm/Senat/MS/MF/MRiT) dot. kredytów hipotecznych, pożyczek konsumenckich, ustawy antylichwiarskiej, wakacji kredytowych, WIBOR/WIRON, podatku PCC/od nieruchomości, planowania przestrzennego, najmu instytucjonalnego, spółdzielni;\n(B) SĄDY I ORZECZNICTWO: wyroki SN, TSUE, sądów apelacyjnych dot. kredytów (frankowicze, WIBOR, sankcja kredytu darmowego), egzekucji z nieruchomości, hipoteki, ksiąg wieczystych;\n(C) KOMORNICY I EGZEKUCJA: zmiany w ustawie o komornikach, opłatach egzekucyjnych, licytacjach nieruchomości (nowe zasady, statystyki KRK/KIRP);\n(D) ADWOKATURA / RADCOWIE PRAWNI / NOTARIUSZE: uchwały NRA/KRRP/KRN, stawki taksy notarialnej, zmiany zawodowe wpływające na obsługę transakcji nieruchomościowych;\n(E) REGULATORZY: KNF, UOKiK, UODO, NBP/RPP — komunikaty i decyzje dot. kredytów, pożyczek pozabankowych, deweloperów, DFG;\n(F) RYNEK NIERUCHOMOŚCI PL: dane GUS/AMRON/Otodom/Rynek Pierwotny — ceny mkw. w 7 największych miastach, liczba transakcji, oferta, mediana czasu sprzedaży;\n(G) ŚWIATOWE RYNKI: decyzje FED/EBC, kurs USD/EUR/PLN, ceny surowców (ropa, gaz, złoto), sytuacja na rynkach nieruchomości w DE/US/UK — TYLKO gdy da się wskazać konkretny mechanizm przełożenia na PL (koszt pieniądza, kapitał zagraniczny, ceny materiałów budowlanych).\n\nDla KAŻDEJ pozycji: data, źródło (URL), 3-4 zdania faktów + 1 zdanie 'MOŻLIWY WPŁYW:' z konkretnym przełożeniem na polski rynek nieruchomości / rynek pożyczek pod zastaw / właściciela nieruchomości. NIE spekuluj poza to co da się wyprowadzić z faktu. Jeżeli w danym obszarze nie ma nowości — napisz jawnie 'brak istotnych zdarzeń w ostatnich 7 dniach'.",
+  },
 };
 
 async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<NewsBrief> {
@@ -90,7 +94,7 @@ async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<New
     },
     body: JSON.stringify({
       model: "sonar",
-      search_recency_filter: kind === "investor_review" ? "month" : "day",
+      search_recency_filter: kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
       messages: [
         { role: "system", content: b.sys },
         { role: "user", content: b.user },
