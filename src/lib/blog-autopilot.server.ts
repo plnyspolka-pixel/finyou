@@ -161,12 +161,16 @@ async function writeArticleFromNews(
 
   const structureHint = kind === "investor_review"
     ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
+    : kind === "legal_market_monitor"
+    ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
     : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
 
 
   let audienceBrief: string;
   if (kind === "investor_review") {
     audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl/inwestor)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
+  } else if (kind === "legal_market_monitor") {
+    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[porozmawiaj z ekspertem Finance You o Twojej sytuacji](https://financeyou.pl/klient)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
     audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań inwestorem Finance You](https://financeyou.pl/inwestor)" wpleć 1 raz.`;
   } else {
@@ -177,9 +181,13 @@ async function writeArticleFromNews(
 
   const briefLabel = kind === "investor_review"
     ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
+    : kind === "legal_market_monitor"
+    ? "BRIEFING (monitoring zmian w prawie i na rynku, ostatnie 7 dni):"
     : "BRIEFING (świeże wiadomości z ostatnich 24h):";
   const taskLabel = kind === "investor_review"
     ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
+    : kind === "legal_market_monitor"
+    ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
     : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
