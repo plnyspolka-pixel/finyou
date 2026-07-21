@@ -39,10 +39,10 @@ interface NewsBrief {
 }
 
 type Audience = "borrower" | "investor";
-type PostKind = "borrower_news" | "investor_news" | "investor_review";
+type PostKind = "borrower_news" | "investor_news" | "legal_market_monitor" | "investor_review";
 
 async function pickNextKind(): Promise<PostKind> {
-  // Rotacja 3-elementowa: borrower_news → investor_news → investor_review → ...
+  // Rotacja 4-elementowa: borrower_news → investor_news → legal_market_monitor → investor_review → ...
   const { data } = await supabaseAdmin
     .from("ai_seo_articles")
     .select("audience,raw_ai_output,published_at")
@@ -53,13 +53,16 @@ async function pickNextKind(): Promise<PostKind> {
   const last: PostKind | undefined = lastRow?.raw_ai_output?.post_kind
     ?? (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
   if (last === "borrower_news") return "investor_news";
-  if (last === "investor_news") return "investor_review";
+  if (last === "investor_news") return "legal_market_monitor";
+  if (last === "legal_market_monitor") return "investor_review";
   if (last === "investor_review") return "borrower_news";
-  return "investor_review"; // first run
+  return "legal_market_monitor"; // first run
 }
 
 function audienceOf(kind: PostKind): Audience {
-  return kind === "borrower_news" ? "borrower" : "investor";
+  if (kind === "borrower_news") return "borrower";
+  if (kind === "legal_market_monitor") return "borrower"; // regulacje/sądy/komornicy dotykają głównie właścicieli nieruchomości i pożyczkobiorców
+  return "investor";
 }
 
 const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
