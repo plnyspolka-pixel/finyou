@@ -83,10 +83,16 @@ export const backfillMessengerData = createServerFn({ method: "POST" })
     const { syncMessengerConversations } = await import("./messenger-sync.server");
 
     // 1) Odzyskaj brakujące rozmowy z Meta (wątki sprzed podłączenia webhooka).
-    let sync = { conversationsSeen: 0, messagesNew: 0, leadsCreated: 0, errors: [] as string[] };
+    let sync = {
+      conversationsSeen: 0,
+      messagesNew: 0,
+      leadsCreated: 0,
+      errors: [] as string[],
+      webhook: [] as Array<{ page: string; subscribed: boolean; fields: string[]; note: string | null }>,
+    };
     try {
       const r = await syncMessengerConversations({ platform: "both" });
-      sync = { conversationsSeen: r.conversationsSeen, messagesNew: r.messagesNew, leadsCreated: r.leadsCreated, errors: r.errors };
+      sync = { conversationsSeen: r.conversationsSeen, messagesNew: r.messagesNew, leadsCreated: r.leadsCreated, errors: r.errors, webhook: r.webhook };
     } catch (e: any) {
       console.warn("[backfill] messenger conversation sync error", e);
       sync.errors.push(String(e?.message ?? e));

@@ -21,6 +21,8 @@ export type MessengerSyncResult = {
   messagesNew: number;
   leadsCreated: number;
   errors: string[];
+  /** Diagnostyka webhooka per strona — czy panel dostaje nowe wiadomości na żywo. */
+  webhook: Array<{ page: string; subscribed: boolean; fields: string[]; note: string | null }>;
 };
 
 type PageInfo = { id: string; name: string | null; token: string };
@@ -55,6 +57,37 @@ async function discoverPages(rootToken: string): Promise<PageInfo[]> {
     /* noop */
   }
   return [];
+}
+
+/**
+ * Sprawdza, czy strona jest zasubskrybowana do webhooka aplikacji i czy w polu
+ * subskrypcji jest `messages`. To najczęstsza przyczyna „panel przestał
+ * pokazywać nowe rozmowy, choć token jest ważny" — token do wysyłki działa,
+ * ale strona nie wypycha już zdarzeń `messages` do naszego webhooka.
+ */
+async function checkPageWebhook(page: PageInfo): Promise<{ subscribed: boolean; fields: string[]; note: string | null }> {
+  try {
+    const res = await fetch(
+      `${GRAPH}/${page.id}/subscribed_apps?access_token=${encodeURIComponent(page.token)}`,
+    );
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { subscribed: false, fields: [], note: json?.error?.message ?? `HTTP ${res.status}` };
+    }
+    const apps: any[] = json?.data ?? [];
+    if (!apps.length) {
+      return { subscribed: false, fields: [], note: "Żadna aplikacja nie jest zasubskrybowana do tej strony." };
+    }
+    const fields = apps.flatMap((a) => (Array.isArray(a?.subscribed_fields) ? a.subscribed_fields : []));
+    const hasMessages = fields.includes("messages");
+    return {
+      subscribed: hasMessages,
+      fields: Array.from(new Set(fields)),
+      note: hasMessages ? null : "Strona jest zasubskrybowana, ale bez pola `messages` — nowe wiadomości nie docierają do panelu.",
+    };
+  } catch (e: any) {
+    return { subscribed: false, fields: [], note: e?.message ?? "błąd sprawdzania subskrypcji" };
+  }
 }
 
 /** Zbiór wszystkich znanych external_id kanału messenger (dedup wiadomości). */
@@ -232,6 +265,7 @@ export async function syncMessengerConversations(opts?: {
     messagesNew: 0,
     leadsCreated: 0,
     errors: [],
+    webhook: [],
   };
 
   const rootToken =
@@ -256,6 +290,13 @@ export async function syncMessengerConversations(opts?: {
     wanted === "both" ? ["messenger", "instagram"] : [wanted];
 
   for (const page of pages) {
+    // Diagnostyka: czy nowe wiadomości w ogóle dotrą do panelu na żywo.
+    const hook = await checkPageWebhook(page);
+    result.webhook.push({ page: page.name ?? page.id, ...hook });
+    if (!hook.subscribed) {
+      result.errors.push(`Webhook „${page.name ?? page.id}": ${hook.note ?? "brak subskrypcji `messages`"}`);
+    }
+
     for (const platform of platforms) {
       try {
         await syncPageConversations(page, platform, known, result);
