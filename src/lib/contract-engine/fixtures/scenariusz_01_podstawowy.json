@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "data_umowy": "21.07.2026",
+    "miejscowosc": "Lublinie",
+    "numer_umowy": "U01-04/2026",
+    "wersja_wzoru": "1.0"
+  },
+  "pozyczkodawca": {
+    "typ": "podmiot_gospodarczy",
+    "nazwa": "FINANCE YOU",
+    "forma_prawna": "sp. z o.o.",
+    "krs": "0000635207",
+    "nip": "7010611803",
+    "regon": "365350668",
+    "adres": "ul. Nowogrodzka 31, 00-511 Warszawa",
+    "telefon": null,
+    "email": null,
+    "reprezentacja": {
+      "imie_nazwisko": "Filip Bielak",
+      "pesel": "87032702195",
+      "funkcja": "pełnomocnik",
+      "podstawa": "pełnomocnictwa z dnia 24 lutego 2023 r."
+    }
+  },
+  "pozyczkobiorca": {
+    "typ": "osoba_fizyczna",
+    "imie_nazwisko": "Piotr Rybarski",
+    "firma": "PIOTR RYBARSKI P.P.H.U. „STOLMAR\"",
+    "pesel": "72081300951",
+    "nip": "5311190382",
+    "regon": "012782192",
+    "dokument_tozsamosci": "dowód osobisty nr CGZ446292",
+    "adres": "ul. Górska 2, 05-100 Nowy Dwór Mazowiecki",
+    "telefon": "601 340 537",
+    "email": "p.rybarski@gmail.com",
+    "stan_cywilny": "kawaler_panna",
+    "ustroj_majatkowy": null
+  },
+  "porecziciel": null,
+  "warunki": {
+    "kwota_pozyczki": {
+      "cyframi": "50 000,00",
+      "slownie": "pięćdziesiąt tysięcy złotych 00/100"
+    },
+    "prowizja": {
+      "kwota": {
+        "cyframi": "13 236,19",
+        "slownie": "trzynaście tysięcy dwieście trzydzieści sześć złotych 19/100"
+      },
+      "model": "nie_potracana_raty"
+    },
+    "oprocentowanie": "15,5",
+    "cel": "zakup maszyny produkcyjnej na potrzeby prowadzonej działalności gospodarczej",
+    "harmonogram": {
+      "liczba_rat": 12,
+      "typ": "balonowy",
+      "data_pierwszej_raty": "21.08.2026",
+      "dzien_miesiaca": 21,
+      "kwota_raty": {
+        "cyframi": "2 000,00",
+        "slownie": "dwa tysiące złotych 00/100"
+      },
+      "kwota_raty_koncowej": {
+        "cyframi": "48 762,59",
+        "slownie": "czterdzieści osiem tysięcy siedemset sześćdziesiąt dwa złote 59/100"
+      },
+      "raty": []
+    },
+    "rachunki": {
+      "wyplata": "25 8011 0008 0010 0150 5299 0002",
+      "splata": "39 1750 0012 0000 0000 3419 5005"
+    }
+  },
+  "nieruchomosci": [
+    {
+      "id": "N1",
+      "nr_kw": "WA1N/00019868/3",
+      "sad": "Sąd Rejonowy w Nowym Dworze Mazowieckim",
+      "opis": "nieruchomość zabudowana budynkiem mieszkalnym",
+      "rodzaj": "dom",
+      "wlasciciel_ref": "pozyczkobiorca",
+      "wlasciciel_dane": null,
+      "wspolwlasnosc": null,
+      "obciazenia": [],
+      "hipoteka": {
+        "kwota": {
+          "cyframi": "102 000,00",
+          "slownie": "sto dwa tysiące złotych 00/100"
+        },
+        "pierwszenstwo": "pierwsze",
+        "oproznione_miejsce_po": null
+      },
+      "zakres": "cala_kw",
+      "dzialki_w_kw": [],
+      "dzialki_do_odlaczenia": []
+    }
+  ],
+  "zabezpieczenia": {
+    "egzekucja_777": {
+      "kwota": {
+        "cyframi": "102 000,00",
+        "slownie": "sto dwa tysiące złotych 00/100"
+      },
+      "poddaje_sie": [
+        "pozyczkobiorca"
+      ],
+      "data_graniczna": "31.12.2030",
+      "termin_wezwania_dni": 7
+    },
+    "charakter_hipoteki": "laczna"
+  },
+  "oswiadczenia_dodatkowe": []
+}

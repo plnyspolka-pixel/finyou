@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "data_umowy": "05.10.2026",
+    "miejscowosc": "Lublinie",
+    "numer_umowy": "U04-02/2026",
+    "wersja_wzoru": "1.0"
+  },
+  "pozyczkodawca": {
+    "typ": "podmiot_gospodarczy",
+    "nazwa": "FINANCE YOU",
+    "forma_prawna": "sp. z o.o.",
+    "krs": "0000635207",
+    "nip": "7010611803",
+    "regon": "365350668",
+    "adres": "ul. Nowogrodzka 31, 00-511 Warszawa",
+    "telefon": null,
+    "email": null,
+    "reprezentacja": {
+      "imie_nazwisko": "Filip Bielak",
+      "pesel": "87032702195",
+      "funkcja": "pełnomocnik",
+      "podstawa": "pełnomocnictwa z dnia 24 lutego 2023 r."
+    }
+  },
+  "pozyczkobiorca": [
+    {
+      "typ": "osoba_fizyczna",
+      "imie_nazwisko": "Tomasz Kowalczyk",
+      "firma": "TOMASZ KOWALCZYK USŁUGI BUDOWLANE",
+      "pesel": "80051012345",
+      "nip": "7122334455",
+      "regon": "061234567",
+      "dokument_tozsamosci": "dowód osobisty nr AXY112233",
+      "adres": "ul. Kwiatowa 14, 20-100 Lublin",
+      "telefon": "605 111 222",
+      "email": "t.kowalczyk@example.pl",
+      "stan_cywilny": "zonaty_zamezna",
+      "ustroj_majatkowy": "wspolnosc_ustawowa"
+    },
+    {
+      "typ": "osoba_fizyczna",
+      "imie_nazwisko": "Agnieszka Kowalczyk",
+      "firma": null,
+      "pesel": "82092387654",
+      "nip": null,
+      "regon": null,
+      "dokument_tozsamosci": "dowód osobisty nr BZW445566",
+      "adres": "ul. Kwiatowa 14, 20-100 Lublin",
+      "telefon": "605 333 444",
+      "email": "a.kowalczyk@example.pl",
+      "stan_cywilny": "zonaty_zamezna",
+      "ustroj_majatkowy": "wspolnosc_ustawowa"
+    }
+  ],
+  "porecziciel": null,
+  "warunki": {
+    "kwota_pozyczki": {
+      "cyframi": "50 000,00",
+      "slownie": "pięćdziesiąt tysięcy złotych 00/100"
+    },
+    "prowizja": {
+      "kwota": {
+        "cyframi": "13 236,19",
+        "slownie": "trzynaście tysięcy dwieście trzydzieści sześć złotych 19/100"
+      },
+      "model": "nie_potracana_raty"
+    },
+    "oprocentowanie": "15,5",
+    "cel": "finansowanie bieżącej działalności usługowej",
+    "harmonogram": {
+      "liczba_rat": 12,
+      "typ": "balonowy",
+      "data_pierwszej_raty": "21.08.2026",
+      "dzien_miesiaca": 21,
+      "kwota_raty": {
+        "cyframi": "2 000,00",
+        "slownie": "dwa tysiące złotych 00/100"
+      },
+      "kwota_raty_koncowej": {
+        "cyframi": "48 762,59",
+        "slownie": "czterdzieści osiem tysięcy siedemset sześćdziesiąt dwa złote 59/100"
+      },
+      "raty": []
+    },
+    "rachunki": {
+      "wyplata": "61 1020 3456 0000 1111 2222 3333",
+      "splata": "39 1750 0012 0000 0000 3419 5005"
+    }
+  },
+  "nieruchomosci": [
+    {
+      "id": "N1",
+      "nr_kw": "LU1I/00445566/7",
+      "sad": "Sąd Rejonowy Lublin-Zachód w Lublinie",
+      "opis": "nieruchomość zabudowana budynkiem mieszkalnym przy ul. Kwiatowej 14 w Lublinie",
+      "rodzaj": "dom",
+      "wlasciciel_ref": "pozyczkobiorca",
+      "wlasciciel_dane": null,
+      "wspolwlasnosc": {
+        "rodzaj": "laczna_malzenska",
+        "wspolwlasciciele": [
+          {
+            "imie_nazwisko": "Tomasz Kowalczyk",
+            "pesel": "80051012345"
+          },
+          {
+            "imie_nazwisko": "Agnieszka Kowalczyk",
+            "pesel": "82092387654"
+          }
+        ]
+      },
+      "obciazenia": [],
+      "hipoteka": {
+        "kwota": {
+          "cyframi": "102 000,00",
+          "slownie": "sto dwa tysiące złotych 00/100"
+        },
+        "pierwszenstwo": "pierwsze",
+        "oproznione_miejsce_po": null
+      },
+      "zakres": "cala_kw",
+      "dzialki_w_kw": [],
+      "dzialki_do_odlaczenia": [],
+      "wlasciciel_index": null
+    }
+  ],
+  "zabezpieczenia": {
+    "egzekucja_777": {
+      "kwota": {
+        "cyframi": "102 000,00",
+        "slownie": "sto dwa tysiące złotych 00/100"
+      },
+      "poddaje_sie": [
+        "pozyczkobiorca"
+      ],
+      "data_graniczna": "31.12.2031",
+      "termin_wezwania_dni": 7
+    },
+    "charakter_hipoteki": "laczna"
+  },
+  "oswiadczenia_dodatkowe": []
+}

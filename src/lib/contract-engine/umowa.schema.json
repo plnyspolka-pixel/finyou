@@ -1,0 +1,1261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://financeyou.pl/schema/umowa-pozyczki/v1",
+  "title": "Umowa pożyczki zabezpieczonej hipotecznie — dane wejściowe",
+  "description": "Jedyny artefakt wypełniany przez AI. Renderer składa dokument wyłącznie na jego podstawie.",
+  "type": "object",
+  "required": [
+    "meta",
+    "pozyczkodawca",
+    "pozyczkobiorca",
+    "warunki",
+    "nieruchomosci",
+    "zabezpieczenia"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "kwota": {
+      "type": "object",
+      "required": [
+        "cyframi",
+        "slownie"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cyframi": {
+          "type": "string",
+          "pattern": "^\\d{1,3}( \\d{3})*,\\d{2}$",
+          "description": "Format polski: '50 000,00' (spacja jako separator tysięcy, przecinek dziesiętny)"
+        },
+        "slownie": {
+          "type": "string",
+          "minLength": 3,
+          "description": "np. 'pięćdziesiąt tysięcy złotych 00/100'"
+        }
+      }
+    },
+    "data_pl": {
+      "type": "string",
+      "pattern": "^\\d{2}\\.\\d{2}\\.\\d{4}$",
+      "description": "DD.MM.RRRR"
+    },
+    "osoba_fizyczna": {
+      "type": "object",
+      "required": [
+        "typ",
+        "imie_nazwisko",
+        "pesel",
+        "adres"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "typ": {
+          "const": "osoba_fizyczna"
+        },
+        "imie_nazwisko": {
+          "type": "string",
+          "minLength": 3
+        },
+        "firma": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Nazwa działalności gospodarczej, jeśli prowadzi. null = osoba prywatna."
+        },
+        "pesel": {
+          "type": "string",
+          "pattern": "^\\d{11}$"
+        },
+        "nip": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10}$"
+        },
+        "regon": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{9}(\\d{5})?$"
+        },
+        "dokument_tozsamosci": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "np. 'dowód osobisty nr ABC123456'"
+        },
+        "adres": {
+          "type": "string",
+          "minLength": 5
+        },
+        "telefon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "email"
+        },
+        "stan_cywilny": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "kawaler_panna",
+            "zonaty_zamezna",
+            "rozwiedziony",
+            "wdowiec",
+            null
+          ],
+          "description": "Istotne dla wymogu zgody małżonka (art. 37 k.r.o.)"
+        },
+        "ustroj_majatkowy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "wspolnosc_ustawowa",
+            "rozdzielnosc",
+            "wspolnosc_umowna",
+            null
+          ]
+        }
+      }
+    },
+    "podmiot_gospodarczy": {
+      "type": "object",
+      "required": [
+        "typ",
+        "nazwa",
+        "adres"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "typ": {
+          "const": "podmiot_gospodarczy"
+        },
+        "nazwa": {
+          "type": "string",
+          "minLength": 3
+        },
+        "forma_prawna": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "np. 'sp. z o.o.'"
+        },
+        "krs": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10}$"
+        },
+        "nip": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10}$"
+        },
+        "regon": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{9}(\\d{5})?$"
+        },
+        "adres": {
+          "type": "string",
+          "minLength": 5
+        },
+        "telefon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reprezentacja": {
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "items": {
+                "$ref": "#/$defs/reprezentant"
+              }
+            },
+            {
+              "$ref": "#/$defs/reprezentant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Osoby działające za podmiot — tablica (zalecane) albo pojedynczy obiekt (kompatybilność wsteczna). Przy reprezentacji łącznej wskaż wszystkie wymagane osoby."
+        },
+        "forma": {
+          "type": "string",
+          "enum": [
+            "osoba_fizyczna",
+            "jdg",
+            "spolka_cywilna",
+            "spolka_jawna",
+            "spolka_partnerska",
+            "spolka_komandytowa",
+            "spolka_komandytowo_akcyjna",
+            "sp_z_oo",
+            "prosta_sa",
+            "sa",
+            "spoldzielnia",
+            "fundacja",
+            "stowarzyszenie",
+            "inna"
+          ],
+          "default": "inna",
+          "description": "Forma prawna w postaci kodu — steruje walidacją reprezentacji i uchwał. UWAGA: spolka_cywilna NIE ma podmiotowości prawnej — stroną są wszyscy wspólnicy; wpisz ich w 'wspolnicy_sc'."
+        },
+        "kapital_zakladowy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/kwota"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Wymagany dla sp. z o.o. / S.A. / P.S.A. — próg z art. 230 k.s.h. (2× kapitał)."
+        },
+        "reprezentacja_laczna": {
+          "type": "boolean",
+          "default": false,
+          "description": "true = wymagane współdziałanie wszystkich osób z 'reprezentacja' (reprezentacja łączna)."
+        },
+        "wspolnicy_sc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "default": null,
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/osoba_fizyczna"
+          },
+          "description": "Wspólnicy spółki cywilnej — wymagane gdy forma='spolka_cywilna'."
+        },
+        "uchwala_zobowiazanie": {
+          "$ref": "#/$defs/uchwala",
+          "description": "Zgoda na zaciągnięcie zobowiązania (np. art. 230 k.s.h.)."
+        },
+        "uchwala_nieruchomosc": {
+          "$ref": "#/$defs/uchwala",
+          "description": "Zgoda na obciążenie/zbycie nieruchomości (np. art. 228 pkt 4 k.s.h.)."
+        }
+      }
+    },
+    "strona": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/osoba_fizyczna"
+        },
+        {
+          "$ref": "#/$defs/podmiot_gospodarczy"
+        }
+      ]
+    },
+    "obciazenie": {
+      "type": "object",
+      "required": [
+        "dzial",
+        "rodzaj",
+        "opis"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "dzial": {
+          "type": "string",
+          "enum": [
+            "III",
+            "IV"
+          ],
+          "description": "Dział KW: III = prawa/roszczenia/egzekucje, IV = hipoteki"
+        },
+        "rodzaj": {
+          "type": "string",
+          "enum": [
+            "hipoteka_umowna",
+            "hipoteka_przymusowa",
+            "sluzebnosc_osobista",
+            "sluzebnosc_gruntowa",
+            "dozywocie",
+            "roszczenie",
+            "egzekucja_sadowa",
+            "egzekucja_administracyjna",
+            "najem_dzierzawa",
+            "zakaz_zbywania",
+            "inne"
+          ]
+        },
+        "opis": {
+          "type": "string",
+          "minLength": 3
+        },
+        "wierzyciel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kwota": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sposob_usuniecia": {
+          "type": "string",
+          "enum": [
+            "brak",
+            "wykreslenie_przed_wyplata",
+            "wykreslenie_ze_srodkow_pozyczki",
+            "zrzeczenie_uprawnionego",
+            "pozostaje_akceptowane"
+          ],
+          "default": "brak",
+          "description": "Jak obciążenie jest neutralizowane. Determinuje klauzule warunków zawieszających."
+        },
+        "uprawniony_do_zrzeczenia": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Wymagane gdy sposob_usuniecia = zrzeczenie_uprawnionego (np. dożywotnik)",
+          "required": [
+            "imie_nazwisko",
+            "pesel"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "imie_nazwisko": {
+              "type": "string"
+            },
+            "pesel": {
+              "type": "string",
+              "pattern": "^\\d{11}$"
+            },
+            "adres": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "kwota_splaty": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/kwota"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Wymagane gdy sposob_usuniecia = wykreslenie_ze_srodkow_pozyczki"
+        },
+        "wierzyciel_rachunek": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Rachunek do spłaty wierzyciela hipotecznego"
+        }
+      }
+    },
+    "nieruchomosc": {
+      "type": "object",
+      "required": [
+        "id",
+        "nr_kw",
+        "sad",
+        "wlasciciel_ref",
+        "opis"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^N[0-9]+$",
+          "description": "Identyfikator lokalny, np. 'N1'. Używany w referencjach."
+        },
+        "nr_kw": {
+          "type": "string",
+          "minLength": 5
+        },
+        "sad": {
+          "type": "string",
+          "minLength": 5
+        },
+        "opis": {
+          "type": "string",
+          "description": "np. 'lokal mieszkalny przy ul. X, pow. 54 m²'"
+        },
+        "rodzaj": {
+          "type": "string",
+          "enum": [
+            "lokal",
+            "dom",
+            "dzialka_budowlana",
+            "grunt_rolny",
+            "lokal_uzytkowy",
+            "inne"
+          ],
+          "default": "inne"
+        },
+        "wlasciciel_ref": {
+          "type": "string",
+          "enum": [
+            "pozyczkobiorca",
+            "porecziciel",
+            "osoba_trzecia"
+          ],
+          "description": "Kto jest właścicielem. 'pozyczkobiorca' = któryś z pożyczkobiorców (przy kilku wskaż konkretnego przez wlasciciel_index). 'osoba_trzecia' wymaga wlasciciel_dane."
+        },
+        "wlasciciel_dane": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/strona"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Wymagane gdy wlasciciel_ref = osoba_trzecia"
+        },
+        "wspolwlasnosc": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "rodzaj",
+            "wspolwlasciciele"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "rodzaj": {
+              "type": "string",
+              "enum": [
+                "laczna_malzenska"
+              ],
+              "description": "Wyłącznie wspólność łączna małżeńska. Finance You nie przyjmuje nieruchomości we współwłasności ułamkowej z osobami spoza transakcji."
+            },
+            "wspolwlasciciele": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": [
+                  "imie_nazwisko"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "imie_nazwisko": {
+                    "type": "string"
+                  },
+                  "pesel": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^\\d{11}$"
+                  }
+                }
+              },
+              "description": "Oboje małżonkowie."
+            }
+          },
+          "description": "Wspólność łączna małżeńska. Gdy oboje małżonkowie są pożyczkobiorcami, zgoda małżonka nie jest wymagana — oboje są stroną Umowy."
+        },
+        "obciazenia": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/obciazenie"
+          }
+        },
+        "hipoteka": {
+          "type": "object",
+          "required": [
+            "kwota",
+            "pierwszenstwo"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kwota": {
+              "$ref": "#/$defs/kwota"
+            },
+            "pierwszenstwo": {
+              "type": "string",
+              "enum": [
+                "pierwsze",
+                "kolejne",
+                "oproznione_miejsce"
+              ],
+              "description": "'oproznione_miejsce' = wpis na miejsce po wykreślanej hipotece (art. 101(1) u.k.w.h.)"
+            },
+            "oproznione_miejsce_po": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Opis wykreślanej hipoteki, gdy pierwszenstwo = oproznione_miejsce"
+            }
+          }
+        },
+        "zakres": {
+          "type": "string",
+          "enum": [
+            "cala_kw",
+            "po_odlaczeniu"
+          ],
+          "default": "cala_kw",
+          "description": "Zakres obciążenia. 'cala_kw' = hipoteka na całej nieruchomości objętej KW (jedyny wariant możliwy od razu — hipoteka rozciąga się na całą nieruchomość, nie da się obciążyć wybranej działki z KW obejmującej ich kilka). 'po_odlaczeniu' = obciążenie ma dotyczyć działek, które trzeba najpierw odłączyć do nowej KW; wymaga wypełnienia dzialki_do_odlaczenia. UWAGA: postępowanie wieczystoksięgowe trwa obecnie ok. roku."
+        },
+        "dzialki_w_kw": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Numery działek ewidencyjnych objętych tą KW, np. ['145/2', '145/3']."
+        },
+        "dzialki_do_odlaczenia": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Działki, które mają zostać odłączone do nowej KW przed ustanowieniem hipoteki. Wymagane gdy zakres='po_odlaczeniu'."
+        },
+        "wlasciciel_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null,
+          "minimum": 0,
+          "description": "Gdy wlasciciel_ref='pozyczkobiorca' i pożyczkobiorców jest kilku: indeks w tablicy pozyczkobiorca (0-based). null = nieruchomość wspólna wszystkich pożyczkobiorców albo pożyczkobiorca jest jeden."
+        }
+      }
+    },
+    "porecziciel_osoba_fizyczna": {
+      "type": "object",
+      "required": [
+        "typ",
+        "imie_nazwisko",
+        "pesel",
+        "adres"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "typ": {
+          "const": "osoba_fizyczna"
+        },
+        "imie_nazwisko": {
+          "type": "string",
+          "minLength": 3
+        },
+        "firma": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Nazwa działalności gospodarczej, jeśli prowadzi. null = osoba prywatna."
+        },
+        "pesel": {
+          "type": "string",
+          "pattern": "^\\d{11}$"
+        },
+        "nip": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10}$"
+        },
+        "regon": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{9}(\\d{5})?$"
+        },
+        "dokument_tozsamosci": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "np. 'dowód osobisty nr ABC123456'"
+        },
+        "adres": {
+          "type": "string",
+          "minLength": 5
+        },
+        "telefon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "email"
+        },
+        "stan_cywilny": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "kawaler_panna",
+            "zonaty_zamezna",
+            "rozwiedziony",
+            "wdowiec",
+            null
+          ],
+          "description": "Istotne dla wymogu zgody małżonka (art. 37 k.r.o.)"
+        },
+        "ustroj_majatkowy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "wspolnosc_ustawowa",
+            "rozdzielnosc",
+            "wspolnosc_umowna",
+            null
+          ]
+        },
+        "zakres_odpowiedzialnosci": {
+          "type": "string",
+          "enum": [
+            "rzeczowa",
+            "rzeczowa_i_osobista"
+          ],
+          "default": "rzeczowa_i_osobista",
+          "description": "'rzeczowa' = wyłącznie z nieruchomości (dłużnik rzeczowy, bez poręczenia z art. 876 k.c.). 'rzeczowa_i_osobista' = hipoteka + poręczenie osobiste."
+        },
+        "zgoda_malzonka": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "description": "Wypełnić, gdy poręczyciel pozostaje we wspólności ustawowej. Zgoda na hipotekę (art. 37 k.r.o.) i na poręczenie (art. 41 k.r.o.) to DWIE ODRĘBNE czynności.",
+          "additionalProperties": false,
+          "required": [
+            "na_hipoteke",
+            "na_poreczenie"
+          ],
+          "properties": {
+            "na_hipoteke": {
+              "type": "boolean",
+              "description": "Zgoda na hipotekę (art. 37 § 1 pkt 1 k.r.o.)"
+            },
+            "na_poreczenie": {
+              "type": "boolean",
+              "description": "Zgoda na poręczenie (art. 41 § 1 k.r.o.). Brak NIE unieważnia poręczenia — ogranicza egzekucję do majątku osobistego (art. 41 § 2 k.r.o.)."
+            }
+          }
+        }
+      }
+    },
+    "porecziciel_podmiot": {
+      "type": "object",
+      "required": [
+        "typ",
+        "nazwa",
+        "adres"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "typ": {
+          "const": "podmiot_gospodarczy"
+        },
+        "nazwa": {
+          "type": "string",
+          "minLength": 3
+        },
+        "forma_prawna": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "np. 'sp. z o.o.'"
+        },
+        "krs": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10}$"
+        },
+        "nip": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{10}$"
+        },
+        "regon": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{9}(\\d{5})?$"
+        },
+        "adres": {
+          "type": "string",
+          "minLength": 5
+        },
+        "telefon": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reprezentacja": {
+          "anyOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "items": {
+                "$ref": "#/$defs/reprezentant"
+              }
+            },
+            {
+              "$ref": "#/$defs/reprezentant"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Osoby działające za podmiot — tablica (zalecane) albo pojedynczy obiekt (kompatybilność wsteczna). Przy reprezentacji łącznej wskaż wszystkie wymagane osoby."
+        },
+        "forma": {
+          "type": "string",
+          "enum": [
+            "osoba_fizyczna",
+            "jdg",
+            "spolka_cywilna",
+            "spolka_jawna",
+            "spolka_partnerska",
+            "spolka_komandytowa",
+            "spolka_komandytowo_akcyjna",
+            "sp_z_oo",
+            "prosta_sa",
+            "sa",
+            "spoldzielnia",
+            "fundacja",
+            "stowarzyszenie",
+            "inna"
+          ],
+          "default": "inna",
+          "description": "Forma prawna w postaci kodu — steruje walidacją reprezentacji i uchwał. UWAGA: spolka_cywilna NIE ma podmiotowości prawnej — stroną są wszyscy wspólnicy; wpisz ich w 'wspolnicy_sc'."
+        },
+        "kapital_zakladowy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/kwota"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Wymagany dla sp. z o.o. / S.A. / P.S.A. — próg z art. 230 k.s.h. (2× kapitał)."
+        },
+        "reprezentacja_laczna": {
+          "type": "boolean",
+          "default": false,
+          "description": "true = wymagane współdziałanie wszystkich osób z 'reprezentacja' (reprezentacja łączna)."
+        },
+        "wspolnicy_sc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "default": null,
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/osoba_fizyczna"
+          },
+          "description": "Wspólnicy spółki cywilnej — wymagane gdy forma='spolka_cywilna'."
+        },
+        "uchwala_zobowiazanie": {
+          "$ref": "#/$defs/uchwala",
+          "description": "Zgoda na zaciągnięcie zobowiązania (np. art. 230 k.s.h.)."
+        },
+        "uchwala_nieruchomosc": {
+          "$ref": "#/$defs/uchwala",
+          "description": "Zgoda na obciążenie/zbycie nieruchomości (np. art. 228 pkt 4 k.s.h.)."
+        },
+        "zakres_odpowiedzialnosci": {
+          "type": "string",
+          "enum": [
+            "rzeczowa",
+            "rzeczowa_i_osobista"
+          ],
+          "default": "rzeczowa_i_osobista",
+          "description": "'rzeczowa' = wyłącznie z nieruchomości (dłużnik rzeczowy, bez poręczenia z art. 876 k.c.). 'rzeczowa_i_osobista' = hipoteka + poręczenie osobiste."
+        },
+        "zgoda_malzonka": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "description": "Wypełnić, gdy poręczyciel pozostaje we wspólności ustawowej. Zgoda na hipotekę (art. 37 k.r.o.) i na poręczenie (art. 41 k.r.o.) to DWIE ODRĘBNE czynności.",
+          "additionalProperties": false,
+          "required": [
+            "na_hipoteke",
+            "na_poreczenie"
+          ],
+          "properties": {
+            "na_hipoteke": {
+              "type": "boolean",
+              "description": "Zgoda na hipotekę (art. 37 § 1 pkt 1 k.r.o.)"
+            },
+            "na_poreczenie": {
+              "type": "boolean",
+              "description": "Zgoda na poręczenie (art. 41 § 1 k.r.o.). Brak NIE unieważnia poręczenia — ogranicza egzekucję do majątku osobistego (art. 41 § 2 k.r.o.)."
+            }
+          }
+        }
+      }
+    },
+    "reprezentant": {
+      "type": "object",
+      "required": [
+        "imie_nazwisko",
+        "funkcja"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "imie_nazwisko": {
+          "type": "string",
+          "minLength": 3
+        },
+        "pesel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{11}$"
+        },
+        "funkcja": {
+          "type": "string",
+          "description": "np. 'prezes zarządu', 'członek zarządu', 'prokurent', 'pełnomocnik', 'wspólnik'"
+        },
+        "podstawa": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Dla pełnomocnika/prokurenta: np. 'pełnomocnictwo z dnia 24.02.2023 r.'"
+        }
+      }
+    },
+    "uchwala": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "wymagana"
+      ],
+      "properties": {
+        "wymagana": {
+          "type": "boolean",
+          "description": "Czy dla tej czynności potrzebna jest zgoda korporacyjna."
+        },
+        "podstawa": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "np. 'art. 228 pkt 4 k.s.h.', 'art. 230 k.s.h.', 'art. 393 pkt 4 k.s.h.', 'umowa spółki §12'"
+        },
+        "organ": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "zgromadzenie_wspolnikow",
+            "walne_zgromadzenie",
+            "rada_nadzorcza",
+            "wspolnicy",
+            "komplementariusze",
+            null
+          ]
+        },
+        "przedlozona": {
+          "type": "boolean",
+          "default": false,
+          "description": "Czy uchwała została już przedłożona Pożyczkodawcy."
+        },
+        "data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/data_pl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wylaczona_umowa_spolki": {
+          "type": "boolean",
+          "default": false,
+          "description": "Umowa/statut spółki wyłącza wymóg uchwały (dopuszcza to art. 228 pkt 4 i art. 230 k.s.h.)."
+        }
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "data_umowy",
+        "miejscowosc"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "data_umowy": {
+          "$ref": "#/$defs/data_pl"
+        },
+        "miejscowosc": {
+          "type": "string",
+          "description": "Miejsce zawarcia w miejscowniku, np. 'Lublinie'"
+        },
+        "numer_umowy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "wersja_wzoru": {
+          "type": "string",
+          "default": "1.0"
+        }
+      }
+    },
+    "pozyczkodawca": {
+      "$ref": "#/$defs/strona"
+    },
+    "pozyczkobiorca": {
+      "description": "Pożyczkobiorca. Może być pojedynczym obiektem (jeden dłużnik) albo tablicą (dwóch lub więcej — odpowiadają solidarnie, art. 366 k.c.). Formy są równoważne; tablica jednoelementowa działa jak pojedynczy obiekt. UWAGA: jeżeli małżonkowie we wspólności ustawowej są OBOJE pożyczkobiorcami, zgoda małżonka na hipotekę nie jest wymagana — oboje są stroną Umowy.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/strona"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/strona"
+          }
+        }
+      ]
+    },
+    "porecziciel": {
+      "description": "null = brak poręczyciela. W konstrukcji Finance You poręczyciel występuje zwykle wtedy, gdy wnosi nieruchomość jako zabezpieczenie, a pożyczkobiorcą jest podmiot prowadzący działalność gospodarczą.",
+      "default": null,
+      "oneOf": [
+        {
+          "$ref": "#/$defs/porecziciel_osoba_fizyczna"
+        },
+        {
+          "$ref": "#/$defs/porecziciel_podmiot"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "warunki": {
+      "type": "object",
+      "required": [
+        "kwota_pozyczki",
+        "prowizja",
+        "oprocentowanie",
+        "harmonogram",
+        "cel",
+        "rachunki"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kwota_pozyczki": {
+          "$ref": "#/$defs/kwota"
+        },
+        "prowizja": {
+          "type": "object",
+          "required": [
+            "kwota",
+            "model"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kwota": {
+              "$ref": "#/$defs/kwota"
+            },
+            "model": {
+              "type": "string",
+              "enum": [
+                "nie_potracana_raty",
+                "potracana_z_wyplaty"
+              ],
+              "default": "nie_potracana_raty",
+              "description": "nie_potracana_raty = model Finance You (pełna wypłata, prowizja w ratach)"
+            }
+          }
+        },
+        "oprocentowanie": {
+          "type": "string",
+          "pattern": "^\\d{1,2},\\d$",
+          "description": "np. '15,5'"
+        },
+        "cel": {
+          "type": "string",
+          "minLength": 5
+        },
+        "harmonogram": {
+          "type": "object",
+          "required": [
+            "liczba_rat",
+            "typ",
+            "data_pierwszej_raty",
+            "dzien_miesiaca"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "liczba_rat": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360
+            },
+            "typ": {
+              "type": "string",
+              "enum": [
+                "balonowy",
+                "rowne_raty",
+                "malejace"
+              ],
+              "description": "balonowy = N-1 rat równych + rata końcowa"
+            },
+            "data_pierwszej_raty": {
+              "$ref": "#/$defs/data_pl"
+            },
+            "dzien_miesiaca": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 28
+            },
+            "kwota_raty": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/kwota"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "kwota_raty_koncowej": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/kwota"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "raty": {
+              "type": "array",
+              "description": "Wyliczony harmonogram. Generowany przez kalkulator, nie przez AI.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "nr",
+                  "termin",
+                  "kapital",
+                  "odsetki",
+                  "prowizja",
+                  "rata_razem",
+                  "saldo"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "nr": {
+                    "type": "integer"
+                  },
+                  "termin": {
+                    "$ref": "#/$defs/data_pl"
+                  },
+                  "kapital": {
+                    "type": "string"
+                  },
+                  "odsetki": {
+                    "type": "string"
+                  },
+                  "prowizja": {
+                    "type": "string"
+                  },
+                  "rata_razem": {
+                    "type": "string"
+                  },
+                  "saldo": {
+                    "type": "string"
+                  },
+                  "uwagi": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "rachunki": {
+          "type": "object",
+          "required": [
+            "wyplata",
+            "splata"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "wyplata": {
+              "type": "string",
+              "description": "Rachunek pożyczkobiorcy"
+            },
+            "splata": {
+              "type": "string",
+              "description": "Rachunek pożyczkodawcy"
+            }
+          }
+        }
+      }
+    },
+    "nieruchomosci": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nieruchomosc"
+      },
+      "description": "Lista nieruchomości stanowiących zabezpieczenie."
+    },
+    "zabezpieczenia": {
+      "type": "object",
+      "required": [
+        "egzekucja_777"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "egzekucja_777": {
+          "type": "object",
+          "required": [
+            "kwota",
+            "poddaje_sie",
+            "data_graniczna"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kwota": {
+              "$ref": "#/$defs/kwota"
+            },
+            "poddaje_sie": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "pozyczkobiorca",
+                  "porecziciel",
+                  "wlasciciel_osoba_trzecia"
+                ]
+              }
+            },
+            "data_graniczna": {
+              "$ref": "#/$defs/data_pl"
+            },
+            "termin_wezwania_dni": {
+              "type": "integer",
+              "default": 7
+            }
+          }
+        },
+        "charakter_hipoteki": {
+          "type": "string",
+          "enum": [
+            "laczna",
+            "odrebna"
+          ],
+          "default": "laczna",
+          "description": "Przy wielu nieruchomościach: 'laczna' (art. 76 u.k.w.h.) = wierzyciel może zaspokoić się z każdej nieruchomości w całości, według wyboru. 'odrebna' = na każdej nieruchomości odrębna hipoteka w odrębnej kwocie."
+        }
+      }
+    },
+    "oswiadczenia_dodatkowe": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "description": "Wolnotekstowe oświadczenia dodatkowe (rzadko używane)."
+    }
+  }
+}
