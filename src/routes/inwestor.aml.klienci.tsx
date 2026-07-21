@@ -355,7 +355,7 @@ function AmlCustomersScreen() {
             <Card key={c.id} className="cursor-pointer" onClick={() => void openDetails(c)}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center justify-between gap-2">
-                  <span className="truncate">{amlCustomerLabel(c as any)}</span>
+                  <span className="truncate">{amlCustomerLabel(c as Parameters<typeof amlCustomerLabel>[0])}</span>
                   <ScreeningBadge status={c.screening_status} />
                 </CardTitle>
               </CardHeader>
@@ -437,7 +437,7 @@ function AmlCustomersScreen() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
-              Screeningi: {amlCustomerLabel(selected as any)}
+              Screeningi: {amlCustomerLabel(selected as Parameters<typeof amlCustomerLabel>[0])}
               <Button size="sm" variant="ghost" onClick={() => void openDetails(selected)}>
                 <RefreshCw className="h-3 w-3" />
               </Button>
