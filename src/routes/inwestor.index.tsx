@@ -74,7 +74,13 @@ function InwestorList() {
       .select("id, loan_amount, preferred_period_months, annual_investor_rate, estimated_ltv, max_monthly_payment, visibility_level, properties(property_type, city, voivodeship, estimated_value, area_sqm, photos, description, street, land_register_number)")
       .eq("available_to_investors", true)
       .order("created_at", { ascending: false });
-    const list = data ?? [];
+    // Defensywnie: pokazuj wyłącznie wnioski z podstawą dla inwestora —
+    // nieruchomość z typem oraz sensowną kwotą. Zabezpiecza przed pustymi
+    // kartami z legacy-danych mimo flagi available_to_investors.
+    const list = (data ?? []).filter((a) => {
+      const p = a.properties?.[0];
+      return !!p?.property_type && a.loan_amount != null && Number(a.loan_amount) > 0;
+    });
     setApps(list); setLoading(false);
 
     const appIds = list.map((a) => a.id).filter(Boolean);

@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
-import { containsValidKw } from "@/lib/kw";
+import { evaluateApplicationCore, missingLabels, type CompletenessResult } from "@/lib/application-completeness";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -44,14 +45,16 @@ const COMPLETE_STATUSES = [
   "zamkniete",
 ];
 
-// Placeholdery wpisywane automatycznie, gdy klient powstał z leada bez danych
-// — nie liczą się jako prawdziwe imię i nazwisko.
-const PLACEHOLDER_NAMES = new Set(["z leada", "(brak nazwiska)", "—", "-", "brak"]);
-function hasRealClientName(c: Row["client"]): boolean {
-  const first = (c?.first_name ?? "").trim();
-  const last = (c?.last_name ?? "").trim();
-  if (!first || !last) return false;
-  return !PLACEHOLDER_NAMES.has(last.toLowerCase()) && !PLACEHOLDER_NAMES.has(first.toLowerCase());
+// Ocena kompletności podstawowych danych wniosku — jedyne źródło prawdy w
+// src/lib/application-completeness.ts (używane też przez panel klienta,
+// marketplace inwestora i migrację czyszczącą dane).
+function coreOf(r: Row): CompletenessResult {
+  return evaluateApplicationCore({
+    loan_amount: r.loan_amount,
+    client: r.client,
+    properties: r.properties ?? [],
+    docCount: r.docCount ?? 0,
+  });
 }
 
 function fmtPLN(n: number | null) {
@@ -64,7 +67,7 @@ function fmtDate(s: string) {
 
 type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "media" | "kw";
 type SortDir = "asc" | "desc";
-type TabKey = "all" | "incomplete" | "complete";
+type TabKey = "all" | "incomplete" | "complete" | "attention";
 
 function MediaThumbs({ photoPaths, docCount, onOpen }: { photoPaths: string[]; docCount: number; onOpen: () => void }) {
   const [urls, setUrls] = useState<string[]>([]);
@@ -156,18 +159,14 @@ function ApplicationsPage() {
         for (const r of list) r.docCount = counts[r.id] ?? 0;
       }
 
-      // Auto-promocja: POPRAWNY numer KW + imię i nazwisko klienta + kontakt
-      // (telefon lub e-mail) + (zdjęcia nieruchomości ALBO dokumenty)
-      // => szukamy_inwestora. Bez nazwiska, bez kontaktu albo z KW-śmieciem
-      // ("PRZESŁANY") wniosek zostaje w kompletowaniu danych — inwestor nie
-      // dostanie anonimowej sprawy, do której nie da się zadzwonić.
+      // Auto-promocja: pełen komplet podstawowych danych (imię i nazwisko,
+      // kontakt, kwota, POPRAWNY numer KW, zdjęcia lub dokumenty) => szukamy_inwestora.
+      // Definicja kompletności = evaluateApplicationCore (wspólny moduł). Bez
+      // kompletu wniosek zostaje w kompletowaniu danych — inwestor nie dostanie
+      // anonimowej sprawy, do której nie da się zadzwonić.
       const toPromote = list.filter((r) => {
         if (!INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) return false;
-        const hasKw = (r.properties ?? []).some((p) => containsValidKw(p.land_register_number));
-        const hasPhotos = (r.properties ?? []).some((p) => Array.isArray(p.photos) && p.photos.length > 0);
-        const hasDocs = (r.docCount ?? 0) > 0;
-        const hasContact = !!(r.client?.phone?.trim() || r.client?.email?.trim());
-        return hasKw && hasRealClientName(r.client) && hasContact && (hasPhotos || hasDocs);
+        return coreOf(r).complete;
       });
       if (toPromote.length > 0) {
         await supabase
@@ -201,17 +200,39 @@ function ApplicationsPage() {
 
   const applications = useMemo(() => rows.filter(isApplication), [rows]);
 
-  const counts = useMemo(() => ({
-    all: applications.length,
-    incomplete: applications.filter((r) => INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
-    complete: applications.filter((r) => COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))).length,
-  }), [applications]);
+  // Klasyfikacja wg DANYCH, nie tylko statusu:
+  //  - "complete"   — status kompletny I komplet podstawowych danych,
+  //  - "attention"  — status kompletny, ale BRAKUJE danych (do korekty),
+  //  - "incomplete" — wniosek jeszcze w kompletowaniu.
+  const classify = (r: Row): "complete" | "attention" | "incomplete" => {
+    if (COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) {
+      return coreOf(r).complete ? "complete" : "attention";
+    }
+    return "incomplete";
+  };
+
+  const counts = useMemo(() => {
+    const c = { all: applications.length, incomplete: 0, complete: 0, attention: 0 };
+    for (const r of applications) c[classify(r)]++;
+    return c;
+  }, [applications]);
+
+  // Cofnij wniosek do kompletowania danych (zdejmij flagę dopuszczenia do inwestorów).
+  const demote = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("loan_applications")
+      .update({ status: "kompletowanie_danych", available_to_investors: false, completeness_percent: 0, updated_at: new Date().toISOString() })
+      .in("id", ids);
+    if (error) { toast.error("Nie udało się cofnąć wniosku", { description: error.message }); return; }
+    setRows((prev) => prev.map((r) => ids.includes(r.id) ? { ...r, status: "kompletowanie_danych", completeness_percent: 0 } : r));
+    toast.success(ids.length === 1 ? "Wniosek cofnięty do kompletowania" : `Cofnięto ${ids.length} wniosków do kompletowania`);
+  };
 
   const filtered = useMemo(() => {
     const byTab = applications.filter((r) => {
-      if (tab === "incomplete") return INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status));
-      if (tab === "complete") return COMPLETE_STATUSES.includes(normalizeLoanStatus(r.status));
-      return true;
+      if (tab === "all") return true;
+      return classify(r) === tab;
     });
 
     const out = byTab.filter((r) => {
@@ -254,7 +275,7 @@ function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Wnioski</h1>
           <p className="text-sm text-muted-foreground">
-            Wszystkie wnioski — kompletne i niekompletne. Po dodaniu imienia i nazwiska, poprawnego numeru KW oraz zdjęć wniosek zostaje automatycznie oznaczony jako kompletny.
+            Wniosek jest „kompletny" dopiero z kompletem podstawowych danych: imię i nazwisko, kontakt, kwota, poprawny numer KW oraz zdjęcia lub dokumenty. Braki widać w kolumnie „Braki”; sprawy oznaczone jako kompletne mimo braków trafiają do zakładki „Do korekty”.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -264,15 +285,28 @@ function ApplicationsPage() {
 
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 space-y-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <CardTitle className="text-base">{filtered.length} wniosków</CardTitle>
             <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
               <TabsList>
                 <TabsTrigger value="all">Wszystkie ({counts.all})</TabsTrigger>
                 <TabsTrigger value="incomplete">Niekompletne ({counts.incomplete})</TabsTrigger>
                 <TabsTrigger value="complete">Kompletne ({counts.complete})</TabsTrigger>
+                <TabsTrigger value="attention" className={counts.attention > 0 ? "text-amber-600 data-[state=active]:text-amber-700" : undefined}>
+                  Do korekty ({counts.attention})
+                </TabsTrigger>
               </TabsList>
             </Tabs>
+            {tab === "attention" && filtered.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={() => void demote(filtered.map((r) => r.id))}
+              >
+                <Undo2 className="h-4 w-4 mr-2" /> Cofnij wszystkie ({filtered.length}) do kompletowania
+              </Button>
+            )}
           </div>
           <Input
             placeholder="Szukaj: imię, nazwisko, e-mail, telefon, ID…"
@@ -285,23 +319,24 @@ function ApplicationsPage() {
           <Table className="w-full table-fixed text-sm [&_th]:text-xs">
             <TableHeader>
               <TableRow>
-                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[18%]" />
-                <TableHead className="w-[16%]">Kontakt</TableHead>
-                <SortHeader label="Status" k="status" sort={sort} setSort={setSort} className="w-[11%]" />
-                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[9%]" />
-                <SortHeader label="Kompl." k="completeness_percent" sort={sort} setSort={setSort} className="text-center w-[10%]" />
-                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[12%]" />
-                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[10%]" />
-                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[8%]" />
-                <TableHead className="text-right w-[6%]">Akcje</TableHead>
+                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[16%]" />
+                <TableHead className="w-[14%]">Kontakt</TableHead>
+                <SortHeader label="Status" k="status" sort={sort} setSort={setSort} className="w-[10%]" />
+                <TableHead className="w-[12%]">Braki</TableHead>
+                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[8%]" />
+                <SortHeader label="Kompl." k="completeness_percent" sort={sort} setSort={setSort} className="text-center w-[9%]" />
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[11%]" />
+                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[8%]" />
+                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[7%]" />
+                <TableHead className="text-right w-[5%]">Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
@@ -310,8 +345,10 @@ function ApplicationsPage() {
                 const allPhotos = (r.properties ?? []).flatMap((p) => Array.isArray(p.photos) ? p.photos : []);
                 const canonStatus = normalizeLoanStatus(r.status);
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
+                const core = coreOf(r);
+                const needsFix = isComplete && !core.complete;
                 return (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
                       <div className="truncate" title={name}>{name}</div>
                       <div className="text-[10px] text-muted-foreground truncate" title={leadSourceLabel(r.source)}>
@@ -323,9 +360,23 @@ function ApplicationsPage() {
                       <div className="text-muted-foreground truncate" title={r.client?.phone ?? ""}>{r.client?.phone ?? "—"}</div>
                     </TableCell>
                     <TableCell className="align-top">
-                      <Badge variant={isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"} className="whitespace-normal text-[11px] leading-tight">
+                      <Badge variant={needsFix ? "outline" : isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"} className={`whitespace-normal text-[11px] leading-tight ${needsFix ? "border-amber-400 text-amber-700" : ""}`}>
+                        {needsFix && <AlertTriangle className="h-3 w-3 mr-1 inline shrink-0" />}
                         {LOAN_STATUS_SHORT_LABELS[canonStatus]}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      {core.complete ? (
+                        <span className="text-[11px] text-emerald-600">komplet</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-0.5">
+                          {missingLabels(core.missing).map((label) => (
+                            <Badge key={label} variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground/30 px-1 py-0 font-normal">
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums align-top">{fmtPLN(r.loan_amount as any)}</TableCell>
                     <TableCell className="text-center align-top">
@@ -359,6 +410,11 @@ function ApplicationsPage() {
                         <Button asChild size="sm" variant="ghost" className="h-8 px-2">
                           <Link to="/admin/wnioski/$id" params={{ id: r.id }}>Otwórz</Link>
                         </Button>
+                        {needsFix && (
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-700 hover:text-amber-800 hover:bg-amber-100" onClick={() => void demote([r.id])} title="Cofnij do kompletowania danych">
+                            <Undo2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {r.return_link && (
                           <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
                             <a href={r.return_link} target="_blank" rel="noreferrer" title="Link zwrotny">

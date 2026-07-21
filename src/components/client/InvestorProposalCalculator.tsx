@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import { FancyShell } from "@/components/landing/fancy-shell";
 import { securityTypeLabels, type SecurityType } from "@/lib/loan-math";
+import { containsValidKw } from "@/lib/kw";
 import { cn } from "@/lib/utils";
 
 const PROPERTY_TILES: { type: SecurityType; icon: typeof Building2 }[] = [
@@ -173,7 +174,7 @@ export function InvestorProposalCalculator({
     if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
     if (!prop?.property_type) m.push("typ zabezpieczenia");
     if (!String(city ?? prop?.city ?? "").trim()) m.push("miejscowość");
-    if (!prop?.land_register_number && !prop?.area_sqm) m.push("numer KW lub powierzchnia");
+    if (!containsValidKw(prop?.land_register_number) && !prop?.area_sqm) m.push("poprawny numer KW lub powierzchnia");
     if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!amount || !months || !annualRate) m.push("warunki finansowe");
     return m;
