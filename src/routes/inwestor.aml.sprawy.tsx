@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Sprawy AML — tworzone z klienta, screeningu, rozbieżności CRBR, oceny
 // ryzyka, transakcji, rejestru ponadprogowego albo ręcznie.
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -58,7 +57,9 @@ function AmlCasesScreen() {
   const fetchCustomers = useServerFn(listAmlCustomers);
   const prepareReport = useServerFn(prepareGiifReport);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [cases, setCases] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -68,13 +69,16 @@ function AmlCasesScreen() {
     description: "",
     justification: "",
   });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [detail, setDetail] = useState<any | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
       const [c, k] = await Promise.all([fetchCases(), fetchCustomers()]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setCases(c.cases as any[]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setCustomers(k.customers as any[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania spraw");
@@ -99,6 +103,7 @@ function AmlCasesScreen() {
     }
     setBusy("save");
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await saveCase({
         data: {
           title: form.title,
@@ -122,6 +127,7 @@ function AmlCasesScreen() {
   const changeStatus = async (caseId: string, status: string) => {
     setBusy(`status-${caseId}`);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       await setStatus({ data: { caseId, status: status as any } });
       toast.success("Zmieniono status sprawy");
       await reload();
@@ -157,6 +163,7 @@ function AmlCasesScreen() {
   const makeReport = async (caseId: string, reportType: string) => {
     setBusy(`report-${caseId}`);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       await prepareReport({ data: { reportType: reportType as any, caseId } });
       toast.success("Przygotowano zgłoszenie GIIF");
       void navigate({ to: "/inwestor/aml/zgloszenia" });
@@ -354,6 +361,7 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Transakcje w sprawie</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.transactions.map((t: any) => (
                     <li key={t.id}>
                       {t.transaction_date} — {t.transaction_type} — {Number(t.amount).toFixed(2)}{" "}
@@ -367,6 +375,7 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Załączniki</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.attachments.map((a: any) => (
                     <li key={a.id}>{a.file_name}</li>
                   ))}
@@ -377,6 +386,7 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Zgłoszenia GIIF w sprawie</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.reports.map((r: any) => (
                     <li key={r.id}>
                       {r.report_type} — {r.status} (v{r.current_version})
@@ -389,6 +399,7 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Historia (audyt — nieusuwalny)</p>
                 <ul className="ml-1 text-xs text-muted-foreground space-y-0.5">
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.audit.slice(0, 20).map((a: any) => (
                     <li key={a.id}>
                       {new Date(a.created_at).toLocaleString("pl-PL")} — {a.action}

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // GIIF Connector — komunikacja z SI*GIIF (API rest2018).
 //
 //  Środowisko testowe:  https://test.giif.mofnet.gov.pl/api/rest2018
@@ -32,6 +31,7 @@ import { getGiifMtlsProvider } from "@/lib/aml/giif-mtls.server";
 export const GIIF_TEST_BASE = "https://test.giif.mofnet.gov.pl/api/rest2018";
 export const GIIF_PROD_BASE = "https://www.giif.mofnet.gov.pl/api/rest2018";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any };
 const db = () => supabaseAdmin as unknown as Loose;
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Zgłoszenia GIIF — cały przepływ:
 //  1) przygotowanie zgłoszenia BEZ podpisu (auto-zbieranie danych inwestora,
 //     osoby odpowiedzialnej, klienta, stron, rachunków, kwot, umowy,
@@ -16,9 +15,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { GiifReportPayload } from "@/lib/aml/aml-types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any; rpc?: any };
 const loose = (c: unknown) => c as Loose;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 function customerName(c: any): string {
   return c.entity_type === "firma"
     ? (c.company_name ?? "")
@@ -57,9 +58,13 @@ export const prepareGiifReport = createServerFn({ method: "POST" })
       throw new Error("Wejdź najpierw na Przegląd AML — ustawienia utworzą się automatycznie.");
 
     // Kontekst: sprawa i/lub wpis ponadprogowy.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     let caseRow: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     let customer: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     let transactions: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     let thresholdEntry: any = null;
 
     if (data.caseId) {
@@ -75,6 +80,7 @@ export const prepareGiifReport = createServerFn({ method: "POST" })
         .from("aml_case_transactions")
         .select("aml_transactions(*)")
         .eq("case_id", data.caseId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       transactions = (links ?? []).map((l: any) => l.aml_transactions).filter(Boolean);
     }
     if (data.thresholdEntryId) {
@@ -134,10 +140,12 @@ export const prepareGiifReport = createServerFn({ method: "POST" })
             dob: customer.dob ?? undefined,
             address: customer.address ?? undefined,
             countryResidence: customer.country_residence ?? "PL",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
             representatives: ((customer.representatives ?? []) as any[]).map((r) => ({
               name: r.name,
               role: r.role ?? undefined,
             })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
             beneficialOwners: ((customer.beneficial_owners ?? []) as any[]).map((b) => ({
               name: b.name,
               sharePct: b.sharePct ?? undefined,
@@ -242,6 +250,7 @@ export const generateGiifDocuments = createServerFn({ method: "POST" })
       .from("aml_attachments")
       .select("file_name, sha256")
       .eq("report_id", report.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     payload.attachments = (atts ?? []).map((a: any) => ({
       fileName: a.file_name,
       sha256: a.sha256,

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Ustawienia AML — osoba odpowiedzialna (domyślnie z profilu inwestora),
 // dodatkowa osoba uprawniona, osoba podpisująca, dane instytucji, środowisko
 // SI*GIIF oraz nieusuwalna historia audytu.
@@ -99,6 +98,7 @@ function AmlSettingsScreen() {
   const fetchAudit = useServerFn(listAmlAudit);
 
   const [settings, setSettings] = useState<AmlSettingsView | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [audit, setAudit] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -114,6 +114,7 @@ function AmlSettingsScreen() {
         setSameSigner(!s.signerPerson);
         setHasAdditional(Boolean(s.additionalPerson));
         const a = await fetchAudit({ data: {} });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
         setAudit(a.audit as any[]);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Błąd wczytywania ustawień");

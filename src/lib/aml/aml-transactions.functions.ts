@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Rejestr transakcji + rejestr transakcji ponadprogowych.
 //  - każda WYKONANA transakcja dostaje równowartość EUR wg średniego kursu
 //    NBP (tabela A) z dnia transakcji; > 15 000 EUR → wpis do rejestru
@@ -16,6 +15,7 @@ import {
   type AmlTransactionType,
 } from "@/lib/aml/aml-types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any };
 const loose = (c: unknown) => c as Loose;
 
@@ -51,6 +51,7 @@ const TransactionInput = z.object({
  * 15 000 EUR — tworzy wpis rejestru ponadprogowego (kurs, data i numer
  * tabeli NBP, termin 7 dni, domyślna decyzja dla gotówki).
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 async function processExecutedTransaction(db: Loose, tx: any, userId: string): Promise<any> {
   const { getEurRateForDate, toEurEquivalent } = await import("@/lib/aml/nbp-eur.server");
   const { amlAudit } = await import("@/lib/aml/audit.server");
@@ -153,6 +154,7 @@ export const upsertAmlTransaction = createServerFn({ method: "POST" })
         : {}),
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     let tx: any;
     if (data.id) {
       const { data: updated, error } = await db

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Rejestr transakcji — automatyczne, ręczne i (w przyszłości) bankowe.
 // Wykonanie transakcji potwierdza inwestor, jeżeli Finance You nie widzi
 // faktycznego przelewu; po potwierdzeniu system liczy równowartość EUR
@@ -64,7 +63,9 @@ function AmlTransactionsScreen() {
   const confirmTx = useServerFn(confirmAmlTransactionExecution);
   const fetchCustomers = useServerFn(listAmlCustomers);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [rows, setRows] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -74,7 +75,9 @@ function AmlTransactionsScreen() {
   const reload = useCallback(async () => {
     try {
       const [t, c] = await Promise.all([fetchTx(), fetchCustomers()]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setRows(t.transactions as any[]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setCustomers(c.customers as any[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania rejestru");
@@ -95,10 +98,12 @@ function AmlTransactionsScreen() {
     }
     setBusy("save");
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await saveTx({
         data: {
           customerId: form.customerId || undefined,
           contractRef: form.contractRef || undefined,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
           transactionType: form.transactionType as any,
           source: "manual",
           transactionDate: form.transactionDate,
@@ -129,6 +134,7 @@ function AmlTransactionsScreen() {
   const confirm = async (id: string) => {
     setBusy(id);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await confirmTx({ data: { transactionId: id } });
       toast.success(
         res.transaction.above_threshold
@@ -219,6 +225,7 @@ function AmlTransactionsScreen() {
                 <Label>Waluta</Label>
                 <Select
                   value={form.currency}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   onValueChange={(v) => setForm({ ...form, currency: v as any })}
                 >
                   <SelectTrigger>

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Zgłoszenia GIIF — przygotowanie (bez podpisu): kompletność, XML + PDF,
 // wersje i hashe, zatwierdzenie treści, pobranie pakietu. Dopiero przycisk
 // „Podpisz i zgłoś do GIIF" wymaga kwalifikowanego podpisu elektronicznego:
@@ -68,6 +67,7 @@ function AmlReportsScreen() {
   const regSubmit = useServerFn(giifRegistrationSubmit);
   const regFinish = useServerFn(giifRegistrationFinish);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -79,6 +79,7 @@ function AmlReportsScreen() {
 
   // Dialog podpisu i wysyłki ("Podpisz i zgłoś do GIIF").
   const [signDialog, setSignDialog] = useState<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     report: any;
     variant: "A" | "B";
     documentUrl?: string | null;
@@ -89,6 +90,7 @@ function AmlReportsScreen() {
   const reload = useCallback(async () => {
     try {
       const res = await fetchReports();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setReports(res.reports as any[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania zgłoszeń");
@@ -106,6 +108,7 @@ function AmlReportsScreen() {
     try {
       await prepare({
         data: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
           reportType: prepForm.reportType as any,
           justification: prepForm.justification || undefined,
         },
@@ -120,9 +123,11 @@ function AmlReportsScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const doGenerate = async (r: any) => {
     setBusy(`gen-${r.id}`);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await generate({ data: { reportId: r.id } });
       if (!res.ok) {
         const missing = res.completeness?.missing ?? res.xsdErrors ?? [];
@@ -138,6 +143,7 @@ function AmlReportsScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const doApprove = async (r: any) => {
     setBusy(`app-${r.id}`);
     try {
@@ -151,6 +157,7 @@ function AmlReportsScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const doDownload = async (r: any) => {
     setBusy(`dl-${r.id}`);
     try {
@@ -168,9 +175,11 @@ function AmlReportsScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const doStartSubmission = async (r: any) => {
     setBusy(`sub-${r.id}`);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await startSubmission({ data: { reportId: r.id } });
       setWizard({ step: "intro" });
       setSignDialog({
@@ -192,6 +201,7 @@ function AmlReportsScreen() {
     setBusy("upload-signed");
     try {
       const base64 = await fileToBase64(file);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await uploadSigned({
         data: { reportId: signDialog.report.id, signedBase64: base64 },
       });
@@ -215,6 +225,7 @@ function AmlReportsScreen() {
   const wizardPrepare = async () => {
     setBusy("wiz-prepare");
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await regPrepare();
       if (!res.ok) {
         toast.error(`Uzupełnij w ustawieniach: ${res.missing.join(", ")}`);
@@ -239,6 +250,7 @@ function AmlReportsScreen() {
     setBusy("wiz-submit");
     try {
       const base64 = await fileToBase64(file);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await regSubmit({
         data: { certificateId: wizard.certificateId, signedRegistrationBase64: base64 },
       });
@@ -259,6 +271,7 @@ function AmlReportsScreen() {
     if (wizard.step !== "submitted") return;
     setBusy("wiz-finish");
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await regFinish({
         data: { certificateId: wizard.certificateId, certificatePem: certificatePem || undefined },
       });
@@ -274,6 +287,7 @@ function AmlReportsScreen() {
       );
       // Wracamy automatycznie do przygotowanego zgłoszenia (wariant A).
       if (res.mtlsOk && signDialog) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
         const again: any = await startSubmission({ data: { reportId: signDialog.report.id } });
         setSignDialog({ ...signDialog, variant: again.variant, documentUrl: again.documentUrl });
       }

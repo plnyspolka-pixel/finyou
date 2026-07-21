@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Rejestr transakcji ponadprogowych (> 15 000 EUR) — kurs/tabela NBP,
 // termin 7 dni, decyzja inwestora; dla przelewów opcja „raportuje bank".
 // Transakcja ponadprogowa nie jest automatycznie podejrzana — można dla
@@ -63,8 +62,10 @@ function AmlThresholdScreen() {
   const createCase = useServerFn(upsertAmlCase);
   const prepareReport = useServerFn(prepareGiifReport);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [dialog, setDialog] = useState<any | null>(null);
   const [decision, setDecision] = useState("");
   const [note, setNote] = useState("");
@@ -74,6 +75,7 @@ function AmlThresholdScreen() {
   const reload = useCallback(async () => {
     try {
       const res = await fetchEntries();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setEntries(res.entries as any[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania rejestru");
@@ -86,6 +88,7 @@ function AmlThresholdScreen() {
     void reload();
   }, [reload]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const openDecision = (entry: any) => {
     setDialog(entry);
     setDecision(entry.decision ?? "");
@@ -103,6 +106,7 @@ function AmlThresholdScreen() {
       await decideEntry({
         data: {
           entryId: dialog.id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
           decision: decision as any,
           note: note || undefined,
           reportedByBank,
@@ -118,10 +122,12 @@ function AmlThresholdScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const makeCase = async (entry: any) => {
     setBusy(`case-${entry.id}`);
     try {
       const tx = entry.aml_transactions;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await createCase({
         data: {
           title: `Transakcja ponadprogowa ${tx?.transaction_date ?? ""} (${formatEUR(Number(entry.eur_equivalent))})`,
@@ -140,6 +146,7 @@ function AmlThresholdScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const makeReport = async (entry: any) => {
     setBusy(`report-${entry.id}`);
     try {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Ustawienia AML + przegląd modułu.
 // Kluczowe założenie: moduł jest dostępny od pierwszego wejścia — pierwszy
 // odczyt ustawień automatycznie tworzy rekord aml_settings z osobą
@@ -9,6 +8,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AmlInstitution, AmlPerson, AmlProfileGaps } from "@/lib/aml/aml-types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any };
 const loose = (c: unknown) => c as Loose;
 
@@ -110,6 +110,7 @@ async function keyProviderInfo() {
   return getAmlKeyProvider().info();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 async function toView(row: any): Promise<AmlSettingsView> {
   const person = (row.responsible_person ?? {}) as AmlPerson;
   const institution = (row.institution ?? {}) as AmlInstitution;
@@ -249,6 +250,7 @@ export const getAmlOverview = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<AmlOverview> => {
     const db = loose(context.supabase);
     const uid = context.userId;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     const count = async (table: string, filter?: (q: any) => any) => {
       let q = db.from(table).select("id", { count: "exact", head: true }).eq("user_id", uid);
       if (filter) q = filter(q);

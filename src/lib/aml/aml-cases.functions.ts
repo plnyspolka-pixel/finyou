@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Sprawy AML — tworzone z klienta, screeningu, rozbieżności CRBR, oceny
 // ryzyka, transakcji, rejestru ponadprogowego albo ręcznie.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any; rpc: (fn: string, args?: Record<string, unknown>) => any };
 const loose = (c: unknown) => c as Loose;
 
@@ -84,6 +84,7 @@ export const getAmlCase = createServerFn({ method: "POST" })
       .limit(100);
     return {
       case: c,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       transactions: (txLinks ?? []).map((l: any) => l.aml_transactions).filter(Boolean),
       attachments: attachments ?? [],
       reports: reports ?? [],
@@ -114,6 +115,7 @@ export const upsertAmlCase = createServerFn({ method: "POST" })
       justification: data.justification ?? null,
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     let caseRow: any;
     if (data.id) {
       const { data: updated, error } = await db

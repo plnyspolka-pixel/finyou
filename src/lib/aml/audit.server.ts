@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Nieusuwalny audit log AML — każda zmiana statusu, decyzja, podpis,
 // wysyłka i odpowiedź GIIF trafia tutaj. Tabela jest append-only
 // (trigger blokuje UPDATE/DELETE nawet dla właściciela).
@@ -24,7 +23,7 @@ export async function amlAudit(entry: {
   action: string;
   details?: Record<string, unknown>;
 }): Promise<void> {
-  const { error } = await (supabaseAdmin as unknown as { from: (t: string) => any })
+  const { error } = await supabaseAdmin
     .from("aml_audit_log")
     .insert({
       user_id: entry.userId,
@@ -32,7 +31,7 @@ export async function amlAudit(entry: {
       entity_type: entry.entityType,
       entity_id: entry.entityId ?? null,
       action: entry.action,
-      details: entry.details ?? {},
+      details: (entry.details ?? {}) as never,
     });
   if (error) {
     // Audyt nie może wywrócić operacji biznesowej, ale brak wpisu logujemy głośno.

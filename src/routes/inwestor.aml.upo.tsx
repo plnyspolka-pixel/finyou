@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // UPO i odpowiedzi GIIF — statusy wysłanych zgłoszeń, pobieranie UPO,
 // odpowiedzi (odrzucenia / korekty) i ręczne odświeżenie statusów.
 import { createFileRoute } from "@tanstack/react-router";
@@ -35,6 +34,7 @@ function AmlUpoScreen() {
   const downloads = useServerFn(getGiifReportDownloads);
   const refresh = useServerFn(refreshGiifStatuses);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,6 +42,7 @@ function AmlUpoScreen() {
   const reload = useCallback(async () => {
     try {
       const res = await fetchReports();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setReports((res.reports as any[]).filter((r) => SUBMITTED_STATUSES.includes(r.status)));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania");
@@ -67,6 +68,7 @@ function AmlUpoScreen() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const downloadUpo = async (r: any) => {
     setBusy(`upo-${r.id}`);
     try {

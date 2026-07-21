@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Klienci i weryfikacje AML: profil klienta, CRBR, screening Dilisense
 // (klient + reprezentanci + beneficjenci rzeczywiści), ocena trafień,
 // unieważnianie screeningu przy zmianie danych oraz oceny ryzyka.
@@ -13,6 +12,7 @@ import {
 } from "@/lib/aml/aml-types";
 import { proposeRiskLevel, type RiskProposal } from "@/lib/aml/risk-proposal";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Loose = { from: (t: string) => any };
 const loose = (c: unknown) => c as Loose;
 
@@ -40,6 +40,7 @@ const CustomerInput = z.object({
   loanApplicationId: z.string().uuid().optional(),
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 function customerDisplayName(c: any): string {
   return c.entity_type === "firma"
     ? (c.company_name ?? "")
@@ -440,7 +441,9 @@ export const resolveAmlScreening = createServerFn({ method: "POST" })
       .select("status, hit_resolution, total_hits")
       .eq("customer_id", screening.customer_id)
       .neq("status", "invalidated");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     const anyBlocked = (all ?? []).some((s: any) => s.status === "blocked");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
     const anyUnreviewed = (all ?? []).some((s: any) => s.status === "review_required");
     const customerStatus = anyBlocked
       ? "blocked"
@@ -451,8 +454,10 @@ export const resolveAmlScreening = createServerFn({ method: "POST" })
       .from("aml_customers")
       .update({
         screening_status: customerStatus,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
         pep_status: (all ?? []).some((s: any) => s.hit_resolution === "confirmed_pep") || undefined,
         sanction_hit:
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
           (all ?? []).some((s: any) => s.hit_resolution === "confirmed_sanction") || undefined,
       })
       .eq("id", screening.customer_id);

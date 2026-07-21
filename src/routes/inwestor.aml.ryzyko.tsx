@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Oceny ryzyka — system proponuje poziom, inwestor podejmuje ostateczną
 // decyzję; każda ręczna zmiana wymaga uzasadnienia.
 import { createFileRoute } from "@tanstack/react-router";
@@ -37,7 +36,9 @@ function AmlRiskScreen() {
   const decide = useServerFn(decideAmlRisk);
   const fetchAssessments = useServerFn(listAmlRiskAssessments);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [customers, setCustomers] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
   const [assessments, setAssessments] = useState<any[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [proposal, setProposal] = useState<RiskProposal | null>(null);
@@ -49,7 +50,9 @@ function AmlRiskScreen() {
   const reload = useCallback(async () => {
     try {
       const [c, a] = await Promise.all([fetchCustomers(), fetchAssessments()]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setCustomers(c.customers as any[]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       setAssessments(a.assessments as any[]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania");

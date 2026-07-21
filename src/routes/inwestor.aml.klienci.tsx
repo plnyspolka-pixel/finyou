@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- tabele aml_* nie są jeszcze w wygenerowanych typach Database; luźny dostęp jak w module wind_* */
 // Klienci i weryfikacje — profil AML klienta, CRBR, screening Dilisense
 // przed zawarciem umowy oraz ręczna ocena trafień.
 import { createFileRoute } from "@tanstack/react-router";
@@ -47,7 +46,9 @@ export const Route = createFileRoute("/inwestor/aml/klienci")({
   component: AmlCustomersScreen,
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Customer = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
 type Screening = Record<string, any>;
 
 const EMPTY_FORM = {
@@ -155,6 +156,7 @@ function AmlCustomersScreen() {
   const pullCrbr = async (c: Customer) => {
     setBusy(`crbr-${c.id}`);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
       const res: any = await fetchCrbr({ data: { customerId: c.id } });
       if (res.status === "ok") {
         toast.success(
@@ -180,6 +182,7 @@ function AmlCustomersScreen() {
     setBusy(`resolve-${s.id}`);
     try {
       const res = await resolve({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
         data: { screeningId: s.id, resolution: r.value as any, note: r.note || undefined },
       });
       toast.success(
@@ -218,6 +221,7 @@ function AmlCustomersScreen() {
                 <Label>Typ podmiotu</Label>
                 <Select
                   value={form.entityType}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   onValueChange={(v) => setForm({ ...form, entityType: v as any })}
                 >
                   <SelectTrigger>
@@ -351,6 +355,7 @@ function AmlCustomersScreen() {
             <Card key={c.id} className="cursor-pointer" onClick={() => void openDetails(c)}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center justify-between gap-2">
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   <span className="truncate">{amlCustomerLabel(c as any)}</span>
                   <ScreeningBadge status={c.screening_status} />
                 </CardTitle>
@@ -432,6 +437,7 @@ function AmlCustomersScreen() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
               Screeningi: {amlCustomerLabel(selected as any)}
               <Button size="sm" variant="ghost" onClick={() => void openDetails(selected)}>
                 <RefreshCw className="h-3 w-3" />
