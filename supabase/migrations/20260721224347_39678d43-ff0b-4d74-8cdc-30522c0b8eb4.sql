@@ -1,0 +1,1 @@
+ALTER VIEW public.public_loan_teasers SET (security_invoker = true);
