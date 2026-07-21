@@ -124,7 +124,7 @@ type MessengerInboxProps = {
  */
 export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadLink }: MessengerInboxProps) {
   const qc = useQueryClient();
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -149,12 +149,12 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
     queryFn: async () => {
       const { data, error } = await supabase
         .from("lead_communications")
-        .select("id, lead_id, direction, content, created_at, metadata, status, attachments")
+        .select("id, lead_id, direction, content, created_at, metadata, status, attachments, thread_external_id")
         .eq("channel", "messenger")
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(2000);
       if (error) throw error;
-      return (data ?? []) as Msg[];
+      return (data ?? []) as (Msg & { thread_external_id: string | null })[];
     },
     refetchInterval: 15_000,
   });
@@ -180,13 +180,19 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
 
   const leadMap = useMemo(() => new Map((leads ?? []).map((l) => [l.id, l])), [leads]);
 
-  // Grupuj wiadomości po lead_id, weź najnowszą jako podgląd
+  // Klucz konwersacji: lead_id jeśli jest, w przeciwnym razie PSID/IGSID
+  // z metadata / thread_external_id — pokazujemy też rozmowy bez podpiętego leada.
   const conversations = useMemo(() => {
-    const byLead = new Map<string, { lastAt: string; last: Msg; count: number }>();
-    for (const m of messages ?? []) {
-      if (!m.lead_id) continue;
-      const cur = byLead.get(m.lead_id);
-      if (!cur) byLead.set(m.lead_id, { lastAt: m.created_at, last: m, count: 1 });
+    const byKey = new Map<string, { key: string; leadId: string | null; lastAt: string; last: Msg; count: number; platform: string; extId: string | null }>();
+    for (const m of (messages ?? []) as (Msg & { thread_external_id: string | null })[]) {
+      const meta = (m.metadata ?? {}) as Record<string, any>;
+      const psid = meta.psid ?? meta.sender_id ?? meta.recipient_id ?? null;
+      const igsid = meta.igsid ?? null;
+      const extId = m.thread_external_id ?? null;
+      const key = m.lead_id ?? (igsid ? `ig:${igsid}` : psid ? `msg:${psid}` : extId ? `ext:${extId}` : `orphan:${m.id}`);
+      const platform = igsid || meta.platform === "instagram" ? "Instagram" : "Messenger";
+      const cur = byKey.get(key);
+      if (!cur) byKey.set(key, { key, leadId: m.lead_id, lastAt: m.created_at, last: m, count: 1, platform, extId });
       else {
         cur.count += 1;
         if (m.created_at > cur.lastAt) {
@@ -195,8 +201,8 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
         }
       }
     }
-    return Array.from(byLead.entries())
-      .map(([leadId, v]) => ({ leadId, ...v, lead: leadMap.get(leadId) }))
+    return Array.from(byKey.values())
+      .map((v) => ({ leadId: v.leadId, key: v.key, lastAt: v.lastAt, last: v.last, count: v.count, platform: v.platform, lead: v.leadId ? leadMap.get(v.leadId) : undefined }))
       .sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
   }, [messages, leadMap]);
 
@@ -210,21 +216,35 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
   }, [conversations, q]);
 
   useEffect(() => {
-    if (!selectedLeadId && filteredConvs[0]) setSelectedLeadId(filteredConvs[0].leadId);
-  }, [filteredConvs, selectedLeadId]);
+    if (!selectedKey && filteredConvs[0]) setSelectedKey(filteredConvs[0].key);
+  }, [filteredConvs, selectedKey]);
+
+  const selectedConv = useMemo(
+    () => filteredConvs.find((c) => c.key === selectedKey) ?? null,
+    [filteredConvs, selectedKey],
+  );
+  const selectedLeadId = selectedConv?.leadId ?? null;
 
   const thread = useMemo(() => {
-    return (messages ?? [])
-      .filter((m) => m.lead_id === selectedLeadId)
+    if (!selectedKey) return [];
+    return ((messages ?? []) as (Msg & { thread_external_id: string | null })[])
+      .filter((m) => {
+        const meta = (m.metadata ?? {}) as Record<string, any>;
+        const psid = meta.psid ?? meta.sender_id ?? meta.recipient_id ?? null;
+        const igsid = meta.igsid ?? null;
+        const extId = m.thread_external_id ?? null;
+        const key = m.lead_id ?? (igsid ? `ig:${igsid}` : psid ? `msg:${psid}` : extId ? `ext:${extId}` : `orphan:${m.id}`);
+        return key === selectedKey;
+      })
       .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
-  }, [messages, selectedLeadId]);
+  }, [messages, selectedKey]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [thread.length, selectedLeadId]);
+  }, [thread.length, selectedKey]);
 
   const selectedLead = selectedLeadId ? leadMap.get(selectedLeadId) : null;
-  const canReply = !!(selectedLead && (selectedLead.messenger_psid || selectedLead.instagram_igsid));
+  const canReply = !!(selectedLeadId && selectedLead && (selectedLead.messenger_psid || selectedLead.instagram_igsid));
 
   const sendMut = useMutation({
     mutationFn: (body: string) => sendFn({ data: { leadId: selectedLeadId!, body } }),
@@ -273,13 +293,13 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                 <div className="p-4 text-sm text-muted-foreground">Brak konwersacji.</div>
               )}
               {filteredConvs.map((c) => {
-                const active = c.leadId === selectedLeadId;
+                const active = c.key === selectedKey;
                 const name = `${c.lead?.first_name ?? ""} ${c.lead?.last_name ?? ""}`.trim() || "Nieznany klient";
-                const platform = c.lead?.instagram_igsid ? "Instagram" : "Messenger";
+                const platform = c.platform;
                 return (
                   <button
-                    key={c.leadId}
-                    onClick={() => setSelectedLeadId(c.leadId)}
+                    key={c.key}
+                    onClick={() => setSelectedKey(c.key)}
                     className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
                       active ? "bg-muted border-primary" : "hover:bg-muted/50"
                     }`}
@@ -299,6 +319,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                     <div className="flex items-center gap-1 mt-1">
                       <Badge variant="secondary" className="text-[10px] h-4">{platform}</Badge>
                       <Badge variant="outline" className="text-[10px] h-4">{c.count} wiad.</Badge>
+                      {!c.leadId && <Badge variant="outline" className="text-[10px] h-4">bez leada</Badge>}
                     </div>
                   </button>
                 );
@@ -308,8 +329,8 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
         </Card>
 
         <Card className="p-4 flex flex-col">
-          {!selectedLeadId && <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>}
-          {selectedLeadId && (
+          {!selectedKey && <div className="text-sm text-muted-foreground">Wybierz konwersację po lewej.</div>}
+          {selectedKey && (
             <>
               <div className="flex items-center justify-between border-b pb-3 mb-3">
                 <div>
@@ -320,7 +341,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                     {selectedLead?.instagram_igsid ? `Instagram IGSID: ${selectedLead.instagram_igsid}` : selectedLead?.messenger_psid ? `Messenger PSID: ${selectedLead.messenger_psid}` : "brak ID"}
                   </div>
                 </div>
-                {renderLeadLink?.(selectedLeadId)}
+                {selectedLeadId && renderLeadLink?.(selectedLeadId)}
               </div>
 
               <ScrollArea className="flex-1 h-[calc(100vh-420px)] pr-3">
