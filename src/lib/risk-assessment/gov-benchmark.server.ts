@@ -16,6 +16,102 @@ function levelLabel(level: "powiat" | "wojewodztwo" | "krajowy" | undefined | nu
   return null;
 }
 
+/**
+ * POMOCNICZY benchmark GUS BDL — bez RCN i bez geokodowania.
+ * Rola w nowym pipeline wyceny: dane GUS są wyłącznie wsparciem — przede
+ * wszystkim dla GRUNTÓW ROLNYCH (ceny zł/ha wg klasy bonitacyjnej), gdzie
+ * stanowią podstawę wyceny; dla pozostałych typów służą jako sanity-check /
+ * fallback, gdy scraping rynku (deweloperuch/otodom) nie zwróci danych.
+ */
+export async function fetchGusAuxiliaryBenchmark(args: {
+  propertyType: string;
+  city?: string | null;
+  voivodeship?: string | null;
+  county?: string | null;
+  soilClass?: string | null;
+  areaSqm?: number | null;
+  landAreaHa?: number | null;
+}): Promise<GovBenchmark> {
+  const areaHa = args.landAreaHa ?? (args.areaSqm ? Math.round((args.areaSqm / 10_000) * 1000) / 1000 : null);
+  const soilCategory = classifySoil(args.soilClass);
+  const isLand = args.propertyType === "grunt_rolny";
+
+  const base: GovBenchmark = {
+    source: "GUS BDL",
+    available: false,
+    propertyType: args.propertyType,
+    primarySource: "brak",
+    pricePerHa: null,
+    pricePerM2Median: null,
+    pricePerM2Average: null,
+    soilClass: args.soilClass ?? null,
+    soilCategory,
+    areaHa,
+    landValuePln: null,
+    dwellingValuePln: null,
+    gusPricePerHa: null,
+    gusPricePerM2Median: null,
+    rcnAvailable: false,
+    rcnPricePerHa: null,
+    rcnPricePerM2: null,
+    rcnTransactions: 0,
+    rcnRadiusKm: null,
+    rcnStatus: "disabled",
+    rcnStatusMessage: "Moduł RCN wyłączony — GUS wykorzystywany pomocniczo.",
+    unitName: null,
+    unitLevel: null,
+    period: null,
+    fallbackUsed: false,
+    summaryLine: "GUS BDL (pomocniczo): brak danych.",
+    warnings: [],
+  };
+
+  const gus = await gusBenchmark({
+    propertyType: args.propertyType,
+    city: args.city,
+    voivodeship: args.voivodeship,
+    county: args.county,
+    soilClass: args.soilClass,
+  }).catch(() => null);
+
+  if (gus?.stats) {
+    base.unitName = gus.diagnostics.resolvedLocation?.bdlUnitName ?? null;
+    base.unitLevel = levelLabel(gus.stats.level);
+    base.period = gus.diagnostics.period?.label || gus.stats.period || null;
+    base.fallbackUsed = !!gus.diagnostics.fallbackUsed;
+    base.warnings.push(...(gus.diagnostics.warnings ?? []));
+    if (isLand && gus.stats.pricePerHaByClass) {
+      base.gusPricePerHa = gus.stats.pricePerHaByClass[soilCategory] ?? gus.stats.pricePerHaByClass.ogolem ?? null;
+    }
+    base.gusPricePerM2Median = gus.stats.pricePerM2Median ?? null;
+    base.pricePerM2Average = gus.stats.pricePerM2Average ?? null;
+  } else if (gus) {
+    base.unitName = gus.diagnostics.resolvedLocation?.bdlUnitName ?? null;
+    if (gus.diagnostics.warnings?.length) base.warnings.push(...gus.diagnostics.warnings);
+  }
+
+  base.pricePerHa = base.gusPricePerHa;
+  base.pricePerM2Median = base.gusPricePerM2Median;
+  base.available = base.pricePerHa != null || base.pricePerM2Median != null;
+  base.primarySource = base.available ? "GUS BDL" : "brak";
+
+  if (isLand) {
+    base.landValuePln = base.pricePerHa != null && areaHa != null ? Math.round(base.pricePerHa * areaHa) : null;
+  } else if (args.propertyType === "mieszkanie" || args.propertyType === "dom") {
+    base.dwellingValuePln = base.pricePerM2Median != null && args.areaSqm != null ? Math.round(base.pricePerM2Median * args.areaSqm) : null;
+  }
+
+  const parts: string[] = [];
+  if (base.pricePerHa != null) parts.push(`${base.pricePerHa.toLocaleString("pl-PL")} zł/ha (klasa: ${soilCategory})`);
+  if (base.pricePerM2Median != null) parts.push(`${base.pricePerM2Median.toLocaleString("pl-PL")} zł/m²`);
+  if (base.unitName) parts.push(base.unitName);
+  base.summaryLine = base.available
+    ? `GUS BDL (pomocniczo${isLand ? " — podstawa dla gruntu rolnego" : ""}): ${parts.join(", ")}${base.period ? `, ${base.period}` : ""}.`
+    : "GUS BDL (pomocniczo): brak danych.";
+
+  return base;
+}
+
 export async function fetchGovBenchmark(args: {
   propertyType: string;
   /** Pełny adres nieruchomości (np. z działu I-O KW) — geokodowany, gdy brak współrzędnych, aby odpytać RCN. */

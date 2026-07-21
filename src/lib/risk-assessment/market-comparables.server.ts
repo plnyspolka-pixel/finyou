@@ -1,8 +1,9 @@
-// Źródło porównawcze dla pipeline'u „Ocena ryzyka":
-//   1) deweloperuch.pl — rzeczywiste transakcje (RCN) dla domów/mieszkań przy ulicy i w promieniu,
-//   2) otodom.pl — aktywne oferty działek (kiedy typ = działka/grunt).
-// Server-only. Uzupełnia RCN/Geoportal (który potrafi milczeć) i GUS BDL (przeciętne).
-// Wynik trafia do dossier wyceny nadrzędnej Perplexity oraz do rejestru źródeł.
+// PODSTAWOWE źródło cenowe pipeline'u „Ocena ryzyka" (scraping przez Firecrawl v2):
+//   1) deweloperuch.pl — rzeczywiste ceny transakcyjne; scraping po mieście/miejscowości
+//      + rodzaju nieruchomości (deweloperuch obsługuje wyłącznie DOMY i MIESZKANIA),
+//   2) otodom.pl — aktywne oferty sprzedaży; tutaj MIESZKANIA, DOMY i DZIAŁKI.
+// Server-only. Wynik jest podstawą deterministycznej wyceny rynkowej
+// (market-valuation.ts) — bez udziału Perplexity.
 
 import { median as med, average as avg, filterIqrOutliers } from "@/lib/property-analysis/cache.server";
 import type { MarketComparablesResult, MarketCompRecord, MarketCompStatus } from "./types";
@@ -22,6 +23,8 @@ const EMPTY = (status: MarketCompStatus, message: string, query = ""): MarketCom
   pricePerM2Average: null,
   pricePerM2Min: null,
   pricePerM2Max: null,
+  pricePerM2P25: null,
+  pricePerM2P75: null,
   sample: [],
   summaryLine: `Rynek porównawczy (deweloperuch/otodom): ${message}`,
 });
@@ -50,14 +53,32 @@ function parseAreaM2(text: string): number | null {
   return n;
 }
 
+const PRICE_PER_M2_RE = /([\d][\d\s.,]{2,})\s*(?:zł|pln)\s*\/?\s*m\s*(?:²|2)/gi;
+
+function normalizePpm2(raw: string): number | null {
+  const n = Number(raw.replace(/[\s.]/g, "").replace(",", ".").replace(/\.\d{1,2}$/, ""));
+  if (!Number.isFinite(n) || n < 10 || n > 100_000) return null;
+  return Math.round(n);
+}
+
 function parsePricePerM2(text: string): number | null {
   if (!text) return null;
-  const m = text.match(/([\d][\d\s.,]{2,})\s*(?:zł|pln)\s*\/?\s*m\s*(?:²|2)/i);
-  if (!m) return null;
-  const raw = m[1].replace(/[\s.]/g, "").replace(",", ".");
-  const n = Number(raw.replace(/\.\d{1,2}$/, ""));
-  if (!Number.isFinite(n) || n < 100 || n > 100_000) return null;
-  return Math.round(n);
+  PRICE_PER_M2_RE.lastIndex = 0;
+  const m = PRICE_PER_M2_RE.exec(text);
+  return m ? normalizePpm2(m[1]) : null;
+}
+
+/** Wszystkie ceny zł/m² z tekstu (np. strona wyników otodom z wieloma ofertami). */
+function parseAllPricesPerM2(text: string, max = 10): number[] {
+  if (!text) return [];
+  const out: number[] = [];
+  PRICE_PER_M2_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = PRICE_PER_M2_RE.exec(text)) !== null && out.length < max) {
+    const v = normalizePpm2(m[1]);
+    if (v != null) out.push(v);
+  }
+  return out;
 }
 
 async function firecrawlSearch(apiKey: string, query: string, limit = 12): Promise<any[]> {
@@ -142,6 +163,7 @@ function parseDeweloperuchTransactions(markdown: string, streetFilter?: string |
   return out.slice(0, 40);
 }
 
+// Deweloperuch: scraping miasto/miejscowość + rodzaj (tylko „domy" i „mieszkania").
 async function scrapeDeweloperuch(apiKey: string, city: string, street: string | null, kind: "domy" | "mieszkania"): Promise<MarketCompRecord[]> {
   const citySlug = slugPl(city);
   // Deweloperuch nie ma stabilnej ścieżki dla ulicy — zaczynamy od widoku miasta i filtrujemy po adresie.
@@ -159,17 +181,32 @@ async function scrapeDeweloperuch(apiKey: string, city: string, street: string |
   return [];
 }
 
-async function scrapeOtodomPlots(apiKey: string, city: string, street: string | null): Promise<MarketCompRecord[]> {
-  const q = `działka sprzedaż ${street ? street + " " : ""}${city} site:otodom.pl OR site:olx.pl OR site:gratka.pl`;
-  const items = await firecrawlSearch(apiKey, q, 15);
+// Otodom: aktywne oferty sprzedaży — mieszkania, domy i działki.
+// Firecrawl search ograniczony do otodom.pl; strony wyników („/wyniki/") niosą
+// wiele cen zł/m² naraz, strony ofert („/oferta/") — pojedynczą cenę + metraż.
+async function scrapeOtodomOffers(apiKey: string, city: string, street: string | null, label: string, limit = 15): Promise<MarketCompRecord[]> {
+  const q = `${label} na sprzedaż ${street ? street + " " : ""}${city} site:otodom.pl`;
+  const items = await firecrawlSearch(apiKey, q, limit);
   const out: MarketCompRecord[] = [];
   for (const it of items) {
     const url: string = it?.url ?? "";
-    if (!/otodom\.pl|olx\.pl|gratka\.pl/.test(url)) continue;
+    if (!/otodom\.pl/.test(url)) continue;
     const title: string = it?.title ?? "";
     const desc: string = it?.description ?? it?.snippet ?? "";
     const md: string = it?.markdown ?? it?.content ?? "";
-    const blob = `${title}\n${desc}\n${md.slice(0, 3500)}`;
+    const blob = `${title}\n${desc}\n${md.slice(0, 6000)}`;
+
+    if (/\/wyniki\//.test(url)) {
+      // Strona z listą ofert — zbierz wszystkie ceny zł/m² (do 10 z jednej strony).
+      for (const ppm2 of parseAllPricesPerM2(md.slice(0, 12_000))) {
+        out.push({
+          source: "otodom.pl", kind: "offer", url, title: title.slice(0, 200),
+          address: null, pricePln: null, areaM2: null, pricePerM2: ppm2, date: null,
+        });
+      }
+      continue;
+    }
+
     const price = parsePricePln(blob);
     const area = parseAreaM2(blob);
     const ppm2Explicit = parsePricePerM2(blob);
@@ -187,7 +224,26 @@ async function scrapeOtodomPlots(apiKey: string, city: string, street: string | 
       date: null,
     });
   }
-  return out.slice(0, 20);
+  return out.slice(0, 30);
+}
+
+// Etykieta zapytania otodom wg typu nieruchomości z wniosku.
+function otodomLabel(propertyType: string): string | null {
+  const t = (propertyType || "").toLowerCase();
+  if (/mieszk/.test(t)) return "mieszkanie";
+  if (/dom/.test(t)) return "dom";
+  if (/dzialka|działka|grunt|siedlisk/.test(t)) return "działka";
+  if (/lokal/.test(t)) return "lokal użytkowy";
+  return null;
+}
+
+function quantile(sorted: number[], q: number): number | null {
+  if (sorted.length === 0) return null;
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  const v = sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  return Math.round(v);
 }
 
 export interface MarketComparablesInput {
@@ -200,35 +256,35 @@ export interface MarketComparablesInput {
 export async function fetchMarketComparables(input: MarketComparablesInput): Promise<MarketComparablesResult> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return EMPTY("error", "Brak FIRECRAWL_API_KEY.");
-  if (!input.city) return EMPTY("skipped", "brak miasta — pomijam scraping rynku.");
+  if (!input.city) return EMPTY("skipped", "brak miasta/miejscowości — pomijam scraping rynku.");
 
   const t = (input.propertyType || "").toLowerCase();
   const isDom = /dom/.test(t);
-  const isMieszkanie = /mieszk|lokal/.test(t);
-  const isDzialka = /dzialka|działka|grunt/.test(t);
+  const isMieszkanie = /mieszk/.test(t) || (/lokal/.test(t) && /mieszk/.test(t));
+  const label = otodomLabel(input.propertyType);
 
-  const query = [input.street, input.city, isDom ? "dom" : isMieszkanie ? "mieszkanie" : "działka"].filter(Boolean).join(" ");
+  const query = [input.street, input.city, label ?? input.propertyType].filter(Boolean).join(" ");
   const records: MarketCompRecord[] = [];
 
   try {
-    if (isDom || isMieszkanie) {
-      const kind = isDom ? "domy" : "mieszkania";
-      const rows = await scrapeDeweloperuch(apiKey, input.city, input.street, kind);
-      records.push(...rows);
-    }
-    if (isDzialka || records.length === 0) {
-      // Dla działek — Otodom/OLX; dla domów/mieszkań uzupełniająco, gdy deweloperuch milczy.
-      if (isDzialka) {
-        const rows = await scrapeOtodomPlots(apiKey, input.city, input.street);
-        records.push(...rows);
-      }
-    }
+    // 1) deweloperuch.pl — wyłącznie domy i mieszkania (rzeczywiste transakcje).
+    const deweloperuchP = (isDom || isMieszkanie)
+      ? scrapeDeweloperuch(apiKey, input.city, input.street, isDom ? "domy" : "mieszkania")
+      : Promise.resolve<MarketCompRecord[]>([]);
+    // 2) otodom.pl — mieszkania, domy i działki (aktywne oferty).
+    const otodomP = label
+      ? scrapeOtodomOffers(apiKey, input.city, input.street, label)
+      : Promise.resolve<MarketCompRecord[]>([]);
+
+    const [trans, offers] = await Promise.all([deweloperuchP, otodomP]);
+    records.push(...trans, ...offers);
   } catch (e: any) {
     return EMPTY("error", `Firecrawl: ${e?.message ?? "błąd"}`, query);
   }
 
-  const ppm2Raw = records.map((r) => r.pricePerM2).filter((v): v is number => v != null && v > 50 && v < 100_000);
+  const ppm2Raw = records.map((r) => r.pricePerM2).filter((v): v is number => v != null && v > 10 && v < 100_000);
   const ppm2 = filterIqrOutliers(ppm2Raw);
+  const sorted = [...ppm2].sort((a, b) => a - b);
   const median = med(ppm2);
   const average = avg(ppm2);
   const min = ppm2.length ? Math.min(...ppm2) : null;
@@ -240,7 +296,7 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
     records.length === 0 ? "no_data" : ppm2.length >= 3 ? "success" : "partial";
 
   const summaryLine = status === "success" || status === "partial"
-    ? `Rynek porównawczy: mediana ${median ? median.toLocaleString("pl-PL") + " zł/m²" : "—"} (${transactionsCount} transakcji, ${offersCount} ofert)` +
+    ? `Rynek porównawczy: mediana ${median ? median.toLocaleString("pl-PL") + " zł/m²" : "—"} (${transactionsCount} transakcji deweloperuch, ${offersCount} ofert otodom)` +
       (input.street ? ` w rejonie ${input.street}, ${input.city}` : ` w ${input.city}`)
     : `Rynek porównawczy (deweloperuch/otodom): brak danych w ${input.city}${input.street ? `, ${input.street}` : ""}.`;
 
@@ -256,6 +312,8 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
     pricePerM2Average: average != null ? Math.round(average) : null,
     pricePerM2Min: min,
     pricePerM2Max: max,
+    pricePerM2P25: quantile(sorted, 0.25),
+    pricePerM2P75: quantile(sorted, 0.75),
     sample: records.slice(0, 12),
     summaryLine,
   };

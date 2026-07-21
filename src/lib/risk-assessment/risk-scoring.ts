@@ -128,7 +128,7 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   else if (investmentScore >= 40) recommendation = "do_weryfikacji";
   else recommendation = "odradzana";
 
-  // Master (Perplexity) może tylko zaostrzyć, nie złagodzić.
+  // Wycena rynkowa (master) może tylko zaostrzyć, nie złagodzić.
   const order: Recommendation[] = ["rekomendowana", "warunkowa", "do_weryfikacji", "odradzana"];
   if (i.master.status === "success" && order.indexOf(i.master.recommendation) > order.indexOf(recommendation)) {
     recommendation = i.master.recommendation;

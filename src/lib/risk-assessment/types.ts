@@ -31,6 +31,10 @@ export interface MarketComparablesResult {
   pricePerM2Average: number | null;
   pricePerM2Min: number | null;
   pricePerM2Max: number | null;
+  /** 1. kwartyl zł/m² (po odfiltrowaniu outlierów IQR) — dolna kotwica wyceny. */
+  pricePerM2P25?: number | null;
+  /** 3. kwartyl zł/m² — górna kotwica wyceny. */
+  pricePerM2P75?: number | null;
   sample: MarketCompRecord[];
   summaryLine: string;
 }
@@ -163,8 +167,12 @@ export interface OcrSummary {
   documents: OcrDocumentResult[];
 }
 
-// ---- Perplexity: nadrzędna wycena i opinia ----
+// ---- Wycena rynkowa (deterministyczna) ----
+// Liczona wprost ze scrapingu rynku (deweloperuch.pl transakcje + otodom.pl oferty)
+// z danymi GUS jako źródłem pomocniczym (grunty rolne: ceny zł/ha). Bez LLM.
 export interface MasterValuation {
+  /** Podstawa wyceny (np. „deweloperuch.pl — transakcje", „GUS BDL — ceny gruntów rolnych"). */
+  basisSource?: string;
   status: "success" | "no_data" | "error";
   estimatedValueLowPln: number | null;
   estimatedValueMidPln: number | null;
