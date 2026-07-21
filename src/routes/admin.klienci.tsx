@@ -281,9 +281,20 @@ function KlienciPage() {
                       className={`border-b cursor-pointer ${isOpen ? "bg-muted/50" : "hover:bg-muted/40"}`}
                     >
 
-                      <td className="px-2 py-2 text-muted-foreground">
-                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <td className="px-2 py-2 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            to="/admin/klienci/$id"
+                            params={{ id: r.id }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                          >
+                            Otwórz <ExternalLink className="h-3 w-3" />
+                          </Link>
+                          {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        </div>
                       </td>
+
                       <td className="px-3 py-2">
                         <div className="font-medium">{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</div>
                         <div className="text-[11px] text-muted-foreground">ID: {r.id.slice(0, 8)}</div>
