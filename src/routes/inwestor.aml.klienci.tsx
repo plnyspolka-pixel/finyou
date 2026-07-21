@@ -436,7 +436,6 @@ function AmlCustomersScreen() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
               Screeningi: {amlCustomerLabel(selected as Parameters<typeof amlCustomerLabel>[0])}
               <Button size="sm" variant="ghost" onClick={() => void openDetails(selected)}>
                 <RefreshCw className="h-3 w-3" />
