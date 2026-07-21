@@ -355,7 +355,6 @@ function AmlCustomersScreen() {
             <Card key={c.id} className="cursor-pointer" onClick={() => void openDetails(c)}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center justify-between gap-2">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   <span className="truncate">{amlCustomerLabel(c as any)}</span>
                   <ScreeningBadge status={c.screening_status} />
                 </CardTitle>

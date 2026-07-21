@@ -361,7 +361,6 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Transakcje w sprawie</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.transactions.map((t: any) => (
                     <li key={t.id}>
                       {t.transaction_date} — {t.transaction_type} — {Number(t.amount).toFixed(2)}{" "}
@@ -375,7 +374,6 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Załączniki</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.attachments.map((a: any) => (
                     <li key={a.id}>{a.file_name}</li>
                   ))}
@@ -386,7 +384,6 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Zgłoszenia GIIF w sprawie</p>
                 <ul className="list-disc ml-5 text-muted-foreground">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.reports.map((r: any) => (
                     <li key={r.id}>
                       {r.report_type} — {r.status} (v{r.current_version})
@@ -399,7 +396,6 @@ function AmlCasesScreen() {
               <div>
                 <p className="font-medium">Historia (audyt — nieusuwalny)</p>
                 <ul className="ml-1 text-xs text-muted-foreground space-y-0.5">
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
                   {detail.audit.slice(0, 20).map((a: any) => (
                     <li key={a.id}>
                       {new Date(a.created_at).toLocaleString("pl-PL")} — {a.action}
