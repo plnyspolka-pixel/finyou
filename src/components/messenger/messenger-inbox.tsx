@@ -341,7 +341,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
                     {selectedLead?.instagram_igsid ? `Instagram IGSID: ${selectedLead.instagram_igsid}` : selectedLead?.messenger_psid ? `Messenger PSID: ${selectedLead.messenger_psid}` : "brak ID"}
                   </div>
                 </div>
-                {renderLeadLink?.(selectedLeadId)}
+                {selectedLeadId && renderLeadLink?.(selectedLeadId)}
               </div>
 
               <ScrollArea className="flex-1 h-[calc(100vh-420px)] pr-3">
