@@ -39,10 +39,10 @@ interface NewsBrief {
 }
 
 type Audience = "borrower" | "investor";
-type PostKind = "borrower_news" | "investor_news" | "investor_review";
+type PostKind = "borrower_news" | "investor_news" | "legal_market_monitor" | "investor_review";
 
 async function pickNextKind(): Promise<PostKind> {
-  // Rotacja 3-elementowa: borrower_news → investor_news → investor_review → ...
+  // Rotacja 4-elementowa: borrower_news → investor_news → legal_market_monitor → investor_review → ...
   const { data } = await supabaseAdmin
     .from("ai_seo_articles")
     .select("audience,raw_ai_output,published_at")
@@ -53,13 +53,16 @@ async function pickNextKind(): Promise<PostKind> {
   const last: PostKind | undefined = lastRow?.raw_ai_output?.post_kind
     ?? (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
   if (last === "borrower_news") return "investor_news";
-  if (last === "investor_news") return "investor_review";
+  if (last === "investor_news") return "legal_market_monitor";
+  if (last === "legal_market_monitor") return "investor_review";
   if (last === "investor_review") return "borrower_news";
-  return "investor_review"; // first run
+  return "legal_market_monitor"; // first run
 }
 
 function audienceOf(kind: PostKind): Audience {
-  return kind === "borrower_news" ? "borrower" : "investor";
+  if (kind === "borrower_news") return "borrower";
+  if (kind === "legal_market_monitor") return "borrower"; // regulacje/sądy/komornicy dotykają głównie właścicieli nieruchomości i pożyczkobiorców
+  return "investor";
 }
 
 const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
@@ -75,6 +78,10 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
     sys: "Jesteś senior analitykiem inwestycyjnym dla polskiego inwestora prywatnego (HNW, 100k–2M PLN kapitału). Po polsku, konkretnie, bez clickbaitu.",
     user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
   },
+  legal_market_monitor: {
+    sys: "Jesteś analitykiem prawno-rynkowym monitorującym polski rynek nieruchomości i finansów. Po polsku, konkretnie, bez spekulacji poza to co wynika ze źródeł.",
+    user: "Zbierz z ostatnich 7 dni KONKRETNE wiadomości (z datą, źródłem, liczbami) o zmianach lub propozycjach zmian mających wpływ na polski rynek nieruchomości i finansów. Obejmij WSZYSTKIE z poniższych obszarów, przynajmniej po 1 wiadomości z każdego jeśli są dostępne:\n(A) LEGISLACJA PL: projekty ustaw i rozporządzeń (Sejm/Senat/MS/MF/MRiT) dot. kredytów hipotecznych, pożyczek konsumenckich, ustawy antylichwiarskiej, wakacji kredytowych, WIBOR/WIRON, podatku PCC/od nieruchomości, planowania przestrzennego, najmu instytucjonalnego, spółdzielni;\n(B) SĄDY I ORZECZNICTWO: wyroki SN, TSUE, sądów apelacyjnych dot. kredytów (frankowicze, WIBOR, sankcja kredytu darmowego), egzekucji z nieruchomości, hipoteki, ksiąg wieczystych;\n(C) KOMORNICY I EGZEKUCJA: zmiany w ustawie o komornikach, opłatach egzekucyjnych, licytacjach nieruchomości (nowe zasady, statystyki KRK/KIRP);\n(D) ADWOKATURA / RADCOWIE PRAWNI / NOTARIUSZE: uchwały NRA/KRRP/KRN, stawki taksy notarialnej, zmiany zawodowe wpływające na obsługę transakcji nieruchomościowych;\n(E) REGULATORZY: KNF, UOKiK, UODO, NBP/RPP — komunikaty i decyzje dot. kredytów, pożyczek pozabankowych, deweloperów, DFG;\n(F) RYNEK NIERUCHOMOŚCI PL: dane GUS/AMRON/Otodom/Rynek Pierwotny — ceny mkw. w 7 największych miastach, liczba transakcji, oferta, mediana czasu sprzedaży;\n(G) ŚWIATOWE RYNKI: decyzje FED/EBC, kurs USD/EUR/PLN, ceny surowców (ropa, gaz, złoto), sytuacja na rynkach nieruchomości w DE/US/UK — TYLKO gdy da się wskazać konkretny mechanizm przełożenia na PL (koszt pieniądza, kapitał zagraniczny, ceny materiałów budowlanych).\n\nDla KAŻDEJ pozycji: data, źródło (URL), 3-4 zdania faktów + 1 zdanie 'MOŻLIWY WPŁYW:' z konkretnym przełożeniem na polski rynek nieruchomości / rynek pożyczek pod zastaw / właściciela nieruchomości. NIE spekuluj poza to co da się wyprowadzić z faktu. Jeżeli w danym obszarze nie ma nowości — napisz jawnie 'brak istotnych zdarzeń w ostatnich 7 dniach'.",
+  },
 };
 
 async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<NewsBrief> {
@@ -87,7 +94,7 @@ async function fetchFreshNewsBrief(pplxKey: string, kind: PostKind): Promise<New
     },
     body: JSON.stringify({
       model: "sonar",
-      search_recency_filter: kind === "investor_review" ? "month" : "day",
+      search_recency_filter: kind === "investor_review" ? "month" : kind === "legal_market_monitor" ? "week" : "day",
       messages: [
         { role: "system", content: b.sys },
         { role: "user", content: b.user },
@@ -154,12 +161,16 @@ async function writeArticleFromNews(
 
   const structureHint = kind === "investor_review"
     ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
+    : kind === "legal_market_monitor"
+    ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
     : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
 
 
   let audienceBrief: string;
   if (kind === "investor_review") {
     audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY (HNW, 100k–2M PLN kapitału) szukający OBIEKTYWNEGO PRZEGLĄDU I PORÓWNANIA klas aktywów. Pisz analitycznie, jak rzetelny analityk inwestycyjny — nie sprzedażowo. Pożyczki pod zastaw nieruchomości pokaż jako JEDNĄ z opcji, z plusami I minusami. CTA do "[zobacz ofertę inwestorską Finance You](https://financeyou.pl/inwestor)" wpleć dyskretnie 1 raz na końcu sekcji wniosków.`;
+  } else if (kind === "legal_market_monitor") {
+    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[porozmawiaj z ekspertem Finance You o Twojej sytuacji](https://financeyou.pl/klient)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
     audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, oczekiwana stopa zwrotu, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań inwestorem Finance You](https://financeyou.pl/inwestor)" wpleć 1 raz.`;
   } else {
@@ -170,9 +181,13 @@ async function writeArticleFromNews(
 
   const briefLabel = kind === "investor_review"
     ? "BRIEFING (dane do przeglądu porównawczego, ostatnie 30 dni):"
+    : kind === "legal_market_monitor"
+    ? "BRIEFING (monitoring zmian w prawie i na rynku, ostatnie 7 dni):"
     : "BRIEFING (świeże wiadomości z ostatnich 24h):";
   const taskLabel = kind === "investor_review"
     ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
+    : kind === "legal_market_monitor"
+    ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
     : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
