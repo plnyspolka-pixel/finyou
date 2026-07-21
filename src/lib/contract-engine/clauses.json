@@ -1,0 +1,414 @@
+{
+  "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
+  "wersja": "1.0",
+  "sekcje": {
+    "OSWIADCZENIA_STRON": {
+      "tytul": "OŚWIADCZENIA STRON",
+      "order": 100
+    },
+    "PRZEDMIOT": {
+      "tytul": "PRZEDMIOT UMOWY",
+      "order": 200
+    },
+    "KWOTA_PROWIZJA_WYPLATA": {
+      "tytul": "KWOTA POŻYCZKI, PROWIZJA I WARUNKI WYPŁATY",
+      "order": 300
+    },
+    "PORECZENIE": {
+      "tytul": "PORĘCZENIE",
+      "order": 350,
+      "warunek": "porecziciel != null",
+      "tytul_warunkowy": {
+        "porecziciel_tylko_rzeczowo": "ZABEZPIECZENIE RZECZOWE PORĘCZYCIELA"
+      }
+    },
+    "ZABEZPIECZENIA": {
+      "tytul": "ZABEZPIECZENIA",
+      "order": 400
+    },
+    "WARUNKI_ZAWIESZAJACE": {
+      "tytul": "WARUNKI URUCHOMIENIA POŻYCZKI",
+      "order": 450,
+      "warunek": "ma_warunki_zawieszajace"
+    },
+    "WINDYKACJA": {
+      "tytul": "WINDYKACJA I SKUTKI OPÓŹNIENIA",
+      "order": 500
+    },
+    "OSWIADCZENIA_RODO": {
+      "tytul": "OŚWIADCZENIA STRON",
+      "order": 600
+    },
+    "POSTANOWIENIA_OGOLNE": {
+      "tytul": "POSTANOWIENIA OGÓLNE",
+      "order": 700
+    },
+    "WYPOWIEDZENIE": {
+      "tytul": "WYPOWIEDZENIE UMOWY",
+      "order": 800
+    }
+  },
+  "klauzule": [
+    {
+      "id": "PRZ_01_przedmiot",
+      "sekcja": "PRZEDMIOT",
+      "order": 10,
+      "warunek": true,
+      "tekst": "Przedmiotem Umowy jest udzielenie przez Pożyczkodawcę pożyczki pieniężnej dla {{pb_dop}} prowadzących działalność gospodarczą, na cele związane bezpośrednio z działalnością zawodową {{pb_dop}}."
+    },
+    {
+      "id": "PRZ_02_cel",
+      "sekcja": "PRZEDMIOT",
+      "order": 20,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_oswiadcza}}, iż uzyskane z pożyczki środki {{pb_przeznaczy}} na następujący cel: {{warunki.cel}}."
+    },
+    {
+      "id": "KWO_01_kwota",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 10,
+      "warunek": true,
+      "tekst": "Pożyczkodawca udziela {{pb_cel}} pożyczki w kwocie {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), zwanej dalej „Kwotą Pożyczki”."
+    },
+    {
+      "id": "KWO_02_prowizja_nie_potracana",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 20,
+      "warunek": "warunki.prowizja.model == 'nie_potracana_raty'",
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji."
+    },
+    {
+      "id": "KWO_02b_prowizja_potracana",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 20,
+      "warunek": "warunki.prowizja.model == 'potracana_z_wyplaty'",
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja potrącana jest w całości z Kwoty Pożyczki przy wypłacie. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji."
+    },
+    {
+      "id": "KWO_03_wyplata_pelna",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 30,
+      "warunek": "warunki.prowizja.model == 'nie_potracana_raty' and not ma_splaty_wierzycieli",
+      "tekst": "Pożyczkodawca wypłaci {{pb_cel}} całą Kwotę Pożyczki, bez potrącania prowizji, tj. {{warunki.kwota_pozyczki.slownie}} ({{warunki.kwota_pozyczki.cyframi}} zł), przelewem na rachunek bankowy {{pb_dop}} nr {{warunki.rachunki.wyplata}}, w ciągu dwóch dni roboczych od spełnienia warunków określonych w niniejszej Umowie."
+    },
+    {
+      "id": "KWO_03b_wyplata_z_podzialem",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 30,
+      "warunek": "ma_splaty_wierzycieli",
+      "tekst": "Pożyczkodawca wypłaci Kwotę Pożyczki w ciągu dwóch dni roboczych od spełnienia warunków określonych w niniejszej Umowie, w następujący sposób:",
+      "podpunkty_dynamiczne": "wyplata_transze"
+    },
+    {
+      "id": "KWO_04_oprocentowanie",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 40,
+      "warunek": true,
+      "tekst": "Oprocentowanie pożyczki wynosi {{warunki.oprocentowanie}} % w stosunku rocznym (odsetki umowne), według stałej stopy. Odsetki naliczane są od kapitału pozostającego do spłaty, od dnia wypłaty do dnia całkowitego zwrotu. Oprocentowanie nie przekracza odsetek maksymalnych (art. 359 § 2¹ k.c.); w razie obniżenia poziomu odsetek maksymalnych poniżej stopy umownej, stopa umowna ulega automatycznemu obniżeniu do poziomu odsetek maksymalnych. W razie wcześniejszej spłaty odsetki należne są wyłącznie za okres faktycznego korzystania z kapitału i podlegają proporcjonalnemu obniżeniu."
+    },
+    {
+      "id": "KWO_05_splata",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 50,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_zobowiazuje}} zwrócić Kwotę Pożyczki wraz z prowizją i odsetkami przelewem na rachunek bankowy Pożyczkodawcy nr {{warunki.rachunki.splata}} w terminach i kwotach określonych w Harmonogramie Spłat stanowiącym Załącznik nr 1 do niniejszej Umowy."
+    },
+    {
+      "id": "POR_01_poreczenie",
+      "sekcja": "PORECZENIE",
+      "order": 10,
+      "warunek": "porecziciel_odpowiada_osobiscie",
+      "tekst": "{{porecziciel_oznaczenie}} poręcza za zobowiązania {{pb_dop}} wynikające z niniejszej Umowy do wysokości {{zabezpieczenia.egzekucja_777.kwota.cyframi}} zł ({{zabezpieczenia.egzekucja_777.kwota.slownie}}), obejmującej Kwotę Pożyczki, prowizję, odsetki umowne, odsetki za opóźnienie oraz udokumentowane koszty dochodzenia należności."
+    },
+    {
+      "id": "POR_02_solidarnosc",
+      "sekcja": "PORECZENIE",
+      "order": 20,
+      "warunek": "porecziciel_odpowiada_osobiscie",
+      "tekst": "Poręczyciel odpowiada solidarnie z {{pb_narz}} (art. 881 k.c.). Pożyczkodawca może dochodzić należności od Poręczyciela bez uprzedniego wyczerpania środków wobec {{pb_dop}}."
+    },
+    {
+      "id": "POR_03_zakres_czasowy",
+      "sekcja": "PORECZENIE",
+      "order": 30,
+      "warunek": "porecziciel_odpowiada_osobiscie",
+      "tekst": "Poręczenie obejmuje również zobowiązania wynikające ze zmian Umowy dokonanych za zgodą Poręczyciela. Poręczenie jest bezterminowe i wygasa z chwilą całkowitej spłaty należności wynikających z Umowy."
+    },
+    {
+      "id": "POR_04_oswiadczenie",
+      "sekcja": "PORECZENIE",
+      "order": 40,
+      "warunek": "porecziciel_odpowiada_osobiscie",
+      "tekst": "Poręczyciel oświadcza, że zapoznał się z treścią Umowy oraz Harmonogramem Spłat, rozumie zakres i skutki prawne poręczenia, w tym jego solidarny charakter, i udziela go dobrowolnie."
+    },
+    {
+      "id": "POR_05_zgoda_malzonka_poreczyciela",
+      "sekcja": "PORECZENIE",
+      "order": 50,
+      "warunek": "porecziciel_odpowiada_osobiscie and porecziciel_wymaga_zgody_malzonka and zgoda_malzonka_na_poreczenie",
+      "tekst": "Poręczyciel pozostaje w związku małżeńskim, w którym obowiązuje ustrój wspólności majątkowej. Małżonek Poręczyciela wyraził zgodę na udzielenie poręczenia (art. 41 § 1 k.r.o.) w formie pisemnej z podpisem notarialnie poświadczonym, stanowiącej załącznik do niniejszej Umowy. Zgoda ta jest odrębna od zgody na ustanowienie hipoteki (art. 37 § 1 pkt 1 k.r.o.). Wierzyciel może zaspokoić się zarówno z majątku osobistego Poręczyciela, jak i z majątku wspólnego małżonków.",
+      "podstawa_prawna": "art. 41 § 1 k.r.o."
+    },
+    {
+      "id": "ZAB_01_hipoteka",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 10,
+      "warunek": true,
+      "tekst_pojedyncza": "{{n.wlasciciel_oznaczenie}} złoży notarialne oświadczenie obejmujące żądanie ustanowienia na rzecz Pożyczkodawcy hipoteki umownej do kwoty {{n.hipoteka.kwota.cyframi}} zł ({{n.hipoteka.kwota.slownie}}) na nieruchomości opisanej jako {{n.opis}}, dla której {{n.sad}} prowadzi księgę wieczystą nr {{n.nr_kw}}. Hipoteka zabezpiecza spłatę wszelkich wierzytelności wynikających z niniejszej Umowy, w tym: Kwoty Pożyczki, odsetek, odsetek za zwłokę, prowizji, kosztów sądowych, egzekucyjnych, windykacyjnych oraz kosztów zastępstwa prawnego.",
+      "tekst_wielokrotna_naglowek": "Zabezpieczeniem wierzytelności Pożyczkodawcy wynikających z niniejszej Umowy są hipoteki umowne ustanowione na następujących nieruchomościach:",
+      "tekst_wielokrotna_pozycja": "{{n.wlasciciel_oznaczenie}} złoży notarialne oświadczenie obejmujące żądanie ustanowienia na rzecz Pożyczkodawcy hipoteki umownej do kwoty {{n.hipoteka.kwota.cyframi}} zł ({{n.hipoteka.kwota.slownie}}) na nieruchomości opisanej jako {{n.opis}}, dla której {{n.sad}} prowadzi księgę wieczystą nr {{n.nr_kw}};",
+      "iteruje": "nieruchomosci",
+      "tekst_wielokrotna_stopka_laczna": "Każda z hipotek zabezpiecza spłatę wszelkich wierzytelności wynikających z niniejszej Umowy, w tym: Kwoty Pożyczki, odsetek, odsetek za zwłokę, prowizji, kosztów sądowych, egzekucyjnych, windykacyjnych oraz kosztów zastępstwa prawnego. Hipoteki mają charakter łączny w rozumieniu art. 76 ustawy o księgach wieczystych i hipotece — Pożyczkodawca może żądać zaspokojenia w całości lub w części z każdej z nieruchomości z osobna, z niektórych z nich albo ze wszystkich łącznie, według swojego wyboru.",
+      "tekst_wielokrotna_stopka_odrebna": "Każda z hipotek zabezpiecza spłatę wszelkich wierzytelności wynikających z niniejszej Umowy, w tym: Kwoty Pożyczki, odsetek, odsetek za zwłokę, prowizji, kosztów sądowych, egzekucyjnych, windykacyjnych oraz kosztów zastępstwa prawnego. Hipoteki nie mają charakteru łącznego — odpowiedzialność z każdej nieruchomości ogranicza się do sumy hipotecznej wpisanej w jej księdze wieczystej.",
+      "podstawa_prawna": "art. 65 i art. 76 u.k.w.h."
+    },
+    {
+      "id": "ZAB_02_oproznione_miejsce",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 20,
+      "warunek": "ma_oproznione_miejsce",
+      "tekst_pozycja": "W odniesieniu do nieruchomości KW nr {{n.nr_kw}} hipoteka Pożyczkodawcy zostanie wpisana na miejscu opróżnionym po wykreśleniu hipoteki: {{n.hipoteka.oproznione_miejsce_po}} — {{n.wlasciciel_oznaczenie}} niniejszym rozporządza opróżnionym miejscem hipotecznym na rzecz Pożyczkodawcy (art. 101¹ ustawy o księgach wieczystych i hipotece) i zobowiązuje się złożyć w formie aktu notarialnego wniosek o wpis hipoteki Pożyczkodawcy na tym miejscu wraz z wnioskiem o wykreślenie hipoteki dotychczasowej.",
+      "iteruje": "nieruchomosci_oproznione_miejsce"
+    },
+    {
+      "id": "ZAB_03_zakaz_rozporzadzania",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 30,
+      "warunek": true,
+      "tekst": "{{wlasciciele_oznaczenie_zbiorcze}} {{wlasciciele_czasownik_zobowiazuje}}, że w okresie obowiązywania Umowy nie dokona zbycia, darowizny, ustanowienia kolejnej hipoteki, obciążenia służebnością ani innego rozporządzenia nieruchomościami stanowiącymi zabezpieczenie bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności."
+    },
+    {
+      "id": "ZAB_04_777",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 40,
+      "warunek": true,
+      "tekst": "{{egzekucja_777_podmioty}} {{egzekucja_777_czasownik}} rygorowi egzekucji wprost z aktu notarialnego w trybie art. 777 §1 pkt 5 k.p.c. do kwoty {{zabezpieczenia.egzekucja_777.kwota.cyframi}} zł ({{zabezpieczenia.egzekucja_777.kwota.slownie}}). Zdarzeniem uprawniającym Wierzyciela do wystąpienia o nadanie aktowi klauzuli wykonalności będzie niezapłacenie — w terminie {{zabezpieczenia.egzekucja_777.termin_wezwania_dni}} dni od daty doręczenia wezwania do zapłaty — należności wynikających z niniejszej Umowy pożyczki z dnia {{meta.data_umowy}}. Wystarczającym dowodem na wykazanie zdarzenia jest potwierdzenie nadania na terytorium RP przesyłki rejestrowanej (art. 3 pkt 23 ustawy Prawo pocztowe) na adres do doręczeń wskazany w niniejszej Umowie. Wierzyciel może wystąpić o nadanie klauzuli wykonalności do dnia {{zabezpieczenia.egzekucja_777.data_graniczna}} i jest uprawniony do wielokrotnego składania takiego wniosku."
+    },
+    {
+      "id": "ZAB_05_wlasciciel_osoba_trzecia",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 50,
+      "warunek": "ma_wlasciciela_osobe_trzecia",
+      "tekst": "Właściciel nieruchomości niebędący {{pb_narz}} ustanawia zabezpieczenie rzeczowe za cudzy dług. Jego odpowiedzialność ogranicza się do przedmiotu zabezpieczenia (odpowiedzialność rzeczowa) i nie obejmuje pozostałego majątku, chyba że odrębnie udzielił poręczenia. Właściciel oświadcza, że zapoznał się z treścią Umowy i Harmonogramem Spłat, rozumie skutki ustanowienia hipoteki na swojej nieruchomości za zobowiązanie {{pb_dop}} i ustanawia je dobrowolnie."
+    },
+    {
+      "id": "ZAB_08_koszty",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 80,
+      "warunek": true,
+      "tekst": "Koszty ustanowienia, zmiany i zwolnienia zabezpieczeń, w tym taksy notarialne, opłaty sądowe i podatek od czynności cywilnoprawnych, {{pb_ponosi}} {{pb}}."
+    },
+    {
+      "id": "ZAB_09_zwolnienie",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 90,
+      "warunek": true,
+      "tekst": "Po całkowitej spłacie należności wynikających z Umowy Pożyczkodawca wyda, w terminie 14 dni, dokumenty konieczne do wykreślenia hipoteki oraz zwolnienia pozostałych zabezpieczeń."
+    },
+    {
+      "id": "WZA_00_wprowadzenie",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 5,
+      "warunek": "ma_warunki_zawieszajace",
+      "tekst": "Wypłata Kwoty Pożyczki nastąpi po łącznym spełnieniu następujących warunków:"
+    },
+    {
+      "id": "WZA_01_dokumenty_podstawowe",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 10,
+      "warunek": "ma_warunki_zawieszajace",
+      "tekst": "przekazaniu Pożyczkodawcy podpisanego oryginału Umowy wraz z załącznikami, z podpisami poświadczonymi notarialnie, oraz wypisów aktów notarialnych obejmujących żądanie wpisu hipoteki i oświadczenie o poddaniu się egzekucji;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WZA_02_zgoda_malzonka",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 20,
+      "warunek": "wymaga_zgody_malzonka",
+      "tekst": "przedłożeniu zgody małżonka właściciela nieruchomości na ustanowienie hipoteki, wyrażonej w formie pisemnej z podpisem notarialnie poświadczonym (art. 37 § 1 pkt 1 k.r.o.);",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WZA_04_wykreslenie_przed",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 40,
+      "warunek": "ma_wykreslenia_przed_wyplata",
+      "tekst_pozycja": "wykreśleniu z księgi wieczystej nr {{o.nr_kw}} obciążenia: {{o.opis}} — potwierdzonym odpisem księgi wieczystej albo prawomocnym postanowieniem sądu wieczystoksięgowego;",
+      "poziom": "podpunkt",
+      "iteruje": "obciazenia_wykreslenie_przed"
+    },
+    {
+      "id": "WZA_05_zrzeczenie_sluzebnosci",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 50,
+      "warunek": "ma_zrzeczenia",
+      "tekst_pozycja": "przedłożeniu Pożyczkodawcy wypisu aktu notarialnego obejmującego oświadczenie {{o.uprawniony_dopelniacz_kogo}} (PESEL {{o.uprawniony_do_zrzeczenia.pesel}}) o zrzeczeniu się przysługującego {{o.uprawniony_zaimek}} prawa: {{o.opis}}, obciążającego nieruchomość KW nr {{o.nr_kw}}, wraz ze zgodą na wykreślenie tego prawa z księgi wieczystej;",
+      "poziom": "podpunkt",
+      "iteruje": "obciazenia_zrzeczenie",
+      "podstawa_prawna": "art. 910 § 1 k.c. w zw. z art. 246 § 1 k.c.; art. 31 ust. 1 u.k.w.h.",
+      "uwaga_prawna": "DECYZJA BIZNESOWA: wypłata następuje po przedłożeniu wypisu aktu notarialnego, bez czekania na uwidocznienie wykreślenia w księdze wieczystej (ani nawet na pojawienie się wzmianki o wniosku). Wykreślenie pozostaje wymagane — domyka je klauzula ZAB_10, która nakłada obowiązek doprowadzenia do niego po wypłacie. Konsekwencja: w chwili wypłaty prawo formalnie jeszcze trwa (art. 910 § 1 w zw. z art. 246 § 1 k.c. — wygasa dopiero z chwilą wykreślenia), więc w razie odmowy sądu środki są już wypłacone, a zabezpieczenie obciążone służebnością. Treść samego oświadczenia redaguje notariusz — umowa określa wyłącznie, co ma zostać przedłożone."
+    },
+    {
+      "id": "WZA_06_zaswiadczenia_zus_us",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 60,
+      "warunek": "ma_obciazenia_egzekucyjne or true",
+      "tekst": "przedłożeniu aktualnych zaświadczeń o niezaleganiu w podatkach (Urząd Skarbowy) oraz w opłacaniu składek (Zakład Ubezpieczeń Społecznych), wystawionych nie wcześniej niż 30 dni przed datą wypłaty, dotyczących {{pb_dop}} oraz każdego właściciela nieruchomości stanowiącej zabezpieczenie;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "WZA_07_odpis_kw",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 70,
+      "warunek": "ma_warunki_zawieszajace",
+      "tekst": "przedłożeniu aktualnych odpisów zwykłych ksiąg wieczystych wszystkich nieruchomości stanowiących zabezpieczenie, potwierdzających stan działów III i IV zgodny z oświadczeniami złożonymi w niniejszej Umowie;",
+      "poziom": "podpunkt"
+    },
+    {
+      "id": "OSW_01_przedsiebiorca",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 10,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_oswiadcza}}, że {{pb_jest}} {{pb_przedsiebiorca}} w rozumieniu art. 43¹ Kodeksu cywilnego, a niniejsza Umowa pozostaje w bezpośrednim związku z prowadzoną przez {{pb_zaimek}} działalnością gospodarczą i {{pb_ma}} charakter zawodowy. Umowa nie jest zawierana w celu konsumenckim, a do udzielonej pożyczki nie mają zastosowania przepisy ustawy o kredycie konsumenckim ani ustawy o kredycie hipotecznym."
+    },
+    {
+      "id": "OSW_02_dane_prawdziwe",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 20,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_oswiadcza}}, że dane podane w Umowie są prawdziwe i aktualne, oraz {{pb_zobowiazuje}} niezwłocznie informować Pożyczkodawcę o każdej ich zmianie."
+    },
+    {
+      "id": "OSW_03_stan_prawny_nieruchomosci",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 30,
+      "warunek": true,
+      "tekst": "{{wlasciciele_oznaczenie_zbiorcze}} {{wlasciciele_czasownik_oswiadcza}}, że {{wlasciciele_zaimek_przysluguje}} prawo własności nieruchomości stanowiących zabezpieczenie, że nieruchomości te — poza obciążeniami ujawnionymi w niniejszej Umowie — są wolne od praw i roszczeń osób trzecich, nie są przedmiotem postępowania egzekucyjnego (sądowego ani administracyjnego), postępowania o zniesienie współwłasności, działu spadku ani sporu co do stanu prawnego, a także że nie istnieją zaległości publicznoprawne mogące skutkować wpisem hipoteki przymusowej."
+    },
+    {
+      "id": "OSW_04_brak_zaleglosci_publicznoprawnych",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 40,
+      "warunek": true,
+      "tekst": "{{pb}} oraz każdy właściciel nieruchomości stanowiącej zabezpieczenie oświadczają, że nie posiadają wymagalnych zaległości wobec Urzędu Skarbowego ani Zakładu Ubezpieczeń Społecznych. Strony przyjmują do wiadomości, że należności publicznoprawne zabezpieczone hipoteką przymusową oraz egzekucja administracyjna mogą korzystać z pierwszeństwa przed hipoteką umowną, a zatajenie takich zaległości stanowi istotne naruszenie Umowy uprawniające do jej wypowiedzenia."
+    },
+    {
+      "id": "OSW_05_zdolnosc",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 50,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_oswiadcza}}, że według swojej najlepszej wiedzy {{pb_posiada}} zdolność do terminowej obsługi zobowiązania na warunkach określonych w Załączniku nr 1, nie toczy się przeciwko {{pb_zaimek}} postępowanie o ogłoszenie upadłości ani restrukturyzacyjne, i nie ma podstaw do ich wszczęcia."
+    },
+    {
+      "id": "OSW_06_swiadomosc",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 60,
+      "warunek": true,
+      "tekst": "{{pb}} {{pb_potwierdza}}, że przed podpisaniem Umowy {{pb_otrzymal}} jej projekt, {{pb_mial}} możliwość zapoznania się z jego treścią oraz zasięgnięcia niezależnej porady prawnej, {{pb_rozumie}} znaczenie i skutki prawne Umowy — w tym konstrukcję spłaty oraz charakter prowizji — nie {{pb_dziala}} pod wpływem błędu ani w przymusowym położeniu w rozumieniu art. 388 k.c., i {{pb_zawiera}} Umowę swobodnie."
+    },
+    {
+      "id": "OSW_07_umocowanie",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 70,
+      "warunek": true,
+      "tekst": "Strony oświadczają, że są należycie umocowane do zawarcia Umowy."
+    },
+    {
+      "id": "ZAB_01b_zakres_kw",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 15,
+      "warunek": "ma_kw_wielodzialkowe",
+      "tekst": "Strony potwierdzają, że hipoteka obciąża każdą nieruchomość w całości, w granicach objętych daną księgą wieczystą — również wówczas, gdy w dziale I-O księgi ujawniono więcej niż jedną działkę ewidencyjną. Obciążenie wybranej działki bez uprzedniego odłączenia jej do odrębnej księgi wieczystej nie jest możliwe.",
+      "podstawa_prawna": "art. 65 ust. 1 u.k.w.h."
+    },
+    {
+      "id": "POR_05b_brak_zgody_malzonka",
+      "sekcja": "PORECZENIE",
+      "order": 50,
+      "warunek": "porecziciel_ograniczenie_do_majatku_osobistego",
+      "tekst": "Poręczyciel pozostaje w związku małżeńskim, w którym obowiązuje ustrój wspólności majątkowej, a jego małżonek nie wyraził zgody na udzielenie poręczenia. Strony zgodnie potwierdzają, że brak takiej zgody nie powoduje nieważności poręczenia — zgodnie z art. 41 § 2 k.r.o. Pożyczkodawca może żądać zaspokojenia z majątku osobistego Poręczyciela, z jego wynagrodzenia za pracę oraz z dochodów uzyskanych przez niego z innej działalności zarobkowej, z wyłączeniem majątku wspólnego małżonków. Poręczyciel oświadcza, że został o tym ograniczeniu poinformowany przed zawarciem Umowy.",
+      "podstawa_prawna": "art. 41 § 2 k.r.o.",
+      "uwaga_prawna": "Wariant przyjęty świadomie: poręczenie pozostaje w mocy mimo braku zgody małżonka, a egzekucja ogranicza się do majątku osobistego. Alternatywą było odstąpienie od poręczenia osobistego."
+    },
+    {
+      "id": "POR_06_tylko_rzeczowa",
+      "sekcja": "PORECZENIE",
+      "order": 10,
+      "warunek": "porecziciel_tylko_rzeczowo",
+      "tekst": "Poręczyciel ustanawia zabezpieczenie rzeczowe na nieruchomości stanowiącej jego własność i nie udziela poręczenia osobistego w rozumieniu art. 876 k.c. Jego odpowiedzialność ogranicza się do przedmiotu zabezpieczenia — Pożyczkodawca może zaspokoić się wyłącznie z nieruchomości obciążonej hipoteką, a pozostały majątek Poręczyciela nie odpowiada za zobowiązania wynikające z niniejszej Umowy.",
+      "podstawa_prawna": "art. 65 u.k.w.h."
+    },
+    {
+      "id": "POR_07_oswiadczenie_rzeczowa",
+      "sekcja": "PORECZENIE",
+      "order": 20,
+      "warunek": "porecziciel_tylko_rzeczowo",
+      "tekst": "Poręczyciel oświadcza, że zapoznał się z treścią Umowy oraz Harmonogramem Spłat, rozumie skutki ustanowienia hipoteki na swojej nieruchomości za zobowiązanie {{pb_dop}} — w tym możliwość utraty nieruchomości w razie braku spłaty — i ustanawia zabezpieczenie dobrowolnie."
+    },
+    {
+      "id": "ZAB_10_wykreslenie_po_wyplacie",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 85,
+      "warunek": "ma_zrzeczenia",
+      "tekst": "{{pb}} {{pb_zobowiazuje}} doprowadzić do wykreślenia z księgi wieczystej praw, co do których złożono oświadczenia o zrzeczeniu, oraz przedłożyć Pożyczkodawcy odpis księgi wieczystej potwierdzający wykreślenie — w terminie 6 miesięcy od dnia wypłaty. Strony przyjmują do wiadomości, że do chwili wykreślenia prawo pozostaje w mocy (art. 910 § 1 w zw. z art. 246 § 1 k.c.). Niewykonanie tego obowiązku stanowi istotne naruszenie Umowy.",
+      "podstawa_prawna": "art. 910 § 1 k.c. w zw. z art. 246 § 1 k.c."
+    },
+    {
+      "id": "KWO_01b_solidarnosc_dluznikow",
+      "sekcja": "KWOTA_PROWIZJA_WYPLATA",
+      "order": 15,
+      "warunek": "dluznicy_solidarni",
+      "tekst": "Pożyczkobiorcy odpowiadają za zobowiązania wynikające z niniejszej Umowy solidarnie (art. 366 k.c.). Pożyczkodawca może żądać całości lub części świadczenia od wszystkich Pożyczkobiorców łącznie, od kilku z nich lub od każdego z osobna, a zaspokojenie przez któregokolwiek z nich zwalnia pozostałych. Do zupełnego zaspokojenia Pożyczkodawcy wszyscy Pożyczkobiorcy pozostają zobowiązani.",
+      "podstawa_prawna": "art. 366 k.c."
+    },
+    {
+      "id": "OSW_08_malzonkowie_stronami",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 35,
+      "warunek": "malzonkowie_oboje_pozyczkobiorcami",
+      "tekst": "Pożyczkobiorcy pozostający w związku małżeńskim, w którym obowiązuje ustrój wspólności majątkowej, są oboje stronami niniejszej Umowy. Strony zgodnie potwierdzają, że w tym zakresie nie jest wymagana odrębna zgoda małżonka, o której mowa w art. 37 § 1 k.r.o., a zaciągnięcie zobowiązania oraz ustanowienie zabezpieczeń następuje za zgodą obojga małżonków.",
+      "podstawa_prawna": "art. 37 § 1 k.r.o. a contrario"
+    },
+    {
+      "id": "OSW_09_umocowanie_spolki",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 75,
+      "warunek": "ma_strone_bedaca_spolka",
+      "tekst": "Strony będące spółkami oświadczają, że osoby podpisujące niniejszą Umowę są należycie umocowane do ich reprezentowania zgodnie z zasadami reprezentacji ujawnionymi w rejestrze przedsiębiorców, a umocowanie to nie zostało odwołane ani ograniczone. Aktualne odpisy z rejestru oraz — w razie potrzeby — dokumenty pełnomocnictwa stanowią załącznik do Umowy."
+    },
+    {
+      "id": "OSW_10_uchwaly_korporacyjne",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 76,
+      "warunek": "ma_strone_bedaca_spolka",
+      "tekst": "Strony będące spółkami oświadczają, że zawarcie niniejszej Umowy oraz ustanowienie przewidzianych w niej zabezpieczeń nie wymaga zgody organów spółki innej niż zgody, które zostały uzyskane i okazane Pożyczkodawcy, ani nie narusza umowy (statutu) spółki. W szczególności dotyczy to zgód wymaganych na podstawie art. 228 i art. 230 Kodeksu spółek handlowych oraz odpowiadających im postanowień umowy (statutu) spółki.",
+      "podstawa_prawna": "art. 17, art. 228, art. 230 k.s.h."
+    },
+    {
+      "id": "OSW_11_spolka_cywilna",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 77,
+      "warunek": "ma_spolke_cywilna",
+      "tekst": "Strony potwierdzają, że spółka cywilna nie posiada osobowości ani podmiotowości prawnej — stroną niniejszej Umowy są wszyscy wspólnicy spółki cywilnej, którzy odpowiadają za zobowiązania z niej wynikające solidarnie, całym swoim majątkiem (art. 864 k.c.).",
+      "podstawa_prawna": "art. 860 i art. 864 k.c."
+    },
+    {
+      "id": "WZA_10_uchwaly",
+      "sekcja": "WARUNKI_ZAWIESZAJACE",
+      "order": 15,
+      "warunek": "ma_uchwaly_do_przedlozenia",
+      "tekst_pozycja": "przedłożeniu Pożyczkodawcy uchwały {{u.organ}} {{u.podmiot}} wyrażającej zgodę na {{u.czynnosc}} — wymaganej na podstawie {{u.podstawa}};",
+      "poziom": "podpunkt",
+      "iteruje": "uchwaly_do_przedlozenia",
+      "podstawa_prawna": "art. 17 § 1 k.s.h.",
+      "uwaga_prawna": "Brak uchwały z art. 228 pkt 4 k.s.h. (nieruchomość) skutkuje NIEWAŻNOŚCIĄ czynności (art. 17 § 1 k.s.h., konwalidacja w 2 miesiące). Brak uchwały z art. 230 k.s.h. nie wpływa na ważność — art. 17 § 1 jest tam wyłączony."
+    },
+    {
+      "id": "OSW_12_reprezentacja_laczna",
+      "sekcja": "OSWIADCZENIA_STRON",
+      "order": 78,
+      "warunek": "ma_reprezentacje_laczna",
+      "tekst": "W przypadku strony reprezentowanej łącznie, oświadczenia woli w imieniu tej strony składają wszystkie osoby wskazane w komparycji działające wspólnie. Oświadczenie złożone przez część z nich nie wiąże tej strony."
+    }
+  ]
+}
