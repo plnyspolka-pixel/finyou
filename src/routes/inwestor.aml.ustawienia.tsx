@@ -314,16 +314,59 @@ function AmlSettingsScreen() {
             <CardTitle className="text-base">Połączenie SI*GIIF</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Badge variant="outline">
-              {GIIF_CONNECTION_LABELS[settings.giifConnectionStatus as AmlGiifConnectionStatus] ??
-                settings.giifConnectionStatus}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                {GIIF_CONNECTION_LABELS[settings.giifConnectionStatus as AmlGiifConnectionStatus] ??
+                  settings.giifConnectionStatus}
+              </Badge>
+              {settings.giifConnectionStatus === "not_connected" && (
+                <span className="text-xs text-muted-foreground">to normalny stan startowy</span>
+              )}
+            </div>
             {settings.giifInstitutionId && (
               <p className="text-xs text-muted-foreground font-mono">
                 ID instytucji: {settings.giifInstitutionId}
               </p>
             )}
-            <div className="w-56">
+
+            <div className="rounded-md bg-muted/50 p-3 text-xs space-y-2">
+              <p className="font-medium text-sm">Co masz zrobić — i dlaczego</p>
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">Teraz: nic.</span> Cały moduł
+                AML — klienci, oceny ryzyka, transakcje, sprawy i przygotowanie zgłoszeń —
+                działa bez połączenia z SI*GIIF. Połączenie jest potrzebne dopiero przy{" "}
+                <span className="font-medium text-foreground">pierwszej wysyłce zgłoszenia</span>{" "}
+                do GIIF. Wtedy z ekranu zgłoszenia sam uruchomi się kreator, który
+                przeprowadzi Cię krok po kroku:
+              </p>
+              <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
+                <li>
+                  <span className="font-medium text-foreground">Rejestracja instytucji</span>{" "}
+                  w SI*GIIF — dane pobierzemy z Twojego profilu, Ty je tylko potwierdzasz.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">Klucz i wniosek o certyfikat</span>{" "}
+                  — generujemy je za Ciebie; klucz prywatny nigdy nie opuszcza platformy w
+                  postaci jawnej.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">Podpis kwalifikowany</span>{" "}
+                  osoby podpisującej — wymaga go GIIF (Profil Zaufany nie wystarcza).
+                  Platforma nie przechowuje Twojego podpisu, PIN-u ani klucza.
+                </li>
+                <li>
+                  <span className="font-medium text-foreground">Certyfikat komunikacyjny</span>{" "}
+                  wydaje operator GIIF — po jego otrzymaniu testujemy połączenie i wracamy
+                  do Twojego zgłoszenia.
+                </li>
+              </ol>
+              <p className="text-muted-foreground">
+                Dlatego połączenie nie „zestawia się samo" — część kroków (podpis,
+                wydanie certyfikatu) leży po stronie Twojej i urzędu.
+              </p>
+            </div>
+
+            <div className="w-full max-w-sm">
               <Label>Środowisko</Label>
               <Select
                 value={settings.giifEnvironment}
@@ -339,30 +382,35 @@ function AmlSettingsScreen() {
                   <SelectItem value="production">Produkcyjne (www.giif.mofnet.gov.pl)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Rejestracja i certyfikat komunikacyjny są potrzebne dopiero przy wysyłce pierwszego
-              zgłoszenia — kreator uruchomi się kontekstowo z ekranu zgłoszenia.
-            </p>
-            <div className="rounded-md border p-2 text-xs">
-              <p className="font-medium">
-                Przechowywanie kluczy certyfikatów: {settings.keyProvider.name}{" "}
-                {settings.keyProvider.productionApproved ? (
-                  <Badge variant="outline">dopuszczony do produkcji</Badge>
-                ) : (
-                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                    NIE dopuszczony do produkcji
-                  </Badge>
-                )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                „Testowe" służy do próbnej wysyłki bez skutków prawnych. „Produkcyjne"
+                wysyła zgłoszenia realnie do GIIF — wybierz je dopiero, gdy masz wydany
+                certyfikat komunikacyjny.
               </p>
-              <p className="text-muted-foreground mt-1">{settings.keyProvider.description}</p>
-              {!settings.keyProvider.productionApproved && (
-                <p className="text-amber-600 mt-1">
-                  Produkcyjne przechowywanie kluczy certyfikatów GIIF wymaga prawdziwego KMS/HSM
-                  (AML_KEY_PROVIDER=production).
-                </p>
-              )}
             </div>
+
+            {settings.giifEnvironment === "production" &&
+            !settings.keyProvider.productionApproved ? (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-900/20">
+                <p className="font-medium text-amber-800 dark:text-amber-200">
+                  Środowisko produkcyjne nie jest jeszcze gotowe po stronie platformy
+                </p>
+                <p className="mt-1 text-amber-700 dark:text-amber-300">
+                  Klucze certyfikatów są obecnie przechowywane w trybie lokalnym
+                  (dev/test), który nie jest dopuszczony do produkcji. Zanim wyślesz realne
+                  zgłoszenie, produkcyjny magazyn kluczy (KMS/HSM) musi włączyć administrator
+                  platformy. Skontaktuj się z administratorem lub na razie korzystaj ze
+                  środowiska testowego.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Klucze Twoich certyfikatów przechowujemy wyłącznie w postaci zaszyfrowanej i
+                nigdy nie pokazujemy ich w przeglądarce.
+                {!settings.keyProvider.productionApproved &&
+                  " Bieżący tryb jest przeznaczony do testów — do wysyłek produkcyjnych administrator platformy włączy magazyn KMS/HSM."}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
