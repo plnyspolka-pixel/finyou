@@ -124,7 +124,7 @@ type MessengerInboxProps = {
  */
 export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadLink }: MessengerInboxProps) {
   const qc = useQueryClient();
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [reply, setReply] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
