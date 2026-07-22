@@ -19,8 +19,12 @@ export type ExtractedFacts = {
   phone: string | null;
 };
 
+// Prefix sądu bywa zapisywany na kilka sposobów: "KS1J", "KS1 J", "KS1/J".
+// Dopuszczamy opcjonalny separator (spacja / ukośnik / kropka / myślnik)
+// pomiędzy cyfrą wydziału a literą oznaczenia zamiejscowego.
 const KW_RE =
-  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d[A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
+  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d)[\s\/\\.-]?([A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
+
 
 // Fragmenty, w których cyfry na pewno nie są kwotą — maile przychodzą często
 // jako surowy HTML/CSS (kolory hex typu #951246), a adresy e-mail i linki
@@ -122,12 +126,13 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
   // KW — deduplikuj po znormalizowanej formie
   const kwSeen = new Set<string>();
   for (const m of text.matchAll(KW_RE)) {
-    const norm = `${m[1].toUpperCase()}/${m[2]}/${m[3]}`;
+    const norm = `${m[1].toUpperCase()}${m[2].toUpperCase()}/${m[3]}/${m[4]}`;
     if (!kwSeen.has(norm)) {
       kwSeen.add(norm);
       out.kwNumbers.push(norm);
     }
   }
+
 
   // Pozycje słów "wartość/wycena/wart" — kwota do ~40 znaków za takim słowem
   // to wartość nieruchomości, nie kwota pożyczki.
