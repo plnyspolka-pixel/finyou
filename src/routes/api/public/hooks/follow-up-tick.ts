@@ -37,6 +37,17 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           console.error("[follow-up-tick] outbox error", e);
         }
 
+        // Automatyczny sync rozmów z Meta (Graph API) — dociąga nowe/zmienione
+        // wątki i pliki załączników, max raz na godzinę (throttle w Storage).
+        // Dzięki temu panel nie gubi rozmów między webhookami. Best-effort.
+        try {
+          const { runScheduledMessengerSync } = await import("@/lib/messenger-sync.server");
+          const ms = await runScheduledMessengerSync();
+          if (ms.ran) console.log("[follow-up-tick] messenger sync", JSON.stringify(ms));
+        } catch (e) {
+          console.error("[follow-up-tick] messenger sync error", e);
+        }
+
         // Uzupełnianie historii Messenger/IG (imiona z Meta/OCR/KW/treści
         // wiadomości, jednorazowa migracja załączników) — best-effort,
         // nie może wywrócić ticka.

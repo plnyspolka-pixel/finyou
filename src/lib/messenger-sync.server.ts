@@ -8,12 +8,27 @@
 // = message id). Idempotentne — ponowne uruchomienie nie duplikuje wiadomości.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource } from "@/lib/lead-comms.server";
+import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
+import { ocrLeadAttachmentsAndEnrich } from "@/lib/lead-doc-intel.server";
+import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 // Bezpieczniki, żeby ręczny backfill nie odpytywał Meta w nieskończoność.
 const MAX_CONVERSATIONS_PER_PAGE = 2000;
 const MAX_MESSAGES_PER_CONVERSATION = 1000;
+// Ile wiadomości z załącznikami pobrać w jednym przebiegu (idempotentne, wznawialne).
+const MAX_ATTACHMENT_MESSAGES_PER_RUN = 200;
+// Ile leadów maksymalnie poddać OCR w jednym przebiegu (OCR to płatne wywołania AI).
+const MAX_OCR_LEADS_PER_RUN = 60;
+
+export type AttachmentBackfillResult = {
+  messagesProcessed: number;
+  attachmentsDownloaded: number;
+  ocrProcessed: number;
+  kwFound: number;
+  errors: string[];
+};
 
 export type MessengerSyncResult = {
   pages: number;
@@ -197,6 +212,7 @@ async function syncPageConversations(
   platform: "messenger" | "instagram",
   known: Set<string>,
   result: MessengerSyncResult,
+  maxConversations: number,
 ): Promise<void> {
   const platformQs = platform === "instagram" ? "&platform=instagram" : "";
   let url: string | null =
@@ -205,7 +221,7 @@ async function syncPageConversations(
     `&limit=50${platformQs}&access_token=${encodeURIComponent(page.token)}`;
 
   let seen = 0;
-  while (url && seen < MAX_CONVERSATIONS_PER_PAGE) {
+  while (url && seen < maxConversations) {
     const res = await fetch(url);
     const json: any = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -256,6 +272,7 @@ async function syncPageConversations(
             conversation_id: conv?.id ?? null,
             from_id: fromId,
             has_attachments: hasAttachments,
+            page_id: page.id,
           },
         });
       }
@@ -277,7 +294,9 @@ async function syncPageConversations(
  */
 export async function syncMessengerConversations(opts?: {
   platform?: "messenger" | "instagram" | "both";
+  maxConversationsPerPage?: number;
 }): Promise<MessengerSyncResult> {
+  const maxConversations = opts?.maxConversationsPerPage ?? MAX_CONVERSATIONS_PER_PAGE;
   const result: MessengerSyncResult = {
     pages: 0,
     conversationsSeen: 0,
@@ -318,7 +337,7 @@ export async function syncMessengerConversations(opts?: {
 
     for (const platform of platforms) {
       try {
-        await syncPageConversations(page, platform, known, result);
+        await syncPageConversations(page, platform, known, result, maxConversations);
       } catch (e: any) {
         result.errors.push(`${platform} ${page.name ?? page.id}: ${e?.message ?? e}`);
       }
@@ -326,4 +345,190 @@ export async function syncMessengerConversations(opts?: {
   }
 
   return result;
+}
+
+/** Adres do pobrania załącznika Meta (obraz / plik / wideo). */
+function attachmentDownloadUrl(a: any): string | null {
+  return a?.image_data?.url ?? a?.file_url ?? a?.video_data?.url ?? a?.image_data?.preview_url ?? null;
+}
+
+/**
+ * Dociąga pliki załączników dla wiadomości zsynchronizowanych z Graph API
+ * (source="graph_sync"), które mają flagę has_attachments, ale nie mają jeszcze
+ * pobranych plików (attachments IS NULL). Dla każdej takiej wiadomości pobiera
+ * z Meta listę załączników po id wiadomości, ściąga pliki do Storage, podpina
+ * je do dokumentów klienta i uruchamia OCR (numery KW, właściciel, wartość).
+ *
+ * Ograniczone i wznawialne: przetwarza do MAX_ATTACHMENT_MESSAGES_PER_RUN
+ * wiadomości na przebieg; kolejne kliknięcie „Uzupełnij historię" kontynuuje.
+ * Idempotentne — raz pobrane pliki nie są ściągane ponownie.
+ */
+export async function backfillGraphSyncAttachments(opts?: {
+  maxMessages?: number;
+}): Promise<AttachmentBackfillResult> {
+  const result: AttachmentBackfillResult = {
+    messagesProcessed: 0,
+    attachmentsDownloaded: 0,
+    ocrProcessed: 0,
+    kwFound: 0,
+    errors: [],
+  };
+
+  const rootToken =
+    process.env.META_ACCESS_TOKEN ??
+    process.env.META_PAGE_ACCESS_TOKEN ??
+    process.env.META_IG_PAGE_ACCESS_TOKEN;
+  if (!rootToken) {
+    result.errors.push("Brak tokenu Meta — nie mogę pobrać załączników.");
+    return result;
+  }
+
+  const pages = await discoverPages(rootToken);
+  const tokenById = new Map<string, string>(pages.map((p) => [p.id, p.token]));
+  const allTokens = Array.from(new Set(pages.map((p) => p.token)));
+  if (!allTokens.length) {
+    result.errors.push("Nie udało się odkryć żadnej strony (token/uprawnienia).");
+    return result;
+  }
+
+  const max = opts?.maxMessages ?? MAX_ATTACHMENT_MESSAGES_PER_RUN;
+  const { data: rows, error } = await supabaseAdmin
+    .from("lead_communications")
+    .select("id, lead_id, external_id, metadata")
+    .eq("channel", "messenger")
+    .is("attachments", null)
+    .eq("metadata->>source", "graph_sync")
+    .eq("metadata->>has_attachments", "true")
+    .not("external_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(max);
+  if (error) {
+    result.errors.push(`select: ${error.message}`);
+    return result;
+  }
+
+  const leadsWithNewDocs = new Set<string>();
+
+  for (const row of rows ?? []) {
+    result.messagesProcessed += 1;
+    const meta = (row.metadata ?? {}) as Record<string, any>;
+    const leadId = row.lead_id as string | null;
+    const mid = row.external_id as string | null;
+    if (!leadId || !mid) continue;
+
+    const pageId = meta.page_id ? String(meta.page_id) : null;
+    const tokens = pageId && tokenById.has(pageId) ? [tokenById.get(pageId)!] : allTokens;
+
+    // Pobierz listę załączników po id wiadomości (spróbuj tokenem właściwej strony,
+    // a gdy nie znamy strony — kolejnymi tokenami, aż któryś zwróci dane).
+    let atts: any[] | null = null;
+    for (const tk of tokens) {
+      try {
+        const r = await fetch(
+          `${GRAPH}/${encodeURIComponent(mid)}?fields=attachments{id,mime_type,name,size,image_data,file_url,video_data}&access_token=${encodeURIComponent(tk)}`,
+        );
+        const j: any = await r.json().catch(() => ({}));
+        if (r.ok) {
+          atts = j?.attachments?.data ?? [];
+          break;
+        }
+      } catch (e: any) {
+        result.errors.push(`fetch ${mid}: ${e?.message ?? e}`);
+      }
+    }
+    if (!atts || !atts.length) continue;
+
+    const stored: any[] = [];
+    for (const a of atts) {
+      const url = attachmentDownloadUrl(a);
+      if (!url) continue;
+      const s = await downloadAndStore({
+        leadId,
+        url,
+        filename: a?.name ?? undefined,
+        mime: a?.mime_type ?? undefined,
+      });
+      if (s) stored.push({ ...s, source_type: "graph_sync" });
+    }
+    if (!stored.length) continue;
+
+    const { error: updErr } = await supabaseAdmin
+      .from("lead_communications")
+      .update({ attachments: stored as any })
+      .eq("id", row.id);
+    if (updErr) {
+      result.errors.push(`update ${row.id}: ${updErr.message}`);
+      continue;
+    }
+    result.attachmentsDownloaded += stored.length;
+    try {
+      await attachStoredToClientDocuments({ leadId, stored, sourceLabel: "messenger" });
+    } catch (e: any) {
+      result.errors.push(`docs ${leadId}: ${e?.message ?? e}`);
+    }
+    leadsWithNewDocs.add(leadId);
+  }
+
+  // OCR świeżo pobranych dokumentów — po jednym przebiegu na leada (dedup ocr_paths).
+  let ocrLeads = 0;
+  for (const leadId of leadsWithNewDocs) {
+    if (ocrLeads >= MAX_OCR_LEADS_PER_RUN) break;
+    ocrLeads += 1;
+    try {
+      const r = await ocrLeadAttachmentsAndEnrich({ leadId });
+      result.ocrProcessed += r.processed;
+      result.kwFound += r.kwFound;
+    } catch (e: any) {
+      result.errors.push(`ocr ${leadId}: ${e?.message ?? e}`);
+    }
+  }
+
+  return result;
+}
+
+// Znacznik ostatniego automatycznego syncu (throttling w cronie).
+const SYNC_MARKER_PATH = "system/messenger-conversation-sync-last.txt";
+
+async function lastScheduledSyncAt(): Promise<number> {
+  try {
+    const { data } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).download(SYNC_MARKER_PATH);
+    if (!data) return 0;
+    const t = Date.parse((await data.text()).trim());
+    return Number.isFinite(t) ? t : 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function markScheduledSync(): Promise<void> {
+  await supabaseAdmin.storage
+    .from(CLIENT_FILES_BUCKET)
+    .upload(SYNC_MARKER_PATH, new TextEncoder().encode(new Date().toISOString()), {
+      contentType: "text/plain",
+      upsert: true,
+    });
+}
+
+/**
+ * Wariant dla crona (follow-up-tick co 15 min): dociąga nowe/zmienione rozmowy
+ * i załączniki z Meta, ale nie częściej niż raz na godzinę (throttle po
+ * znaczniku w Storage). Skanuje tylko najświeższe wątki — dedup po id
+ * wiadomości ogarnia resztę. Best-effort; błędy nie mogą wywrócić ticka.
+ */
+export async function runScheduledMessengerSync(opts?: {
+  minIntervalMs?: number;
+}): Promise<{ ran: boolean; messagesNew?: number; attachmentsDownloaded?: number; ocrProcessed?: number }> {
+  const minInterval = opts?.minIntervalMs ?? 3600_000; // 1h
+  const last = await lastScheduledSyncAt();
+  if (Date.now() - last < minInterval) return { ran: false };
+
+  const sync = await syncMessengerConversations({ platform: "both", maxConversationsPerPage: 150 });
+  const atts = await backfillGraphSyncAttachments({ maxMessages: 100 });
+  await markScheduledSync().catch(() => {});
+  return {
+    ran: true,
+    messagesNew: sync.messagesNew,
+    attachmentsDownloaded: atts.attachmentsDownloaded,
+    ocrProcessed: atts.ocrProcessed,
+  };
 }
