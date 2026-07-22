@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon, Network, Coins, Share2, Wallet, Building2 } from "lucide-react";
-import { AiAdminChat } from "@/components/admin/AiAdminChat";
+
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
 import { PanelShell } from "@/components/layout/panel-shell";
@@ -122,7 +122,7 @@ function AdminLayout() {
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
       groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
-      footer={roles.includes("administrator") ? <AiAdminChat /> : null}
+      
     />
   );
 }
