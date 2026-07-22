@@ -154,7 +154,6 @@ import { Route as ApiPublicMailgunInboundWebhookRouteImport } from './routes/api
 import { Route as ApiPublicLoanApplicationRouteImport } from './routes/api/public/loan-application'
 import { Route as ApiPublicElevenlabsWebhookRouteImport } from './routes/api/public/elevenlabs-webhook'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
-import { Route as ApiPublicDiagMetaSubsRouteImport } from './routes/api/public/diag-meta-subs'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
 import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/admin.program-posrednikow.wyplaty'
@@ -944,11 +943,6 @@ const ApiPublicElevenlabsSendSmsRoute =
     path: '/api/public/elevenlabs-send-sms',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicDiagMetaSubsRoute = ApiPublicDiagMetaSubsRouteImport.update({
-  id: '/api/public/diag-meta-subs',
-  path: '/api/public/diag-meta-subs',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   id: '/wnioski/$id',
   path: '/wnioski/$id',
@@ -1355,7 +1349,6 @@ export interface FileRoutesByFullPath {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/diag-meta-subs': typeof ApiPublicDiagMetaSubsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -1542,7 +1535,6 @@ export interface FileRoutesByTo {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/diag-meta-subs': typeof ApiPublicDiagMetaSubsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -1739,7 +1731,6 @@ export interface FileRoutesById {
   '/admin/program-posrednikow/wyplaty': typeof AdminProgramPosrednikowWyplatyRoute
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
-  '/api/public/diag-meta-subs': typeof ApiPublicDiagMetaSubsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
   '/api/public/elevenlabs-webhook': typeof ApiPublicElevenlabsWebhookRoute
   '/api/public/loan-application': typeof ApiPublicLoanApplicationRoute
@@ -1937,7 +1928,6 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
-    | '/api/public/diag-meta-subs'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -2124,7 +2114,6 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
-    | '/api/public/diag-meta-subs'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -2320,7 +2309,6 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/wyplaty'
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/wnioski/$id'
-    | '/api/public/diag-meta-subs'
     | '/api/public/elevenlabs-send-sms'
     | '/api/public/elevenlabs-webhook'
     | '/api/public/loan-application'
@@ -2423,7 +2411,6 @@ export interface RootRouteChildren {
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
-  ApiPublicDiagMetaSubsRoute: typeof ApiPublicDiagMetaSubsRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
   ApiPublicElevenlabsWebhookRoute: typeof ApiPublicElevenlabsWebhookRoute
   ApiPublicLoanApplicationRoute: typeof ApiPublicLoanApplicationRoute
@@ -3479,13 +3466,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicElevenlabsSendSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/diag-meta-subs': {
-      id: '/api/public/diag-meta-subs'
-      path: '/api/public/diag-meta-subs'
-      fullPath: '/api/public/diag-meta-subs'
-      preLoaderRoute: typeof ApiPublicDiagMetaSubsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/wnioski/$id': {
       id: '/admin/wnioski/$id'
       path: '/wnioski/$id'
@@ -4222,7 +4202,6 @@ const rootRouteChildren: RootRouteChildren = {
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
-  ApiPublicDiagMetaSubsRoute: ApiPublicDiagMetaSubsRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
   ApiPublicElevenlabsWebhookRoute: ApiPublicElevenlabsWebhookRoute,
   ApiPublicLoanApplicationRoute: ApiPublicLoanApplicationRoute,
