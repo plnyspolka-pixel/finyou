@@ -66,6 +66,7 @@ async function discoverPages(rootToken: string): Promise<PageInfo[]> {
  * ale strona nie wypycha już zdarzeń `messages` do naszego webhooka.
  */
 async function checkPageWebhook(page: PageInfo): Promise<{ subscribed: boolean; fields: string[]; note: string | null }> {
+  const ownAppId = process.env.META_APP_ID ?? null;
   try {
     const res = await fetch(
       `${GRAPH}/${page.id}/subscribed_apps?access_token=${encodeURIComponent(page.token)}`,
@@ -76,14 +77,32 @@ async function checkPageWebhook(page: PageInfo): Promise<{ subscribed: boolean; 
     }
     const apps: any[] = json?.data ?? [];
     if (!apps.length) {
-      return { subscribed: false, fields: [], note: "Żadna aplikacja nie jest zasubskrybowana do tej strony." };
+      return { subscribed: false, fields: [], note: "Żadna aplikacja nie jest zasubskrybowana do webhooka tej strony." };
     }
-    const fields = apps.flatMap((a) => (Array.isArray(a?.subscribed_fields) ? a.subscribed_fields : []));
+
+    const appNames = apps.map((a) => a?.name ?? a?.id ?? "?").join(", ");
+    const fields = Array.from(new Set(apps.flatMap((a) => (Array.isArray(a?.subscribed_fields) ? a.subscribed_fields : []))));
     const hasMessages = fields.includes("messages");
+
+    // Czy TA aplikacja (META_APP_ID) jest wśród subskrybentów? Jeśli wiadomościami
+    // zajmuje się inna appka (np. bezpośrednia integracja ElevenLabs / ManyChat),
+    // to ona odpowiada klientom, a nasz panel nigdy nie zapisuje tych rozmów.
+    const thisAppSubscribed = ownAppId ? apps.some((a) => String(a?.id) === String(ownAppId)) : null;
+
+    let note: string | null = null;
+    if (!hasMessages) {
+      note = `Subskrybenci: ${appNames}. Brak pola \`messages\` — nowe wiadomości nie docierają do panelu.`;
+    } else if (thisAppSubscribed === false) {
+      note = `Webhook \`messages\` obsługuje INNA aplikacja: ${appNames}. To ona odpowiada klientom — panel nie zapisuje tych rozmów. Podłącz webhook tej aplikacji (META_APP_ID=${ownAppId}) do strony.`;
+    } else if (thisAppSubscribed === null) {
+      note = `Subskrybenci webhooka: ${appNames}. (Nie mogę potwierdzić, czy to ta aplikacja — brak META_APP_ID.)`;
+    }
+
     return {
-      subscribed: hasMessages,
-      fields: Array.from(new Set(fields)),
-      note: hasMessages ? null : "Strona jest zasubskrybowana, ale bez pola `messages` — nowe wiadomości nie docierają do panelu.",
+      // "subscribed" = nasz panel dostanie wiadomości: pole messages + ta aplikacja (lub nieznane app id).
+      subscribed: hasMessages && thisAppSubscribed !== false,
+      fields,
+      note,
     };
   } catch (e: any) {
     return { subscribed: false, fields: [], note: e?.message ?? "błąd sprawdzania subskrypcji" };
