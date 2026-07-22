@@ -155,7 +155,7 @@ export function inferAmountSource(
   return manualBy(loanId, ctx);
 }
 
-/** Skąd wziął się NUMER KW. */
+/** Skąd wziął się NUMER KW (kanał, którym klient nam go przekazał). */
 export function inferKwSource(
   loanId: string,
   kwNumber: string | null,
@@ -165,20 +165,22 @@ export function inferKwSource(
 ): FieldSource | null {
   if (!kwNumber) return null;
   const trimmed = kwNumber.trim();
-  if (ctx.autoKwSet.has(trimmed)) {
-    return { key: "ekw_auto", title: "Numer KW zweryfikowany w EKW (auto-pobranie)" };
-  }
-  const form = baseFormSource(appSource);
-  if (form) return form;
+  // 1. wiadomość przychodząca od klienta z numerem KW
   const comms = clientId ? ctx.commsByClient.get(clientId) : undefined;
-  const hit = commsContainingText(comms, trimmed);
+  const hit =
+    commsContainingText(comms, trimmed) ??
+    commsContainingDigits(comms, digitsOnly(trimmed));
   const src = channelToSource(hit);
   if (src) {
     return {
       key: src,
-      title: `Numer KW pojawił się w wiadomości od klienta (${src === "messenger" ? "Messenger/IG/WA" : "e-mail"})`,
+      title: `Numer KW podany przez klienta w wiadomości (${src === "messenger" ? "Messenger/IG/WA" : "e-mail"})`,
     };
   }
+  // 2. wniosek wypełniony przez klienta (landing / embed / panel klienta)
+  const form = baseFormSource(appSource);
+  if (form) return form;
+  // 3. ręcznie wpisany w panelu przez operatora (być może z auto-weryfikacją EKW)
   return manualBy(loanId, ctx);
 }
 
