@@ -80,12 +80,31 @@ export const backfillMessengerData = createServerFn({ method: "POST" })
 
     const { backfillLeadNames, backfillOrphanAttachments, markAttachmentsBackfillDone } =
       await import("./messenger-backfill.server");
+    const { syncMessengerConversations } = await import("./messenger-sync.server");
 
+    // 1) Odzyskaj brakujące rozmowy z Meta (wątki sprzed podłączenia webhooka).
+    let sync = {
+      conversationsSeen: 0,
+      messagesNew: 0,
+      leadsCreated: 0,
+      errors: [] as string[],
+      webhook: [] as Array<{ page: string; subscribed: boolean; fields: string[]; note: string | null }>,
+    };
+    try {
+      const r = await syncMessengerConversations({ platform: "both" });
+      sync = { conversationsSeen: r.conversationsSeen, messagesNew: r.messagesNew, leadsCreated: r.leadsCreated, errors: r.errors, webhook: r.webhook };
+    } catch (e: any) {
+      console.warn("[backfill] messenger conversation sync error", e);
+      sync.errors.push(String(e?.message ?? e));
+    }
+
+    // 2) Uzupełnij nazwiska i dopnij osierocone załączniki (także do leadów
+    //    świeżo utworzonych przez sync powyżej).
     const names = await backfillLeadNames({ force: true });
     const atts = await backfillOrphanAttachments();
     try { await markAttachmentsBackfillDone(); } catch (e) {
       console.warn("[backfill] marker upload error", e);
     }
 
-    return { ok: true, ...names, ...atts };
+    return { ok: true, ...names, ...atts, ...sync };
   });
