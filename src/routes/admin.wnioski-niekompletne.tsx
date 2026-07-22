@@ -66,7 +66,7 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
 }
 
-type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "media" | "kw";
+type SortKey = "updated_at" | "created_at" | "loan_amount" | "name" | "status" | "media" | "kw";
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete" | "attention";
 
