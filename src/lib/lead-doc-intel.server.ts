@@ -20,7 +20,10 @@ const MODEL = "google/gemini-2.5-flash";
 const MAX_FILES_PER_RUN = 3;
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
 
-const KW_RE = /\b[A-Z]{2}\d[A-Z0-9][\s/\\.-]{0,3}\d{7,8}[\s/\\.-]{0,3}\d\b/g;
+// Tolerujemy separator także pomiędzy cyfrą wydziału a literą wydziału
+// zamiejscowego ("KS1/J 00009044/5" ≡ "KS1J/00009044/5").
+const KW_RE = /\b[A-Z]{2}\d[\s/\\.-]?[A-Z0-9][\s/\\.-]{0,3}\d{7,8}[\s/\\.-]{0,3}\d\b/g;
+
 
 const OCR_SYSTEM_PROMPT =
   "Jesteś ekspertem OCR polskich dokumentów nieruchomościowych (operaty szacunkowe, odpisy KW, wypisy z rejestru gruntów, umowy). Odpowiadasz wyłącznie poprawnym JSON-em.";
