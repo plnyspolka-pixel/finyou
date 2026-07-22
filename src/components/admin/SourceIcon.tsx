@@ -8,6 +8,8 @@ import {
   Bot,
   HelpCircle,
   Facebook,
+  PencilLine,
+  DatabaseZap,
   type LucideIcon,
 } from "lucide-react";
 import { normalizeLeadSource, leadSourceLabel } from "@/lib/lead-source";
@@ -24,6 +26,8 @@ const ICONS: Record<string, { Icon: LucideIcon; cls: string }> = {
   inbound_enrichment: { Icon: Phone, cls: "text-violet-600" },
   ocr: { Icon: ScanText, cls: "text-fuchsia-600" },
   mcp: { Icon: Bot, cls: "text-slate-600" },
+  manual: { Icon: PencilLine, cls: "text-rose-600" },
+  ekw_auto: { Icon: DatabaseZap, cls: "text-fuchsia-600" },
   lead: { Icon: HelpCircle, cls: "text-muted-foreground" },
   unknown: { Icon: HelpCircle, cls: "text-muted-foreground" },
 };

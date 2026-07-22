@@ -22,6 +22,8 @@ const SOURCE_LABELS: Record<string, string> = {
   lead: "Lead",
   mcp: "Asystent AI",
   ocr: "OCR dokumentu",
+  manual: "Ręcznie (panel)",
+  ekw_auto: "EKW (auto-pobranie)",
 };
 
 /** Kanoniczny klucz kanału — np. "inbound_enrichment:messenger" -> "messenger". */

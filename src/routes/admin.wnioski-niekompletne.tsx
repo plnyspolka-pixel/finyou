@@ -12,9 +12,16 @@ import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { SourceIcon } from "@/components/admin/SourceIcon";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
-import { leadSourceLabel, enrichedFieldSource } from "@/lib/lead-source";
+import { leadSourceLabel } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import { evaluateApplicationCore, missingLabels, type CompletenessResult } from "@/lib/application-completeness";
+import {
+  inferAmountSource,
+  inferKwSource,
+  inferMediaSource,
+  type EnrichmentContext,
+  type FieldSource,
+} from "@/lib/enrichment-source";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
   component: ApplicationsPage,
@@ -129,6 +136,14 @@ function SortHeader({ label, k, sort, setSort, className }: { label: string; k: 
 
 function ApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [ctx, setCtx] = useState<EnrichmentContext>(() => ({
+    docsByLoan: new Map(),
+    autoKwSet: new Set(),
+    commsByClient: new Map(),
+    leadsByClient: new Map(),
+    nameByUser: new Map(),
+    operatorByLoan: new Map(),
+  }));
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<TabKey>("all");
@@ -139,7 +154,7 @@ function ApplicationsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,merged_into_id,archived_at,client:clients(id,first_name,last_name,email,phone,source),properties(id,land_register_number,photos)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,merged_into_id,archived_at,assigned_operator,client:clients(id,first_name,last_name,email,phone,source),properties(id,land_register_number,photos)")
       .is("merged_into_id", null)
       .is("archived_at", null)
       .neq("status", "archiwalny")
@@ -148,26 +163,98 @@ function ApplicationsPage() {
       .limit(1000);
     if (!error && data) {
       const list = data as any as Row[];
-
-      // Bulk fetch document counts per loan_application (potrzebne też do auto-promocji)
       const ids = list.map((r) => r.id);
+      const clientIds = Array.from(new Set(list.map((r) => r.client?.id).filter((x): x is string => !!x)));
+      const kwNums = Array.from(new Set(list.flatMap((r) => (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0))));
+
+      const docsByLoan = new Map<string, { loan_application_id: string; document_type: string | null; uploaded_by: string | null }[]>();
+      const commsByClient = new Map<string, { lead_id: string; channel: string | null; direction: string | null; content: string | null }[]>();
+      const leadsByClient = new Map<string, string[]>();
+      const autoKwSet = new Set<string>();
+      const nameByUser = new Map<string, string>();
+      const operatorByLoan = new Map<string, string | null>();
+      const docCounts: Record<string, number> = {};
+
       if (ids.length > 0) {
         const { data: docs } = await supabase
           .from("documents")
-          .select("loan_application_id")
+          .select("loan_application_id,document_type,uploaded_by")
           .in("loan_application_id", ids);
-        const counts: Record<string, number> = {};
-        for (const d of (docs ?? []) as { loan_application_id: string }[]) {
-          counts[d.loan_application_id] = (counts[d.loan_application_id] ?? 0) + 1;
+        for (const d of (docs ?? []) as any[]) {
+          if (!d.loan_application_id) continue;
+          docCounts[d.loan_application_id] = (docCounts[d.loan_application_id] ?? 0) + 1;
+          const arr = docsByLoan.get(d.loan_application_id) ?? [];
+          arr.push(d);
+          docsByLoan.set(d.loan_application_id, arr);
         }
-        for (const r of list) r.docCount = counts[r.id] ?? 0;
+      }
+      for (const r of list) {
+        r.docCount = docCounts[r.id] ?? 0;
+        operatorByLoan.set(r.id, (r as any).assigned_operator ?? null);
       }
 
-      // Auto-promocja: pełen komplet podstawowych danych (imię i nazwisko,
-      // kontakt, kwota, POPRAWNY numer KW, zdjęcia lub dokumenty) => szukamy_inwestora.
-      // Definicja kompletności = evaluateApplicationCore (wspólny moduł). Bez
-      // kompletu wniosek zostaje w kompletowaniu danych — inwestor nie dostanie
-      // anonimowej sprawy, do której nie da się zadzwonić.
+      // Leady dla klientów (żeby zebrać wiadomości)
+      const leadIds: string[] = [];
+      if (clientIds.length > 0) {
+        const { data: leads } = await supabase
+          .from("leads")
+          .select("id,client_id")
+          .in("client_id", clientIds);
+        for (const l of (leads ?? []) as { id: string; client_id: string | null }[]) {
+          if (!l.client_id) continue;
+          const arr = leadsByClient.get(l.client_id) ?? [];
+          arr.push(l.id);
+          leadsByClient.set(l.client_id, arr);
+          leadIds.push(l.id);
+        }
+      }
+
+      if (leadIds.length > 0) {
+        const { data: comms } = await supabase
+          .from("lead_communications")
+          .select("lead_id,channel,direction,content")
+          .in("lead_id", leadIds)
+          .limit(5000);
+        const leadToClient = new Map<string, string>();
+        for (const [cid, ls] of leadsByClient.entries()) for (const l of ls) leadToClient.set(l, cid);
+        for (const c of (comms ?? []) as any[]) {
+          const cid = leadToClient.get(c.lead_id);
+          if (!cid) continue;
+          const arr = commsByClient.get(cid) ?? [];
+          arr.push(c);
+          commsByClient.set(cid, arr);
+        }
+      }
+
+      if (kwNums.length > 0) {
+        const { data: kws } = await supabase
+          .from("kw_documents")
+          .select("kw_number,status")
+          .in("kw_number", kwNums);
+        for (const k of (kws ?? []) as { kw_number: string; status: string | null }[]) {
+          if (k.status && ["fetched", "completed", "success", "ok"].includes(k.status)) {
+            autoKwSet.add(k.kw_number);
+          } else if (!k.status) {
+            autoKwSet.add(k.kw_number);
+          }
+        }
+      }
+
+      const userIds = new Set<string>();
+      for (const arr of docsByLoan.values()) for (const d of arr) if (d.uploaded_by) userIds.add(d.uploaded_by);
+      for (const op of operatorByLoan.values()) if (op) userIds.add(op);
+      if (userIds.size > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id,first_name,last_name,email")
+          .in("id", Array.from(userIds));
+        for (const p of (profs ?? []) as any[]) {
+          const name = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pracownik";
+          nameByUser.set(p.id, name);
+        }
+      }
+
+      // Auto-promocja (bez zmian)
       const toPromote = list.filter((r) => {
         if (!INCOMPLETE_STATUSES.includes(normalizeLoanStatus(r.status))) return false;
         return coreOf(r).complete;
@@ -177,13 +264,13 @@ function ApplicationsPage() {
           .from("loan_applications")
           .update({ status: "szukamy_inwestora", available_to_investors: true, completeness_percent: 100, updated_at: new Date().toISOString() })
           .in("id", toPromote.map((r) => r.id));
-        // Update local list
         for (const p of toPromote) {
           const r = list.find((x) => x.id === p.id);
           if (r) { r.status = "szukamy_inwestora"; r.completeness_percent = 100; }
         }
       }
       setRows(list);
+      setCtx({ docsByLoan, autoKwSet, commsByClient, leadsByClient, nameByUser, operatorByLoan });
     }
     setLoading(false);
   };
@@ -348,13 +435,16 @@ function ApplicationsPage() {
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 const core = coreOf(r);
                 const needsFix = isComplete && !core.complete;
-                // Źródło pozyskania leada (kanał wejścia) vs. źródło pól
-                // pogłębionych. Meta Lead Ads to CZYSTY kanał pozyskania —
-                // KW, kwota, zdjęcia nie mogą wejść tym kanałem, więc dla
-                // takich pól pokazujemy neutralną ikonkę „?" zamiast Facebooka.
+                // Źródło danych POGŁĘBIONYCH (kwota, KW, zdjęcia) obliczane
+                // per pole na podstawie faktów z bazy: dokumenty z Messengera,
+                // maile z załącznikami, EKW, uploader z panelu itd. Meta Lead
+                // Ads nie może dostarczyć tych pól, więc ikonka będzie
+                // pokazywać PRAWDZIWE źródło (np. Messenger, mail, ręcznie).
                 const appSource = r.source;
                 const clientSource = r.client?.source ?? appSource;
-                const enrichedSource = enrichedFieldSource(appSource);
+                const clientId = r.client?.id ?? null;
+                const amountSrc: FieldSource | null = inferAmountSource(r.id, r.loan_amount, appSource, clientId, ctx);
+                const mediaSrc: FieldSource | null = inferMediaSource(r.id, allPhotos.length + (r.docCount ?? 0) > 0, appSource, ctx);
                 return (
                   <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
@@ -397,7 +487,7 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums align-top">
                       <div className="inline-flex items-center gap-1">
-                        {r.loan_amount != null && <SourceIcon source={enrichedSource} title={`Kwota — źródło: ${leadSourceLabel(enrichedSource)}`} />}
+                        {amountSrc && <SourceIcon source={amountSrc.key} title={amountSrc.title} />}
                         <span>{fmtPLN(r.loan_amount as any)}</span>
                       </div>
                     </TableCell>
@@ -406,20 +496,21 @@ function ApplicationsPage() {
                         <Badge variant="outline" className="text-muted-foreground">brak</Badge>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          {kwNums.map((k, i) => (
-                            <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
-                              <SourceIcon source={enrichedSource} title={`Numer KW — źródło: ${leadSourceLabel(enrichedSource)}`} />
-                              <span className="truncate">{k}</span>
-                            </span>
-                          ))}
+                          {kwNums.map((k, i) => {
+                            const s = inferKwSource(r.id, k, appSource, clientId, ctx);
+                            return (
+                              <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
+                                {s && <SourceIcon source={s.key} title={s.title} />}
+                                <span className="truncate">{k}</span>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="flex items-center gap-1">
-                        {(allPhotos.length > 0 || (r.docCount ?? 0) > 0) && (
-                          <SourceIcon source={enrichedSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(enrichedSource)}`} />
-                        )}
+                        {mediaSrc && <SourceIcon source={mediaSrc.key} title={mediaSrc.title} />}
                         <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                       </div>
                     </TableCell>
