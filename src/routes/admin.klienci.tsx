@@ -14,7 +14,7 @@ import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadSt
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
-import { evaluateApplicationCore } from "@/lib/application-completeness";
+
 
 
 export const Route = createFileRoute("/admin/klienci")({
