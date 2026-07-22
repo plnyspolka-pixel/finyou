@@ -135,9 +135,13 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
     mutationFn: () => backfillFn(),
     onSuccess: (r) => {
       toast.success(
-        `Uzupełniono: ${r.namesFromMeta + r.namesFromText + r.namesFromOcr + r.namesFromKw} nazwisk (Meta: ${r.namesFromMeta}, OCR: ${r.namesFromOcr}, KW: ${r.namesFromKw}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
+        `Odzyskano ${r.messagesNew} wiadomości z Meta (${r.leadsCreated} nowych rozmów). ` +
+          `Uzupełniono: ${r.namesFromMeta + r.namesFromText + r.namesFromOcr + r.namesFromKw} nazwisk (Meta: ${r.namesFromMeta}, OCR: ${r.namesFromOcr}, KW: ${r.namesFromKw}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
           (r.filesSkipped ? `, pominięto ${r.filesSkipped} plików bez dopasowania` : ""),
       );
+      if (r.errors?.length) {
+        toast.error(`Meta zgłosiła ${r.errors.length} błąd(ów) przy pobieraniu rozmów: ${r.errors[0]}`);
+      }
       qc.invalidateQueries({ queryKey: ["messenger-inbox"] });
       qc.invalidateQueries({ queryKey: ["messenger-inbox-leads"] });
     },
