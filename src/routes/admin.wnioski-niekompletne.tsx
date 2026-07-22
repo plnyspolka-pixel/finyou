@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
+import { SourceIcon } from "@/components/admin/SourceIcon";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
@@ -31,7 +32,7 @@ type Row = {
   source: string | null;
   return_link: string | null;
   missing_fields: any;
-  client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
+  client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; source?: string | null } | null;
   properties: Property[] | null;
   docCount?: number;
 };
@@ -65,7 +66,7 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
 }
 
-type SortKey = "updated_at" | "created_at" | "loan_amount" | "completeness_percent" | "name" | "status" | "media" | "kw";
+type SortKey = "updated_at" | "created_at" | "loan_amount" | "name" | "status" | "media" | "kw";
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete" | "attention";
 
@@ -138,7 +139,7 @@ function ApplicationsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,merged_into_id,archived_at,client:clients(id,first_name,last_name,email,phone),properties(id,land_register_number,photos)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,merged_into_id,archived_at,client:clients(id,first_name,last_name,email,phone,source),properties(id,land_register_number,photos)")
       .is("merged_into_id", null)
       .is("archived_at", null)
       .neq("status", "archiwalny")
@@ -255,7 +256,6 @@ function ApplicationsPage() {
         case "name": return [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ").toLowerCase();
         case "status": return normalizeLoanStatus(r.status);
         case "loan_amount": return r.loan_amount ?? -1;
-        case "completeness_percent": return r.completeness_percent ?? -1;
         case "media": return (r.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0) + (r.docCount ?? 0);
         case "kw": return (r.properties ?? []).filter((p) => !!p.land_register_number).length;
         case "created_at": return new Date(r.created_at).getTime();
@@ -322,45 +322,57 @@ function ApplicationsPage() {
           <Table className="w-full table-fixed text-sm [&_th]:text-xs">
             <TableHeader>
               <TableRow>
-                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[16%]" />
-                <TableHead className="w-[14%]">Kontakt</TableHead>
+                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[17%]" />
+                <TableHead className="w-[15%]">Kontakt</TableHead>
                 <SortHeader label="Status" k="status" sort={sort} setSort={setSort} className="w-[10%]" />
-                <TableHead className="w-[12%]">Braki</TableHead>
-                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[8%]" />
-                <SortHeader label="Kompl." k="completeness_percent" sort={sort} setSort={setSort} className="text-center w-[9%]" />
-                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[11%]" />
-                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[8%]" />
-                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[7%]" />
-                <TableHead className="text-right w-[5%]">Akcje</TableHead>
+                <TableHead className="w-[13%]">Braki</TableHead>
+                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[9%]" />
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[13%]" />
+                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[9%]" />
+                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[8%]" />
+                <TableHead className="text-right w-[6%]">Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
-                const pct = r.completeness_percent ?? 0;
                 const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
                 const allPhotos = (r.properties ?? []).flatMap((p) => Array.isArray(p.photos) ? p.photos : []);
                 const canonStatus = normalizeLoanStatus(r.status);
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 const core = coreOf(r);
                 const needsFix = isComplete && !core.complete;
+                // Źródło wniosku (kwota/kw/pliki) i klienta (imię/kontakt) —
+                // to jedyne dwa pola „source” jakie mamy w bazie. Reszta jest
+                // wprowadzana w tym samym kanale co wniosek.
+                const appSource = r.source;
+                const clientSource = r.client?.source ?? appSource;
                 return (
                   <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
-                      <div className="truncate" title={name}>{name}</div>
-                      <div className="text-[10px] text-muted-foreground truncate" title={leadSourceLabel(r.source)}>
-                        {leadSourceLabel(r.source)}{r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
+                      <div className="flex items-center gap-1 truncate" title={name}>
+                        <SourceIcon source={clientSource} title={`Imię i nazwisko — źródło: ${leadSourceLabel(clientSource)}`} />
+                        <span className="truncate">{name}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate" title={leadSourceLabel(appSource)}>
+                        {leadSourceLabel(appSource)}{r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs align-top">
-                      <div className="truncate" title={r.client?.email ?? ""}>{r.client?.email ?? "—"}</div>
-                      <div className="text-muted-foreground truncate" title={r.client?.phone ?? ""}>{r.client?.phone ?? "—"}</div>
+                      <div className="flex items-center gap-1 truncate" title={r.client?.email ?? ""}>
+                        {r.client?.email && <SourceIcon source={clientSource} title={`E-mail — źródło: ${leadSourceLabel(clientSource)}`} />}
+                        <span className="truncate">{r.client?.email ?? "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground truncate" title={r.client?.phone ?? ""}>
+                        {r.client?.phone && <SourceIcon source={clientSource} title={`Telefon — źródło: ${leadSourceLabel(clientSource)}`} />}
+                        <span className="truncate">{r.client?.phone ?? "—"}</span>
+                      </div>
                     </TableCell>
                     <TableCell className="align-top">
                       <Badge variant={needsFix ? "outline" : isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"} className={`whitespace-normal text-[11px] leading-tight ${needsFix ? "border-amber-400 text-amber-700" : ""}`}>
@@ -381,13 +393,10 @@ function ApplicationsPage() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums align-top">{fmtPLN(r.loan_amount as any)}</TableCell>
-                    <TableCell className="text-center align-top">
-                      <div className="flex items-center gap-2 justify-center">
-                        <div className="h-1.5 w-full max-w-[80px] rounded bg-muted overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${Math.min(100, pct)}%` }} />
-                        </div>
-                        <span className="text-xs tabular-nums">{pct}%</span>
+                    <TableCell className="text-right tabular-nums align-top">
+                      <div className="inline-flex items-center gap-1">
+                        {r.loan_amount != null && <SourceIcon source={appSource} title={`Kwota — źródło: ${leadSourceLabel(appSource)}`} />}
+                        <span>{fmtPLN(r.loan_amount as any)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs align-top">
@@ -395,12 +404,22 @@ function ApplicationsPage() {
                         <Badge variant="outline" className="text-muted-foreground">brak</Badge>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          {kwNums.map((k, i) => <span key={i} className="font-mono truncate" title={k}>{k}</span>)}
+                          {kwNums.map((k, i) => (
+                            <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
+                              <SourceIcon source={appSource} title={`Numer KW — źródło: ${leadSourceLabel(appSource)}`} />
+                              <span className="truncate">{k}</span>
+                            </span>
+                          ))}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="align-top">
-                      <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
+                      <div className="flex items-center gap-1">
+                        {(allPhotos.length > 0 || (r.docCount ?? 0) > 0) && (
+                          <SourceIcon source={appSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(appSource)}`} />
+                        )}
+                        <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs align-top" title={`Utworzono: ${fmtDate(r.created_at)}`}>
                       {fmtDate(r.updated_at)}
