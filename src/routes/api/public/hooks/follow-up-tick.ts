@@ -41,6 +41,14 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         // wiadomości, jednorazowa migracja załączników) — best-effort,
         // nie może wywrócić ticka.
         try {
+          const { runScheduledMessengerSync } = await import("@/lib/messenger-sync.server");
+          const ms = await runScheduledMessengerSync();
+          if (ms.ran) console.log("[follow-up-tick] messenger sync", JSON.stringify(ms));
+        } catch (e) {
+          console.error("[follow-up-tick] messenger sync error", e);
+        }
+
+        try {
           const { runScheduledMessengerBackfill } = await import("@/lib/messenger-backfill.server");
           const bf = await runScheduledMessengerBackfill();
           if (bf.namesFromMeta || bf.namesFromText || bf.namesFromOcr || bf.namesFromKw || bf.attachmentsRun) {
