@@ -126,12 +126,13 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
   // KW — deduplikuj po znormalizowanej formie
   const kwSeen = new Set<string>();
   for (const m of text.matchAll(KW_RE)) {
-    const norm = `${m[1].toUpperCase()}/${m[2]}/${m[3]}`;
+    const norm = `${m[1].toUpperCase()}${m[2].toUpperCase()}/${m[3]}/${m[4]}`;
     if (!kwSeen.has(norm)) {
       kwSeen.add(norm);
       out.kwNumbers.push(norm);
     }
   }
+
 
   // Pozycje słów "wartość/wycena/wart" — kwota do ~40 znaków za takim słowem
   // to wartość nieruchomości, nie kwota pożyczki.
