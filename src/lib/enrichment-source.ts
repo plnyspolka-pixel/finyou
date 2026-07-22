@@ -33,8 +33,11 @@ export type EnrichmentContext = {
   leadsByClient: Map<string, string[]>;
   // uploader / operator display name
   nameByUser: Map<string, string>;
+  // uploader / operator -> nazwa panelu (Admin / Operator / Pośrednik / Klient)
+  panelByUser?: Map<string, string>;
   // przypisany operator wniosku (opcjonalnie)
   operatorByLoan: Map<string, string | null>;
+
 };
 
 // Kanały które SĄ realnym źródłem pogłębionych danych (formularze / panel
