@@ -9,7 +9,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { fetchMetaUserProfile } from "@/lib/meta-profile.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
-import { extractInboundFacts } from "@/lib/lead-enrichment.server";
+import { extractInboundFacts, enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { ocrLeadAttachmentsAndEnrich, fillLeadNameFromKw } from "@/lib/lead-doc-intel.server";
 
 // Znacznik jednorazowej migracji załączników (bucket documents).
