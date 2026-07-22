@@ -33,5 +33,7 @@ export {
 export type { RataLiczbowa, RataSchema } from "./schedule";
 export { mapujKwDoNieruchomosci } from "./kw-mapper";
 export type { KwMapContext, KwMapResult } from "./kw-mapper";
+export { buildEngineSchedule } from "./loan-schedule";
+export type { EngineScheduleInput, EngineSchedule, EngineScheduleRow } from "./loan-schedule";
 export { umowaSchema } from "./schema";
 export type { UmowaData } from "./schema";
