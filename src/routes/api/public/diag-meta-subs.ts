@@ -16,37 +16,18 @@ export const Route = createFileRoute("/api/public/diag-meta-subs")({
           const r = await fetch(url);
           return { status: r.status, body: await r.json().catch(() => ({})) };
         };
-        const tries: Array<{ label: string; tok: string }> = [];
-        if (userTok) tries.push({ label: "user", tok: userTok });
-        if (pageTok) tries.push({ label: "page", tok: pageTok });
-        if (igTok) tries.push({ label: "ig", tok: igTok });
-        const attempts: unknown[] = [];
-        let pages: Array<{ id: string; name: string; access_token?: string }> = [];
-        for (const t of tries) {
-          const acc = await j(`https://graph.facebook.com/${V}/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(t.tok)}`);
-          const accBody = acc.body as { data?: Array<{ id: string; name: string; access_token?: string }> };
-          if (acc.status === 200 && Array.isArray(accBody.data) && accBody.data.length) {
-            pages = accBody.data;
-            attempts.push({ token: t.label, via: "me/accounts", count: pages.length });
-            break;
-          }
-          const me = await j(`https://graph.facebook.com/${V}/me?fields=id,name&access_token=${encodeURIComponent(t.tok)}`);
-          const meBody = me.body as { id?: string; name?: string };
-          if (me.status === 200 && meBody.id) {
-            pages = [{ id: meBody.id, name: meBody.name || "", access_token: t.tok }];
-            attempts.push({ token: t.label, via: "me", id: meBody.id });
-            break;
-          }
-          attempts.push({ token: t.label, accErr: acc.body, meErr: me.body });
+        const KNOWN_PAGE_ID = "661893307005604";
+        const tokens: Array<{ label: string; tok: string }> = [];
+        if (pageTok) tokens.push({ label: "page", tok: pageTok });
+        if (userTok) tokens.push({ label: "user", tok: userTok });
+        if (igTok) tokens.push({ label: "ig", tok: igTok });
+        const results: unknown[] = [];
+        for (const t of tokens) {
+          const sub = await j(`https://graph.facebook.com/${V}/${KNOWN_PAGE_ID}/subscribed_apps?access_token=${encodeURIComponent(t.tok)}`);
+          results.push({ token: t.label, status: sub.status, body: sub.body });
         }
-        out.attempts = attempts;
-        const pagesOut: unknown[] = [];
-        for (const p of pages) {
-          const pt = p.access_token || pageTok || token;
-          const sub = await j(`https://graph.facebook.com/${V}/${p.id}/subscribed_apps?access_token=${encodeURIComponent(pt)}`);
-          pagesOut.push({ id: p.id, name: p.name, subscribed_apps: sub.body });
-        }
-        out.pages = pagesOut;
+        out.pageId = KNOWN_PAGE_ID;
+        out.subscribed_apps_attempts = results;
         return new Response(JSON.stringify(out, null, 2), { headers: { "content-type": "application/json" } });
       },
     },
