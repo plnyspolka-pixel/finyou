@@ -190,6 +190,7 @@ import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
+import { Route as ApiPublicHooksMessengerSyncForceRouteImport } from './routes/api/public/hooks/messenger-sync-force'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
@@ -1144,6 +1145,12 @@ const ApiPublicHooksMetaLeadsPullRoute =
     path: '/api/public/hooks/meta-leads-pull',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMessengerSyncForceRoute =
+  ApiPublicHooksMessengerSyncForceRouteImport.update({
+    id: '/api/public/hooks/messenger-sync-force',
+    path: '/api/public/hooks/messenger-sync-force',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanRemindersRoute =
   ApiPublicHooksLoanRemindersRouteImport.update({
     id: '/api/public/hooks/loan-reminders',
@@ -1395,6 +1402,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1581,6 +1589,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1777,6 +1786,7 @@ export interface FileRoutesById {
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
+  '/api/public/hooks/messenger-sync-force': typeof ApiPublicHooksMessengerSyncForceRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -1974,6 +1984,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2160,6 +2171,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2355,6 +2367,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
+    | '/api/public/hooks/messenger-sync-force'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/saturday-sms-reminders'
@@ -2434,6 +2447,7 @@ export interface RootRouteChildren {
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
+  ApiPublicHooksMessengerSyncForceRoute: typeof ApiPublicHooksMessengerSyncForceRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
@@ -3718,6 +3732,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMetaLeadsPullRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/messenger-sync-force': {
+      id: '/api/public/hooks/messenger-sync-force'
+      path: '/api/public/hooks/messenger-sync-force'
+      fullPath: '/api/public/hooks/messenger-sync-force'
+      preLoaderRoute: typeof ApiPublicHooksMessengerSyncForceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminders': {
       id: '/api/public/hooks/loan-reminders'
       path: '/api/public/hooks/loan-reminders'
@@ -4228,6 +4249,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksLoanReminderEmailsTickRoute:
     ApiPublicHooksLoanReminderEmailsTickRoute,
   ApiPublicHooksLoanRemindersRoute: ApiPublicHooksLoanRemindersRoute,
+  ApiPublicHooksMessengerSyncForceRoute: ApiPublicHooksMessengerSyncForceRoute,
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
