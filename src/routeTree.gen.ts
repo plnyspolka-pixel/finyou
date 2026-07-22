@@ -69,6 +69,7 @@ import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiado
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
+import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
@@ -92,6 +93,7 @@ import { Route as AdminSzkoleniaRouteImport } from './routes/admin.szkolenia'
 import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
+import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
@@ -125,6 +127,7 @@ import { Route as PosrednikLeadyIndexRouteImport } from './routes/posrednik.lead
 import { Route as OperatorWnioskiIndexRouteImport } from './routes/operator.wnioski.index'
 import { Route as OperatorLeadyIndexRouteImport } from './routes/operator.leady.index'
 import { Route as InwestorWindykacjaIndexRouteImport } from './routes/inwestor.windykacja.index'
+import { Route as InwestorProjektyIndexRouteImport } from './routes/inwestor.projekty.index'
 import { Route as InwestorAmlIndexRouteImport } from './routes/inwestor.aml.index'
 import { Route as AdminProgramPosrednikowIndexRouteImport } from './routes/admin.program-posrednikow.index'
 import { Route as AdminKsiegowoscIndexRouteImport } from './routes/admin.ksiegowosc.index'
@@ -135,6 +138,7 @@ import { Route as OperatorLeadyIdRouteImport } from './routes/operator.leady.$id
 import { Route as InwestorWniosekIdRouteImport } from './routes/inwestor.wniosek.$id'
 import { Route as InwestorWindykacjaCaseIdRouteImport } from './routes/inwestor.windykacja.$caseId'
 import { Route as InwestorUmowaOfferIdRouteImport } from './routes/inwestor.umowa.$offerId'
+import { Route as InwestorProjektyPropozycjeRouteImport } from './routes/inwestor.projekty.propozycje'
 import { Route as InwestorAmlZgloszeniaRouteImport } from './routes/inwestor.aml.zgloszenia'
 import { Route as InwestorAmlUstawieniaRouteImport } from './routes/inwestor.aml.ustawienia'
 import { Route as InwestorAmlUpoRouteImport } from './routes/inwestor.aml.upo'
@@ -180,6 +184,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as InwestorWindykacjaCaseIdRaportRouteImport } from './routes/inwestor.windykacja.$caseId.raport'
+import { Route as InwestorProjektyOfertaAssignmentIdRouteImport } from './routes/inwestor.projekty.oferta.$assignmentId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicPaymentsTpayWebhookRouteImport } from './routes/api/public/payments/tpay-webhook'
 import { Route as ApiPublicHooksVoicebotOptOutRouteImport } from './routes/api/public/hooks/voicebot-opt-out'
@@ -188,6 +193,7 @@ import { Route as ApiPublicHooksVoicebotEnrichTickRouteImport } from './routes/a
 import { Route as ApiPublicHooksSyncAccountingRouteImport } from './routes/api/public/hooks/sync-accounting'
 import { Route as ApiPublicHooksSeedBlogRouteImport } from './routes/api/public/hooks/seed-blog'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
+import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksMetaLeadsPullRouteImport } from './routes/api/public/hooks/meta-leads-pull'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
@@ -504,6 +510,11 @@ const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
   path: '/szkolenia',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorProjektyRoute = InwestorProjektyRouteImport.update({
+  id: '/projekty',
+  path: '/projekty',
+  getParentRoute: () => InwestorRoute,
+} as any)
 const InwestorProfilRoute = InwestorProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -619,6 +630,11 @@ const AdminRoleRoute = AdminRoleRouteImport.update({
 const AdminPrzypomnieniaRoute = AdminPrzypomnieniaRouteImport.update({
   id: '/przypomnienia',
   path: '/przypomnienia',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProjektyRoute = AdminProjektyRouteImport.update({
+  id: '/projekty',
+  path: '/projekty',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPlatnosciDostepRoute = AdminPlatnosciDostepRouteImport.update({
@@ -788,6 +804,11 @@ const InwestorWindykacjaIndexRoute = InwestorWindykacjaIndexRouteImport.update({
   path: '/',
   getParentRoute: () => InwestorWindykacjaRoute,
 } as any)
+const InwestorProjektyIndexRoute = InwestorProjektyIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => InwestorProjektyRoute,
+} as any)
 const InwestorAmlIndexRoute = InwestorAmlIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -840,6 +861,12 @@ const InwestorUmowaOfferIdRoute = InwestorUmowaOfferIdRouteImport.update({
   path: '/umowa/$offerId',
   getParentRoute: () => InwestorRoute,
 } as any)
+const InwestorProjektyPropozycjeRoute =
+  InwestorProjektyPropozycjeRouteImport.update({
+    id: '/propozycje',
+    path: '/propozycje',
+    getParentRoute: () => InwestorProjektyRoute,
+  } as any)
 const InwestorAmlZgloszeniaRoute = InwestorAmlZgloszeniaRouteImport.update({
   id: '/zgloszenia',
   path: '/zgloszenia',
@@ -1085,6 +1112,12 @@ const InwestorWindykacjaCaseIdRaportRoute =
     path: '/raport',
     getParentRoute: () => InwestorWindykacjaCaseIdRoute,
   } as any)
+const InwestorProjektyOfertaAssignmentIdRoute =
+  InwestorProjektyOfertaAssignmentIdRouteImport.update({
+    id: '/oferta/$assignmentId',
+    path: '/oferta/$assignmentId',
+    getParentRoute: () => InwestorProjektyRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -1130,6 +1163,12 @@ const ApiPublicHooksSaturdaySmsRemindersRoute =
   ApiPublicHooksSaturdaySmsRemindersRouteImport.update({
     id: '/api/public/hooks/saturday-sms-reminders',
     path: '/api/public/hooks/saturday-sms-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProjectAssignmentsTickRoute =
+  ApiPublicHooksProjectAssignmentsTickRouteImport.update({
+    id: '/api/public/hooks/project-assignments-tick',
+    path: '/api/public/hooks/project-assignments-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksProcessScheduledCallsRoute =
@@ -1264,6 +1303,7 @@ export interface FileRoutesByFullPath {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
@@ -1287,6 +1327,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
@@ -1368,6 +1409,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
   '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
   '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
+  '/inwestor/projekty/propozycje': typeof InwestorProjektyPropozycjeRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
@@ -1378,6 +1420,7 @@ export interface FileRoutesByFullPath {
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/aml/': typeof InwestorAmlIndexRoute
+  '/inwestor/projekty/': typeof InwestorProjektyIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
   '/operator/leady/': typeof OperatorLeadyIndexRoute
   '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
@@ -1397,6 +1440,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
+  '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
@@ -1405,6 +1449,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
   '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1454,6 +1499,7 @@ export interface FileRoutesByTo {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
@@ -1554,6 +1600,7 @@ export interface FileRoutesByTo {
   '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
   '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
   '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
+  '/inwestor/projekty/propozycje': typeof InwestorProjektyPropozycjeRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
@@ -1564,6 +1611,7 @@ export interface FileRoutesByTo {
   '/admin/ksiegowosc': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/aml': typeof InwestorAmlIndexRoute
+  '/inwestor/projekty': typeof InwestorProjektyIndexRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaIndexRoute
   '/operator/leady': typeof OperatorLeadyIndexRoute
   '/operator/wnioski': typeof OperatorWnioskiIndexRoute
@@ -1583,6 +1631,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
+  '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
@@ -1591,6 +1640,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
   '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1646,6 +1696,7 @@ export interface FileRoutesById {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
   '/admin/skrzynka': typeof AdminSkrzynkaRoute
@@ -1669,6 +1720,7 @@ export interface FileRoutesById {
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
@@ -1750,6 +1802,7 @@ export interface FileRoutesById {
   '/inwestor/aml/upo': typeof InwestorAmlUpoRoute
   '/inwestor/aml/ustawienia': typeof InwestorAmlUstawieniaRoute
   '/inwestor/aml/zgloszenia': typeof InwestorAmlZgloszeniaRoute
+  '/inwestor/projekty/propozycje': typeof InwestorProjektyPropozycjeRoute
   '/inwestor/umowa/$offerId': typeof InwestorUmowaOfferIdRoute
   '/inwestor/windykacja/$caseId': typeof InwestorWindykacjaCaseIdRouteWithChildren
   '/inwestor/wniosek/$id': typeof InwestorWniosekIdRoute
@@ -1760,6 +1813,7 @@ export interface FileRoutesById {
   '/admin/ksiegowosc/': typeof AdminKsiegowoscIndexRoute
   '/admin/program-posrednikow/': typeof AdminProgramPosrednikowIndexRoute
   '/inwestor/aml/': typeof InwestorAmlIndexRoute
+  '/inwestor/projekty/': typeof InwestorProjektyIndexRoute
   '/inwestor/windykacja/': typeof InwestorWindykacjaIndexRoute
   '/operator/leady/': typeof OperatorLeadyIndexRoute
   '/operator/wnioski/': typeof OperatorWnioskiIndexRoute
@@ -1779,6 +1833,7 @@ export interface FileRoutesById {
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
   '/api/public/hooks/meta-leads-pull': typeof ApiPublicHooksMetaLeadsPullRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
+  '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/seed-blog': typeof ApiPublicHooksSeedBlogRoute
   '/api/public/hooks/sync-accounting': typeof ApiPublicHooksSyncAccountingRoute
@@ -1787,6 +1842,7 @@ export interface FileRoutesById {
   '/api/public/hooks/voicebot-opt-out': typeof ApiPublicHooksVoicebotOptOutRoute
   '/api/public/payments/tpay-webhook': typeof ApiPublicPaymentsTpayWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/inwestor/projekty/oferta/$assignmentId': typeof InwestorProjektyOfertaAssignmentIdRoute
   '/inwestor/windykacja/$caseId/raport': typeof InwestorWindykacjaCaseIdRaportRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1843,6 +1899,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
@@ -1866,6 +1923,7 @@ export interface FileRouteTypes {
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
+    | '/inwestor/projekty'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
@@ -1947,6 +2005,7 @@ export interface FileRouteTypes {
     | '/inwestor/aml/upo'
     | '/inwestor/aml/ustawienia'
     | '/inwestor/aml/zgloszenia'
+    | '/inwestor/projekty/propozycje'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
@@ -1957,6 +2016,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/aml/'
+    | '/inwestor/projekty/'
     | '/inwestor/windykacja/'
     | '/operator/leady/'
     | '/operator/wnioski/'
@@ -1976,6 +2036,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
+    | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/sync-accounting'
@@ -1984,6 +2045,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/projekty/oferta/$assignmentId'
     | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -2033,6 +2095,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
@@ -2133,6 +2196,7 @@ export interface FileRouteTypes {
     | '/inwestor/aml/upo'
     | '/inwestor/aml/ustawienia'
     | '/inwestor/aml/zgloszenia'
+    | '/inwestor/projekty/propozycje'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
@@ -2143,6 +2207,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc'
     | '/admin/program-posrednikow'
     | '/inwestor/aml'
+    | '/inwestor/projekty'
     | '/inwestor/windykacja'
     | '/operator/leady'
     | '/operator/wnioski'
@@ -2162,6 +2227,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
+    | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/sync-accounting'
@@ -2170,6 +2236,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/projekty/oferta/$assignmentId'
     | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -2224,6 +2291,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
     | '/admin/skrzynka'
@@ -2247,6 +2315,7 @@ export interface FileRouteTypes {
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
     | '/inwestor/profil'
+    | '/inwestor/projekty'
     | '/inwestor/szkolenia'
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
@@ -2328,6 +2397,7 @@ export interface FileRouteTypes {
     | '/inwestor/aml/upo'
     | '/inwestor/aml/ustawienia'
     | '/inwestor/aml/zgloszenia'
+    | '/inwestor/projekty/propozycje'
     | '/inwestor/umowa/$offerId'
     | '/inwestor/windykacja/$caseId'
     | '/inwestor/wniosek/$id'
@@ -2338,6 +2408,7 @@ export interface FileRouteTypes {
     | '/admin/ksiegowosc/'
     | '/admin/program-posrednikow/'
     | '/inwestor/aml/'
+    | '/inwestor/projekty/'
     | '/inwestor/windykacja/'
     | '/operator/leady/'
     | '/operator/wnioski/'
@@ -2357,6 +2428,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/loan-reminders'
     | '/api/public/hooks/meta-leads-pull'
     | '/api/public/hooks/process-scheduled-calls'
+    | '/api/public/hooks/project-assignments-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/seed-blog'
     | '/api/public/hooks/sync-accounting'
@@ -2365,6 +2437,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/voicebot-opt-out'
     | '/api/public/payments/tpay-webhook'
     | '/api/public/payments/webhook'
+    | '/inwestor/projekty/oferta/$assignmentId'
     | '/inwestor/windykacja/$caseId/raport'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -2436,6 +2509,7 @@ export interface RootRouteChildren {
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
   ApiPublicHooksMetaLeadsPullRoute: typeof ApiPublicHooksMetaLeadsPullRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
+  ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksSeedBlogRoute: typeof ApiPublicHooksSeedBlogRoute
   ApiPublicHooksSyncAccountingRoute: typeof ApiPublicHooksSyncAccountingRoute
@@ -2871,6 +2945,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorSzkoleniaRouteImport
       parentRoute: typeof InwestorRoute
     }
+    '/inwestor/projekty': {
+      id: '/inwestor/projekty'
+      path: '/projekty'
+      fullPath: '/inwestor/projekty'
+      preLoaderRoute: typeof InwestorProjektyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
     '/inwestor/profil': {
       id: '/inwestor/profil'
       path: '/profil'
@@ -3030,6 +3111,13 @@ declare module '@tanstack/react-router' {
       path: '/przypomnienia'
       fullPath: '/admin/przypomnienia'
       preLoaderRoute: typeof AdminPrzypomnieniaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/projekty': {
+      id: '/admin/projekty'
+      path: '/projekty'
+      fullPath: '/admin/projekty'
+      preLoaderRoute: typeof AdminProjektyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/platnosci-dostep': {
@@ -3263,6 +3351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorWindykacjaIndexRouteImport
       parentRoute: typeof InwestorWindykacjaRoute
     }
+    '/inwestor/projekty/': {
+      id: '/inwestor/projekty/'
+      path: '/'
+      fullPath: '/inwestor/projekty/'
+      preLoaderRoute: typeof InwestorProjektyIndexRouteImport
+      parentRoute: typeof InwestorProjektyRoute
+    }
     '/inwestor/aml/': {
       id: '/inwestor/aml/'
       path: '/'
@@ -3332,6 +3427,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/umowa/$offerId'
       preLoaderRoute: typeof InwestorUmowaOfferIdRouteImport
       parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/projekty/propozycje': {
+      id: '/inwestor/projekty/propozycje'
+      path: '/propozycje'
+      fullPath: '/inwestor/projekty/propozycje'
+      preLoaderRoute: typeof InwestorProjektyPropozycjeRouteImport
+      parentRoute: typeof InwestorProjektyRoute
     }
     '/inwestor/aml/zgloszenia': {
       id: '/inwestor/aml/zgloszenia'
@@ -3648,6 +3750,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InwestorWindykacjaCaseIdRaportRouteImport
       parentRoute: typeof InwestorWindykacjaCaseIdRoute
     }
+    '/inwestor/projekty/oferta/$assignmentId': {
+      id: '/inwestor/projekty/oferta/$assignmentId'
+      path: '/oferta/$assignmentId'
+      fullPath: '/inwestor/projekty/oferta/$assignmentId'
+      preLoaderRoute: typeof InwestorProjektyOfertaAssignmentIdRouteImport
+      parentRoute: typeof InwestorProjektyRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -3702,6 +3811,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/saturday-sms-reminders'
       fullPath: '/api/public/hooks/saturday-sms-reminders'
       preLoaderRoute: typeof ApiPublicHooksSaturdaySmsRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/project-assignments-tick': {
+      id: '/api/public/hooks/project-assignments-tick'
+      path: '/api/public/hooks/project-assignments-tick'
+      fullPath: '/api/public/hooks/project-assignments-tick'
+      preLoaderRoute: typeof ApiPublicHooksProjectAssignmentsTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/process-scheduled-calls': {
@@ -3856,6 +3972,7 @@ interface AdminRouteChildren {
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
+  AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
   AdminSkrzynkaRoute: typeof AdminSkrzynkaRoute
@@ -3915,6 +4032,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
+  AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
   AdminSkrzynkaRoute: AdminSkrzynkaRoute,
@@ -3979,6 +4097,22 @@ const InwestorAmlRouteWithChildren = InwestorAmlRoute._addFileChildren(
   InwestorAmlRouteChildren,
 )
 
+interface InwestorProjektyRouteChildren {
+  InwestorProjektyPropozycjeRoute: typeof InwestorProjektyPropozycjeRoute
+  InwestorProjektyIndexRoute: typeof InwestorProjektyIndexRoute
+  InwestorProjektyOfertaAssignmentIdRoute: typeof InwestorProjektyOfertaAssignmentIdRoute
+}
+
+const InwestorProjektyRouteChildren: InwestorProjektyRouteChildren = {
+  InwestorProjektyPropozycjeRoute: InwestorProjektyPropozycjeRoute,
+  InwestorProjektyIndexRoute: InwestorProjektyIndexRoute,
+  InwestorProjektyOfertaAssignmentIdRoute:
+    InwestorProjektyOfertaAssignmentIdRoute,
+}
+
+const InwestorProjektyRouteWithChildren =
+  InwestorProjektyRoute._addFileChildren(InwestorProjektyRouteChildren)
+
 interface InwestorWindykacjaCaseIdRouteChildren {
   InwestorWindykacjaCaseIdRaportRoute: typeof InwestorWindykacjaCaseIdRaportRoute
 }
@@ -4014,6 +4148,7 @@ interface InwestorRouteChildren {
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
+  InwestorProjektyRoute: typeof InwestorProjektyRouteWithChildren
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
   InwestorWindykacjaRoute: typeof InwestorWindykacjaRouteWithChildren
@@ -4030,6 +4165,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
   InwestorProfilRoute: InwestorProfilRoute,
+  InwestorProjektyRoute: InwestorProjektyRouteWithChildren,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,
   InwestorWindykacjaRoute: InwestorWindykacjaRouteWithChildren,
@@ -4231,6 +4367,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksMetaLeadsPullRoute: ApiPublicHooksMetaLeadsPullRoute,
   ApiPublicHooksProcessScheduledCallsRoute:
     ApiPublicHooksProcessScheduledCallsRoute,
+  ApiPublicHooksProjectAssignmentsTickRoute:
+    ApiPublicHooksProjectAssignmentsTickRoute,
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
   ApiPublicHooksSeedBlogRoute: ApiPublicHooksSeedBlogRoute,
