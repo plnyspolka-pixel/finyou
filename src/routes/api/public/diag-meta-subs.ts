@@ -4,9 +4,11 @@ export const Route = createFileRoute("/api/public/diag-meta-subs")({
   server: {
     handlers: {
       GET: async () => {
-        const token = process.env.META_ACCESS_TOKEN || process.env.META_PAGE_ACCESS_TOKEN || "";
-        const appId = process.env.META_APP_ID || "";
+        const userTok = process.env.META_ACCESS_TOKEN || "";
         const pageTok = process.env.META_PAGE_ACCESS_TOKEN || "";
+        const igTok = process.env.META_IG_PAGE_ACCESS_TOKEN || "";
+        const token = userTok || pageTok;
+        const appId = process.env.META_APP_ID || "";
         const V = "v21.0";
         const out: Record<string, unknown> = { appId, pages: [] as unknown[] };
         if (!token) return new Response(JSON.stringify({ error: "no token" }), { status: 500 });
