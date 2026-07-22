@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { SourceIcon } from "@/components/admin/SourceIcon";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
-import { leadSourceLabel } from "@/lib/lead-source";
+import { leadSourceLabel, enrichedFieldSource } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import { evaluateApplicationCore, missingLabels, type CompletenessResult } from "@/lib/application-completeness";
 
