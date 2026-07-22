@@ -397,7 +397,7 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums align-top">
                       <div className="inline-flex items-center gap-1">
-                        {r.loan_amount != null && <SourceIcon source={appSource} title={`Kwota — źródło: ${leadSourceLabel(appSource)}`} />}
+                        {r.loan_amount != null && <SourceIcon source={enrichedSource} title={`Kwota — źródło: ${leadSourceLabel(enrichedSource)}`} />}
                         <span>{fmtPLN(r.loan_amount as any)}</span>
                       </div>
                     </TableCell>
@@ -408,7 +408,7 @@ function ApplicationsPage() {
                         <div className="flex flex-col gap-0.5">
                           {kwNums.map((k, i) => (
                             <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
-                              <SourceIcon source={appSource} title={`Numer KW — źródło: ${leadSourceLabel(appSource)}`} />
+                              <SourceIcon source={enrichedSource} title={`Numer KW — źródło: ${leadSourceLabel(enrichedSource)}`} />
                               <span className="truncate">{k}</span>
                             </span>
                           ))}
@@ -418,7 +418,7 @@ function ApplicationsPage() {
                     <TableCell className="align-top">
                       <div className="flex items-center gap-1">
                         {(allPhotos.length > 0 || (r.docCount ?? 0) > 0) && (
-                          <SourceIcon source={appSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(appSource)}`} />
+                          <SourceIcon source={enrichedSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(enrichedSource)}`} />
                         )}
                         <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                       </div>
