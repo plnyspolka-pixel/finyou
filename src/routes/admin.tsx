@@ -122,7 +122,7 @@ function AdminLayout() {
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
       groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
-      footer={roles.includes("administrator") ? <AiAdminChat /> : null}
+      
     />
   );
 }
