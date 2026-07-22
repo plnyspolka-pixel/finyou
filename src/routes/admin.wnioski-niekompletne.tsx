@@ -348,11 +348,13 @@ function ApplicationsPage() {
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 const core = coreOf(r);
                 const needsFix = isComplete && !core.complete;
-                // Źródło wniosku (kwota/kw/pliki) i klienta (imię/kontakt) —
-                // to jedyne dwa pola „source” jakie mamy w bazie. Reszta jest
-                // wprowadzana w tym samym kanale co wniosek.
+                // Źródło pozyskania leada (kanał wejścia) vs. źródło pól
+                // pogłębionych. Meta Lead Ads to CZYSTY kanał pozyskania —
+                // KW, kwota, zdjęcia nie mogą wejść tym kanałem, więc dla
+                // takich pól pokazujemy neutralną ikonkę „?" zamiast Facebooka.
                 const appSource = r.source;
                 const clientSource = r.client?.source ?? appSource;
+                const enrichedSource = enrichedFieldSource(appSource);
                 return (
                   <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
