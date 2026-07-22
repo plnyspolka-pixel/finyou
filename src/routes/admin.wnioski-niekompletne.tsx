@@ -435,13 +435,16 @@ function ApplicationsPage() {
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 const core = coreOf(r);
                 const needsFix = isComplete && !core.complete;
-                // Źródło pozyskania leada (kanał wejścia) vs. źródło pól
-                // pogłębionych. Meta Lead Ads to CZYSTY kanał pozyskania —
-                // KW, kwota, zdjęcia nie mogą wejść tym kanałem, więc dla
-                // takich pól pokazujemy neutralną ikonkę „?" zamiast Facebooka.
+                // Źródło danych POGŁĘBIONYCH (kwota, KW, zdjęcia) obliczane
+                // per pole na podstawie faktów z bazy: dokumenty z Messengera,
+                // maile z załącznikami, EKW, uploader z panelu itd. Meta Lead
+                // Ads nie może dostarczyć tych pól, więc ikonka będzie
+                // pokazywać PRAWDZIWE źródło (np. Messenger, mail, ręcznie).
                 const appSource = r.source;
                 const clientSource = r.client?.source ?? appSource;
-                const enrichedSource = enrichedFieldSource(appSource);
+                const clientId = r.client?.id ?? null;
+                const amountSrc: FieldSource | null = inferAmountSource(r.id, r.loan_amount, appSource, clientId, ctx);
+                const mediaSrc: FieldSource | null = inferMediaSource(r.id, allPhotos.length + (r.docCount ?? 0) > 0, appSource, ctx);
                 return (
                   <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
@@ -484,7 +487,7 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums align-top">
                       <div className="inline-flex items-center gap-1">
-                        {r.loan_amount != null && <SourceIcon source={enrichedSource} title={`Kwota — źródło: ${leadSourceLabel(enrichedSource)}`} />}
+                        {amountSrc && <SourceIcon source={amountSrc.key} title={amountSrc.title} />}
                         <span>{fmtPLN(r.loan_amount as any)}</span>
                       </div>
                     </TableCell>
@@ -493,20 +496,21 @@ function ApplicationsPage() {
                         <Badge variant="outline" className="text-muted-foreground">brak</Badge>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          {kwNums.map((k, i) => (
-                            <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
-                              <SourceIcon source={enrichedSource} title={`Numer KW — źródło: ${leadSourceLabel(enrichedSource)}`} />
-                              <span className="truncate">{k}</span>
-                            </span>
-                          ))}
+                          {kwNums.map((k, i) => {
+                            const s = inferKwSource(r.id, k, appSource, clientId, ctx);
+                            return (
+                              <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
+                                {s && <SourceIcon source={s.key} title={s.title} />}
+                                <span className="truncate">{k}</span>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="flex items-center gap-1">
-                        {(allPhotos.length > 0 || (r.docCount ?? 0) > 0) && (
-                          <SourceIcon source={enrichedSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(enrichedSource)}`} />
-                        )}
+                        {mediaSrc && <SourceIcon source={mediaSrc.key} title={mediaSrc.title} />}
                         <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                       </div>
                     </TableCell>
