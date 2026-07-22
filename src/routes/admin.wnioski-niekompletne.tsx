@@ -243,15 +243,26 @@ function ApplicationsPage() {
       const userIds = new Set<string>();
       for (const arr of docsByLoan.values()) for (const d of arr) if (d.uploaded_by) userIds.add(d.uploaded_by);
       for (const op of operatorByLoan.values()) if (op) userIds.add(op);
+      const panelByUser = new Map<string, string>();
       if (userIds.size > 0) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id,first_name,last_name,email")
-          .in("id", Array.from(userIds));
+        const ids = Array.from(userIds);
+        const [{ data: profs }, { data: roles }] = await Promise.all([
+          supabase.from("profiles").select("id,first_name,last_name,email").in("id", ids),
+          supabase.from("user_roles").select("user_id,role").in("user_id", ids),
+        ]);
         for (const p of (profs ?? []) as any[]) {
           const name = [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "Pracownik";
           nameByUser.set(p.id, name);
         }
+        // Priorytet paneli: admin > operator > posrednik > inwestor > klient
+        const priority: Record<string, number> = { admin: 5, operator: 4, posrednik: 3, inwestor: 2, klient: 1 };
+        const label: Record<string, string> = { admin: "Administrator", operator: "Operator", posrednik: "Pośrednik", inwestor: "Inwestor", klient: "Klient" };
+        const best = new Map<string, string>();
+        for (const r of (roles ?? []) as any[]) {
+          const cur = best.get(r.user_id);
+          if (!cur || (priority[r.role] ?? 0) > (priority[cur] ?? 0)) best.set(r.user_id, r.role);
+        }
+        for (const [uid, role] of best) panelByUser.set(uid, label[role] ?? role);
       }
 
       // Auto-promocja (bez zmian)
@@ -270,7 +281,8 @@ function ApplicationsPage() {
         }
       }
       setRows(list);
-      setCtx({ docsByLoan, autoKwSet, commsByClient, leadsByClient, nameByUser, operatorByLoan });
+      setCtx({ docsByLoan, autoKwSet, commsByClient, leadsByClient, nameByUser, panelByUser, operatorByLoan });
+
     }
     setLoading(false);
   };

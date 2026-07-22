@@ -33,8 +33,11 @@ export type EnrichmentContext = {
   leadsByClient: Map<string, string[]>;
   // uploader / operator display name
   nameByUser: Map<string, string>;
+  // uploader / operator -> nazwa panelu (Admin / Operator / Pośrednik / Klient)
+  panelByUser?: Map<string, string>;
   // przypisany operator wniosku (opcjonalnie)
   operatorByLoan: Map<string, string | null>;
+
 };
 
 // Kanały które SĄ realnym źródłem pogłębionych danych (formularze / panel
@@ -105,16 +108,22 @@ function channelToSource(c: CommRef | null): string | null {
   return CHANNEL_TO_SOURCE[key] ?? null;
 }
 
+function panelLabel(userId: string | null | undefined, ctx: EnrichmentContext): string | null {
+  if (!userId) return null;
+  return ctx.panelByUser?.get(userId) ?? null;
+}
+
 function manualBy(loanId: string, ctx: EnrichmentContext): FieldSource {
-  const op = ctx.operatorByLoan.get(loanId);
+  const op = ctx.operatorByLoan.get(loanId) ?? null;
   const name = op ? ctx.nameByUser.get(op) : null;
+  const panel = panelLabel(op, ctx);
+  const who = [panel ? `panel ${panel}` : null, name].filter(Boolean).join(" — ");
   return {
     key: "manual",
-    title: name
-      ? `Wpisane ręcznie w panelu przez: ${name}`
-      : "Wpisane ręcznie w panelu",
+    title: who ? `Wpisane ręcznie (${who})` : "Wpisane ręcznie w panelu",
   };
 }
+
 
 /** Dla wniosku, który wszedł formularzem/z panelu klienta zwraca to źródło. */
 function baseFormSource(appSource: string | null): FieldSource | null {
@@ -202,11 +211,14 @@ export function inferMediaSource(
   const uploaded = docs.find((d) => !!d.uploaded_by);
   if (uploaded && uploaded.uploaded_by) {
     const name = ctx.nameByUser.get(uploaded.uploaded_by);
+    const panel = panelLabel(uploaded.uploaded_by, ctx);
+    const who = [panel ? `panel ${panel}` : null, name].filter(Boolean).join(" — ");
     return {
       key: "manual",
-      title: name ? `Wgrane ręcznie w panelu przez: ${name}` : "Wgrane ręcznie w panelu",
+      title: who ? `Wgrane ręcznie (${who})` : "Wgrane ręcznie w panelu",
     };
   }
+
   // 3. fallback: formularz / panel klienta / ręcznie
   const form = baseFormSource(appSource);
   if (form) return form;
