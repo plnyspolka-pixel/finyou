@@ -19,8 +19,12 @@ export type ExtractedFacts = {
   phone: string | null;
 };
 
+// Prefix sądu bywa zapisywany na kilka sposobów: "KS1J", "KS1 J", "KS1/J".
+// Dopuszczamy opcjonalny separator (spacja / ukośnik / kropka / myślnik)
+// pomiędzy cyfrą wydziału a literą oznaczenia zamiejscowego.
 const KW_RE =
-  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d[A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
+  /\b([A-ZŁŃŚŻŹĄĆĘÓ0-9]{2}\d)[\s\/\\.-]?([A-Z0-9])[\s\/\\.-]{0,3}(\d{7,8})[\s\/\\.-]{0,3}(\d)\b/g;
+
 
 // Fragmenty, w których cyfry na pewno nie są kwotą — maile przychodzą często
 // jako surowy HTML/CSS (kolory hex typu #951246), a adresy e-mail i linki
