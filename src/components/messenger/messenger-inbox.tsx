@@ -136,6 +136,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
     onSuccess: (r) => {
       toast.success(
         `Odzyskano ${r.messagesNew} wiadomości z Meta (${r.leadsCreated} nowych rozmów). ` +
+          `Pobrano ${r.attachmentsDownloaded} plików z rozmów, OCR przetworzył ${r.ocrProcessed} dok. (KW: ${r.kwFound}). ` +
           `Uzupełniono: ${r.namesFromMeta + r.namesFromText + r.namesFromOcr + r.namesFromKw} nazwisk (Meta: ${r.namesFromMeta}, OCR: ${r.namesFromOcr}, KW: ${r.namesFromKw}, z treści: ${r.namesFromText}), ${r.attachmentsLinked} załączników` +
           (r.filesSkipped ? `, pominięto ${r.filesSkipped} plików bez dopasowania` : ""),
       );
