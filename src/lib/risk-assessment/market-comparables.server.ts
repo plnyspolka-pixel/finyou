@@ -167,30 +167,59 @@ function parseDeweloperuchTransactions(markdown: string, streetFilter?: string |
   return out.slice(0, 40);
 }
 
+// Strona statystyk deweloperuch — gotowa mediana transakcyjna dla miasta.
+// Zwraca pojedynczy rekord-kotwicę (mediana zł/m² z RCN), gdy tabela transakcji milczy.
+function parseDeweloperuchStats(markdown: string, citySlug: string): MarketCompRecord[] {
+  const median = markdown.match(/median\w*[^0-9]{0,60}?([\d][\d\s.,]{2,})\s*(?:zł|pln)\s*\/?\s*m\s*(?:²|2)/i);
+  const ppm2 = median ? normalizePpm2(median[1]) : null;
+  if (ppm2 == null) return [];
+  const txCountM = markdown.match(/(\d{1,5})\s+transakcj/i);
+  return [{
+    source: "deweloperuch.pl",
+    kind: "transaction",
+    url: null,
+    title: `mediana transakcyjna (statystyki${txCountM ? `, ${txCountM[1]} transakcji` : ""})`,
+    address: citySlug,
+    pricePln: null,
+    areaM2: null,
+    pricePerM2: ppm2,
+    date: null,
+  }];
+}
+
 // Deweloperuch: scraping miasto/miejscowość + rodzaj (tylko „domy" i „mieszkania").
+// Realne ścieżki serwisu: /ceny-transakcyjne/{miasto}/{rodzaj} (tabela transakcji)
+// oraz /statystyki/ceny-transakcyjne/{rodzaj}/{miasto} (mediana z RCN).
 async function scrapeDeweloperuch(apiKey: string, city: string, street: string | null, kind: "domy" | "mieszkania"): Promise<MarketCompRecord[]> {
   const citySlug = slugPl(city);
   // Deweloperuch nie ma stabilnej ścieżki dla ulicy — zaczynamy od widoku miasta i filtrujemy po adresie.
-  const urls = [
+  const tableUrls = [
+    `https://deweloperuch.pl/ceny-transakcyjne/${citySlug}/${kind}`,
     `https://deweloperuch.pl/ceny-transakcyjne/polska/${citySlug}/${kind}`,
-    `https://deweloperuch.pl/polska/${citySlug}/${kind}`,
-    `https://deweloperuch.pl/${citySlug}/${kind}`,
   ];
-  for (const url of urls) {
+  for (const url of tableUrls) {
     const md = await firecrawlScrape(apiKey, url);
     if (!md || md.length < 200) continue;
     const rows = parseDeweloperuchTransactions(md, street);
     if (rows.length > 0) return rows;
   }
+  // Fallback: strona statystyk z medianą transakcyjną dla miasta.
+  const statsMd = await firecrawlScrape(apiKey, `https://deweloperuch.pl/statystyki/ceny-transakcyjne/${kind}/${citySlug}`);
+  if (statsMd && statsMd.length >= 200) return parseDeweloperuchStats(statsMd, citySlug);
   return [];
 }
 
 // Otodom: aktywne oferty sprzedaży — mieszkania, domy i działki.
 // Firecrawl search ograniczony do otodom.pl; strony wyników („/wyniki/") niosą
 // wiele cen zł/m² naraz, strony ofert („/oferta/") — pojedynczą cenę + metraż.
-async function scrapeOtodomOffers(apiKey: string, city: string, street: string | null, label: string, limit = 15): Promise<MarketCompRecord[]> {
-  const q = `${label} na sprzedaż ${street ? street + " " : ""}${city} site:otodom.pl`;
-  const items = await firecrawlSearch(apiKey, q, limit);
+// UWAGA: bez ulicy w zapytaniu — dla małych miejscowości zawężenie do ulicy
+// praktycznie zawsze daje 0 wyników; ulica służy tylko do filtrowania tabel.
+async function scrapeOtodomOffers(apiKey: string, city: string, voivodeship: string | null, label: string, limit = 15): Promise<MarketCompRecord[]> {
+  let items = await firecrawlSearch(apiKey, `${label} na sprzedaż ${city} site:otodom.pl`, limit);
+  if (!items.some((it: any) => /otodom\.pl/.test(it?.url ?? ""))) {
+    // Fallback: bez operatora site: (bywa ignorowany), z województwem dla jednoznaczności.
+    items = await firecrawlSearch(apiKey, `otodom ${label} na sprzedaż ${city}${voivodeship ? " " + voivodeship : ""}`, limit);
+  }
   const out: MarketCompRecord[] = [];
   for (const it of items) {
     const url: string = it?.url ?? "";
@@ -277,7 +306,7 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
       : Promise.resolve<MarketCompRecord[]>([]);
     // 2) otodom.pl — mieszkania, domy i działki (aktywne oferty).
     const otodomP = label
-      ? scrapeOtodomOffers(apiKey, input.city, input.street, label)
+      ? scrapeOtodomOffers(apiKey, input.city, input.voivodeship, label)
       : Promise.resolve<MarketCompRecord[]>([]);
 
     const [trans, offers] = await Promise.all([deweloperuchP, otodomP]);
