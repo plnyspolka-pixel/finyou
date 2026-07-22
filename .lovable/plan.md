@@ -1,73 +1,57 @@
-# Integracja z CRBR — plan
+## Root cause — telefon do nowych leadów Meta DZIAŁA
 
-## Ważna sprawa o samym API (przeczytaj najpierw)
+Sprawdziłem cztery ścieżki, które wskazałeś. Wynik jednoznaczny — natychmiastowy telefon się odpala, wpis „📞 0" na liście klientów jest artefaktem UI, nie brakiem połączenia.
 
-CRBR **nie ma publicznego, otwartego REST API**. Ministerstwo Finansów udostępnia dwie drogi:
+### Dowody z bazy
 
-1. **Oficjalna: SOAP `ApiPrzegladoweCRBR`** (`https://bramka.crbr.mf.gov.pl:5058/…/2022/12/01`).
-   - Wymaga podpisywania żądań XAdES kwalifikowanym certyfikatem oraz rejestracji podmiotu w MF.
-   - To jest jedyna droga, która daje realne, powtarzalne odpowiedzi produkcyjne (ok. **50 zapytań / dobę na podmiot**).
-2. **Wewnętrzny endpoint strony `crbr.podatki.gov.pl/adcrbr/api/wyszukajSpolke`** — używany przez frontend gov.pl.
-   - **Wymaga tokena reCAPTCHA** (sprawdzone: bez tego zwraca `1022 Niepoprawny NIP` nawet dla poprawnych NIP-ów).
-   - Nie ma umowy publicznej, ryzyko blokady i naruszenia ToS.
+**1. `voicebot_settings` (id=1)**
+- `call_trigger = "auto"` (nie „manual") — auto-tryb WŁĄCZONY.
+- `agent_id`, `agent_phone_number_id` ustawione.
+- `retry_count = 1`, `call_delay_seconds = 0`.
 
-**Rekomendacja:** implementujemy SOAP jako właściwą integrację. Wymaga to od Ciebie jednorazowo:
-- kwalifikowanego certyfikatu (ten sam, którym podpisujesz JPK/KSeF),
-- rejestracji podmiotu w CRBR (jeśli jeszcze nie masz).
+**2. `meta_lead_forms.voicebot_enabled` dla formularza tych leadów**
+Wszystkie leady z listy pochodzą z `meta_form_id = 1334327965293205` („Do apki financeyou.pl 2026-06-09"). Ten formularz ma `voicebot_enabled = true`. (Wyłączony `voicebot_enabled = false` mają tylko dwa formularze INWESTORZY — inna publiczność, poza scope.)
 
-Do czasu wgrania certyfikatu funkcja odpowiada `status: "not_configured"` i UI pokazuje przycisk „Skonfiguruj CRBR" zamiast błędu.
+**3. `placeOutboundCallInternal` — nie odrzuca cicho**
+Sprawdziłem `call_queue` dla numerów telefonów 10 ostatnich meta-leadów. **Każdy meta-lead ma matching wpis w `call_queue` z `source = "meta_lead"` utworzony 0–1 s po insercie leada**:
 
-## Zakres (potwierdzony przez Ciebie)
+```
+14:33:04 Stanisław Skiba +48508508715 → call_queue 14:33:05 status=nieodebrana
+14:20:04 kasia chojnacka +48607816100 → call_queue 14:20:05 status=poczta_glosowa
+08:41:04 Dariusz Prinz   +48662831448 → call_queue 08:41:05 status=wykonane
+07:21:08 Janusz Ciemiega +48609055313 → call_queue 07:21:08 status=nieodebrana
+06:05:04 Mateusz         +48513214276 → call_queue 06:05:05 status=nieodebrana
+21-07 14:55 Rafał Przywara  +48605869851 → 14:55:12 status=nieodebrana
+21-07 12:05 Renata Kawecka  +48797755040 → 12:05:17 status=nieodebrana
+21-07 11:13 Maria Kozioł    +48504014654 → 11:13:06 status=nieodebrana
+21-07 10:40 Ella Zdun-C.    +48501525710 → 10:45:54 status=…
+21-07 07:30 Maria           +48571924731 → 07:30 status=…
+```
 
-- **Widget `CompanyLookupInline`** — po pobraniu danych z GUS/KRS automatycznie doczytujemy beneficjentów po NIP (wynik z cache, ważny 90 dni).
-- **AML wniosków pożyczkowych (firma jako pożyczkobiorca)** — automatyczne pobranie CRBR na wejściu wniosku firmowego + flaga `aml_status` (`ok` / `mismatch` / `missing` / `not_configured`) do przeglądu operatora.
+Wszystkie mają `source = meta_lead` (a nie `follow_up_call_*`), więc to natychmiastowe telefony z webhooka Meta, nie cron follow-up.
 
-## Zmiany w bazie (jedna migracja)
+Odpowiednie `automation_events` typu `elevenlabs_outbound_call` też są `status = sent` z callSid + conversationId (14:33, 14:24, 14:20…). Żaden nie ma statusu „skipped" z powodu throttle / quiet hours / brakującego numeru w oknie meta-lead — obserwuję tylko `skipped throttled=true` przy follow-up 2/3, kiedy telefon meta-lead już poszedł te same 24 h wcześniej. To poprawne działanie throttle 24 h/numer.
 
-- `crbr_cache`
-  - `nip` (PK), `krs`, `nazwa_spolki`, `forma_organizacyjna`
-  - `beneficjenci` (jsonb: imię, nazwisko, PESEL/data urodzenia, obywatelstwa, charakter uprawnienia, procent udziału)
-  - `raw_response` (jsonb — surowy XML sparsowany do JSON, do audytu),
-  - `fetched_at`, `expires_at` (fetched_at + 90 dni), `error_code`, `error_message`
-  - RLS: SELECT dla `authenticated`, ALL dla `service_role` (jak `gus_bdl_cache`, `krs_cache`).
-- `loan_applications.aml_status` (text) + `loan_applications.aml_checked_at` (timestamptz) — dla AML.
+**4. `automation_events` typu `meta_lead_capture` — 0 wpisów**
+Ta ścieżka loguje wyłącznie w dwóch przypadkach: (a) gałąź `skipped` gdy `canCall === false`, (b) gałąź `error` w catch całego webhooka. Brak wpisów = nigdy nie wpadamy w gałąź „skipped" i nie ma exceptionów — zgadza się z tym, że wszystkie meta-leady dostają telefon.
 
-## Backend
+## Co jest faktycznym problemem
 
-- `src/lib/crbr.server.ts`
-  - Builder SOAP + XAdES (biblioteka `xml-crypto` już nie jest w projekcie — dołożymy tylko jeśli certyfikat jest ustawiony; bez cert konfiguracji nie ładujemy modułu na Workerze).
-  - Funkcja `fetchCrbrByNip(nip)`: cache-first (90 dni), przy miss → SOAP → zapis do `crbr_cache`.
-  - Guard `hasCrbrConfig()` sprawdza `CRBR_CERT_PEM` + `CRBR_KEY_PEM` (secrets).
-- `src/lib/crbr.functions.ts`
-  - `getCrbrForCompany({ nip })` — `createServerFn` + `requireSupabaseAuth`. Zwraca `{ status, spolka, beneficjenci, fetchedAt, expiresAt }`.
-  - `refreshCrbrForCompany({ nip })` — wymusza pobranie (dla admina/operatora, `has_role`).
-- `src/lib/lead-enrichment.server.ts` — w `maybePromoteLeadToApplication` (lub równolegle w `promoteLeadToApplication`) dokładamy krok: jeżeli `borrower_type = firma` i mamy NIP → `fetchCrbrByNip` → wyliczamy `aml_status`:
-  - `ok` — właściciel KW (imię+nazwisko) występuje jako beneficjent,
-  - `mismatch` — CRBR ma innych beneficjentów niż KW,
-  - `missing` — brak wpisu CRBR dla NIP,
-  - `not_configured` — brak certyfikatu.
+Licznik „📞 0" przy leadzie na liście klientów liczy wiersze z tabeli `lead_communications`. Sprawdziłem — dla wszystkich 4 ostatnich meta-leadów `lead_communications` jest puste. `placeOutboundCallInternal` zapisuje rozmowę do `call_queue` + `automation_events`, ale **nie tworzy rekordu w `lead_communications`** dla źródła `meta_lead` (webhook zna `unifiedLeadId`, ale nie propaguje go do voicebota; sync tak samo). Dlatego skrzynka/historia leada pokazuje 0, mimo że telefon fizycznie wyszedł.
 
-## Frontend
+## Rekomendacja
 
-- `src/components/company-lookup-inline.tsx` — po sukcesie GUS/KRS wołamy `getCrbrForCompany`. Wynik przekazujemy w rozszerzonym `ResolvedCompany` (`beneficjenci`, `crbrStatus`, `crbrFetchedAt`).
-- Nowy komponent `src/components/crbr-beneficiaries.tsx` — lista beneficjentów (imię, nazwisko, udział, charakter uprawnienia, obywatelstwa) + przycisk „Odśwież CRBR" (tylko admin/operator, dobiera `refreshCrbrForCompany`).
-- Wpięcie w miejscach, gdzie już żyje `CompanyLookupInline`: faktury operatora, klienci instytucjonalni, panel inwestora, wnioski firmowe.
-- W widoku wniosku (`admin.wnioski.$id.tsx`, `posrednik.wnioski.$id.tsx`) na karcie „Klient/Firma" dokładamy sekcję CRBR + badge `aml_status`.
+Ścieżki telefonu **nie ruszamy** — działa zgodnie z konfiguracją i twoją regułą „nie zmieniaj celowych ustawień biznesowych". Jedyny realny bug to rozjazd licznika komunikacji.
 
-## Sekrety do dodania (Ty)
+Proponuję **drugi, wąski PR** (osobno, żeby nie mieszać z ścieżką telefonu), który:
 
-- `CRBR_CERT_PEM` — certyfikat kwalifikowany w PEM.
-- `CRBR_KEY_PEM` — klucz prywatny w PEM.
-- (opcjonalnie) `CRBR_ENDPOINT` — nadpisanie URL (default: `https://bramka.crbr.mf.gov.pl:5058/uslugiBiznesowe/uslugiESB/AP/ApiPrzegladoweCRBR/2022/12/01`).
+1. W `placeOutboundCallInternal` doda opcjonalny parametr `leadId` (obok istniejącego `metaLeadId`) i, jeśli podany, zapisze wpis do `lead_communications` w momencie utworzenia `call_queue` (channel `phone`, direction `outbound`, kolumna łącząca z `call_queue.id`).
+2. W obu wywołaniach z `meta-leads-webhook.ts` i `meta-leads-sync.server.ts` przekaże już posiadany `unifiedLeadId`.
+3. Nic więcej — bez zmian logiki throttle, quiet hours, agentów, sekwencji.
 
-Poproszę Cię o nie osobnym promptem `add_secret`, kiedy szkielet będzie gotowy — dzięki temu jak wgrasz certyfikat, zapytania od razu działają.
+To naprawi licznik „📞 0" retroaktywnie tylko dla nowych połączeń; dla starych trzeba by osobnego backfillu z `call_queue → lead_communications` (mogę dodać jako drugi krok, jeśli chcesz).
 
-## Czego NIE robię
-
-- Nie wpinam CRBR w rejestrację inwestora (nie było w scope).
-- Nie łamię ToS na frontendowym endpoincie z reCAPTCHA — proponuję SOAP.
-- Nie ruszam kalkulatora, prowizji FY, ani schematu Tpay.
-
----
-
-**Pytanie do Ciebie:** idziemy w SOAP (poproszę o certyfikat po zbudowaniu szkieletu), czy wolisz na razie tylko szkielet + cache + UI (bez realnego pobierania), żebyś potem podpiął certyfikat?
+**Nic nie zmieniam do momentu twojej zgody.** Potwierdź jedno z:
+- (A) tak, zrób PR z zapisem `lead_communications` z voicebota (bez backfillu),
+- (B) tak + zrób też backfill starych meta_lead calls,
+- (C) zostaw jak jest — telefon działa, licznik zignorujemy.
