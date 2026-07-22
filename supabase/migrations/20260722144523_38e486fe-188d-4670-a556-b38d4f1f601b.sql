@@ -1,0 +1,1 @@
+ALTER TABLE public.lead_communications ALTER COLUMN attachments SET DEFAULT '[]'::jsonb; UPDATE public.lead_communications SET attachments = '[]'::jsonb WHERE attachments IS NULL;
