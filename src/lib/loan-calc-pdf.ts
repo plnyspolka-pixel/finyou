@@ -22,6 +22,8 @@ export interface LoanCalcScheduleRow {
   rata: number;
   kap: number;
   ods: number;
+  /** Część prowizji przypadająca na ratę (model silnika). Opcjonalne dla starszych PDF-ów. */
+  prow?: number;
   saldo: number;
 }
 
@@ -131,7 +133,7 @@ function buildLines(p: LoanCalcPayload): string[] {
   L.push(`  Kwota art. 777 k.p.c.:      ${PLN(p.art777Amount)} zl`);
   L.push("");
   L.push("HARMONOGRAM SPLAT");
-  L.push("  Nr  Termin       Rata         Kapital      Odsetki      Saldo");
+  L.push("  Nr  Termin       Rata         Kapital      Odsetki      Prowizja     Saldo");
   const col = (s: string, w: number) => (s.length >= w ? s.slice(0, w) : s + " ".repeat(w - s.length));
   for (const r of p.schedule) {
     L.push(
@@ -141,11 +143,17 @@ function buildLines(p: LoanCalcPayload): string[] {
         col(PLN(r.rata), 13) +
         col(PLN(r.kap), 13) +
         col(PLN(r.ods), 13) +
+        col(PLN(r.prow ?? 0), 13) +
         col(PLN(r.saldo), 13),
     );
   }
   L.push(
-    "  " + col("", 4) + col("RAZEM", 13) + col(PLN(p.totalToRepay), 13) + col("", 13) + col(PLN(p.totalInterest), 13),
+    "  " +
+      col("", 4) +
+      col("RAZEM", 13) +
+      col(PLN(p.totalToRepay), 13) +
+      col("", 13) +
+      col(PLN(p.totalInterest), 13),
   );
   L.push("");
   L.push("Dokument informacyjny wygenerowany w kalkulatorze Finance You.");

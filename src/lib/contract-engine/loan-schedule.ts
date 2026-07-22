@@ -155,7 +155,9 @@ export function buildEngineSchedule(input: EngineScheduleInput): EngineSchedule 
   }
 
   const last = rows[rows.length - 1];
-  const hasBalloon = last.rata_razem > maxPay + 0.01;
+  // Balon istnieje, gdy ostatnia rata wyraźnie przekracza pułap — margines 2 zł
+  // pochłania groszowe reszty z zaokrągleń przy pełnej amortyzacji (bez pułapu).
+  const hasBalloon = last.rata_razem > maxPay + 2;
   last.isBalloon = hasBalloon;
 
   const totalInterest = round2(rows.reduce((a, r0) => a + r0.odsetki, 0));

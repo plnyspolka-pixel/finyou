@@ -1,5 +1,7 @@
 // Kalkulacje pożyczki + wskaźnik zainteresowania inwestora.
 
+import { buildEngineSchedule } from "./contract-engine/loan-schedule";
+
 export type SecurityType =
   | "mieszkanie"
   | "dom"
@@ -43,13 +45,28 @@ export function computeLoanFigures(input: {
   annualRatePercent: number;
   months: number;
   maxPayment?: number;
+  /** Prowizja (rozłożona na raty). Domyślnie 0 — ten kalkulator nie zawsze ją modeluje. */
+  commission?: number;
 }): LoanFigures {
   const nominal = monthlyPayment(input.amount, input.annualRatePercent, input.months);
   const cap = input.maxPayment && input.maxPayment > 0 ? input.maxPayment : nominal;
   const monthly = Math.min(nominal || 0, cap || 0);
-  const balloon = Math.max(0, (nominal - monthly) * input.months);
-  const total = monthly * input.months + balloon;
-  return { nominal, monthly, balloon, total, investorCompensation: Math.max(0, total - input.amount) };
+  // Jedno źródło prawdy: model silnika (pełna wypłata, odsetki od salda,
+  // prowizja w ratach, balon = ostatnia z rat).
+  const eng = buildEngineSchedule({
+    kwotaPozyczki: input.amount,
+    prowizja: Math.max(0, input.commission ?? 0),
+    annualRatePercent: input.annualRatePercent,
+    months: input.months,
+    maxMonthlyPayment: cap,
+  });
+  return {
+    nominal,
+    monthly,
+    balloon: eng.balloon,
+    total: eng.totalToRepay,
+    investorCompensation: Math.max(0, eng.totalToRepay - input.amount),
+  };
 }
 
 // Wartości bazowe i skalowanie według rocznego wynagrodzenia.
