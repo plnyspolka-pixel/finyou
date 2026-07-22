@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
-import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import { evaluateApplicationCore, missingLabels, type CompletenessResult } from "@/lib/application-completeness";
 
 export const Route = createFileRoute("/admin/wnioski-niekompletne")({
@@ -75,8 +75,11 @@ function MediaThumbs({ photoPaths, docCount, onOpen }: { photoPaths: string[]; d
     let cancelled = false;
     (async () => {
       if (photoPaths.length === 0) { setUrls([]); return; }
-      const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrls(photoPaths.slice(0, 3), 60 * 60);
-      if (!cancelled && data) setUrls(data.map((d) => d.signedUrl).filter(Boolean) as string[]);
+      // Podpisuj z fallbackiem bucketów (pliki-klienta → documents → property-photos)
+      // i tylko faktyczne zdjęcia — inaczej pliki ze starych bucketów oraz skany
+      // dokumentów renderują się jako puste kwadraty.
+      const resolved = await resolveShowablePhotoUrls(photoPaths, 60 * 60);
+      if (!cancelled) setUrls(resolved.slice(0, 3));
     })();
     return () => { cancelled = true; };
   }, [photoPaths.join("|")]);

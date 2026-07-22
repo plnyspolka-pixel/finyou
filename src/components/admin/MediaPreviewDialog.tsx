@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CLIENT_FILES_BUCKET, CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { CLIENT_FILES_LABEL } from "@/lib/storage-buckets";
+import { signStoragePath, signStoragePathsMap } from "@/lib/property-photos";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,10 +27,11 @@ type MediaItem = {
   docType?: string | null;
 };
 
-// Wszystkie pliki klienta leżą w jednym buckecie "pliki-klienta".
+// Pliki klienta bywają w kilku bucketach (pliki-klienta oraz starsze
+// documents/property-photos) — podpisujemy z fallbackiem, inaczej starsze
+// załączniki „nie chcą się otworzyć".
 async function signDocument(path: string): Promise<string | null> {
-  const { data } = await supabase.storage.from(CLIENT_FILES_BUCKET).createSignedUrl(path, 60 * 60);
-  return data?.signedUrl ?? null;
+  return signStoragePath(path, 60 * 60);
 }
 
 function inferKind(name: string): Kind {
@@ -63,22 +65,20 @@ export function MediaPreviewDialog({
       setLoading(true);
       const all: MediaItem[] = [];
 
-      // Zdjęcia z properties.photos
+      // Zdjęcia z properties.photos — podpisz z fallbackiem bucketów.
       if (photoPaths.length > 0) {
-        const { data } = await supabase.storage
-          .from(CLIENT_FILES_BUCKET)
-          .createSignedUrls(photoPaths, 60 * 60);
-        (data ?? []).forEach((d, i) => {
-          if (d.signedUrl) {
-            const name = photoPaths[i].split("/").pop() ?? `zdjęcie-${i + 1}`;
-            all.push({
-              key: `photo:${photoPaths[i]}`,
-              name,
-              url: d.signedUrl,
-              kind: inferKind(name) === "other" ? "image" : inferKind(name),
-              source: "photo",
-            });
-          }
+        const urlByPath = await signStoragePathsMap(photoPaths, 60 * 60);
+        photoPaths.forEach((path, i) => {
+          const url = urlByPath.get(path);
+          if (!url) return;
+          const name = path.split("/").pop() ?? `zdjęcie-${i + 1}`;
+          all.push({
+            key: `photo:${path}`,
+            name,
+            url,
+            kind: inferKind(name) === "other" ? "image" : inferKind(name),
+            source: "photo",
+          });
         });
       }
 
