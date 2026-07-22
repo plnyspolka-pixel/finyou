@@ -14,6 +14,7 @@ import { formatPLN, formatRelative, propertyTypeLabels, loanStatusLabels, leadSt
 import { LeadDetailView } from "@/components/admin/LeadDetailView";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { RemindersPanel } from "@/components/admin/RemindersPanel";
+import { evaluateApplicationCore } from "@/lib/application-completeness";
 
 
 export const Route = createFileRoute("/admin/klienci")({
@@ -50,6 +51,8 @@ type Row = {
 };
 
 // Wniosek = coś więcej niż same dane leada (imię/nazwisko/email/telefon).
+// Sam `loan_application_id` NIE wystarcza — stub jest tworzony automatycznie
+// przy otwarciu leada (ensureLoanApplicationForLead), więc niemal każdy lead go ma.
 function isApplication(r: Row): boolean {
   if (r.loan?.loan_amount != null) return true;
   if ((r.docCount ?? 0) > 0) return true;
@@ -59,6 +62,18 @@ function isApplication(r: Row): boolean {
     if (p.estimated_value != null) return true;
   }
   return false;
+}
+
+// Kompletność podstawowych danych — ta sama definicja co w panelu wniosków
+// (application-completeness.ts). Dane klienta bierzemy z leada (imię, nazwisko,
+// telefon, e-mail), nieruchomość i kwotę z wniosku.
+function isCoreComplete(r: Row): boolean {
+  return evaluateApplicationCore({
+    loan_amount: r.loan?.loan_amount ?? null,
+    client: { first_name: r.first_name, last_name: r.last_name, email: r.email, phone: r.phone_normalized },
+    properties: r.loan?.properties ?? [],
+    docCount: r.docCount ?? 0,
+  }).complete;
 }
 
 function filesCount(r: Row): number {
@@ -74,6 +89,7 @@ function KlienciPage() {
   const [status, setStatus] = useState<string>("all");
   const [source, setSource] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [quick, setQuick] = useState<"all" | "nieobsluzone" | "ma_wniosek" | "kompletne" | "bez_kontaktu">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
 
@@ -89,14 +105,26 @@ function KlienciPage() {
   const statuses = useMemo(() => Array.from(new Set(rows.map((r) => r.status).filter(Boolean))), [rows]);
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: rows.length, nieobsluzone: 0, ma_wniosek: 0, bez_kontaktu: 0 };
+    const c = { all: rows.length, nieobsluzone: 0, ma_wniosek: 0, kompletne: 0, bez_kontaktu: 0 };
     for (const r of rows) {
       if (r.status === "nowy") c.nieobsluzone++;
-      if (r.loan_application_id) c.ma_wniosek++;
+      // „Z wnioskiem" = realny wniosek (dane), nie sam stub loan_application_id.
+      if (isApplication(r)) c.ma_wniosek++;
+      if (isCoreComplete(r)) c.kompletne++;
       if (!r.comms.lastAt) c.bez_kontaktu++;
     }
     return c;
   }, [rows]);
+
+  const visibleRows = useMemo(() => {
+    switch (quick) {
+      case "nieobsluzone": return rows.filter((r) => r.status === "nowy");
+      case "ma_wniosek": return rows.filter(isApplication);
+      case "kompletne": return rows.filter(isCoreComplete);
+      case "bez_kontaktu": return rows.filter((r) => !r.comms.lastAt);
+      default: return rows;
+    }
+  }, [rows, quick]);
 
   const exportCsv = () => {
     const header = ["ID","Imię","Nazwisko","Telefon","E-mail","Typ","Status","Źródło","Kwota","Okres","Kompl.%","Tel.","SMS","E-mail#","Ostatni kontakt","Utworzono"];
@@ -133,10 +161,24 @@ function KlienciPage() {
 
         <TabsContent value="lista" className="space-y-4 mt-0">
           <div className="flex flex-wrap gap-2 text-xs">
-            <Badge variant="outline">Wszystkie: {counts.all}</Badge>
-            <Badge variant="outline">Nieobsłużone: {counts.nieobsluzone}</Badge>
-            <Badge variant="outline">Z wnioskiem: {counts.ma_wniosek}</Badge>
-            <Badge variant="outline">Bez kontaktu: {counts.bez_kontaktu}</Badge>
+            {([
+              { key: "all", label: "Wszystkie", n: counts.all },
+              { key: "nieobsluzone", label: "Nieobsłużone", n: counts.nieobsluzone },
+              { key: "ma_wniosek", label: "Z wnioskiem", n: counts.ma_wniosek },
+              { key: "kompletne", label: "Kompletne", n: counts.kompletne },
+              { key: "bez_kontaktu", label: "Bez kontaktu", n: counts.bez_kontaktu },
+            ] as const).map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setQuick(f.key)}
+                className={`rounded-full border px-2.5 py-1 transition-colors ${
+                  quick === f.key ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-muted"
+                }`}
+              >
+                {f.label}: <span className="font-semibold tabular-nums">{f.n}</span>
+              </button>
+            ))}
           </div>
 
       <Card className="p-3 space-y-2">
@@ -171,8 +213,8 @@ function KlienciPage() {
         {/* Mobile: karty */}
         <div className="lg:hidden divide-y">
           {q.isLoading && <div className="p-6 text-center text-sm text-muted-foreground">Ładowanie…</div>}
-          {!q.isLoading && rows.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Brak rekordów.</div>}
-          {rows.map((r) => {
+          {!q.isLoading && visibleRows.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Brak rekordów.</div>}
+          {visibleRows.map((r) => {
             const p = r.loan?.properties?.[0];
             const name = [r.first_name, r.last_name].filter(Boolean).join(" ") || "—";
             const isOpen = expandedId === r.id;
@@ -206,9 +248,9 @@ function KlienciPage() {
 
                   </div>
 
-                  {(r.loan || p) && (
+                  {(isApplication(r) || p) && (
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs pl-6">
-                      {r.loan && (
+                      {isApplication(r) && r.loan && (
                         <div className="min-w-0">
                           <div className="text-muted-foreground">Wniosek</div>
                           <div className="truncate font-medium">{formatPLN(r.loan.loan_amount)}{r.loan.preferred_period_months ? ` · ${r.loan.preferred_period_months} mc` : ""}</div>
@@ -270,8 +312,8 @@ function KlienciPage() {
             </thead>
             <tbody>
               {q.isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Ładowanie…</td></tr>}
-              {!q.isLoading && rows.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Brak rekordów.</td></tr>}
-              {rows.map((r) => {
+              {!q.isLoading && visibleRows.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Brak rekordów.</td></tr>}
+              {visibleRows.map((r) => {
                 const p = r.loan?.properties?.[0];
                 const isOpen = expandedId === r.id;
                 return (
@@ -313,12 +355,14 @@ function KlienciPage() {
                       </td>
 
                       <td className="px-3 py-2 text-xs">
-                        {r.loan ? (
+                        {isApplication(r) && r.loan ? (
                           <>
                             <div className="font-medium">{formatPLN(r.loan.loan_amount)}</div>
                             <div className="text-muted-foreground">{r.loan.preferred_period_months ? `${r.loan.preferred_period_months} mc` : "—"} · {r.loan.completeness_percent ?? 0}%</div>
                           </>
-                        ) : r.current_form_step ? <span className="text-muted-foreground">krok {r.current_form_step}</span> : <span className="text-muted-foreground">—</span>}
+                        ) : (
+                          <span className="text-muted-foreground">lead{r.current_form_step ? ` · krok ${r.current_form_step}` : ""}</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs">
                         {p ? (
