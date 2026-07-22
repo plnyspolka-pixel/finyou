@@ -327,7 +327,7 @@ export async function backfillGraphSyncAttachments(opts?: {
     .from("lead_communications")
     .select("id, lead_id, external_id, metadata")
     .eq("channel", "messenger")
-    .is("attachments", null)
+    .or("attachments.is.null,attachments.eq.[]")
     .eq("metadata->>source", "graph_sync")
     .eq("metadata->>has_attachments", "true")
     .not("external_id", "is", null)
