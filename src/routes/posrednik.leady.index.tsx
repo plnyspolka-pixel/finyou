@@ -20,6 +20,8 @@ import { CallOutcomeDialog } from "@/components/broker/call-outcome-dialog";
 import { MetaRateButtons } from "@/components/broker/meta-rate-buttons";
 import { FileThumb } from "@/components/media/FileThumb";
 import { RevealContact, RevealsList } from "@/components/broker/reveal-contact";
+import { SourceIcon } from "@/components/admin/SourceIcon";
+import { leadSourceLabel, enrichedFieldSource } from "@/lib/lead-source";
 
 
 export const Route = createFileRoute("/posrednik/leady/")({
