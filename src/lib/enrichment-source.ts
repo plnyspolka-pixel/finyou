@@ -211,11 +211,14 @@ export function inferMediaSource(
   const uploaded = docs.find((d) => !!d.uploaded_by);
   if (uploaded && uploaded.uploaded_by) {
     const name = ctx.nameByUser.get(uploaded.uploaded_by);
+    const panel = panelLabel(uploaded.uploaded_by, ctx);
+    const who = [panel ? `panel ${panel}` : null, name].filter(Boolean).join(" — ");
     return {
       key: "manual",
-      title: name ? `Wgrane ręcznie w panelu przez: ${name}` : "Wgrane ręcznie w panelu",
+      title: who ? `Wgrane ręcznie (${who})` : "Wgrane ręcznie w panelu",
     };
   }
+
   // 3. fallback: formularz / panel klienta / ręcznie
   const form = baseFormSource(appSource);
   if (form) return form;
