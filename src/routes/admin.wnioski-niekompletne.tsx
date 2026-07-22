@@ -343,24 +343,37 @@ function ApplicationsPage() {
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
-                const pct = r.completeness_percent ?? 0;
                 const kwNums = (r.properties ?? []).map((p) => p.land_register_number).filter((x): x is string => !!x && x.trim().length > 0);
                 const allPhotos = (r.properties ?? []).flatMap((p) => Array.isArray(p.photos) ? p.photos : []);
                 const canonStatus = normalizeLoanStatus(r.status);
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 const core = coreOf(r);
                 const needsFix = isComplete && !core.complete;
+                // Źródło wniosku (kwota/kw/pliki) i klienta (imię/kontakt) —
+                // to jedyne dwa pola „source” jakie mamy w bazie. Reszta jest
+                // wprowadzana w tym samym kanale co wniosek.
+                const appSource = r.source;
+                const clientSource = r.client?.source ?? appSource;
                 return (
                   <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
-                      <div className="truncate" title={name}>{name}</div>
-                      <div className="text-[10px] text-muted-foreground truncate" title={leadSourceLabel(r.source)}>
-                        {leadSourceLabel(r.source)}{r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
+                      <div className="flex items-center gap-1 truncate" title={name}>
+                        <SourceIcon source={clientSource} title={`Imię i nazwisko — źródło: ${leadSourceLabel(clientSource)}`} />
+                        <span className="truncate">{name}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate" title={leadSourceLabel(appSource)}>
+                        {leadSourceLabel(appSource)}{r.current_form_step != null ? ` · krok ${r.current_form_step}` : ""}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs align-top">
-                      <div className="truncate" title={r.client?.email ?? ""}>{r.client?.email ?? "—"}</div>
-                      <div className="text-muted-foreground truncate" title={r.client?.phone ?? ""}>{r.client?.phone ?? "—"}</div>
+                      <div className="flex items-center gap-1 truncate" title={r.client?.email ?? ""}>
+                        {r.client?.email && <SourceIcon source={clientSource} title={`E-mail — źródło: ${leadSourceLabel(clientSource)}`} />}
+                        <span className="truncate">{r.client?.email ?? "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground truncate" title={r.client?.phone ?? ""}>
+                        {r.client?.phone && <SourceIcon source={clientSource} title={`Telefon — źródło: ${leadSourceLabel(clientSource)}`} />}
+                        <span className="truncate">{r.client?.phone ?? "—"}</span>
+                      </div>
                     </TableCell>
                     <TableCell className="align-top">
                       <Badge variant={needsFix ? "outline" : isComplete ? "default" : canonStatus === "nowy_lead" ? "secondary" : "outline"} className={`whitespace-normal text-[11px] leading-tight ${needsFix ? "border-amber-400 text-amber-700" : ""}`}>
@@ -381,13 +394,10 @@ function ApplicationsPage() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums align-top">{fmtPLN(r.loan_amount as any)}</TableCell>
-                    <TableCell className="text-center align-top">
-                      <div className="flex items-center gap-2 justify-center">
-                        <div className="h-1.5 w-full max-w-[80px] rounded bg-muted overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${Math.min(100, pct)}%` }} />
-                        </div>
-                        <span className="text-xs tabular-nums">{pct}%</span>
+                    <TableCell className="text-right tabular-nums align-top">
+                      <div className="inline-flex items-center gap-1">
+                        {r.loan_amount != null && <SourceIcon source={appSource} title={`Kwota — źródło: ${leadSourceLabel(appSource)}`} />}
+                        <span>{fmtPLN(r.loan_amount as any)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs align-top">
@@ -395,12 +405,22 @@ function ApplicationsPage() {
                         <Badge variant="outline" className="text-muted-foreground">brak</Badge>
                       ) : (
                         <div className="flex flex-col gap-0.5">
-                          {kwNums.map((k, i) => <span key={i} className="font-mono truncate" title={k}>{k}</span>)}
+                          {kwNums.map((k, i) => (
+                            <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
+                              <SourceIcon source={appSource} title={`Numer KW — źródło: ${leadSourceLabel(appSource)}`} />
+                              <span className="truncate">{k}</span>
+                            </span>
+                          ))}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="align-top">
-                      <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
+                      <div className="flex items-center gap-1">
+                        {(allPhotos.length > 0 || (r.docCount ?? 0) > 0) && (
+                          <SourceIcon source={appSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(appSource)}`} />
+                        )}
+                        <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs align-top" title={`Utworzono: ${fmtDate(r.created_at)}`}>
                       {fmtDate(r.updated_at)}
