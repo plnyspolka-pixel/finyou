@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Eye, ExternalLink, FileText, Image as ImageIcon, RefreshCw, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
+import { SourceIcon } from "@/components/admin/SourceIcon";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
 import { leadSourceLabel } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
