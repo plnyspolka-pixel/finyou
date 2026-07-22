@@ -237,13 +237,73 @@ export async function markAttachmentsBackfillDone(): Promise<void> {
  * Błędy nie mogą wywrócić ticka — łapane u wołającego.
  */
 export async function runScheduledMessengerBackfill(): Promise<
-  NameBackfillResult & Partial<AttachmentBackfillResult> & { attachmentsRun: boolean }
+  NameBackfillResult & Partial<AttachmentBackfillResult> & { attachmentsRun: boolean } & {
+    enrichLeadsScanned: number;
+    enrichLeadsUpdated: number;
+    enrichPromoted: number;
+  }
 > {
   const names = await backfillLeadNames({ force: false });
+  const enrich = await backfillLeadEnrichmentFromMessages();
   if (await attachmentsBackfillDone()) {
-    return { ...names, attachmentsRun: false };
+    return { ...names, ...enrich, attachmentsRun: false };
   }
   const atts = await backfillOrphanAttachments();
   await markAttachmentsBackfillDone();
-  return { ...names, ...atts, attachmentsRun: true };
+  return { ...names, ...atts, ...enrich, attachmentsRun: true };
+}
+
+/**
+ * Skanuje istniejące inbound wiadomości leadów, dla których aplikacja nie ma
+ * jeszcze wyekstrahowanych KW / kwoty, i przepuszcza je przez
+ * enrichLeadFromInbound. Naprawia leady zaimportowane przez historyczny sync
+ * Messengera, w których klient podał KW w rozmowie, ale enrichment nigdy się
+ * nie odpalił (webhook nie widział tych wiadomości).
+ */
+export async function backfillLeadEnrichmentFromMessages(opts?: { limit?: number }): Promise<{
+  enrichLeadsScanned: number;
+  enrichLeadsUpdated: number;
+  enrichPromoted: number;
+}> {
+  const limit = opts?.limit ?? 500;
+  let scanned = 0;
+  let updated = 0;
+  let promoted = 0;
+
+  // Kandydaci: leady, w których application_data.kw_numbers puste
+  // ALBO brak loan_amount, ale mają choć jedną wiadomość inbound.
+  const { data: leads } = await supabaseAdmin
+    .from("leads")
+    .select("id, application_data")
+    .limit(limit);
+
+  for (const lead of leads ?? []) {
+    const app = (lead.application_data as Record<string, any>) ?? {};
+    const hasKw = Array.isArray(app.kw_numbers) && app.kw_numbers.length > 0;
+    const hasAmt = typeof app.loan_amount === "number" && app.loan_amount > 0;
+    if (hasKw && hasAmt) continue;
+
+    const { data: inbound } = await supabaseAdmin
+      .from("lead_communications")
+      .select("content")
+      .eq("lead_id", lead.id)
+      .eq("direction", "inbound")
+      .not("content", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(500);
+    if (!inbound?.length) continue;
+    const text = inbound.map((m: any) => m.content).filter(Boolean).join("\n");
+    if (!text.trim()) continue;
+
+    scanned += 1;
+    try {
+      const r = await enrichLeadFromInbound({ leadId: lead.id, text, hasAttachments: false });
+      if (r.updated) updated += 1;
+      if (r.promoted) promoted += 1;
+    } catch (e) {
+      console.warn("[backfill] enrich from messages error", lead.id, e);
+    }
+  }
+
+  return { enrichLeadsScanned: scanned, enrichLeadsUpdated: updated, enrichPromoted: promoted };
 }
