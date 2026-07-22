@@ -87,7 +87,9 @@ export async function logLeadCommunication(args: LogCommArgs): Promise<string | 
       agent_id: args.agentId ?? null,
       metadata: args.metadata ?? {},
       error_message: args.errorMessage ?? null,
-      attachments: args.attachments ?? null,
+      // Kolumna `attachments` jest NOT NULL — brak załączników zapisujemy jako pustą tablicę,
+      // inaczej cały insert leci 23502 i logi rozmów voicebota/enricha nie trafiają do skrzynki.
+      attachments: args.attachments ?? [],
     })
     .select("id")
     .maybeSingle();
