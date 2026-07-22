@@ -108,16 +108,22 @@ function channelToSource(c: CommRef | null): string | null {
   return CHANNEL_TO_SOURCE[key] ?? null;
 }
 
+function panelLabel(userId: string | null | undefined, ctx: EnrichmentContext): string | null {
+  if (!userId) return null;
+  return ctx.panelByUser?.get(userId) ?? null;
+}
+
 function manualBy(loanId: string, ctx: EnrichmentContext): FieldSource {
-  const op = ctx.operatorByLoan.get(loanId);
+  const op = ctx.operatorByLoan.get(loanId) ?? null;
   const name = op ? ctx.nameByUser.get(op) : null;
+  const panel = panelLabel(op, ctx);
+  const who = [panel ? `panel ${panel}` : null, name].filter(Boolean).join(" — ");
   return {
     key: "manual",
-    title: name
-      ? `Wpisane ręcznie w panelu przez: ${name}`
-      : "Wpisane ręcznie w panelu",
+    title: who ? `Wpisane ręcznie (${who})` : "Wpisane ręcznie w panelu",
   };
 }
+
 
 /** Dla wniosku, który wszedł formularzem/z panelu klienta zwraca to źródło. */
 function baseFormSource(appSource: string | null): FieldSource | null {
