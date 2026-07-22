@@ -64,6 +64,31 @@ export async function signStoragePath(path: string, expiresIn = 3600): Promise<s
   return null;
 }
 
+/** Podpisuje WSZYSTKIE ścieżki (bez filtra „pokazywalne"), próbując po kolei
+ *  bucketów — zwraca mapę ścieżka→URL. Do podglądu załączników, gdzie chcemy
+ *  pokazać też skany dokumentów/akty, a pliki bywają w starych bucketach.
+ *  Zewnętrzne URL-e przechodzą bez zmian. */
+export async function signStoragePathsMap(
+  paths: string[] | null | undefined,
+  expiresIn = 3600,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  let remaining: string[] = [];
+  for (const p of (paths ?? []).filter(Boolean)) {
+    if (isExternalUrl(p)) map.set(p, p);
+    else remaining.push(p);
+  }
+  for (const bucket of PHOTO_BUCKETS) {
+    if (remaining.length === 0) break;
+    const { data } = await supabase.storage.from(bucket).createSignedUrls(remaining, expiresIn);
+    (data ?? []).forEach((s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
+      if (s?.path && s?.signedUrl && !s.error) map.set(s.path, s.signedUrl);
+    });
+    remaining = remaining.filter((p) => !map.has(p));
+  }
+  return map;
+}
+
 /** Filtruje ścieżki do faktycznych zdjęć i podpisuje je (obie buckety, batch).
  *  Zachowuje kolejność wejściową, pomija zdjęcia, których nie udało się rozwiązać. */
 export async function resolveShowablePhotoUrls(
