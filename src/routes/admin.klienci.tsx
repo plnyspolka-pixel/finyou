@@ -64,17 +64,6 @@ function isApplication(r: Row): boolean {
   return false;
 }
 
-// Kompletność podstawowych danych — ta sama definicja co w panelu wniosków
-// (application-completeness.ts). Dane klienta bierzemy z leada (imię, nazwisko,
-// telefon, e-mail), nieruchomość i kwotę z wniosku.
-function isCoreComplete(r: Row): boolean {
-  return evaluateApplicationCore({
-    loan_amount: r.loan?.loan_amount ?? null,
-    client: { first_name: r.first_name, last_name: r.last_name, email: r.email, phone: r.phone_normalized },
-    properties: r.loan?.properties ?? [],
-    docCount: r.docCount ?? 0,
-  }).complete;
-}
 
 function filesCount(r: Row): number {
   const photos = (r.loan?.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0);
