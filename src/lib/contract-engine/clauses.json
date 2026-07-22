@@ -75,7 +75,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 20,
       "warunek": "warunki.prowizja.model == 'nie_potracana_raty'",
-      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. W razie wcześniejszej spłaty prowizja nie podlega obniżeniu, a jej niezapłacona część staje się płatna wraz ze spłacanym kapitałem. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji."
+      "tekst": "Pożyczkodawca pobiera jednorazową prowizję za udzielenie pożyczki w wysokości {{warunki.prowizja.kwota.slownie}} ({{warunki.prowizja.kwota.cyframi}} zł), która obejmuje wszelkie koszty związane z: weryfikacją wniosku, oceną ryzyka, przygotowaniem i zawarciem Umowy, oceną zabezpieczenia hipotecznego oraz kosztami obsługi transakcji. Prowizja nie jest potrącana z kwoty wypłaty. Prowizja staje się wymagalna w całości w dniu zawarcia Umowy. Pożyczkodawca, wyłącznie jako ułatwienie płatnicze dla {{pb_dop}}, odracza jej zapłatę i rozkłada ją na raty miesięczne zgodnie z Załącznikiem nr 1. Rozłożenie prowizji na raty nie zmienia jej charakteru ani terminu wymagalności. Strony zgodnie potwierdzają, że wysokość prowizji odpowiada wartości i kosztom świadczeń Pożyczkodawcy wskazanych powyżej oraz przyjętemu ryzyku, a wzajemne świadczenia Stron nie pozostają w rażącej dysproporcji."
     },
     {
       "id": "KWO_02b_prowizja_potracana",
@@ -409,6 +409,15 @@
       "order": 78,
       "warunek": "ma_reprezentacje_laczna",
       "tekst": "W przypadku strony reprezentowanej łącznie, oświadczenia woli w imieniu tej strony składają wszystkie osoby wskazane w komparycji działające wspólnie. Oświadczenie złożone przez część z nich nie wiąże tej strony."
+    },
+    {
+      "id": "ZAB_02b_roszczenie_oproznione_miejsce",
+      "sekcja": "ZABEZPIECZENIA",
+      "order": 22,
+      "iteruje": "nieruchomosci_roszczenie_oproznione",
+      "warunek": "ma_roszczenie_oproznione_miejsce",
+      "tekst_pozycja": "W celu zabezpieczenia interesu Pożyczkodawcy Pożyczkobiorca w notarialnym oświadczeniu, o którym mowa w ust. 1, ustanowi na rzecz Pożyczkodawcy roszczenie o przeniesienie hipoteki ustanowionej zgodnie z ust. 1 na miejsce opróżnione przez każdą inną hipotekę wpisaną w księdze wieczystej nr {{n.nr_kw}} z pierwszeństwem przed hipoteką Pożyczkodawcy, a które to miejsce zostanie lub może zostać opróżnione wskutek wygaśnięcia, uchylenia, zmniejszenia lub wykreślenia takiej hipoteki (art. 101¹ ustawy z dnia 6 lipca 1982 r. o księgach wieczystych i hipotece). Roszczenie to podlega ujawnieniu w księdze wieczystej wraz z hipoteką Pożyczkodawcy. Pożyczkobiorca zobowiązuje się nie rozporządzać opróżnionym miejscem hipotecznym ani nie ustanawiać na nim innej hipoteki bez uprzedniej pisemnej zgody Pożyczkodawcy pod rygorem nieważności.",
+      "uwaga_prawna": "Roszczenie o przeniesienie hipoteki na przyszłe opróżnione miejsce (art. 101(1) u.k.w.h.) — skuteczne wyłącznie po ujawnieniu w KW; treść oświadczenia notarialnego i wniosek wieczystoksięgowy muszą obejmować żądanie wpisu tego roszczenia."
     }
   ]
 }

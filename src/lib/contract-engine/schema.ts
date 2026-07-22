@@ -249,6 +249,8 @@ const nieruchomosc = z
     dzialki_w_kw: z.array(z.string()).optional(),
     dzialki_do_odlaczenia: z.array(z.string()).optional(),
     wlasciciel_index: z.number().int().min(0).nullable().optional(),
+    // Roszczenie o przeniesienie hipoteki na przyszłe opróżnione miejsce (art. 101¹ u.k.w.h.).
+    roszczenie_oproznione_miejsce: z.boolean().optional(),
   })
   .strict();
 

@@ -580,3 +580,29 @@ describe("E. Determinizm", () => {
     expect(a).toBe(b);
   });
 });
+
+// ══ J. Zmiany szablonu generatora (spec) ══
+describe("J. Zmiany szablonu generatora", () => {
+  it("J1 klauzula prowizji: bez zdania o braku obniżenia przy wcześniejszej spłacie", () => {
+    const p1 = plaski(S1);
+    expect(p1.includes("Prowizja nie jest potrącana")).toBe(true);
+    expect(p1.includes("wymagalna w całości w dniu zawarcia Umowy")).toBe(true);
+    expect(p1.toLowerCase().includes("nie podlega obniżeniu")).toBe(false);
+  });
+  it("J2 roszczenie o opróżnione miejsce: brak klauzuli bez flagi", () => {
+    expect(plaski(S1).includes("roszczenie o przeniesienie hipoteki")).toBe(false);
+  });
+  it("J3 roszczenie o opróżnione miejsce: klauzula przy fladze (art. 101¹)", () => {
+    const z = clone(S1) as any;
+    z.nieruchomosci[0].roszczenie_oproznione_miejsce = true;
+    const p = plaski(z);
+    expect(p.includes("roszczenie o przeniesienie hipoteki ustanowionej zgodnie z ust. 1")).toBe(true);
+    expect(p.includes("art. 101¹ ustawy z dnia 6 lipca 1982")).toBe(true);
+    expect(walidujSchemat(z)).toEqual([]);
+  });
+  it("J4 schemat odrzuca zły typ flagi roszczenia", () => {
+    const z = clone(S1) as any;
+    z.nieruchomosci[0].roszczenie_oproznione_miejsce = "tak";
+    expect(walidujSchemat(z).length).not.toBe(0);
+  });
+});

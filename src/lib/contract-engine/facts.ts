@@ -269,6 +269,11 @@ export function zbudujFakty(d: any): Record<string, any> {
   );
   f.ma_oproznione_miejsce = f.nieruchomosci_oproznione_miejsce.length > 0;
 
+  // Roszczenie o przeniesienie hipoteki na przyszłe opróżnione miejsce (art. 101¹) —
+  // opcjonalna klauzula zabezpieczająca, niezależna od aktualnego wpisu na opróżnione miejsce.
+  f.nieruchomosci_roszczenie_oproznione = nier.filter((n) => n.roszczenie_oproznione_miejsce);
+  f.ma_roszczenie_oproznione_miejsce = f.nieruchomosci_roszczenie_oproznione.length > 0;
+
   const obcAll: any[] = [];
   for (const n of nier) {
     for (const o of n.obciazenia ?? []) {
