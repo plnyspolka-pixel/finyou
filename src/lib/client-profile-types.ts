@@ -180,22 +180,27 @@ export interface OfferData {
 }
 
 export interface ScheduleRow {
-  index: number | "Balon";
+  index: number;
   date: string;
   paymentAmount: number;
   capital: number;
   interest: number;
-  riskFee: number;
+  /** Część prowizji przypadająca na ratę (model silnika: prowizja rozłożona na raty). */
+  commission: number;
   remainingCapital: number;
+  /** true dla ostatniej raty, gdy jest wyższa od raty regularnej (rata balonowa). */
+  isBalloon: boolean;
 }
 
 export interface ScheduleData {
-  rows: ScheduleRow[];
+  /** Kwota Pożyczki = pełna wypłata dla Pożyczkobiorcy (prowizja NIE jest potrącana). */
   nominalLoanAmount: number;
+  rows: ScheduleRow[];
   expectedMonthlyInvestorReturn: number;
   monthlyInterestAmount: number;
-  monthlyRiskFeeAmount: number;
-  monthlyRiskFeePercent: number;
+  /** Nominalna prowizja miesięczna (prowizja / liczba rat). */
+  monthlyCommissionAmount: number;
+  monthlyCommissionPercent: number;
   balloonPayment: number;
   totalClientObligation: number;
   totalInvestorProfit: number;
