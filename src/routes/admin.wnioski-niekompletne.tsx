@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { MediaPreviewDialog } from "@/components/admin/MediaPreviewDialog";
 import { SourceIcon } from "@/components/admin/SourceIcon";
 import { normalizeLoanStatus, LOAN_STATUS_SHORT_LABELS } from "@/lib/loan-status";
-import { leadSourceLabel } from "@/lib/lead-source";
+import { leadSourceLabel, enrichedFieldSource } from "@/lib/lead-source";
 import { resolveShowablePhotoUrls } from "@/lib/property-photos";
 import { evaluateApplicationCore, missingLabels, type CompletenessResult } from "@/lib/application-completeness";
 
@@ -348,11 +348,13 @@ function ApplicationsPage() {
                 const isComplete = COMPLETE_STATUSES.includes(canonStatus);
                 const core = coreOf(r);
                 const needsFix = isComplete && !core.complete;
-                // Źródło wniosku (kwota/kw/pliki) i klienta (imię/kontakt) —
-                // to jedyne dwa pola „source” jakie mamy w bazie. Reszta jest
-                // wprowadzana w tym samym kanale co wniosek.
+                // Źródło pozyskania leada (kanał wejścia) vs. źródło pól
+                // pogłębionych. Meta Lead Ads to CZYSTY kanał pozyskania —
+                // KW, kwota, zdjęcia nie mogą wejść tym kanałem, więc dla
+                // takich pól pokazujemy neutralną ikonkę „?" zamiast Facebooka.
                 const appSource = r.source;
                 const clientSource = r.client?.source ?? appSource;
+                const enrichedSource = enrichedFieldSource(appSource);
                 return (
                   <TableRow key={r.id} className={needsFix ? "bg-amber-50/60" : undefined}>
                     <TableCell className="font-medium align-top">
@@ -395,7 +397,7 @@ function ApplicationsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums align-top">
                       <div className="inline-flex items-center gap-1">
-                        {r.loan_amount != null && <SourceIcon source={appSource} title={`Kwota — źródło: ${leadSourceLabel(appSource)}`} />}
+                        {r.loan_amount != null && <SourceIcon source={enrichedSource} title={`Kwota — źródło: ${leadSourceLabel(enrichedSource)}`} />}
                         <span>{fmtPLN(r.loan_amount as any)}</span>
                       </div>
                     </TableCell>
@@ -406,7 +408,7 @@ function ApplicationsPage() {
                         <div className="flex flex-col gap-0.5">
                           {kwNums.map((k, i) => (
                             <span key={i} className="flex items-center gap-1 font-mono truncate" title={k}>
-                              <SourceIcon source={appSource} title={`Numer KW — źródło: ${leadSourceLabel(appSource)}`} />
+                              <SourceIcon source={enrichedSource} title={`Numer KW — źródło: ${leadSourceLabel(enrichedSource)}`} />
                               <span className="truncate">{k}</span>
                             </span>
                           ))}
@@ -416,7 +418,7 @@ function ApplicationsPage() {
                     <TableCell className="align-top">
                       <div className="flex items-center gap-1">
                         {(allPhotos.length > 0 || (r.docCount ?? 0) > 0) && (
-                          <SourceIcon source={appSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(appSource)}`} />
+                          <SourceIcon source={enrichedSource} title={`Zdjęcia/dokumenty — źródło: ${leadSourceLabel(enrichedSource)}`} />
                         )}
                         <MediaThumbs photoPaths={allPhotos} docCount={r.docCount ?? 0} onOpen={() => setPreview({ id: r.id, paths: allPhotos, name })} />
                       </div>

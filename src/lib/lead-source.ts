@@ -37,3 +37,23 @@ export function leadSourceLabel(source: string | null | undefined): string {
   if (!key) return "—";
   return SOURCE_LABELS[key] ?? key;
 }
+
+// Kanały będące WYŁĄCZNIE źródłem pozyskania leada — nie da się nimi
+// przesłać danych pogłębionych (kwota pożyczki, numer KW, zdjęcia,
+// dokumenty). Jeżeli wniosek ma taki `source`, to znaczy, że pogłębione
+// dane trafiły do systemu innym kanałem (ręcznie / telefon / messenger),
+// którego my w bazie per-pole nie zapisujemy — więc lepiej pokazać
+// „nieznane" niż wprowadzać użytkownika w błąd ikonką Facebooka.
+const ACQUISITION_ONLY_SOURCES = new Set(["meta_lead"]);
+
+/**
+ * Źródło dla pól wymagających pogłębienia (kwota, KW, zdjęcia, dokumenty).
+ * Dla czystych kanałów pozyskania (np. Facebook Lead Ads) zwraca `null`,
+ * dzięki czemu SourceIcon pokazuje neutralną ikonkę „?".
+ */
+export function enrichedFieldSource(source: string | null | undefined): string | null {
+  const key = normalizeLeadSource(source);
+  if (!key) return null;
+  if (ACQUISITION_ONLY_SOURCES.has(key)) return null;
+  return source ?? null;
+}
