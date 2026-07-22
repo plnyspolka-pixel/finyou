@@ -10,6 +10,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource } from "@/lib/lead-comms.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { ocrLeadAttachmentsAndEnrich } from "@/lib/lead-doc-intel.server";
+import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
