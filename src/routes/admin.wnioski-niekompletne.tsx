@@ -32,7 +32,7 @@ type Row = {
   source: string | null;
   return_link: string | null;
   missing_fields: any;
-  client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
+  client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; source?: string | null } | null;
   properties: Property[] | null;
   docCount?: number;
 };
