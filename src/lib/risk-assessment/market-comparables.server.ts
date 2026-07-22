@@ -99,7 +99,11 @@ async function firecrawlSearch(apiKey: string, query: string, limit = 12): Promi
     });
     if (!res.ok) return [];
     const json: any = await res.json().catch(() => null);
-    return json?.data ?? json?.web ?? json?.results?.web ?? [];
+    // Firecrawl v2 /search zwraca { data: { web: [...] } } — `data` bywa OBIEKTEM,
+    // nie tablicą (wcześniej wywalało "items is not iterable").
+    const candidates = [json?.data?.web, json?.data, json?.web, json?.results?.web];
+    for (const c of candidates) if (Array.isArray(c)) return c;
+    return [];
   } catch {
     return [];
   } finally {

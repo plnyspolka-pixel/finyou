@@ -219,7 +219,7 @@ export function parseFloorInfo(dzial1o: string | null | undefined): { kondygnacj
 
 // Granica wartości pola działu I-O — lookahead na kolejną etykietę EKW lub koniec.
 const IO_FIELD_BOUNDARY =
-  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b)|[.;]|$)";
+  "(?=\\s+(?:przeznaczenie|obszar|kondygnacj|liczba|numer|obr[eę]b|spos[óo]b|pole|powierzchni|imi[eę]|nazwisk|dzia[łl]|po[łl]o[żz]|umiejscowieni|informacj|wpis|ulica|budynk|lokal\\b|opis|odr[eę]bno|przy[łl][aą]czeni)|[.;]|$)";
 
 // Parsuje liczbę w formacie PL („45,50" / „1 250,00" / „0,0450") na Number.
 function parsePlNumber(raw: string): number | null {
@@ -238,9 +238,11 @@ export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPro
   if (!text) return empty;
   const low = text.toLowerCase();
 
-  // Powierzchnia użytkowa lokalu (np. „Pole powierzchni użytkowej lokalu 45,50 m2").
+  // Powierzchnia użytkowa lokalu. Etykieta EKW bywa długa, np. „Pole powierzchni
+  // użytkowej lokalu wraz z powierzchnią pomieszczeń przynależnych 64,5100 M2" —
+  // stąd luka do 80 znaków; bezpieczna, bo wartość musi kończyć się jednostką m².
   let usableAreaM2: number | null = null;
-  const puM = low.match(/(?:pole\s+powierzchni\s+u[żz]ytkowej[^0-9]{0,20}|powierzchni[ai]\s+u[żz]ytkow\w*[^0-9]{0,20})(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
+  const puM = low.match(/(?:pole\s+powierzchni\s+u[żz]ytkowej[^0-9]{0,80}|powierzchni[ai]\s+u[żz]ytkow\w*[^0-9]{0,80})(\d[\d\s.]*(?:,\d+)?)\s*m\s*(?:²|2)\b/);
   if (puM) usableAreaM2 = parsePlNumber(puM[1]);
 
   // Obszar: „45,50 M2" (lokal/budynek) lub „0,0450 HA" (działka).
@@ -259,12 +261,20 @@ export function parseKwPropertyParams(dzial1o: string | null | undefined): KwPro
   }
   if (landAreaHa != null && landAreaM2 == null) landAreaM2 = Math.round(landAreaHa * 10_000);
 
-  // Liczba izb / pokoi.
+  // Liczba izb / pokoi. Fallback: „Opis lokalu (rodzaj izby - liczba)
+  // POKÓJ - 3, KUCHNIA - 1, …" → liczba pokoi z pozycji POKÓJ.
   let roomCount: number | null = null;
   const izbM = low.match(/liczba\s+(?:izb|pokoi)[^0-9]{0,12}(\d{1,2})/);
   if (izbM) {
     const k = Number(izbM[1]);
     if (Number.isFinite(k) && k >= 1 && k <= 30) roomCount = k;
+  }
+  if (roomCount == null) {
+    const pokojM = low.match(/pok[óo]j\w*\s*[-–—]\s*(\d{1,2})\b/);
+    if (pokojM) {
+      const k = Number(pokojM[1]);
+      if (Number.isFinite(k) && k >= 1 && k <= 30) roomCount = k;
+    }
   }
 
   // Rodzaj / przeznaczenie nieruchomości lub lokalu. Wartość wyłuskujemy leniwie

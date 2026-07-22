@@ -23,6 +23,23 @@ describe("parseKwPropertyParams — dział I-O KW", () => {
     expect(p.landUse).toContain("tereny mieszkaniowe");
   });
 
+  // Regresja: realny układ EKW (KW z Bierutowa) — długa etykieta powierzchni
+  // („wraz z powierzchnią pomieszczeń przynależnych"), rodzaj przed „Opis lokalu",
+  // liczba pokoi tylko w opisie izb. Wcześniej: usableAreaM2 = null → wycena no_data.
+  it("czyta lokal z długą etykietą powierzchni i opisem izb (układ EKW)", () => {
+    const html =
+      "Przeznaczenie lokalu LOKAL MIESZKALNY " +
+      "Opis lokalu (rodzaj izby - liczba) POKÓJ - 3, KUCHNIA - 1, ŁAZIENKA - 1, PRZEDPOKÓJ - 1, GARDEROBA - 1 " +
+      "Opis pomieszczeń przynależnych (rodzaj pomieszczenia - liczba) KOMÓRKA LOK. NR 19 O POW. 4,29 M2 - 1 " +
+      "Kondygnacja 3,0 " +
+      "Odrębność (lokal stanowi odrębną nieruchomość) TAK " +
+      "Pole powierzchni użytkowej lokalu wraz z powierzchnią pomieszczeń przynależnych 64,5100 M2";
+    const p = parseKwPropertyParams(html);
+    expect(p.usableAreaM2).toBe(64.51);
+    expect(p.kind).toBe("lokal mieszkalny");
+    expect(p.roomCount).toBe(3);
+  });
+
   it("pusty/brakujący dział I-O daje puste parametry", () => {
     const p = parseKwPropertyParams(null);
     expect(p).toEqual({ kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null });
