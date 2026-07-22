@@ -31,5 +31,7 @@ export {
   TOLERANCJA_GROSZOWA,
 } from "./schedule";
 export type { RataLiczbowa, RataSchema } from "./schedule";
+export { mapujKwDoNieruchomosci } from "./kw-mapper";
+export type { KwMapContext, KwMapResult } from "./kw-mapper";
 export { umowaSchema } from "./schema";
 export type { UmowaData } from "./schema";
