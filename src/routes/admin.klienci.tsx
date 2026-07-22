@@ -99,18 +99,17 @@ function KlienciPage() {
     queryFn: () => fn({ data: { type, status: status === "all" ? "" : status, source: source === "all" ? "" : source, search } }),
   });
 
-  const rows = (q.data ?? []) as Row[];
+  // Wnioski (rekordy z KW, kwotą, dokumentami lub zdjęciami) mają swój dom w
+  // /admin/wnioski-niekompletne — tutaj zostają wyłącznie leady bez wniosku.
+  const rows = ((q.data ?? []) as Row[]).filter((r) => !isApplication(r));
 
   const sources = useMemo(() => Array.from(new Set(rows.map((r) => r.source).filter(Boolean) as string[])), [rows]);
   const statuses = useMemo(() => Array.from(new Set(rows.map((r) => r.status).filter(Boolean))), [rows]);
 
   const counts = useMemo(() => {
-    const c = { all: rows.length, nieobsluzone: 0, ma_wniosek: 0, kompletne: 0, bez_kontaktu: 0 };
+    const c = { all: rows.length, nieobsluzone: 0, bez_kontaktu: 0 };
     for (const r of rows) {
       if (r.status === "nowy") c.nieobsluzone++;
-      // „Z wnioskiem" = realny wniosek (dane), nie sam stub loan_application_id.
-      if (isApplication(r)) c.ma_wniosek++;
-      if (isCoreComplete(r)) c.kompletne++;
       if (!r.comms.lastAt) c.bez_kontaktu++;
     }
     return c;
@@ -119,8 +118,6 @@ function KlienciPage() {
   const visibleRows = useMemo(() => {
     switch (quick) {
       case "nieobsluzone": return rows.filter((r) => r.status === "nowy");
-      case "ma_wniosek": return rows.filter(isApplication);
-      case "kompletne": return rows.filter(isCoreComplete);
       case "bez_kontaktu": return rows.filter((r) => !r.comms.lastAt);
       default: return rows;
     }
