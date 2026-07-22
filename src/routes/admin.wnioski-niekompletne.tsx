@@ -323,16 +323,15 @@ function ApplicationsPage() {
           <Table className="w-full table-fixed text-sm [&_th]:text-xs">
             <TableHeader>
               <TableRow>
-                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[16%]" />
-                <TableHead className="w-[14%]">Kontakt</TableHead>
+                <SortHeader label="Klient" k="name" sort={sort} setSort={setSort} className="w-[17%]" />
+                <TableHead className="w-[15%]">Kontakt</TableHead>
                 <SortHeader label="Status" k="status" sort={sort} setSort={setSort} className="w-[10%]" />
-                <TableHead className="w-[12%]">Braki</TableHead>
-                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[8%]" />
-                <SortHeader label="Kompl." k="completeness_percent" sort={sort} setSort={setSort} className="text-center w-[9%]" />
-                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[11%]" />
-                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[8%]" />
-                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[7%]" />
-                <TableHead className="text-right w-[5%]">Akcje</TableHead>
+                <TableHead className="w-[13%]">Braki</TableHead>
+                <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[9%]" />
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[13%]" />
+                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[9%]" />
+                <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[8%]" />
+                <TableHead className="text-right w-[6%]">Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
