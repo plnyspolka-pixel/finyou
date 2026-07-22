@@ -110,25 +110,42 @@ export function OperatorLeadsList() {
                 <span aria-hidden className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-indigo-400 via-sky-400 to-emerald-400 opacity-80" />
                 <div className="flex-1 min-w-0 w-full">
                   <div className="flex items-center gap-2 flex-wrap">
+                    <SourceIcon
+                      source={r.source}
+                      className="text-white/80"
+                      title={`Kanał pozyskania leada: ${leadSourceLabel(r.source)}`}
+                    />
                     <div className="font-semibold truncate text-white">{name}</div>
                     <Badge className="bg-white/15 text-white border-white/20 hover:bg-white/20">{leadStatusLabels[r.status] ?? r.status}</Badge>
-                    {r.source && <Badge className="bg-sky-500/25 text-sky-100 border-sky-300/30">{r.source}</Badge>}
+                    {r.source && (
+                      <Badge className="bg-sky-500/25 text-sky-100 border-sky-300/30 gap-1">
+                        <SourceIcon source={r.source} className="!text-sky-100" />
+                        {leadSourceLabel(r.source)}
+                      </Badge>
+                    )}
                     {r.quality_tier && <Badge className="bg-blue-500 text-white">Tier {r.quality_tier}</Badge>}
                   </div>
                   {r.loan && (
-                    <PropertyKeyFacts
-                      variant="inline"
-                      className="mt-1"
-                      amount={r.loan.loan_amount}
-                      propertyType={r.loan.properties?.[0]?.property_type}
-                      kwNumber={r.loan.properties?.[0]?.land_register_number}
-                      photoCount={r.loan.properties?.[0]?.photos?.length ?? 0}
-                      docCount={r.docCount ?? 0}
-                      periodMonths={r.loan.preferred_period_months}
-                    />
+                    <div className="mt-1 flex items-start gap-1.5">
+                      <SourceIcon
+                        source={enrichedFieldSource(r.loan.source ?? r.source)}
+                        className="text-white/80 mt-1"
+                        title={`Dane pogłębione (kwota / KW / zdjęcia) — źródło: ${leadSourceLabel(enrichedFieldSource(r.loan.source ?? r.source))}`}
+                      />
+                      <PropertyKeyFacts
+                        variant="inline"
+                        amount={r.loan.loan_amount}
+                        propertyType={r.loan.properties?.[0]?.property_type}
+                        kwNumber={r.loan.properties?.[0]?.land_register_number}
+                        photoCount={r.loan.properties?.[0]?.photos?.length ?? 0}
+                        docCount={r.docCount ?? 0}
+                        periodMonths={r.loan.preferred_period_months}
+                      />
+                    </div>
                   )}
                   <div className="text-xs text-white/80 mt-1 flex flex-wrap gap-2 min-w-0">
                     <RevealContact leadId={r.id} field="email" value={r.email} onRevealed={() => q.refetch()} />
+
                     <RevealContact
                       leadId={r.id}
                       field="phone"
