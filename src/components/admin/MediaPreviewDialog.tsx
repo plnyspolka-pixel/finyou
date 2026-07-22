@@ -27,13 +27,6 @@ type MediaItem = {
   docType?: string | null;
 };
 
-// Pliki klienta bywają w kilku bucketach (pliki-klienta oraz starsze
-// documents/property-photos) — podpisujemy z fallbackiem, inaczej starsze
-// załączniki „nie chcą się otworzyć".
-async function signDocument(path: string): Promise<string | null> {
-  return signStoragePath(path, 60 * 60);
-}
-
 function inferKind(name: string): Kind {
   const n = name.toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
@@ -90,8 +83,12 @@ export function MediaPreviewDialog({
         .order("created_at", { ascending: false });
 
       for (const d of (docRows ?? []) as Doc[]) {
-        let url = d.file_url ?? null;
-        if (!url && d.file_path) url = await signDocument(d.file_path);
+        // UWAGA: file_url bywa błędnie wypełniony ścieżką Storage (nie URL-em http)
+        // — np. załączniki inbound z Messengera/maila. Dlatego podpisujemy przez
+        // signStoragePath, które zwraca zewnętrzny URL bez zmian, a ścieżkę
+        // podpisuje z fallbackiem bucketów. Najpierw file_path (pewniejszy),
+        // potem file_url jako ewentualna ścieżka/URL.
+        const url = await signStoragePath(d.file_path || d.file_url || "", 60 * 60);
         if (!url) continue;
         const name = d.file_name || d.file_path?.split("/").pop() || "dokument";
         all.push({
