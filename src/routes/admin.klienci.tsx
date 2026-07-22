@@ -89,7 +89,7 @@ function KlienciPage() {
   const [status, setStatus] = useState<string>("all");
   const [source, setSource] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [quick, setQuick] = useState<"all" | "nieobsluzone" | "ma_wniosek" | "kompletne" | "bez_kontaktu">("all");
+  const [quick, setQuick] = useState<"all" | "nieobsluzone" | "bez_kontaktu">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
 
