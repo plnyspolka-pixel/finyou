@@ -161,8 +161,6 @@ function KlienciPage() {
             {([
               { key: "all", label: "Wszystkie", n: counts.all },
               { key: "nieobsluzone", label: "Nieobsłużone", n: counts.nieobsluzone },
-              { key: "ma_wniosek", label: "Z wnioskiem", n: counts.ma_wniosek },
-              { key: "kompletne", label: "Kompletne", n: counts.kompletne },
               { key: "bez_kontaktu", label: "Bez kontaktu", n: counts.bez_kontaktu },
             ] as const).map((f) => (
               <button
