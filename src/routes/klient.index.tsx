@@ -19,6 +19,7 @@ import { ClientProfileSections } from "@/components/client/ClientProfileSections
 import { InvestorDescriptionCard } from "@/components/client/InvestorDescriptionCard";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { SinglePageApplicationForm } from "@/components/landing/single-page-application-form";
+import { evaluateApplicationCore, missingLabels } from "@/lib/application-completeness";
 
 import { toast } from "sonner";
 
@@ -45,7 +46,7 @@ function KlientDashboard() {
     queryKey: ["client-loan", clientRow?.id],
     queryFn: async () => {
       const { data } = await supabase.from("loan_applications")
-        .select("id, view_count")
+        .select("id, view_count, loan_amount")
         .eq("client_id", clientRow!.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data;
     },
@@ -113,10 +114,24 @@ function KlientDashboard() {
 
   const markApplicationComplete = async () => {
     if (!loanRow?.id) { toast.error("Najpierw rozpocznij wniosek"); return; }
+    // Wniosek trafia do inwestorów tylko z kompletem podstawowych danych —
+    // ta sama definicja co w panelu admina (application-completeness.ts).
+    const core = evaluateApplicationCore({
+      loan_amount: loanRow?.loan_amount ?? null,
+      client: clientRow,
+      properties: [{ land_register_number: propertyRow?.land_register_number ?? null, photos: photoPaths }],
+      docCount,
+    });
+    if (!core.complete) {
+      toast.error("Wniosek nie jest jeszcze kompletny", {
+        description: `Uzupełnij: ${missingLabels(core.missing).join(", ")}.`,
+      });
+      return;
+    }
     setMarkingComplete(true);
     try {
       const { error } = await supabase.from("loan_applications")
-        .update({ status: "szukamy_inwestora", available_to_investors: true })
+        .update({ status: "szukamy_inwestora", available_to_investors: true, completeness_percent: 100 })
         .eq("id", loanRow.id);
       if (error) throw error;
       setForceUnlock(true);
