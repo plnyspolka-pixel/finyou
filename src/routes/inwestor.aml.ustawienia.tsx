@@ -389,28 +389,10 @@ function AmlSettingsScreen() {
               </p>
             </div>
 
-            {settings.giifEnvironment === "production" &&
-            !settings.keyProvider.productionApproved ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-900/20">
-                <p className="font-medium text-amber-800 dark:text-amber-200">
-                  Środowisko produkcyjne nie jest jeszcze gotowe po stronie platformy
-                </p>
-                <p className="mt-1 text-amber-700 dark:text-amber-300">
-                  Klucze certyfikatów są obecnie przechowywane w trybie lokalnym
-                  (dev/test), który nie jest dopuszczony do produkcji. Zanim wyślesz realne
-                  zgłoszenie, produkcyjny magazyn kluczy (KMS/HSM) musi włączyć administrator
-                  platformy. Skontaktuj się z administratorem lub na razie korzystaj ze
-                  środowiska testowego.
-                </p>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Klucze Twoich certyfikatów przechowujemy wyłącznie w postaci zaszyfrowanej i
-                nigdy nie pokazujemy ich w przeglądarce.
-                {!settings.keyProvider.productionApproved &&
-                  " Bieżący tryb jest przeznaczony do testów — do wysyłek produkcyjnych administrator platformy włączy magazyn KMS/HSM."}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Klucze Twoich certyfikatów komunikacyjnych przechowujemy wyłącznie w postaci
+              zaszyfrowanej (zarządzany sekret) i nigdy nie pokazujemy ich w przeglądarce.
+            </p>
           </CardContent>
         </Card>
       </div>
