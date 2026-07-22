@@ -10,6 +10,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { upsertLeadFromSource } from "@/lib/lead-comms.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { ocrLeadAttachmentsAndEnrich } from "@/lib/lead-doc-intel.server";
+import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -238,7 +239,24 @@ async function syncPageConversations(
       if (rows.length) {
         const { error } = await supabaseAdmin.from("lead_communications").insert(rows as any);
         if (error) result.errors.push(`insert ${leadId}: ${error.message}`);
-        else result.messagesNew += rows.length;
+        else {
+          result.messagesNew += rows.length;
+          // Wyciągnij fakty (KW, kwota, imię, miasto) z nowo dopisanych
+          // wiadomości przychodzących — bez tego historyczny sync
+          // trzymałby leada bez kw_numbers, mimo że klient podał numer
+          // w rozmowie.
+          const inboundText = rows
+            .filter((r) => r.direction === "inbound" && typeof r.content === "string")
+            .map((r) => r.content)
+            .join("\n");
+          if (inboundText.trim()) {
+            try {
+              await enrichLeadFromInbound({ leadId, text: inboundText, hasAttachments: false });
+            } catch (e: any) {
+              result.errors.push(`enrich ${leadId}: ${String(e?.message ?? e)}`);
+            }
+          }
+        }
       }
     }
     url = json?.paging?.next ?? null;
