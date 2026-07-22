@@ -9,6 +9,7 @@ import type {
   ScheduleRow,
   SecurityData,
 } from "./client-profile-types";
+import { buildEngineSchedule } from "./contract-engine/loan-schedule";
 
 export function formatPLN(n: number | undefined | null): string {
   return new Intl.NumberFormat("pl-PL", {
@@ -48,125 +49,77 @@ export function maskPesel(p?: string): string {
 
 export interface ScheduleInput extends OfferData {}
 
+/**
+ * Harmonogram „Dyrektor Finansowy" — w modelu silnika (jedno źródło prawdy,
+ * `buildEngineSchedule`). Mapowanie pól oferty na model umowy:
+ *  - `netAmountToClient` = **Kwota Pożyczki** (pełna wypłata dla klienta;
+ *    prowizja NIE jest potrącana z wypłaty),
+ *  - `creditedCommission` = **prowizja**, rozłożona równo na raty jako
+ *    ułatwienie płatnicze (klauzula KWO_02),
+ *  - odsetki liczone od kapitału pozostającego do spłaty,
+ *  - pułap „maks. rata" steruje kapitałem; nadwyżka trafia do raty balonowej
+ *    będącej ostatnią z N rat.
+ * Wynagrodzenie inwestora jest teraz **wyprowadzane** (odsetki + prowizja),
+ * a nie zadawane osobnym parametrem.
+ */
 export function buildDirectorSchedule(
   offer: ScheduleInput,
 ): ScheduleData | null {
-  const net = Number(offer.netAmountToClient ?? 0);
-  const commission = Number(offer.creditedCommission ?? 0);
+  const kwotaPozyczki = Number(offer.netAmountToClient ?? 0);
+  const prowizja = Number(offer.creditedCommission ?? 0);
   const maxPayment = Number(offer.maxMonthlyPaymentByClient ?? 0);
   const months = Number(offer.loanTermMonths ?? 0);
   const payoutDate = offer.payoutDate;
   const annualInterest = Number(offer.annualInterestPercent ?? 0);
 
-  // walidacja
-  if (!net || !maxPayment || !months || !payoutDate) return null;
+  if (!kwotaPozyczki || !maxPayment || !months || !payoutDate) return null;
 
-  const nominalLoanAmount = net + commission;
-
-  let expectedMonthly = 0;
-  if (offer.investorMonthlyReturnType === "percent") {
-    expectedMonthly = (net * Number(offer.investorMonthlyReturnPercent ?? 0)) / 100;
-  } else {
-    expectedMonthly = Number(offer.investorMonthlyReturnAmount ?? 0);
-  }
-  if (!expectedMonthly) return null;
-
-  const monthlyInterestAmount = (nominalLoanAmount * annualInterest) / 100 / 12;
-  let monthlyRiskFeeAmount = expectedMonthly - monthlyInterestAmount;
-  const warnings: string[] = [];
-  const infos: string[] = [];
-
-  if (monthlyRiskFeeAmount < 0) {
-    warnings.push(
-      "Oprocentowanie roczne generuje odsetki wyższe niż oczekiwane miesięczne wynagrodzenie inwestora.",
-    );
-    monthlyRiskFeeAmount = 0;
-  }
-  const monthlyRiskFeePercent =
-    nominalLoanAmount > 0 ? (monthlyRiskFeeAmount / nominalLoanAmount) * 100 : 0;
-
-  // info techniczne
-  if (maxPayment > expectedMonthly) {
-    infos.push("Nadwyżka ponad wynagrodzenie inwestora pomniejsza kapitał bieżąco.");
-  } else if (maxPayment === expectedMonthly) {
-    infos.push("Kapitał będzie spłacany w racie balonowej.");
-  } else {
-    infos.push("Część wynagrodzenia inwestora zostanie rozliczona w racie balonowej.");
-  }
-
-  const rows: ScheduleRow[] = [];
-  let remainingCapital = nominalLoanAmount;
-  // skumulowane braki rozliczone w balonie
-  let unpaidInterest = 0;
-  let unpaidRiskFee = 0;
-
-  for (let i = 1; i <= months; i++) {
-    const rowDate = addMonths(payoutDate, i);
-
-    // rozliczenie raty w kolejności: odsetki, opłata za ryzyko, kapitał
-    let payment = maxPayment;
-    let interestPaid = Math.min(payment, monthlyInterestAmount);
-    payment -= interestPaid;
-    let riskPaid = Math.min(payment, monthlyRiskFeeAmount);
-    payment -= riskPaid;
-    let capitalPaid = Math.min(payment, remainingCapital);
-
-    // jeżeli płatność klienta jest mniejsza niż wynagrodzenie inwestora,
-    // brakujące części trafiają do balonu
-    unpaidInterest += monthlyInterestAmount - interestPaid;
-    unpaidRiskFee += monthlyRiskFeeAmount - riskPaid;
-
-    remainingCapital = Math.max(0, remainingCapital - capitalPaid);
-
-    rows.push({
-      index: i,
-      date: rowDate,
-      paymentAmount: round2(interestPaid + riskPaid + capitalPaid),
-      capital: round2(capitalPaid),
-      interest: round2(interestPaid),
-      riskFee: round2(riskPaid),
-      remainingCapital: round2(remainingCapital),
-    });
-  }
-
-  // rata balonowa
-  const balloonDate = addMonths(payoutDate, months);
-  const balloonCapital = remainingCapital;
-  const balloonInterest = Math.max(0, unpaidInterest);
-  const balloonRisk = Math.max(0, unpaidRiskFee);
-  const balloonPayment = balloonCapital + balloonInterest + balloonRisk;
-
-  rows.push({
-    index: "Balon",
-    date: balloonDate,
-    paymentAmount: round2(balloonPayment),
-    capital: round2(balloonCapital),
-    interest: round2(balloonInterest),
-    riskFee: round2(balloonRisk),
-    remainingCapital: 0,
+  const eng = buildEngineSchedule({
+    kwotaPozyczki,
+    prowizja,
+    annualRatePercent: annualInterest,
+    months,
+    maxMonthlyPayment: maxPayment,
+    firstPaymentDate: addMonths(payoutDate, 1),
   });
 
-  const sumOfRegularPayments = rows
-    .slice(0, months)
-    .reduce((a, r) => a + r.paymentAmount, 0);
-  const totalClientObligation = round2(sumOfRegularPayments + balloonPayment);
+  const rows: ScheduleRow[] = eng.rows.map((r) => ({
+    index: r.nr,
+    date: addMonths(payoutDate, r.nr),
+    paymentAmount: r.rata_razem,
+    capital: r.kapital,
+    interest: r.odsetki,
+    commission: r.prowizja,
+    remainingCapital: r.saldo,
+    isBalloon: r.isBalloon,
+  }));
 
-  const totalInterest = rows.reduce((a, r) => a + r.interest, 0);
-  const totalRiskFee = rows.reduce((a, r) => a + r.riskFee, 0);
-  const totalInvestorProfit = round2(totalInterest + totalRiskFee + commission);
-  const annualizedInvestorProfitAmount = round2((totalInvestorProfit / months) * 12);
+  const monthlyCommissionAmount = eng.monthlyCommission;
+  const monthlyCommissionPercent =
+    kwotaPozyczki > 0 ? round2((monthlyCommissionAmount / kwotaPozyczki) * 100) : 0;
+  const monthlyInterestAmount = months > 0 ? round2(eng.totalInterest / months) : 0;
+  const totalInvestorProfit = round2(eng.totalInterest + prowizja);
+  const expectedMonthlyInvestorReturn = months > 0 ? round2(totalInvestorProfit / months) : 0;
+  const annualizedInvestorProfitAmount = months > 0 ? round2((totalInvestorProfit / months) * 12) : 0;
   const annualizedInvestorProfitPercent =
-    net > 0 ? round2((annualizedInvestorProfitAmount / net) * 100) : 0;
+    kwotaPozyczki > 0 ? round2((annualizedInvestorProfitAmount / kwotaPozyczki) * 100) : 0;
+
+  const infos: string[] = [
+    "Pożyczkobiorca otrzymuje pełną Kwotę Pożyczki; prowizja nie jest potrącana z wypłaty, lecz rozłożona na raty (KWO_02).",
+  ];
+  if (eng.balloon > 0) infos.push("Nadwyżka kapitału ponad pułap raty rozliczana jest w racie balonowej (ostatnia z rat).");
+  const warnings = [...eng.warnings];
+  if (prowizja <= 0) warnings.push("Brak prowizji — sprawdź pole „Prowizja”, jeśli miała zostać naliczona.");
 
   return {
     rows,
-    nominalLoanAmount: round2(nominalLoanAmount),
-    expectedMonthlyInvestorReturn: round2(expectedMonthly),
-    monthlyInterestAmount: round2(monthlyInterestAmount),
-    monthlyRiskFeeAmount: round2(monthlyRiskFeeAmount),
-    monthlyRiskFeePercent: round2(monthlyRiskFeePercent),
-    balloonPayment: round2(balloonPayment),
-    totalClientObligation,
+    nominalLoanAmount: eng.kwotaPozyczki,
+    expectedMonthlyInvestorReturn,
+    monthlyInterestAmount,
+    monthlyCommissionAmount: round2(monthlyCommissionAmount),
+    monthlyCommissionPercent,
+    balloonPayment: eng.balloon,
+    totalClientObligation: eng.totalToRepay,
     totalInvestorProfit,
     annualizedInvestorProfitAmount,
     annualizedInvestorProfitPercent,

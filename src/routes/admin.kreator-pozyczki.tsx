@@ -611,11 +611,11 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
           <Card>
             <CardHeader><CardTitle>Wyliczenia automatyczne</CardTitle></CardHeader>
             <CardContent className="grid md:grid-cols-4 gap-3 text-sm">
-              <Stat label="Kwota nominalna pożyczki" value={formatPLN(schedule?.nominalLoanAmount)} />
-              <Stat label="Wynagrodzenie inwestora / mies." value={formatPLN(schedule?.expectedMonthlyInvestorReturn)} />
-              <Stat label="Odsetki / mies." value={formatPLN(schedule?.monthlyInterestAmount)} />
-              <Stat label="Opłata za ryzyko / mies." value={formatPLN(schedule?.monthlyRiskFeeAmount)} />
-              <Stat label="Opłata za ryzyko (% kw. nom.)" value={`${(schedule?.monthlyRiskFeePercent ?? 0).toFixed(4)}%`} />
+              <Stat label="Kwota Pożyczki (pełna wypłata)" value={formatPLN(schedule?.nominalLoanAmount)} />
+              <Stat label="Wynagrodzenie inwestora / mies. (odsetki + prowizja)" value={formatPLN(schedule?.expectedMonthlyInvestorReturn)} />
+              <Stat label="Odsetki / mies. (śr.)" value={formatPLN(schedule?.monthlyInterestAmount)} />
+              <Stat label="Prowizja / mies." value={formatPLN(schedule?.monthlyCommissionAmount)} />
+              <Stat label="Prowizja (% Kwoty Pożyczki)" value={`${(schedule?.monthlyCommissionPercent ?? 0).toFixed(4)}%`} />
               <Stat label="Rata balonowa" value={formatPLN(schedule?.balloonPayment)} />
               <Stat label="Całk. zobowiązanie klienta" value={formatPLN(schedule?.totalClientObligation)} />
               <Stat label="Zysk inwestora (annualized)" value={`${formatPLN(schedule?.annualizedInvestorProfitAmount)} (${schedule?.annualizedInvestorProfitPercent ?? 0}%)`} />
@@ -646,19 +646,19 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                         <TableHead className="text-right">Kwota raty</TableHead>
                         <TableHead className="text-right">Kapitał</TableHead>
                         <TableHead className="text-right">Odsetki</TableHead>
-                        <TableHead className="text-right">Opłata za ryzyko</TableHead>
+                        <TableHead className="text-right">Prowizja</TableHead>
                         <TableHead className="text-right">Kapitał pozostały</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {schedule.rows.map((r) => (
-                        <TableRow key={String(r.index)} className={r.index === "Balon" ? "bg-muted/40 font-semibold" : ""}>
-                          <TableCell>{r.index === "Balon" ? <Badge variant="secondary">Balon</Badge> : r.index}</TableCell>
+                        <TableRow key={String(r.index)} className={r.isBalloon ? "bg-muted/40 font-semibold" : ""}>
+                          <TableCell>{r.isBalloon ? <><Badge variant="secondary">Balon</Badge> {r.index}</> : r.index}</TableCell>
                           <TableCell>{formatDate(r.date)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.paymentAmount)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.capital)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.interest)}</TableCell>
-                          <TableCell className="text-right">{formatPLN(r.riskFee)}</TableCell>
+                          <TableCell className="text-right">{formatPLN(r.commission)}</TableCell>
                           <TableCell className="text-right">{formatPLN(r.remainingCapital)}</TableCell>
                         </TableRow>
                       ))}

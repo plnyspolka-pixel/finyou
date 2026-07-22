@@ -60,6 +60,7 @@ import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { sendLoanScheduleToClient } from "@/lib/loan-schedule.functions";
 import { buildLoanCalcPdfBlob, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
+import { buildEngineSchedule } from "@/lib/contract-engine/loan-schedule";
 import { saveCalcHandoff } from "@/lib/loan-calc-handoff";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
@@ -238,24 +239,20 @@ export function LoanCalculator({
   // W trybie oferty wewnętrznej (hideFinanceYouFee) prowizja FY = 0.
   // Ponieważ % FY zależy od nominału, a nominał zależy od %, iterujemy do punktu stałego.
   const { amount, financeYouFeePct } = useMemo(() => {
-    // Konto darmowe inwestora: prowizja FY 2× wyższa niż w planie komercyjnym.
+    // Model silnika: PEŁNA WYPŁATA — Pożyczkobiorca otrzymuje całą Kwotę Pożyczki.
+    // Prowizja nie jest potrącana z wypłaty (jest rozłożona na raty), więc kwota
+    // na rękę = Kwota Pożyczki (brak „ubruttowienia").
     const fyMultiplier = freeTierMode ? 2 : 1;
-    let amt = onHand / Math.max(0.01, 1 - commissionPct / 100);
-    let fyPct = 0;
-    for (let i = 0; i < 6; i++) {
-      const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
-      fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * fyMultiplier * 10) / 10;
-      const factor = Math.max(0.01, 1 - (commissionPct + fyPct) / 100);
-      amt = onHand / factor;
-    }
+    const amt = onHand;
+    const t = Math.min(1, Math.max(0, (amt - 20_000) / (1_000_000 - 20_000)));
+    const fyPct = hideFinanceYouFee ? 0 : Math.round((10 - t * 6) * fyMultiplier * 10) / 10;
     return { amount: amt, financeYouFeePct: fyPct };
-  }, [onHand, commissionPct, hideFinanceYouFee, freeTierMode]);
+  }, [onHand, hideFinanceYouFee, freeTierMode]);
 
-  // Ustawienie kwoty nominalnej przelicza z powrotem na kwotę na rękę (na rękę pozostaje spójne).
+  // Kwota Pożyczki = kwota wypłacana na rękę (pełna wypłata) — wartości są równe.
   const setAmount = (nominal: number) => {
     const clamped = Math.min(1_000_000, Math.max(20_000, nominal || 0));
-    const factor = Math.max(0.01, 1 - (commissionPct + financeYouFeePct) / 100);
-    setOnHand(clamped * factor);
+    setOnHand(clamped);
   };
   const rateTouched = useRef(false);
   const commissionTouched = useRef(false);
@@ -303,8 +300,9 @@ export function LoanCalculator({
   const statutoryInterest = effectiveRefRate + 3.5;
 
   const financeYouFeePln = Math.round((amount * financeYouFeePct) / 100);
-  // Kapitał, od którego liczone są odsetki i raty = kwota nominalna umowy
-  // (zawiera prowizję inwestora ORAZ prowizję Finance You — obie są kredytowane).
+  // Kapitał, od którego liczone są odsetki i raty = Kwota Pożyczki (pełna
+  // wypłata). Prowizja inwestora i Finance You NIE wchodzą do kapitału —
+  // są rozłożone na raty jako osobny składnik (model silnika).
   const grossPrincipal = amount;
 
   const maxNonInterest = maxNonInterestCosts(amount, months);
@@ -320,6 +318,10 @@ export function LoanCalculator({
     : 0;
   const investorNetCommissionPln = Math.max(0, commissionPln - operatorCommissionPln);
 
+  // Harmonogram = model silnika (jedno źródło prawdy): pełna wypłata kapitału,
+  // prowizja (inwestora + Finance You) rozłożona na raty, odsetki od salda,
+  // balon = ostatnia z N rat.
+  const scheduleCommission = commissionPln + financeYouFeePln;
   const schedule = useMemo(() => {
     if (!grossPrincipal || !months)
       return {
@@ -327,42 +329,44 @@ export function LoanCalculator({
         totalRata: 0,
         totalOds: 0,
         totalKap: 0,
+        totalProw: 0,
         balloon: 0,
         nominalRata: 0,
         cappedRata: 0,
       };
     const monthlyRate = annualRate / 100 / 12;
-    const rows: any[] = [];
-    const start = new Date();
-
     const nominalRata =
       monthlyRate > 0
         ? (grossPrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
         : grossPrincipal / months;
-    const cappedRata = maxPayment > 0 ? Math.min(nominalRata, maxPayment) : nominalRata;
-    const balloon = Math.max(0, (nominalRata - cappedRata) * months);
+    const monthlyComm = scheduleCommission / months;
+    const cap = maxPayment > 0 ? maxPayment : nominalRata + monthlyComm;
 
-    let saldo = grossPrincipal;
-    for (let i = 1; i <= months; i++) {
-      const ods = saldo * monthlyRate;
-      const last = i === months;
-      const rata = last ? cappedRata + balloon : cappedRata;
-      const kap = rata - ods;
-      saldo = Math.max(0, saldo - kap);
+    const eng = buildEngineSchedule({
+      kwotaPozyczki: grossPrincipal,
+      prowizja: scheduleCommission,
+      annualRatePercent: annualRate,
+      months,
+      maxMonthlyPayment: cap,
+    });
+
+    const start = new Date();
+    const rows = eng.rows.map((r) => {
       const d = new Date(start);
-      d.setMonth(d.getMonth() + i);
-      rows.push({ idx: i, date: d.toLocaleDateString("pl-PL"), rata, kap, ods, saldo });
-    }
+      d.setMonth(d.getMonth() + r.nr);
+      return { idx: r.nr, date: d.toLocaleDateString("pl-PL"), rata: r.rata_razem, kap: r.kapital, ods: r.odsetki, prow: r.prowizja, saldo: r.saldo };
+    });
     return {
       rows,
-      totalRata: rows.reduce((s, r) => s + r.rata, 0),
-      totalOds: rows.reduce((s, r) => s + r.ods, 0),
-      totalKap: rows.reduce((s, r) => s + r.kap, 0),
-      balloon,
-      nominalRata,
-      cappedRata,
+      totalRata: eng.totalToRepay,
+      totalOds: eng.totalInterest,
+      totalKap: grossPrincipal,
+      totalProw: scheduleCommission,
+      balloon: eng.balloon,
+      nominalRata: nominalRata + monthlyComm,
+      cappedRata: Math.min(nominalRata + monthlyComm, cap),
     };
-  }, [grossPrincipal, months, annualRate, maxPayment]);
+  }, [grossPrincipal, months, annualRate, maxPayment, scheduleCommission]);
 
   // MPKK obejmuje prowizję inwestora ORAZ prowizję Finance You — obie są kosztami
   // pozaodsetkowymi po stronie klienta (art. 36a UoKK).
@@ -511,11 +515,11 @@ export function LoanCalculator({
     `nie przekraczając wysokości odsetek maksymalnych.`;
 
   function downloadScheduleCsv() {
-    const header = ["Nr raty", "Termin", "Rata", "Kapitał", "Odsetki", "Saldo"];
+    const header = ["Nr raty", "Termin", "Rata", "Kapitał", "Odsetki", "Prowizja", "Saldo"];
     const fmt = (n: number) => n.toFixed(2).replace(".", ",");
     const lines = [header.join(";")];
     for (const r of schedule.rows) {
-      lines.push([r.idx, r.date, fmt(r.rata), fmt(r.kap), fmt(r.ods), fmt(r.saldo)].join(";"));
+      lines.push([r.idx, r.date, fmt(r.rata), fmt(r.kap), fmt(r.ods), fmt(r.prow ?? 0), fmt(r.saldo)].join(";"));
     }
     lines.push(
       [
@@ -524,6 +528,7 @@ export function LoanCalculator({
         fmt(schedule.totalRata),
         fmt(schedule.totalKap),
         fmt(schedule.totalOds),
+        fmt(schedule.totalProw),
         "",
       ].join(";"),
     );
@@ -550,33 +555,33 @@ export function LoanCalculator({
     const rows = schedule.rows
       .map(
         (r) =>
-          `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">${r.idx}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">${r.date}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.rata)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.kap)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.ods)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.saldo)}</td></tr>`,
+          `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">${r.idx}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;">${r.date}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.rata)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.kap)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.ods)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.prow ?? 0)}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">${m(r.saldo)}</td></tr>`,
       )
       .join("");
     return `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a2e;max-width:720px;">
       <h1 style="font-size:20px;margin:0 0 4px;">Harmonogram spłat pożyczki</h1>
       ${clientName ? `<p style="margin:0 0 12px;color:#555;">dla: <b>${escapeHtml(clientName)}</b></p>` : ""}
       <table style="width:100%;border-collapse:collapse;margin:12px 0 4px;font-size:14px;">
-        ${sum("Kwota do wypłaty na rękę", m(onHand), true)}
-        ${sum("Kwota nominalna pożyczki", m(Math.round(amount)))}
+        ${sum("Kwota Pożyczki (pełna wypłata)", m(onHand), true)}
         ${sum("Okres", `${months} mies.`)}
         ${sum("Oprocentowanie", `${annualRate.toFixed(2).replace(".", ",")}% / rok`)}
         ${sum("Rata miesięczna", m(schedule.cappedRata))}
         ${schedule.balloon > 0 ? sum("Rata balonowa (ostatnia)", m(schedule.balloon)) : ""}
-        ${sum("Prowizja inwestora", m(commissionPln))}
+        ${sum("Prowizja (rozłożona na raty)", m(commissionPln))}
         ${sum("Całkowity koszt pożyczki", m(totalCost))}
         ${sum("Łączna kwota do spłaty", m(totalToRepay), true)}
         ${sum("Proponowana kwota hipoteki", m(mortgageAmount))}
         ${sum("Kwota art. 777 k.p.c. (rygor egzekucji)", m(art777Amount))}
       </table>
       <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
-        <thead><tr>${th("#")}${th("Termin")}${th("Rata", true)}${th("Kapitał", true)}${th("Odsetki", true)}${th("Saldo", true)}</tr></thead>
+        <thead><tr>${th("#")}${th("Termin")}${th("Rata", true)}${th("Kapitał", true)}${th("Odsetki", true)}${th("Prowizja", true)}${th("Saldo", true)}</tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
           <td colspan="2" style="padding:8px;font-weight:700;border-top:2px solid #333;">RAZEM</td>
           <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalRata)}</td>
           <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalKap)}</td>
           <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalOds)}</td>
+          <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid #333;">${m(schedule.totalProw)}</td>
           <td style="border-top:2px solid #333;"></td>
         </tr></tfoot>
       </table>
@@ -633,6 +638,7 @@ export function LoanCalculator({
         rata: Math.round(r.rata * 100) / 100,
         kap: Math.round(r.kap * 100) / 100,
         ods: Math.round(r.ods * 100) / 100,
+        prow: Math.round((r.prow ?? 0) * 100) / 100,
         saldo: Math.round(r.saldo * 100) / 100,
       })),
     };
@@ -1812,6 +1818,7 @@ export function LoanCalculator({
                     <TableHead className="text-white/80">Rata</TableHead>
                     <TableHead className="text-white/80">Kapitał</TableHead>
                     <TableHead className="text-white/80">Odsetki</TableHead>
+                    <TableHead className="text-white/80">Prowizja</TableHead>
                     <TableHead className="text-white/80">Saldo</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1823,6 +1830,7 @@ export function LoanCalculator({
                       <TableCell className="tabular-nums text-white">{formatPLN(r.rata)}</TableCell>
                       <TableCell className="tabular-nums text-white">{formatPLN(r.kap)}</TableCell>
                       <TableCell className="tabular-nums text-white">{formatPLN(r.ods)}</TableCell>
+                      <TableCell className="tabular-nums text-white">{formatPLN(r.prow ?? 0)}</TableCell>
                       <TableCell className="tabular-nums text-white">
                         {formatPLN(r.saldo)}
                       </TableCell>

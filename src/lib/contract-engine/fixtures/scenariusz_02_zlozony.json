@@ -1,0 +1,228 @@
+{
+  "meta": {
+    "data_umowy": "15.09.2026",
+    "miejscowosc": "Lublinie",
+    "numer_umowy": "U02-11/2026",
+    "wersja_wzoru": "1.0"
+  },
+  "pozyczkodawca": {
+    "typ": "podmiot_gospodarczy",
+    "nazwa": "FINANCE YOU",
+    "forma_prawna": "sp. z o.o.",
+    "krs": "0000635207",
+    "nip": "7010611803",
+    "regon": "365350668",
+    "adres": "ul. Nowogrodzka 31, 00-511 Warszawa",
+    "telefon": null,
+    "email": null,
+    "reprezentacja": {
+      "imie_nazwisko": "Filip Bielak",
+      "pesel": "87032702195",
+      "funkcja": "pełnomocnik",
+      "podstawa": "pełnomocnictwa z dnia 24 lutego 2023 r."
+    }
+  },
+  "pozyczkobiorca": {
+    "typ": "podmiot_gospodarczy",
+    "nazwa": "TRANSPOL LOGISTYKA",
+    "forma_prawna": "sp. z o.o.",
+    "krs": "0000111222",
+    "nip": "9462612345",
+    "regon": "060123456",
+    "adres": "ul. Krochmalna 12, 20-401 Lublin",
+    "telefon": "81 555 22 11",
+    "email": "biuro@transpol.example.pl",
+    "reprezentacja": {
+      "imie_nazwisko": "Marek Wiśniewski",
+      "pesel": "78050512345",
+      "funkcja": "prezes zarządu",
+      "podstawa": null
+    }
+  },
+  "porecziciel": {
+    "typ": "osoba_fizyczna",
+    "imie_nazwisko": "Marek Wiśniewski",
+    "firma": null,
+    "pesel": "78050512345",
+    "nip": null,
+    "regon": null,
+    "dokument_tozsamosci": "dowód osobisty nr ABX998877",
+    "adres": "ul. Lipowa 8/3, 20-020 Lublin",
+    "telefon": "601 222 333",
+    "email": "m.wisniewski@example.pl",
+    "stan_cywilny": "zonaty_zamezna",
+    "ustroj_majatkowy": "wspolnosc_ustawowa",
+    "zakres_odpowiedzialnosci": "rzeczowa_i_osobista",
+    "zgoda_malzonka": {
+      "na_hipoteke": true,
+      "na_poreczenie": true
+    }
+  },
+  "warunki": {
+    "kwota_pozyczki": {
+      "cyframi": "320 000,00",
+      "slownie": "trzysta dwadzieścia tysięcy złotych 00/100"
+    },
+    "prowizja": {
+      "kwota": {
+        "cyframi": "48 000,00",
+        "slownie": "czterdzieści osiem tysięcy złotych 00/100"
+      },
+      "model": "nie_potracana_raty"
+    },
+    "oprocentowanie": "16,0",
+    "cel": "refinansowanie zadłużenia oraz finansowanie bieżącej działalności transportowej",
+    "harmonogram": {
+      "liczba_rat": 24,
+      "typ": "balonowy",
+      "data_pierwszej_raty": "15.10.2026",
+      "dzien_miesiaca": 15,
+      "kwota_raty": {
+        "cyframi": "6 500,00",
+        "slownie": "sześć tysięcy pięćset złotych 00/100"
+      },
+      "kwota_raty_koncowej": {
+        "cyframi": "310 000,00",
+        "slownie": "trzysta dziesięć tysięcy złotych 00/100"
+      },
+      "raty": []
+    },
+    "rachunki": {
+      "wyplata": "11 1020 0000 0000 1111 2222 3333",
+      "splata": "39 1750 0012 0000 0000 3419 5005"
+    }
+  },
+  "nieruchomosci": [
+    {
+      "id": "N1",
+      "nr_kw": "LU1I/00234567/8",
+      "sad": "Sąd Rejonowy Lublin-Zachód w Lublinie",
+      "opis": "lokal mieszkalny przy ul. Lipowej 8/3 w Lublinie, pow. 62,40 m²",
+      "rodzaj": "lokal",
+      "wlasciciel_ref": "porecziciel",
+      "wlasciciel_dane": null,
+      "wspolwlasnosc": {
+        "rodzaj": "laczna_malzenska",
+        "wspolwlasciciele": [
+          {
+            "imie_nazwisko": "Marek Wiśniewski",
+            "pesel": "78050512345"
+          },
+          {
+            "imie_nazwisko": "Anna Wiśniewska",
+            "pesel": "81070798765"
+          }
+        ]
+      },
+      "obciazenia": [
+        {
+          "dzial": "IV",
+          "rodzaj": "hipoteka_umowna",
+          "opis": "hipoteka umowna do kwoty 180 000,00 zł na rzecz Banku Przykładowego S.A.",
+          "wierzyciel": "Bank Przykładowy S.A.",
+          "kwota": "180 000,00",
+          "sposob_usuniecia": "wykreslenie_ze_srodkow_pozyczki",
+          "uprawniony_do_zrzeczenia": null,
+          "kwota_splaty": {
+            "cyframi": "142 350,00",
+            "slownie": "sto czterdzieści dwa tysiące trzysta pięćdziesiąt złotych 00/100"
+          },
+          "wierzyciel_rachunek": "77 1020 5555 0000 3333 4444 5555"
+        }
+      ],
+      "hipoteka": {
+        "kwota": {
+          "cyframi": "480 000,00",
+          "slownie": "czterysta osiemdziesiąt tysięcy złotych 00/100"
+        },
+        "pierwszenstwo": "oproznione_miejsce",
+        "oproznione_miejsce_po": "hipoteka umowna do kwoty 180 000,00 zł na rzecz Banku Przykładowego S.A."
+      },
+      "zakres": "cala_kw",
+      "dzialki_w_kw": [],
+      "dzialki_do_odlaczenia": []
+    },
+    {
+      "id": "N2",
+      "nr_kw": "LU1I/00998877/1",
+      "sad": "Sąd Rejonowy Lublin-Wschód w Lublinie z siedzibą w Świdniku",
+      "opis": "nieruchomość gruntowa zabudowana budynkiem mieszkalnym, dz. nr 145/2, obręb Kalinówka",
+      "rodzaj": "dom",
+      "wlasciciel_ref": "osoba_trzecia",
+      "wlasciciel_dane": {
+        "typ": "osoba_fizyczna",
+        "imie_nazwisko": "Halina Wiśniewska",
+        "firma": null,
+        "pesel": "45031201234",
+        "nip": null,
+        "regon": null,
+        "dokument_tozsamosci": "dowód osobisty nr CDE112233",
+        "adres": "Kalinówka 145, 21-040 Świdnik",
+        "telefon": null,
+        "email": null,
+        "stan_cywilny": "wdowiec",
+        "ustroj_majatkowy": null
+      },
+      "wspolwlasnosc": null,
+      "obciazenia": [
+        {
+          "dzial": "III",
+          "rodzaj": "dozywocie",
+          "opis": "służebność osobista mieszkania (dożywocie) na rzecz Haliny Wiśniewskiej",
+          "wierzyciel": null,
+          "kwota": null,
+          "sposob_usuniecia": "zrzeczenie_uprawnionego",
+          "uprawniony_do_zrzeczenia": {
+            "imie_nazwisko": "Halina Wiśniewska",
+            "pesel": "45031201234",
+            "adres": "Kalinówka 145, 21-040 Świdnik"
+          },
+          "kwota_splaty": null,
+          "wierzyciel_rachunek": null
+        },
+        {
+          "dzial": "III",
+          "rodzaj": "egzekucja_administracyjna",
+          "opis": "wzmianka o wszczęciu egzekucji administracyjnej przez Naczelnika US w Świdniku",
+          "wierzyciel": "Urząd Skarbowy w Świdniku",
+          "kwota": "12 400,00",
+          "sposob_usuniecia": "wykreslenie_przed_wyplata",
+          "uprawniony_do_zrzeczenia": null,
+          "kwota_splaty": null,
+          "wierzyciel_rachunek": null
+        }
+      ],
+      "hipoteka": {
+        "kwota": {
+          "cyframi": "480 000,00",
+          "slownie": "czterysta osiemdziesiąt tysięcy złotych 00/100"
+        },
+        "pierwszenstwo": "pierwsze",
+        "oproznione_miejsce_po": null
+      },
+      "zakres": "cala_kw",
+      "dzialki_w_kw": [
+        "145/2",
+        "145/3"
+      ],
+      "dzialki_do_odlaczenia": []
+    }
+  ],
+  "zabezpieczenia": {
+    "egzekucja_777": {
+      "kwota": {
+        "cyframi": "480 000,00",
+        "slownie": "czterysta osiemdziesiąt tysięcy złotych 00/100"
+      },
+      "poddaje_sie": [
+        "pozyczkobiorca",
+        "porecziciel",
+        "wlasciciel_osoba_trzecia"
+      ],
+      "data_graniczna": "31.12.2034",
+      "termin_wezwania_dni": 7
+    },
+    "charakter_hipoteki": "laczna"
+  },
+  "oswiadczenia_dodatkowe": []
+}
