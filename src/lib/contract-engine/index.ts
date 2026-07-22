@@ -22,5 +22,14 @@ export type { Dokument, Sekcja, Ustep, Strona } from "./renderer";
 export { formatuj } from "./formatter";
 export { waliduj, walidujReguly, walidujSchemat } from "./validator";
 export type { Problem, Poziom } from "./validator";
+export {
+  walidujHarmonogram,
+  payloadDoRaty,
+  formatujRaty,
+  formatKwotaPL,
+  parseKwota,
+  TOLERANCJA_GROSZOWA,
+} from "./schedule";
+export type { RataLiczbowa, RataSchema } from "./schedule";
 export { umowaSchema } from "./schema";
 export type { UmowaData } from "./schema";
