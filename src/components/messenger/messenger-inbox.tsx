@@ -273,7 +273,7 @@ export function MessengerInbox({ title = "Messenger / Instagram DM", renderLeadL
             size="sm"
             onClick={() => backfillMut.mutate()}
             disabled={backfillMut.isPending}
-            title="Uzupełnia wstecz imiona/nazwiska klientów i dopina stare załączniki do wiadomości"
+            title="Pobiera z Meta brakujące rozmowy (sprzed podłączenia webhooka), uzupełnia imiona/nazwiska klientów i dopina stare załączniki do wiadomości"
           >
             <Wand2 className={`h-4 w-4 mr-2 ${backfillMut.isPending ? "animate-pulse" : ""}`} />
             {backfillMut.isPending ? "Uzupełniam…" : "Uzupełnij historię"}
