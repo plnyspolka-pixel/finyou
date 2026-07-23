@@ -214,6 +214,7 @@ function WniosekDetail() {
                 <CardContent className="text-sm space-y-1">
                   <EditableField label="Adres" value={p.address} table="properties" rowId={p.id} column="address" onSaved={load} />
                   <EditableField label="Miasto" value={p.city} table="properties" rowId={p.id} column="city" onSaved={load} />
+                  <EditableField label="Liczba ludności" value={p.population} table="properties" rowId={p.id} column="population" type="number" display={(v) => v != null && v !== "" ? Number(v).toLocaleString("pl-PL") : "—"} onSaved={load} />
                   <EditableField label="Województwo" value={p.voivodeship} table="properties" rowId={p.id} column="voivodeship" onSaved={load} />
                   <EditableField label="Powierzchnia (m²)" value={p.area_sqm} table="properties" rowId={p.id} column="area_sqm" type="number" display={(v) => v ? `${v} m²` : "—"} onSaved={load} />
                   <EditableField label="Szacowana wartość" value={p.estimated_value} table="properties" rowId={p.id} column="estimated_value" type="number" display={(v) => formatPLN(v as number)} onSaved={load} />
@@ -223,7 +224,7 @@ function WniosekDetail() {
                   <EditableField label="Opis" value={p.description} table="properties" rowId={p.id} column="description" onSaved={load} />
                 </CardContent>
               </Card>
-              <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr={isAdmin} />
+              <KwContentSection applicationId={id} canFetch showKwNumber canImportOcr={isAdmin} onApplied={load} />
             </>
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>

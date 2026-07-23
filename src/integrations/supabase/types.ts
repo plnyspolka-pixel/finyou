@@ -7733,6 +7733,7 @@ export type Database = {
           loan_application_id: string
           mpzp_info: string | null
           photos: string[]
+          population: number | null
           property_type: Database["public"]["Enums"]["property_type"]
           street: string | null
           updated_at: string
@@ -7754,6 +7755,7 @@ export type Database = {
           loan_application_id: string
           mpzp_info?: string | null
           photos?: string[]
+          population?: number | null
           property_type: Database["public"]["Enums"]["property_type"]
           street?: string | null
           updated_at?: string
@@ -7775,6 +7777,7 @@ export type Database = {
           loan_application_id?: string
           mpzp_info?: string | null
           photos?: string[]
+          population?: number | null
           property_type?: Database["public"]["Enums"]["property_type"]
           street?: string | null
           updated_at?: string

@@ -18,6 +18,8 @@ function headers(): HeadersInit {
 const VAR_DWELLING_MEDIAN = "633687";
 const VAR_DWELLING_AVG = "633690";
 const VAR_LAND_AGRI_AVG = "217230";
+// Ludność ogółem wg faktycznego miejsca zamieszkania (stan na 31 XII).
+const VAR_POPULATION_TOTAL = "72305";
 
 // --- Mapowanie znanych miast na BDL unit-id (poziom 6: powiat / miasto na prawach powiatu) ---
 // Klucz: znormalizowana nazwa miasta. Wartość: BDL unitId (12-znakowy kod TERYT-BDL).
@@ -248,6 +250,48 @@ async function fetchValueForUnit(varId: string, unitId: string): Promise<BdlValu
   } catch {
     void url;
     return null;
+  }
+}
+
+export interface PopulationResult {
+  population: number | null;
+  unitName: string | null;
+  unitLevel: BdlLevelLabel | null;
+  year: string | null;
+}
+
+/**
+ * Liczba ludności dla lokalizacji nieruchomości z GUS BDL.
+ * Rozwiązuje jednostkę terytorialną (miasto na prawach powiatu / powiat /
+ * województwo) i odczytuje wskaźnik „ludność ogółem". Miasto na prawach
+ * powiatu daje ludność miasta; mniejsze miejscowości spadają do poziomu
+ * powiatu (przybliżenie). Wynik cache'owany 30 dni. Braki → `population: null`
+ * (UI pokazuje „—"), nigdy nie rzuca.
+ */
+export async function fetchPopulation(args: {
+  city?: string | null;
+  county?: string | null;
+  voivodeship?: string | null;
+}): Promise<PopulationResult> {
+  try {
+    const unit = await resolveBdlUnit(args);
+    // Poziom „Polska" to bezużyteczny fallback dla liczby ludności miejscowości.
+    if (unit.source === "country_fallback") {
+      return { population: null, unitName: unit.unitName, unitLevel: unit.levelLabel, year: null };
+    }
+    const cacheKey = `pop:${unit.unitId}:${VAR_POPULATION_TOTAL}`;
+    return await withCache("gus_bdl_cache", cacheKey, 30, async () => {
+      const point = await fetchValueForUnit(VAR_POPULATION_TOTAL, unit.unitId);
+      const value = point?.value ?? null;
+      return {
+        population: value != null && Number.isFinite(value) ? Math.round(value) : null,
+        unitName: unit.unitName,
+        unitLevel: unit.levelLabel,
+        year: point?.year ?? null,
+      };
+    });
+  } catch {
+    return { population: null, unitName: null, unitLevel: null, year: null };
   }
 }
 
