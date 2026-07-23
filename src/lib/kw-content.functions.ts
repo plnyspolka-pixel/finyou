@@ -8,6 +8,9 @@ import {
   hasCmdConfig,
   normalizeKwNumber,
 } from "@/lib/kw-fetch.server";
+import { parseKwAddress } from "@/lib/kw-address-core";
+import { parseKwPropertyParams, parseMortgages, parseOwners } from "@/lib/risk-assessment/kw-parse-core";
+import { fetchPopulation } from "@/lib/property-analysis/gus-bdl.server";
 
 async function resolveKwForApplication(
   supabase: SupabaseClient,
@@ -84,4 +87,88 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
       throw new Error(out.error ?? "Nie udało się pobrać treści KW.");
     }
     return { ok: true, kwNumber: kw, status: "ready", cached: out.cached };
+  });
+
+const isEmpty = (v: unknown): boolean => v == null || v === "";
+
+/**
+ * Admin/operator only. Uzupełnia dane nieruchomości na podstawie pobranej treści
+ * KW (dział I-O: adres/miejscowość/województwo/powierzchnia; dział II:
+ * współwłaściciele; dział IV: hipoteka) oraz liczbę ludności z GUS BDL.
+ * Pola tekstowe/liczbowe wypełnia tylko, gdy są puste (nie nadpisuje ręcznych
+ * korekt); fakty prawne (hipoteka, współwłaściciele) ustawia wg KW.
+ */
+export const applyKwToProperty = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => z.object({ loanApplicationId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context;
+
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+    const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
+    if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
+
+    // Pierwsza nieruchomość wniosku (ta sama kolejność co przy pobieraniu KW).
+    const { data: property, error: propErr } = await supabase
+      .from("properties")
+      .select("id, address, city, voivodeship, area_sqm, has_mortgage, has_co_owners, population, land_register_number")
+      .eq("loan_application_id", data.loanApplicationId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (propErr) throw new Error(propErr.message);
+    if (!property) return { applied: [] as string[], population: null as number | null };
+
+    const kw = property.land_register_number ? normalizeKwNumber(property.land_register_number) : null;
+    if (!kw) return { applied: [] as string[], population: null as number | null };
+
+    const { data: row, error: kwErr } = await supabase
+      .from("kw_documents")
+      .select("status, dzial_1o, dzial_2, dzial_4")
+      .eq("kw_number", kw)
+      .maybeSingle();
+    if (kwErr) throw new Error(kwErr.message);
+    if (!row || row.status !== "ready") return { applied: [] as string[], population: null as number | null };
+
+    const dzial1o = decodeMaybeBase64(row.dzial_1o);
+    const dzial2 = decodeMaybeBase64(row.dzial_2);
+    const dzial4 = decodeMaybeBase64(row.dzial_4);
+
+    const addr = parseKwAddress(dzial1o);
+    const pp = parseKwPropertyParams(dzial1o);
+    const areaSqm = pp.usableAreaM2 ?? pp.landAreaM2 ?? null;
+
+    const patch: Record<string, unknown> = {};
+    if (isEmpty(property.address) && addr.fullAddress) patch.address = addr.fullAddress;
+    if (isEmpty(property.city) && addr.city) patch.city = addr.city;
+    if (isEmpty(property.voivodeship) && addr.voivodeship) patch.voivodeship = addr.voivodeship;
+    if (isEmpty(property.area_sqm) && areaSqm != null) patch.area_sqm = areaSqm;
+
+    // Fakty prawne z KW — ustawiamy wg zawartości działów (źródło prawdy).
+    if (dzial4 != null) patch.has_mortgage = parseMortgages(dzial4).length > 0;
+    if (dzial2 != null) patch.has_co_owners = parseOwners(dzial2).length > 1;
+
+    // Liczba ludności z GUS BDL — miejscowość z KW ma pierwszeństwo, fallback do zapisanej.
+    let population: number | null = null;
+    if (isEmpty(property.population)) {
+      const cityForPop = addr.city ?? property.city;
+      const voivForPop = addr.voivodeship ?? property.voivodeship;
+      if (cityForPop || voivForPop) {
+        const pop = await fetchPopulation({ city: cityForPop, county: addr.powiat, voivodeship: voivForPop });
+        if (pop.population != null) {
+          population = pop.population;
+          patch.population = pop.population;
+        }
+      }
+    }
+
+    if (Object.keys(patch).length === 0) return { applied: [] as string[], population };
+
+    const { error: upErr } = await supabase
+      .from("properties")
+      .update(patch as never)
+      .eq("id", property.id);
+    if (upErr) throw new Error(upErr.message);
+
+    return { applied: Object.keys(patch), population };
   });

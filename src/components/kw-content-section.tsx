@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BookOpenCheck, RefreshCw, AlertCircle, Loader2, ScanText } from "lucide-react";
 import { toast } from "sonner";
-import { getKwForApplication, fetchKwForApplication } from "@/lib/kw-content.functions";
+import { getKwForApplication, fetchKwForApplication, applyKwToProperty } from "@/lib/kw-content.functions";
 import { ensureKwReady } from "@/lib/kw-ensure";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { KwPasteSlotsDialog } from "@/components/kw-paste-slots";
@@ -52,6 +52,7 @@ export function KwContentSection({
   canFetch,
   showKwNumber = false,
   canImportOcr = false,
+  onApplied,
 }: {
   applicationId: string;
   /** Whether the user can trigger a fetch / refresh (admin only). */
@@ -60,9 +61,12 @@ export function KwContentSection({
   showKwNumber?: boolean;
   /** Whether the user can import KW content from screenshots via OCR (admin only). */
   canImportOcr?: boolean;
+  /** Wywoływane po automatycznym uzupełnieniu danych nieruchomości z KW (odśwież kartę nieruchomości). */
+  onApplied?: () => void;
 }) {
   const getKw = useServerFn(getKwForApplication);
   const doFetch = useServerFn(fetchKwForApplication);
+  const applyKw = useServerFn(applyKwToProperty);
   const [doc, setDoc] = useState<KwDoc>(null);
   const [hasKw, setHasKw] = useState<boolean | null>(null);
   const [kwNumber, setKwNumber] = useState<string | null>(null);
@@ -105,7 +109,19 @@ export function KwContentSection({
         },
       });
       if (res.ok) {
-        toast.success("Treść KW pobrana");
+        // Automatyczne uzupełnienie danych nieruchomości (adres, powierzchnia,
+        // hipoteka, współwłaściciele) i liczby ludności z pobranej treści KW.
+        try {
+          const applied = await applyKw({ data: { loanApplicationId: applicationId } });
+          if (applied?.applied?.length) {
+            toast.success("Treść KW pobrana — uzupełniono dane nieruchomości");
+            onApplied?.();
+          } else {
+            toast.success("Treść KW pobrana");
+          }
+        } catch {
+          toast.success("Treść KW pobrana");
+        }
       } else if (res.status === "not_found") {
         toast.error("Księga wieczysta nie została odnaleziona w EKW");
       } else if (res.status === "timeout") {
@@ -134,7 +150,14 @@ export function KwContentSection({
       open={pasteOpen}
       onOpenChange={setPasteOpen}
       loanApplicationId={applicationId}
-      onImported={() => { setHasKw(true); void reload(); }}
+      onImported={() => {
+        setHasKw(true);
+        void reload();
+        // Uzupełnij dane nieruchomości również po imporcie treści KW z OCR.
+        void applyKw({ data: { loanApplicationId: applicationId } })
+          .then((applied) => { if (applied?.applied?.length) onApplied?.(); })
+          .catch(() => {});
+      }}
     />
   ) : null;
 
