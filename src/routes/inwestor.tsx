@@ -4,6 +4,7 @@ import {
   ListChecks,
   Tag,
   FileSignature,
+  FolderLock,
   GraduationCap,
   Calculator,
   CreditCard,
@@ -24,6 +25,7 @@ const fullGroups: NavGroup[] = [
   {
     items: [
       { to: "/inwestor", label: "Dostępne wnioski", icon: ListChecks, exact: true },
+      { to: "/inwestor/projekty", label: "Projekty", icon: FolderLock },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
@@ -44,6 +46,7 @@ const limitedGroups: NavGroup[] = [
   {
     items: [
       { to: "/inwestor", label: "Dostępne oferty", icon: ListChecks, exact: true },
+      { to: "/inwestor/projekty", label: "Projekty", icon: FolderLock },
       { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
       { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
       { to: "/inwestor/kalkulator", label: "Kalkulator", icon: Calculator },
@@ -59,6 +62,11 @@ const limitedGroups: NavGroup[] = [
 // egzekwowania; server functions i RLS blokują resztę niezależnie).
 const FREE_PATHS = [
   "/inwestor/aml", // moduł AML w całości dostępny od pierwszego wejścia, bez kłódek i planów
+  // Zamknięty moduł projektów ma WŁASNĄ, niezależną bramkę (aplikacja → KYC →
+  // screening → decyzja Finance You). Kursant bez płatnego abonamentu musi
+  // widzieć zablokowaną kartę i „Aplikuj o dostęp" — dane i tak chronią
+  // server functions + RLS (status approved_investor).
+  "/inwestor/projekty",
   "/inwestor/abonament",
   "/inwestor/platnosci",
   "/inwestor/profil",

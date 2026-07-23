@@ -36,6 +36,7 @@ const groups: Group[] = [
     label: "Inwestorzy",
     items: [
       { to: "/admin/inwestorzy", label: "Lista inwestorów", icon: Briefcase },
+      { to: "/admin/projekty", label: "Projekty inwestycyjne", icon: FolderOpen },
       { to: "/admin/oferty", label: "Oferty", icon: Tag },
       { to: "/admin/dystrybucja", label: "Dystrybucja ofert", icon: Send },
       { to: "/admin/szkolenia", label: "Szkolenia", icon: GraduationCap },
