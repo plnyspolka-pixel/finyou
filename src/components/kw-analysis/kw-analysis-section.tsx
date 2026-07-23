@@ -401,14 +401,26 @@ function Metric({ label, value }: { label: string; value: string }) {
 export function KwAnalysisSection({
   defaultKwNumber = "",
   loanApplicationId,
+  defaultPropertyValue,
+  defaultLoanExposure,
 }: {
   defaultKwNumber?: string;
   loanApplicationId?: string;
+  defaultPropertyValue?: number | null;
+  defaultLoanExposure?: number | null;
 }) {
   const run = useServerFn(runKwLandRegisterAnalysis);
   const [kwNumber, setKwNumber] = useState(defaultKwNumber);
-  const [propertyValue, setPropertyValue] = useState("");
-  const [loanExposure, setLoanExposure] = useState("");
+  const [propertyValue, setPropertyValue] = useState(
+    defaultPropertyValue != null && defaultPropertyValue > 0
+      ? String(Math.round(defaultPropertyValue))
+      : "",
+  );
+  const [loanExposure, setLoanExposure] = useState(
+    defaultLoanExposure != null && defaultLoanExposure > 0
+      ? String(Math.round(defaultLoanExposure))
+      : "",
+  );
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<KwAnalysisResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
