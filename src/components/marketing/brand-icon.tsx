@@ -715,7 +715,10 @@ function BrandIcon({
     sphere: `url(#${sphereId})`,
     goldSphere: `url(#${goldSphereId})`
   };
-  return /*#__PURE__*/React.createElement("svg", _extends({
+  // The design-system export references Babel's `_extends` helper without
+  // bundling it — plain object spread is the same semantics without the
+  // production `ReferenceError: _extends is not defined`.
+  return /*#__PURE__*/React.createElement("svg", {
     width: size,
     height: size,
     viewBox: "0 0 24 24",
@@ -727,8 +730,9 @@ function BrandIcon({
       verticalAlign: "middle",
       ...style
     },
-    "aria-hidden": "true"
-  }, rest), /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    "aria-hidden": "true",
+    ...rest
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
     id: navId,
     gradientUnits: "userSpaceOnUse",
     x1: "4",
