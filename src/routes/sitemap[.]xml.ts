@@ -18,9 +18,11 @@ export const Route = createFileRoute("/sitemap.xml")({
         const today = new Date().toISOString().slice(0, 10);
         const entries: SitemapEntry[] = [
           { path: "/", lastmod: today, changefreq: "weekly", priority: "1.0" },
-          { path: "/klient", lastmod: today, changefreq: "weekly", priority: "0.9" },
-          { path: "/inwestor", lastmod: today, changefreq: "weekly", priority: "0.9" },
-          { path: "/posrednik", lastmod: today, changefreq: "weekly", priority: "0.8" },
+          // Publiczne strony marketingowe (ścieżki ról). /klient /inwestor
+          // /posrednik to panele wymagające logowania — nie trafiają do sitemapy.
+          { path: "/dla-klienta", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          { path: "/dla-inwestora", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          { path: "/dla-posrednika", lastmod: today, changefreq: "weekly", priority: "0.8" },
           { path: "/oferty", lastmod: today, changefreq: "daily", priority: "0.9" },
           { path: "/blog", lastmod: today, changefreq: "daily", priority: "0.7" },
           { path: "/logowanie", changefreq: "yearly", priority: "0.3" },

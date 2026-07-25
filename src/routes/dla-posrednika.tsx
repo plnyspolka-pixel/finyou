@@ -205,13 +205,13 @@ function BrokerLanding() {
         <div style={{ marginTop: "2.5rem" }}>
           <PricingCard
             eyebrow="Program Pośrednika Finance You"
-            title="Konto partnera"
-            price="XXX zł"
-            period="/ start"
+            title="Pełny dostęp pośrednika"
+            price="499 zł"
+            period="/ 30 dni"
             cta="Załóż konto partnera"
             href={JOIN}
             features={["CRM + panel partnera", "Szkolenie wdrożeniowe", "Kampanie AI i materiały", "Dostęp do bazy inwestorów", "Wzory dokumentów i procedury", "Transparentny model prowizyjny"]}
-            note="Cena orientacyjna (placeholder). Warunki określa umowa partnerska."
+            note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa partnerska."
           />
         </div>
       </Section>

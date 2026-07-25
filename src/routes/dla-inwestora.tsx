@@ -275,13 +275,13 @@ function InvestorLanding() {
         <div style={{ marginTop: "2.5rem" }}>
           <PricingCard
             eyebrow="Klub Inwestorów Hipotecznych"
-            title="Członkostwo w Klubie"
-            price="od XXX zł"
-            period="/ miesiąc"
+            title="Pełny dostęp inwestora"
+            price="999 zł"
+            period="/ 30 dni"
             cta="Dołącz do Klubu"
             href={JOIN}
             features={["Dostęp do spraw klientów", "Akademia inwestora", "Wzory dokumentów i procedury", "Narzędzia AI + CRM", "Wsparcie compliance", "Dostęp do społeczności"]}
-            note="Cena orientacyjna (placeholder). Materiały mają charakter edukacyjny i informacyjny."
+            note="Ceny brutto. Dostęp roczny: 5 999 zł / 365 dni. Materiały mają charakter edukacyjny i informacyjny."
           />
         </div>
       </Section>
