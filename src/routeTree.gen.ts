@@ -11,6 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
+import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
+import { Route as DlaInwestoraRouteImport } from './routes/dla-inwestora'
+import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
@@ -219,6 +222,21 @@ const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaKlientaRoute = DlaKlientaRouteImport.update({
+  id: '/dla-klienta',
+  path: '/dla-klienta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaInwestoraRoute = DlaInwestoraRouteImport.update({
+  id: '/dla-inwestora',
+  path: '/dla-inwestora',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaPosrednikaRoute = DlaPosrednikaRouteImport.update({
+  id: '/dla-posrednika',
+  path: '/dla-posrednika',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -1287,6 +1305,9 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1485,6 +1506,9 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1684,6 +1708,9 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1889,6 +1916,9 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-roli'
+    | '/dla-klienta'
+    | '/dla-inwestora'
+    | '/dla-posrednika'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -2087,6 +2117,9 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-roli'
+    | '/dla-klienta'
+    | '/dla-inwestora'
+    | '/dla-posrednika'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -2285,6 +2318,9 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-roli'
+    | '/dla-klienta'
+    | '/dla-inwestora'
+    | '/dla-posrednika'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -2489,6 +2525,9 @@ export interface RootRouteChildren {
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WyborRoliRoute: typeof WyborRoliRoute
+  DlaKlientaRoute: typeof DlaKlientaRoute
+  DlaInwestoraRoute: typeof DlaInwestoraRoute
+  DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2563,6 +2602,27 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-klienta': {
+      id: '/dla-klienta'
+      path: '/dla-klienta'
+      fullPath: '/dla-klienta'
+      preLoaderRoute: typeof DlaKlientaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-inwestora': {
+      id: '/dla-inwestora'
+      path: '/dla-inwestora'
+      fullPath: '/dla-inwestora'
+      preLoaderRoute: typeof DlaInwestoraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-posrednika': {
+      id: '/dla-posrednika'
+      path: '/dla-posrednika'
+      fullPath: '/dla-posrednika'
+      preLoaderRoute: typeof DlaPosrednikaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -4359,6 +4419,9 @@ const rootRouteChildren: RootRouteChildren = {
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WyborRoliRoute: WyborRoliRoute,
+  DlaKlientaRoute: DlaKlientaRoute,
+  DlaInwestoraRoute: DlaInwestoraRoute,
+  DlaPosrednikaRoute: DlaPosrednikaRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
