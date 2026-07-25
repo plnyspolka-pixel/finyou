@@ -138,8 +138,21 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
       return { docxPath: null, signedUrl: null, problemy, blocked: true };
     }
 
-    const doc = renderuj(umowa);
-    const bytes = await buildUmowaDocx(doc, harmonogramZUmowy(umowa));
+    // Render może rzucić BladPola dla pola szablonu, które przechodzi schemat
+    // (np. brak wartości podstawianej w klauzuli) — traktujemy to jak brak
+    // blokujący, nie jak błąd 500.
+    let bytes: Uint8Array;
+    try {
+      const doc = renderuj(umowa);
+      bytes = await buildUmowaDocx(doc, harmonogramZUmowy(umowa));
+    } catch (e: any) {
+      problemy.push({
+        poziom: "BLAD",
+        sciezka: "render",
+        komunikat: `Nie udało się złożyć dokumentu: ${e?.message ?? e}`,
+      });
+      return { docxPath: null, signedUrl: null, problemy, blocked: true };
+    }
 
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     const nazwa = (umowa.meta?.numer_umowy || "umowa-pozyczki").replace(/[^\p{L}\p{N}._-]+/gu, "_").slice(0, 60);
