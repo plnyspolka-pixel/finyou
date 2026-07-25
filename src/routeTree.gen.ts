@@ -11,9 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
-import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
-import { Route as DlaInwestoraRouteImport } from './routes/dla-inwestora'
-import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
@@ -28,6 +25,9 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as KlientRouteImport } from './routes/klient'
 import { Route as InwestorRouteImport } from './routes/inwestor'
+import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
+import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
+import { Route as DlaInwestoraRouteImport } from './routes/dla-inwestora'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -88,7 +88,6 @@ import { Route as EmbedBlogRouteImport } from './routes/embed.blog'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
-import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
@@ -98,6 +97,7 @@ import { Route as AdminSkrzynkaRouteImport } from './routes/admin.skrzynka'
 import { Route as AdminRoleRouteImport } from './routes/admin.role'
 import { Route as AdminPrzypomnieniaRouteImport } from './routes/admin.przypomnienia'
 import { Route as AdminProjektyRouteImport } from './routes/admin.projekty'
+import { Route as AdminPotencjalLokalizacyjnyRouteImport } from './routes/admin.potencjal-lokalizacyjny'
 import { Route as AdminPlatnosciDostepRouteImport } from './routes/admin.platnosci-dostep'
 import { Route as AdminPixeleRouteImport } from './routes/admin.pixele'
 import { Route as AdminOperatorzyRouteImport } from './routes/admin.operatorzy'
@@ -106,6 +106,7 @@ import { Route as AdminMetaRouteImport } from './routes/admin.meta'
 import { Route as AdminMessengerRouteImport } from './routes/admin.messenger'
 import { Route as AdminMaterialyRouteImport } from './routes/admin.materialy'
 import { Route as AdminMailingRouteImport } from './routes/admin.mailing'
+import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminKreatorPozyczkiRouteImport } from './routes/admin.kreator-pozyczki'
 import { Route as AdminKreatorDokumentowRouteImport } from './routes/admin.kreator-dokumentow'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
@@ -224,21 +225,6 @@ const WyborRoliRoute = WyborRoliRouteImport.update({
   path: '/wybor-roli',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DlaKlientaRoute = DlaKlientaRouteImport.update({
-  id: '/dla-klienta',
-  path: '/dla-klienta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DlaInwestoraRoute = DlaInwestoraRouteImport.update({
-  id: '/dla-inwestora',
-  path: '/dla-inwestora',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DlaPosrednikaRoute = DlaPosrednikaRouteImport.update({
-  id: '/dla-posrednika',
-  path: '/dla-posrednika',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -307,6 +293,21 @@ const KlientRoute = KlientRouteImport.update({
 const InwestorRoute = InwestorRouteImport.update({
   id: '/inwestor',
   path: '/inwestor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaPosrednikaRoute = DlaPosrednikaRouteImport.update({
+  id: '/dla-posrednika',
+  path: '/dla-posrednika',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaKlientaRoute = DlaKlientaRouteImport.update({
+  id: '/dla-klienta',
+  path: '/dla-klienta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DlaInwestoraRoute = DlaInwestoraRouteImport.update({
+  id: '/dla-inwestora',
+  path: '/dla-inwestora',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectRoute = ConnectRouteImport.update({
@@ -611,11 +612,6 @@ const AdminZgodyRoute = AdminZgodyRouteImport.update({
   path: '/zgody',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminKwRoute = AdminKwRouteImport.update({
-  id: '/kw',
-  path: '/kw',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminWnioskiNiekompletneRoute =
   AdminWnioskiNiekompletneRouteImport.update({
     id: '/wnioski-niekompletne',
@@ -662,6 +658,12 @@ const AdminProjektyRoute = AdminProjektyRouteImport.update({
   path: '/projekty',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPotencjalLokalizacyjnyRoute =
+  AdminPotencjalLokalizacyjnyRouteImport.update({
+    id: '/potencjal-lokalizacyjny',
+    path: '/potencjal-lokalizacyjny',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminPlatnosciDostepRoute = AdminPlatnosciDostepRouteImport.update({
   id: '/platnosci-dostep',
   path: '/platnosci-dostep',
@@ -700,6 +702,11 @@ const AdminMaterialyRoute = AdminMaterialyRouteImport.update({
 const AdminMailingRoute = AdminMailingRouteImport.update({
   id: '/mailing',
   path: '/mailing',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKwRoute = AdminKwRouteImport.update({
+  id: '/kw',
+  path: '/kw',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminKreatorPozyczkiRoute = AdminKreatorPozyczkiRouteImport.update({
@@ -1290,6 +1297,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1305,9 +1315,6 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-roli': typeof WyborRoliRoute
-  '/dla-klienta': typeof DlaKlientaRoute
-  '/dla-inwestora': typeof DlaInwestoraRoute
-  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1329,6 +1336,7 @@ export interface FileRoutesByFullPath {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
@@ -1337,6 +1345,7 @@ export interface FileRoutesByFullPath {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1347,7 +1356,6 @@ export interface FileRoutesByFullPath {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
-  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1495,6 +1503,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
@@ -1506,9 +1517,6 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-roli': typeof WyborRoliRoute
-  '/dla-klienta': typeof DlaKlientaRoute
-  '/dla-inwestora': typeof DlaInwestoraRoute
-  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1530,6 +1538,7 @@ export interface FileRoutesByTo {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
@@ -1538,6 +1547,7 @@ export interface FileRoutesByTo {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1548,7 +1558,6 @@ export interface FileRoutesByTo {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
-  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1693,6 +1702,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
+  '/dla-inwestora': typeof DlaInwestoraRoute
+  '/dla-klienta': typeof DlaKlientaRoute
+  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/klient': typeof KlientRouteWithChildren
   '/logowanie': typeof LogowanieRoute
@@ -1708,9 +1720,6 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-roli': typeof WyborRoliRoute
-  '/dla-klienta': typeof DlaKlientaRoute
-  '/dla-inwestora': typeof DlaInwestoraRoute
-  '/dla-posrednika': typeof DlaPosrednikaRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1732,6 +1741,7 @@ export interface FileRoutesById {
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/kreator-dokumentow': typeof AdminKreatorDokumentowRoute
   '/admin/kreator-pozyczki': typeof AdminKreatorPozyczkiRoute
+  '/admin/kw': typeof AdminKwRoute
   '/admin/mailing': typeof AdminMailingRoute
   '/admin/materialy': typeof AdminMaterialyRoute
   '/admin/messenger': typeof AdminMessengerRoute
@@ -1740,6 +1750,7 @@ export interface FileRoutesById {
   '/admin/operatorzy': typeof AdminOperatorzyRoute
   '/admin/pixele': typeof AdminPixeleRoute
   '/admin/platnosci-dostep': typeof AdminPlatnosciDostepRoute
+  '/admin/potencjal-lokalizacyjny': typeof AdminPotencjalLokalizacyjnyRoute
   '/admin/projekty': typeof AdminProjektyRoute
   '/admin/przypomnienia': typeof AdminPrzypomnieniaRoute
   '/admin/role': typeof AdminRoleRoute
@@ -1750,7 +1761,6 @@ export interface FileRoutesById {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
-  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1901,6 +1911,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/connect'
+    | '/dla-inwestora'
+    | '/dla-klienta'
+    | '/dla-posrednika'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -1916,9 +1929,6 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-roli'
-    | '/dla-klienta'
-    | '/dla-inwestora'
-    | '/dla-posrednika'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1940,6 +1950,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
@@ -1948,6 +1959,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/potencjal-lokalizacyjny'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -1958,7 +1970,6 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
-    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2106,6 +2117,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/connect'
+    | '/dla-inwestora'
+    | '/dla-klienta'
+    | '/dla-posrednika'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
@@ -2117,9 +2131,6 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-roli'
-    | '/dla-klienta'
-    | '/dla-inwestora'
-    | '/dla-posrednika'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -2141,6 +2152,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
@@ -2149,6 +2161,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/potencjal-lokalizacyjny'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2159,7 +2172,6 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
-    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2303,6 +2315,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/connect'
+    | '/dla-inwestora'
+    | '/dla-klienta'
+    | '/dla-posrednika'
     | '/inwestor'
     | '/klient'
     | '/logowanie'
@@ -2318,9 +2333,6 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/wybor-roli'
-    | '/dla-klienta'
-    | '/dla-inwestora'
-    | '/dla-posrednika'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -2342,6 +2354,7 @@ export interface FileRouteTypes {
     | '/admin/klienci'
     | '/admin/kreator-dokumentow'
     | '/admin/kreator-pozyczki'
+    | '/admin/kw'
     | '/admin/mailing'
     | '/admin/materialy'
     | '/admin/messenger'
@@ -2350,6 +2363,7 @@ export interface FileRouteTypes {
     | '/admin/operatorzy'
     | '/admin/pixele'
     | '/admin/platnosci-dostep'
+    | '/admin/potencjal-lokalizacyjny'
     | '/admin/projekty'
     | '/admin/przypomnienia'
     | '/admin/role'
@@ -2360,7 +2374,6 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
-    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2510,6 +2523,9 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConnectRoute: typeof ConnectRoute
+  DlaInwestoraRoute: typeof DlaInwestoraRoute
+  DlaKlientaRoute: typeof DlaKlientaRoute
+  DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   InwestorRoute: typeof InwestorRouteWithChildren
   KlientRoute: typeof KlientRouteWithChildren
   LogowanieRoute: typeof LogowanieRoute
@@ -2525,9 +2541,6 @@ export interface RootRouteChildren {
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WyborRoliRoute: typeof WyborRoliRoute
-  DlaKlientaRoute: typeof DlaKlientaRoute
-  DlaInwestoraRoute: typeof DlaInwestoraRoute
-  DlaPosrednikaRoute: typeof DlaPosrednikaRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2602,27 +2615,6 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dla-klienta': {
-      id: '/dla-klienta'
-      path: '/dla-klienta'
-      fullPath: '/dla-klienta'
-      preLoaderRoute: typeof DlaKlientaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dla-inwestora': {
-      id: '/dla-inwestora'
-      path: '/dla-inwestora'
-      fullPath: '/dla-inwestora'
-      preLoaderRoute: typeof DlaInwestoraRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dla-posrednika': {
-      id: '/dla-posrednika'
-      path: '/dla-posrednika'
-      fullPath: '/dla-posrednika'
-      preLoaderRoute: typeof DlaPosrednikaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -2721,6 +2713,27 @@ declare module '@tanstack/react-router' {
       path: '/inwestor'
       fullPath: '/inwestor'
       preLoaderRoute: typeof InwestorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-posrednika': {
+      id: '/dla-posrednika'
+      path: '/dla-posrednika'
+      fullPath: '/dla-posrednika'
+      preLoaderRoute: typeof DlaPosrednikaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-klienta': {
+      id: '/dla-klienta'
+      path: '/dla-klienta'
+      fullPath: '/dla-klienta'
+      preLoaderRoute: typeof DlaKlientaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dla-inwestora': {
+      id: '/dla-inwestora'
+      path: '/dla-inwestora'
+      fullPath: '/dla-inwestora'
+      preLoaderRoute: typeof DlaInwestoraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connect': {
@@ -3136,13 +3149,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/kw': {
-      id: '/admin/kw'
-      path: '/kw'
-      fullPath: '/admin/kw'
-      preLoaderRoute: typeof AdminKwRouteImport
-      parentRoute: typeof AdminRouteImport
-    }
     '/admin/zgody': {
       id: '/admin/zgody'
       path: '/zgody'
@@ -3213,6 +3219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProjektyRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/potencjal-lokalizacyjny': {
+      id: '/admin/potencjal-lokalizacyjny'
+      path: '/potencjal-lokalizacyjny'
+      fullPath: '/admin/potencjal-lokalizacyjny'
+      preLoaderRoute: typeof AdminPotencjalLokalizacyjnyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/platnosci-dostep': {
       id: '/admin/platnosci-dostep'
       path: '/platnosci-dostep'
@@ -3267,6 +3280,13 @@ declare module '@tanstack/react-router' {
       path: '/mailing'
       fullPath: '/admin/mailing'
       preLoaderRoute: typeof AdminMailingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/kw': {
+      id: '/admin/kw'
+      path: '/kw'
+      fullPath: '/admin/kw'
+      preLoaderRoute: typeof AdminKwRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/kreator-pozyczki': {
@@ -4064,6 +4084,7 @@ interface AdminRouteChildren {
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKreatorDokumentowRoute: typeof AdminKreatorDokumentowRoute
   AdminKreatorPozyczkiRoute: typeof AdminKreatorPozyczkiRoute
+  AdminKwRoute: typeof AdminKwRoute
   AdminMailingRoute: typeof AdminMailingRoute
   AdminMaterialyRoute: typeof AdminMaterialyRoute
   AdminMessengerRoute: typeof AdminMessengerRoute
@@ -4072,6 +4093,7 @@ interface AdminRouteChildren {
   AdminOperatorzyRoute: typeof AdminOperatorzyRoute
   AdminPixeleRoute: typeof AdminPixeleRoute
   AdminPlatnosciDostepRoute: typeof AdminPlatnosciDostepRoute
+  AdminPotencjalLokalizacyjnyRoute: typeof AdminPotencjalLokalizacyjnyRoute
   AdminProjektyRoute: typeof AdminProjektyRoute
   AdminPrzypomnieniaRoute: typeof AdminPrzypomnieniaRoute
   AdminRoleRoute: typeof AdminRoleRoute
@@ -4082,7 +4104,6 @@ interface AdminRouteChildren {
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
-  AdminKwRoute: typeof AdminKwRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
@@ -4125,6 +4146,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKreatorDokumentowRoute: AdminKreatorDokumentowRoute,
   AdminKreatorPozyczkiRoute: AdminKreatorPozyczkiRoute,
+  AdminKwRoute: AdminKwRoute,
   AdminMailingRoute: AdminMailingRoute,
   AdminMaterialyRoute: AdminMaterialyRoute,
   AdminMessengerRoute: AdminMessengerRoute,
@@ -4133,6 +4155,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOperatorzyRoute: AdminOperatorzyRoute,
   AdminPixeleRoute: AdminPixeleRoute,
   AdminPlatnosciDostepRoute: AdminPlatnosciDostepRoute,
+  AdminPotencjalLokalizacyjnyRoute: AdminPotencjalLokalizacyjnyRoute,
   AdminProjektyRoute: AdminProjektyRoute,
   AdminPrzypomnieniaRoute: AdminPrzypomnieniaRoute,
   AdminRoleRoute: AdminRoleRoute,
@@ -4143,7 +4166,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
   AdminZgodyRoute: AdminZgodyRoute,
-  AdminKwRoute: AdminKwRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
@@ -4404,6 +4426,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   ConnectRoute: ConnectRoute,
+  DlaInwestoraRoute: DlaInwestoraRoute,
+  DlaKlientaRoute: DlaKlientaRoute,
+  DlaPosrednikaRoute: DlaPosrednikaRoute,
   InwestorRoute: InwestorRouteWithChildren,
   KlientRoute: KlientRouteWithChildren,
   LogowanieRoute: LogowanieRoute,
@@ -4419,9 +4444,6 @@ const rootRouteChildren: RootRouteChildren = {
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WyborRoliRoute: WyborRoliRoute,
-  DlaKlientaRoute: DlaKlientaRoute,
-  DlaInwestoraRoute: DlaInwestoraRoute,
-  DlaPosrednikaRoute: DlaPosrednikaRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -4491,13 +4513,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

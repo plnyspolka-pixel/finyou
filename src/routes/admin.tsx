@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon, Network, Coins, Share2, Wallet, Building2 } from "lucide-react";
+import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon, Network, Coins, Share2, Wallet, Building2, MapPinned } from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -25,6 +25,7 @@ const groups: Group[] = [
       { to: "/admin/messenger", label: "Messenger / Instagram DM", icon: Mail },
       { to: "/admin/wnioski-niekompletne", label: "Wnioski (wszystkie)", icon: FileText },
       { to: "/admin/kw", label: "Księgi wieczyste", icon: BookOpen },
+      { to: "/admin/potencjal-lokalizacyjny", label: "Potencjał lokalizacyjny", icon: MapPinned },
       { to: "/admin/kreator-pozyczki", label: "Kreator pożyczki", icon: Wand2 },
       { to: "/admin/kreator-dokumentow", label: "Kreator dokumentów B2B", icon: FileSignature },
       { to: "/admin/voicebot", label: "Voicebot", icon: Mic },

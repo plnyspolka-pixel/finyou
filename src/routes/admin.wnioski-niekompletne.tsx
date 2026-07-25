@@ -39,6 +39,9 @@ type Row = {
   source: string | null;
   return_link: string | null;
   missing_fields: any;
+  location_potential_score: number | null;
+  location_confidence_score: number | null;
+  location_analysis_priority: string | null;
   client: { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; source?: string | null } | null;
   properties: Property[] | null;
   docCount?: number;
@@ -73,7 +76,7 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleString("pl-PL", { dateStyle: "short", timeStyle: "short" });
 }
 
-type SortKey = "updated_at" | "created_at" | "loan_amount" | "name" | "status" | "media" | "kw";
+type SortKey = "updated_at" | "created_at" | "loan_amount" | "name" | "status" | "media" | "kw" | "location";
 type SortDir = "asc" | "desc";
 type TabKey = "all" | "incomplete" | "complete" | "attention";
 
@@ -134,6 +137,50 @@ function SortHeader({ label, k, sort, setSort, className }: { label: string; k: 
   );
 }
 
+const LOC_PRIORITY_META: Record<string, { label: string; cls: string }> = {
+  AUTO_ANALYZE_HIGH: { label: "wysoki", cls: "border-emerald-400 text-emerald-700" },
+  AUTO_ANALYZE_STANDARD: { label: "standard", cls: "border-lime-400 text-lime-700" },
+  LIGHT_LOCATION_CHECK: { label: "lekki", cls: "border-amber-300 text-amber-700" },
+  LOW_PRIORITY: { label: "niski", cls: "text-muted-foreground" },
+  INVALID_KW: { label: "błąd KW", cls: "text-muted-foreground" },
+  INSUFFICIENT_DATA: { label: "brak danych", cls: "text-muted-foreground" },
+};
+
+function LocationCell({
+  score,
+  confidence,
+  priority,
+}: {
+  score: number | null;
+  confidence: number | null;
+  priority: string | null;
+}) {
+  if (score == null && !priority) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const meta = priority ? LOC_PRIORITY_META[priority] : null;
+  const lowConf = confidence != null && confidence < 50;
+  const scoreCls =
+    score == null ? "" : score >= 75 ? "text-emerald-600" : score >= 60 ? "text-lime-600" : score >= 40 ? "text-amber-600" : "text-muted-foreground";
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1">
+        <span className={`font-semibold tabular-nums ${scoreCls}`}>{score ?? "—"}</span>
+        {lowConf && (
+          <span title={`Niska pewność (${confidence}%)`} className="text-amber-500">
+            <AlertTriangle className="h-3 w-3" />
+          </span>
+        )}
+      </div>
+      {meta && (
+        <Badge variant="outline" className={`text-[10px] px-1 py-0 font-normal w-fit ${meta.cls}`}>
+          {meta.label}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 function ApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [ctx, setCtx] = useState<EnrichmentContext>(() => ({
@@ -148,13 +195,14 @@ function ApplicationsPage() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "updated_at", dir: "desc" });
+  const [locFilter, setLocFilter] = useState<"all" | "high" | "standard" | "low_conf">("all");
   const [preview, setPreview] = useState<{ id: string; paths: string[]; name: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("loan_applications")
-      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,merged_into_id,archived_at,assigned_operator,client:clients(id,first_name,last_name,email,phone,source),properties(id,land_register_number,photos)")
+      .select("id,status,loan_amount,completeness_percent,current_form_step,created_at,updated_at,source,return_link,missing_fields,location_potential_score,location_confidence_score,location_analysis_priority,merged_into_id,archived_at,assigned_operator,client:clients(id,first_name,last_name,email,phone,source),properties(id,land_register_number,photos)")
       .is("merged_into_id", null)
       .is("archived_at", null)
       .neq("status", "archiwalny")
@@ -338,7 +386,19 @@ function ApplicationsPage() {
       return classify(r) === tab;
     });
 
-    const out = byTab.filter((r) => {
+    const byLoc = byTab.filter((r) => {
+      if (locFilter === "all") return true;
+      if (locFilter === "high") return r.location_analysis_priority === "AUTO_ANALYZE_HIGH";
+      if (locFilter === "standard")
+        return (
+          r.location_analysis_priority === "AUTO_ANALYZE_HIGH" ||
+          r.location_analysis_priority === "AUTO_ANALYZE_STANDARD"
+        );
+      // low_conf: wynik jest, ale pewność < 50.
+      return r.location_confidence_score != null && r.location_confidence_score < 50;
+    });
+
+    const out = byLoc.filter((r) => {
       if (!q.trim()) return true;
       const s = q.toLowerCase();
       const c = r.client;
@@ -357,6 +417,7 @@ function ApplicationsPage() {
         case "loan_amount": return r.loan_amount ?? -1;
         case "media": return (r.properties ?? []).reduce((s, p) => s + (Array.isArray(p.photos) ? p.photos.length : 0), 0) + (r.docCount ?? 0);
         case "kw": return (r.properties ?? []).filter((p) => !!p.land_register_number).length;
+        case "location": return r.location_potential_score ?? -1;
         case "created_at": return new Date(r.created_at).getTime();
         case "updated_at":
         default: return new Date(r.updated_at).getTime();
@@ -369,7 +430,7 @@ function ApplicationsPage() {
       return 0;
     });
     return out;
-  }, [applications, q, sort, tab]);
+  }, [applications, q, sort, tab, locFilter]);
 
   return (
     <div className="space-y-4">
@@ -410,12 +471,25 @@ function ApplicationsPage() {
               </Button>
             )}
           </div>
-          <Input
-            placeholder="Szukaj: imię, nazwisko, e-mail, telefon, ID…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="max-w-xs"
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              aria-label="Filtr potencjału lokalizacyjnego"
+              value={locFilter}
+              onChange={(e) => setLocFilter(e.target.value as typeof locFilter)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="all">Lokalizacja: wszystkie</option>
+              <option value="high">Wysoki priorytet</option>
+              <option value="standard">Wysoki + standard</option>
+              <option value="low_conf">Niska pewność</option>
+            </select>
+            <Input
+              placeholder="Szukaj: imię, nazwisko, e-mail, telefon, ID…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table className="w-full table-fixed text-sm [&_th]:text-xs">
@@ -426,18 +500,19 @@ function ApplicationsPage() {
                 <SortHeader label="Status" k="status" sort={sort} setSort={setSort} className="w-[10%]" />
                 <TableHead className="w-[13%]">Braki</TableHead>
                 <SortHeader label="Kwota" k="loan_amount" sort={sort} setSort={setSort} className="text-right w-[9%]" />
-                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[13%]" />
-                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[9%]" />
+                <SortHeader label="KW" k="kw" sort={sort} setSort={setSort} className="w-[11%]" />
+                <SortHeader label="Lokalizacja" k="location" sort={sort} setSort={setSort} className="w-[11%]" />
+                <SortHeader label="Pliki" k="media" sort={sort} setSort={setSort} className="w-[8%]" />
                 <SortHeader label="Aktualizacja" k="updated_at" sort={sort} setSort={setSort} className="w-[8%]" />
                 <TableHead className="text-right w-[6%]">Akcje</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Ładowanie…</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Brak wniosków.</TableCell></TableRow>
               )}
               {filtered.map((r) => {
                 const name = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "—";
@@ -519,6 +594,13 @@ function ApplicationsPage() {
                           })}
                         </div>
                       )}
+                    </TableCell>
+                    <TableCell className="text-xs align-top">
+                      <LocationCell
+                        score={r.location_potential_score}
+                        confidence={r.location_confidence_score}
+                        priority={r.location_analysis_priority}
+                      />
                     </TableCell>
                     <TableCell className="align-top">
                       <div className="flex items-center gap-1">
