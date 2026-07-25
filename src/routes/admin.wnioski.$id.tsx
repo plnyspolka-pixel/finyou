@@ -19,6 +19,7 @@ import { leadSourceLabel } from "@/lib/lead-source";
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
+import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
@@ -165,7 +166,7 @@ function WniosekDetail() {
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
-          
+          <TabsTrigger value="analiza-kw">Analiza KW</TabsTrigger>
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length + comms.length})</TabsTrigger>
@@ -228,8 +229,14 @@ function WniosekDetail() {
           ) : <p className="text-sm text-muted-foreground">Brak danych o nieruchomości.</p>}
         </TabsContent>
 
-
-
+        <TabsContent value="analiza-kw" className="space-y-4">
+          <KwAnalysisSection
+            loanApplicationId={id}
+            defaultKwNumber={p?.land_register_number ?? ""}
+            defaultPropertyValue={p?.estimated_value ?? null}
+            defaultLoanExposure={app.loan_amount ?? null}
+          />
+        </TabsContent>
 
 
         <TabsContent value="ryzyko" className="space-y-4">

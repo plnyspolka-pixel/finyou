@@ -85,6 +85,7 @@ import { Route as EmbedBlogRouteImport } from './routes/embed.blog'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email.unsubscribe'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AdminZgodyRouteImport } from './routes/admin.zgody'
+import { Route as AdminKwRouteImport } from './routes/admin.kw'
 import { Route as AdminWnioskiNiekompletneRouteImport } from './routes/admin.wnioski-niekompletne'
 import { Route as AdminVoicebotRouteImport } from './routes/admin.voicebot'
 import { Route as AdminUstawieniaRouteImport } from './routes/admin.ustawienia'
@@ -590,6 +591,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
 const AdminZgodyRoute = AdminZgodyRouteImport.update({
   id: '/zgody',
   path: '/zgody',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKwRoute = AdminKwRouteImport.update({
+  id: '/kw',
+  path: '/kw',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminWnioskiNiekompletneRoute =
@@ -1320,6 +1326,7 @@ export interface FileRoutesByFullPath {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
+  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1517,6 +1524,7 @@ export interface FileRoutesByTo {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
+  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1715,6 +1723,7 @@ export interface FileRoutesById {
   '/admin/voicebot': typeof AdminVoicebotRoute
   '/admin/wnioski-niekompletne': typeof AdminWnioskiNiekompletneRoute
   '/admin/zgody': typeof AdminZgodyRoute
+  '/admin/kw': typeof AdminKwRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/embed/blog': typeof EmbedBlogRoute
@@ -1919,6 +1928,7 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
+    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2116,6 +2126,7 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
+    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -2313,6 +2324,7 @@ export interface FileRouteTypes {
     | '/admin/voicebot'
     | '/admin/wnioski-niekompletne'
     | '/admin/zgody'
+    | '/admin/kw'
     | '/blog/$slug'
     | '/email/unsubscribe'
     | '/embed/blog'
@@ -3063,6 +3075,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/kw': {
+      id: '/admin/kw'
+      path: '/kw'
+      fullPath: '/admin/kw'
+      preLoaderRoute: typeof AdminKwRouteImport
+      parentRoute: typeof AdminRouteImport
     }
     '/admin/zgody': {
       id: '/admin/zgody'
@@ -4003,6 +4022,7 @@ interface AdminRouteChildren {
   AdminVoicebotRoute: typeof AdminVoicebotRoute
   AdminWnioskiNiekompletneRoute: typeof AdminWnioskiNiekompletneRoute
   AdminZgodyRoute: typeof AdminZgodyRoute
+  AdminKwRoute: typeof AdminKwRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminFbAdsKreatorRoute: typeof AdminFbAdsKreatorRoute
   AdminGoogleAdsKreatorRoute: typeof AdminGoogleAdsKreatorRoute
@@ -4063,6 +4083,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminVoicebotRoute: AdminVoicebotRoute,
   AdminWnioskiNiekompletneRoute: AdminWnioskiNiekompletneRoute,
   AdminZgodyRoute: AdminZgodyRoute,
+  AdminKwRoute: AdminKwRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminFbAdsKreatorRoute: AdminFbAdsKreatorRoute,
   AdminGoogleAdsKreatorRoute: AdminGoogleAdsKreatorRoute,
