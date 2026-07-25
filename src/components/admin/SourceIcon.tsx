@@ -16,6 +16,7 @@ import { normalizeLeadSource, leadSourceLabel } from "@/lib/lead-source";
 
 const ICONS: Record<string, { Icon: LucideIcon; cls: string }> = {
   messenger: { Icon: MessageCircle, cls: "text-sky-600" },
+  chat: { Icon: MessageCircle, cls: "text-teal-600" },
   meta_lead: { Icon: Facebook, cls: "text-blue-600" },
   email_inbound: { Icon: Mail, cls: "text-amber-600" },
   landing_wizard: { Icon: ClipboardList, cls: "text-emerald-600" },

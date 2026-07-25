@@ -42,7 +42,7 @@ export type LogCommArgs = {
   metaLeadId?: string | null;
   phoneNormalized?: string | null;
   email?: string | null;
-  channel: "voicebot_call" | "sms" | "email" | "messenger" | "manual_note" | "whatsapp";
+  channel: "voicebot_call" | "sms" | "email" | "messenger" | "manual_note" | "whatsapp" | "chat";
   direction?: "inbound" | "outbound";
   status?: string | null;
   subject?: string | null;

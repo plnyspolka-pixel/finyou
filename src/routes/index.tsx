@@ -5,6 +5,7 @@ import { Phone, Menu, X } from "lucide-react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { useAuth, defaultPathForRoles } from "@/hooks/use-auth";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
+import { ChatWidget } from "@/components/landing/chat-widget";
 
 
 
@@ -166,6 +167,9 @@ function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Czat z asystentem — kanał komunikacji przychodzącej "chat" */}
+      <ChatWidget source="landing" />
     </div>
   );
 }

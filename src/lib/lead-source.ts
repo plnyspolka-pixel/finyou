@@ -11,6 +11,7 @@
 const SOURCE_LABELS: Record<string, string> = {
   meta_lead: "Facebook Lead Ads",
   messenger: "Messenger",
+  chat: "Czat WWW",
   email_inbound: "E-mail",
   landing_wizard: "Formularz — kreator",
   landing_single_page: "Formularz — landing",
