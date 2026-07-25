@@ -270,6 +270,42 @@ describe("LTV/CLTV nie należy do modułu prawnego", () => {
   });
 });
 
+describe("Format EKW: współwłaściciele + wzmianka o hipotece przymusowej", () => {
+  // Układ „widoku aktualnego" EKW: etykiety w nawiasie + wartości po przecinku.
+  const EKW_D2 =
+    "DZIAŁ II - WŁASNOŚĆ Właściciele Lp. 1. Lista wskazań udziałów w prawie (numer udziału w prawie/ wielkość udziału/rodzaj wspólności) Lp. 1. 1 1 /2 Osoba fizyczna (Imię pierwsze nazwisko, imię ojca, imię matki, PESEL) JAN KOWALSKI , STANISŁAW, JANINA, 44051401359 Lp. 2. Lista wskazań udziałów Lp. 1. 3 1 /2 Osoba fizyczna (Imię pierwsze imię drugie nazwisko, imię ojca, imię matki, PESEL) ANNA MARIA NOWAK , EDWARD, KAZIMIERA, 86050212343 DOKUMENTY BĘDĄCE PODSTAWĄ WPISU";
+  const EKW_D4 =
+    "DZIAŁ IV - HIPOTEKA Wzmianki (numer wzmianki, chwila zamieszczenia, opis wzmianki) 1. DZ. KW. / WA1M / 36524 / 26 / 1 - 2026-07-03, 11:58:00 - WPIS HIPOTEKI PRZYMUSOWEJ BRAK WPISÓW";
+
+  it("wykrywa 2 współwłaścicieli, wzmianka o hipotece bez fałszywej hipoteki łącznej", () => {
+    const s = sections(baseExtraction(), { dzial_2: EKW_D2, dzial_4: EKW_D4 });
+    const res = runKwAnalysis(baseInput({ declaredCollateralProviders: [] }), s);
+    // Obaj właściciele rozpoznani.
+    expect(res.computedFrom.ownersCount).toBe(2);
+    // Współwłasność bez zadeklarowanych stron ⇒ warunkowo (nie STOP).
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("WARUNKOWO_DOPUSZCZALNE");
+    // Wzmianka o wpisie hipoteki ⇒ WSTRZYMANE z żądaniem dokładnej kwoty.
+    const mention = res.findings.find((f) => f.ruleId === "R-MENTIONS");
+    expect(mention?.status).toBe("WSTRZYMANE");
+    expect(mention?.title).toContain("hipoteki");
+    // Brak fałszywej „hipoteki łącznej" ani wpisanej hipoteki (BRAK WPISÓW).
+    expect(res.computedFrom.mortgagesCount).toBe(0);
+    expect(res.findings.some((f) => f.title.includes("łączna"))).toBe(false);
+  });
+
+  it("STOP tylko gdy konkretny współwłaściciel jest wykluczony z zabezpieczenia", () => {
+    const s = sections(baseExtraction(), { dzial_2: EKW_D2, dzial_4: EKW_D4 });
+    // Zadeklarowano tylko jednego współwłaściciela (drugi znany, ale poza zabezpieczeniem).
+    const res = runKwAnalysis(
+      baseInput({
+        declaredCollateralProviders: [party("COLLATERAL_PROVIDER", { pesel: PESEL_A })],
+      }),
+      s,
+    );
+    expect(statusesOf(res.findings, "R-COOWNERS")).toContain("STOP");
+  });
+});
+
 describe("Scenariusz 10 — wpis egzekucji / zajęcia (Dział III)", () => {
   it("STOP", () => {
     const d3 =

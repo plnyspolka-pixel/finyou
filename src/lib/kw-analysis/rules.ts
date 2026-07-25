@@ -210,42 +210,56 @@ const ruleCoOwners: Rule = {
   version: V,
   run({ nlr, input }) {
     if (nlr.owners.length <= 1) return [];
-    // Czy wszyscy właściciele są zadeklarowani jako dający zabezpieczenie?
     const providers = input.declaredCollateralProviders;
-    const allCovered = nlr.owners.every((o) =>
-      providers.some((p) => matchPartyToOwners(p, [o]).kind !== "NO_MATCH"),
+    const knownProviders = providers.length > 0;
+    // Którzy współwłaściciele NIE są jeszcze objęci deklaracją dających zabezpieczenie?
+    const uncovered = nlr.owners.filter(
+      (o) => !providers.some((p) => matchPartyToOwners(p, [o]).kind !== "NO_MATCH"),
     );
+    const names = (list: typeof nlr.owners) =>
+      list
+        .map((o) => o.companyName ?? `${o.firstName ?? ""} ${o.lastName ?? ""}`.trim())
+        .filter(Boolean)
+        .join(", ");
+    // STOP tylko, gdy WIEMY, że konkretny współwłaściciel nie przystępuje
+    // (deklaracja stron istnieje i kogoś brakuje). Gdy stron nie zadeklarowano,
+    // to warunek do potwierdzenia — nie bloker (współwłasność sama w sobie jest OK).
+    const knownExcluded = knownProviders && uncovered.length > 0;
+    const allCovered = knownProviders && uncovered.length === 0;
+
     return [
       mkFinding({
         ruleId: "R-COOWNERS",
         ruleVersion: V,
         category: "OWNERSHIP",
-        status: allCovered ? "WARUNKOWO_DOPUSZCZALNE" : "STOP",
-        title: `Nieruchomość ma ${nlr.owners.length} współwłaścicieli`,
+        status: knownExcluded ? "STOP" : "WARUNKOWO_DOPUSZCZALNE",
+        title: `Nieruchomość ma ${nlr.owners.length} współwłaścicieli${names(nlr.owners) ? " (" + names(nlr.owners) + ")" : ""}`,
         plainLanguageSummary: allCovered
           ? "Wszyscy współwłaściciele są zadeklarowani jako ustanawiający hipotekę na całości — dopuszczalne warunkowo."
-          : "Nie wszyscy współwłaściciele ustanawiają hipotekę na całej nieruchomości.",
+          : knownExcluded
+            ? `Współwłaściciel poza zabezpieczeniem: ${names(uncovered)}.`
+            : "Współwłasność — warunkiem jest przystąpienie WSZYSTKICH współwłaścicieli do ustanowienia hipoteki na całości. Po potwierdzeniu to dobre zabezpieczenie.",
         source: nlr.owners.flatMap((o) => o.evidence),
         whyItMatters:
-          "Zabezpieczenie musi objąć całą nieruchomość — wymagana zgoda i hipoteka wszystkich współwłaścicieli.",
+          "Zabezpieczenie musi objąć całą nieruchomość — hipotekę na całości ustanawiają wszyscy współwłaściciele (nie tylko wnioskodawca).",
         rankImpact: "DIRECT",
         enforcementImpact: "POSSIBLE",
         expectedFromClient:
-          "Zgoda i ustanowienie hipoteki przez wszystkich współwłaścicieli na całości.",
+          "Potwierdzenie, że wszyscy współwłaściciele przystąpią do ustanowienia hipoteki na całej nieruchomości.",
         requestedDocuments: [DOCS.ID_DOC],
-        proposedResolution: allCovered
-          ? "Potwierdź, że wszyscy współwłaściciele podpiszą oświadczenie o ustanowieniu hipoteki na całej nieruchomości."
-          : "Uzupełnij listę dających zabezpieczenie o wszystkich współwłaścicieli albo zmień zabezpieczenie.",
+        proposedResolution: knownExcluded
+          ? `Uzupełnij zabezpieczenie o brakujących współwłaścicieli (${names(uncovered)}) albo zmień zabezpieczenie.`
+          : "Potwierdź przystąpienie wszystkich współwłaścicieli; wtedy hipoteka na całości jest dobrym zabezpieczeniem.",
         agreementCondition:
           "Hipoteka na całej nieruchomości ustanowiona przez wszystkich współwłaścicieli.",
-        intermediaryMessage: allCovered
-          ? "Jest kilku właścicieli — wszyscy muszą podpisać hipotekę na całości. Zaplanuj podpisy wszystkich."
-          : "Nie wszyscy współwłaściciele obejmują hipoteką całość. Ustal, kto jeszcze musi przystąpić.",
+        intermediaryMessage: knownExcluded
+          ? `Brakuje współwłaściciela w zabezpieczeniu: ${names(uncovered)}. Ustal, czy przystąpi.`
+          : `Nieruchomość ma ${nlr.owners.length} właścicieli. Potwierdź, że drugi/pozostali współwłaściciele przystąpią do pożyczki (podpiszą hipotekę na całości). Jeśli tak — to dobra sprawa.`,
         clientMessage:
-          "Nieruchomość ma kilku właścicieli — hipotekę na całej nieruchomości muszą ustanowić wszyscy z nich.",
-        investorMessage: allCovered
-          ? "Wielu współwłaścicieli — dopuszczalne warunkowo, gdy wszyscy obciążą całość."
-          : "Nie wszyscy współwłaściciele obciążają całość — STOP do uzupełnienia.",
+          "Nieruchomość ma kilku właścicieli — hipotekę na całej nieruchomości muszą ustanowić wszyscy z nich. Prosimy potwierdzić ich udział.",
+        investorMessage: knownExcluded
+          ? `Współwłaściciel poza zabezpieczeniem (${names(uncovered)}) — STOP do uzupełnienia.`
+          : `Współwłasność (${nlr.owners.length} os.) — warunkowo dopuszczalne; warunek: przystąpienie wszystkich współwłaścicieli do hipoteki na całości.`,
       }),
     ];
   },
@@ -1249,8 +1263,39 @@ const ruleMentions: Rule = {
   run({ nlr }) {
     const active = nlr.mentions.filter((m) => m.isActive);
     if (active.length === 0) return [];
-    return active.map((m) =>
-      mkFinding({
+    return active.map((m) => {
+      const dz = m.dzKwNumber ? " (" + m.dzKwNumber + ")" : "";
+      // Wzmianka dotycząca hipoteki (np. wpis hipoteki przymusowej) — do
+      // zaakceptowania po ustaleniu DOKŁADNEJ kwoty zabezpieczonej wierzytelności.
+      const isMortgageMention = /hipotek/i.test(m.rawText);
+      if (isMortgageMention) {
+        return mkFinding({
+          ruleId: "R-MENTIONS",
+          ruleVersion: V,
+          category: "MENTION",
+          status: "WSTRZYMANE",
+          title: `Aktywna wzmianka o wpisie hipoteki (Dział ${m.section.replace("_", "-")})`,
+          plainLanguageSummary:
+            "Złożono wniosek o wpis hipoteki (wzmianka aktywna). Do zaakceptowania po ustaleniu dokładnej kwoty zabezpieczonej wierzytelności / do spłaty.",
+          source: [m.evidence],
+          detectedValue: { dzKwNumber: m.dzKwNumber, rawText: m.rawText.slice(0, 200) },
+          whyItMatters:
+            "Po wpisaniu ta hipoteka może uzyskać miejsce przed inwestorem. Kluczowa jest DOKŁADNA kwota zabezpieczonej wierzytelności — od niej zależy dopuszczalność i miejsce inwestora.",
+          rankImpact: "DIRECT",
+          enforcementImpact: "POSSIBLE",
+          expectedFromClient:
+            "Dokładna kwota zabezpieczonej wierzytelności / do spłaty, wierzyciel i tytuł, wniosek + Dz.Kw z załącznikami.",
+          requestedDocuments: [DOCS.MENTION_APPLICATION, DOCS.SENIOR_CERT],
+          proposedResolution:
+            "Ustal dokładną kwotę i wierzyciela wzmiankowanej hipoteki; wtedy oceń miejsce inwestora i dopuszczalność (spłata/kolejność wniosków).",
+          agreementCondition: "Ustalona dokładna kwota i wierzyciel wzmiankowanej hipoteki.",
+          intermediaryMessage: `Jest wzmianka o wpisie hipoteki${dz}. Do zaakceptowania — ale najpierw ustal DOKŁADNIE, ile jest do spłaty i na czyją rzecz.`,
+          clientMessage:
+            "W księdze jest wzmianka o wpisie hipoteki. Prosimy o dokładną kwotę zadłużenia do spłaty, wskazanie wierzyciela oraz wniosek/Dz.Kw z załącznikami.",
+          investorMessage: `Aktywna wzmianka o wpisie hipoteki w Dziale ${m.section.replace("_", "-")} — WSTRZYMANE do ustalenia dokładnej kwoty zabezpieczonej wierzytelności (do zaakceptowania, gdy kwota znana).`,
+        });
+      }
+      return mkFinding({
         ruleId: "R-MENTIONS",
         ruleVersion: V,
         category: "MENTION",
@@ -1270,12 +1315,12 @@ const ruleMentions: Rule = {
         proposedResolution:
           "Zweryfikuj dokumenty każdej aktywnej wzmianki (także wcześniejszej) — dopiero wtedy można ją uznać za pozytywną/kontrolowaną.",
         agreementCondition: "Wyjaśnienie treści i skutku wszystkich aktywnych wzmianek.",
-        intermediaryMessage: `Jest aktywna wzmianka${m.dzKwNumber ? " (" + m.dzKwNumber + ")" : ""}. Poproś klienta o wniosek KW, potwierdzenie złożenia i załączniki.`,
+        intermediaryMessage: `Jest aktywna wzmianka${dz}. Poproś klienta o wniosek KW, potwierdzenie złożenia i załączniki.`,
         clientMessage:
           "W księdze jest wzmianka o złożonym wniosku. Prosimy o kopię wniosku, potwierdzenie złożenia (Dz.Kw) i załączniki.",
         investorMessage: `Aktywna wzmianka w Dziale ${m.section.replace("_", "-")} — WSTRZYMANE do weryfikacji dokumentów (wniosek ≠ wpis).`,
-      }),
-    );
+      });
+    });
   },
 };
 
