@@ -5,7 +5,7 @@
 // Server-only. Wynik jest podstawą deterministycznej wyceny rynkowej
 // (market-valuation.ts) — bez udziału Perplexity.
 
-import { median as med, average as avg, filterIqrOutliers } from "@/lib/property-analysis/cache.server";
+import { filterIqrOutliers } from "@/lib/property-analysis/cache.server";
 import type { MarketComparablesResult, MarketCompRecord, MarketCompStatus } from "./types";
 
 export type { MarketComparablesResult, MarketCompRecord, MarketCompStatus } from "./types";
@@ -270,13 +270,72 @@ function otodomLabel(propertyType: string): string | null {
   return null;
 }
 
-function quantile(sorted: number[], q: number): number | null {
-  if (sorted.length === 0) return null;
-  const pos = (sorted.length - 1) * q;
-  const lo = Math.floor(pos);
-  const hi = Math.ceil(pos);
-  const v = sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
-  return Math.round(v);
+// Ceny OFERTOWE (otodom) są systematycznie wyższe od TRANSAKCYJNYCH (deweloperuch)
+// o kilka procent — to przestrzeń negocjacyjna sprzedającego. Zanim wejdą do
+// wspólnej mediany, korygujemy je w dół i dajemy transakcjom większą wagę, żeby
+// wycena kotwiczyła się w rzeczywistych cenach zawarcia, nie w cenach wywoławczych.
+const OFFER_TO_TRANSACTION_FACTOR = 0.95; // −5% na ofertach otodom
+const TRANSACTION_WEIGHT = 3;             // 1 transakcja ≈ 3 oferty w medianie
+const OFFER_WEIGHT = 1;
+
+interface WeightedPpm2 { value: number; weight: number }
+
+// Kwantyl ważony (mediana = q 0.5): sortuje po wartości i szuka miejsca, w którym
+// skumulowana waga przekracza q·(suma wag).
+function weightedQuantile(items: WeightedPpm2[], q: number): number | null {
+  if (items.length === 0) return null;
+  const sorted = [...items].sort((a, b) => a.value - b.value);
+  const total = sorted.reduce((s, it) => s + it.weight, 0);
+  if (total <= 0) return null;
+  const target = total * q;
+  let acc = 0;
+  for (const it of sorted) {
+    acc += it.weight;
+    if (acc >= target) return Math.round(it.value);
+  }
+  return Math.round(sorted[sorted.length - 1].value);
+}
+
+function weightedMean(items: WeightedPpm2[]): number | null {
+  const total = items.reduce((s, it) => s + it.weight, 0);
+  if (total <= 0) return null;
+  return Math.round(items.reduce((s, it) => s + it.value * it.weight, 0) / total);
+}
+
+export interface PreferredPpm2Stats {
+  median: number | null;
+  average: number | null;
+  min: number | null;
+  max: number | null;
+  p25: number | null;
+  p75: number | null;
+  /** Liczba wartości po korekcie i filtrze (transakcje + oferty). */
+  count: number;
+}
+
+/**
+ * Czysta logika „preferencji transakcji": z surowych cen zł/m² transakcyjnych
+ * (deweloperuch) i ofertowych (otodom) liczy medianę/kwartyle ważone, z ofertami
+ * skorygowanymi w dół i transakcjami o większej wadze. Testowalna bez sieci.
+ */
+export function computePreferredPpm2(txRaw: number[], offerRaw: number[]): PreferredPpm2Stats {
+  const clean = (arr: number[]) => filterIqrOutliers(arr.filter((v) => v != null && v > 10 && v < 100_000));
+  const txPpm2 = clean(txRaw);
+  const offerPpm2 = clean(offerRaw).map((v) => Math.round(v * OFFER_TO_TRANSACTION_FACTOR));
+  const weighted: WeightedPpm2[] = [
+    ...txPpm2.map((value) => ({ value, weight: TRANSACTION_WEIGHT })),
+    ...offerPpm2.map((value) => ({ value, weight: OFFER_WEIGHT })),
+  ];
+  const values = weighted.map((w) => w.value);
+  return {
+    median: weightedQuantile(weighted, 0.5),
+    average: weightedMean(weighted),
+    min: values.length ? Math.min(...values) : null,
+    max: values.length ? Math.max(...values) : null,
+    p25: weightedQuantile(weighted, 0.25),
+    p75: weightedQuantile(weighted, 0.75),
+    count: values.length,
+  };
 }
 
 export interface MarketComparablesInput {
@@ -315,21 +374,26 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
     return EMPTY("error", `Firecrawl: ${e?.message ?? "błąd"}`, query);
   }
 
-  const ppm2Raw = records.map((r) => r.pricePerM2).filter((v): v is number => v != null && v > 10 && v < 100_000);
-  const ppm2 = filterIqrOutliers(ppm2Raw);
-  const sorted = [...ppm2].sort((a, b) => a - b);
-  const median = med(ppm2);
-  const average = avg(ppm2);
-  const min = ppm2.length ? Math.min(...ppm2) : null;
-  const max = ppm2.length ? Math.max(...ppm2) : null;
+  // Statystyki z preferencją transakcji: oferty otodom korygowane w dół
+  // (przestrzeń negocjacyjna), transakcje deweloperuch o większej wadze.
+  const asPpm2 = (kind: MarketCompRecord["kind"]) =>
+    records.filter((r) => r.kind === kind)
+      .map((r) => r.pricePerM2)
+      .filter((v): v is number => v != null);
+  const txRaw = asPpm2("transaction");
+  const stats = computePreferredPpm2(txRaw, asPpm2("offer"));
+  const { median, average, min, max } = stats;
   const transactionsCount = records.filter((r) => r.kind === "transaction").length;
   const offersCount = records.filter((r) => r.kind === "offer").length;
 
   const status: MarketCompStatus =
-    records.length === 0 ? "no_data" : ppm2.length >= 3 ? "success" : "partial";
+    records.length === 0 ? "no_data" : stats.count >= 3 ? "success" : "partial";
 
+  const basisNote = txRaw.length > 0
+    ? `preferencja transakcji (${transactionsCount} tx ×${TRANSACTION_WEIGHT}, oferty −${Math.round((1 - OFFER_TO_TRANSACTION_FACTOR) * 100)}%)`
+    : `wyłącznie oferty (−${Math.round((1 - OFFER_TO_TRANSACTION_FACTOR) * 100)}%)`;
   const summaryLine = status === "success" || status === "partial"
-    ? `Rynek porównawczy: mediana ${median ? median.toLocaleString("pl-PL") + " zł/m²" : "—"} (${transactionsCount} transakcji deweloperuch, ${offersCount} ofert otodom)` +
+    ? `Rynek porównawczy: mediana ${median ? median.toLocaleString("pl-PL") + " zł/m²" : "—"} (${transactionsCount} transakcji deweloperuch, ${offersCount} ofert otodom; ${basisNote})` +
       (input.street ? ` w rejonie ${input.street}, ${input.city}` : ` w ${input.city}`)
     : `Rynek porównawczy (deweloperuch/otodom): brak danych w ${input.city}${input.street ? `, ${input.street}` : ""}.`;
 
@@ -345,8 +409,8 @@ export async function fetchMarketComparables(input: MarketComparablesInput): Pro
     pricePerM2Average: average != null ? Math.round(average) : null,
     pricePerM2Min: min,
     pricePerM2Max: max,
-    pricePerM2P25: quantile(sorted, 0.25),
-    pricePerM2P75: quantile(sorted, 0.75),
+    pricePerM2P25: stats.p25,
+    pricePerM2P75: stats.p75,
     sample: records.slice(0, 12),
     summaryLine,
   };
