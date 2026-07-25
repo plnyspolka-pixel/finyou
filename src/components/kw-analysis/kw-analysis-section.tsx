@@ -262,14 +262,6 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
                   : "niejednoznaczne"
               }
             />
-            <Metric
-              label="CLTV"
-              value={
-                result.ltv.determinable && result.ltv.cltv != null
-                  ? `${(result.ltv.cltv * 100).toFixed(1)}%`
-                  : "brak danych"
-              }
-            />
             <Metric label="Aktywne wzmianki" value={String(result.activeMentionCount)} />
             <Metric label="Nierozwiązane alerty" value={String(result.unresolvedFindingCount)} />
           </div>
@@ -325,7 +317,6 @@ export function KwAnalysisReport({ result }: { result: KwAnalysisResult }) {
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               <p>{result.priority.explanation}</p>
-              <p className="text-xs text-muted-foreground">{result.ltv.note}</p>
               {result.priority.requiredConditions.length > 0 && (
                 <div>
                   <div className="font-medium">Warunki:</div>
@@ -401,21 +392,14 @@ function Metric({ label, value }: { label: string; value: string }) {
 export function KwAnalysisSection({
   defaultKwNumber = "",
   loanApplicationId,
-  defaultPropertyValue,
   defaultLoanExposure,
 }: {
   defaultKwNumber?: string;
   loanApplicationId?: string;
-  defaultPropertyValue?: number | null;
   defaultLoanExposure?: number | null;
 }) {
   const run = useServerFn(runKwLandRegisterAnalysis);
   const [kwNumber, setKwNumber] = useState(defaultKwNumber);
-  const [propertyValue, setPropertyValue] = useState(
-    defaultPropertyValue != null && defaultPropertyValue > 0
-      ? String(Math.round(defaultPropertyValue))
-      : "",
-  );
   const [loanExposure, setLoanExposure] = useState(
     defaultLoanExposure != null && defaultLoanExposure > 0
       ? String(Math.round(defaultLoanExposure))
@@ -433,7 +417,6 @@ export function KwAnalysisSection({
         data: {
           kwNumber,
           loanApplicationId: loanApplicationId ?? null,
-          acceptedPropertyValue: propertyValue ? Number(propertyValue) : null,
           newLoanExposure: loanExposure ? Number(loanExposure) : 0,
           requestedCashAmount: loanExposure ? Number(loanExposure) : 0,
         },
@@ -464,7 +447,7 @@ export function KwAnalysisSection({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid gap-2 md:grid-cols-4">
+          <div className="grid gap-2 md:grid-cols-3">
             <input
               className="border rounded-md px-3 py-2 text-sm md:col-span-2"
               placeholder="Numer KW, np. WR1K/00012345/6"
@@ -473,14 +456,7 @@ export function KwAnalysisSection({
             />
             <input
               className="border rounded-md px-3 py-2 text-sm"
-              placeholder="Wartość nieruchomości (PLN)"
-              value={propertyValue}
-              onChange={(e) => setPropertyValue(e.target.value.replace(/[^\d]/g, ""))}
-              inputMode="numeric"
-            />
-            <input
-              className="border rounded-md px-3 py-2 text-sm"
-              placeholder="Ekspozycja pożyczki (PLN)"
+              placeholder="Kwota pożyczki (PLN)"
               value={loanExposure}
               onChange={(e) => setLoanExposure(e.target.value.replace(/[^\d]/g, ""))}
               inputMode="numeric"

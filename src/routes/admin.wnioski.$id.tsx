@@ -233,7 +233,6 @@ function WniosekDetail() {
           <KwAnalysisSection
             loanApplicationId={id}
             defaultKwNumber={p?.land_register_number ?? ""}
-            defaultPropertyValue={p?.estimated_value ?? null}
             defaultLoanExposure={app.loan_amount ?? null}
           />
         </TabsContent>

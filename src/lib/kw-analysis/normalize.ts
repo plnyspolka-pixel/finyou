@@ -356,6 +356,14 @@ const SECTION_THREE_MATCHERS: Array<{ kind: SectionThreeKind; label: string; re:
   },
   { kind: "USUFRUCT", label: "Użytkowanie", re: /uzytkowanie(?!\s+wieczyst)/ },
   { kind: "LEASE", label: "Najem / dzierżawa", re: /najem|najmu|dzierzaw/ },
+  // Opłata przekształceniowa (uż. wieczyste → własność, ustawa 2018) — sprawdzana
+  // PRZED OWNERSHIP_CLAIM, bo treść zawiera słowo „własność", ale to opłata
+  // publicznoprawna, nie roszczenie o przeniesienie własności.
+  {
+    kind: "CONVERSION_FEE",
+    label: "Roszczenie o opłatę przekształceniową",
+    re: /oplat\w*\s+przeksztalcenio|przeksztalcenio|przeksztalcen\w*\s+praw\w*\s+uzytkowania\s+wieczyst/,
+  },
   {
     kind: "OWNERSHIP_CLAIM",
     label: "Roszczenie o przeniesienie własności",

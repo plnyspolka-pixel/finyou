@@ -245,6 +245,31 @@ describe("Scenariusz 7 — niejasna aktywna wzmianka w Dziale IV", () => {
   });
 });
 
+describe("Roszczenie o opłatę przekształceniową (Dział III)", () => {
+  it("INFORMACYJNE, nie roszczenie o własność", () => {
+    const d3 =
+      "Rodzaj wpisu ROSZCZENIE. Treść wpisu ROSZCZENIE DOTYCHCZASOWEGO WŁAŚCICIELA GRUNTU O ROCZNĄ OPŁATĘ PRZEKSZTAŁCENIOWĄ W ODNIESIENIU DO KAŻDOCZESNEGO WŁAŚCICIELA NIERUCHOMOŚCI NA PODSTAWIE USTAWY O PRZEKSZTAŁCENIU PRAWA UŻYTKOWANIA WIECZYSTEGO W PRAWO WŁASNOŚCI. Miasto Poznań.";
+    const res = runKwAnalysis(baseInput(), sections(baseExtraction(), { dzial_3: d3 }));
+    const f = res.findings.find((x) => x.title.includes("opłatę przekształceniową"));
+    expect(f?.status).toBe("INFORMACYJNE");
+    // Nie może być sklasyfikowane jako roszczenie o przeniesienie własności.
+    expect(res.findings.some((x) => x.title.includes("przeniesienie własności"))).toBe(false);
+  });
+});
+
+describe("LTV/CLTV nie należy do modułu prawnego", () => {
+  it("brak alertu R-CLTV nawet bez wartości nieruchomości", () => {
+    const res = runKwAnalysis(
+      baseInput({ acceptedPropertyValue: null }),
+      sections(baseExtraction()),
+    );
+    expect(statusesOf(res.findings, "R-CLTV")).toHaveLength(0);
+    expect(res.findings.some((f) => f.category === "VALUATION" && f.status === "WSTRZYMANE")).toBe(
+      false,
+    );
+  });
+});
+
 describe("Scenariusz 10 — wpis egzekucji / zajęcia (Dział III)", () => {
   it("STOP", () => {
     const d3 =

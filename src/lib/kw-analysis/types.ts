@@ -231,6 +231,7 @@ export type SectionThreeKind =
   | "WARNING_MISMATCH" //  ostrzeżenie o niezgodności stanu prawnego
   | "INSOLVENCY" //  upadłość / zarządca / syndyk
   | "PREEMPTION" //  prawo pierwokupu / odkupu
+  | "CONVERSION_FEE" //  roszczenie o opłatę przekształceniową (uż. wieczyste → własność)
   | "CO_ENCUMBRANCE" //  współobciążenie innej nieruchomości
   | "MIGRATION_COMMENT"
   | "OTHER";

@@ -585,7 +585,7 @@ const ruleRank: Rule = {
           status: "WARUNKOWO_DOPUSZCZALNE",
           title: "Docelowe drugie miejsce hipoteki",
           plainLanguageSummary:
-            "Hipoteka inwestora byłaby na drugim miejscu — dopuszczalne warunkowo (zaświadczenie + CLTV ≤ limit).",
+            "Hipoteka inwestora byłaby na drugim miejscu — dopuszczalne warunkowo po zaświadczeniu wierzyciela z 1. miejsca (LTV liczy osobny moduł wyceny).",
           source: priority.evidence,
           whyItMatters:
             "Drugie miejsce wymaga ustalenia bieżącej i maksymalnej ekspozycji wierzyciela z pierwszego miejsca.",
@@ -593,16 +593,15 @@ const ruleRank: Rule = {
           expectedFromClient: "Aktualne zaświadczenie wierzyciela z pierwszego miejsca.",
           requestedDocuments: [DOCS.SENIOR_CERT],
           proposedResolution:
-            "Uzyskaj kompletne zaświadczenie i przelicz CLTV — dopuszczalne, gdy CLTV ≤ limit polityki.",
-          agreementCondition: "Kompletne zaświadczenie wierzyciela z 1. miejsca i CLTV w limicie.",
-          payoutCondition:
-            "Potwierdzona maksymalna ekspozycja poprzedzająca i CLTV ≤ limit polityki.",
+            "Uzyskaj kompletne zaświadczenie (ustala ekspozycję poprzedzającą); ostateczny limit obciążenia weryfikuje moduł wyceny/LTV.",
+          agreementCondition: "Kompletne zaświadczenie wierzyciela z 1. miejsca.",
+          payoutCondition: "Potwierdzona maksymalna ekspozycja poprzedzająca (dług z 1. miejsca).",
           intermediaryMessage:
             "Hipoteka byłaby na drugim miejscu. To możliwe, ale najpierw potrzebujemy zaświadczenia od banku z pierwszego miejsca.",
           clientMessage:
             "Na nieruchomości jest już jedna hipoteka. Aby udzielić finansowania, potrzebujemy zaświadczenia od obecnego wierzyciela.",
           investorMessage:
-            "Drugie miejsce — warunkowo dopuszczalne po zaświadczeniu wierzyciela z 1. miejsca i CLTV w limicie.",
+            "Drugie miejsce — warunkowo dopuszczalne po zaświadczeniu wierzyciela z 1. miejsca (limit obciążenia liczy moduł wyceny).",
         }),
       ];
     }
@@ -714,118 +713,33 @@ const ruleSecondRankCertificate: Rule = {
         status: "WARUNKOWO_DOPUSZCZALNE",
         title: "Zaświadczenie wierzyciela z pierwszego miejsca dostarczone",
         plainLanguageSummary:
-          "Zaświadczenie pozwala ustalić ekspozycję poprzedzającą — drugie miejsce dopuszczalne, o ile CLTV w limicie.",
+          "Zaświadczenie pozwala ustalić ekspozycję poprzedzającą — drugie miejsce dopuszczalne (ostateczny limit obciążenia liczy moduł wyceny/LTV).",
         source: priority.evidence,
         whyItMatters:
-          "Znana ekspozycja poprzedzająca umożliwia policzenie CLTV i decyzję o drugim miejscu.",
+          "Znana ekspozycja poprzedzająca (dług z 1. miejsca) jest potrzebna modułowi wyceny do decyzji o drugim miejscu.",
         rankImpact: "DIRECT",
-        expectedFromClient: "Brak — zaświadczenie dostarczone; weryfikacja CLTV.",
+        expectedFromClient: "Brak — zaświadczenie dostarczone.",
         proposedResolution:
-          "Zweryfikuj CLTV z ekspozycją z zaświadczenia; jeśli w limicie — dopuszczalne warunkowo.",
-        agreementCondition: "CLTV ≤ limit polityki z ekspozycją poprzedzającą.",
+          "Przekaż ekspozycję z zaświadczenia do modułu wyceny/LTV; on rozstrzyga o dopuszczalnym limicie obciążenia.",
+        agreementCondition: "Ekspozycja poprzedzająca ustalona z zaświadczenia.",
         payoutCondition: "Kontrolowana wypłata z uwzględnieniem warunków wierzyciela z 1. miejsca.",
         intermediaryMessage:
-          "Mamy zaświadczenie z pierwszego miejsca. Sprawdzamy, czy łączne obciążenie mieści się w limicie.",
+          "Mamy zaświadczenie z pierwszego miejsca. Ekspozycję przekazujemy do modułu wyceny, który liczy limit obciążenia.",
         clientMessage:
           "Otrzymaliśmy zaświadczenie od obecnego wierzyciela — analizujemy możliwość finansowania.",
-        investorMessage: "Zaświadczenie z 1. miejsca dostarczone — decyzja zależy od CLTV.",
+        investorMessage:
+          "Zaświadczenie z 1. miejsca dostarczone — ekspozycja poprzedzająca znana; limit obciążenia liczy moduł wyceny.",
         confidence: 0.9,
       }),
     ];
   },
 };
 
-const ruleCltv: Rule = {
-  id: "R-CLTV",
-  version: V,
-  run({ ltv, policy }) {
-    if (!ltv.determinable) {
-      return [
-        mkFinding({
-          ruleId: "R-CLTV",
-          ruleVersion: V,
-          category: "VALUATION",
-          status: "WSTRZYMANE",
-          title: "Brak danych do LTV/CLTV",
-          plainLanguageSummary:
-            "Brakuje wartości nieruchomości lub wiarygodnego salda długu — nie pokazujemy pozytywnego LTV.",
-          source: [
-            {
-              section: "IV",
-              fieldCode: "4.4.1.2",
-              fieldLabel: "Suma hipoteki",
-              rawValue: ltv.note,
-            },
-          ],
-          whyItMatters:
-            "Bez wartości i salda nie da się ocenić bezpieczeństwa łącznego obciążenia.",
-          rankImpact: "POSSIBLE",
-          expectedFromClient: "Zaakceptowana wartość nieruchomości i saldo długu poprzedzającego.",
-          requestedDocuments: [DOCS.VALUATION, DOCS.SENIOR_CERT],
-          proposedResolution:
-            "Uzupełnij wartość nieruchomości i saldo z zaświadczenia; przelicz CLTV.",
-          intermediaryMessage:
-            "Nie mamy pełnych danych do policzenia LTV. Potrzebna wartość nieruchomości i saldo długu.",
-          clientMessage:
-            "Do oceny potrzebujemy wyceny nieruchomości i informacji o obecnym zadłużeniu.",
-          investorMessage: "BRAK DANYCH / WSTRZYMANE — LTV/CLTV nieobliczalne.",
-        }),
-      ];
-    }
-    if (ltv.withinPolicy === false) {
-      return [
-        mkFinding({
-          ruleId: "R-CLTV",
-          ruleVersion: V,
-          category: "VALUATION",
-          status: "STOP",
-          title: `CLTV przekracza limit polityki (${Math.round(policy.maxCltv * 100)}%)`,
-          plainLanguageSummary: `Łączne obciążenie (${ltv.cltv != null ? Math.round(ltv.cltv * 100) : "?"}%) przekracza dopuszczalny limit.`,
-          source: [
-            {
-              section: "IV",
-              fieldCode: "4.4.1.2",
-              fieldLabel: "Suma hipoteki",
-              rawValue: ltv.note,
-            },
-          ],
-          whyItMatters: "Zbyt wysokie łączne obciążenie zagraża odzyskaniu kapitału w egzekucji.",
-          rankImpact: "POSSIBLE",
-          enforcementImpact: "DIRECT",
-          expectedFromClient:
-            "Niższa kwota pożyczki, wyższa wartość zabezpieczenia albo spłata długu poprzedzającego.",
-          proposedResolution:
-            "Zmniejsz ekspozycję albo zwiększ wartość zabezpieczenia, aby CLTV zmieścił się w limicie.",
-          intermediaryMessage:
-            "Łączne obciążenie jest za wysokie. Trzeba zmniejszyć kwotę pożyczki lub spłacić wcześniejszy dług.",
-          clientMessage:
-            "Suma zobowiązań w stosunku do wartości nieruchomości jest za wysoka dla tej pożyczki.",
-          investorMessage: `CLTV ${ltv.cltv != null ? Math.round(ltv.cltv * 100) : "?"}% > limit ${Math.round(policy.maxCltv * 100)}% — STOP.`,
-        }),
-      ];
-    }
-    return [
-      mkFinding({
-        ruleId: "R-CLTV",
-        ruleVersion: V,
-        category: "VALUATION",
-        status: "BRAK_PROBLEMU",
-        title: `CLTV w limicie (${ltv.cltv != null ? Math.round(ltv.cltv * 100) : "?"}%)`,
-        plainLanguageSummary: "Łączne obciążenie mieści się w limicie polityki.",
-        source: [
-          { section: "IV", fieldCode: "4.4.1.2", fieldLabel: "Suma hipoteki", rawValue: ltv.note },
-        ],
-        whyItMatters: "Bezpieczny poziom łącznego obciążenia sprzyja odzyskaniu kapitału.",
-        expectedFromClient: "Brak.",
-        proposedResolution: "Brak działań.",
-        intermediaryMessage: "Łączne obciążenie mieści się w limicie.",
-        clientMessage: "Poziom zadłużenia względem wartości nieruchomości jest akceptowalny.",
-        investorMessage: `CLTV ${ltv.cltv != null ? Math.round(ltv.cltv * 100) : "?"}% ≤ limit ${Math.round(policy.maxCltv * 100)}%.`,
-        confidence: 0.9,
-      }),
-    ];
-  },
-};
+// LTV/CLTV NIE należy do tego modułu — wartość nieruchomości i wyliczenie
+// LTV/CLTV liczy osobny moduł wyceny. Ten moduł ogranicza się do strony prawnej
+// KW (własność, tożsamość, pierwszeństwo, egzekucja, wzmianki, prawa/roszczenia).
+// Fakt „suma hipotek z KW" pozostaje w danych wyniku (result.ltv), ale nie
+// generujemy z niego alertu ani nie blokujemy analizy na braku wartości.
 
 const ruleVacantRank: Rule = {
   id: "R-VACANT-RANK",
@@ -1251,6 +1165,33 @@ const ruleSectionThree: Rule = {
             }),
           );
           break;
+        case "CONVERSION_FEE":
+          out.push(
+            mkFinding({
+              ...base,
+              category: "RIGHT_OR_CLAIM",
+              status: "INFORMACYJNE",
+              title: "Roszczenie o opłatę przekształceniową",
+              plainLanguageSummary:
+                "Roszczenie o opłatę przekształceniową (użytkowanie wieczyste → własność, ustawa 2018) — nie zagraża własności ani egzekucji.",
+              whyItMatters:
+                "To publicznoprawna opłata roczna obciążająca właściciela lokalu, nie roszczenie o przeniesienie własności. Nie wpływa na miejsce hipoteki ani na zbywalność/sprzedaż egzekucyjną.",
+              rankImpact: "NONE",
+              enforcementImpact: "NONE",
+              expectedFromClient:
+                "Ewentualnie zaświadczenie o wysokości/spłacie opłaty przekształceniowej (opcjonalnie).",
+              proposedResolution:
+                "Traktuj jako informacyjne. Opcjonalnie potwierdź spłatę/wysokość opłaty; po pełnej spłacie roszczenie podlega wykreśleniu.",
+              intermediaryMessage:
+                "To roszczenie o opłatę przekształceniową (grunt po użytkowaniu wieczystym). Standard dla mieszkań — nie blokuje transakcji.",
+              clientMessage:
+                "W księdze jest wpis o opłacie przekształceniowej gruntu — to normalna opłata roczna, nie problem dla finansowania.",
+              investorMessage:
+                "Roszczenie o opłatę przekształceniową (uż. wieczyste → własność) — INFORMACYJNE; bez wpływu na miejsce hipoteki i egzekucję.",
+              confidence: 0.9,
+            }),
+          );
+          break;
         case "CO_ENCUMBRANCE":
           out.push(
             mkFinding({
@@ -1482,7 +1423,6 @@ export const RULES: Rule[] = [
   ruleIdentity,
   ruleRank,
   ruleSecondRankCertificate,
-  ruleCltv,
   ruleVacantRank,
   ruleJointOrCreditor,
   ruleSectionThree,
