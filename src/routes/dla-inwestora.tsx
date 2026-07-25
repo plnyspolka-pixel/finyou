@@ -16,10 +16,29 @@ import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives"
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
+import { MarketingPricing } from "@/components/marketing/pricing";
+import { listAccessProducts } from "@/lib/access/state.functions";
+import type { AccessProduct } from "@/lib/access/core";
 
 const JOIN = "/rejestracja?role=inwestor";
 
+// Cennik pobierany z zaufanego katalogu access_products (te same ceny co panel).
+// Odporne na brak bazy podczas SSR — wtedy pokazujemy statyczny fallback.
+async function loadInvestorProducts(): Promise<AccessProduct[]> {
+  try {
+    return await listAccessProducts({ data: { audience: "investor" } });
+  } catch {
+    return [];
+  }
+}
+
+const PRICING_FEATURES: Record<number, string[]> = {
+  30: ["Dostęp do spraw klientów", "Akademia inwestora", "Wzory dokumentów i procedury", "Narzędzia AI + CRM", "Wsparcie compliance"],
+  365: ["Wszystko z pakietu 30-dniowego", "Pełny rok bez przerw w dostępie", "Priorytetowe wsparcie"],
+};
+
 export const Route = createFileRoute("/dla-inwestora")({
+  loader: async () => ({ products: await loadInvestorProducts() }),
   head: () => ({
     meta: [
       { title: "Klub Inwestorów Hipotecznych — inwestuj w pożyczki pod nieruchomości | Finance You" },
@@ -157,6 +176,7 @@ function Hero() {
 }
 
 function InvestorLanding() {
+  const { products } = Route.useLoaderData();
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Dołącz do Klubu", href: JOIN }}>
       <Hero />
@@ -271,19 +291,37 @@ function InvestorLanding() {
       </Section>
 
       <Section tint>
-        <SectionHead center eyebrow="Rejestracja" title="Klub Inwestorów Hipotecznych" />
+        <SectionHead
+          center
+          eyebrow="Cennik"
+          title="Klub Inwestorów Hipotecznych"
+          sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień. Konto darmowe (do 5 ofert) masz zawsze bez opłat."
+        />
         <div style={{ marginTop: "2.5rem" }}>
-          <PricingCard
-            eyebrow="Klub Inwestorów Hipotecznych"
-            title="Pełny dostęp inwestora"
-            price="999 zł"
-            period="/ 30 dni"
-            cta="Dołącz do Klubu"
-            href={JOIN}
-            features={["Dostęp do spraw klientów", "Akademia inwestora", "Wzory dokumentów i procedury", "Narzędzia AI + CRM", "Wsparcie compliance", "Dostęp do społeczności"]}
-            note="Ceny brutto. Dostęp roczny: 5 999 zł / 365 dni. Materiały mają charakter edukacyjny i informacyjny."
+          <MarketingPricing
+            products={products}
+            audience="investor"
+            ctaLabel="Wykup dostęp"
+            featuresByDuration={PRICING_FEATURES}
+            fallback={
+              <PricingCard
+                eyebrow="Klub Inwestorów Hipotecznych"
+                title="Pełny dostęp inwestora"
+                price="999 zł"
+                period="/ 30 dni"
+                cta="Dołącz do Klubu"
+                href={JOIN}
+                features={["Dostęp do spraw klientów", "Akademia inwestora", "Wzory dokumentów i procedury", "Narzędzia AI + CRM", "Wsparcie compliance", "Dostęp do społeczności"]}
+                note="Ceny brutto. Dostęp roczny: 5 999 zł / 365 dni. Materiały mają charakter edukacyjny i informacyjny."
+              />
+            }
           />
         </div>
+        <ComplianceNote style={{ marginTop: "2rem" }}>
+          Ceny brutto (PLN). Zakup wymaga konta inwestora — po wybraniu pakietu przejdziesz do
+          bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Materiały mają
+          charakter edukacyjny i informacyjny.
+        </ComplianceNote>
       </Section>
 
       <Section id="faq">

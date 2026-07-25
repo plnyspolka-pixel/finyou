@@ -13,10 +13,28 @@ import {
 import { MktBadge, MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
+import { MarketingPricing } from "@/components/marketing/pricing";
+import { listAccessProducts } from "@/lib/access/state.functions";
+import type { AccessProduct } from "@/lib/access/core";
 
 const JOIN = "/rejestracja?role=posrednik";
 
+// Cennik z katalogu access_products (te same ceny co panel pośrednika).
+async function loadBrokerProducts(): Promise<AccessProduct[]> {
+  try {
+    return await listAccessProducts({ data: { audience: "broker" } });
+  } catch {
+    return [];
+  }
+}
+
+const PRICING_FEATURES: Record<number, string[]> = {
+  30: ["Bez limitu liczby ofert", "Leady Finance You i pełny CRM", "Skrzynka, kampanie i automatyzacje", "Akademia Pośrednika i program partnerski"],
+  365: ["Wszystko z pakietu 30-dniowego", "Pełny rok bez przerw w dostępie", "Priorytetowe wsparcie"],
+};
+
 export const Route = createFileRoute("/dla-posrednika")({
+  loader: async () => ({ products: await loadBrokerProducts() }),
   head: () => ({
     meta: [
       { title: "Program Pośrednika — zarabiaj z CRM, AI i bazą inwestorów | Finance You" },
@@ -134,6 +152,7 @@ function Hero() {
 }
 
 function BrokerLanding() {
+  const { products } = Route.useLoaderData();
   return (
     <MarketingShell page="posrednik" sticky={{ label: "Dołącz jako pośrednik", href: JOIN }}>
       <Hero />
@@ -201,19 +220,37 @@ function BrokerLanding() {
       </Section>
 
       <Section tint>
-        <SectionHead center eyebrow="Rejestracja" title="Program Pośrednika Finance You" />
+        <SectionHead
+          center
+          eyebrow="Cennik"
+          title="Program Pośrednika Finance You"
+          sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień. Konto darmowe (do 5 ofert) masz zawsze bez opłat."
+        />
         <div style={{ marginTop: "2.5rem" }}>
-          <PricingCard
-            eyebrow="Program Pośrednika Finance You"
-            title="Pełny dostęp pośrednika"
-            price="499 zł"
-            period="/ 30 dni"
-            cta="Załóż konto partnera"
-            href={JOIN}
-            features={["CRM + panel partnera", "Szkolenie wdrożeniowe", "Kampanie AI i materiały", "Dostęp do bazy inwestorów", "Wzory dokumentów i procedury", "Transparentny model prowizyjny"]}
-            note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa partnerska."
+          <MarketingPricing
+            products={products}
+            audience="broker"
+            ctaLabel="Wykup dostęp"
+            featuresByDuration={PRICING_FEATURES}
+            fallback={
+              <PricingCard
+                eyebrow="Program Pośrednika Finance You"
+                title="Pełny dostęp pośrednika"
+                price="499 zł"
+                period="/ 30 dni"
+                cta="Załóż konto partnera"
+                href={JOIN}
+                features={["CRM + panel partnera", "Szkolenie wdrożeniowe", "Kampanie AI i materiały", "Dostęp do bazy inwestorów", "Wzory dokumentów i procedury", "Transparentny model prowizyjny"]}
+                note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa partnerska."
+              />
+            }
           />
         </div>
+        <ComplianceNote style={{ marginTop: "2rem" }}>
+          Ceny brutto (PLN). Zakup wymaga konta pośrednika — po wybraniu pakietu przejdziesz do
+          bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Warunki
+          współpracy i rozliczeń prowizyjnych określa umowa partnerska.
+        </ComplianceNote>
       </Section>
 
       <Section id="faq">

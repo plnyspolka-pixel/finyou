@@ -19,9 +19,13 @@ import {
 import { formatWarsawDate, type AccessProduct } from "@/lib/access/core";
 
 export const Route = createFileRoute("/posrednik/abonament")({
-  validateSearch: (search: Record<string, unknown>): { tpay?: string; payment?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tpay?: string; payment?: string; product?: string } => ({
     tpay: typeof search.tpay === "string" ? search.tpay : undefined,
     payment: typeof search.payment === "string" ? search.payment : undefined,
+    // Deep-link ze strony marketingowej: preselekcja pakietu do zakupu.
+    product: typeof search.product === "string" ? search.product : undefined,
   }),
   component: PosrednikAbonament,
 });
@@ -41,7 +45,7 @@ const FEATURES: Record<number, string[]> = {
 };
 
 function PosrednikAbonament() {
-  const { tpay, payment } = useSearch({ from: "/posrednik/abonament" });
+  const { tpay, payment, product } = useSearch({ from: "/posrednik/abonament" });
   const stateFn = useServerFn(getMyAccessState);
   const usageFn = useServerFn(getMyBrokerOfferUsage);
   const productsFn = useServerFn(listAccessProducts);
@@ -60,6 +64,11 @@ function PosrednikAbonament() {
     setState(s);
     setUsage(u);
     setProducts(p);
+    // Deep-link ?product=<code> ze strony marketingowej → od razu otwórz płatność.
+    if (product) {
+      const match = p.find((x) => x.code === product && x.active);
+      if (match) setSelected(match);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
