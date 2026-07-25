@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Copy, Download, Plus, RefreshCw, Search, Save, FileText, Printer } from "lucide-react";
+import { Copy, Download, Plus, RefreshCw, Search, Save, FileText, Printer, Sparkles, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 import {
   emptyProfile,
@@ -47,6 +47,11 @@ import {
   getClientProfile,
   fetchCompanyByNip,
 } from "@/lib/client-profile.functions";
+import {
+  previewUmowaFromEngine,
+  generateUmowaFromEngine,
+} from "@/lib/contract-engine/generate-umowa.functions";
+import type { Problem } from "@/lib/contract-engine";
 
 export const Route = createFileRoute("/admin/kreator-pozyczki")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -720,8 +725,9 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
               </CardContent>
             </Card>
           )}
+          <EngineContractBlock profile={profile} />
           <DocBlock title="Wniosek pożyczkowy" text={generateApplicationDoc(profile)} filename={`wniosek_${profile.id ?? "draft"}.txt`} />
-          <DocBlock title="Umowa pożyczki" text={generateContractDoc(profile, schedule)} filename={`umowa_${profile.id ?? "draft"}.txt`} />
+          <DocBlock title="Umowa pożyczki (tekst roboczy)" text={generateContractDoc(profile, schedule)} filename={`umowa_${profile.id ?? "draft"}.txt`} />
           <DocBlock title="Załącznik nr 1 — Harmonogram" text={generateScheduleDoc(profile, schedule)} filename={`harmonogram_${profile.id ?? "draft"}.txt`} />
           <DocBlock title="Załącznik nr 2 — Protokół negocjacji" text={generateProtocolDoc(profile, schedule)} filename={`protokol_${profile.id ?? "draft"}.txt`} />
         </TabsContent>
@@ -736,6 +742,127 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-semibold tabular-nums">{value}</div>
     </div>
+  );
+}
+
+/**
+ * Generacja umowy z SILNIKA KLAUZUL (pkt 3.4). Dokument jest składany
+ * deterministycznie z biblioteki klauzul na podstawie `UmowaData` zbudowanej z
+ * profilu — nie z wypełnianego wzoru. Panel pokazuje podgląd, listę braków
+ * (brama walidacji) oraz pobiera plik .docx, gdy nie ma błędów blokujących.
+ */
+function EngineContractBlock({ profile }: { profile: ClientProfile }) {
+  const previewFn = useServerFn(previewUmowaFromEngine);
+  const generateFn = useServerFn(generateUmowaFromEngine);
+
+  const [miejscowosc, setMiejscowosc] = useState<string>(profile.propertyData?.city ?? "");
+  const [busy, setBusy] = useState<"" | "preview" | "docx">("");
+  const [preview, setPreview] = useState<string>("");
+  const [problemy, setProblemy] = useState<Problem[]>([]);
+  const [blocked, setBlocked] = useState<boolean | null>(null);
+
+  const saved = !!profile.id;
+  const bledy = problemy.filter((p) => p.poziom === "BLAD");
+  const ostrzezenia = problemy.filter((p) => p.poziom === "OSTRZEZENIE");
+
+  async function runPreview() {
+    if (!profile.id) return;
+    setBusy("preview");
+    try {
+      const res: any = await previewFn({ data: { profileId: profile.id, miejscowosc: miejscowosc || undefined } });
+      setPreview(res.previewText ?? "");
+      setProblemy(res.problemy ?? []);
+      setBlocked(!!res.blocked);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd podglądu");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function runDocx() {
+    if (!profile.id) return;
+    setBusy("docx");
+    try {
+      const res: any = await generateFn({ data: { profileId: profile.id, miejscowosc: miejscowosc || undefined } });
+      setProblemy(res.problemy ?? []);
+      setBlocked(!!res.blocked);
+      if (res.blocked) {
+        toast.error("Umowy nie wygenerowano — uzupełnij braki.");
+      } else if (res.signedUrl) {
+        window.open(res.signedUrl, "_blank");
+        toast.success("Umowa wygenerowana (.docx).");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Błąd generacji");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" /> Umowa pożyczki — silnik klauzul
+        </CardTitle>
+        <div className="flex items-end gap-2">
+          <div className="grid gap-1">
+            <Label className="text-xs">Miejscowość zawarcia</Label>
+            <Input className="h-9 w-40" value={miejscowosc} onChange={(e) => setMiejscowosc(e.target.value)} placeholder="np. Lublin" />
+          </div>
+          <Button size="sm" variant="outline" disabled={!saved || !!busy} onClick={runPreview}>
+            {busy === "preview" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+            Podgląd
+          </Button>
+          <Button size="sm" disabled={!saved || !!busy || blocked === true} onClick={runDocx}>
+            {busy === "docx" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Pobierz .docx
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!saved && (
+          <div className="text-sm text-amber-700 bg-amber-50 rounded p-3">
+            Zapisz profil (przycisk „Zapisz"), aby wygenerować umowę z silnika.
+          </div>
+        )}
+
+        {bledy.length > 0 && (
+          <div className="text-sm rounded p-3 bg-red-50 text-red-800 space-y-1">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4" /> Braki blokujące ({bledy.length}) — uzupełnij, aby wygenerować:
+            </div>
+            <ul className="list-disc pl-6">
+              {bledy.map((p, i) => (
+                <li key={i}><span className="font-mono text-xs">{p.sciezka}</span> — {p.komunikat}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {ostrzezenia.length > 0 && (
+          <div className="text-sm rounded p-3 bg-amber-50 text-amber-800 space-y-1">
+            <div className="font-medium">Ostrzeżenia ({ostrzezenia.length}) — nie blokują generacji:</div>
+            <ul className="list-disc pl-6">
+              {ostrzezenia.map((p, i) => (
+                <li key={i}>{p.komunikat}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {blocked === false && bledy.length === 0 && (
+          <div className="flex items-center gap-2 text-sm text-green-700">
+            <CheckCircle2 className="h-4 w-4" /> Dane kompletne — umowa gotowa do wygenerowania.
+          </div>
+        )}
+
+        {preview && (
+          <pre className="text-xs whitespace-pre-wrap bg-muted/40 rounded p-3 max-h-96 overflow-auto">{preview}</pre>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
