@@ -112,6 +112,57 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
 
+        const plainFromHtmlEarly = html ? html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
+        const bodyText = text || plainFromHtmlEarly.slice(0, 8000);
+
+        // Nadawca może być INWESTOREM — wtedy nie traktujemy maila jak leada
+        // klienta i NIE odpowiadamy botem onboardingowym. Zamiast tego
+        // przypisujemy wiadomość do wniosku/dystrybucji.
+        const { findInvestorByEmail, recordInvestorReply } = await import("@/lib/investor-inbound.server");
+        const investor = await findInvestorByEmail(fromEmail);
+        if (investor) {
+          const invStored: any[] = [];
+          if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+            try {
+              const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, { headers: resendHeaders });
+              if (r.ok) {
+                const list = await r.json();
+                const items: any[] = Array.isArray(list?.data) ? list.data : [];
+                for (const a of items) {
+                  const filename = a?.filename ?? `file-${a?.id ?? Date.now()}`;
+                  const mime = a?.content_type ?? "application/octet-stream";
+                  if (a?.download_url) {
+                    const st = await downloadAndStore({
+                      storagePrefix: `investors/${investor.id}`,
+                      url: a.download_url,
+                      filename,
+                      mime,
+                    });
+                    if (st) invStored.push(st);
+                  }
+                }
+              }
+            } catch (e) { console.error("[resend-inbound] investor attachments error", e); }
+          }
+          const rec = await recordInvestorReply({
+            investor,
+            fromEmail,
+            fromName: name,
+            subject,
+            content: bodyText,
+            html,
+            messageId: messageId || null,
+            inReplyTo,
+            references,
+            emailId: emailId || null,
+            attachments: invStored.map((a) => ({ name: a.name, mime: a.mime, size: a.size, path: a.path })),
+          });
+          console.warn(
+            `[resend-inbound] investor reply captured (${fromEmail}) → app=${rec.loanApplicationId ?? "?"}`,
+          );
+          return new Response("ok:investor", { status: 200 });
+        }
+
         let leadId = await findLeadId({ email: fromEmail });
         if (!leadId) {
           const parts = (name ?? "").trim().split(/\s+/);

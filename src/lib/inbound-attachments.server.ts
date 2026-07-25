@@ -15,12 +15,20 @@ export type StoredAttachment = {
 };
 
 export async function downloadAndStore(opts: {
-  leadId: string;
+  /** Prefiks leadowy `leads/{leadId}` — używany domyślnie, gdy brak `storagePrefix`. */
+  leadId?: string;
+  /** Alternatywny prefiks ścieżki w buckecie (np. `investors/{id}`) dla załączników spoza świata leadów. */
+  storagePrefix?: string;
   url: string;
   filename?: string;
   mime?: string;
   authHeader?: Record<string, string>;
 }): Promise<StoredAttachment | null> {
+  const prefix = opts.storagePrefix ?? (opts.leadId ? `leads/${opts.leadId}` : null);
+  if (!prefix) {
+    console.error("[attachments] downloadAndStore: missing leadId/storagePrefix");
+    return null;
+  }
   try {
     const res = await fetch(opts.url, { headers: opts.authHeader });
     if (!res.ok) return null;
@@ -31,7 +39,7 @@ export async function downloadAndStore(opts: {
     const safeName =
       (opts.filename ?? `file-${Date.now()}`).replace(/[^\w.\-]+/g, "_") +
       ((opts.filename ?? "").includes(".") ? "" : ext);
-    const path = `leads/${opts.leadId}/${Date.now()}-${safeName}`;
+    const path = `${prefix}/${Date.now()}-${safeName}`;
     const mime = opts.mime ?? res.headers.get("content-type") ?? "application/octet-stream";
     const { error } = await admin().storage.from(CLIENT_FILES_BUCKET).upload(path, buf, {
       contentType: mime,

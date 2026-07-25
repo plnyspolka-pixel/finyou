@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, ThumbsUp, ThumbsDown, Search } from "lucide-react";
-import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels } from "@/lib/labels";
+import { ArrowLeft, ThumbsUp, ThumbsDown, Search, Building2, UserRound, Send, Mail, ArrowDownLeft } from "lucide-react";
+import { loanStatusLabels, formatPLN, formatDateTime, propertyTypeLabels, contactChannelLabels, contactDirectionLabels, distributionStatusLabels } from "@/lib/labels";
+import { DistributeToInvestorsDialog } from "@/components/admin/distribute-to-investors-dialog";
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import { useAuth } from "@/hooks/use-auth";
 import { leadSourceLabel } from "@/lib/lead-source";
@@ -60,6 +61,8 @@ function WniosekDetail() {
   const [audit, setAudit] = useState<any[]>([]);
   const [automations, setAutomations] = useState<any[]>([]);
   const [distributions, setDistributions] = useState<any[]>([]);
+  const [investorMsgs, setInvestorMsgs] = useState<any[]>([]);
+  const [distDialog, setDistDialog] = useState<null | "instytucjonalny" | "indywidualny">(null);
   const [tabValue, setTabValue] = useState<string>(() => {
     if (typeof window === "undefined") return "dane";
     try { return sessionStorage.getItem(`wniosek-tab:${id}`) || "dane"; } catch { return "dane"; }
@@ -79,6 +82,19 @@ function WniosekDetail() {
     ]);
     setApp(a.data); setContacts(c.data ?? []); setDocs(d.data ?? []); setOffers(o.data ?? []);
     setAudit(au.data ?? []); setAutomations(am.data ?? []); setDistributions(di.data ?? []);
+
+    // Wiadomości OD/DO inwestorów przypięte do tego wniosku (dystrybucja + odpowiedzi).
+    const { data: im } = await supabase
+      .from("lead_communications")
+      .select("id, direction, subject, content, email, attachments, created_at, metadata")
+      .eq("channel", "email")
+      .eq("metadata->>loan_application_id", id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setInvestorMsgs((im ?? []).filter((m: any) => {
+      const k = (m.metadata ?? {})?.kind;
+      return k === "investor_reply" || k === "investor_distribution";
+    }));
 
     // Historia kontaktu obejmuje też komunikację z fazy leada (Messenger/IG,
     // e-mail, SMS, voicebot) — także dopasowaną po telefonie/mailu klienta,
@@ -321,14 +337,87 @@ function WniosekDetail() {
             </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="dystrybucja">
-          {distributions.length === 0 ? <p className="text-sm text-muted-foreground">Wniosek nie został jeszcze rozesłany.</p> :
-            <div className="space-y-2">{distributions.map((d) => (
-              <Card key={d.id}><CardContent className="py-3 text-sm flex items-center justify-between">
-                <div>{d.investor?.company_name ?? `${d.investor?.first_name ?? ""} ${d.investor?.last_name ?? ""}`.trim()}</div>
-                <Badge variant="secondary">{d.distribution_status}</Badge>
-              </CardContent></Card>
-            ))}</div>}
+        <TabsContent value="dystrybucja" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-base">Wyślij ofertę do inwestorów</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Wyślij temat (KW, kwota, zdjęcia, dokumenty, stopka) do wybranych inwestorów. Utworzę wpisy dystrybucji, a odpowiedzi inwestorów wrócą tutaj.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setDistDialog("instytucjonalny")}>
+                  <Building2 className="mr-2 h-4 w-4" />Inwestorzy instytucjonalni
+                </Button>
+                <Button variant="secondary" onClick={() => setDistDialog("indywidualny")}>
+                  <UserRound className="mr-2 h-4 w-4" />Inwestorzy prywatni
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Rozesłano do inwestorów ({distributions.length})</h3>
+            {distributions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Wniosek nie został jeszcze rozesłany.</p>
+            ) : (
+              <div className="space-y-2">{distributions.map((d) => (
+                <Card key={d.id}><CardContent className="py-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium">{(d.investor?.company_name ?? `${d.investor?.first_name ?? ""} ${d.investor?.last_name ?? ""}`.trim()) || "—"}</div>
+                    <Badge variant={d.responded_at ? "default" : "secondary"}>{distributionStatusLabels[d.distribution_status] ?? d.distribution_status}</Badge>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                    {d.sent_at && <span>Wysłano: {formatDateTime(d.sent_at)}</span>}
+                    {d.responded_at && <span>Odpowiedź: {formatDateTime(d.responded_at)}</span>}
+                  </div>
+                  {d.response_summary && <div className="mt-1 text-muted-foreground whitespace-pre-wrap">{d.response_summary}</div>}
+                </CardContent></Card>
+              ))}</div>
+            )}
+          </div>
+
+          <div>
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Mail className="h-4 w-4" />Wiadomości od inwestorów ({investorMsgs.filter((m) => m.direction === "inbound").length})
+            </h3>
+            {investorMsgs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Brak wiadomości. Po wysłaniu oferty odpowiedzi inwestorów pojawią się tutaj.</p>
+            ) : (
+              <div className="space-y-2">{investorMsgs.map((m) => {
+                const inbound = m.direction === "inbound";
+                const atts = Array.isArray(m.attachments) ? m.attachments : [];
+                return (
+                  <Card key={m.id} className={inbound ? "border-primary/40" : undefined}>
+                    <CardContent className="py-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={inbound ? "default" : "outline"} className="gap-1">
+                          {inbound ? <ArrowDownLeft className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+                          {inbound ? "Od inwestora" : "Wysłane"}
+                        </Badge>
+                        <span className="truncate text-xs text-muted-foreground">{m.email}</span>
+                        <span className="ml-auto whitespace-nowrap text-xs text-muted-foreground">{formatDateTime(m.created_at)}</span>
+                      </div>
+                      {m.subject && <div className="mt-1 font-medium">{m.subject}</div>}
+                      {m.content && <div className="mt-1 whitespace-pre-wrap text-muted-foreground line-clamp-6">{m.content}</div>}
+                      {atts.length > 0 && (
+                        <div className="mt-1 text-xs text-muted-foreground">Załączniki: {atts.length}</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}</div>
+            )}
+          </div>
+
+          {distDialog && (
+            <DistributeToInvestorsDialog
+              open={!!distDialog}
+              onOpenChange={(o) => !o && setDistDialog(null)}
+              applicationId={id}
+              audience={distDialog}
+              onSent={() => void load()}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="oferty">

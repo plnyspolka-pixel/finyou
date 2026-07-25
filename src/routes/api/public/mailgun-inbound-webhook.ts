@@ -54,6 +54,39 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
 
         if (!fromEmail) return new Response("no sender", { status: 200 });
 
+        // Nadawca może być INWESTOREM — nie traktujemy maila jak leada klienta
+        // i nie odpowiadamy botem onboardingowym; przypisujemy do wniosku.
+        const { findInvestorByEmail, recordInvestorReply } = await import("@/lib/investor-inbound.server");
+        const investor = await findInvestorByEmail(fromEmail);
+        if (investor) {
+          const invAttachmentCount = parseInt(String(form.get("attachment-count") ?? "0"), 10);
+          const invStored: any[] = [];
+          for (let i = 1; i <= invAttachmentCount; i++) {
+            const file = form.get(`attachment-${i}`);
+            if (file && typeof (file as any).arrayBuffer === "function") {
+              const f = file as File;
+              const buf = new Uint8Array(await f.arrayBuffer());
+              const safeName = f.name.replace(/[^\w.\-]+/g, "_");
+              const path = `investors/${investor.id}/${Date.now()}-${safeName}`;
+              const { error } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)
+                .upload(path, buf, { contentType: f.type || "application/octet-stream", upsert: false });
+              if (!error) invStored.push({ name: safeName, mime: f.type, size: buf.byteLength, path });
+            }
+          }
+          await recordInvestorReply({
+            investor,
+            fromEmail,
+            fromName: name,
+            subject,
+            content: text,
+            messageId: messageId || null,
+            inReplyTo,
+            references,
+            attachments: invStored,
+          });
+          return new Response("ok:investor", { status: 200 });
+        }
+
         // Match leada po emailu, w razie czego utwórz
         let leadId = await findLeadId({ email: fromEmail });
         if (!leadId) {
