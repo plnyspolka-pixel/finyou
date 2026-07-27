@@ -695,13 +695,20 @@ function paths(name, g) {
       });
   }
 }
+type BrandIconProps = {
+  name?: string;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+} & Omit<React.SVGProps<SVGSVGElement>, "name" | "style">;
+
 function BrandIcon({
   name = "shield",
   size = 24,
   className,
   style,
   ...rest
-}) {
+}: BrandIconProps) {
   const uid = React.useId().replace(/:/g, "");
   const navId = `${uid}n`;
   const goldId = `${uid}g`;
