@@ -128,9 +128,26 @@ Po pełnej analizie księgi zapisz obserwację (`recordLocationObservation`):
 prefiks, numer repertoryjny, rodzaj, rzeczywisty TERYT/miejscowość, rzeczywistą
 atrakcyjność i `good_location`. Estymacja jest korygowana **wygładzaniem
 bayesowskim** (prior = model przestrzenny; `lambda` ≈ 50–100 obserwacji), więc
-kilka przypadkowych obserwacji nie przeważa danych bazowych. Sygnał z numeru
-repertoryjnego jest włączany **tylko** dla dużej, zwalidowanej offline próby
-(`kw_number_range_statistics.validated_offline`).
+kilka przypadkowych obserwacji nie przeważa danych bazowych.
+
+### Bramka sygnału numeru repertoryjnego — działa automatycznie
+
+Sygnał z numeru repertoryjnego (środkowe cyfry KW) jest włączany **tylko** dla
+dużej, zwalidowanej próby (`kw_number_range_statistics.validated_offline`). Flaga
+`validated_offline` **nie jest ustawiana ręcznie** — po każdej nowej obserwacji
+(`recordLocationObservation`) moduł automatycznie:
+
+1. buduje adaptacyjne przedziały numerów dla grupy prefiks × rodzaj,
+2. waliduje sygnał **czasowo** (train = starsze, test = nowsze obserwacje):
+   sygnał musi obniżyć Brier na zbiorze testowym względem predykcji bazowej
+   (base rate) o co najmniej 2%,
+3. ustawia `validated_offline` = true tylko, gdy walidacja wypada pozytywnie i
+   próba treningowa ≥ `serialSignalMinSample`.
+
+Dzięki temu **bramka aktywuje się sama**, gdy dane to uzasadniają, i pozostaje
+wyłączona dla małych/niestabilnych prób — bez ręcznej interwencji. Ręcznie można
+też przeliczyć wszystkie grupy w panelu („Przelicz bramkę sygnału KW",
+`recalibrateSerialRanges`).
 
 ## Testy
 
@@ -159,15 +176,52 @@ integracyjny** seed → metryki → rozkład → scoring → priorytet.
   księgach legalnie pozyskanych w toku obsługi wniosków oraz na otwartych
   zbiorach GUS.
 
-## Walidacja modelu (backtest)
+## Walidacja modelu (backtest) — zaimplementowana i dostępna z panelu
 
-Zaprojektowana metodyka (do uruchomienia po zebraniu obserwacji): podział
-**czasowy** (bez wycieku), walidacja osobno per prefiks i per rodzaj, test nowych
-zakresów numerów i wydziałów o małej próbie. Metryki: precision, recall,
-ROC‑AUC, PR‑AUC, Brier score, calibration error, precision spraw kierowanych
-automatycznie oraz pokrycie. Docelowo próg `AUTO_ANALYZE_HIGH` strojony do
-≥ 90% precision — **o ile próba na to pozwoli**; w przeciwnym razie pokazujemy
-rzeczywisty wynik bez deklarowania sztucznej pewności.
+Backtest jest **działającym kodem** (`src/lib/location-scoring/backtest.ts`,
+server fn `runLocationBacktest`), nie tylko metodyką. Panel administratora
+(„Kalibracja i backtest") uruchamia go jednym kliknięciem i pokazuje metryki:
+precision, recall, ROC‑AUC, PR‑AUC, Brier score, calibration error, precision
+spraw kierowanych automatycznie i pokrycie — liczone na **podziale czasowym**
+(bez wycieku), z rozbiciem per rodzaj nieruchomości.
+
+**Automatyczne strojenie progu.** `runLocationBacktest` dobiera próg
+`AUTO_ANALYZE_HIGH` maksymalizujący pokrycie przy zachowaniu docelowego precision
+(domyślnie ≥ 90%). Przycisk „Zastosuj jako nową wersję" zapisuje sugerowany próg
+jako nową, wersjonowaną konfigurację. Jeżeli próba nie pozwala osiągnąć celu —
+panel pokazuje **rzeczywisty** najlepszy precision i oznacza „cel nieosiągalny na
+próbie" (bez deklarowania sztucznej pewności).
+
+Dopóki nie ma zebranych par (predykcja, rzeczywistość), backtest zwraca notatkę
+„zbyt mała próba", a moduł **działa na domyślnych, aktywnych wagach/progach**
+(`cfg-default-1`, zaseedowana i aktywna w `location_scoring_settings`). Nie jest
+wymagana żadna ręczna konfiguracja, aby moduł działał — kalibracja jedynie
+poprawia progi w miarę napływu danych.
+
+## Zadania dla Lovable / ops (zminimalizowane)
+
+Wszystko, co dało się zrobić w kodzie, jest zrobione (schemat, RLS, domyślna
+konfiguracja aktywna, importer, backtest, auto‑kalibracja, UI). Poza kodem
+pozostają **tylko** czynności operacyjne, których z repozytorium wykonać nie
+można:
+
+1. **Zastosować migrację** `supabase/migrations/20260725120000_location_scoring.sql`
+   (Lovable Cloud aplikuje migracje z katalogu przy wdrożeniu — zweryfikować, że
+   przeszła; jest idempotentna).
+2. **Ustawić sekret** środowiskowy serwera:
+   `LOCATION_SCORING_HMAC_SECRET=<losowy, długi sekret>` — wymagany do zapisu
+   obserwacji uczących (pseudonimizacja numeru KW). Bez niego scoring działa,
+   ale uczenie na obserwacjach jest wstrzymane (świadomie).
+3. **Zaimportować dane produkcyjne** (jednorazowo + przy aktualizacjach GUS):
+   przygotować `dataset.json` z oficjalnych zbiorów (instrukcja wyżej) i uruchomić
+   `LOCATION_SCORING_SOURCE=/ścieżka/dataset.json SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… bun run scripts/location-scoring/import.ts`.
+   Do czasu importu moduł działa na oznaczonym ziarnie `seed-dev-1`.
+4. *(Opcjonalnie)* zaplanować cykliczny backtest/rekalibrację — wystarczy
+   okresowo wywołać `runLocationBacktest` / `recalibrateSerialRanges` (bramka
+   sygnału i tak przelicza się automatycznie po każdej obserwacji).
+
+Punkty 1–2 to jednorazowa konfiguracja; 3 zależy od pozyskania danych GUS. Nic z
+tego nie wymaga pisania kodu.
 
 ## Znane ograniczenia i elementy do kalibracji na danych Finance You
 
@@ -180,7 +234,10 @@ rzeczywisty wynik bez deklarowania sztucznej pewności.
   komórkach siatki NSP.
 - **Wagi działek** bez ewidencji działek → `source_quality = low` (obniżają
   pewność) — do zastąpienia danymi ewidencyjnymi.
-- **Wagi, granice i progi** domyślne — wymagają kalibracji na rzeczywistych
-  wynikach preselekcji Finance You (panel konfiguracji + backtest).
-- **Sygnał numeru repertoryjnego** domyślnie nieaktywny do czasu zebrania
-  dużej, zwalidowanej próby.
+- **Wagi, granice i progi** mają aktywne wartości domyślne (`cfg-default-1`) i
+  działają od razu. Auto‑strojenie progu i backtest są zaimplementowane i
+  dostępne w panelu — dostrajają się na rzeczywistych wynikach Finance You w
+  miarę napływu obserwacji (nie jest to warunek działania modułu).
+- **Sygnał numeru repertoryjnego** aktywuje się automatycznie (walidacja
+  czasowa po każdej obserwacji); domyślnie wyłączony do czasu zebrania dużej,
+  zwalidowanej próby — zgodnie z projektem.

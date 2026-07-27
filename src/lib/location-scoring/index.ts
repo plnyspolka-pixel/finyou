@@ -32,3 +32,20 @@ export {
   type ScoreOptions,
 } from "./scoring";
 export { toScoringPropertyType, toDbPropertyType, plotTypeFromDb } from "./property-type";
+export {
+  runBacktest,
+  tunePriorityThreshold,
+  calibrateSerialSignal,
+  buildAdaptiveRanges,
+  precisionRecallAt,
+  rocAuc,
+  prAuc,
+  brier,
+  calibrationError,
+  timeSplit,
+  type EvalPair,
+  type SerialObs,
+  type BacktestReport,
+  type ThresholdSuggestion,
+  type CalibratedRange,
+} from "./backtest";

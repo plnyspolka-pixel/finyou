@@ -13,13 +13,15 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Save, MapPinned, History } from "lucide-react";
+import { Loader2, Save, MapPinned, History, LineChart, Target } from "lucide-react";
 import { toast } from "sonner";
 import {
   getLocationScoringSettings,
   saveLocationScoringSettings,
+  runLocationBacktest,
+  recalibrateSerialRanges,
 } from "@/lib/location-scoring.functions";
-import type { LocationScoringConfig } from "@/lib/location-scoring";
+import type { LocationScoringConfig, BacktestReport } from "@/lib/location-scoring";
 
 export const Route = createFileRoute("/admin/potencjal-lokalizacyjny")({
   component: LocationScoringConfigPage,
@@ -33,6 +35,8 @@ function num(v: string): number {
 function LocationScoringConfigPage() {
   const fetchSettings = useServerFn(getLocationScoringSettings);
   const saveSettings = useServerFn(saveLocationScoringSettings);
+  const runBacktestFn = useServerFn(runLocationBacktest);
+  const recalibrateFn = useServerFn(recalibrateSerialRanges);
   const [config, setConfig] = useState<LocationScoringConfig | null>(null);
   const [versions, setVersions] = useState<
     Array<{ config_version: string; is_active: boolean; created_at: string }>
@@ -41,6 +45,59 @@ function LocationScoringConfigPage() {
   const [newVersion, setNewVersion] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [backtest, setBacktest] = useState<BacktestReport | null>(null);
+  const [backtesting, setBacktesting] = useState(false);
+  const [recalibrating, setRecalibrating] = useState(false);
+
+  const doBacktest = async () => {
+    setBacktesting(true);
+    try {
+      const r = await runBacktestFn({ data: { targetPrecision: 0.9 } });
+      setBacktest(r.report);
+      toast.success("Backtest zakończony", { description: r.report.note });
+    } catch (e) {
+      toast.error("Błąd backtestu", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBacktesting(false);
+    }
+  };
+
+  const applySuggestedThreshold = async () => {
+    if (!config || !backtest) return;
+    const t = backtest.suggestion.priorityThreshold;
+    const version = `cfg-auto-${t}-${backtest.suggestion.sampleSize}`;
+    setSaving(true);
+    try {
+      const next = {
+        ...config,
+        version,
+        decisionThresholds: { ...config.decisionThresholds, autoHighScore: t },
+      };
+      await saveSettings({
+        data: { configVersion: version, config: next as unknown as Record<string, unknown> },
+      });
+      toast.success(`Zastosowano sugerowany próg AUTO_HIGH = ${t} (wersja ${version})`);
+      await load();
+    } catch (e) {
+      toast.error("Błąd zapisu progu", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const doRecalibrate = async () => {
+    setRecalibrating(true);
+    try {
+      const r = await recalibrateFn({ data: {} });
+      toast.success("Bramka sygnału KW przeliczona", {
+        description: `Grupy: ${r.groups}, zwalidowane: ${r.validatedGroups}.`,
+      });
+    } catch (e) {
+      toast.error("Błąd kalibracji", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setRecalibrating(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -294,6 +351,98 @@ function LocationScoringConfigPage() {
         </CardContent>
       </Card>
 
+      {/* Kalibracja / backtest */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <LineChart className="h-4 w-4" /> Kalibracja i backtest
+          </CardTitle>
+          <CardDescription>
+            Strojenie progu AUTO_ANALYZE_HIGH pod docelowy precision (≥ 90%) na rzeczywistych
+            wynikach preselekcji oraz kalibracja bramki sygnału numeru repertoryjnego. Bramka
+            aktywuje się także automatycznie po napłynięciu obserwacji.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={doBacktest} disabled={backtesting} variant="outline" size="sm">
+              {backtesting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <LineChart className="h-4 w-4 mr-2" />
+              )}
+              Uruchom backtest
+            </Button>
+            <Button onClick={doRecalibrate} disabled={recalibrating} variant="outline" size="sm">
+              {recalibrating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Target className="h-4 w-4 mr-2" />
+              )}
+              Przelicz bramkę sygnału KW
+            </Button>
+          </div>
+
+          {backtest && (
+            <div className="space-y-3">
+              <Alert>
+                <AlertDescription className="text-xs">{backtest.note}</AlertDescription>
+              </Alert>
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 text-sm">
+                <Stat label="Próba (par)" value={String(backtest.sampleSize)} />
+                <Stat label="ROC-AUC" value={backtest.rocAuc.toFixed(3)} />
+                <Stat label="PR-AUC" value={backtest.prAuc.toFixed(3)} />
+                <Stat label="Brier" value={backtest.brier.toFixed(3)} />
+                <Stat label="Calibration error" value={backtest.calibrationError.toFixed(3)} />
+                <Stat
+                  label="Precision @AUTO"
+                  value={`${(backtest.precisionAtAuto * 100).toFixed(1)}%`}
+                />
+                <Stat label="Recall @AUTO" value={`${(backtest.recallAtAuto * 100).toFixed(1)}%`} />
+                <Stat
+                  label="Pokrycie @AUTO"
+                  value={`${(backtest.coverageAtAuto * 100).toFixed(1)}%`}
+                />
+              </div>
+              <div className="rounded-md border p-3 text-sm space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span>
+                    Sugerowany próg AUTO_HIGH: <b>{backtest.suggestion.priorityThreshold}</b>{" "}
+                    (precision {(backtest.suggestion.precision * 100).toFixed(1)}%, pokrycie{" "}
+                    {(backtest.suggestion.coverage * 100).toFixed(1)}%){" "}
+                    {backtest.suggestion.reachedTarget ? (
+                      <Badge className="ml-1">cel osiągnięty</Badge>
+                    ) : (
+                      <Badge variant="outline" className="ml-1">
+                        cel nieosiągalny na próbie
+                      </Badge>
+                    )}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={applySuggestedThreshold}
+                    disabled={saving || !backtest.suggestion.reachedTarget}
+                  >
+                    Zastosuj jako nową wersję
+                  </Button>
+                </div>
+                {Object.keys(backtest.perPropertyType).length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Precision @AUTO wg rodzaju:{" "}
+                    {Object.entries(backtest.perPropertyType)
+                      .map(
+                        ([t, v]) =>
+                          `${t}: ${(v.precisionAtAuto * 100).toFixed(0)}% (n=${v.sample})`,
+                      )
+                      .join(", ")}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Zapis nowej wersji */}
       <Card>
         <CardContent className="pt-6 flex flex-col sm:flex-row items-start sm:items-end gap-3">
@@ -351,6 +500,15 @@ function LocationScoringConfigPage() {
         Import danych GUS/TERYT oraz mapy prefiksów uruchamia się skryptem ETL (patrz
         <span className="font-mono"> docs/location-scoring.md</span>).
       </p>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border p-2">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="font-semibold tabular-nums">{value}</div>
     </div>
   );
 }
