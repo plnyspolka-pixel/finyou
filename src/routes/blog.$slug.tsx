@@ -295,14 +295,14 @@ function ArticlePage() {
     ? "Inwestuj w pożyczki zabezpieczone nieruchomościami"
     : "Szukasz finansowania pod zabezpieczenie nieruchomości?";
   const ctaSub = isInvestor
-    ? "Klub Inwestorów Hipotecznych: dostęp do spraw klientów, Akademia inwestora, wzory dokumentów, narzędzia AI i wsparcie compliance."
+    ? "Inwestorzy na rynku pożyczek zabezpieczonych nieruchomościami realnie osiągają od kilkunastu do nawet kilkudziesięciu procent rocznie. W Klubie Inwestorów Hipotecznych: dostęp do spraw klientów, Akademia inwestora, wzory dokumentów, narzędzia AI i wsparcie compliance."
     : "Złóż bezpłatny wniosek — jedno zgłoszenie trafia do wielu prywatnych inwestorów i partnerów finansowych. Bez zobowiązań.";
   const ctaLabel = isInvestor ? "Poznaj Klub Inwestorów" : "Sprawdź możliwości bezpłatnie";
   const ctaMicro = isInvestor
-    ? "Edukacja i narzędzia • dostęp do zgłoszeń klientów • decyzja zawsze należy do Ciebie"
+    ? "Realne stopy zwrotu: kilkanaście–kilkadziesiąt % rocznie • dostęp do zgłoszeń klientów • decyzja należy do Ciebie"
     : "Bezpłatne zgłoszenie • bez zobowiązań • liczy się nieruchomość, nie sam scoring";
   const disclaimer = isInvestor
-    ? "Finance You nie gwarantuje zysku ani braku ryzyka — inwestowanie w pożyczki zabezpieczone nieruchomościami wiąże się z ryzykiem, w tym utraty części lub całości kapitału. Wszelkie stopy zwrotu, wyliczenia i dane rynkowe przywoływane w artykule mają charakter wyłącznie informacyjny i nie stanowią oferty, rekomendacji ani doradztwa inwestycyjnego."
+    ? "Przywoływane stopy zwrotu odzwierciedlają wyniki osiągane na rynku pożyczek zabezpieczonych nieruchomościami i mają charakter informacyjny — nie stanowią gwarancji przyszłych wyników, oferty ani doradztwa inwestycyjnego. Wynik zależy od parametrów konkretnej transakcji, a inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału."
     : "Materiał ma charakter informacyjny i nie stanowi oferty. Finance You nie gwarantuje finansowania — decyzja należy do finansujących. Kwoty, koszty i kalkulacje przywoływane w artykule mają charakter orientacyjny.";
 
   return (
