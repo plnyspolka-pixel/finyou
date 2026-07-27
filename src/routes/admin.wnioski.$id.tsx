@@ -20,6 +20,7 @@ import { leadSourceLabel } from "@/lib/lead-source";
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
+import { LocationScoringSection } from "@/components/location-scoring/location-scoring-section";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FileThumb } from "@/components/media/FileThumb";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
@@ -167,6 +168,7 @@ function WniosekDetail() {
           <TabsTrigger value="dane">Dane</TabsTrigger>
           <TabsTrigger value="nieruchomosc">Nieruchomość</TabsTrigger>
           <TabsTrigger value="analiza-kw">Analiza KW</TabsTrigger>
+          <TabsTrigger value="lokalizacja">Lokalizacja</TabsTrigger>
           <TabsTrigger value="ryzyko">Ocena ryzyka</TabsTrigger>
           <TabsTrigger value="dokumenty">{CLIENT_FILES_LABEL} ({docs.length})</TabsTrigger>
           <TabsTrigger value="kontakt">Historia kontaktu ({contacts.length + comms.length})</TabsTrigger>
@@ -238,6 +240,14 @@ function WniosekDetail() {
           />
         </TabsContent>
 
+
+        <TabsContent value="lokalizacja" className="space-y-4">
+          <LocationScoringSection
+            applicationId={id}
+            kwNumber={p?.land_register_number ?? null}
+            propertyType={p?.property_type ?? null}
+          />
+        </TabsContent>
 
         <TabsContent value="ryzyko" className="space-y-4">
           <RiskAssessmentSection applicationId={id} />

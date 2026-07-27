@@ -1,0 +1,60 @@
+{
+  "_comment": "ZIARNO DEWELOPERSKIE/TESTOWE — NIE są to pełne dane produkcyjne. Wartości ludności są przybliżone i służą wyłącznie do uruchomienia modułu end-to-end oraz testów. Produkcyjny import zastępuje te dane oficjalnymi zbiorami GUS/TERYT/NSP 2021 (patrz docs/location-scoring.md). data_version 'seed-dev-1' jednoznacznie oznacza dane nieprodukcyjne.",
+  "dataVersion": "seed-dev-1",
+  "jurisdictionVersion": {
+    "version_label": "2026.1-seed",
+    "source": "SEED (przybliżenie na podstawie właściwości sądów rejonowych)",
+    "valid_from": "2026-01-01"
+  },
+  "departments": [
+    {
+      "prefix": "RA1R",
+      "court_name": "Sąd Rejonowy w Radomiu",
+      "department_name": "VI Wydział Ksiąg Wieczystych",
+      "mapping_confidence": 0.9,
+      "source": "SEED",
+      "areas": ["1463011", "1425032", "1425042", "1425092", "1425072", "1425112"]
+    },
+    {
+      "prefix": "WA1M",
+      "court_name": "Sąd Rejonowy dla Warszawy-Mokotowa w Warszawie",
+      "department_name": "IX Wydział Ksiąg Wieczystych",
+      "mapping_confidence": 0.92,
+      "source": "SEED",
+      "areas": ["1465011", "1418052", "1418032"]
+    },
+    {
+      "prefix": "KR1P",
+      "court_name": "Sąd Rejonowy dla Krakowa-Podgórza w Krakowie",
+      "department_name": "IV Wydział Ksiąg Wieczystych",
+      "mapping_confidence": 0.9,
+      "source": "SEED",
+      "areas": ["1261011", "1219052", "1219042"]
+    }
+  ],
+  "geoUnits": [
+    { "teryt": "1463011", "name": "Radom", "unit_type": "municipality", "parent_teryt": "1463", "center_lat": 51.4027, "center_lng": 21.1471, "area_km2": 111.8, "population": 200000, "degurba": 1, "is_city_above_30k": true, "is_city_above_100k": true, "is_city_above_250k": false },
+    { "teryt": "1425032", "name": "Jedlnia-Letnisko", "unit_type": "municipality", "parent_teryt": "1425", "center_lat": 51.4547, "center_lng": 21.26, "area_km2": 78.0, "population": 12000, "degurba": 3, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1425042", "name": "Kowala", "unit_type": "municipality", "parent_teryt": "1425", "center_lat": 51.32, "center_lng": 21.07, "area_km2": 100.0, "population": 11000, "degurba": 3, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1425092", "name": "Skaryszew", "unit_type": "municipality", "parent_teryt": "1425", "center_lat": 51.313, "center_lng": 21.25, "area_km2": 172.0, "population": 14000, "degurba": 3, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1425072", "name": "Przytyk", "unit_type": "municipality", "parent_teryt": "1425", "center_lat": 51.47, "center_lng": 20.92, "area_km2": 133.0, "population": 6500, "degurba": 3, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1425112", "name": "Wolanów", "unit_type": "municipality", "parent_teryt": "1425", "center_lat": 51.38, "center_lng": 20.9, "area_km2": 82.0, "population": 7000, "degurba": 3, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1465011", "name": "Warszawa", "unit_type": "municipality", "parent_teryt": "1465", "center_lat": 52.2297, "center_lng": 21.0122, "area_km2": 517.2, "population": 1800000, "degurba": 1, "is_city_above_30k": true, "is_city_above_100k": true, "is_city_above_250k": true },
+    { "teryt": "1418052", "name": "Piaseczno", "unit_type": "municipality", "parent_teryt": "1418", "center_lat": 52.0817, "center_lng": 21.0244, "area_km2": 128.0, "population": 48000, "degurba": 2, "is_city_above_30k": true, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1418032", "name": "Konstancin-Jeziorna", "unit_type": "municipality", "parent_teryt": "1418", "center_lat": 52.005, "center_lng": 21.115, "area_km2": 78.5, "population": 24000, "degurba": 2, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1261011", "name": "Kraków", "unit_type": "municipality", "parent_teryt": "1261", "center_lat": 50.0647, "center_lng": 19.945, "area_km2": 326.8, "population": 780000, "degurba": 1, "is_city_above_30k": true, "is_city_above_100k": true, "is_city_above_250k": true },
+    { "teryt": "1219052", "name": "Wieliczka", "unit_type": "municipality", "parent_teryt": "1219", "center_lat": 49.987, "center_lng": 20.065, "area_km2": 100.0, "population": 55000, "degurba": 2, "is_city_above_30k": true, "is_city_above_100k": false, "is_city_above_250k": false },
+    { "teryt": "1219042", "name": "Świątniki Górne", "unit_type": "municipality", "parent_teryt": "1219", "center_lat": 49.933, "center_lng": 19.95, "area_km2": 20.3, "population": 9500, "degurba": 3, "is_city_above_30k": false, "is_city_above_100k": false, "is_city_above_250k": false }
+  ],
+  "fua": {
+    "1465011": { "code": "PL001", "role": "core" },
+    "1418052": { "code": "PL001", "role": "commuting_zone" },
+    "1418032": { "code": "PL001", "role": "commuting_zone" },
+    "1261011": { "code": "PL002", "role": "core" },
+    "1219052": { "code": "PL002", "role": "commuting_zone" },
+    "1219042": { "code": "PL002", "role": "commuting_zone" },
+    "1463011": { "code": "PL021", "role": "core" },
+    "1425032": { "code": "PL021", "role": "commuting_zone" },
+    "1425042": { "code": "PL021", "role": "commuting_zone" }
+  }
+}
