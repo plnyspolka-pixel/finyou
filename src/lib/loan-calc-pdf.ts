@@ -73,11 +73,34 @@ const PLN = (n: number) =>
 /** Usuwa polskie znaki diakrytyczne — do tekstu widocznego w PDF (font Courier). */
 function fold(s: string): string {
   const map: Record<string, string> = {
-    ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z",
-    Ą: "A", Ć: "C", Ę: "E", Ł: "L", Ń: "N", Ó: "O", Ś: "S", Ź: "Z", Ż: "Z",
-    "–": "-", "—": "-", "„": '"', "”": '"', "…": "...", " ": " ",
+    ą: "a",
+    ć: "c",
+    ę: "e",
+    ł: "l",
+    ń: "n",
+    ó: "o",
+    ś: "s",
+    ź: "z",
+    ż: "z",
+    Ą: "A",
+    Ć: "C",
+    Ę: "E",
+    Ł: "L",
+    Ń: "N",
+    Ó: "O",
+    Ś: "S",
+    Ź: "Z",
+    Ż: "Z",
+    "–": "-",
+    "—": "-",
+    "„": '"',
+    "”": '"',
+    "…": "...",
+    " ": " ",
   };
-  return (s ?? "").replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ–—„”… ]/g, (c) => map[c] ?? c).replace(/[^\x20-\x7e]/g, "");
+  return (s ?? "")
+    .replace(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ–—„”… ]/g, (c) => map[c] ?? c)
+    .replace(/[^\x20-\x7e]/g, "");
 }
 
 /** Base64 z UTF-8 (działa w przeglądarce i w Node). */
@@ -86,13 +109,13 @@ function toBase64Utf8(s: string): string {
   const bytes = new TextEncoder().encode(s);
   let bin = "";
   bytes.forEach((b) => (bin += String.fromCharCode(b)));
-  // eslint-disable-next-line no-undef
+
   return btoa(bin);
 }
 
 function fromBase64Utf8(b64: string): string {
   if (typeof Buffer !== "undefined") return Buffer.from(b64, "base64").toString("utf-8");
-  // eslint-disable-next-line no-undef
+
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -123,7 +146,9 @@ function buildLines(p: LoanCalcPayload): string[] {
   L.push(`  Rata miesieczna:            ${PLN(p.monthlyPayment)} zl`);
   if (p.balloon > 0) L.push(`  Rata balonowa (ostatnia):   ${PLN(p.balloon)} zl`);
   L.push(`  Prowizja inwestora:         ${PLN(p.commissionPln)} zl (${PLN(p.commissionPct)}%)`);
-  L.push(`  Prowizja Finance You:       ${PLN(p.financeYouFeePln)} zl (koszt inwestora, platna na wejsciu)`);
+  L.push(
+    `  Prowizja Finance You:       ${PLN(p.financeYouFeePln)} zl (koszt inwestora, platna na wejsciu)`,
+  );
   L.push(`  Suma odsetek:               ${PLN(p.totalInterest)} zl`);
   L.push(`  Calkowity koszt pozyczki:   ${PLN(p.totalCost)} zl (po stronie klienta)`);
   L.push(`  Laczna kwota do splaty:     ${PLN(p.totalToRepay)} zl`);
@@ -134,7 +159,8 @@ function buildLines(p: LoanCalcPayload): string[] {
   L.push("");
   L.push("HARMONOGRAM SPLAT");
   L.push("  Nr  Termin       Rata         Kapital      Odsetki      Prowizja     Saldo");
-  const col = (s: string, w: number) => (s.length >= w ? s.slice(0, w) : s + " ".repeat(w - s.length));
+  const col = (s: string, w: number) =>
+    s.length >= w ? s.slice(0, w) : s + " ".repeat(w - s.length);
   for (const r of p.schedule) {
     L.push(
       "  " +
@@ -170,7 +196,11 @@ export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
   const lines = buildLines(payload);
 
   // Strona A4 (punkty), font Courier 9pt.
-  const PAGE_W = 595, PAGE_H = 842, MARGIN = 40, FS = 9, LH = 12;
+  const PAGE_W = 595,
+    PAGE_H = 842,
+    MARGIN = 40,
+    FS = 9,
+    LH = 12;
   const linesPerPage = Math.floor((PAGE_H - 2 * MARGIN) / LH);
   const pages: string[][] = [];
   for (let i = 0; i < lines.length; i += linesPerPage) pages.push(lines.slice(i, i + linesPerPage));
@@ -186,9 +216,7 @@ export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
   add("<< /Type /Catalog /Pages 2 0 R >>"); // 1
   add("PAGES_PLACEHOLDER"); // 2 (uzupełnimy po zebraniu kidsów)
   add("<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>"); // 3
-  add(
-    `<< /Producer (Finance You) /Title (Kalkulacja pozyczki) /Keywords (${b64}) >>`,
-  ); // 4
+  add(`<< /Producer (Finance You) /Title (Kalkulacja pozyczki) /Keywords (${b64}) >>`); // 4
 
   let nextId = 5;
   for (const pageLines of pages) {
@@ -196,7 +224,8 @@ export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
     const contentId = nextId++;
     pageObjIds.push(pageId);
 
-    let stream = "BT\n/F1 " + FS + " Tf\n" + LH + " TL\n" + MARGIN + " " + (PAGE_H - MARGIN) + " Td\n";
+    let stream =
+      "BT\n/F1 " + FS + " Tf\n" + LH + " TL\n" + MARGIN + " " + (PAGE_H - MARGIN) + " Td\n";
     pageLines.forEach((ln, i) => {
       if (i > 0) stream += "T*\n";
       stream += "(" + pdfEscape(ln) + ") Tj\n";
@@ -212,8 +241,7 @@ export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
   }
 
   // Uzupełnij Pages
-  objects[1] =
-    `<< /Type /Pages /Kids [${pageObjIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageObjIds.length} >>`;
+  objects[1] = `<< /Type /Pages /Kids [${pageObjIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageObjIds.length} >>`;
 
   // Złóż plik z tablicą xref.
   let pdf = "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n";
@@ -243,7 +271,10 @@ export function buildLoanCalcPdfBytes(payload: LoanCalcPayload): Uint8Array {
 /** Blob PDF do pobrania w przeglądarce. */
 export function buildLoanCalcPdfBlob(payload: LoanCalcPayload): Blob {
   const bytes = buildLoanCalcPdfBytes(payload);
-  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const buf = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
   return new Blob([buf], { type: "application/pdf" });
 }
 

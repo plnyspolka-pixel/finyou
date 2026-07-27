@@ -5,8 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // Clarity Data Export API
 // Docs: https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-data-export-api
 // Limit: do 10 wywołań / dzień / projekt. numOfDays: 1-3.
-const CLARITY_ENDPOINT =
-  "https://www.clarity.ms/export-data/api/v1-project-live-insights";
+const CLARITY_ENDPOINT = "https://www.clarity.ms/export-data/api/v1-project-live-insights";
 
 const DIMENSIONS = [
   "Browser",
@@ -22,11 +21,7 @@ const DIMENSIONS = [
 
 type Dim = (typeof DIMENSIONS)[number];
 
-async function clarityCall(
-  token: string,
-  numOfDays: 1 | 2 | 3,
-  dims: Dim[],
-): Promise<any> {
+async function clarityCall(token: string, numOfDays: 1 | 2 | 3, dims: Dim[]): Promise<any> {
   const params = new URLSearchParams();
   params.set("numOfDays", String(numOfDays));
   dims.slice(0, 3).forEach((d, i) => params.set(`dimension${i + 1}`, d));
@@ -91,30 +86,27 @@ export const analyzeClarityMetrics = createServerFn({ method: "POST" })
       "co dokładnie naprawić i gdzie (URL/strona), priorytety (P0/P1/P2). " +
       "Używaj liczb z danych. Bez ogólników. Format: krótkie sekcje + listy.";
 
-    const userMsg = `Dane Clarity (JSON):\n\`\`\`json\n${JSON.stringify(
-      data.metrics,
-    ).slice(0, 60000)}\n\`\`\`\n\nPytanie/zadanie: ${
-      data.question ||
-      "Przeanalizuj dane i podaj TOP 5 problemów UX + rekomendacje napraw."
+    const userMsg = `Dane Clarity (JSON):\n\`\`\`json\n${JSON.stringify(data.metrics).slice(
+      0,
+      60000,
+    )}\n\`\`\`\n\nPytanie/zadanie: ${
+      data.question || "Przeanalizuj dane i podaj TOP 5 problemów UX + rekomendacje napraw."
     }`;
 
-    const res = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: userMsg },
-          ],
-        }),
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userMsg },
+        ],
+      }),
+    });
     if (res.status === 429) throw new Error("Limit AI. Spróbuj za chwilę.");
     if (res.status === 402) throw new Error("Wyczerpany limit AI.");
     if (!res.ok) throw new Error(`AI gateway: ${res.status}`);

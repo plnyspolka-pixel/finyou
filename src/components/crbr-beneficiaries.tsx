@@ -62,9 +62,7 @@ export function CrbrBeneficiariesCard({
     if (!nip) return;
     setBusy(true);
     try {
-      const res = force
-        ? await refreshFn({ data: { nip } })
-        : await getFn({ data: { nip } });
+      const res = force ? await refreshFn({ data: { nip } }) : await getFn({ data: { nip } });
       setData(res as CrbrData);
       if (force) toast.success("Odświeżono CRBR");
     } catch (e: any) {
@@ -124,7 +122,11 @@ export function CrbrBeneficiariesCard({
         </div>
         {canRefresh && data.status !== "invalid_input" && (
           <Button size="sm" variant="ghost" onClick={() => void load(true)} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
           </Button>
         )}
       </div>
@@ -157,9 +159,7 @@ export function CrbrBeneficiariesCard({
           )}
           {data.representatives?.length ? (
             <div className="pt-1">
-              <div className="text-[11px] font-medium text-muted-foreground mb-1">
-                Zgłaszający
-              </div>
+              <div className="text-[11px] font-medium text-muted-foreground mb-1">Zgłaszający</div>
               <ul className="text-[11px] text-muted-foreground space-y-0.5">
                 {data.representatives.map((r, i) => (
                   <li key={i}>

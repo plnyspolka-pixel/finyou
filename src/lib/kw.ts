@@ -15,7 +15,9 @@ const KW_SEARCH_RE =
  * zapisał status w rodzaju "przesłany" zamiast właściwego numeru.
  */
 export function normalizeKwNumber(raw: unknown): string | null {
-  const text = String(raw ?? "").trim().toUpperCase();
+  const text = String(raw ?? "")
+    .trim()
+    .toUpperCase();
   if (!text) return null;
   if (KW_FULL_RE.test(text)) return text;
   const m = KW_SEARCH_RE.exec(text);

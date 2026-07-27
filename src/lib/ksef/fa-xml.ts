@@ -49,7 +49,8 @@ function num(n: number): string {
 }
 
 function vatRateValue(rate: string): { stawka: string; netToVat: (net: number) => number } {
-  if (rate === "zw" || rate === "0") return { stawka: rate === "zw" ? "zw" : "0", netToVat: () => 0 };
+  if (rate === "zw" || rate === "0")
+    return { stawka: rate === "zw" ? "zw" : "0", netToVat: () => 0 };
   const pct = Number(rate) || 0;
   return { stawka: String(pct), netToVat: (net) => Math.round(net * pct) / 100 };
 }
@@ -79,7 +80,7 @@ export function buildFaXml(invoice: FaInvoice, seller: FaEntity): string {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<Faktura xmlns="http://crd.gov.pl/wzor/2023/06/29/12648/">',
     "  <Naglowek>",
-    "    <KodFormularza kodSystemowy=\"FA (2)\" wersjaSchemy=\"1-0E\">FA</KodFormularza>",
+    '    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>',
     "    <WariantFormularza>2</WariantFormularza>",
     `    <DataWytworzeniaFa>${esc(today)}T00:00:00Z</DataWytworzeniaFa>`,
     "  </Naglowek>",

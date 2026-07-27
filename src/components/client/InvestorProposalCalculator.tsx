@@ -8,7 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Info, Lock, Send, Loader2, Building2, Home, Trees, Map as MapIcon, Store, FileQuestion, Check, MapPin } from "lucide-react";
+import {
+  Info,
+  Lock,
+  Send,
+  Loader2,
+  Building2,
+  Home,
+  Trees,
+  Map as MapIcon,
+  Store,
+  FileQuestion,
+  Check,
+  MapPin,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { loanStatusLabels } from "@/lib/labels";
 import { toast } from "sonner";
@@ -30,8 +43,12 @@ const PROPERTY_TILES: { type: SecurityType; icon: typeof Building2 }[] = [
 // Klient może swobodnie zmieniać parametry propozycji aż do momentu, w którym
 // pojawi się konkretna oferta od inwestora lub umowa wchodzi w realizację.
 const LOCKED_STATUSES = new Set<string>([
-  "oferta_od_inwestora", "oferta_przekazana_klientowi",
-  "zaakceptowany_przez_klienta", "do_umowy", "zamkniety", "archiwalny",
+  "oferta_od_inwestora",
+  "oferta_przekazana_klientowi",
+  "zaakceptowany_przez_klienta",
+  "do_umowy",
+  "zamkniety",
+  "archiwalny",
 ]);
 
 export function InvestorProposalCalculator({
@@ -50,22 +67,37 @@ export function InvestorProposalCalculator({
   const [client, setClient] = useState<any | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  useEffect(() => { void (async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data: c } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
-    setClient(c);
-    if (c) {
-      const { data: la } = await supabase.from("loan_applications").select("*")
-        .eq("client_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      setLoan(la);
-      if (la) {
-        const { data: p } = await supabase.from("properties").select("*").eq("loan_application_id", la.id).maybeSingle();
-        setProp(p);
+  useEffect(() => {
+    void (async () => {
+      if (!user) return;
+      setLoading(true);
+      const { data: c } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setClient(c);
+      if (c) {
+        const { data: la } = await supabase
+          .from("loan_applications")
+          .select("*")
+          .eq("client_id", c.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setLoan(la);
+        if (la) {
+          const { data: p } = await supabase
+            .from("properties")
+            .select("*")
+            .eq("loan_application_id", la.id)
+            .maybeSingle();
+          setProp(p);
+        }
       }
-    }
-    setLoading(false);
-  })(); }, [user, refreshTick]);
+      setLoading(false);
+    })();
+  }, [user, refreshTick]);
 
   const locked = !!(loan?.status && LOCKED_STATUSES.has(loan.status));
 
@@ -104,12 +136,17 @@ export function InvestorProposalCalculator({
       const trimmed = value.trim();
       try {
         if (prop?.id) {
-          await supabase.from("properties").update({ city: trimmed || null }).eq("id", prop.id);
-          setProp((prev: any) => prev ? { ...prev, city: trimmed || null } : prev);
+          await supabase
+            .from("properties")
+            .update({ city: trimmed || null })
+            .eq("id", prop.id);
+          setProp((prev: any) => (prev ? { ...prev, city: trimmed || null } : prev));
         } else {
-          const { data: inserted } = await supabase.from("properties")
+          const { data: inserted } = await supabase
+            .from("properties")
             .insert({ loan_application_id: loan.id, property_type: "inna", city: trimmed || null })
-            .select("*").maybeSingle();
+            .select("*")
+            .maybeSingle();
           if (inserted) setProp(inserted);
         }
       } catch (e: any) {
@@ -118,7 +155,6 @@ export function InvestorProposalCalculator({
     }, 600);
   };
 
-
   const savePropertyType = async (t: SecurityType) => {
     setPropertyType(t);
     if (!loan?.id || locked) return;
@@ -126,11 +162,13 @@ export function InvestorProposalCalculator({
     try {
       if (prop?.id) {
         await supabase.from("properties").update({ property_type: t }).eq("id", prop.id);
-        setProp((prev: any) => prev ? { ...prev, property_type: t } : prev);
+        setProp((prev: any) => (prev ? { ...prev, property_type: t } : prev));
       } else {
-        const { data: inserted } = await supabase.from("properties")
+        const { data: inserted } = await supabase
+          .from("properties")
           .insert({ loan_application_id: loan.id, property_type: t })
-          .select("*").maybeSingle();
+          .select("*")
+          .maybeSingle();
         if (inserted) setProp(inserted);
       }
       void qc.invalidateQueries({ queryKey: ["client-property", loan.id] });
@@ -156,16 +194,20 @@ export function InvestorProposalCalculator({
     if (!loan?.id || locked) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      void supabase.from("loan_applications").update({
-        loan_amount: amount,
-        preferred_period_months: months,
-        annual_investor_rate: annualRate,
-        max_monthly_payment: maxPayment || null,
-      }).eq("id", loan.id);
+      void supabase
+        .from("loan_applications")
+        .update({
+          loan_amount: amount,
+          preferred_period_months: months,
+          annual_investor_rate: annualRate,
+          max_monthly_payment: maxPayment || null,
+        })
+        .eq("id", loan.id);
     }, 600);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
   }, [amount, months, annualRate, maxPayment, loan?.id, locked]);
-
 
   const hasDesc = String(loan?.investor_description ?? "").trim().length >= 20;
 
@@ -174,12 +216,12 @@ export function InvestorProposalCalculator({
     if (!client?.first_name || !client?.phone) m.push("dane kontaktowe");
     if (!prop?.property_type) m.push("typ zabezpieczenia");
     if (!String(city ?? prop?.city ?? "").trim()) m.push("miejscowość");
-    if (!containsValidKw(prop?.land_register_number) && !prop?.area_sqm) m.push("poprawny numer KW lub powierzchnia");
+    if (!containsValidKw(prop?.land_register_number) && !prop?.area_sqm)
+      m.push("poprawny numer KW lub powierzchnia");
     if (!hasDesc) m.push("krótki opis dla inwestora");
     if (!amount || !months || !annualRate) m.push("warunki finansowe");
     return m;
   }, [client, prop, hasDesc, amount, months, annualRate, city]);
-
 
   const sendToInvestors = async () => {
     if (!loan?.id) return;
@@ -198,19 +240,22 @@ export function InvestorProposalCalculator({
         property_type: propertyType,
         accepted_at: new Date().toISOString(),
       };
-      const { error } = await supabase.from("loan_applications").update({
-        loan_amount: amount,
-        preferred_period_months: months,
-        annual_investor_rate: annualRate,
-        max_monthly_payment: maxPayment || null,
-        accepted_terms: acceptedSnapshot,
-        accepted_terms_at: acceptedSnapshot.accepted_at,
-        accepted_loan_amount: amount,
-        accepted_period_months: months,
-        accepted_annual_rate: annualRate,
-        accepted_max_monthly_payment: maxPayment || null,
-        status: "szukamy_inwestora",
-      }).eq("id", loan.id);
+      const { error } = await supabase
+        .from("loan_applications")
+        .update({
+          loan_amount: amount,
+          preferred_period_months: months,
+          annual_investor_rate: annualRate,
+          max_monthly_payment: maxPayment || null,
+          accepted_terms: acceptedSnapshot,
+          accepted_terms_at: acceptedSnapshot.accepted_at,
+          accepted_loan_amount: amount,
+          accepted_period_months: months,
+          accepted_annual_rate: annualRate,
+          accepted_max_monthly_payment: maxPayment || null,
+          status: "szukamy_inwestora",
+        })
+        .eq("id", loan.id);
       if (error) throw error;
       toast.success("Warunki zaakceptowane i zapisane. Wniosek trafił do inwestorów.");
       setRefreshTick((t) => t + 1);
@@ -221,8 +266,9 @@ export function InvestorProposalCalculator({
     }
   };
 
-
-  const statusLabel = loan ? (loanStatusLabels[loan.status as keyof typeof loanStatusLabels] ?? loan.status) : null;
+  const statusLabel = loan
+    ? (loanStatusLabels[loan.status as keyof typeof loanStatusLabels] ?? loan.status)
+    : null;
 
   if (loading) return <p className="text-sm text-muted-foreground">Ładowanie kalkulatora…</p>;
 
@@ -240,7 +286,9 @@ export function InvestorProposalCalculator({
     <div className="max-w-5xl space-y-4">
       {locked && (
         <div className="flex flex-wrap items-center gap-2">
-          <Badge className="gap-1"><Lock className="h-3.5 w-3.5" /> Zablokowany do edycji</Badge>
+          <Badge className="gap-1">
+            <Lock className="h-3.5 w-3.5" /> Zablokowany do edycji
+          </Badge>
         </div>
       )}
 
@@ -252,10 +300,13 @@ export function InvestorProposalCalculator({
                 <Check className="h-4 w-4" strokeWidth={3} />
               </span>
               <span className="text-[11px] font-bold uppercase tracking-widest text-white">
-                Typ nieruchomości {savingPropertyType && <Loader2 className="ml-1 inline h-3 w-3 animate-spin" />}
+                Typ nieruchomości{" "}
+                {savingPropertyType && <Loader2 className="ml-1 inline h-3 w-3 animate-spin" />}
               </span>
             </div>
-            <p className="text-xs text-white/75">Wybierz, co stanowi zabezpieczenie — to wpływa na zainteresowanie inwestorów.</p>
+            <p className="text-xs text-white/75">
+              Wybierz, co stanowi zabezpieczenie — to wpływa na zainteresowanie inwestorów.
+            </p>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {PROPERTY_TILES.map(({ type, icon: Icon }) => {
                 const active = propertyType === type;
@@ -272,7 +323,9 @@ export function InvestorProposalCalculator({
                     )}
                   >
                     <Icon className={cn("h-7 w-7", active ? "text-white" : "text-white/70")} />
-                    <span className="text-xs font-semibold text-white">{securityTypeLabels[type]}</span>
+                    <span className="text-xs font-semibold text-white">
+                      {securityTypeLabels[type]}
+                    </span>
                   </button>
                 );
               })}
@@ -287,7 +340,9 @@ export function InvestorProposalCalculator({
                   Miejscowość <span className="text-rose-200">*</span>
                 </span>
               </div>
-              <p className="text-xs text-white/75">Podaj miasto/miejscowość, w której znajduje się nieruchomość.</p>
+              <p className="text-xs text-white/75">
+                Podaj miasto/miejscowość, w której znajduje się nieruchomość.
+              </p>
               <div className="relative">
                 <MapPin className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/80" />
                 <Input
@@ -310,21 +365,28 @@ export function InvestorProposalCalculator({
               </div>
             </div>
           </div>
-
         </FancyShell>
 
         {filesSlot}
 
         <div className="relative">
-          <fieldset disabled={Boolean(lockReason)} className={cn("contents", lockReason && "pointer-events-none")}>
+          <fieldset
+            disabled={Boolean(lockReason)}
+            className={cn("contents", lockReason && "pointer-events-none")}
+          >
             <OfferCalculatorPanel
-              amount={amount} setAmount={setAmount}
-              months={months} setMonths={setMonths}
+              amount={amount}
+              setAmount={setAmount}
+              months={months}
+              setMonths={setMonths}
               maxMonths={maxMonths}
-              canExtend={canExtend} setCanExtend={setCanExtend}
-              annualRate={annualRate} setAnnualRate={setAnnualRate}
+              canExtend={canExtend}
+              setCanExtend={setCanExtend}
+              annualRate={annualRate}
+              setAnnualRate={setAnnualRate}
               rateTouchedRef={rateTouchedRef}
-              maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+              maxPayment={maxPayment}
+              setMaxPayment={setMaxPayment}
               headerLabel="Twoja oferta"
             />
           </fieldset>
@@ -351,12 +413,34 @@ export function InvestorProposalCalculator({
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3 text-white md:grid-cols-4">
-              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Kwota</div><div className="text-lg font-bold">{Number(loan.accepted_loan_amount ?? 0).toLocaleString("pl-PL")} zł</div></div>
-              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Okres</div><div className="text-lg font-bold">{loan.accepted_period_months} mies.</div></div>
-              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Oproc. roczne</div><div className="text-lg font-bold">{Number(loan.accepted_annual_rate ?? 0)}%</div></div>
-              <div><div className="text-[10px] uppercase tracking-wider text-white/60">Maks. rata</div><div className="text-lg font-bold">{loan.accepted_max_monthly_payment ? `${Number(loan.accepted_max_monthly_payment).toLocaleString("pl-PL")} zł` : "—"}</div></div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-white/60">Kwota</div>
+                <div className="text-lg font-bold">
+                  {Number(loan.accepted_loan_amount ?? 0).toLocaleString("pl-PL")} zł
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-white/60">Okres</div>
+                <div className="text-lg font-bold">{loan.accepted_period_months} mies.</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-white/60">
+                  Oproc. roczne
+                </div>
+                <div className="text-lg font-bold">{Number(loan.accepted_annual_rate ?? 0)}%</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-white/60">Maks. rata</div>
+                <div className="text-lg font-bold">
+                  {loan.accepted_max_monthly_payment
+                    ? `${Number(loan.accepted_max_monthly_payment).toLocaleString("pl-PL")} zł`
+                    : "—"}
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-white/70">Zaakceptowano: {new Date(loan.accepted_terms_at).toLocaleString("pl-PL")}</p>
+            <p className="text-xs text-white/70">
+              Zaakceptowano: {new Date(loan.accepted_terms_at).toLocaleString("pl-PL")}
+            </p>
           </div>
         </FancyShell>
       )}
@@ -372,16 +456,25 @@ export function InvestorProposalCalculator({
               "h-16 w-full rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-lg font-black uppercase tracking-[0.18em] text-white shadow-[0_18px_45px_-12px_oklch(0.55_0.18_150/0.7)] ring-1 ring-emerald-300/50 transition hover:from-emerald-400 hover:via-emerald-500 hover:to-emerald-600 hover:shadow-[0_20px_55px_-12px_oklch(0.55_0.18_150/0.85)] disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:hover:from-emerald-500 disabled:hover:via-emerald-600 disabled:hover:to-emerald-700",
             )}
           >
-            {sendingToInvestors
-              ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Wysyłam…</>
-              : lockReason
-                ? <><Lock className="mr-3 h-6 w-6" />Zaakceptuj warunki</>
-                : <><Send className="mr-3 h-6 w-6" />{loan?.accepted_terms_at ? "Zaktualizuj warunki" : "Zaakceptuj warunki"}</>}
+            {sendingToInvestors ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Wysyłam…
+              </>
+            ) : lockReason ? (
+              <>
+                <Lock className="mr-3 h-6 w-6" />
+                Zaakceptuj warunki
+              </>
+            ) : (
+              <>
+                <Send className="mr-3 h-6 w-6" />
+                {loan?.accepted_terms_at ? "Zaktualizuj warunki" : "Zaakceptuj warunki"}
+              </>
+            )}
           </Button>
         </div>
       )}
-
-
     </div>
   );
 }

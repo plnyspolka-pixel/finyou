@@ -55,8 +55,8 @@ export interface ProgressResult {
   property_city: string | null;
   loan_amount: number | null;
   required_documents: DocRequirement[];
-  uploaded_documents: string[];   // ludzkie etykiety
-  missing_documents: string[];    // ludzkie etykiety
+  uploaded_documents: string[]; // ludzkie etykiety
+  missing_documents: string[]; // ludzkie etykiety
   missing_documents_kinds: string[];
   is_complete: boolean;
   completion_percent: number;
@@ -74,8 +74,12 @@ export function computeLoanProgress(input: ProgressInput): ProgressResult {
   if ((input.property?.area_sqm ?? 0) > 0) have.add("usable_area");
 
   const photosCount = input.property?.photos?.length ?? 0;
-  const interiorPhotos = (input.property?.photos ?? []).filter((p) => /wewn|interior|pokoj|kuch|salon|lazi|łazi/i.test(p)).length;
-  const exteriorPhotos = (input.property?.photos ?? []).filter((p) => /zewn|exterior|elewacj|front|fasad/i.test(p)).length;
+  const interiorPhotos = (input.property?.photos ?? []).filter((p) =>
+    /wewn|interior|pokoj|kuch|salon|lazi|łazi/i.test(p),
+  ).length;
+  const exteriorPhotos = (input.property?.photos ?? []).filter((p) =>
+    /zewn|exterior|elewacj|front|fasad/i.test(p),
+  ).length;
 
   // Klasyfikacja po dokumentach
   for (const d of input.documents) {
@@ -107,16 +111,13 @@ export function computeLoanProgress(input: ProgressInput): ProgressResult {
   if (step > 5) step = 5;
   const stepLabel = STEP_LABELS[step] ?? "Wniosek";
 
-  const isComplete =
-    step >= 5 &&
-    missing.length === 0 &&
-    input.loan.status === "wniosek_kompletny";
+  const isComplete = step >= 5 && missing.length === 0 && input.loan.status === "wniosek_kompletny";
 
   // Procent globalny: kroki 1-3 = 60%, dokumenty = 40%
   const stepPercent = Math.min(step, 4) * 15; // 1=15, 2=30, 3=45, 4=60
   const overallPercent = Math.min(
     100,
-    Math.max(stepPercent, stepPercent + Math.round((docsPercent / 100) * 40))
+    Math.max(stepPercent, stepPercent + Math.round((docsPercent / 100) * 40)),
   );
 
   return {
@@ -140,7 +141,8 @@ export function describeMissingStep(p: ProgressResult): string {
   if (p.is_complete) return "Wniosek kompletny";
   if (p.current_step <= 2) return "Wybór zabezpieczenia i dane kontaktowe";
   if (p.current_step === 3) return "Dane nieruchomości";
-  if (p.missing_documents.length > 0) return "Brakujące dokumenty: " + p.missing_documents.join(", ");
+  if (p.missing_documents.length > 0)
+    return "Brakujące dokumenty: " + p.missing_documents.join(", ");
   return STEP_LABELS[p.current_step] ?? "Wniosek";
 }
 

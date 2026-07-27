@@ -13,10 +13,16 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ loan_application_id, status, limit }, ctx: ToolContext) => {
-    try { requireAuth(ctx); } catch (e) { return fail((e as Error).message); }
+    try {
+      requireAuth(ctx);
+    } catch (e) {
+      return fail((e as Error).message);
+    }
     let q = userClient(ctx)
       .from("investor_offers")
-      .select("id, loan_application_id, investor_id, offer_status, proposed_amount, period_months, expected_yearly_yield, estimated_monthly_payment, submitted_at, created_at")
+      .select(
+        "id, loan_application_id, investor_id, offer_status, proposed_amount, period_months, expected_yearly_yield, estimated_monthly_payment, submitted_at, created_at",
+      )
       .order("created_at", { ascending: false })
       .limit(limit ?? 20);
     if (loan_application_id) q = q.eq("loan_application_id", loan_application_id);

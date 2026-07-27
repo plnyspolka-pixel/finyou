@@ -4,14 +4,31 @@ import type { NbpTrend } from "./types";
 import { withCache } from "./cache.server";
 
 const NBP_CITIES = [
-  "Warszawa","Kraków","Łódź","Wrocław","Poznań","Gdańsk","Gdynia","Sopot","Szczecin","Bydgoszcz",
-  "Lublin","Białystok","Katowice","Olsztyn","Rzeszów","Opole","Zielona Góra","Kielce","Toruń",
+  "Warszawa",
+  "Kraków",
+  "Łódź",
+  "Wrocław",
+  "Poznań",
+  "Gdańsk",
+  "Gdynia",
+  "Sopot",
+  "Szczecin",
+  "Bydgoszcz",
+  "Lublin",
+  "Białystok",
+  "Katowice",
+  "Olsztyn",
+  "Rzeszów",
+  "Opole",
+  "Zielona Góra",
+  "Kielce",
+  "Toruń",
 ];
 
 function nearestNbpCity(city?: string | null): string | null {
   if (!city) return null;
   const norm = city.trim().toLowerCase();
-  const hit = NBP_CITIES.find(c => c.toLowerCase() === norm);
+  const hit = NBP_CITIES.find((c) => c.toLowerCase() === norm);
   return hit ?? null;
 }
 

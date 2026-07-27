@@ -61,7 +61,12 @@ export const Route = createFileRoute("/oferty")({
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Strona główna", item: "https://financeyou.pl/" },
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Strona główna",
+              item: "https://financeyou.pl/",
+            },
             { "@type": "ListItem", position: 2, name: "Oferty", item: URL },
           ],
         }),
@@ -76,7 +81,9 @@ function OfertyPage() {
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 pt-10 md:px-6 md:pt-14">
         <nav aria-label="breadcrumb" className="text-xs text-muted-foreground">
-          <a href="/" className="hover:underline">Strona główna</a>
+          <a href="/" className="hover:underline">
+            Strona główna
+          </a>
           <span className="mx-2">/</span>
           <span className="text-foreground">Oferty</span>
         </nav>

@@ -7,9 +7,20 @@ function admin(): SupabaseClient {
 }
 
 const SYSTEM_PREFIXES = [
-  "noreply@", "no-reply@", "no_reply@", "donotreply@", "do-not-reply@",
-  "mailer-daemon@", "postmaster@", "bounce@", "bounces@", "notifications@",
-  "notification@", "auto-reply@", "autoreply@", "support-noreply@",
+  "noreply@",
+  "no-reply@",
+  "no_reply@",
+  "donotreply@",
+  "do-not-reply@",
+  "mailer-daemon@",
+  "postmaster@",
+  "bounce@",
+  "bounces@",
+  "notifications@",
+  "notification@",
+  "auto-reply@",
+  "autoreply@",
+  "support-noreply@",
 ];
 
 /** Zwraca lowercased headers map z dowolnego inputu (Headers/object/array) */
@@ -63,13 +74,16 @@ export async function isSuppressed(email: string | null | undefined): Promise<bo
   return !!data;
 }
 
-export async function addSuppression(email: string, reason: string, metadata: Record<string, any> = {}): Promise<void> {
+export async function addSuppression(
+  email: string,
+  reason: string,
+  metadata: Record<string, any> = {},
+): Promise<void> {
   if (!email) return;
   const s = admin();
-  await s.from("suppressed_emails").upsert(
-    { email: email.toLowerCase(), reason, metadata },
-    { onConflict: "email" },
-  );
+  await s
+    .from("suppressed_emails")
+    .upsert({ email: email.toLowerCase(), reason, metadata }, { onConflict: "email" });
 }
 
 /** Liczba wiadomości wychodzących do leada w ostatnich 24h */

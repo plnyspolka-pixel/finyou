@@ -9,9 +9,14 @@ type AuthorizationDetails = {
   redirect_to?: string | null;
   scope?: string | null;
 };
-type OAuthResult = { data: { redirect_url?: string | null; redirect_to?: string | null } | null; error: { message: string } | null };
+type OAuthResult = {
+  data: { redirect_url?: string | null; redirect_to?: string | null } | null;
+  error: { message: string } | null;
+};
 type OAuthApi = {
-  getAuthorizationDetails: (id: string) => Promise<{ data: AuthorizationDetails | null; error: { message: string } | null }>;
+  getAuthorizationDetails: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: { message: string } | null }>;
   approveAuthorization: (id: string) => Promise<OAuthResult>;
   denyAuthorization: (id: string) => Promise<OAuthResult>;
 };
@@ -82,11 +87,15 @@ function Consent() {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">Połącz {clientName} z Twoim kontem Finance You</h1>
         <p className="text-sm text-muted-foreground">
-          {clientName} chce uzyskać dostęp do Twojego konta Finance You (odczyt profilu, leadów i publicznych treści bloga) w Twoim imieniu.
+          {clientName} chce uzyskać dostęp do Twojego konta Finance You (odczyt profilu, leadów i
+          publicznych treści bloga) w Twoim imieniu.
         </p>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-destructive border border-destructive/40 rounded p-3">
+        <p
+          role="alert"
+          className="text-sm text-destructive border border-destructive/40 rounded p-3"
+        >
           {error}
         </p>
       )}

@@ -53,7 +53,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           // jeśli baza niedostępna — zwracamy resztę sitemapy
         }
 
-
         const urls = entries.map((e) =>
           [
             `  <url>`,

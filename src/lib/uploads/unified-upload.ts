@@ -82,7 +82,9 @@ async function renderPdfFirstPage(file: Blob): Promise<Blob | null> {
     if (!ctx) return null;
     // pdfjs v6 wymaga argumentu canvas
     await page.render({ canvasContext: ctx, viewport: scaled, canvas } as any).promise;
-    return await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png", 0.85));
+    return await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/png", 0.85),
+    );
   } catch (e) {
     console.warn("[unified-upload] PDF thumbnail render failed:", e);
     return null;
@@ -149,6 +151,9 @@ export async function backfillPdfThumbnail(path: string): Promise<string | null>
 export async function deleteStoragePath(path: string): Promise<void> {
   const buckets = [UNIFIED_BUCKET, "marketing-materials", "avatars"];
   for (const bucket of buckets) {
-    await supabase.storage.from(bucket).remove([path, `${path}.thumb.png`]).catch(() => {});
+    await supabase.storage
+      .from(bucket)
+      .remove([path, `${path}.thumb.png`])
+      .catch(() => {});
   }
 }

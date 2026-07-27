@@ -43,11 +43,8 @@ export interface FloodAnalysisOutput {
   raw: Record<string, any>;
 }
 
-
-const WFS_BASE =
-  "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WFS";
-const WMS_BASE =
-  "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WMS";
+const WFS_BASE = "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WFS";
+const WMS_BASE = "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WMS";
 const FETCH_TIMEOUT_MS = 12_000;
 
 function unknownResult(): FloodRiskResult {
@@ -66,26 +63,45 @@ function unknownResult(): FloodRiskResult {
 
 export function scoreForRiskLevel(r: FloodRiskLevel): number {
   switch (r) {
-    case "none": return 10;
-    case "low": return 7;
-    case "medium": return 4;
-    case "high": return 1;
-    case "very_high": return 0;
-    default: return 5;
+    case "none":
+      return 10;
+    case "low":
+      return 7;
+    case "medium":
+      return 4;
+    case "high":
+      return 1;
+    case "very_high":
+      return 0;
+    default:
+      return 5;
   }
 }
 
 export function buildAlerts(r: FloodRiskResult, ok: boolean): string[] {
   const alerts: string[] = [];
   if (!ok) {
-    alerts.push("Nie udało się automatycznie zweryfikować zagrożenia powodziowego. Wymagana ręczna weryfikacja w Hydroportalu.");
+    alerts.push(
+      "Nie udało się automatycznie zweryfikować zagrożenia powodziowego. Wymagana ręczna weryfikacja w Hydroportalu.",
+    );
     return alerts;
   }
-  if (r.scenario10Percent) alerts.push("Uwaga: nieruchomość znajduje się na obszarze wysokiego zagrożenia powodziowego według map ISOK/Wody Polskie.");
-  if (r.scenario1Percent) alerts.push("Nieruchomość znajduje się na obszarze zagrożenia powodziowego dla scenariusza 1%.");
-  if (r.scenario02Percent) alerts.push("Nieruchomość znajduje się na obszarze zagrożenia powodziowego dla scenariusza 0,2%.");
+  if (r.scenario10Percent)
+    alerts.push(
+      "Uwaga: nieruchomość znajduje się na obszarze wysokiego zagrożenia powodziowego według map ISOK/Wody Polskie.",
+    );
+  if (r.scenario1Percent)
+    alerts.push(
+      "Nieruchomość znajduje się na obszarze zagrożenia powodziowego dla scenariusza 1%.",
+    );
+  if (r.scenario02Percent)
+    alerts.push(
+      "Nieruchomość znajduje się na obszarze zagrożenia powodziowego dla scenariusza 0,2%.",
+    );
   if (!r.scenario02Percent && !r.scenario1Percent && !r.scenario10Percent) {
-    alerts.push("Nie stwierdzono przecięcia lokalizacji nieruchomości z obszarami zagrożenia powodziowego w dostępnych warstwach MZP.");
+    alerts.push(
+      "Nie stwierdzono przecięcia lokalizacji nieruchomości z obszarami zagrożenia powodziowego w dostępnych warstwach MZP.",
+    );
   }
   return alerts;
 }
@@ -94,7 +110,10 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": "lovable-flood-risk/1.0" } });
+    return await fetch(url, {
+      signal: ctrl.signal,
+      headers: { "User-Agent": "lovable-flood-risk/1.0" },
+    });
   } finally {
     clearTimeout(t);
   }
@@ -118,16 +137,24 @@ async function fetchWfsTypeNames(): Promise<string[]> {
 
 // Heurystyka: dopasuj warstwy do scenariuszy 10/1/0.2 i ryzyka.
 function classifyLayers(names: string[]): {
-  scenario10: string[]; scenario1: string[]; scenario02: string[]; risk: string[];
+  scenario10: string[];
+  scenario1: string[];
+  scenario02: string[];
+  risk: string[];
 } {
-  const out = { scenario10: [] as string[], scenario1: [] as string[], scenario02: [] as string[], risk: [] as string[] };
+  const out = {
+    scenario10: [] as string[],
+    scenario1: [] as string[],
+    scenario02: [] as string[],
+    risk: [] as string[],
+  };
   for (const n of names) {
     const low = n.toLowerCase();
     const isHazard = low.includes("zagroz") || low.includes("hazard") || low.includes("mzp");
     const isRisk = low.includes("ryzyk") || low.includes("risk") || low.includes("mrp");
     // wykrycie scenariusza po liczbach / oznaczeniach
     const has10 = /(?:^|[^0-9])(10|q10|0?10p|wysok)/i.test(low);
-    const has1  = /(?:^|[^0-9.])(1p|q100|sredn|średn|100l)/i.test(low) && !has10;
+    const has1 = /(?:^|[^0-9.])(1p|q100|sredn|średn|100l)/i.test(low) && !has10;
     const has02 = /(0[.,]?2|q500|nisk|500l)/i.test(low);
     if (isHazard && has10) out.scenario10.push(n);
     else if (isHazard && has1) out.scenario1.push(n);
@@ -141,8 +168,10 @@ async function wfsHasFeaturesInBbox(typeName: string, lat: number, lng: number):
   // mały bbox ~ ±50m: 0.0005 stopnia szer., dla dł. korygujemy cos(lat)
   const dLat = 0.0005;
   const dLng = 0.0005 / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
-  const minLat = lat - dLat, maxLat = lat + dLat;
-  const minLng = lng - dLng, maxLng = lng + dLng;
+  const minLat = lat - dLat,
+    maxLat = lat + dLat;
+  const minLng = lng - dLng,
+    maxLng = lng + dLng;
   // WFS 2.0 BBOX SRS = urn:ogc:def:crs:EPSG::4326 (axis y,x)
   const bbox = `${minLat},${minLng},${maxLat},${maxLng},urn:ogc:def:crs:EPSG::4326`;
   const url =
@@ -173,7 +202,8 @@ async function anyLayerHit(layers: string[], lat: number, lng: number): Promise<
 
 export function buildWmsPreviewUrl(lat: number, lng: number, w = 600, h = 400): string {
   // poglądowy obrazek WMS — wszystkie warstwy domyślne
-  const dLat = 0.01, dLng = 0.015;
+  const dLat = 0.01,
+    dLng = 0.015;
   const bbox = `${lng - dLng},${lat - dLat},${lng + dLng},${lat + dLat}`;
   return (
     `${WMS_BASE}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap` +
@@ -191,7 +221,11 @@ export async function analyzeFloodRisk(input: FloodAnalysisInput): Promise<Flood
   if ((lat == null || lng == null) && (input.address || input.city)) {
     const q = [input.address, input.city, input.voivodeship].filter(Boolean).join(", ");
     const g = await geocode(q);
-    if (g) { lat = g.lat; lng = g.lng; geometryUsed = "address_geocoding"; }
+    if (g) {
+      lat = g.lat;
+      lng = g.lng;
+      geometryUsed = "address_geocoding";
+    }
   }
 
   if (lat == null || lng == null) {
@@ -229,7 +263,8 @@ export async function analyzeFloodRisk(input: FloodAnalysisInput): Promise<Flood
         waterDepth: cached.water_depth as number | null,
         flowVelocity: cached.flow_velocity as number | null,
         riskMapIntersection: false,
-        score: cached.score ?? scoreForRiskLevel((cached.risk_level as FloodRiskLevel) ?? "unknown"),
+        score:
+          cached.score ?? scoreForRiskLevel((cached.risk_level as FloodRiskLevel) ?? "unknown"),
       };
       return {
         success: true,
@@ -241,7 +276,9 @@ export async function analyzeFloodRisk(input: FloodAnalysisInput): Promise<Flood
         raw: { cached: true },
       };
     }
-  } catch { /* ignore cache errors */ }
+  } catch {
+    /* ignore cache errors */
+  }
 
   let typeNames: string[] = [];
   try {
@@ -262,7 +299,10 @@ export async function analyzeFloodRisk(input: FloodAnalysisInput): Promise<Flood
 
   const layers = classifyLayers(typeNames);
 
-  let hit10 = false, hit1 = false, hit02 = false, hitRisk = false;
+  let hit10 = false,
+    hit1 = false,
+    hit02 = false,
+    hitRisk = false;
   try {
     [hit10, hit1, hit02, hitRisk] = await Promise.all([
       anyLayerHit(layers.scenario10, lat, lng),
@@ -313,7 +353,9 @@ export async function analyzeFloodRisk(input: FloodAnalysisInput): Promise<Flood
       score: fr.score,
       response_json: { layers, hit10, hit1, hit02, hitRisk } as never,
     });
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return {
     success: true,
@@ -326,26 +368,37 @@ export async function analyzeFloodRisk(input: FloodAnalysisInput): Promise<Flood
   };
 }
 
-export function floodRiskInvestorText(fr: FloodRiskResult, ok: boolean): {
-  floodRiskSummary: string; riskComment: string; shortInvestorBullet: string;
+export function floodRiskInvestorText(
+  fr: FloodRiskResult,
+  ok: boolean,
+): {
+  floodRiskSummary: string;
+  riskComment: string;
+  shortInvestorBullet: string;
 } {
   if (!ok || fr.riskLevel === "unknown") {
     return {
-      floodRiskSummary: "Nie udało się automatycznie zweryfikować zagrożenia powodziowego dla tej lokalizacji w oficjalnych warstwach ISOK/Wody Polskie. Rekomendowana ręczna weryfikacja w Hydroportalu.",
+      floodRiskSummary:
+        "Nie udało się automatycznie zweryfikować zagrożenia powodziowego dla tej lokalizacji w oficjalnych warstwach ISOK/Wody Polskie. Rekomendowana ręczna weryfikacja w Hydroportalu.",
       riskComment: "Brak rozstrzygającej informacji — pozycja wymaga weryfikacji.",
       shortInvestorBullet: "Ryzyko powodziowe: do weryfikacji.",
     };
   }
   if (fr.riskLevel === "none") {
     return {
-      floodRiskSummary: "Na podstawie dostępnych warstw ISOK/Wody Polskie nie stwierdzono przecięcia nieruchomości z obszarami zagrożenia powodziowego. Wynik ma charakter pomocniczy i powinien być interpretowany łącznie z dokumentami nieruchomości oraz lokalnymi uwarunkowaniami.",
+      floodRiskSummary:
+        "Na podstawie dostępnych warstw ISOK/Wody Polskie nie stwierdzono przecięcia nieruchomości z obszarami zagrożenia powodziowego. Wynik ma charakter pomocniczy i powinien być interpretowany łącznie z dokumentami nieruchomości oraz lokalnymi uwarunkowaniami.",
       riskComment: "Brak stwierdzonego ryzyka powodziowego.",
       shortInvestorBullet: "Ryzyko powodziowe: brak stwierdzonego ryzyka.",
     };
   }
-  const scen = fr.scenario10Percent ? "10%"
-    : fr.scenario1Percent ? "1%"
-    : fr.scenario02Percent ? "0,2%" : "—";
+  const scen = fr.scenario10Percent
+    ? "10%"
+    : fr.scenario1Percent
+      ? "1%"
+      : fr.scenario02Percent
+        ? "0,2%"
+        : "—";
   return {
     floodRiskSummary: `Dostępne warstwy ISOK/Wody Polskie wskazują, że nieruchomość znajduje się w obszarze zagrożenia powodziowego dla scenariusza ${scen}. Może to wpływać na płynność zabezpieczenia, warunki ubezpieczenia oraz ostrożnościową ocenę wartości nieruchomości.`,
     riskComment: `Stwierdzone zagrożenie powodziowe — poziom: ${fr.riskLevel}.`,

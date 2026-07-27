@@ -8,7 +8,9 @@ function getKey(): Buffer | null {
   const raw = process.env.AFFILIATE_ENCRYPTION_KEY;
   if (!raw) return null;
   try {
-    const buf = /^[0-9a-fA-F]{64}$/.test(raw) ? Buffer.from(raw, "hex") : Buffer.from(raw, "base64");
+    const buf = /^[0-9a-fA-F]{64}$/.test(raw)
+      ? Buffer.from(raw, "hex")
+      : Buffer.from(raw, "base64");
     return buf.length === 32 ? buf : null;
   } catch {
     return null;
@@ -19,8 +21,9 @@ export function encryptSensitive(plain: string | null | undefined): string | nul
   if (plain == null || plain === "") return null;
   const key = getKey();
   if (!key) {
-    // eslint-disable-next-line no-console
-    console.warn("[affiliate] AFFILIATE_ENCRYPTION_KEY brak — dane wrażliwe zapisane jako base64 (skonfiguruj klucz!).");
+    console.warn(
+      "[affiliate] AFFILIATE_ENCRYPTION_KEY brak — dane wrażliwe zapisane jako base64 (skonfiguruj klucz!).",
+    );
     return `b64:${Buffer.from(String(plain), "utf8").toString("base64")}`;
   }
   const iv = randomBytes(12);
@@ -46,7 +49,10 @@ export function decryptSensitive(stored: string | null | undefined): string | nu
     try {
       const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64, "base64"));
       decipher.setAuthTag(Buffer.from(tagB64, "base64"));
-      return Buffer.concat([decipher.update(Buffer.from(dataB64, "base64")), decipher.final()]).toString("utf8");
+      return Buffer.concat([
+        decipher.update(Buffer.from(dataB64, "base64")),
+        decipher.final(),
+      ]).toString("utf8");
     } catch {
       return null;
     }

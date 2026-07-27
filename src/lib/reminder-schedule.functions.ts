@@ -23,7 +23,7 @@ export const getReminderSchedule = createServerFn({ method: "GET" })
     if (error) throw error;
 
     // Policz dzisiejsze wysyłki + następne 3 zaplanowane terminy.
-    let nextRuns: string[] = [];
+    const nextRuns: string[] = [];
     if (data?.cron_expression) {
       try {
         const { CronExpressionParser } = await import("cron-parser");
@@ -78,15 +78,18 @@ export const triggerReminderEmailsNow = createServerFn({ method: "POST" })
 export const sendFollowupSample = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({
-      to: z.string().email(),
-      count: z.number().int().min(1).max(20).default(10),
-    }).parse(input)
+    z
+      .object({
+        to: z.string().email(),
+        count: z.number().int().min(1).max(20).default(10),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await ensureAdmin(context);
 
-    const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } = await import("@/lib/follow-up-templates");
+    const { EMAIL_FOLLOW_UPS, renderFollowUp, buildFollowUpVars } =
+      await import("@/lib/follow-up-templates");
     const { sendResendEmail } = await import("@/lib/resend-send.server");
 
     const vars = buildFollowUpVars({
@@ -99,10 +102,22 @@ export const sendFollowupSample = createServerFn({ method: "POST" })
     const results: Array<{ i: number; subject: string; ok: boolean; error?: string }> = [];
     for (let i = 0; i < n; i++) {
       const tpl = EMAIL_FOLLOW_UPS[i];
-      const subject = `[${i + 1}/${n}] ${renderFollowUp(tpl.subject, vars)}`.replace(/\{\{[^}]+\}\}/g, "").replace(/\s{2,}/g, " ").trim();
+      const subject = `[${i + 1}/${n}] ${renderFollowUp(tpl.subject, vars)}`
+        .replace(/\{\{[^}]+\}\}/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
       const html = renderFollowUp(tpl.body, vars);
-      const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      const r = await sendResendEmail({ to: data.to, subject, text, html, fromName: "Ania z Finance You" });
+      const text = html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const r = await sendResendEmail({
+        to: data.to,
+        subject,
+        text,
+        html,
+        fromName: "Ania z Finance You",
+      });
       results.push({ i: i + 1, subject, ok: r.ok, error: r.error });
     }
     const sent = results.filter((r) => r.ok).length;

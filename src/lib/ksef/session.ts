@@ -33,30 +33,45 @@ type CertEntry = { certificate: string; usage: string[] | string };
 // Zwraca klucz publiczny MF jako PEM (string). PEM jest wymagany, bo część runtime'ów
 // (workerd/Cloudflare) nie przyjmuje obiektu KeyObject w publicEncrypt({ key }).
 async function fetchEncryptionPublicKey(baseUrl: string): Promise<string> {
-  const res = await fetch(`${baseUrl}/api/v2/security/public-key-certificates`, { headers: { Accept: "application/json" } });
+  const res = await fetch(`${baseUrl}/api/v2/security/public-key-certificates`, {
+    headers: { Accept: "application/json" },
+  });
   if (!res.ok) throw new Error(`Nie udało się pobrać certyfikatów KSeF (${res.status}).`);
   const items = (await res.json()) as CertEntry[];
-  const pick = items.find((c) => {
-    const u = Array.isArray(c.usage) ? c.usage : [c.usage];
-    return u.includes("KsefTokenEncryption");
-  }) ?? items[0];
-  if (!pick?.certificate) throw new Error("Brak certyfikatu KsefTokenEncryption w odpowiedzi KSeF.");
+  const pick =
+    items.find((c) => {
+      const u = Array.isArray(c.usage) ? c.usage : [c.usage];
+      return u.includes("KsefTokenEncryption");
+    }) ?? items[0];
+  if (!pick?.certificate)
+    throw new Error("Brak certyfikatu KsefTokenEncryption w odpowiedzi KSeF.");
   const der = Buffer.from(pick.certificate, "base64");
   const cert = new X509Certificate(der);
   return cert.publicKey.export({ type: "spki", format: "pem" }) as string;
 }
 
-async function pollAuthStatus(baseUrl: string, referenceNumber: string, authToken: string): Promise<void> {
+async function pollAuthStatus(
+  baseUrl: string,
+  referenceNumber: string,
+  authToken: string,
+): Promise<void> {
   const deadline = Date.now() + 20_000;
   while (Date.now() < deadline) {
     const res = await fetch(`${baseUrl}/api/v2/auth/${encodeURIComponent(referenceNumber)}`, {
       headers: { Accept: "application/json", Authorization: `Bearer ${authToken}` },
     });
     if (!res.ok) throw new Error(`GET /auth/${referenceNumber} ${res.status}`);
-    const j = (await res.json()) as { status?: { code?: number; description?: string } | string; authenticationTokenStatus?: string };
-    const status = typeof j.status === "string" ? j.status : (j.status?.description ?? "") + " " + (j.authenticationTokenStatus ?? "");
+    const j = (await res.json()) as {
+      status?: { code?: number; description?: string } | string;
+      authenticationTokenStatus?: string;
+    };
+    const status =
+      typeof j.status === "string"
+        ? j.status
+        : (j.status?.description ?? "") + " " + (j.authenticationTokenStatus ?? "");
     if (/success|zakończ|complete/i.test(status)) return;
-    if (/fail|error|blad|błąd/i.test(status)) throw new Error(`Uwierzytelnianie KSeF nie powiodło się: ${status}`);
+    if (/fail|error|blad|błąd/i.test(status))
+      throw new Error(`Uwierzytelnianie KSeF nie powiodło się: ${status}`);
     await new Promise((r) => setTimeout(r, 800));
   }
   throw new Error("Timeout uwierzytelniania KSeF.");
@@ -66,7 +81,11 @@ async function pollAuthStatus(baseUrl: string, referenceNumber: string, authToke
 export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> {
   const envToken = pickEnvTokenFor(entity);
   const environment: KsefEnvironment =
-    entity.ksef_environment && entity.ksef_environment !== "disabled" ? entity.ksef_environment : envToken ? "prod" : "disabled";
+    entity.ksef_environment && entity.ksef_environment !== "disabled"
+      ? entity.ksef_environment
+      : envToken
+        ? "prod"
+        : "disabled";
   if (environment === "disabled") throw new Error("KSeF wyłączony dla tego podmiotu.");
   const token = decryptSensitive(entity.ksef_token_encrypted) ?? envToken;
   if (!token) throw new Error("Brak tokenu autoryzacyjnego KSeF dla podmiotu.");
@@ -114,7 +133,8 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
     authenticationToken?: { token: string };
   };
   const authToken = submit.authenticationToken?.token;
-  if (!submit.referenceNumber || !authToken) throw new Error("Brak referenceNumber/authenticationToken w odpowiedzi KSeF.");
+  if (!submit.referenceNumber || !authToken)
+    throw new Error("Brak referenceNumber/authenticationToken w odpowiedzi KSeF.");
 
   // 5) poll
   await pollAuthStatus(base, submit.referenceNumber, authToken);
@@ -135,7 +155,13 @@ export async function openKsefSession(entity: KsefEntity): Promise<KsefSession> 
   const accessToken = rd.accessToken?.token;
   if (!accessToken) throw new Error("Brak accessToken w odpowiedzi redeem.");
 
-  return { baseUrl: base, environment, accessToken, refreshToken: rd.refreshToken?.token ?? null, nip };
+  return {
+    baseUrl: base,
+    environment,
+    accessToken,
+    refreshToken: rd.refreshToken?.token ?? null,
+    nip,
+  };
 }
 
 /** Zamyka sesję (best-effort). */

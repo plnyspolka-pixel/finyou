@@ -28,5 +28,11 @@ export const uploadLandingAttachment = createServerFn({ method: "POST" })
       .from(CLIENT_FILES_BUCKET)
       .upload(path, bytes, { contentType: data.mimeType || m[1], upsert: false });
     if (error) throw new Error(error.message);
-    return { ok: true as const, path, bucket: data.bucket, mimeType: data.mimeType || m[1], fileName: data.fileName };
+    return {
+      ok: true as const,
+      path,
+      bucket: data.bucket,
+      mimeType: data.mimeType || m[1],
+      fileName: data.fileName,
+    };
   });

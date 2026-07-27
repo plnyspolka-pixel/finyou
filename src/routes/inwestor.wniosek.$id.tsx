@@ -8,12 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Send, MessageSquare, FileText, ExternalLink, Eye, AlertTriangle, FolderOpen } from "lucide-react";
+import {
+  ArrowLeft,
+  Send,
+  MessageSquare,
+  FileText,
+  ExternalLink,
+  Eye,
+  AlertTriangle,
+  FolderOpen,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import { propertyTypeLabels } from "@/lib/labels";
-
 
 import { KwContentSection } from "@/components/kw-content-section";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
@@ -73,42 +81,63 @@ function InwestorWniosek() {
   const [submitting, setSubmitting] = useState(false);
   const openThread = useServerFn(openOrCreateThread);
   const fetchRates = useServerFn(getNbpRates);
-  const ratesQ = useQuery({ queryKey: ["nbp-rates"], queryFn: () => fetchRates(), staleTime: 12 * 60 * 60 * 1000 });
+  const ratesQ = useQuery({
+    queryKey: ["nbp-rates"],
+    queryFn: () => fetchRates(),
+    staleTime: 12 * 60 * 60 * 1000,
+  });
   const maxAnnualRate = ((ratesQ.data?.referenceRate ?? 3.75) + 3.5) * 2;
 
   // Calc state — wypełniana przez LoanCalculator (onChange)
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
   const [note, setNote] = useState("");
 
-  useEffect(() => { void (async () => {
-    const { data } = await supabase.from("loan_applications").select("*, properties(*)").eq("id", id).maybeSingle();
-    setApp(data);
-    if (data) {
-      void supabase.rpc("increment_loan_view" as any, { _loan_id: id });
-    }
-    if (user) {
-      const { data: inv } = await supabase.from("investors").select("id").eq("user_id", user.id).maybeSingle();
-      if (inv) setInvestorId(inv.id);
-    }
-    const { data: ds } = await supabase.from("documents").select("*").eq("loan_application_id", id).order("created_at", { ascending: false });
-    const list = ds ?? [];
-    setDocs(list);
-    // Podpisane URL-e dla każdego pliku klienta (obrazy pokazujemy jako miniaturki, reszta jako kafle).
-    const next: Record<string, string> = {};
-    await Promise.all(list.map(async (d: any) => {
-      if (!d.file_path) return;
-      const url = await signStoragePath(d.file_path, 3600);
-      if (url) next[d.id] = url;
-    }));
-    setDocUrls(next);
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("loan_applications")
+        .select("*, properties(*)")
+        .eq("id", id)
+        .maybeSingle();
+      setApp(data);
+      if (data) {
+        void supabase.rpc("increment_loan_view" as any, { _loan_id: id });
+      }
+      if (user) {
+        const { data: inv } = await supabase
+          .from("investors")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (inv) setInvestorId(inv.id);
+      }
+      const { data: ds } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("loan_application_id", id)
+        .order("created_at", { ascending: false });
+      const list = ds ?? [];
+      setDocs(list);
+      // Podpisane URL-e dla każdego pliku klienta (obrazy pokazujemy jako miniaturki, reszta jako kafle).
+      const next: Record<string, string> = {};
+      await Promise.all(
+        list.map(async (d: any) => {
+          if (!d.file_path) return;
+          const url = await signStoragePath(d.file_path, 3600);
+          if (url) next[d.id] = url;
+        }),
+      );
+      setDocUrls(next);
 
-    // Zdjęcia z properties.photos (starszy format) — nie duplikujemy tych, które są już w documents.
-    const knownDocPaths = new Set(list.map((d: any) => d.file_path).filter(Boolean));
-    const rawPhotos: string[] = ((data?.properties?.[0]?.photos ?? []) as string[])
-      .filter((src) => isImage(src) && !knownDocPaths.has(src));
-    const resolved = await Promise.all(rawPhotos.map((src) => signStoragePath(src, 3600)));
-    setPhotoUrls(resolved.filter((s): s is string => !!s));
-  })(); }, [id, user]);
+      // Zdjęcia z properties.photos (starszy format) — nie duplikujemy tych, które są już w documents.
+      const knownDocPaths = new Set(list.map((d: any) => d.file_path).filter(Boolean));
+      const rawPhotos: string[] = ((data?.properties?.[0]?.photos ?? []) as string[]).filter(
+        (src) => isImage(src) && !knownDocPaths.has(src),
+      );
+      const resolved = await Promise.all(rawPhotos.map((src) => signStoragePath(src, 3600)));
+      setPhotoUrls(resolved.filter((s): s is string => !!s));
+    })();
+  }, [id, user]);
 
   const openFile = async (d: any) => {
     if (!d.file_path) return;
@@ -118,28 +147,49 @@ function InwestorWniosek() {
   };
 
   const submit = async (status: "szkic" | "zlozona") => {
-    if (!investorId) { toast.error("Brak profilu inwestora"); return; }
-    if (!calc || !calc.amount || !calc.months) { toast.error("Uzupełnij parametry oferty w kalkulatorze"); return; }
+    if (!investorId) {
+      toast.error("Brak profilu inwestora");
+      return;
+    }
+    if (!calc || !calc.amount || !calc.months) {
+      toast.error("Uzupełnij parametry oferty w kalkulatorze");
+      return;
+    }
     setSubmitting(true);
     const payload = {
-      loan_application_id: id, investor_id: investorId, offer_status: status as any,
-      proposed_amount: calc.amount, period_months: calc.months,
-      expected_yearly_yield: calc.annualRate, commission: calc.commissionPln,
-      collection_protection: false, has_balloon: calc.balloon > 0,
+      loan_application_id: id,
+      investor_id: investorId,
+      offer_status: status as any,
+      proposed_amount: calc.amount,
+      period_months: calc.months,
+      expected_yearly_yield: calc.annualRate,
+      commission: calc.commissionPln,
+      collection_protection: false,
+      has_balloon: calc.balloon > 0,
       balloon_amount: calc.balloon > 0 ? calc.balloon : null,
       repayment_type: (calc.balloon > 0 ? "mieszana" : "miesieczna") as any,
-      estimated_monthly_payment: calc.cappedRata, estimated_total_cost: calc.totalToRepay,
-      schedule: calc.schedule.map(r => ({ idx: r.idx, date: r.date, rata: r.rata, kapital: r.kap, odsetki: r.ods, saldo: r.saldo })) as any,
+      estimated_monthly_payment: calc.cappedRata,
+      estimated_total_cost: calc.totalToRepay,
+      schedule: calc.schedule.map((r) => ({
+        idx: r.idx,
+        date: r.date,
+        rata: r.rata,
+        kapital: r.kap,
+        odsetki: r.ods,
+        saldo: r.saldo,
+      })) as any,
       investor_note: note || null,
       submitted_at: status === "zlozona" ? new Date().toISOString() : null,
     };
     const { error } = await supabase.from("investor_offers").insert(payload);
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(status === "zlozona" ? "Oferta złożona" : "Zapisano szkic");
     void navigate({ to: "/inwestor/oferty" });
   };
-
 
   if (!app) return <div className="text-muted-foreground">Ładowanie…</div>;
   const p = app.properties?.[0];
@@ -153,10 +203,22 @@ function InwestorWniosek() {
     const url = docUrls[d.id];
     const img = url && isImage(d.file_name ?? "");
     return (
-      <button key={d.id} onClick={() => void openFile(d)} className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
+      <button
+        key={d.id}
+        onClick={() => void openFile(d)}
+        className="group text-left border rounded-lg overflow-hidden hover:border-primary transition"
+      >
         <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
-          {img ? <img src={url} alt={d.file_name} className="h-full w-full object-cover group-hover:scale-105 transition" loading="lazy" />
-            : <FileText className="h-10 w-10 text-muted-foreground" />}
+          {img ? (
+            <img
+              src={url}
+              alt={d.file_name}
+              className="h-full w-full object-cover group-hover:scale-105 transition"
+              loading="lazy"
+            />
+          ) : (
+            <FileText className="h-10 w-10 text-muted-foreground" />
+          )}
         </div>
         <div className="px-2 py-1.5 text-xs flex items-center justify-between gap-1">
           <span className="truncate">{d.file_name}</span>
@@ -168,63 +230,103 @@ function InwestorWniosek() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <Link to="/inwestor" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="mr-1 h-4 w-4" />Wróć</Link>
+      <Link
+        to="/inwestor"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="mr-1 h-4 w-4" />
+        Wróć
+      </Link>
       <FancyPageHeader
         eyebrow="Wniosek inwestycyjny"
-        title={<>{p?.property_type ? propertyTypeLabels[p.property_type] : "Wniosek"} {formatPLN(app.loan_amount)}{p?.land_register_number ? <> · <span className="font-mono">{p.land_register_number}</span></> : null}</>}
+        title={
+          <>
+            {p?.property_type ? propertyTypeLabels[p.property_type] : "Wniosek"}{" "}
+            {formatPLN(app.loan_amount)}
+            {p?.land_register_number ? (
+              <>
+                {" "}
+                · <span className="font-mono">{p.land_register_number}</span>
+              </>
+            ) : null}
+          </>
+        }
         subtitle={p ? [p.city, p.voivodeship].filter(Boolean).join(", ") || undefined : undefined}
         actions={
-          <Badge className="bg-white/15 text-white border-white/20 backdrop-blur"><Eye className="mr-1 h-3 w-3" />{app.view_count ?? 0} odsłon</Badge>
+          <Badge className="bg-white/15 text-white border-white/20 backdrop-blur">
+            <Eye className="mr-1 h-3 w-3" />
+            {app.view_count ?? 0} odsłon
+          </Badge>
         }
       />
 
       <ApplicationInfoBadges app={app} loanApplicationId={id} />
 
-
-
       {app.situation_description && (
-        <Card><CardHeader><CardTitle className="text-base">Opis sytuacji klienta</CardTitle></CardHeader>
-          <CardContent className="text-sm whitespace-pre-wrap">{app.situation_description}</CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Opis sytuacji klienta</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm whitespace-pre-wrap">
+            {app.situation_description}
+          </CardContent>
         </Card>
       )}
 
-      {(totalFiles > 0) && (
+      {totalFiles > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FolderOpen className="h-5 w-5" />{CLIENT_FILES_LABEL} <span className="text-xs font-normal text-muted-foreground">({totalFiles})</span></CardTitle>
-            <CardDescription>Zdjęcia nieruchomości, skany dokumentów i wszystkie inne załączniki wgrane przez klienta — w jednym miejscu.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              {CLIENT_FILES_LABEL}{" "}
+              <span className="text-xs font-normal text-muted-foreground">({totalFiles})</span>
+            </CardTitle>
+            <CardDescription>
+              Zdjęcia nieruchomości, skany dokumentów i wszystkie inne załączniki wgrane przez
+              klienta — w jednym miejscu.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {(imageDocs.length > 0 || photoUrls.length > 0) && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {imageDocs.map(renderDocCard)}
                 {photoUrls.map((src, i) => (
-                  <a key={`ph-${i}`} href={src} target="_blank" rel="noreferrer" className="group text-left border rounded-lg overflow-hidden hover:border-primary transition">
+                  <a
+                    key={`ph-${i}`}
+                    href={src}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group text-left border rounded-lg overflow-hidden hover:border-primary transition"
+                  >
                     <div className="aspect-[4/3] bg-muted overflow-hidden">
-                      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      <img
+                        src={src}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover group-hover:scale-105 transition"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
                     </div>
                   </a>
                 ))}
               </div>
             )}
             {otherDocs.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">{otherDocs.map(renderDocCard)}</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {otherDocs.map(renderDocCard)}
+              </div>
             )}
           </CardContent>
         </Card>
       )}
-
-
-      
 
       <KwContentSection applicationId={id} canFetch={false} />
 
       <InvestorSummaryCard applicationId={id} />
 
       <InvestorValuationCard applicationId={id} />
-
-
 
       <LoanCalculator
         key={`calc-${ratesQ.data?.referenceRate ?? "loading"}`}
@@ -258,28 +360,46 @@ function InwestorWniosek() {
 
       <RiskDisclaimer />
 
-
       <Card>
         <CardHeader>
           <CardTitle>Notatka dla administratora</CardTitle>
         </CardHeader>
         <CardContent>
           <Label className="sr-only">Notatka</Label>
-          <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Opcjonalna notatka do oferty…" />
+          <Textarea
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Opcjonalna notatka do oferty…"
+          />
         </CardContent>
       </Card>
 
-
       <div className="flex gap-2 justify-end flex-wrap">
-        <Button variant="secondary" onClick={async () => {
-          if (!investorId || !app?.client_id) return toast.error("Brak danych");
-          try {
-            await openThread({ data: { loanApplicationId: id, investorId, clientId: app.client_id }});
-            void navigate({ to: "/inwestor/wiadomosci" });
-          } catch (e: any) { toast.error(e.message); }
-        }}><MessageSquare className="mr-2 h-4 w-4"/>Czat z klientem</Button>
-        <Button variant="outline" disabled={submitting} onClick={() => void submit("szkic")}>Zapisz jako szkic</Button>
-        <Button disabled={submitting} onClick={() => void submit("zlozona")}><Send className="mr-2 h-4 w-4" />Złóż ofertę</Button>
+        <Button
+          variant="secondary"
+          onClick={async () => {
+            if (!investorId || !app?.client_id) return toast.error("Brak danych");
+            try {
+              await openThread({
+                data: { loanApplicationId: id, investorId, clientId: app.client_id },
+              });
+              void navigate({ to: "/inwestor/wiadomosci" });
+            } catch (e: any) {
+              toast.error(e.message);
+            }
+          }}
+        >
+          <MessageSquare className="mr-2 h-4 w-4" />
+          Czat z klientem
+        </Button>
+        <Button variant="outline" disabled={submitting} onClick={() => void submit("szkic")}>
+          Zapisz jako szkic
+        </Button>
+        <Button disabled={submitting} onClick={() => void submit("zlozona")}>
+          <Send className="mr-2 h-4 w-4" />
+          Złóż ofertę
+        </Button>
       </div>
     </div>
   );

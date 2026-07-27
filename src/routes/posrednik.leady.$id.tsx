@@ -16,7 +16,10 @@ export function OperatorLeadDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
   const base = usePanelBase();
   const fn = useServerFn(getLead);
-  const q = useQuery({ queryKey: ["operator-lead-quickactions", id], queryFn: () => fn({ data: { id } }) });
+  const q = useQuery({
+    queryKey: ["operator-lead-quickactions", id],
+    queryFn: () => fn({ data: { id } }),
+  });
   const lead = (q.data as any)?.lead;
   const phone = lead?.phone_normalized as string | undefined;
   const email = lead?.email as string | undefined;
@@ -24,7 +27,10 @@ export function OperatorLeadDetail() {
 
   return (
     <div className="space-y-4">
-      <Link to={`${base}/leady` as any} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to={`${base}/leady` as any}
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="mr-1 h-4 w-4" /> Wróć do listy
       </Link>
 

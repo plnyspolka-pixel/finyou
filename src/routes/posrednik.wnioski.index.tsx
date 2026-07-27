@@ -10,10 +10,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FilePlus2, ImageOff, Search, MapPin, FileText, Calendar, Hash, Trash2, Loader2 } from "lucide-react";
+import {
+  FilePlus2,
+  ImageOff,
+  Search,
+  MapPin,
+  FileText,
+  Calendar,
+  Hash,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { formatPLN } from "@/lib/loan-math";
 import { loanStatusLabels } from "@/lib/labels";
-import { isShowablePropertyPhoto, isPropertyPhotoDocument, signStoragePath } from "@/lib/property-photos";
+import {
+  isShowablePropertyPhoto,
+  isPropertyPhotoDocument,
+  signStoragePath,
+} from "@/lib/property-photos";
 import {
   getMyBrokerOfferUsage,
   softDeleteMyApplication,
@@ -31,15 +45,27 @@ type Row = {
   preferred_period_months: number | null;
   created_at: string;
   client: { first_name?: string; last_name?: string; city?: string } | null;
-  properties: Array<{ city?: string; property_type?: string; photos?: string[] | null; land_register_number?: string | null }>;
-  documents: Array<{ id: string; file_path?: string | null; document_type?: string | null; file_name?: string | null }>;
+  properties: Array<{
+    city?: string;
+    property_type?: string;
+    photos?: string[] | null;
+    land_register_number?: string | null;
+  }>;
+  documents: Array<{
+    id: string;
+    file_path?: string | null;
+    document_type?: string | null;
+    file_name?: string | null;
+  }>;
 };
 
 function SmartImg({ src, alt, className }: { src: string; alt?: string; className?: string }) {
   const [broken, setBroken] = useState(false);
   if (broken || !src) {
     return (
-      <div className={`flex items-center justify-center bg-muted text-muted-foreground ${className ?? ""}`}>
+      <div
+        className={`flex items-center justify-center bg-muted text-muted-foreground ${className ?? ""}`}
+      >
         <ImageOff className="h-6 w-6" />
       </div>
     );
@@ -78,13 +104,15 @@ export function MojeWnioski() {
     setLoading(true);
     let query = supabase
       .from("loan_applications")
-      .select("id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, document_type, file_name)")
+      .select(
+        "id, status, loan_amount, preferred_period_months, created_at, client:clients(first_name, last_name, city), properties(city, property_type, photos, land_register_number), documents(id, file_path, document_type, file_name)",
+      )
       .order("created_at", { ascending: false });
     query = isExternalBroker
       ? (query as any).eq("created_by_partner_user_id", user.id)
       : query.eq("status", "szukamy_inwestora");
     const { data } = await query;
-    const all = ((data as any) as Row[]) ?? [];
+    const all = (data as any as Row[]) ?? [];
     setRows(all);
     setLoading(false);
     try {
@@ -96,7 +124,12 @@ export function MojeWnioski() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Usunąć tę ofertę? Zwolni to miejsce w limicie darmowego konta. Oferta nie będzie już widoczna.")) return;
+    if (
+      !window.confirm(
+        "Usunąć tę ofertę? Zwolni to miejsce w limicie darmowego konta. Oferta nie będzie już widoczna.",
+      )
+    )
+      return;
     setDeletingId(id);
     try {
       await deleteFn({ data: { applicationId: id } });
@@ -122,7 +155,8 @@ export function MojeWnioski() {
           const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
           const photoPaths: string[] = Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : [];
           const firstPhoto = photoPaths.find(isShowablePropertyPhoto);
-          const fallbackDoc = (r.documents ?? []).find(isPropertyPhotoDocument)?.file_path ?? undefined;
+          const fallbackDoc =
+            (r.documents ?? []).find(isPropertyPhotoDocument)?.file_path ?? undefined;
           const candidate = firstPhoto ?? fallbackDoc;
           if (!candidate) return;
           const url = await signStoragePath(candidate, 60 * 60);
@@ -173,7 +207,10 @@ export function MojeWnioski() {
               </Badge>
             )}
             <Button asChild>
-              <Link to={`${base}/wniosek` as any}><FilePlus2 className="mr-2 h-4 w-4" />Nowy wniosek</Link>
+              <Link to={`${base}/wniosek` as any}>
+                <FilePlus2 className="mr-2 h-4 w-4" />
+                Nowy wniosek
+              </Link>
             </Button>
           </div>
         }
@@ -196,7 +233,8 @@ export function MojeWnioski() {
 
       {!loading && rows.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
-          Brak wniosków ze statusem „szukamy inwestora". Gdy wniosek skompletuje KW i zdjęcia/dokumenty, pojawi się tutaj automatycznie.
+          Brak wniosków ze statusem „szukamy inwestora". Gdy wniosek skompletuje KW i
+          zdjęcia/dokumenty, pojawi się tutaj automatycznie.
         </Card>
       ) : !loading && visible.length === 0 ? (
         <Card className="py-10 text-center text-sm text-muted-foreground">
@@ -207,8 +245,11 @@ export function MojeWnioski() {
           {visible.map((r) => {
             const p = Array.isArray(r.properties) ? r.properties[0] : (r.properties as any);
             const city = p?.city ?? r.client?.city ?? "—";
-            const photoCount = (Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : []).filter(isShowablePropertyPhoto).length;
-            const clientName = [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient";
+            const photoCount = (Array.isArray(p?.photos) ? p!.photos!.filter(Boolean) : []).filter(
+              isShowablePropertyPhoto,
+            ).length;
+            const clientName =
+              [r.client?.first_name, r.client?.last_name].filter(Boolean).join(" ") || "Klient";
             const hero = heroByApp[r.id];
             const docCount = r.documents?.length ?? 0;
 
@@ -273,9 +314,7 @@ export function MojeWnioski() {
                     <span className="truncate">{city}</span>
                     <span>·</span>
                     <Calendar className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">
-                      {r.preferred_period_months ?? "—"} mies.
-                    </span>
+                    <span className="truncate">{r.preferred_period_months ?? "—"} mies.</span>
                   </div>
                   {p?.land_register_number && (
                     <div className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 font-mono text-[11px] font-semibold text-primary max-w-full">

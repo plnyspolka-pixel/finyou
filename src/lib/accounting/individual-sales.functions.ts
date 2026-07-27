@@ -2,8 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertStaff(ctx: { supabase: any; userId: string }) {
-  const { data: isAdmin } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "administrator" });
-  const { data: isOp } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "operator" });
+  const { data: isAdmin } = await ctx.supabase.rpc("has_role", {
+    _user_id: ctx.userId,
+    _role: "administrator",
+  });
+  const { data: isOp } = await ctx.supabase.rpc("has_role", {
+    _user_id: ctx.userId,
+    _role: "operator",
+  });
   if (!isAdmin && !isOp) throw new Error("Brak uprawnień");
 }
 
@@ -22,15 +28,17 @@ export const listIndividualSales = createServerFn({ method: "GET" })
 
 export const updateIndividualSaleBuyer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: {
-    id: string;
-    buyer_name?: string | null;
-    buyer_email?: string | null;
-    buyer_address?: string | null;
-    buyer_city?: string | null;
-    buyer_postal_code?: string | null;
-    notes?: string | null;
-  }) => data)
+  .inputValidator(
+    (data: {
+      id: string;
+      buyer_name?: string | null;
+      buyer_email?: string | null;
+      buyer_address?: string | null;
+      buyer_city?: string | null;
+      buyer_postal_code?: string | null;
+      notes?: string | null;
+    }) => data,
+  )
   .handler(async ({ data, context }) => {
     await assertStaff(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -77,8 +85,15 @@ export const issueInvoiceForIndividualSale = createServerFn({ method: "POST" })
       return { invoiceId: existingInvoice.id, deduped: true };
     }
 
-    if (!row.buyer_name?.trim() || !row.buyer_address?.trim() || !row.buyer_postal_code?.trim() || !row.buyer_city?.trim()) {
-      throw new Error("Uzupełnij dane nabywcy (imię i nazwisko, ulica, kod pocztowy, miasto) przed wystawieniem faktury.");
+    if (
+      !row.buyer_name?.trim() ||
+      !row.buyer_address?.trim() ||
+      !row.buyer_postal_code?.trim() ||
+      !row.buyer_city?.trim()
+    ) {
+      throw new Error(
+        "Uzupełnij dane nabywcy (imię i nazwisko, ulica, kod pocztowy, miasto) przed wystawieniem faktury.",
+      );
     }
     const { createInvoiceFromPayment } = await import("@/lib/accounting/auto-invoice");
     const res = await createInvoiceFromPayment(supabaseAdmin as any, {

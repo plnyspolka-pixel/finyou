@@ -695,13 +695,20 @@ function paths(name, g) {
       });
   }
 }
+type BrandIconProps = {
+  name?: string;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+} & Omit<React.SVGProps<SVGSVGElement>, "name" | "style">;
+
 function BrandIcon({
   name = "shield",
   size = 24,
   className,
   style,
   ...rest
-}) {
+}: BrandIconProps) {
   const uid = React.useId().replace(/:/g, "");
   const navId = `${uid}n`;
   const goldId = `${uid}g`;
@@ -715,7 +722,7 @@ function BrandIcon({
     sphere: `url(#${sphereId})`,
     goldSphere: `url(#${goldSphereId})`
   };
-  return /*#__PURE__*/React.createElement("svg", _extends({
+  return /*#__PURE__*/React.createElement("svg", {
     width: size,
     height: size,
     viewBox: "0 0 24 24",
@@ -727,8 +734,9 @@ function BrandIcon({
       verticalAlign: "middle",
       ...style
     },
-    "aria-hidden": "true"
-  }, rest), /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    "aria-hidden": "true",
+    ...rest
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
     id: navId,
     gradientUnits: "userSpaceOnUse",
     x1: "4",

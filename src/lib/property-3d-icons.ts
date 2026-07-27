@@ -20,7 +20,6 @@ export const PROPERTY_3D_ICON: Record<string, string> = {
   udzial_w_nieruchomosci: otherAssetUrl,
 };
 
-
 export const PROPERTY_LABELS: Record<string, string> = {
   apartment: "Mieszkanie",
   mieszkanie: "Mieszkanie",

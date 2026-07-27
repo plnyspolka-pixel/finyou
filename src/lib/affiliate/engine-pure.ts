@@ -140,8 +140,10 @@ export function calculateAmount(rule: RuleLike, basisAmount: number): number {
   } else {
     amount = basisAmount * (Number(rule.percent_rate ?? 0) / 100);
   }
-  if (rule.min_commission != null && amount < rule.min_commission) amount = Number(rule.min_commission);
-  if (rule.max_commission != null && amount > rule.max_commission) amount = Number(rule.max_commission);
+  if (rule.min_commission != null && amount < rule.min_commission)
+    amount = Number(rule.min_commission);
+  if (rule.max_commission != null && amount > rule.max_commission)
+    amount = Number(rule.max_commission);
   return roundMoney(amount);
 }
 
@@ -262,7 +264,11 @@ export function groupPayouts(
   partnersById: Record<string, PartnerLike>,
 ): {
   items: { commission_id: string; partner_id: string; amount: number; transfer_title: string }[];
-  skipped: { partner_id: string; reason: "below_threshold" | "missing_bank_account"; total: number }[];
+  skipped: {
+    partner_id: string;
+    reason: "below_threshold" | "missing_bank_account";
+    total: number;
+  }[];
 } {
   const byPartner = new Map<string, PayoutCandidate[]>();
   for (const c of commissions) {
@@ -271,8 +277,17 @@ export function groupPayouts(
     byPartner.set(c.partner_id, arr);
   }
 
-  const items: { commission_id: string; partner_id: string; amount: number; transfer_title: string }[] = [];
-  const skipped: { partner_id: string; reason: "below_threshold" | "missing_bank_account"; total: number }[] = [];
+  const items: {
+    commission_id: string;
+    partner_id: string;
+    amount: number;
+    transfer_title: string;
+  }[] = [];
+  const skipped: {
+    partner_id: string;
+    reason: "below_threshold" | "missing_bank_account";
+    total: number;
+  }[] = [];
 
   for (const [partnerId, list] of byPartner.entries()) {
     const total = roundMoney(list.reduce((s, c) => s + Number(c.gross_amount || 0), 0));

@@ -365,7 +365,12 @@ function WindykacjaCaseCard() {
         subtitle={borrower?.imie_nazwisko ?? undefined}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="secondary" size="sm" className="bg-white/15 text-white border-white/20 hover:bg-white/25">
+            <Button
+              asChild
+              variant="secondary"
+              size="sm"
+              className="bg-white/15 text-white border-white/20 hover:bg-white/25"
+            >
               <Link to="/inwestor/windykacja/$caseId/raport" params={{ caseId }} target="_blank">
                 <FileDown className="h-4 w-4 mr-1" /> Raport (PDF)
               </Link>

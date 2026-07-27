@@ -11,14 +11,18 @@ function verifyMetaSig(body: string, signature: string | null, secret: string): 
     const a = Buffer.from(signature);
     const b = Buffer.from(expected);
     return a.length === b.length && timingSafeEqual(a, b);
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 async function fetchLeadDetails(leadgenId: string) {
   const token = process.env.META_ACCESS_TOKEN!;
-  const res = await fetch(`${GRAPH}/${leadgenId}?access_token=${token}&fields=id,created_time,field_data,form_id,campaign_id,ad_id`);
+  const res = await fetch(
+    `${GRAPH}/${leadgenId}?access_token=${token}&fields=id,created_time,field_data,form_id,campaign_id,ad_id`,
+  );
   if (!res.ok) throw new Error(`Meta lead fetch failed: ${res.status}`);
   return res.json();
 }
@@ -43,7 +47,9 @@ function extractPhone(fd: any[], nameFallback?: string | null): string | null {
   const digits = (p: string | null) => (p ? p.replace(/\D/g, "") : "");
   if (digits(direct).length >= 9) return direct;
   const hay = [
-    ...(Array.isArray(fd) ? fd.map((f) => (Array.isArray(f?.values) ? f.values.join(" ") : String(f?.values ?? ""))) : []),
+    ...(Array.isArray(fd)
+      ? fd.map((f) => (Array.isArray(f?.values) ? f.values.join(" ") : String(f?.values ?? "")))
+      : []),
     String(nameFallback ?? ""),
   ].join("  ");
   const m = hay.match(/(?<!\d)(?:\+?48[\s-]?)?(\d{3}[\s-]?\d{3}[\s-]?\d{3})(?!\d)/);
@@ -52,7 +58,10 @@ function extractPhone(fd: any[], nameFallback?: string | null): string | null {
 
 // Usuwa z nazwy wklejony numer telefonu (np. „Gadek691586905" → „Gadek").
 function cleanName(full: string | null | undefined): string | null {
-  const t = String(full ?? "").replace(/(?:\+?48[\s-]?)?\d[\d\s-]{7,}\d/g, " ").replace(/\s{2,}/g, " ").trim();
+  const t = String(full ?? "")
+    .replace(/(?:\+?48[\s-]?)?\d[\d\s-]{7,}\d/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   return t || (full ?? null);
 }
 
@@ -91,12 +100,20 @@ async function upsertClientAndApplication(opts: {
   fullName: string | null;
   origin: string;
   formId?: string | null;
-}): Promise<{ loanApplicationId: string | null; clientId: string | null; returnLink: string | null; firstName: string | null }> {
+}): Promise<{
+  loanApplicationId: string | null;
+  clientId: string | null;
+  returnLink: string | null;
+  firstName: string | null;
+}> {
   let assignedUserId: string | null = null;
   let assignedRole: "klient" | "operator" | "inwestor" = "klient";
   if (opts.formId) {
     const { data: form } = await supabaseAdmin
-      .from("meta_lead_forms").select("assigned_user_id, assigned_role").eq("meta_form_id", String(opts.formId)).maybeSingle();
+      .from("meta_lead_forms")
+      .select("assigned_user_id, assigned_role")
+      .eq("meta_form_id", String(opts.formId))
+      .maybeSingle();
     assignedUserId = (form as any)?.assigned_user_id ?? null;
     assignedRole = ((form as any)?.assigned_role ?? "klient") as typeof assignedRole;
   }
@@ -144,13 +161,20 @@ async function upsertClientAndApplication(opts: {
     clientId = inserted.id;
   } else {
     // Uzupełnij brakujące pola, ale nie nadpisuj istniejących danych
-    await supabaseAdmin.from("clients").update({
-      email: opts.email ?? undefined,
-      phone: opts.phone ?? undefined,
-      phone_normalized: phoneNorm ?? undefined,
-    }).eq("id", clientId);
+    await supabaseAdmin
+      .from("clients")
+      .update({
+        email: opts.email ?? undefined,
+        phone: opts.phone ?? undefined,
+        phone_normalized: phoneNorm ?? undefined,
+      })
+      .eq("id", clientId);
     if (assignedUserId) {
-      await supabaseAdmin.from("clients").update({ assigned_user_id: assignedUserId }).eq("id", clientId).is("assigned_user_id", null);
+      await supabaseAdmin
+        .from("clients")
+        .update({ assigned_user_id: assignedUserId })
+        .eq("id", clientId)
+        .is("assigned_user_id", null);
     }
   }
 
@@ -160,7 +184,10 @@ async function upsertClientAndApplication(opts: {
     try {
       const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
       const r = await ensureKlientAccountAndMagicLink(opts.email, {
-        firstName: first, lastName: last, source: "meta_lead", role: assignedRole,
+        firstName: first,
+        lastName: last,
+        source: "meta_lead",
+        role: assignedRole,
       });
       if (r.userId) {
         await supabaseAdmin.from("clients").update({ user_id: r.userId }).eq("id", clientId);
@@ -170,8 +197,6 @@ async function upsertClientAndApplication(opts: {
       console.error("[meta-leads-webhook] auth-bootstrap error", e);
     }
   }
-
-
 
   // 2) Wniosek — szukaj istniejącego "nowy_lead" tego klienta, inaczej utwórz
   const { data: existingApp } = await supabaseAdmin
@@ -184,7 +209,7 @@ async function upsertClientAndApplication(opts: {
     .maybeSingle();
 
   let loanApplicationId = existingApp?.id ?? null;
-  let returnLink: string | null = magicLink ?? `${opts.origin}/klient`;
+  const returnLink: string | null = magicLink ?? `${opts.origin}/klient`;
   let returnToken = existingApp?.return_link_token ?? null;
 
   if (!existingApp) {
@@ -246,7 +271,11 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
             return new Response("Forbidden", { status: 403 });
           }
           let body: any;
-          try { body = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
+          try {
+            body = JSON.parse(raw);
+          } catch {
+            return new Response("Bad JSON", { status: 400 });
+          }
 
           // Facebook dostarcza WSZYSTKIE zdarzenia (leadgen, wiadomości Messenger/IG,
           // komentarze) na jeden skonfigurowany URL webhooka. Obsłuż tu również
@@ -269,8 +298,11 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               const phone = extractPhone(fd, rawName);
               const name = cleanName(rawName);
 
-              const { data: camp } = await supabaseAdmin.from("meta_campaigns")
-                .select("id").eq("meta_campaign_id", v.campaign_id ?? "").maybeSingle();
+              const { data: camp } = await supabaseAdmin
+                .from("meta_campaigns")
+                .select("id")
+                .eq("meta_campaign_id", v.campaign_id ?? "")
+                .maybeSingle();
 
               // 1) Klient + wniosek + return link
               const capture = await upsertClientAndApplication({
@@ -282,18 +314,25 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               });
 
               // 2) Upsert meta_leads (z podpięciem do wniosku)
-              const { data: inserted } = await supabaseAdmin.from("meta_leads").upsert({
-                meta_lead_id: leadgenId,
-                meta_form_id: v.form_id ?? details.form_id,
-                meta_campaign_id: v.campaign_id ?? details.campaign_id,
-                campaign_id: camp?.id ?? null,
-                full_name: name,
-                email,
-                phone,
-                field_data: details.field_data,
-                received_at: details.created_time ?? new Date().toISOString(),
-                lead_application_id: capture.loanApplicationId,
-              }, { onConflict: "meta_lead_id" }).select("id").single();
+              const { data: inserted } = await supabaseAdmin
+                .from("meta_leads")
+                .upsert(
+                  {
+                    meta_lead_id: leadgenId,
+                    meta_form_id: v.form_id ?? details.form_id,
+                    meta_campaign_id: v.campaign_id ?? details.campaign_id,
+                    campaign_id: camp?.id ?? null,
+                    full_name: name,
+                    email,
+                    phone,
+                    field_data: details.field_data,
+                    received_at: details.created_time ?? new Date().toISOString(),
+                    lead_application_id: capture.loanApplicationId,
+                  },
+                  { onConflict: "meta_lead_id" },
+                )
+                .select("id")
+                .single();
 
               // Upsert zunifikowanego leada (panel admina widzi wszystko z jednego miejsca)
               let unifiedLeadId: string | null = null;
@@ -312,7 +351,10 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                   metaCampaignId: v.campaign_id ?? details.campaign_id,
                   loanApplicationId: capture.loanApplicationId,
                   clientId: capture.clientId,
-                  applicationData: { meta_field_data: details.field_data, return_link: capture.returnLink },
+                  applicationData: {
+                    meta_field_data: details.field_data,
+                    return_link: capture.returnLink,
+                  },
                 });
               } catch (e) {
                 console.error("[meta-leads-webhook] unified lead upsert", e);
@@ -341,14 +383,21 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               //    Gdy telefon jest pomijany — logujemy DLACZEGO do automation_events (diagnostyka).
               try {
                 const { data: settings } = await supabaseAdmin
-                  .from("voicebot_settings").select("call_trigger").eq("id", 1).maybeSingle();
+                  .from("voicebot_settings")
+                  .select("call_trigger")
+                  .eq("id", 1)
+                  .maybeSingle();
                 let formAllowsCall = true;
                 if (formId) {
                   const { data: form } = await supabaseAdmin
-                    .from("meta_lead_forms").select("voicebot_enabled").eq("meta_form_id", String(formId)).maybeSingle();
+                    .from("meta_lead_forms")
+                    .select("voicebot_enabled")
+                    .eq("meta_form_id", String(formId))
+                    .maybeSingle();
                   formAllowsCall = form?.voicebot_enabled !== false;
                 }
-                const canCall = !!phone && !!settings && settings.call_trigger !== "manual" && formAllowsCall;
+                const canCall =
+                  !!phone && !!settings && settings.call_trigger !== "manual" && formAllowsCall;
                 if (canCall) {
                   await placeOutboundCallInternal({
                     phone: phone!,
@@ -359,12 +408,18 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                     firstName: capture.firstName,
                   }).catch((e) => console.error("[meta-leads-webhook] call trigger", e));
                 } else {
-                  await supabaseAdmin.from("automation_events").insert({
-                    automation_type: "meta_lead_capture",
-                    status: "skipped",
-                    error_message: `call skipped — phone=${!!phone} call_trigger=${settings?.call_trigger ?? "brak_ustawień"} form_voicebot_enabled=${formAllowsCall}`,
-                    sent_payload: { leadgenId, formId: formId ?? null, phone },
-                  }).then(() => {}, () => {});
+                  await supabaseAdmin
+                    .from("automation_events")
+                    .insert({
+                      automation_type: "meta_lead_capture",
+                      status: "skipped",
+                      error_message: `call skipped — phone=${!!phone} call_trigger=${settings?.call_trigger ?? "brak_ustawień"} form_voicebot_enabled=${formAllowsCall}`,
+                      sent_payload: { leadgenId, formId: formId ?? null, phone },
+                    })
+                    .then(
+                      () => {},
+                      () => {},
+                    );
                 }
               } catch (e) {
                 console.error("[meta-leads-webhook] call block error", e);
@@ -380,20 +435,26 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 try {
                   let formName: string | null = null;
                   try {
-                    const fr = await fetch(`${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN}&fields=name`);
+                    const fr = await fetch(
+                      `${GRAPH}/${formId}?access_token=${process.env.META_ACCESS_TOKEN}&fields=name`,
+                    );
                     if (fr.ok) formName = (await fr.json())?.name ?? null;
-                  } catch { /* noop */ }
-                  await supabaseAdmin.from("meta_lead_forms").upsert({
-                    meta_form_id: String(formId),
-                    meta_page_id: v.page_id ?? entry.id ?? null,
-                    form_name: formName,
-                    last_lead_at: new Date().toISOString(),
-                  }, { onConflict: "meta_form_id", ignoreDuplicates: false });
+                  } catch {
+                    /* noop */
+                  }
+                  await supabaseAdmin.from("meta_lead_forms").upsert(
+                    {
+                      meta_form_id: String(formId),
+                      meta_page_id: v.page_id ?? entry.id ?? null,
+                      form_name: formName,
+                      last_lead_at: new Date().toISOString(),
+                    },
+                    { onConflict: "meta_form_id", ignoreDuplicates: false },
+                  );
                 } catch (e) {
                   console.error("[meta-leads-webhook] form upsert", e);
                 }
               }
-
             }
           }
           return new Response("ok", { status: 200 });
@@ -405,7 +466,9 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
               status: "error",
               error_message: e?.message ?? "exception",
             });
-          } catch { /* noop */ }
+          } catch {
+            /* noop */
+          }
           return new Response("error", { status: 500 });
         }
       },

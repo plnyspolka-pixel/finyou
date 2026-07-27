@@ -5,7 +5,10 @@ const SYS = `Jesteś copywriterem Finance You. Twórz krótkie (max 280 znaków)
 
 export const generateMaterialDescription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { materialId: string; audience: string; title: string; userDescription?: string }) => data)
+  .inputValidator(
+    (data: { materialId: string; audience: string; title: string; userDescription?: string }) =>
+      data,
+  )
   .handler(async ({ data, context }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY not configured");

@@ -3,7 +3,10 @@ import { assessPlotBuildability } from "./plot-buildability";
 
 describe("assessPlotBuildability — prawo zabudowy działki", () => {
   it("zabudowa zagrodowa (RM) — tylko rolnik, wąski krąg nabywców", () => {
-    const r = assessPlotBuildability({ propertyType: "grunt_rolny", mpzpInfo: "Teren zabudowy zagrodowej RM" });
+    const r = assessPlotBuildability({
+      propertyType: "grunt_rolny",
+      mpzpInfo: "Teren zabudowy zagrodowej RM",
+    });
     expect(r.category).toBe("zagrodowa_siedliskowa");
     expect(r.onlyFarmerCanBuild).toBe(true);
     expect(r.buyerPool).toBe("ograniczony_rolnicy");
@@ -12,7 +15,10 @@ describe("assessPlotBuildability — prawo zabudowy działki", () => {
   });
 
   it('słowo „siedlisko" w opisie także klasyfikuje jako zagrodowa', () => {
-    const r = assessPlotBuildability({ propertyType: "dzialka_zabudowana", ocrText: "Działka siedliskowa z budynkiem gospodarczym" });
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_zabudowana",
+      ocrText: "Działka siedliskowa z budynkiem gospodarczym",
+    });
     expect(r.category).toBe("zagrodowa_siedliskowa");
     expect(r.onlyFarmerCanBuild).toBe(true);
   });
@@ -27,7 +33,10 @@ describe("assessPlotBuildability — prawo zabudowy działki", () => {
   });
 
   it("działka budowlana (MPZP MN) — szeroki krąg nabywców", () => {
-    const r = assessPlotBuildability({ propertyType: "dzialka_budowlana", mpzpInfo: "Zabudowa mieszkaniowa jednorodzinna MN" });
+    const r = assessPlotBuildability({
+      propertyType: "dzialka_budowlana",
+      mpzpInfo: "Zabudowa mieszkaniowa jednorodzinna MN",
+    });
     expect(r.category).toBe("budowlana");
     expect(r.buyerPool).toBe("szeroki");
     expect(r.saleabilityDelta).toBeGreaterThanOrEqual(0);

@@ -24,7 +24,11 @@ export function requireAuth(ctx: ToolContext) {
 export function ok(payload: unknown, structured?: Record<string, unknown>) {
   return {
     content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
-    structuredContent: structured ?? (typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : { value: payload }),
+    structuredContent:
+      structured ??
+      (typeof payload === "object" && payload !== null
+        ? (payload as Record<string, unknown>)
+        : { value: payload }),
   };
 }
 
@@ -35,5 +39,7 @@ export function fail(msg: string) {
 export async function isAdmin(ctx: ToolContext): Promise<boolean> {
   const s = userClient(ctx);
   const { data } = await s.from("user_roles").select("role").eq("user_id", ctx.getUserId());
-  return (data ?? []).some((r: { role: string }) => r.role === "administrator" || r.role === "operator");
+  return (data ?? []).some(
+    (r: { role: string }) => r.role === "administrator" || r.role === "operator",
+  );
 }

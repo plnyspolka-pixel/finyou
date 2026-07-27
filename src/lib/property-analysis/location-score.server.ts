@@ -13,31 +13,45 @@ export async function locationScore(args: {
 }): Promise<LocationScoreResult> {
   const { lat, lng } = args;
   if (lat == null || lng == null) {
-    return { score: 35, summary: "Brak współrzędnych — ograniczona analiza lokalizacji.", liquidityComment: "Płynność trudna do oceny bez geolokalizacji." };
+    return {
+      score: 35,
+      summary: "Brak współrzędnych — ograniczona analiza lokalizacji.",
+      liquidityComment: "Płynność trudna do oceny bez geolokalizacji.",
+    };
   }
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!apiKey || !lovableKey) {
-    return { score: 45, summary: "Brak konfiguracji Google Maps — wynik szacunkowy.", liquidityComment: "Wymagana ręczna weryfikacja lokalizacji." };
+    return {
+      score: 45,
+      summary: "Brak konfiguracji Google Maps — wynik szacunkowy.",
+      liquidityComment: "Wymagana ręczna weryfikacja lokalizacji.",
+    };
   }
   const categories = ["school", "supermarket", "pharmacy", "bus_station", "park", "hospital"];
   const counts: Record<string, number> = {};
   try {
     for (const type of categories) {
-      const res = await fetchWithTimeout(`${GATEWAY}/places/v1/places:searchNearby`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableKey}`,
-          "X-Connection-Api-Key": apiKey,
-          "Content-Type": "application/json",
-          "X-Goog-FieldMask": "places.id",
+      const res = await fetchWithTimeout(
+        `${GATEWAY}/places/v1/places:searchNearby`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "X-Connection-Api-Key": apiKey,
+            "Content-Type": "application/json",
+            "X-Goog-FieldMask": "places.id",
+          },
+          body: JSON.stringify({
+            includedTypes: [type],
+            maxResultCount: 20,
+            locationRestriction: {
+              circle: { center: { latitude: lat, longitude: lng }, radius: 1500 },
+            },
+          }),
         },
-        body: JSON.stringify({
-          includedTypes: [type],
-          maxResultCount: 20,
-          locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: 1500 } },
-        }),
-      }, 12_000);
+        12_000,
+      );
       if (res.ok) {
         const j = (await res.json()) as { places?: unknown[] };
         counts[type] = (j.places ?? []).length;
@@ -47,15 +61,23 @@ export async function locationScore(args: {
     }
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     const score = Math.max(0, Math.min(100, Math.round((total / 60) * 100)));
-    const quality = score >= 70 ? "bardzo dobra" : score >= 50 ? "dobra" : score >= 30 ? "przeciętna" : "słaba";
+    const quality =
+      score >= 70 ? "bardzo dobra" : score >= 50 ? "dobra" : score >= 30 ? "przeciętna" : "słaba";
     return {
       score,
       summary: `Dostępność infrastruktury: ${quality}. Łącznie ${total} punktów POI w promieniu 1,5 km.`,
-      liquidityComment: score >= 50 ? "Lokalizacja sprzyja płynności rynkowej." : "Lokalizacja może obniżać płynność rynkową.",
+      liquidityComment:
+        score >= 50
+          ? "Lokalizacja sprzyja płynności rynkowej."
+          : "Lokalizacja może obniżać płynność rynkową.",
       poiCounts: counts,
     };
   } catch {
-    return { score: 40, summary: "Błąd pobierania danych Google Maps — wynik szacunkowy.", liquidityComment: "Wymagana ręczna weryfikacja." };
+    return {
+      score: 40,
+      summary: "Błąd pobierania danych Google Maps — wynik szacunkowy.",
+      liquidityComment: "Wymagana ręczna weryfikacja.",
+    };
   }
 }
 
@@ -68,12 +90,16 @@ type GeocodeResult = {
 };
 
 function norm(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 export async function geocode(
   address: string,
-  opts?: { expectedCity?: string | null; expectedVoivodeship?: string | null }
+  opts?: { expectedCity?: string | null; expectedVoivodeship?: string | null },
 ): Promise<{ lat: number; lng: number } | null> {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   const lovableKey = process.env.LOVABLE_API_KEY;
@@ -104,8 +130,11 @@ export async function geocode(
     const pick = results.find((r) => {
       if (!expCity && !expVoi) return true;
       const comps = r.address_components ?? [];
-      const cityComp = comps.find((c) =>
-        c.types.includes("locality") || c.types.includes("postal_town") || c.types.includes("administrative_area_level_3")
+      const cityComp = comps.find(
+        (c) =>
+          c.types.includes("locality") ||
+          c.types.includes("postal_town") ||
+          c.types.includes("administrative_area_level_3"),
       );
       const voiComp = comps.find((c) => c.types.includes("administrative_area_level_1"));
       const cityOk = expCity ? cityComp && norm(cityComp.long_name).includes(expCity) : true;
@@ -118,6 +147,7 @@ export async function geocode(
     const chosen = pick ?? (expCity ? null : results[0]);
     const loc = chosen?.geometry?.location;
     return loc ? { lat: loc.lat, lng: loc.lng } : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
-

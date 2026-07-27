@@ -7,18 +7,24 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export async function extractDocuments(args: {
   applicationId: string;
   documents: Array<{ id: string; url?: string | null; type?: string | null; name?: string | null }>;
-}): Promise<{ extractions: DocumentExtraction[]; status: "success" | "partial" | "no_data" | "error" }> {
+}): Promise<{
+  extractions: DocumentExtraction[];
+  status: "success" | "partial" | "no_data" | "error";
+}> {
   const out: DocumentExtraction[] = [];
   if (!args.documents.length) return { extractions: out, status: "no_data" };
 
   // Cache: pobierz istniejące ekstrakcje
-  const ids = args.documents.map(d => d.id);
+  const ids = args.documents.map((d) => d.id);
   const { data: existing } = await supabaseAdmin
     .from("property_document_extractions")
     .select("document_id, doc_kind, extracted_json")
     .in("document_id", ids);
   const cache = new Map<string, { doc_kind: string | null; extracted_json: unknown }>(
-    (existing ?? []).map(e => [e.document_id, { doc_kind: e.doc_kind, extracted_json: e.extracted_json }]),
+    (existing ?? []).map((e) => [
+      e.document_id,
+      { doc_kind: e.doc_kind, extracted_json: e.extracted_json },
+    ]),
   );
 
   for (const doc of args.documents) {
@@ -45,7 +51,9 @@ export async function extractDocuments(args: {
         },
         { onConflict: "document_id" },
       );
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   return { extractions: out, status: out.length ? "partial" : "no_data" };
 }

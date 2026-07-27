@@ -36,12 +36,10 @@ async function loadGoogleSettings(): Promise<Settings | null> {
   return (row as Settings) ?? null;
 }
 
-
 function ensureGtag() {
   if (typeof window === "undefined") return;
   window.dataLayer = window.dataLayer || [];
   if (!window.gtag) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.gtag = function gtag(...args: unknown[]) {
       (window.dataLayer as unknown[]).push(args);
     } as any;
@@ -117,7 +115,6 @@ export function GoogleAnalytics() {
       };
     }
   }, [settings]);
-
 
   useEffect(() => {
     if (!settings?.ga4_measurement_id || typeof window === "undefined" || !window.gtag) return;

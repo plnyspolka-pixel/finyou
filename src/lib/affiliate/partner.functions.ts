@@ -8,7 +8,13 @@ import { encryptSensitive, decryptSensitive, maskBankAccount } from "./crypto";
 import { getActiveLimit, quarterCountedSum } from "./engine";
 import { getTaxPeriod, unregisteredLimitState } from "./engine-pure";
 
-const NALICZONE = ["calculated", "pending_admin_approval", "requires_invoice", "requires_unregistered_activity_statement", "requires_business_registration"];
+const NALICZONE = [
+  "calculated",
+  "pending_admin_approval",
+  "requires_invoice",
+  "requires_unregistered_activity_statement",
+  "requires_business_registration",
+];
 const ZATWIERDZONE = ["approved", "payable"];
 
 function randomCode(len = 8): string {
@@ -81,12 +87,16 @@ export const registerAffiliatePartner = createServerFn({ method: "POST" })
     // Unikalny kod / slug.
     let referralCode = randomCode();
     for (let i = 0; i < 5; i++) {
-      const { data: clash } = await affiliateDb.from("affiliate_partners").select("id").eq("referral_code", referralCode).maybeSingle();
+      const { data: clash } = await affiliateDb
+        .from("affiliate_partners")
+        .select("id")
+        .eq("referral_code", referralCode)
+        .maybeSingle();
       if (!clash) break;
       referralCode = randomCode();
     }
     const baseSlug = slugify(`${data.firstName}-${data.lastName}`) || "partner";
-    let referralSlug = `${baseSlug}-${referralCode.slice(0, 4).toLowerCase()}`;
+    const referralSlug = `${baseSlug}-${referralCode.slice(0, 4).toLowerCase()}`;
 
     const { data: inserted, error } = await affiliateDb
       .from("affiliate_partners")
@@ -138,7 +148,9 @@ export const getMyAffiliatePartner = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await affiliateDb
       .from("affiliate_partners")
-      .select("id,settlement_type,status,referral_code,referral_slug,first_name,last_name,company_name,email,phone,nip,regon,address_street,address_postal_code,address_city,billing_email,website_url,bank_account_encrypted,vat_payer,sponsor_partner_id,created_at,approved_at")
+      .select(
+        "id,settlement_type,status,referral_code,referral_slug,first_name,last_name,company_name,email,phone,nip,regon,address_street,address_postal_code,address_city,billing_email,website_url,bank_account_encrypted,vat_payer,sponsor_partner_id,created_at,approved_at",
+      )
       .eq("user_id", context.userId)
       .maybeSingle();
     if (!data) return null;
@@ -147,7 +159,9 @@ export const getMyAffiliatePartner = createServerFn({ method: "GET" })
     return {
       ...safe,
       has_bank_account: Boolean(bank_account_encrypted),
-      bank_account_masked: bank_account_encrypted ? maskBankAccount(decryptSensitive(bank_account_encrypted)) : null,
+      bank_account_masked: bank_account_encrypted
+        ? maskBankAccount(decryptSensitive(bank_account_encrypted))
+        : null,
     };
   });
 
@@ -166,19 +180,31 @@ export const getAffiliateDashboard = createServerFn({ method: "GET" })
 
     const { data: commissions } = await affiliateDb
       .from("affiliate_commissions")
-      .select("gross_amount,status,network_level,requires_invoice,invoice_id,requires_business_registration")
+      .select(
+        "gross_amount,status,network_level,requires_invoice,invoice_id,requires_business_registration",
+      )
       .eq("partner_id", partnerId);
 
     const sumBy = (pred: (c: any) => boolean) =>
-      Math.round((commissions ?? []).filter(pred).reduce((s: number, c: any) => s + Number(c.gross_amount || 0), 0) * 100) / 100;
+      Math.round(
+        (commissions ?? [])
+          .filter(pred)
+          .reduce((s: number, c: any) => s + Number(c.gross_amount || 0), 0) * 100,
+      ) / 100;
 
     const naliczone = sumBy((c) => NALICZONE.includes(c.status));
     const zatwierdzone = sumBy((c) => ZATWIERDZONE.includes(c.status));
     const dostepne = sumBy((c) => c.status === "approved");
     const wyplacone = sumBy((c) => c.status === "paid");
-    const level1 = sumBy((c) => c.network_level === 1 && c.status !== "cancelled" && c.status !== "blocked");
-    const level2 = sumBy((c) => c.network_level === 2 && c.status !== "cancelled" && c.status !== "blocked");
-    const level3 = sumBy((c) => c.network_level === 3 && c.status !== "cancelled" && c.status !== "blocked");
+    const level1 = sumBy(
+      (c) => c.network_level === 1 && c.status !== "cancelled" && c.status !== "blocked",
+    );
+    const level2 = sumBy(
+      (c) => c.network_level === 2 && c.status !== "cancelled" && c.status !== "blocked",
+    );
+    const level3 = sumBy(
+      (c) => c.network_level === 3 && c.status !== "cancelled" && c.status !== "blocked",
+    );
 
     // Liczby poleconych — z realnych zdarzeń bezpośrednich.
     const { data: events } = await affiliateDb
@@ -193,25 +219,49 @@ export const getAffiliateDashboard = createServerFn({ method: "GET" })
     if (settlementType === "unregistered_activity") {
       const limitAmount = await getActiveLimit(affiliateDb, year, quarter);
       const quarterSum = await quarterCountedSum(affiliateDb, partnerId, year, quarter);
-      const state = unregisteredLimitState({ quarterApprovedSum: quarterSum, newAmount: 0, limitAmount });
+      const state = unregisteredLimitState({
+        quarterApprovedSum: quarterSum,
+        newAmount: 0,
+        limitAmount,
+      });
       limitInfo = { year, quarter, limitAmount, quarterSum, ...state };
     }
 
     const PROG = 500;
     const alerts: { level: "info" | "warning" | "danger"; message: string }[] = [];
     if (dostepne < PROG) {
-      alerts.push({ level: "info", message: "Twoje saldo nie osiągnęło jeszcze minimalnego progu wypłaty 500 zł." });
+      alerts.push({
+        level: "info",
+        message: "Twoje saldo nie osiągnęło jeszcze minimalnego progu wypłaty 500 zł.",
+      });
     }
-    const needsInvoice = (commissions ?? []).some((c: any) => settlementType === "b2b" && c.requires_invoice && !c.invoice_id && NALICZONE.includes(c.status));
+    const needsInvoice = (commissions ?? []).some(
+      (c: any) =>
+        settlementType === "b2b" &&
+        c.requires_invoice &&
+        !c.invoice_id &&
+        NALICZONE.includes(c.status),
+    );
     if (needsInvoice) {
-      alerts.push({ level: "warning", message: "Aby wypłacić prowizję, dodaj fakturę lub dokument rozliczeniowy." });
+      alerts.push({
+        level: "warning",
+        message: "Aby wypłacić prowizję, dodaj fakturę lub dokument rozliczeniowy.",
+      });
     }
     if (limitInfo?.nearLimit && limitInfo?.withinLimit) {
-      alerts.push({ level: "warning", message: "Zbliżasz się do limitu działalności nierejestrowanej w tym kwartale. Kolejne prowizje mogą wymagać przejścia na rozliczenie B2B." });
+      alerts.push({
+        level: "warning",
+        message:
+          "Zbliżasz się do limitu działalności nierejestrowanej w tym kwartale. Kolejne prowizje mogą wymagać przejścia na rozliczenie B2B.",
+      });
     }
     const overLimit = (commissions ?? []).some((c: any) => c.requires_business_registration);
     if (overLimit) {
-      alerts.push({ level: "danger", message: "Ta prowizja wymaga rejestracji działalności gospodarczej lub ręcznej weryfikacji księgowej." });
+      alerts.push({
+        level: "danger",
+        message:
+          "Ta prowizja wymaga rejestracji działalności gospodarczej lub ręcznej weryfikacji księgowej.",
+      });
     }
 
     return {
@@ -265,8 +315,13 @@ export const getAffiliateStructure = createServerFn({ method: "GET" })
     // Liczba zdarzeń wygenerowanych przez partnerów z dołu (anonimizowane).
     const eventCountByPartner: Record<string, number> = {};
     if (ids.length) {
-      const { data: ev } = await affiliateDb.from("affiliate_commission_events").select("direct_partner_id").in("direct_partner_id", ids);
-      for (const e of ev ?? []) eventCountByPartner[(e as any).direct_partner_id] = (eventCountByPartner[(e as any).direct_partner_id] ?? 0) + 1;
+      const { data: ev } = await affiliateDb
+        .from("affiliate_commission_events")
+        .select("direct_partner_id")
+        .in("direct_partner_id", ids);
+      for (const e of ev ?? [])
+        eventCountByPartner[(e as any).direct_partner_id] =
+          (eventCountByPartner[(e as any).direct_partner_id] ?? 0) + 1;
     }
 
     // Prowizja sieciowa zalogowanego partnera z każdego poziomu.
@@ -275,7 +330,14 @@ export const getAffiliateStructure = createServerFn({ method: "GET" })
       .select("gross_amount,network_level,status")
       .eq("partner_id", partnerId);
     const commByLevel = (lvl: number) =>
-      Math.round((myCommissions ?? []).filter((c: any) => c.network_level === lvl && c.status !== "cancelled" && c.status !== "blocked").reduce((s: number, c: any) => s + Number(c.gross_amount || 0), 0) * 100) / 100;
+      Math.round(
+        (myCommissions ?? [])
+          .filter(
+            (c: any) =>
+              c.network_level === lvl && c.status !== "cancelled" && c.status !== "blocked",
+          )
+          .reduce((s: number, c: any) => s + Number(c.gross_amount || 0), 0) * 100,
+      ) / 100;
 
     const levels = [1, 2, 3].map((depth) => {
       const members = ids
@@ -310,7 +372,9 @@ export const getAffiliateCommissions = createServerFn({ method: "GET" })
     if (!partnerId) return [];
     const { data } = await affiliateDb
       .from("affiliate_commissions")
-      .select("id,network_level,settlement_type,status,basis_type,gross_amount,currency,tax_year,tax_quarter,requires_invoice,requires_business_registration,created_at,approved_at,paid_at,commission_event_id")
+      .select(
+        "id,network_level,settlement_type,status,basis_type,gross_amount,currency,tax_year,tax_quarter,requires_invoice,requires_business_registration,created_at,approved_at,paid_at,commission_event_id",
+      )
       .eq("partner_id", partnerId)
       .order("created_at", { ascending: false });
     return data ?? [];
@@ -356,7 +420,8 @@ export const updateAffiliateBilling = createServerFn({ method: "POST" })
     if (data.nip !== undefined) patch.nip = data.nip || null;
     if (data.regon !== undefined) patch.regon = data.regon || null;
     if (data.addressStreet !== undefined) patch.address_street = data.addressStreet || null;
-    if (data.addressPostalCode !== undefined) patch.address_postal_code = data.addressPostalCode || null;
+    if (data.addressPostalCode !== undefined)
+      patch.address_postal_code = data.addressPostalCode || null;
     if (data.addressCity !== undefined) patch.address_city = data.addressCity || null;
     if (data.billingEmail !== undefined) patch.billing_email = data.billingEmail || null;
     if (data.websiteUrl !== undefined) patch.website_url = data.websiteUrl || null;

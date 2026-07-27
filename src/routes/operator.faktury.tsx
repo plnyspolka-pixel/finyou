@@ -8,11 +8,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  ArrowRight, MapPin, ShieldCheck, Wallet, TrendingUp, Landmark, FileText, ExternalLink,
-  Building2, User, CheckCircle2, Clock, Coins,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ArrowRight,
+  MapPin,
+  ShieldCheck,
+  Wallet,
+  TrendingUp,
+  Landmark,
+  FileText,
+  ExternalLink,
+  Building2,
+  User,
+  CheckCircle2,
+  Clock,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN, formatDate } from "@/lib/labels";
@@ -24,7 +48,14 @@ import {
   setLoanPaidOut,
   setInvoiceDeal,
 } from "@/lib/invoicing/operator-invoices.functions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { CompanyLookupInline, VerifiedBadge } from "@/components/company-lookup-inline";
 
 export const Route = createFileRoute("/operator/faktury")({
@@ -43,7 +74,11 @@ const SECURITY_OPTIONS = [
 const VAT_RATES = ["23", "8", "5", "0", "zw"] as const;
 
 const STATUS_LABELS: Record<string, string> = {
-  draft: "Robocza", issued: "Wystawiona", sent: "Wysłana", paid: "Opłacona", cancelled: "Anulowana",
+  draft: "Robocza",
+  issued: "Wystawiona",
+  sent: "Wysłana",
+  paid: "Opłacona",
+  cancelled: "Anulowana",
 };
 
 type BuyerType = "instytucja" | "klient_indywidualny";
@@ -76,7 +111,8 @@ function OperatorFakturyPage() {
       <div>
         <h1 className="text-2xl font-bold">Wystawianie faktur</h1>
         <p className="text-sm text-muted-foreground">
-          Faktury wystawiane w całości w aplikacji. Dane transakcji i prowizje zapisujemy wewnętrznie — nie pojawiają się na fakturze.
+          Faktury wystawiane w całości w aplikacji. Dane transakcji i prowizje zapisujemy
+          wewnętrznie — nie pojawiają się na fakturze.
         </p>
       </div>
 
@@ -158,7 +194,9 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   const [issued, setIssued] = useState<{ id: string; invoiceNumber: string } | null>(() =>
     readStoredRaw<{ id: string; invoiceNumber: string } | null>(ISSUED_KEY, null),
   );
-  const [deal, setDeal] = useState<DealContext>(() => readStored<DealContext>(DEAL_KEY, EMPTY_DEAL));
+  const [deal, setDeal] = useState<DealContext>(() =>
+    readStored<DealContext>(DEAL_KEY, EMPTY_DEAL),
+  );
   const [savingDeal, setSavingDeal] = useState(false);
 
   const entitiesQ = useQuery({ queryKey: ["invoice-entities"], queryFn: () => entitiesFn() });
@@ -170,11 +208,15 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try { window.sessionStorage.setItem(FORM_KEY, JSON.stringify(form)); } catch {}
+    try {
+      window.sessionStorage.setItem(FORM_KEY, JSON.stringify(form));
+    } catch {}
   }, [form]);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try { window.sessionStorage.setItem(DEAL_KEY, JSON.stringify(deal)); } catch {}
+    try {
+      window.sessionStorage.setItem(DEAL_KEY, JSON.stringify(deal));
+    } catch {}
   }, [deal]);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -212,7 +254,6 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
     const auto = Number.isFinite(gross) && gross > 0 ? (gross * 0.5).toFixed(2) : "";
     setForm((s) => (s.operatorCommission === auto ? s : { ...s, operatorCommission: auto }));
   }, [form.grossAmount, commissionTouched]);
-
 
   const selectedEntity = entities.find((e) => e.id === form.entityId);
 
@@ -312,15 +353,15 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
     void navigate({ to: "/faktura/$id", params: { id } });
   };
 
-
   const isIndividual = form.buyerType === "klient_indywidualny";
 
   return (
     <div className="space-y-4 max-w-3xl">
       {/* Typ faktury */}
       <Card>
-
-        <CardHeader><CardTitle>Typ faktury</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Typ faktury</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
             <BuyerTypeButton
@@ -340,33 +381,44 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
           </div>
           {isIndividual && (
             <p className="rounded-md bg-amber-50 border border-amber-200 p-2.5 text-[12px] text-amber-800">
-              Faktura wystawiana na dane klienta pożyczkowego. Inwestor wypłaci tę kwotę jako część pożyczki na konto Finance You.
+              Faktura wystawiana na dane klienta pożyczkowego. Inwestor wypłaci tę kwotę jako część
+              pożyczki na konto Finance You.
             </p>
           )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Sprzedawca i rachunek</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Sprzedawca i rachunek</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs">Podmiot wystawiający</Label>
             <Select value={form.entityId} onValueChange={onEntityChange}>
-              <SelectTrigger><SelectValue placeholder="Wybierz podmiot" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz podmiot" />
+              </SelectTrigger>
               <SelectContent>
                 {entities.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>{e.name}{e.is_default ? " (domyślny)" : ""}</SelectItem>
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name}
+                    {e.is_default ? " (domyślny)" : ""}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {selectedEntity && (
               <p className="text-[11px] text-muted-foreground">
-                {selectedEntity.legal_name}{selectedEntity.nip ? ` · NIP ${selectedEntity.nip}` : ""}
+                {selectedEntity.legal_name}
+                {selectedEntity.nip ? ` · NIP ${selectedEntity.nip}` : ""}
               </p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> Numer rachunku na fakturze</Label>
+            <Label className="text-xs flex items-center gap-1.5">
+              <Landmark className="h-3.5 w-3.5" /> Numer rachunku na fakturze
+            </Label>
             <Input
               value={form.bankAccount}
               onChange={(e) => setForm({ ...form, bankAccount: e.target.value })}
@@ -383,7 +435,9 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2">
-            <span>{isIndividual ? "Nabywca — dane klienta pożyczkowego" : "Nabywca — instytucja"}</span>
+            <span>
+              {isIndividual ? "Nabywca — dane klienta pożyczkowego" : "Nabywca — instytucja"}
+            </span>
             <VerifiedBadge verified={form.buyerVerified} />
           </CardTitle>
         </CardHeader>
@@ -398,7 +452,10 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
                   if (!p) return;
                   setForm((s) => ({
                     ...s,
-                    buyerName: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || s.buyerName,
+                    buyerName:
+                      p.company_name ||
+                      [p.first_name, p.last_name].filter(Boolean).join(" ") ||
+                      s.buyerName,
                     buyerNip: p.nip || "",
                     buyerRegon: p.regon || "",
                     buyerKrs: p.krs || "",
@@ -412,30 +469,50 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={partnersQ.isLoading ? "Ładowanie partnerów…" : `Wybierz partnera (${partners.length})`} />
+                  <SelectValue
+                    placeholder={
+                      partnersQ.isLoading
+                        ? "Ładowanie partnerów…"
+                        : `Wybierz partnera (${partners.length})`
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {partners.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.company_name || [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "—"}
+                      {p.company_name ||
+                        [p.first_name, p.last_name].filter(Boolean).join(" ") ||
+                        p.email ||
+                        "—"}
                       {p.nip ? ` · NIP ${p.nip}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground">Lub wpisz NIP/REGON/KRS poniżej, żeby zaciągnąć nowego nabywcę z GUS.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Lub wpisz NIP/REGON/KRS poniżej, żeby zaciągnąć nowego nabywcę z GUS.
+              </p>
             </div>
           )}
           <div className="rounded-md border border-dashed p-3">
             <p className="mb-2 text-xs text-muted-foreground">
-              Wpisz {isIndividual ? "NIP (opcjonalnie)" : "NIP, REGON lub KRS"} i pobierz dane firmy z GUS/KRS — resztę pól uzupełnimy automatycznie.
+              Wpisz {isIndividual ? "NIP (opcjonalnie)" : "NIP, REGON lub KRS"} i pobierz dane firmy
+              z GUS/KRS — resztę pól uzupełnimy automatycznie.
             </p>
             <CompanyLookupInline
               compact
               showRegon={!isIndividual}
               showKrs={!isIndividual}
               value={{ nip: form.buyerNip, regon: form.buyerRegon, krs: form.buyerKrs }}
-              onChange={(v) => setForm({ ...form, buyerNip: v.nip ?? "", buyerRegon: v.regon ?? "", buyerKrs: v.krs ?? "", buyerVerified: false })}
+              onChange={(v) =>
+                setForm({
+                  ...form,
+                  buyerNip: v.nip ?? "",
+                  buyerRegon: v.regon ?? "",
+                  buyerKrs: v.krs ?? "",
+                  buyerVerified: false,
+                })
+              }
               onResolved={(c) =>
                 setForm((s) => ({
                   ...s,
@@ -453,38 +530,110 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5 md:col-span-2"><Label className="text-xs">{isIndividual ? "Imię i nazwisko klienta" : "Nazwa nabywcy"}</Label><Input value={form.buyerName} onChange={(e) => setForm({ ...form, buyerName: e.target.value, buyerVerified: false })} /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Ulica i numer</Label><Input value={form.buyerStreet} onChange={(e) => setForm({ ...form, buyerStreet: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label className="text-xs">Kod pocztowy</Label><Input value={form.buyerPostalCode} onChange={(e) => setForm({ ...form, buyerPostalCode: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Miasto</Label><Input value={form.buyerCity} onChange={(e) => setForm({ ...form, buyerCity: e.target.value })} /></div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-xs">
+                {isIndividual ? "Imię i nazwisko klienta" : "Nazwa nabywcy"}
+              </Label>
+              <Input
+                value={form.buyerName}
+                onChange={(e) =>
+                  setForm({ ...form, buyerName: e.target.value, buyerVerified: false })
+                }
+              />
             </div>
-            <div className="space-y-1.5 md:col-span-2"><Label className="text-xs">E-mail</Label><Input type="email" value={form.buyerEmail} onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Ulica i numer</Label>
+              <Input
+                value={form.buyerStreet}
+                onChange={(e) => setForm({ ...form, buyerStreet: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Kod pocztowy</Label>
+                <Input
+                  value={form.buyerPostalCode}
+                  onChange={(e) => setForm({ ...form, buyerPostalCode: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Miasto</Label>
+                <Input
+                  value={form.buyerCity}
+                  onChange={(e) => setForm({ ...form, buyerCity: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-xs">E-mail</Label>
+              <Input
+                type="email"
+                value={form.buyerEmail}
+                onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Pozycja i kwota</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Pozycja i kwota</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1.5 md:col-span-2"><Label className="text-xs">Opis pozycji (widoczny na fakturze)</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label className="text-xs">Kwota brutto (PLN)</Label><Input type="number" step="0.01" min="0" value={form.grossAmount} onChange={(e) => setForm({ ...form, grossAmount: e.target.value })} /></div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-xs">Opis pozycji (widoczny na fakturze)</Label>
+            <Input
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Kwota brutto (PLN)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.grossAmount}
+              onChange={(e) => setForm({ ...form, grossAmount: e.target.value })}
+            />
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Stawka VAT</Label>
             <Select value={form.vatRate} onValueChange={(v) => setForm({ ...form, vatRate: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{VAT_RATES.map((r) => <SelectItem key={r} value={r}>{r === "zw" ? "zw." : `${r}%`}</SelectItem>)}</SelectContent>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VAT_RATES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {r === "zw" ? "zw." : `${r}%`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Termin płatności</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Termin płatności</Label>
+            <Input
+              type="date"
+              value={form.dueDate}
+              onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+            />
+          </div>
         </CardContent>
       </Card>
 
       {/* Rozliczenie wewnętrzne — nie trafia na fakturę */}
       <Card className="border-dashed">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Coins className="h-4 w-4" /> Rozliczenie wewnętrzne</CardTitle>
-          <p className="text-xs text-muted-foreground">Nie pojawia się na fakturze. Prowizja z faktury (kwota brutto) trafia do rejestru zrealizowanych.</p>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-4 w-4" /> Rozliczenie wewnętrzne
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Nie pojawia się na fakturze. Prowizja z faktury (kwota brutto) trafia do rejestru
+            zrealizowanych.
+          </p>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
@@ -511,7 +660,8 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
                   className="h-6 px-2 text-[11px]"
                   onClick={() => {
                     const gross = Number(form.grossAmount);
-                    const auto = Number.isFinite(gross) && gross > 0 ? (gross * 0.5).toFixed(2) : "";
+                    const auto =
+                      Number.isFinite(gross) && gross > 0 ? (gross * 0.5).toFixed(2) : "";
                     setCommissionTouched(false);
                     setForm((s) => ({ ...s, operatorCommission: auto }));
                   }}
@@ -530,7 +680,12 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
         </Button>
       </div>
 
-      <Dialog open={!!issued} onOpenChange={(open) => { if (!open) skipDeal(); }}>
+      <Dialog
+        open={!!issued}
+        onOpenChange={(open) => {
+          if (!open) skipDeal();
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Dane transakcji {issued ? `— ${issued.invoiceNumber}` : ""}</DialogTitle>
@@ -540,15 +695,32 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Miasto</Label>
-              <Input value={deal.city} onChange={(e) => setDeal({ ...deal, city: e.target.value })} placeholder="np. Warszawa" />
+              <Label className="text-xs flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" /> Miasto
+              </Label>
+              <Input
+                value={deal.city}
+                onChange={(e) => setDeal({ ...deal, city: e.target.value })}
+                placeholder="np. Warszawa"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Rodzaj zabezpieczenia</Label>
-              <Select value={deal.security} onValueChange={(v) => setDeal({ ...deal, security: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label className="text-xs flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" /> Rodzaj zabezpieczenia
+              </Label>
+              <Select
+                value={deal.security}
+                onValueChange={(v) => setDeal({ ...deal, security: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {SECURITY_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  {SECURITY_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {deal.security === "Inne" && (
@@ -561,16 +733,33 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Kwota pożyczki (PLN)</Label>
-              <Input type="number" step="0.01" min="0" value={deal.loanAmount} onChange={(e) => setDeal({ ...deal, loanAmount: e.target.value })} placeholder="np. 250000" />
+              <Label className="text-xs flex items-center gap-1.5">
+                <Wallet className="h-3.5 w-3.5" /> Kwota pożyczki (PLN)
+              </Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={deal.loanAmount}
+                onChange={(e) => setDeal({ ...deal, loanAmount: e.target.value })}
+                placeholder="np. 250000"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5" /> Zysk inwestora rocznie</Label>
-              <Input value={deal.investorProfitAnnual} onChange={(e) => setDeal({ ...deal, investorProfitAnnual: e.target.value })} placeholder="np. 10% lub 25 000 PLN" />
+              <Label className="text-xs flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5" /> Zysk inwestora rocznie
+              </Label>
+              <Input
+                value={deal.investorProfitAnnual}
+                onChange={(e) => setDeal({ ...deal, investorProfitAnnual: e.target.value })}
+                placeholder="np. 10% lub 25 000 PLN"
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={skipDeal} disabled={savingDeal}>Uzupełnię później</Button>
+            <Button variant="ghost" onClick={skipDeal} disabled={savingDeal}>
+              Uzupełnię później
+            </Button>
             <Button onClick={saveDeal} disabled={savingDeal || !canSaveDeal}>
               {savingDeal ? "Zapisywanie…" : "Zapisz dane transakcji"}
               <ArrowRight className="h-4 w-4 ml-2" />
@@ -582,8 +771,19 @@ function IssueFlow({ onIssued }: { onIssued: () => void }) {
   );
 }
 
-
-function BuyerTypeButton({ active, onClick, icon, title, desc }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string; desc: string }) {
+function BuyerTypeButton({
+  active,
+  onClick,
+  icon,
+  title,
+  desc,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
   return (
     <button
       type="button"
@@ -618,24 +818,44 @@ function MyInvoices() {
     }
   };
 
-  const commissionPaid = invoices.filter((i) => i.loan_paid_out).reduce((s, i) => s + Number(i.operator_commission || 0), 0);
-  const commissionPending = invoices.filter((i) => !i.loan_paid_out).reduce((s, i) => s + Number(i.operator_commission || 0), 0);
+  const commissionPaid = invoices
+    .filter((i) => i.loan_paid_out)
+    .reduce((s, i) => s + Number(i.operator_commission || 0), 0);
+  const commissionPending = invoices
+    .filter((i) => !i.loan_paid_out)
+    .reduce((s, i) => s + Number(i.operator_commission || 0), 0);
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Faktury" value={String(invoices.length)} icon={<FileText className="h-4 w-4" />} />
-        <StatCard label="Prowizja operatora — wypłacona" value={formatPLN(commissionPaid)} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} />
-        <StatCard label="Prowizja operatora — oczekująca" value={formatPLN(commissionPending)} icon={<Clock className="h-4 w-4 text-amber-600" />} />
+        <StatCard
+          label="Faktury"
+          value={String(invoices.length)}
+          icon={<FileText className="h-4 w-4" />}
+        />
+        <StatCard
+          label="Prowizja operatora — wypłacona"
+          value={formatPLN(commissionPaid)}
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+        />
+        <StatCard
+          label="Prowizja operatora — oczekująca"
+          value={formatPLN(commissionPending)}
+          icon={<Clock className="h-4 w-4 text-amber-600" />}
+        />
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Moje faktury</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Moje faktury</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           {q.isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Ładowanie…</p>
           ) : invoices.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground flex items-center gap-2"><FileText className="h-4 w-4" /> Brak faktur.</p>
+            <p className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Brak faktur.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -659,20 +879,35 @@ function MyInvoices() {
                         {i.buyer_name ?? "—"}
                         <div className="mt-0.5">
                           <Badge variant="outline" className="text-[10px] h-4">
-                            {i.buyer_type === "klient_indywidualny" ? "Klient indyw." : "Instytucja"}
+                            {i.buyer_type === "klient_indywidualny"
+                              ? "Klient indyw."
+                              : "Instytucja"}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-semibold">{formatPLN(i.gross_amount)}</TableCell>
-                      <TableCell><Badge variant="secondary">{STATUS_LABELS[i.status] ?? i.status}</Badge></TableCell>
+                      <TableCell className="text-right tabular-nums font-semibold">
+                        {formatPLN(i.gross_amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{STATUS_LABELS[i.status] ?? i.status}</Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         {Number(i.operator_commission) > 0 ? (
                           <div className="space-y-1">
-                            <div className="tabular-nums font-medium">{formatPLN(i.operator_commission)}</div>
+                            <div className="tabular-nums font-medium">
+                              {formatPLN(i.operator_commission)}
+                            </div>
                             {i.loan_paid_out ? (
-                              <Badge className="text-[10px] h-4 bg-emerald-100 text-emerald-800">Wypłacona</Badge>
+                              <Badge className="text-[10px] h-4 bg-emerald-100 text-emerald-800">
+                                Wypłacona
+                              </Badge>
                             ) : (
-                              <Badge variant="secondary" className="text-[10px] h-4 bg-amber-100 text-amber-800">Oczekuje</Badge>
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] h-4 bg-amber-100 text-amber-800"
+                              >
+                                Oczekuje
+                              </Badge>
                             )}
                           </div>
                         ) : (
@@ -684,10 +919,16 @@ function MyInvoices() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            title={i.loan_paid_out ? "Cofnij: pożyczka wypłacona" : "Oznacz: pożyczka wypłacona"}
+                            title={
+                              i.loan_paid_out
+                                ? "Cofnij: pożyczka wypłacona"
+                                : "Oznacz: pożyczka wypłacona"
+                            }
                             onClick={() => togglePaid(i.id, !i.loan_paid_out)}
                           >
-                            <CheckCircle2 className={`h-3.5 w-3.5 ${i.loan_paid_out ? "text-emerald-600" : "text-muted-foreground"}`} />
+                            <CheckCircle2
+                              className={`h-3.5 w-3.5 ${i.loan_paid_out ? "text-emerald-600" : "text-muted-foreground"}`}
+                            />
                           </Button>
                           <Button asChild size="sm" variant="ghost">
                             <Link to="/faktura/$id" params={{ id: i.id }}>
@@ -721,4 +962,3 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
     </Card>
   );
 }
-

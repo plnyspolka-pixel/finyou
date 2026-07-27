@@ -29,10 +29,10 @@ export const Route = createFileRoute("/api/public/hooks/daily-blog-tick")({
         if (denied) return denied;
         const url = new URL(request.url);
         if (url.searchParams.get("run") !== "1") {
-          return new Response(
-            JSON.stringify({ ok: true, hint: "POST or GET ?run=1 to trigger" }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
+          return new Response(JSON.stringify({ ok: true, hint: "POST or GET ?run=1 to trigger" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const force = url.searchParams.get("force") === "1" && hasPrivateCronSecret(request);
         const result = await runDailyBlogTick({ force });

@@ -24,7 +24,8 @@ const isHttpUrl = (s: string) => /^https?:\/\//i.test(s);
 async function downloadRef(
   ref: OutboundAttachmentRef,
 ): Promise<{ buf: Buffer; contentType?: string } | null> {
-  const url = ref.url && isHttpUrl(ref.url) ? ref.url : ref.path && isHttpUrl(ref.path) ? ref.path : null;
+  const url =
+    ref.url && isHttpUrl(ref.url) ? ref.url : ref.path && isHttpUrl(ref.path) ? ref.path : null;
   if (url) {
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -35,7 +36,9 @@ async function downloadRef(
   }
   const path = (ref.path ?? "").replace(/^\/+/, "");
   if (!path) return null;
-  const buckets = Array.from(new Set([ref.bucket, ...CANDIDATE_BUCKETS].filter((b): b is string => !!b)));
+  const buckets = Array.from(
+    new Set([ref.bucket, ...CANDIDATE_BUCKETS].filter((b): b is string => !!b)),
+  );
   for (const bucket of buckets) {
     const { data, error } = await supabaseAdmin.storage.from(bucket).download(path);
     if (!error && data) {

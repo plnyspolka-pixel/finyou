@@ -19,7 +19,9 @@ export function PreviewBypassToggle() {
           ? "border-emerald-400/40 bg-emerald-500/90 text-white hover:bg-emerald-500"
           : "border-white/20 bg-slate-900/80 text-white hover:bg-slate-900")
       }
-      title={active ? "Wyłącz podgląd bez logowania" : "Włącz podgląd bez logowania (tylko preview)"}
+      title={
+        active ? "Wyłącz podgląd bez logowania" : "Włącz podgląd bez logowania (tylko preview)"
+      }
     >
       {active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       {active ? "Podgląd: BEZ LOGOWANIA" : "Podgląd bez logowania"}

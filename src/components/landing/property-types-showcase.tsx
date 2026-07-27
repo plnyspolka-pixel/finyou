@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { ChevronDown, FileText, Sparkles, Building2, Home, Store, Trees, Map, type LucideIcon } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  Sparkles,
+  Building2,
+  Home,
+  Store,
+  Trees,
+  Map,
+  type LucideIcon,
+} from "lucide-react";
 import { BlurFade } from "@/components/ui/blur-fade";
 
 type PropType = {
@@ -14,11 +24,7 @@ const TYPES: PropType[] = [
     key: "mieszkanie",
     title: "Mieszkanie",
     Icon: Building2,
-    docs: [
-      "Numer księgi wieczystej",
-      "Zdjęcia każdego pomieszczenia",
-      "Zdjęcia z zewnątrz",
-    ],
+    docs: ["Numer księgi wieczystej", "Zdjęcia każdego pomieszczenia", "Zdjęcia z zewnątrz"],
   },
   {
     key: "dom",
@@ -46,19 +52,13 @@ const TYPES: PropType[] = [
     key: "rolna",
     title: "Grunt rolny",
     Icon: Trees,
-    docs: [
-      "Wypis z rejestru gruntów",
-      "Numer księgi wieczystej (jeżeli nie ma go na wypisie)",
-    ],
+    docs: ["Wypis z rejestru gruntów", "Numer księgi wieczystej (jeżeli nie ma go na wypisie)"],
   },
   {
     key: "budowlana",
     title: "Działka budowlana",
     Icon: Map,
-    docs: [
-      "Numer księgi wieczystej",
-      "MPZP albo warunki zabudowy",
-    ],
+    docs: ["Numer księgi wieczystej", "MPZP albo warunki zabudowy"],
   },
 ];
 
@@ -73,7 +73,13 @@ export function PropertyTypesShowcase({
   const selectMode = typeof onSelect === "function";
 
   return (
-    <div className={selectMode ? "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+    <div
+      className={
+        selectMode
+          ? "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
+          : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+      }
+    >
       {TYPES.map((p, i) => {
         const isOpen = !selectMode && openKey === p.key;
         const isSelected = selectMode && selectedKey === p.key;
@@ -97,7 +103,9 @@ export function PropertyTypesShowcase({
                 <span
                   className={[
                     "grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors",
-                    isSelected ? "bg-white/20 text-white" : "bg-white/10 text-white/80 group-hover:text-white",
+                    isSelected
+                      ? "bg-white/20 text-white"
+                      : "bg-white/10 text-white/80 group-hover:text-white",
                   ].join(" ")}
                 >
                   <Icon className="h-5 w-5" />
@@ -133,10 +141,14 @@ export function PropertyTypesShowcase({
                 <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">
                   {p.title}
                 </span>
-                <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
-              <div className={`grid transition-all duration-200 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+              <div
+                className={`grid transition-all duration-200 ease-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              >
                 <div className="overflow-hidden">
                   <div className="border-t p-4">
                     <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -152,7 +164,8 @@ export function PropertyTypesShowcase({
                       ))}
                     </ul>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Każdą sprawę analizujemy indywidualnie — listę dopasujemy do Twojej nieruchomości.
+                      Każdą sprawę analizujemy indywidualnie — listę dopasujemy do Twojej
+                      nieruchomości.
                     </p>
                   </div>
                 </div>
@@ -164,7 +177,6 @@ export function PropertyTypesShowcase({
     </div>
   );
 }
-
 
 export const PROPERTY_SHOWCASE_KEY_TO_SECURITY: Record<string, string> = {
   mieszkanie: "mieszkanie",

@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Upload, Bug, ExternalLink } from "lucide-react";
@@ -22,7 +29,11 @@ export function KwPasteSlotsDialog({
   const storageKey = `kw-paste-text:${loanApplicationId}`;
   const [text, setText] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-    try { return sessionStorage.getItem(storageKey) ?? ""; } catch { return ""; }
+    try {
+      return sessionStorage.getItem(storageKey) ?? "";
+    } catch {
+      return "";
+    }
   });
   const [busy, setBusy] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
@@ -55,7 +66,9 @@ export function KwPasteSlotsDialog({
       if (res.ok) {
         toast.success(`Treść KW ${res.kwNumber} zapisana`);
         for (const w of (res.warnings ?? []).slice(0, 4)) toast.info(w);
-        try { sessionStorage.removeItem(storageKey); } catch {}
+        try {
+          sessionStorage.removeItem(storageKey);
+        } catch {}
         setText("");
         onImported();
         onOpenChange(false);
@@ -106,7 +119,9 @@ export function KwPasteSlotsDialog({
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         onFocusOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => { if (text.trim()) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => {
+          if (text.trim()) e.preventDefault();
+        }}
       >
         <DialogHeader>
           <DialogTitle>Wklej treść KW</DialogTitle>
@@ -120,7 +135,8 @@ export function KwPasteSlotsDialog({
             >
               EKW <ExternalLink className="h-3 w-3" />
             </a>
-            , zaznacz treść (Ctrl+A / Ctrl+C) i wklej ją poniżej. AI podzieli tekst na działy i zapisze do KW.
+            , zaznacz treść (Ctrl+A / Ctrl+C) i wklej ją poniżej. AI podzieli tekst na działy i
+            zapisze do KW.
           </DialogDescription>
         </DialogHeader>
 
@@ -158,12 +174,22 @@ export function KwPasteSlotsDialog({
             disabled={busy || debugBusy || chars < 20}
             title="Uruchom parsowanie bez zapisu — pokaż JSON"
           >
-            {debugBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bug className="mr-2 h-4 w-4" />}
+            {debugBusy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Bug className="mr-2 h-4 w-4" />
+            )}
             Podgląd JSON
           </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Anuluj</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+            Anuluj
+          </Button>
           <Button onClick={() => void submit()} disabled={busy || chars < 20}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            {busy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
             Importuj treść KW
           </Button>
         </DialogFooter>

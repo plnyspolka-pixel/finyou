@@ -3,7 +3,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  const { data: roles } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
   const isAdmin = (roles ?? []).some((r) => r.role === "administrator");
   if (!isAdmin) throw new Error("Brak uprawnień");
 }
@@ -52,7 +55,10 @@ export const upsertKnowledge = createServerFn({ method: "POST" })
     if (embedding && embedding.length > 0) row.embedding = embedding as any;
 
     if (data.id) {
-      const { error } = await supabaseAdmin.from("text_agent_knowledge").update(row).eq("id", data.id);
+      const { error } = await supabaseAdmin
+        .from("text_agent_knowledge")
+        .update(row)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ok: true, id: data.id, embedded: !!embedding };
     }

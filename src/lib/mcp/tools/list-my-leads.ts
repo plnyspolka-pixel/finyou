@@ -8,7 +8,13 @@ export default defineTool({
   description:
     "Zwraca leady przypisane do zalogowanego pośrednika/operatora (Finance You). Sortowane najnowsze na górze. Widoczność ograniczona przez RLS.",
   inputSchema: {
-    limit: z.number().int().min(1).max(50).optional().describe("Maksymalna liczba leadów do zwrócenia (domyślnie 20)."),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(50)
+      .optional()
+      .describe("Maksymalna liczba leadów do zwrócenia (domyślnie 20)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ limit }, ctx: ToolContext) => {

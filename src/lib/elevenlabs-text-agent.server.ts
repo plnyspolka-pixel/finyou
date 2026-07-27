@@ -19,9 +19,15 @@ function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-type EmittedMessage = { role: "system" | "user" | "assistant" | "tool"; content: string; tool_call_id?: string; tool_calls?: any[] };
+type EmittedMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_call_id?: string;
+  tool_calls?: any[];
+};
 
-let cachedAgentPrompt: { prompt: string; firstMessage: string | null; fetchedAt: number } | null = null;
+let cachedAgentPrompt: { prompt: string; firstMessage: string | null; fetchedAt: number } | null =
+  null;
 const PROMPT_TTL_MS = 5 * 60 * 1000;
 
 async function fetchAgentPrompt(): Promise<{ prompt: string; firstMessage: string | null }> {
@@ -125,7 +131,8 @@ const TOOLS = [
     type: "function",
     function: {
       name: "mark_ready_for_human",
-      description: "Oznacz że sprawa wymaga człowieka. Używaj wyjątkowo rzadko — masz pełną autonomię.",
+      description:
+        "Oznacz że sprawa wymaga człowieka. Używaj wyjątkowo rzadko — masz pełną autonomię.",
       parameters: {
         type: "object",
         properties: { reason: { type: "string" } },
@@ -182,7 +189,11 @@ export async function runAgentTurn(opts: {
       });
       if (r.magicLink) applicationLink = r.magicLink;
       if (r.userId && lead.client_id) {
-        await s.from("clients").update({ user_id: r.userId }).eq("id", lead.client_id).is("user_id", null);
+        await s
+          .from("clients")
+          .update({ user_id: r.userId })
+          .eq("id", lead.client_id)
+          .is("user_id", null);
       }
     } catch (e) {
       console.error("[el-text-agent] magic link failed", e);
@@ -211,12 +222,15 @@ export async function runAgentTurn(opts: {
   // Tylko POPRAWNY numer KW (format XXXX/NNNNNNNN/C) — status typu
   // "przesłany" nie kończy dopytywania o właściwy numer.
   mark(
-    (Array.isArray(appData.kw_numbers) && appData.kw_numbers.some((k: unknown) => normalizeKwNumber(k))) ||
+    (Array.isArray(appData.kw_numbers) &&
+      appData.kw_numbers.some((k: unknown) => normalizeKwNumber(k))) ||
       !!normalizeKwNumber(appData.numer_kw),
     "numer księgi wieczystej",
   );
   mark(
-    (attCount ?? 0) > 0 || opts.attachmentsSummary != null || appData.zdjecia_nieruchomosci === "przesłane",
+    (attCount ?? 0) > 0 ||
+      opts.attachmentsSummary != null ||
+      appData.zdjecia_nieruchomosci === "przesłane",
     "zdjęcia/dokumenty nieruchomości",
   );
   mark(!!(lead.phone_raw || lead.phone_normalized || appData.phone), "numer telefonu");
@@ -243,8 +257,10 @@ export async function runAgentTurn(opts: {
   const messages: EmittedMessage[] = [
     {
       role: "system",
-      content: (systemPrompt + leadContext + checklistBlock + knowledgeBlock)
-        .replaceAll("{{MAGIC_LINK_KLIENT}}", applicationLink),
+      content: (systemPrompt + leadContext + checklistBlock + knowledgeBlock).replaceAll(
+        "{{MAGIC_LINK_KLIENT}}",
+        applicationLink,
+      ),
     },
   ];
   for (const m of history ?? []) {
@@ -290,7 +306,10 @@ export async function runAgentTurn(opts: {
 
     const calls = msg.tool_calls ?? [];
     if (calls.length === 0) {
-      return { reply: String(msg.content ?? "").trim() || "Dziękuję, oddzwonimy.", toolCalls: toolResults };
+      return {
+        reply: String(msg.content ?? "").trim() || "Dziękuję, oddzwonimy.",
+        toolCalls: toolResults,
+      };
     }
 
     messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
@@ -298,7 +317,11 @@ export async function runAgentTurn(opts: {
     for (const c of calls) {
       const name = c.function?.name;
       let args: any = {};
-      try { args = JSON.parse(c.function?.arguments ?? "{}"); } catch { /* noop */ }
+      try {
+        args = JSON.parse(c.function?.arguments ?? "{}");
+      } catch {
+        /* noop */
+      }
       const result = await executeTool(opts.leadId, opts.channel, name, args, { applicationLink });
       toolResults.push({ name, args, result });
       messages.push({
@@ -336,7 +359,10 @@ function normalizePatch(raw: Record<string, any>): Record<string, any> {
     const key = PATCH_KEY_ALIASES[k] ?? k;
     // Kwoty jako liczby — bot potrafi przysłać "360 000 zł" / "360 tys."
     if ((key === "loan_amount" || key === "property_value") && typeof v === "string") {
-      const m = v.toLowerCase().replace(/[\s.\u00a0]/g, "").match(/(\d+(?:,\d+)?)(tys|mln)?/);
+      const m = v
+        .toLowerCase()
+        .replace(/[\s.\u00a0]/g, "")
+        .match(/(\d+(?:,\d+)?)(tys|mln)?/);
       if (m) {
         let n = Number(m[1].replace(",", "."));
         if (m[2] === "tys") n *= 1000;
@@ -370,7 +396,11 @@ async function executeTool(
   const s = admin();
   if (name === "update_lead_data") {
     const patch = normalizePatch(args?.patch ?? {});
-    const { data: lead } = await s.from("leads").select("application_data, email, phone_raw, phone_normalized, first_name, last_name").eq("id", leadId).maybeSingle();
+    const { data: lead } = await s
+      .from("leads")
+      .select("application_data, email, phone_raw, phone_normalized, first_name, last_name")
+      .eq("id", leadId)
+      .maybeSingle();
     const merged: Record<string, any> = { ...(lead?.application_data ?? {}), ...patch };
     if (typeof patch.numer_kw === "string") {
       const kwList: string[] = Array.isArray(merged.kw_numbers) ? [...merged.kw_numbers] : [];
@@ -378,8 +408,10 @@ async function executeTool(
       merged.kw_numbers = kwList;
     }
     const topLevel: Record<string, any> = { application_data: merged };
-    if (typeof patch.first_name === "string" && !lead?.first_name) topLevel.first_name = patch.first_name;
-    if (typeof patch.last_name === "string" && !lead?.last_name) topLevel.last_name = patch.last_name;
+    if (typeof patch.first_name === "string" && !lead?.first_name)
+      topLevel.first_name = patch.first_name;
+    if (typeof patch.last_name === "string" && !lead?.last_name)
+      topLevel.last_name = patch.last_name;
     if (typeof patch.email === "string" && !lead?.email) topLevel.email = patch.email;
     if (typeof patch.phone === "string" && !lead?.phone_raw) {
       topLevel.phone_raw = patch.phone;
@@ -399,10 +431,17 @@ async function executeTool(
   if (name === "send_application_link") {
     const link = ctx.applicationLink;
     await s.from("leads").update({ return_link: link }).eq("id", leadId);
-    return { ok: true, link, instruction: `Wyślij klientowi w odpowiedzi tekst typu: "Twój link do dokończenia wniosku: ${link}"` };
+    return {
+      ok: true,
+      link,
+      instruction: `Wyślij klientowi w odpowiedzi tekst typu: "Twój link do dokończenia wniosku: ${link}"`,
+    };
   }
   if (name === "mark_ready_for_human") {
-    await s.from("leads").update({ status: "wymaga_kontaktu", notes: `[AI] ${args?.reason ?? "eskalacja"}` }).eq("id", leadId);
+    await s
+      .from("leads")
+      .update({ status: "wymaga_kontaktu", notes: `[AI] ${args?.reason ?? "eskalacja"}` })
+      .eq("id", leadId);
     return { ok: true };
   }
   return { ok: false, error: `unknown tool ${name}` };

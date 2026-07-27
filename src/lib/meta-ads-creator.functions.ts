@@ -14,7 +14,8 @@ function getToken() {
 async function assertStaff(userId: string) {
   const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r) => r.role);
-  if (!roles.includes("administrator") && !roles.includes("operator")) throw new Error("Brak uprawnień");
+  if (!roles.includes("administrator") && !roles.includes("operator"))
+    throw new Error("Brak uprawnień");
 }
 
 async function metaGet(path: string, params: Record<string, string> = {}) {
@@ -38,8 +39,18 @@ export const listFbPages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertStaff(context.userId);
-    const r = await metaGet("/me/accounts", { fields: "id,name,access_token,category", limit: "100" });
-    return { pages: (r.data ?? []).map((p: any) => ({ id: p.id, name: p.name, category: p.category, page_token: p.access_token })) };
+    const r = await metaGet("/me/accounts", {
+      fields: "id,name,access_token,category",
+      limit: "100",
+    });
+    return {
+      pages: (r.data ?? []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        page_token: p.access_token,
+      })),
+    };
   });
 
 export const searchTargeting = createServerFn({ method: "POST" })
@@ -76,10 +87,17 @@ export const saveAdDraft = createServerFn({ method: "POST" })
     await assertStaff(context.userId);
     if (data.id) {
       const { id, ...rest } = data;
-      await supabaseAdmin.from("meta_ad_drafts").update(rest as any).eq("id", id!);
+      await supabaseAdmin
+        .from("meta_ad_drafts")
+        .update(rest as any)
+        .eq("id", id!);
       return { id: id! };
     }
-    const { data: row, error } = await supabaseAdmin.from("meta_ad_drafts").insert({ ...data, created_by: context.userId } as any).select("id").single();
+    const { data: row, error } = await supabaseAdmin
+      .from("meta_ad_drafts")
+      .insert({ ...data, created_by: context.userId } as any)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { id: row!.id };
   });
@@ -88,7 +106,11 @@ export const listAdDrafts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertStaff(context.userId);
-    const { data } = await supabaseAdmin.from("meta_ad_drafts").select("*, meta_ad_accounts(name)").order("created_at", { ascending: false }).limit(100);
+    const { data } = await supabaseAdmin
+      .from("meta_ad_drafts")
+      .select("*, meta_ad_accounts(name)")
+      .order("created_at", { ascending: false })
+      .limit(100);
     return { drafts: data ?? [] };
   });
 
@@ -97,7 +119,11 @@ export const getAdDraft = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ context, data }) => {
     await assertStaff(context.userId);
-    const { data: draft } = await supabaseAdmin.from("meta_ad_drafts").select("*").eq("id", data.id).single();
+    const { data: draft } = await supabaseAdmin
+      .from("meta_ad_drafts")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     return { draft };
   });
 
@@ -115,7 +141,11 @@ export const publishAdDraft = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ context, data }) => {
     await assertStaff(context.userId);
-    const { data: draft } = await supabaseAdmin.from("meta_ad_drafts").select("*, meta_ad_accounts(meta_account_id)").eq("id", data.id).single();
+    const { data: draft } = await supabaseAdmin
+      .from("meta_ad_drafts")
+      .select("*, meta_ad_accounts(meta_account_id)")
+      .eq("id", data.id)
+      .single();
     if (!draft) throw new Error("Szkic nie istnieje");
     if (!draft.page_id) throw new Error("Wybierz stronę Facebook");
     const acc = (draft as any).meta_ad_accounts;
@@ -147,7 +177,25 @@ export const publishAdDraft = createServerFn({ method: "POST" })
             inclusions: {
               operator: "or",
               rules: [
-                { event_sources: [{ id: (await supabaseAdmin.from("tracking_settings").select("client_pixel_id").eq("id", 1).maybeSingle()).data?.client_pixel_id, type: "pixel" }], retention_seconds: 30 * 86400, filter: { operator: "and", filters: [{ field: "url", operator: "i_contains", value: "/wniosek" }] } },
+                {
+                  event_sources: [
+                    {
+                      id: (
+                        await supabaseAdmin
+                          .from("tracking_settings")
+                          .select("client_pixel_id")
+                          .eq("id", 1)
+                          .maybeSingle()
+                      ).data?.client_pixel_id,
+                      type: "pixel",
+                    },
+                  ],
+                  retention_seconds: 30 * 86400,
+                  filter: {
+                    operator: "and",
+                    filters: [{ field: "url", operator: "i_contains", value: "/wniosek" }],
+                  },
+                },
               ],
             },
           }),
@@ -160,18 +208,39 @@ export const publishAdDraft = createServerFn({ method: "POST" })
             inclusions: {
               operator: "or",
               rules: [
-                { event_sources: [{ id: (await supabaseAdmin.from("tracking_settings").select("client_pixel_id").eq("id", 1).maybeSingle()).data?.client_pixel_id, type: "pixel" }], retention_seconds: 30 * 86400, filter: { operator: "and", filters: [{ field: "event", operator: "eq", value: "SubmitApplication" }] } },
+                {
+                  event_sources: [
+                    {
+                      id: (
+                        await supabaseAdmin
+                          .from("tracking_settings")
+                          .select("client_pixel_id")
+                          .eq("id", 1)
+                          .maybeSingle()
+                      ).data?.client_pixel_id,
+                      type: "pixel",
+                    },
+                  ],
+                  retention_seconds: 30 * 86400,
+                  filter: {
+                    operator: "and",
+                    filters: [{ field: "event", operator: "eq", value: "SubmitApplication" }],
+                  },
+                },
               ],
             },
           }),
         });
         visitorsId = visitors.id;
         convertersId = converters.id;
-        await supabaseAdmin.from("tracking_settings").update({
-          meta_audience_visitors_id: visitorsId,
-          meta_audience_converters_id: convertersId,
-          meta_audiences_account_id: acc.meta_account_id,
-        }).eq("id", 1);
+        await supabaseAdmin
+          .from("tracking_settings")
+          .update({
+            meta_audience_visitors_id: visitorsId,
+            meta_audience_converters_id: convertersId,
+            meta_audiences_account_id: acc.meta_account_id,
+          })
+          .eq("id", 1);
       }
 
       // 1) Campaign
@@ -183,9 +252,10 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       });
 
       const useRemarketing = (targeting as any).remarketing !== false; // domyślnie włączone
-      const customAudiences = useRemarketing && (targeting as any).remarketing_mode !== "exclude_only"
-        ? [{ id: visitorsId }]
-        : undefined;
+      const customAudiences =
+        useRemarketing && (targeting as any).remarketing_mode !== "exclude_only"
+          ? [{ id: visitorsId }]
+          : undefined;
       const excludedAudiences = useRemarketing ? [{ id: convertersId }] : undefined;
 
       // 2) AdSet
@@ -215,8 +285,15 @@ export const publishAdDraft = createServerFn({ method: "POST" })
       // 3) Lead form
       const form = await metaPost(`/${draft.page_id}/leadgen_forms`, {
         name: leadForm.name ?? draft.name,
-        questions: leadForm.questions ?? [{ type: "EMAIL" }, { type: "FULL_NAME" }, { type: "PHONE" }],
-        privacy_policy: leadForm.privacy_policy ?? { url: "https://financeyou.pl/polityka-prywatnosci", link_text: "Polityka prywatności" },
+        questions: leadForm.questions ?? [
+          { type: "EMAIL" },
+          { type: "FULL_NAME" },
+          { type: "PHONE" },
+        ],
+        privacy_policy: leadForm.privacy_policy ?? {
+          url: "https://financeyou.pl/polityka-prywatnosci",
+          link_text: "Polityka prywatności",
+        },
         follow_up_action_url: leadForm.follow_up_action_url ?? "https://financeyou.pl/dziekujemy",
         locale: "pl_PL",
       });
@@ -232,7 +309,10 @@ export const publishAdDraft = createServerFn({ method: "POST" })
             name: creative.headline ?? draft.name,
             description: creative.description ?? "",
             picture: creative.image_url ?? undefined,
-            call_to_action: { type: creative.cta_type ?? "SIGN_UP", value: { lead_gen_form_id: form.id } },
+            call_to_action: {
+              type: creative.cta_type ?? "SIGN_UP",
+              value: { lead_gen_form_id: form.id },
+            },
           },
         },
       });
@@ -245,20 +325,26 @@ export const publishAdDraft = createServerFn({ method: "POST" })
         status: "PAUSED",
       });
 
-      await supabaseAdmin.from("meta_ad_drafts").update({
-        status: "opublikowana",
-        meta_campaign_id: camp.id,
-        meta_adset_id: adset.id,
-        meta_form_id: form.id,
-        meta_creative_id: cr.id,
-        meta_ad_id: ad.id,
-        published_at: new Date().toISOString(),
-        error_message: null,
-      }).eq("id", data.id);
+      await supabaseAdmin
+        .from("meta_ad_drafts")
+        .update({
+          status: "opublikowana",
+          meta_campaign_id: camp.id,
+          meta_adset_id: adset.id,
+          meta_form_id: form.id,
+          meta_creative_id: cr.id,
+          meta_ad_id: ad.id,
+          published_at: new Date().toISOString(),
+          error_message: null,
+        })
+        .eq("id", data.id);
 
       return { ok: true, ad_id: ad.id };
     } catch (e: any) {
-      await supabaseAdmin.from("meta_ad_drafts").update({ status: "blad", error_message: String(e.message).slice(0, 1000) }).eq("id", data.id);
+      await supabaseAdmin
+        .from("meta_ad_drafts")
+        .update({ status: "blad", error_message: String(e.message).slice(0, 1000) })
+        .eq("id", data.id);
       throw e;
     }
   });

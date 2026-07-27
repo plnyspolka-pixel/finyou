@@ -18,7 +18,13 @@ export async function ensureKlientAccountAndMagicLink(
     source?: string;
     role?: Role;
   } = {},
-): Promise<{ userId: string | null; magicLink: string | null; created: boolean; role: Role; error?: string }> {
+): Promise<{
+  userId: string | null;
+  magicLink: string | null;
+  created: boolean;
+  role: Role;
+  error?: string;
+}> {
   const role: Role = meta.role ?? "klient";
   if (!email) return { userId: null, magicLink: null, created: false, role, error: "no email" };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -39,7 +45,12 @@ export async function ensureKlientAccountAndMagicLink(
     if (createRes?.user?.id) {
       userId = createRes.user.id;
       created = true;
-    } else if (createErr && !String(createErr.message ?? "").toLowerCase().includes("registered")) {
+    } else if (
+      createErr &&
+      !String(createErr.message ?? "")
+        .toLowerCase()
+        .includes("registered")
+    ) {
       return { userId: null, magicLink: null, created: false, role, error: createErr.message };
     }
   } catch (e: any) {
@@ -51,22 +62,27 @@ export async function ensureKlientAccountAndMagicLink(
     while (page <= 20 && !userId) {
       const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
       const found = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase());
-      if (found) { userId = found.id; break; }
+      if (found) {
+        userId = found.id;
+        break;
+      }
       if (!list?.users?.length || list.users.length < 200) break;
       page++;
     }
   }
 
   if (userId) {
-    await supabaseAdmin.from("user_roles").upsert(
-      { user_id: userId, role: role as any },
-      { onConflict: "user_id,role" },
-    );
+    await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: userId, role: role as any }, { onConflict: "user_id,role" });
 
     // Inwestor → załóż także rekord w investors (jeśli brak)
     if (role === "inwestor") {
       const { data: existingInv } = await supabaseAdmin
-        .from("investors").select("id").eq("user_id", userId).maybeSingle();
+        .from("investors")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
       if (!existingInv) {
         await supabaseAdmin.from("investors").insert({
           user_id: userId,
@@ -87,7 +103,9 @@ export async function ensureKlientAccountAndMagicLink(
       options: { redirectTo: ROLE_REDIRECT[role] },
     });
     if (!linkErr) magicLink = (linkRes?.properties as any)?.action_link ?? null;
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 
   return { userId, magicLink, created, role };
 }

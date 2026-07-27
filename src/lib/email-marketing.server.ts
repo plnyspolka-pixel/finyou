@@ -4,7 +4,6 @@ import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
 
 const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
 
-
 export type SegmentFilters = {
   tags?: string[];
   sources?: string[];
@@ -14,8 +13,10 @@ export type SegmentFilters = {
 };
 
 export async function resolveSegmentRecipients(
-  filters: SegmentFilters
-): Promise<Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>> {
+  filters: SegmentFilters,
+): Promise<
+  Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>
+> {
   let q = supabaseAdmin
     .from("email_subscribers")
     .select("id,email,first_name,last_name")

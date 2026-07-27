@@ -1,8 +1,52 @@
 /** Bardzo prosty konwerter liczb PLN na słownie (PL). Dla pełnej zgodności użyj zewnętrznej biblioteki. */
-const ONES = ["zero","jeden","dwa","trzy","cztery","pięć","sześć","siedem","osiem","dziewięć"];
-const TEENS = ["dziesięć","jedenaście","dwanaście","trzynaście","czternaście","piętnaście","szesnaście","siedemnaście","osiemnaście","dziewiętnaście"];
-const TENS = ["","","dwadzieścia","trzydzieści","czterdzieści","pięćdziesiąt","sześćdziesiąt","siedemdziesiąt","osiemdziesiąt","dziewięćdziesiąt"];
-const HUNDREDS = ["","sto","dwieście","trzysta","czterysta","pięćset","sześćset","siedemset","osiemset","dziewięćset"];
+const ONES = [
+  "zero",
+  "jeden",
+  "dwa",
+  "trzy",
+  "cztery",
+  "pięć",
+  "sześć",
+  "siedem",
+  "osiem",
+  "dziewięć",
+];
+const TEENS = [
+  "dziesięć",
+  "jedenaście",
+  "dwanaście",
+  "trzynaście",
+  "czternaście",
+  "piętnaście",
+  "szesnaście",
+  "siedemnaście",
+  "osiemnaście",
+  "dziewiętnaście",
+];
+const TENS = [
+  "",
+  "",
+  "dwadzieścia",
+  "trzydzieści",
+  "czterdzieści",
+  "pięćdziesiąt",
+  "sześćdziesiąt",
+  "siedemdziesiąt",
+  "osiemdziesiąt",
+  "dziewięćdziesiąt",
+];
+const HUNDREDS = [
+  "",
+  "sto",
+  "dwieście",
+  "trzysta",
+  "czterysta",
+  "pięćset",
+  "sześćset",
+  "siedemset",
+  "osiemset",
+  "dziewięćset",
+];
 
 function under1000(n: number): string {
   if (n === 0) return "";
@@ -10,9 +54,13 @@ function under1000(n: number): string {
   const rest = n % 100;
   const parts: string[] = [];
   if (h) parts.push(HUNDREDS[h]);
-  if (rest < 10) { if (rest) parts.push(ONES[rest]); }
-  else if (rest < 20) parts.push(TEENS[rest - 10]);
-  else { parts.push(TENS[Math.floor(rest / 10)]); if (rest % 10) parts.push(ONES[rest % 10]); }
+  if (rest < 10) {
+    if (rest) parts.push(ONES[rest]);
+  } else if (rest < 20) parts.push(TEENS[rest - 10]);
+  else {
+    parts.push(TENS[Math.floor(rest / 10)]);
+    if (rest % 10) parts.push(ONES[rest % 10]);
+  }
   return parts.join(" ");
 }
 
@@ -31,14 +79,17 @@ export function amountToWordsPLN(amount: number): string {
 
   const groups: number[] = [];
   let x = zl;
-  while (x > 0) { groups.push(x % 1000); x = Math.floor(x / 1000); }
+  while (x > 0) {
+    groups.push(x % 1000);
+    x = Math.floor(x / 1000);
+  }
   if (groups.length === 0) groups.push(0);
 
-  const labels: [string,string,string][] = [
+  const labels: [string, string, string][] = [
     ["", "", ""],
-    ["tysiąc","tysiące","tysięcy"],
-    ["milion","miliony","milionów"],
-    ["miliard","miliardy","miliardów"],
+    ["tysiąc", "tysiące", "tysięcy"],
+    ["milion", "miliony", "milionów"],
+    ["miliard", "miliardy", "miliardów"],
   ];
 
   const parts: string[] = [];
@@ -51,5 +102,5 @@ export function amountToWordsPLN(amount: number): string {
 
   const zlText = parts.length ? parts.join(" ") : "zero";
   const grText = `${gr.toString().padStart(2, "0")}/100`;
-  return `${zlText} ${pluralPLN(zl, ["złoty","złote","złotych"])} ${grText}`;
+  return `${zlText} ${pluralPLN(zl, ["złoty", "złote", "złotych"])} ${grText}`;
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { extractKwOwnerPersons, extractKwOwnerPesels, parseMortgages, parseKwPropertyParams } from "./kw-parser.server";
+import {
+  extractKwOwnerPersons,
+  extractKwOwnerPesels,
+  parseMortgages,
+  parseKwPropertyParams,
+} from "./kw-parser.server";
 
 describe("parseKwPropertyParams — dział I-O KW", () => {
   it("czyta lokal mieszkalny: powierzchnia użytkowa, liczba izb, rodzaj", () => {
@@ -42,7 +47,14 @@ describe("parseKwPropertyParams — dział I-O KW", () => {
 
   it("pusty/brakujący dział I-O daje puste parametry", () => {
     const p = parseKwPropertyParams(null);
-    expect(p).toEqual({ kind: null, usableAreaM2: null, landAreaM2: null, landAreaHa: null, roomCount: null, landUse: null });
+    expect(p).toEqual({
+      kind: null,
+      usableAreaM2: null,
+      landAreaM2: null,
+      landAreaHa: null,
+      roomCount: null,
+      landUse: null,
+    });
   });
 });
 
@@ -154,7 +166,9 @@ describe("parseMortgages — dział IV KW", () => {
   });
 
   it("obsługuje starszy układ z kwotą przy jednostce", () => {
-    const m = parseMortgages("Hipoteka umowna zwykła w kwocie 250 000,00 zł na rzecz Banku PKO BP SA.");
+    const m = parseMortgages(
+      "Hipoteka umowna zwykła w kwocie 250 000,00 zł na rzecz Banku PKO BP SA.",
+    );
     expect(m).toHaveLength(1);
     expect(m[0].amount).toBe(250000);
     expect(m[0].currency).toBe("PLN");

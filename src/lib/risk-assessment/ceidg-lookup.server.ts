@@ -15,7 +15,10 @@ import type { CeidgActivity } from "./types";
 
 const CEIDG_BASE = "https://dane.biznes.gov.pl/api/ceidg/v3/firmy";
 
-export function emptyCeidg(note: string, queried: CeidgActivity["queried"] = "none"): CeidgActivity {
+export function emptyCeidg(
+  note: string,
+  queried: CeidgActivity["queried"] = "none",
+): CeidgActivity {
   return {
     available: false,
     queried,
@@ -29,7 +32,11 @@ export function emptyCeidg(note: string, queried: CeidgActivity["queried"] = "no
 }
 
 function normName(s: string | null | undefined): string {
-  return (s ?? "").toLowerCase().normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").replace(/[^a-z]/g, "");
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
+    .replace(/[^a-z]/g, "");
 }
 
 function digits(s: string | null | undefined): string {
@@ -68,7 +75,8 @@ function pickFirms(json: any): any[] {
 
 function parseFirm(f: any): CeidgFirm {
   const owner = f?.wlasciciel ?? f?.przedsiebiorca ?? {};
-  const addr = f?.adresDzialalnosci ?? f?.adres ?? f?.adresGlownyMiejscaWykonywaniaDzialalnosci ?? {};
+  const addr =
+    f?.adresDzialalnosci ?? f?.adres ?? f?.adresGlownyMiejscaWykonywaniaDzialalnosci ?? {};
   const pkd = f?.pkdGlowny ?? (Array.isArray(f?.pkd) ? f.pkd[0] : f?.pkd) ?? null;
   return {
     name: f?.nazwa ?? owner?.nazwa ?? null,
@@ -99,15 +107,30 @@ async function ceidgFetch(url: string, token: string): Promise<any | { error: st
     }
     return await res.json();
   } catch (e: any) {
-    return { error: e?.name === "AbortError" ? "CEIDG timeout" : (e?.message ?? "CEIDG błąd sieci") };
+    return {
+      error: e?.name === "AbortError" ? "CEIDG timeout" : (e?.message ?? "CEIDG błąd sieci"),
+    };
   } finally {
     clearTimeout(timer);
   }
 }
 
-function toActivity(firms: CeidgFirm[], queried: CeidgActivity["queried"], confidence: CeidgActivity["matchConfidence"]): CeidgActivity {
+function toActivity(
+  firms: CeidgFirm[],
+  queried: CeidgActivity["queried"],
+  confidence: CeidgActivity["matchConfidence"],
+): CeidgActivity {
   if (firms.length === 0) {
-    return { available: true, queried, isEntrepreneur: false, status: "brak", matchConfidence: confidence, activeCount: 0, company: null, note: "Brak wpisu w CEIDG dla podanych danych." };
+    return {
+      available: true,
+      queried,
+      isEntrepreneur: false,
+      status: "brak",
+      matchConfidence: confidence,
+      activeCount: 0,
+      company: null,
+      note: "Brak wpisu w CEIDG dla podanych danych.",
+    };
   }
   const active = firms.filter((f) => f.status === "aktywny");
   const chosen = active[0] ?? firms.find((f) => f.status === "zawieszony") ?? firms[0];
@@ -140,7 +163,8 @@ export async function lookupCeidgActivity(args: {
   voivodeship?: string | null;
 }): Promise<CeidgActivity> {
   const token = process.env.CEIDG_JWT_TOKEN;
-  if (!token) return emptyCeidg("Brak CEIDG_JWT_TOKEN — pominięto sprawdzenie działalności w CEIDG.");
+  if (!token)
+    return emptyCeidg("Brak CEIDG_JWT_TOKEN — pominięto sprawdzenie działalności w CEIDG.");
 
   const nip = digits(args.nip);
 
@@ -175,7 +199,10 @@ export async function lookupCeidgActivity(args: {
     let confidence: CeidgActivity["matchConfidence"] = "low";
     if (wantCity) {
       const byCity = matched.filter((f) => normName(f.city).includes(wantCity));
-      if (byCity.length) { matched = byCity; confidence = "medium"; }
+      if (byCity.length) {
+        matched = byCity;
+        confidence = "medium";
+      }
     }
     if (matched.length === 0) matched = all;
     return toActivity(matched, "name", matched.length ? confidence : "none");

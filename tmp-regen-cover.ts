@@ -13,7 +13,10 @@ async function gen() {
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-3-pro-image-preview",
-      prompt, n: 1, size: "1536x1024", response_format: "url",
+      prompt,
+      n: 1,
+      size: "1536x1024",
+      response_format: "url",
     }),
   });
   if (!res.ok) throw new Error(`gen ${res.status}: ${await res.text()}`);

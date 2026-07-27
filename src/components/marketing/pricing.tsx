@@ -33,15 +33,24 @@ function periodLabel(days: number): string {
   return `/ ${days} dni`;
 }
 
-export function MarketingPricing({ products, audience, ctaLabel, featuresByDuration, fallback }: Props) {
-  const active = (products ?? []).filter((p) => p.active).sort((a, b) => a.sort_order - b.sort_order);
+export function MarketingPricing({
+  products,
+  audience,
+  ctaLabel,
+  featuresByDuration,
+  fallback,
+}: Props) {
+  const active = (products ?? [])
+    .filter((p) => p.active)
+    .sort((a, b) => a.sort_order - b.sort_order);
   if (active.length === 0) {
     return <>{fallback ?? null}</>;
   }
 
   const monthly = active.find((p) => p.duration_days === 30);
   const yearly = active.find((p) => p.duration_days === 365);
-  const savings = monthly && yearly ? yearlySavingsGrosz(monthly.amount_grosz, yearly.amount_grosz) : 0;
+  const savings =
+    monthly && yearly ? yearlySavingsGrosz(monthly.amount_grosz, yearly.amount_grosz) : 0;
 
   return (
     <div
@@ -64,15 +73,39 @@ export function MarketingPricing({ products, audience, ctaLabel, featuresByDurat
               display: "flex",
               flexDirection: "column",
               borderRadius: "var(--radius-3xl)",
-              border: best ? "1px solid oklch(0.78 0.18 85 / 0.5)" : "1px solid oklch(0.40 0.25 268 / 0.35)",
+              border: best
+                ? "1px solid oklch(0.78 0.18 85 / 0.5)"
+                : "1px solid oklch(0.40 0.25 268 / 0.35)",
               background: "var(--card)",
               boxShadow: best ? "var(--shadow-xl)" : "var(--shadow-lg)",
               overflow: "hidden",
             }}
           >
-            <div style={{ background: "var(--gradient-brand)", color: "#fff", padding: "1.5rem", position: "relative" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.85 }}>
+            <div
+              style={{
+                background: "var(--gradient-brand)",
+                color: "#fff",
+                padding: "1.5rem",
+                position: "relative",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    opacity: 0.85,
+                  }}
+                >
                   {p.label}
                 </div>
                 {best && (
@@ -94,18 +127,37 @@ export function MarketingPricing({ products, audience, ctaLabel, featuresByDurat
                 )}
               </div>
               <div style={{ marginTop: "0.9rem", display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontSize: "2.2rem", fontWeight: 900 }}>{formatGroszPln(p.amount_grosz)}</span>
-                <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>{periodLabel(p.duration_days)}</span>
+                <span style={{ fontSize: "2.2rem", fontWeight: 900 }}>
+                  {formatGroszPln(p.amount_grosz)}
+                </span>
+                <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>
+                  {periodLabel(p.duration_days)}
+                </span>
               </div>
               {best && savings > 0 && (
-                <div style={{ marginTop: "0.4rem", fontSize: "0.75rem", fontWeight: 600, opacity: 0.9 }}>
+                <div
+                  style={{
+                    marginTop: "0.4rem",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    opacity: 0.9,
+                  }}
+                >
                   Oszczędzasz {formatGroszPln(savings)} względem 12× pakietu 30-dniowego
                 </div>
               )}
             </div>
             <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", flex: 1 }}>
               {feats.length > 0 && (
-                <ul style={{ padding: 0, listStyle: "none", display: "grid", gap: "0.65rem", flex: 1 }}>
+                <ul
+                  style={{
+                    padding: 0,
+                    listStyle: "none",
+                    display: "grid",
+                    gap: "0.65rem",
+                    flex: 1,
+                  }}
+                >
                   {feats.map((f) => (
                     <li key={f} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
                       <BrandIcon name="check" size={18} />

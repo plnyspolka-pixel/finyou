@@ -332,37 +332,37 @@ function AmlSettingsScreen() {
             <div className="rounded-md bg-muted/50 p-3 text-xs space-y-2">
               <p className="font-medium text-sm">Co masz zrobić — i dlaczego</p>
               <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Teraz: nic.</span> Cały moduł
-                AML — klienci, oceny ryzyka, transakcje, sprawy i przygotowanie zgłoszeń —
-                działa bez połączenia z SI*GIIF. Połączenie jest potrzebne dopiero przy{" "}
-                <span className="font-medium text-foreground">pierwszej wysyłce zgłoszenia</span>{" "}
-                do GIIF. Wtedy z ekranu zgłoszenia sam uruchomi się kreator, który
-                przeprowadzi Cię krok po kroku:
+                <span className="font-medium text-foreground">Teraz: nic.</span> Cały moduł AML —
+                klienci, oceny ryzyka, transakcje, sprawy i przygotowanie zgłoszeń — działa bez
+                połączenia z SI*GIIF. Połączenie jest potrzebne dopiero przy{" "}
+                <span className="font-medium text-foreground">pierwszej wysyłce zgłoszenia</span> do
+                GIIF. Wtedy z ekranu zgłoszenia sam uruchomi się kreator, który przeprowadzi Cię
+                krok po kroku:
               </p>
               <ol className="list-decimal space-y-1 pl-4 text-muted-foreground">
                 <li>
-                  <span className="font-medium text-foreground">Rejestracja instytucji</span>{" "}
-                  w SI*GIIF — dane pobierzemy z Twojego profilu, Ty je tylko potwierdzasz.
+                  <span className="font-medium text-foreground">Rejestracja instytucji</span> w
+                  SI*GIIF — dane pobierzemy z Twojego profilu, Ty je tylko potwierdzasz.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">Klucz i wniosek o certyfikat</span>{" "}
-                  — generujemy je za Ciebie; klucz prywatny nigdy nie opuszcza platformy w
-                  postaci jawnej.
+                  — generujemy je za Ciebie; klucz prywatny nigdy nie opuszcza platformy w postaci
+                  jawnej.
                 </li>
                 <li>
-                  <span className="font-medium text-foreground">Podpis kwalifikowany</span>{" "}
-                  osoby podpisującej — wymaga go GIIF (Profil Zaufany nie wystarcza).
-                  Platforma nie przechowuje Twojego podpisu, PIN-u ani klucza.
+                  <span className="font-medium text-foreground">Podpis kwalifikowany</span> osoby
+                  podpisującej — wymaga go GIIF (Profil Zaufany nie wystarcza). Platforma nie
+                  przechowuje Twojego podpisu, PIN-u ani klucza.
                 </li>
                 <li>
                   <span className="font-medium text-foreground">Certyfikat komunikacyjny</span>{" "}
-                  wydaje operator GIIF — po jego otrzymaniu testujemy połączenie i wracamy
-                  do Twojego zgłoszenia.
+                  wydaje operator GIIF — po jego otrzymaniu testujemy połączenie i wracamy do
+                  Twojego zgłoszenia.
                 </li>
               </ol>
               <p className="text-muted-foreground">
-                Dlatego połączenie nie „zestawia się samo" — część kroków (podpis,
-                wydanie certyfikatu) leży po stronie Twojej i urzędu.
+                Dlatego połączenie nie „zestawia się samo" — część kroków (podpis, wydanie
+                certyfikatu) leży po stronie Twojej i urzędu.
               </p>
             </div>
 
@@ -383,9 +383,9 @@ function AmlSettingsScreen() {
                 </SelectContent>
               </Select>
               <p className="mt-1 text-xs text-muted-foreground">
-                „Testowe" służy do próbnej wysyłki bez skutków prawnych. „Produkcyjne"
-                wysyła zgłoszenia realnie do GIIF — wybierz je dopiero, gdy masz wydany
-                certyfikat komunikacyjny.
+                „Testowe" służy do próbnej wysyłki bez skutków prawnych. „Produkcyjne" wysyła
+                zgłoszenia realnie do GIIF — wybierz je dopiero, gdy masz wydany certyfikat
+                komunikacyjny.
               </p>
             </div>
 

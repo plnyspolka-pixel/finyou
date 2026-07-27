@@ -142,161 +142,178 @@ function OperatorRegisterPage() {
         <div className="w-full">
           <div className="mb-8 flex justify-center lg:justify-start">
             <Link to="/">
-              <img src={houseMark.url} alt="Finance You" className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(56,189,248,0.35)] md:h-24" draggable={false} />
+              <img
+                src={houseMark.url}
+                alt="Finance You"
+                className="h-20 w-auto drop-shadow-[0_8px_24px_rgba(56,189,248,0.35)] md:h-24"
+                draggable={false}
+              />
             </Link>
           </div>
-        <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
-          {/* Left — hype panel */}
-          <div className="hidden space-y-6 lg:block">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-widest text-white/70 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
-              Zaproszenie prywatne
-            </div>
-            <h1 className="bg-gradient-to-br from-white via-white to-cyan-200 bg-clip-text text-4xl font-bold leading-tight text-transparent md:text-5xl">
-              Witaj w zespole operatorów
-              <br />
-              Finance You.
-            </h1>
-            <p className="max-w-md text-base text-white/70">
-              Aktywuj swoje konto w kilka sekund. Po zalogowaniu trafisz od razu do panelu operatora — z leadami, wnioskami i wewnętrzną ofertą.
-            </p>
-            <ul className="space-y-3 text-sm text-white/80">
-              {[
-                "Pełny dostęp do leadów bez opiekuna",
-                "Wewnętrzna oferta pożyczkowa z prowizją operatora",
-                "Skrzynka mailowa i historia rozmów pod jednym dachem",
-              ].map((t) => (
-                <li key={t} className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                  <span>{t}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Right — glass card */}
-          <div className="mx-auto w-full max-w-md">
-            <div className="relative rounded-2xl border border-white/15 bg-white/[0.06] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-transparent" />
-              <div className="relative space-y-5">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400/15 ring-1 ring-cyan-300/40">
-                    <ShieldCheck className="h-5 w-5 text-cyan-200" />
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-widest text-white/60">Finance You</div>
-                    <div className="text-lg font-semibold">Rejestracja operatora</div>
-                  </div>
-                </div>
-
-                {status.state === "loading" && (
-                  <div className="flex items-center gap-2 text-sm text-white/70">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Sprawdzam zaproszenie…
-                  </div>
-                )}
-
-                {status.state === "invalid" && (
-                  <div className="rounded-lg border border-red-400/40 bg-red-500/10 p-4 text-sm">
-                    <div className="flex items-center gap-2 font-medium text-red-200">
-                      <AlertCircle className="h-4 w-4" /> Nie można użyć tego linku
-                    </div>
-                    <p className="mt-1 text-white/70">{status.reason}</p>
-                    <p className="mt-3 text-xs text-white/50">
-                      Poproś administratora o wygenerowanie nowego linku.
-                    </p>
-                  </div>
-                )}
-
-                {status.state === "valid" && redeeming && (
-                  <div className="flex items-center gap-2 text-sm text-white/70">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Aktywuję konto operatora…
-                  </div>
-                )}
-
-                {status.state === "valid" && !redeeming && !user && !sent && (
-                  <>
-                    <SocialSignIn
-                      redirectUri={oauthRedirect}
-                      variant="dark"
-                      labelPrefix="Kontynuuj"
-                    />
-                    <AuthDivider label="lub e-mailem" variant="dark" />
-                    <form className="space-y-3" onSubmit={submit}>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label htmlFor="fn" className="text-white/80">Imię</Label>
-                          <Input
-                            id="fn"
-                            required
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            className="border-white/15 bg-white/10 text-white placeholder:text-white/40"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="ln" className="text-white/80">Nazwisko</Label>
-                          <Input
-                            id="ln"
-                            required
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            className="border-white/15 bg-white/10 text-white placeholder:text-white/40"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="email" className="text-white/80">E-mail</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          readOnly={!!status.email}
-                          className="border-white/15 bg-white/10 text-white placeholder:text-white/40 read-only:opacity-70"
-                        />
-                        {status.email && (
-                          <p className="text-xs text-white/50">
-                            Adres przypisany przez administratora — nie można go zmienić.
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        type="submit"
-                        className="h-11 w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 hover:opacity-90"
-                        disabled={sending}
-                      >
-                        {sending ? "Wysyłanie linku…" : "Wyślij link aktywacyjny"}
-                      </Button>
-                    </form>
-                    <p className="text-center text-xs text-white/60">
-                      Masz już konto?{" "}
-                      <Link
-                        to="/logowanie"
-                        search={{ next: `/operator-rejestracja?token=${token}&welcome=1` } as never}
-                        className="font-medium text-cyan-300 hover:underline"
-                      >
-                        Zaloguj się
-                      </Link>
-                    </p>
-                  </>
-                )}
-
-                {status.state === "valid" && sent && !user && (
-                  <div className="rounded-lg border border-white/15 bg-white/5 p-4 text-sm">
-                    <p className="font-medium text-white">Sprawdź skrzynkę {email}</p>
-                    <p className="mt-1 text-white/70">
-                      Kliknij w link — wrócisz tutaj i Twoje konto operatora zostanie aktywowane.
-                    </p>
-                  </div>
-                )}
+          <div className="grid w-full gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+            {/* Left — hype panel */}
+            <div className="hidden space-y-6 lg:block">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-widest text-white/70 backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+                Zaproszenie prywatne
               </div>
+              <h1 className="bg-gradient-to-br from-white via-white to-cyan-200 bg-clip-text text-4xl font-bold leading-tight text-transparent md:text-5xl">
+                Witaj w zespole operatorów
+                <br />
+                Finance You.
+              </h1>
+              <p className="max-w-md text-base text-white/70">
+                Aktywuj swoje konto w kilka sekund. Po zalogowaniu trafisz od razu do panelu
+                operatora — z leadami, wnioskami i wewnętrzną ofertą.
+              </p>
+              <ul className="space-y-3 text-sm text-white/80">
+                {[
+                  "Pełny dostęp do leadów bez opiekuna",
+                  "Wewnętrzna oferta pożyczkowa z prowizją operatora",
+                  "Skrzynka mailowa i historia rozmów pod jednym dachem",
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="mt-4 text-center text-xs text-white/40">
-              Konto operatora wewnętrznego można założyć wyłącznie z linku zapraszającego od administratora.
-            </p>
+
+            {/* Right — glass card */}
+            <div className="mx-auto w-full max-w-md">
+              <div className="relative rounded-2xl border border-white/15 bg-white/[0.06] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+                <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-transparent" />
+                <div className="relative space-y-5">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400/15 ring-1 ring-cyan-300/40">
+                      <ShieldCheck className="h-5 w-5 text-cyan-200" />
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-widest text-white/60">
+                        Finance You
+                      </div>
+                      <div className="text-lg font-semibold">Rejestracja operatora</div>
+                    </div>
+                  </div>
+
+                  {status.state === "loading" && (
+                    <div className="flex items-center gap-2 text-sm text-white/70">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Sprawdzam zaproszenie…
+                    </div>
+                  )}
+
+                  {status.state === "invalid" && (
+                    <div className="rounded-lg border border-red-400/40 bg-red-500/10 p-4 text-sm">
+                      <div className="flex items-center gap-2 font-medium text-red-200">
+                        <AlertCircle className="h-4 w-4" /> Nie można użyć tego linku
+                      </div>
+                      <p className="mt-1 text-white/70">{status.reason}</p>
+                      <p className="mt-3 text-xs text-white/50">
+                        Poproś administratora o wygenerowanie nowego linku.
+                      </p>
+                    </div>
+                  )}
+
+                  {status.state === "valid" && redeeming && (
+                    <div className="flex items-center gap-2 text-sm text-white/70">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Aktywuję konto operatora…
+                    </div>
+                  )}
+
+                  {status.state === "valid" && !redeeming && !user && !sent && (
+                    <>
+                      <SocialSignIn
+                        redirectUri={oauthRedirect}
+                        variant="dark"
+                        labelPrefix="Kontynuuj"
+                      />
+                      <AuthDivider label="lub e-mailem" variant="dark" />
+                      <form className="space-y-3" onSubmit={submit}>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor="fn" className="text-white/80">
+                              Imię
+                            </Label>
+                            <Input
+                              id="fn"
+                              required
+                              value={firstName}
+                              onChange={(e) => setFirstName(e.target.value)}
+                              className="border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="ln" className="text-white/80">
+                              Nazwisko
+                            </Label>
+                            <Input
+                              id="ln"
+                              required
+                              value={lastName}
+                              onChange={(e) => setLastName(e.target.value)}
+                              className="border-white/15 bg-white/10 text-white placeholder:text-white/40"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="email" className="text-white/80">
+                            E-mail
+                          </Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            readOnly={!!status.email}
+                            className="border-white/15 bg-white/10 text-white placeholder:text-white/40 read-only:opacity-70"
+                          />
+                          {status.email && (
+                            <p className="text-xs text-white/50">
+                              Adres przypisany przez administratora — nie można go zmienić.
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          type="submit"
+                          className="h-11 w-full bg-gradient-to-r from-cyan-400 to-indigo-500 text-white shadow-lg shadow-cyan-500/20 hover:opacity-90"
+                          disabled={sending}
+                        >
+                          {sending ? "Wysyłanie linku…" : "Wyślij link aktywacyjny"}
+                        </Button>
+                      </form>
+                      <p className="text-center text-xs text-white/60">
+                        Masz już konto?{" "}
+                        <Link
+                          to="/logowanie"
+                          search={
+                            { next: `/operator-rejestracja?token=${token}&welcome=1` } as never
+                          }
+                          className="font-medium text-cyan-300 hover:underline"
+                        >
+                          Zaloguj się
+                        </Link>
+                      </p>
+                    </>
+                  )}
+
+                  {status.state === "valid" && sent && !user && (
+                    <div className="rounded-lg border border-white/15 bg-white/5 p-4 text-sm">
+                      <p className="font-medium text-white">Sprawdź skrzynkę {email}</p>
+                      <p className="mt-1 text-white/70">
+                        Kliknij w link — wrócisz tutaj i Twoje konto operatora zostanie aktywowane.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="mt-4 text-center text-xs text-white/40">
+                Konto operatora wewnętrznego można założyć wyłącznie z linku zapraszającego od
+                administratora.
+              </p>
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>

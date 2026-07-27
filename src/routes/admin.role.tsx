@@ -5,7 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
@@ -38,7 +45,9 @@ function RolesPage() {
       supabase.from("user_roles").select("user_id, role"),
     ]);
     if (pe || re) {
-      toast.error("Nie udało się wczytać użytkowników", { description: pe?.message ?? re?.message });
+      toast.error("Nie udało się wczytać użytkowników", {
+        description: pe?.message ?? re?.message,
+      });
       setLoading(false);
       return;
     }
@@ -54,17 +63,22 @@ function RolesPage() {
     });
     (roles ?? []).forEach((r) => {
       const cur = map.get(r.user_id) ?? {
-        user_id: r.user_id, email: null, first_name: null, last_name: null, roles: [],
+        user_id: r.user_id,
+        email: null,
+        first_name: null,
+        last_name: null,
+        roles: [],
       };
       cur.roles.push(r.role as AppRole);
       map.set(r.user_id, cur);
     });
-    setRows(Array.from(map.values()).sort((a, b) =>
-      (a.email ?? "").localeCompare(b.email ?? "")));
+    setRows(Array.from(map.values()).sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")));
     setLoading(false);
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const toggle = async (row: Row, role: AppRole, checked: boolean) => {
     setSaving(row.user_id + role);
@@ -73,8 +87,11 @@ function RolesPage() {
       if (error) toast.error("Nie udało się dodać roli", { description: error.message });
       else toast.success(`Dodano rolę: ${role}`);
     } else {
-      const { error } = await supabase.from("user_roles").delete()
-        .eq("user_id", row.user_id).eq("role", role);
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", row.user_id)
+        .eq("role", role);
       if (error) toast.error("Nie udało się usunąć roli", { description: error.message });
       else toast.success(`Usunięto rolę: ${role}`);
     }
@@ -86,7 +103,8 @@ function RolesPage() {
     const q = filter.trim().toLowerCase();
     if (!q) return true;
     return [r.email, r.first_name, r.last_name, r.user_id].some((v) =>
-      (v ?? "").toLowerCase().includes(q));
+      (v ?? "").toLowerCase().includes(q),
+    );
   });
 
   return (
@@ -121,7 +139,9 @@ function RolesPage() {
                     <TableHead>Użytkownik</TableHead>
                     <TableHead>Aktualne role</TableHead>
                     {ALL_ROLES.map((r) => (
-                      <TableHead key={r} className="text-center capitalize">{r}</TableHead>
+                      <TableHead key={r} className="text-center capitalize">
+                        {r}
+                      </TableHead>
                     ))}
                     <TableHead className="text-right">Akcje</TableHead>
                   </TableRow>
@@ -135,15 +155,21 @@ function RolesPage() {
                             ? `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim()
                             : "—"}
                         </div>
-                        <div className="text-xs text-muted-foreground">{row.email ?? row.user_id}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {row.email ?? row.user_id}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {row.roles.length === 0 ? (
                             <span className="text-xs text-muted-foreground">brak</span>
-                          ) : row.roles.map((r) => (
-                            <Badge key={r} variant="secondary" className="capitalize">{r}</Badge>
-                          ))}
+                          ) : (
+                            row.roles.map((r) => (
+                              <Badge key={r} variant="secondary" className="capitalize">
+                                {r}
+                              </Badge>
+                            ))
+                          )}
                         </div>
                       </TableCell>
                       {ALL_ROLES.map((r) => {
@@ -161,13 +187,19 @@ function RolesPage() {
                       })}
                       <TableCell className="text-right">
                         <Button
-                          variant="ghost" size="sm"
+                          variant="ghost"
+                          size="sm"
                           onClick={async () => {
                             if (!confirm("Usunąć wszystkie role tego użytkownika?")) return;
-                            const { error } = await supabase.from("user_roles")
-                              .delete().eq("user_id", row.user_id);
+                            const { error } = await supabase
+                              .from("user_roles")
+                              .delete()
+                              .eq("user_id", row.user_id);
                             if (error) toast.error("Błąd", { description: error.message });
-                            else { toast.success("Usunięto role"); void load(); }
+                            else {
+                              toast.success("Usunięto role");
+                              void load();
+                            }
                           }}
                         >
                           <Trash2 className="h-4 w-4" />

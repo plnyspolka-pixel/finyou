@@ -8,7 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Trash2, Upload, ImageIcon, Video as VideoIcon, Download } from "lucide-react";
 
@@ -77,7 +83,9 @@ function MarketingMaterialsPage() {
     const signed: Record<string, string> = {};
     await Promise.all(
       list.map(async (m) => {
-        const { data: s } = await supabase.storage.from(BUCKET).createSignedUrl(m.storage_path, 3600);
+        const { data: s } = await supabase.storage
+          .from(BUCKET)
+          .createSignedUrl(m.storage_path, 3600);
         if (s?.signedUrl) signed[m.id] = s.signedUrl;
       }),
     );
@@ -113,7 +121,8 @@ function MarketingMaterialsPage() {
           });
           if (upErr) throw upErr;
           const baseTitle = title.trim() || f.name.replace(/\.[^.]+$/, "");
-          const finalTitle = files.length > 1 && title.trim() ? `${baseTitle} (${i + 1})` : baseTitle;
+          const finalTitle =
+            files.length > 1 && title.trim() ? `${baseTitle} (${i + 1})` : baseTitle;
           const { error: insErr } = await supabase.from("marketing_materials").insert({
             title: finalTitle,
             description: description.trim() || null,
@@ -166,7 +175,9 @@ function MarketingMaterialsPage() {
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Materiały marketingowe</h1>
-        <p className="text-muted-foreground text-sm">Zdjęcia i filmy podzielone na kategorie: klient, inwestor, pośrednik.</p>
+        <p className="text-muted-foreground text-sm">
+          Zdjęcia i filmy podzielone na kategorie: klient, inwestor, pośrednik.
+        </p>
       </div>
 
       <Card>
@@ -198,7 +209,11 @@ function MarketingMaterialsPage() {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Opis (opcjonalnie)</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Pliki (możesz wybrać wiele — zdjęcia i filmy)</Label>
@@ -215,7 +230,9 @@ function MarketingMaterialsPage() {
             </div>
             <div className="md:col-span-2 flex items-center gap-3">
               <Button type="submit" disabled={uploading || files.length === 0}>
-                {uploading ? `Wgrywam... ${uploadProgress}` : `Dodaj ${files.length || ""} materiał(ów)`}
+                {uploading
+                  ? `Wgrywam... ${uploadProgress}`
+                  : `Dodaj ${files.length || ""} materiał(ów)`}
               </Button>
             </div>
           </form>
@@ -228,7 +245,10 @@ function MarketingMaterialsPage() {
             const count = items.filter((i) => i.audience === a.value).length;
             return (
               <TabsTrigger key={a.value} value={a.value}>
-                {a.label} <Badge variant="secondary" className="ml-2">{count}</Badge>
+                {a.label}{" "}
+                <Badge variant="secondary" className="ml-2">
+                  {count}
+                </Badge>
               </TabsTrigger>
             );
           })}
@@ -252,7 +272,13 @@ function MarketingMaterialsPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={url} alt={m.title} className="w-full h-full object-contain" />
                         ) : (
-                          <video src={url} controls preload="none" playsInline className="w-full h-full object-contain bg-black" />
+                          <video
+                            src={url}
+                            controls
+                            preload="none"
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          />
                         )}
                       </div>
                       <CardContent className="p-4 space-y-2">
@@ -260,7 +286,9 @@ function MarketingMaterialsPage() {
                           <div className="min-w-0">
                             <h3 className="font-semibold truncate">{m.title}</h3>
                             {m.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2">{m.description}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {m.description}
+                              </p>
                             )}
                           </div>
                           <Badge variant="outline" className="shrink-0">

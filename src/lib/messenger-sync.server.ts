@@ -56,16 +56,21 @@ async function discoverPages(rootToken: string): Promise<PageInfo[]> {
     /* noop */
   }
   try {
-    const res = await fetch(`${GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(rootToken)}`);
+    const res = await fetch(
+      `${GRAPH}/me?fields=id,name&access_token=${encodeURIComponent(rootToken)}`,
+    );
     const json: any = await res.json().catch(() => ({}));
-    if (res.ok && json?.id) return [{ id: String(json.id), name: json.name ?? null, token: rootToken }];
+    if (res.ok && json?.id)
+      return [{ id: String(json.id), name: json.name ?? null, token: rootToken }];
   } catch {
     /* noop */
   }
   return [];
 }
 
-async function checkPageWebhook(page: PageInfo): Promise<{ subscribed: boolean; fields: string[]; note: string | null }> {
+async function checkPageWebhook(
+  page: PageInfo,
+): Promise<{ subscribed: boolean; fields: string[]; note: string | null }> {
   const ownAppId = process.env.META_APP_ID ?? null;
   try {
     const res = await fetch(
@@ -77,12 +82,22 @@ async function checkPageWebhook(page: PageInfo): Promise<{ subscribed: boolean; 
     }
     const apps: any[] = json?.data ?? [];
     if (!apps.length) {
-      return { subscribed: false, fields: [], note: "Żadna aplikacja nie jest zasubskrybowana do webhooka tej strony." };
+      return {
+        subscribed: false,
+        fields: [],
+        note: "Żadna aplikacja nie jest zasubskrybowana do webhooka tej strony.",
+      };
     }
     const appNames = apps.map((a) => a?.name ?? a?.id ?? "?").join(", ");
-    const fields = Array.from(new Set(apps.flatMap((a) => (Array.isArray(a?.subscribed_fields) ? a.subscribed_fields : []))));
+    const fields = Array.from(
+      new Set(
+        apps.flatMap((a) => (Array.isArray(a?.subscribed_fields) ? a.subscribed_fields : [])),
+      ),
+    );
     const hasMessages = fields.includes("messages");
-    const thisAppSubscribed = ownAppId ? apps.some((a) => String(a?.id) === String(ownAppId)) : null;
+    const thisAppSubscribed = ownAppId
+      ? apps.some((a) => String(a?.id) === String(ownAppId))
+      : null;
     let note: string | null = null;
     if (!hasMessages) {
       note = `Subskrybenci: ${appNames}. Brak pola \`messages\` — nowe wiadomości nie docierają do panelu.`;
@@ -131,7 +146,11 @@ async function findOrCreateLead(opts: {
   name: string | null;
 }): Promise<{ leadId: string | null; created: boolean }> {
   const col = opts.platform === "messenger" ? "messenger_psid" : "instagram_igsid";
-  const { data: existing } = await supabaseAdmin.from("leads").select("id").eq(col, opts.senderId).maybeSingle();
+  const { data: existing } = await supabaseAdmin
+    .from("leads")
+    .select("id")
+    .eq(col, opts.senderId)
+    .maybeSingle();
   if (existing?.id) return { leadId: existing.id, created: false };
   const { first, last } = splitName(opts.name);
   if (first && last) {
@@ -145,7 +164,10 @@ async function findOrCreateLead(opts: {
       .limit(1)
       .maybeSingle();
     if (match?.id) {
-      await supabaseAdmin.from("leads").update({ [col]: opts.senderId } as any).eq("id", match.id);
+      await supabaseAdmin
+        .from("leads")
+        .update({ [col]: opts.senderId } as any)
+        .eq("id", match.id);
       return { leadId: match.id, created: false };
     }
   }
@@ -156,7 +178,10 @@ async function findOrCreateLead(opts: {
     applicationData: { [col]: opts.senderId },
   });
   if (leadId) {
-    await supabaseAdmin.from("leads").update({ [col]: opts.senderId } as any).eq("id", leadId);
+    await supabaseAdmin
+      .from("leads")
+      .update({ [col]: opts.senderId } as any)
+      .eq("id", leadId);
   }
   return { leadId, created: !!leadId };
 }
@@ -191,7 +216,9 @@ async function syncPageConversations(
     const res = await fetch(url);
     const json: any = await res.json().catch(() => ({}));
     if (!res.ok) {
-      result.errors.push(`${platform} ${page.name ?? page.id}: ${json?.error?.message ?? res.status}`);
+      result.errors.push(
+        `${platform} ${page.name ?? page.id}: ${json?.error?.message ?? res.status}`,
+      );
       return;
     }
     const conversations: any[] = json?.data ?? [];
@@ -202,7 +229,11 @@ async function syncPageConversations(
       const user = participants.find((p) => p?.id && String(p.id) !== page.id);
       const userId = user ? String(user.id) : null;
       if (!userId) continue;
-      const { leadId, created } = await findOrCreateLead({ senderId: userId, platform, name: user?.name ?? null });
+      const { leadId, created } = await findOrCreateLead({
+        senderId: userId,
+        platform,
+        name: user?.name ?? null,
+      });
       if (!leadId) continue;
       if (created) result.leadsCreated += 1;
       const messages = await fetchAllMessages(conv?.messages ?? {}, page.token);
@@ -298,7 +329,9 @@ export async function syncMessengerConversations(opts?: {
     const hook = await checkPageWebhook(page);
     result.webhook.push({ page: page.name ?? page.id, ...hook });
     if (!hook.subscribed) {
-      result.errors.push(`Webhook „${page.name ?? page.id}": ${hook.note ?? "brak subskrypcji `messages`"}`);
+      result.errors.push(
+        `Webhook „${page.name ?? page.id}": ${hook.note ?? "brak subskrypcji `messages`"}`,
+      );
     }
     for (const platform of platforms) {
       try {
@@ -312,7 +345,9 @@ export async function syncMessengerConversations(opts?: {
 }
 
 function attachmentDownloadUrl(a: any): string | null {
-  return a?.image_data?.url ?? a?.file_url ?? a?.video_data?.url ?? a?.image_data?.preview_url ?? null;
+  return (
+    a?.image_data?.url ?? a?.file_url ?? a?.video_data?.url ?? a?.image_data?.preview_url ?? null
+  );
 }
 
 export async function backfillGraphSyncAttachments(opts?: {
@@ -428,7 +463,9 @@ const SYNC_MARKER_PATH = "system/messenger-conversation-sync-last.txt";
 
 async function lastScheduledSyncAt(): Promise<number> {
   try {
-    const { data } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).download(SYNC_MARKER_PATH);
+    const { data } = await supabaseAdmin.storage
+      .from(CLIENT_FILES_BUCKET)
+      .download(SYNC_MARKER_PATH);
     if (!data) return 0;
     const t = Date.parse((await data.text()).trim());
     return Number.isFinite(t) ? t : 0;
@@ -446,9 +483,12 @@ async function markScheduledSync(): Promise<void> {
     });
 }
 
-export async function runScheduledMessengerSync(opts?: {
-  minIntervalMs?: number;
-}): Promise<{ ran: boolean; messagesNew?: number; attachmentsDownloaded?: number; ocrProcessed?: number }> {
+export async function runScheduledMessengerSync(opts?: { minIntervalMs?: number }): Promise<{
+  ran: boolean;
+  messagesNew?: number;
+  attachmentsDownloaded?: number;
+  ocrProcessed?: number;
+}> {
   const minInterval = opts?.minIntervalMs ?? 3600_000;
   const last = await lastScheduledSyncAt();
   if (Date.now() - last < minInterval) return { ran: false };

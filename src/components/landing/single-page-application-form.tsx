@@ -8,10 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 
-import { PropertyTypesShowcase, PROPERTY_SHOWCASE_KEY_TO_SECURITY, PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
+import {
+  PropertyTypesShowcase,
+  PROPERTY_SHOWCASE_KEY_TO_SECURITY,
+  PROPERTY_DOCS_BY_SECURITY,
+} from "@/components/landing/property-types-showcase";
 import { OfferCalculatorPanel } from "@/components/landing/offer-calculator-panel";
 import {
   computeLoanFigures,
@@ -19,7 +29,10 @@ import {
   securityTypeLabels,
   type SecurityType,
 } from "@/lib/loan-math";
-import { submitLandingLoanApplication, submitBrokerLoanApplication } from "@/lib/landing-application.functions";
+import {
+  submitLandingLoanApplication,
+  submitBrokerLoanApplication,
+} from "@/lib/landing-application.functions";
 import { uploadLandingAttachment } from "@/lib/uploads/landing-upload.functions";
 import { compressImageIfNeeded, fileToDataUrl } from "@/lib/uploads/client-image-compress";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,7 +126,6 @@ function bucketsFor(sec: SecurityType): BucketDef[] {
   }
 }
 
-
 const BUILDING_TYPES: SecurityType[] = ["dom"];
 
 function readAsDataUrl(file: File): Promise<string> {
@@ -167,14 +179,35 @@ function PhotoBucket({
           <Camera className="h-4 w-4" /> Zrób zdjęcie
         </button>
       </div>
-      <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
-        onChange={(e) => { onAdd(e.target.files, bucket); e.currentTarget.value = ""; }} />
-      <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
-        onChange={(e) => { onAdd(e.target.files, bucket); e.currentTarget.value = ""; }} />
+      <input
+        ref={fileRef}
+        type="file"
+        multiple
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          onAdd(e.target.files, bucket);
+          e.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          onAdd(e.target.files, bucket);
+          e.currentTarget.value = "";
+        }}
+      />
       {own.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {own.map((p) => (
-            <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
+            <div
+              key={p.id}
+              className="relative overflow-hidden rounded-md border border-white/30 bg-white/10"
+            >
               {p.type.startsWith("image/") ? (
                 <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
               ) : (
@@ -203,9 +236,14 @@ function PhotoBucket({
                   <span className="mt-1">Ponów</span>
                 </button>
               )}
-              <button type="button" onClick={() => onRemove(p.id)}
+              <button
+                type="button"
+                onClick={() => onRemove(p.id)}
                 className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-xs font-bold text-foreground shadow"
-                aria-label="Usuń">×</button>
+                aria-label="Usuń"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
@@ -219,10 +257,6 @@ const STEPS = [
   { id: 2, label: "Ścieżka" },
   { id: 3, label: "Wniosek i kalkulator" },
 ] as const;
-
-
-
-
 
 export type PrefilledContact = {
   firstName?: string | null;
@@ -249,7 +283,7 @@ export function SinglePageApplicationForm({
   const isBroker = Boolean(brokerMode);
   const submitFn = isBroker ? brokerSubmitFn : landingSubmitFn;
   const [limitModalOpen, setLimitModalOpen] = useState(false);
-  
+
   const [secType, setSecType] = useState<SecurityType>("mieszkanie");
   const [typeSelected, setTypeSelected] = useState(false);
 
@@ -302,10 +336,7 @@ export function SinglePageApplicationForm({
   const leadFiredRef = useRef(false);
   const deedInputRef = useRef<HTMLInputElement>(null);
 
-
   useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.url)), [photos]);
-
-  
 
   const contactValid = useMemo(() => {
     const fn = firstName.trim();
@@ -342,21 +373,36 @@ export function SinglePageApplicationForm({
       const { blob, mimeType, fileName } = await compressImageIfNeeded(file);
       const dataUrl = await fileToDataUrl(blob);
       const res = await uploadFn({ data: { dataUrl, mimeType, fileName, bucket } });
-      setPhotos((cur) => cur.map((p) => p.id === id
-        ? { ...p, status: "ready", storagePath: res.path, uploadedMime: mimeType, uploadedName: fileName }
-        : p));
+      setPhotos((cur) =>
+        cur.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                status: "ready",
+                storagePath: res.path,
+                uploadedMime: mimeType,
+                uploadedName: fileName,
+              }
+            : p,
+        ),
+      );
     } catch (e: any) {
       console.error("[landing-form] upload failed", e);
-      setPhotos((cur) => cur.map((p) => p.id === id
-        ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" }
-        : p));
+      setPhotos((cur) =>
+        cur.map((p) =>
+          p.id === id ? { ...p, status: "error", errorMsg: e?.message ?? "Błąd wysyłki" } : p,
+        ),
+      );
     }
   };
 
   const addPhotos = (files: FileList | null, bucket: string) => {
     if (!files?.length) return;
     const next: PhotoItem[] = Array.from(files).map((f) => ({
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${f.name}`,
+      id:
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${f.name}`,
       name: f.name,
       type: f.type,
       url: URL.createObjectURL(f),
@@ -369,7 +415,9 @@ export function SinglePageApplicationForm({
   };
 
   const retryUpload = (id: string) => {
-    setPhotos((cur) => cur.map((p) => p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p));
+    setPhotos((cur) =>
+      cur.map((p) => (p.id === id ? { ...p, status: "uploading", errorMsg: undefined } : p)),
+    );
     const item = photos.find((p) => p.id === id);
     if (item) void uploadOne(id, item.file, item.bucket);
   };
@@ -395,12 +443,13 @@ export function SinglePageApplicationForm({
   // Allow external CTAs (e.g. hero button) to scroll to the form
   useEffect(() => {
     const handler = () => {
-      document.getElementById("financeyou-application-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById("financeyou-application-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
   }, []);
-
 
   const hasPropertyPhotos = photos.some((p) => p.bucket === "property_photos");
 
@@ -428,7 +477,9 @@ export function SinglePageApplicationForm({
       return;
     }
     if (!hasPropertyPhotos) {
-      toast.error("Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.");
+      toast.error(
+        "Dodaj przynajmniej jeden plik (zdjęcie lub dokument nieruchomości), aby przejść do oferty.",
+      );
       return;
     }
     if (photos.some((p) => p.status === "uploading")) {
@@ -439,7 +490,6 @@ export function SinglePageApplicationForm({
       toast.error("Niektóre pliki nie zostały wysłane — kliknij ikonę, aby ponowić.");
       return;
     }
-
 
     setSubmitting(true);
     try {
@@ -513,7 +563,10 @@ export function SinglePageApplicationForm({
         void navigate({ to: brokerMode.redirectTo ?? "/posrednik/wnioski" });
       } else {
         if (res.token_hash) {
-          const { error: otpErr } = await supabase.auth.verifyOtp({ token_hash: res.token_hash, type: "magiclink" });
+          const { error: otpErr } = await supabase.auth.verifyOtp({
+            token_hash: res.token_hash,
+            type: "magiclink",
+          });
           if (!otpErr) {
             toast.success("Wniosek wysłany. Zalogowaliśmy Cię automatycznie.");
             void navigate({ to: "/klient" });
@@ -523,7 +576,6 @@ export function SinglePageApplicationForm({
         toast.success("Wniosek wysłany! Sprawdź e-mail — wysłaliśmy dane do logowania.");
         void navigate({ to: "/" });
       }
-
     } catch (err) {
       console.error(err);
       toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
@@ -532,75 +584,119 @@ export function SinglePageApplicationForm({
     }
   };
 
-
-
-
-
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-
-
-
-
-
-
       {/* Dane kontaktowe */}
       {!skipContact && (
         <FancyShell>
           <div className="space-y-5">
-            
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="f-fn" className="text-white">Imię *</Label>
-                <Input id="f-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={FANCY_INPUT_CLASS} /></div>
-              <div className="space-y-2"><Label htmlFor="f-ln" className="text-white">Nazwisko *</Label>
-                <Input id="f-ln" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" className={FANCY_INPUT_CLASS} /></div>
-              <div className="space-y-2"><Label htmlFor="f-ph" className="text-white">Telefon *</Label>
-                <Input id="f-ph" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" className={FANCY_INPUT_CLASS} /></div>
-              <div className="space-y-2"><Label htmlFor="f-em" className="text-white">E-mail *</Label>
-                <Input id="f-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" className={FANCY_INPUT_CLASS} /></div>
+              <div className="space-y-2">
+                <Label htmlFor="f-fn" className="text-white">
+                  Imię *
+                </Label>
+                <Input
+                  id="f-fn"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Anna"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="f-ln" className="text-white">
+                  Nazwisko *
+                </Label>
+                <Input
+                  id="f-ln"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Kowalska"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="f-ph" className="text-white">
+                  Telefon *
+                </Label>
+                <Input
+                  id="f-ph"
+                  type="tel"
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+48 600 000 000"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="f-em" className="text-white">
+                  E-mail *
+                </Label>
+                <Input
+                  id="f-em"
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="anna@example.com"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
             </div>
 
             {!isBroker && (
-            <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
-                <Checkbox
-                  checked={consentPrivacy}
-                  onCheckedChange={(v) => setConsentPrivacy(v === true)}
-                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
-                />
-                <span>
-                  Akceptuję{" "}
-                  <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">
-                    politykę prywatności
-                  </a>{" "}
-                  Finance You. *
-                </span>
-              </label>
-              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
-                <Checkbox
-                  checked={consentTerms}
-                  onCheckedChange={(v) => setConsentTerms(v === true)}
-                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
-                />
-                <span>
-                  Akceptuję{" "}
-                  <a href="/regulamin" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">
-                    regulamin serwisu
-                  </a>
-                  . *
-                </span>
-              </label>
-              <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
-                <Checkbox
-                  checked={consentMarketing}
-                  onCheckedChange={(v) => setConsentMarketing(v === true)}
-                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
-                />
-                <span>
-                  Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. Mogę ją wycofać w każdej chwili. *
-                </span>
-              </label>
-            </div>
+              <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                  <Checkbox
+                    checked={consentPrivacy}
+                    onCheckedChange={(v) => setConsentPrivacy(v === true)}
+                    className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                  />
+                  <span>
+                    Akceptuję{" "}
+                    <a
+                      href="/polityka-prywatnosci"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-white underline underline-offset-2"
+                    >
+                      politykę prywatności
+                    </a>{" "}
+                    Finance You. *
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                  <Checkbox
+                    checked={consentTerms}
+                    onCheckedChange={(v) => setConsentTerms(v === true)}
+                    className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                  />
+                  <span>
+                    Akceptuję{" "}
+                    <a
+                      href="/regulamin"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-white underline underline-offset-2"
+                    >
+                      regulamin serwisu
+                    </a>
+                    . *
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                  <Checkbox
+                    checked={consentMarketing}
+                    onCheckedChange={(v) => setConsentMarketing(v === true)}
+                    className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                  />
+                  <span>
+                    Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert
+                    Finance You. Mogę ją wycofać w każdej chwili. *
+                  </span>
+                </label>
+              </div>
             )}
           </div>
         </FancyShell>
@@ -608,8 +704,6 @@ export function SinglePageApplicationForm({
 
       {/* Wniosek — typ → KW → dokumenty → kalkulator */}
       {(() => {
-
-
         const secToShowcase: Record<string, string> = {
           mieszkanie: "mieszkanie",
           dom: "dom",
@@ -633,7 +727,10 @@ export function SinglePageApplicationForm({
                 }}
               />
               <div className="mt-6 space-y-2">
-                <Label htmlFor="f-city" className="text-base font-bold uppercase tracking-[0.14em] text-white">
+                <Label
+                  htmlFor="f-city"
+                  className="text-base font-bold uppercase tracking-[0.14em] text-white"
+                >
                   Miejscowość nieruchomości
                 </Label>
                 <Input
@@ -644,7 +741,8 @@ export function SinglePageApplicationForm({
                   className={FANCY_INPUT_CLASS}
                 />
                 <p className="text-xs text-white/75">
-                  Miasto / wieś, w której znajduje się nieruchomość — pomaga inwestorom ocenić lokalizację.
+                  Miasto / wieś, w której znajduje się nieruchomość — pomaga inwestorom ocenić
+                  lokalizację.
                 </p>
               </div>
             </FancyShell>
@@ -656,7 +754,10 @@ export function SinglePageApplicationForm({
                   <span className="grid h-9 w-9 place-items-center rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
                     <FileText className="h-5 w-5" strokeWidth={2.5} />
                   </span>
-                  <Label htmlFor="f-kw" className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer">
+                  <Label
+                    htmlFor="f-kw"
+                    className="text-base font-bold uppercase tracking-[0.18em] text-white sm:text-lg cursor-pointer"
+                  >
                     Numer księgi wieczystej
                   </Label>
                 </div>
@@ -668,7 +769,8 @@ export function SinglePageApplicationForm({
                   className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 pl-4 pr-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
                 />
                 <p className="text-xs text-white/75">
-                  Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji mObywatel.
+                  Wystarczy numer KW LUB dołączony akt własności. Numer sprawdzisz w aplikacji
+                  mObywatel.
                 </p>
 
                 {extraKwNumbers.map((val, idx) => (
@@ -682,38 +784,70 @@ export function SinglePageApplicationForm({
                       placeholder={`Dodatkowy numer KW #${idx + 2}`}
                       className={`${FANCY_INPUT_CLASS} font-mono text-lg tracking-wider`}
                     />
-                    <Button type="button" variant="outline" size="lg"
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
                       onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
                       className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                      aria-label="Usuń numer KW">×</Button>
+                      aria-label="Usuń numer KW"
+                    >
+                      ×
+                    </Button>
                   </div>
                 ))}
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <Button type="button" variant="outline" size="sm"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                    onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
+                    onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}
+                  >
                     + Dodaj kolejny numer KW
                   </Button>
-                  <Button type="button" variant="outline" size="sm"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                    onClick={() => deedInputRef.current?.click()}>
+                    onClick={() => deedInputRef.current?.click()}
+                  >
                     + Dodaj akt własności
                   </Button>
-                  <input ref={deedInputRef} type="file" multiple accept="image/*,application/pdf"
+                  <input
+                    ref={deedInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf"
                     className="hidden"
-                    onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
+                    onChange={(e) => {
+                      addPhotos(e.target.files, "ownership_deed");
+                      e.currentTarget.value = "";
+                    }}
+                  />
                 </div>
                 {photos.some((p) => p.bucket === "ownership_deed") && (
                   <ul className="flex flex-wrap gap-2 pt-1">
-                    {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
-                      <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
-                        <FileText className="h-3.5 w-3.5" />
-                        <span className="max-w-[160px] truncate">{p.name}</span>
-                        <button type="button" onClick={() => removePhoto(p.id)}
-                          className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
-                          aria-label="Usuń akt własności">×</button>
-                      </li>
-                    ))}
+                    {photos
+                      .filter((p) => p.bucket === "ownership_deed")
+                      .map((p) => (
+                        <li
+                          key={p.id}
+                          className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          <span className="max-w-[160px] truncate">{p.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(p.id)}
+                            className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
+                            aria-label="Usuń akt własności"
+                          >
+                            ×
+                          </button>
+                        </li>
+                      ))}
                   </ul>
                 )}
 
@@ -723,9 +857,17 @@ export function SinglePageApplicationForm({
                       Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
                     </Label>
                     <div className="flex items-center gap-2">
-                      <Input id="f-area" type="number" inputMode="decimal" min={1} step="0.1"
-                        value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
-                        placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
+                      <Input
+                        id="f-area"
+                        type="number"
+                        inputMode="decimal"
+                        min={1}
+                        step="0.1"
+                        value={usableArea}
+                        onChange={(e) => setUsableArea(e.target.value)}
+                        placeholder="np. 58"
+                        className={`${FANCY_INPUT_CLASS} max-w-[180px]`}
+                      />
                       <span className="text-sm text-white/75">m²</span>
                     </div>
                   </div>
@@ -739,7 +881,9 @@ export function SinglePageApplicationForm({
                 {(() => {
                   const hint = PROPERTY_DOCS_BY_SECURITY[secType];
                   if (!hint) return null;
-                  const remaining = hint.docs.filter((d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d));
+                  const remaining = hint.docs.filter(
+                    (d) => !/ksi[ęe]gi wieczystej|numer kw|powierzchnia u[żz]ytkowa/i.test(d),
+                  );
                   if (remaining.length === 0) return null;
                   return (
                     <div className="rounded-xl border border-white/25 bg-white/10 p-4 backdrop-blur-sm">
@@ -769,7 +913,8 @@ export function SinglePageApplicationForm({
 
                 {docPhotos.length > 0 && (
                   <p className="text-xs text-white/75">
-                    Dodano {docPhotos.length} {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
+                    Dodano {docPhotos.length}{" "}
+                    {docPhotos.length === 1 ? "plik" : docPhotos.length < 5 ? "pliki" : "plików"}.
                   </p>
                 )}
               </div>
@@ -778,13 +923,18 @@ export function SinglePageApplicationForm({
             {/* D: kalkulator raty (ukryty dla pośrednika) — zablokowany do czasu uzupełnienia typu, KW/aktu i zdjęć */}
             {!isBroker && (
               <OfferCalculatorPanel
-                amount={amount} setAmount={setAmount}
-                months={months} setMonths={setMonths}
+                amount={amount}
+                setAmount={setAmount}
+                months={months}
+                setMonths={setMonths}
                 maxMonths={maxMonths}
-                canExtend={canExtend} setCanExtend={setCanExtend}
-                annualRate={annualRate} setAnnualRate={setAnnualRate}
+                canExtend={canExtend}
+                setCanExtend={setCanExtend}
+                annualRate={annualRate}
+                setAnnualRate={setAnnualRate}
                 rateTouchedRef={rateTouchedRef}
-                maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+                maxPayment={maxPayment}
+                setMaxPayment={setMaxPayment}
                 headerLabel="Kalkulator raty"
                 locked={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
                 lockedMessage="Wybierz typ nieruchomości, podaj numer KW (lub dodaj akt własności) oraz wgraj zdjęcia — wtedy odblokujemy kalkulator raty."
@@ -796,18 +946,28 @@ export function SinglePageApplicationForm({
 
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        <Button type="submit" variant="cta" size="lg" disabled={submitting}
+        <Button
+          type="submit"
+          variant="cta"
+          size="lg"
+          disabled={submitting}
           aria-disabled={!typeSelected || !kwOrDeedOk || !hasPropertyPhotos}
-          className={`ml-auto flex-1 text-base md:flex-none ${(!typeSelected || !kwOrDeedOk || !hasPropertyPhotos) ? "opacity-60" : ""}`}>
+          className={`ml-auto flex-1 text-base md:flex-none ${!typeSelected || !kwOrDeedOk || !hasPropertyPhotos ? "opacity-60" : ""}`}
+        >
           {submitting ? (
-            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…
+            </>
           ) : (
-            <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
+            <>
+              <Send className="mr-2 h-5 w-5" /> Złóż wniosek
+            </>
           )}
         </Button>
       </div>
       <p className="text-center text-[11px] text-muted-foreground">
-        Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
+        Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance
+        You.
       </p>
 
       {/* Limit 5 ofert na darmowym koncie pośrednika (egzekwowany w bazie —
@@ -822,10 +982,21 @@ export function SinglePageApplicationForm({
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => { setLimitModalOpen(false); void navigate({ to: "/posrednik/wnioski" }); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLimitModalOpen(false);
+                void navigate({ to: "/posrednik/wnioski" });
+              }}
+            >
               Zobacz moje oferty
             </Button>
-            <Button onClick={() => { setLimitModalOpen(false); void navigate({ to: "/posrednik/abonament" }); }}>
+            <Button
+              onClick={() => {
+                setLimitModalOpen(false);
+                void navigate({ to: "/posrednik/abonament" });
+              }}
+            >
               Wykup pełny dostęp
             </Button>
             <Button variant="ghost" onClick={() => setLimitModalOpen(false)}>
@@ -837,4 +1008,3 @@ export function SinglePageApplicationForm({
     </form>
   );
 }
-

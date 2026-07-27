@@ -34,7 +34,6 @@ export async function sendResendEmail(opts: {
     return { ok: false, error: "missing_subject" };
   }
 
-
   // Ochrona przed pętlami: nie wysyłaj do adresów na liście suppressed_emails
   try {
     const { isSuppressed } = await import("./email-guard.server");
@@ -111,9 +110,11 @@ export async function sendResendEmail(opts: {
   }
 
   if (!res.ok) {
-    console.error(`[resend-send] FAILED to ${opts.to}: ${res.status}`, JSON.stringify(json).slice(0, 300));
+    console.error(
+      `[resend-send] FAILED to ${opts.to}: ${res.status}`,
+      JSON.stringify(json).slice(0, 300),
+    );
     return { ok: false, error: `${res.status}: ${JSON.stringify(json).slice(0, 300)}` };
   }
   return { ok: true, id: json?.id };
 }
-

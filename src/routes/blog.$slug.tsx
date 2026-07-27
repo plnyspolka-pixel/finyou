@@ -55,14 +55,34 @@ function ShareBar({ url, title }: { url: string; title: string }) {
   const [copied, setCopied] = useState(false);
   const enc = encodeURIComponent;
   const links = [
-    { label: "Facebook", icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
-    { label: "X / Twitter", icon: Twitter, href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}` },
-    { label: "LinkedIn", icon: Linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}` },
-    { label: "WhatsApp", icon: MessageCircle, href: `https://wa.me/?text=${enc(title + " " + url)}` },
+    {
+      label: "Facebook",
+      icon: Facebook,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`,
+    },
+    {
+      label: "X / Twitter",
+      icon: Twitter,
+      href: `https://twitter.com/intent/tweet?url=${enc(url)}&text=${enc(title)}`,
+    },
+    {
+      label: "LinkedIn",
+      icon: Linkedin,
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
+    },
+    {
+      label: "WhatsApp",
+      icon: MessageCircle,
+      href: `https://wa.me/?text=${enc(title + " " + url)}`,
+    },
     { label: "E-mail", icon: Mail, href: `mailto:?subject=${enc(title)}&body=${enc(url)}` },
   ];
   const copy = async () => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {}
   };
   const itemStyle: CSSProperties = {
     display: "inline-flex",
@@ -75,15 +95,31 @@ function ShareBar({ url, title }: { url: string; title: string }) {
     background: "var(--card)",
     color: "var(--muted-foreground)",
     cursor: "pointer",
-    transition: "background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out)",
+    transition:
+      "background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out)",
   };
   return (
     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}>
-      <span style={{ fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "var(--tracking-widest)", color: "var(--muted-foreground)", marginRight: 4 }}>
+      <span
+        style={{
+          fontSize: "0.68rem",
+          textTransform: "uppercase",
+          letterSpacing: "var(--tracking-widest)",
+          color: "var(--muted-foreground)",
+          marginRight: 4,
+        }}
+      >
         Udostępnij:
       </span>
       {links.map((l) => (
-        <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" aria-label={`Udostępnij na ${l.label}`} style={itemStyle}>
+        <a
+          key={l.label}
+          href={l.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Udostępnij na ${l.label}`}
+          style={itemStyle}
+        >
           <l.icon size={16} />
         </a>
       ))}
@@ -96,21 +132,31 @@ function ShareBar({ url, title }: { url: string; title: string }) {
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => {
-    const { data } = await supabase.from("ai_seo_articles").select("*").eq("slug", params.slug).eq("status", "published").maybeSingle();
+    const { data } = await supabase
+      .from("ai_seo_articles")
+      .select("*")
+      .eq("slug", params.slug)
+      .eq("status", "published")
+      .maybeSingle();
     if (!data) throw notFound();
 
     // Powiązane artykuły do linkowania wewnętrznego: najpierw te, do których
     // artykuł linkuje w treści, potem najnowsze dla tej samej grupy odbiorców.
     const { data: relRaw } = await supabase
       .from("ai_seo_articles")
-      .select("slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,audience")
+      .select(
+        "slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,audience",
+      )
       .eq("status", "published")
       .neq("slug", params.slug)
       .order("published_at", { ascending: false })
       .limit(12);
     const pool = (relRaw ?? []) as RelatedRow[];
-    const linked: string[] = Array.isArray((data as any).internal_link_slugs) ? (data as any).internal_link_slugs : [];
-    const score = (r: RelatedRow) => (linked.includes(r.slug) ? 0 : r.audience === (data as any).audience ? 1 : 2);
+    const linked: string[] = Array.isArray((data as any).internal_link_slugs)
+      ? (data as any).internal_link_slugs
+      : [];
+    const score = (r: RelatedRow) =>
+      linked.includes(r.slug) ? 0 : r.audience === (data as any).audience ? 1 : 2;
     const related = [...pool].sort((a, b) => score(a) - score(b)).slice(0, 3);
 
     return { article: data, related };
@@ -120,7 +166,9 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!a) return { meta: [], links: [], scripts: [] };
     const url = `https://financeyou.pl/blog/${params.slug}`;
     const isInvestor = a.audience === "investor";
-    const ctaUrl = isInvestor ? "https://financeyou.pl/dla-inwestora" : "https://financeyou.pl/dla-klienta";
+    const ctaUrl = isInvestor
+      ? "https://financeyou.pl/dla-inwestora"
+      : "https://financeyou.pl/dla-klienta";
     const audienceType = isInvestor ? "Investor" : "Borrower";
     const section = isInvestor ? "Inwestowanie" : "Pożyczki pod zastaw";
     const title = a.meta_title || a.title;
@@ -134,7 +182,10 @@ export const Route = createFileRoute("/blog/$slug")({
         ...(keywords.length ? [{ name: "keywords", content: keywords.join(", ") }] : []),
         ...(a.primary_keyword ? [{ name: "news_keywords", content: a.primary_keyword }] : []),
         { name: "author", content: "Finance You" },
-        { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
+        {
+          name: "robots",
+          content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+        },
         { name: "article:section", content: section },
         { name: "article:published_time", content: a.published_at ?? "" },
         { name: "article:modified_time", content: a.updated_at ?? a.published_at ?? "" },
@@ -147,19 +198,25 @@ export const Route = createFileRoute("/blog/$slug")({
         { property: "og:locale", content: "pl_PL" },
         { property: "article:publisher", content: "https://financeyou.pl" },
         { property: "article:section", content: section },
-        ...(a.published_at ? [{ property: "article:published_time", content: a.published_at }] : []),
-        ...(a.updated_at || a.published_at ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }] : []),
+        ...(a.published_at
+          ? [{ property: "article:published_time", content: a.published_at }]
+          : []),
+        ...(a.updated_at || a.published_at
+          ? [{ property: "article:modified_time", content: a.updated_at ?? a.published_at }]
+          : []),
         ...keywords.map((k) => ({ property: "article:tag", content: k })),
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "twitter:site", content: "@financeyou_pl" },
-        ...(a.cover_image_url ? [
-          { property: "og:image", content: a.cover_image_url },
-          { property: "og:image:alt", content: a.cover_image_alt || title },
-          { name: "twitter:image", content: a.cover_image_url },
-          { name: "twitter:image:alt", content: a.cover_image_alt || title },
-        ] : []),
+        ...(a.cover_image_url
+          ? [
+              { property: "og:image", content: a.cover_image_url },
+              { property: "og:image:alt", content: a.cover_image_alt || title },
+              { name: "twitter:image", content: a.cover_image_url },
+              { name: "twitter:image:alt", content: a.cover_image_alt || title },
+            ]
+          : []),
         { name: "audience", content: audienceType },
       ],
       links: [
@@ -208,7 +265,11 @@ export const Route = createFileRoute("/blog/$slug")({
                 ? "Inwestowanie w pożyczki pod zastaw nieruchomości"
                 : "Pożyczka pod zastaw nieruchomości",
               url: ctaUrl,
-              provider: { "@type": "Organization", name: "Finance You", url: "https://financeyou.pl" },
+              provider: {
+                "@type": "Organization",
+                name: "Finance You",
+                url: "https://financeyou.pl",
+              },
             },
             isAccessibleForFree: true,
           }),
@@ -219,8 +280,18 @@ export const Route = createFileRoute("/blog/$slug")({
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Finance You", item: "https://financeyou.pl" },
-              { "@type": "ListItem", position: 2, name: "Blog", item: "https://financeyou.pl/blog" },
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Finance You",
+                item: "https://financeyou.pl",
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Blog",
+                item: "https://financeyou.pl/blog",
+              },
               { "@type": "ListItem", position: 3, name: a.title, item: url },
             ],
           }),
@@ -262,7 +333,8 @@ function RelatedCard({ r }: { r: RelatedRow }) {
         borderRadius: "var(--radius-2xl)",
         overflow: "hidden",
         boxShadow: "var(--shadow-sm)",
-        transition: "border-color var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out)",
+        transition:
+          "border-color var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out)",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = "var(--accent)";
@@ -273,9 +345,21 @@ function RelatedCard({ r }: { r: RelatedRow }) {
         e.currentTarget.style.transform = "none";
       }}
     >
-      {r.cover_image_url && <BlogCover src={r.cover_image_url} alt={r.cover_image_alt || r.title} />}
+      {r.cover_image_url && (
+        <BlogCover src={r.cover_image_url} alt={r.cover_image_alt || r.title} />
+      )}
       <div style={{ padding: "1rem 1.1rem 1.1rem" }}>
-        <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, lineHeight: 1.4, color: "var(--foreground)" }}>{r.title}</h3>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "0.95rem",
+            fontWeight: 700,
+            lineHeight: 1.4,
+            color: "var(--foreground)",
+          }}
+        >
+          {r.title}
+        </h3>
         <div style={{ marginTop: "0.5rem", fontSize: "0.72rem", color: "var(--muted-foreground)" }}>
           {r.reading_minutes ? `${r.reading_minutes} min czytania` : null}
           {r.reading_minutes && r.published_at ? " • " : null}
@@ -308,21 +392,45 @@ function ArticlePage() {
   return (
     <MarketingShell page="blog">
       <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "3rem 1.5rem 0" }}>
-        <nav aria-label="Okruszki" style={{ fontSize: "0.78rem", color: "var(--muted-foreground)", display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <a href="/" style={{ color: "inherit", textDecoration: "none" }}>Finance You</a>
+        <nav
+          aria-label="Okruszki"
+          style={{
+            fontSize: "0.78rem",
+            color: "var(--muted-foreground)",
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+          }}
+        >
+          <a href="/" style={{ color: "inherit", textDecoration: "none" }}>
+            Finance You
+          </a>
           <span aria-hidden>/</span>
-          <Link to="/blog" style={{ color: "inherit", textDecoration: "none" }}>Blog</Link>
+          <Link to="/blog" style={{ color: "inherit", textDecoration: "none" }}>
+            Blog
+          </Link>
           <span aria-hidden>/</span>
           <span style={{ color: "var(--foreground)" }}>{article.title}</span>
         </nav>
 
         <header style={{ margin: "1.6rem 0 2rem", display: "grid", gap: "1rem" }}>
           <div>
-            {isInvestor
-              ? <MktBadge variant="gold">Dla inwestora</MktBadge>
-              : <MktBadge variant="accent">Dla klienta</MktBadge>}
+            {isInvestor ? (
+              <MktBadge variant="gold">Dla inwestora</MktBadge>
+            ) : (
+              <MktBadge variant="accent">Dla klienta</MktBadge>
+            )}
           </div>
-          <h1 style={{ margin: 0, fontSize: "clamp(1.8rem, 3.4vw, 2.6rem)", fontWeight: 900, lineHeight: 1.12, letterSpacing: "-0.02em", color: "var(--foreground)" }}>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(1.8rem, 3.4vw, 2.6rem)",
+              fontWeight: 900,
+              lineHeight: 1.12,
+              letterSpacing: "-0.02em",
+              color: "var(--foreground)",
+            }}
+          >
             {article.title}
           </h1>
           <div style={{ fontSize: "0.78rem", color: "var(--muted-foreground)" }}>
@@ -331,7 +439,11 @@ function ArticlePage() {
             {article.published_at ? formatDate(article.published_at) : null}
           </div>
           {article.cover_image_url && (
-            <BlogCover src={article.cover_image_url} alt={article.cover_image_alt || article.title} rounded />
+            <BlogCover
+              src={article.cover_image_url}
+              alt={article.cover_image_alt || article.title}
+              rounded
+            />
           )}
           <ShareBar url={shareUrl} title={article.title} />
         </header>
@@ -357,15 +469,58 @@ function ArticlePage() {
               "radial-gradient(120% 140% at 0% 0%, rgba(56,120,255,0.35) 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, rgba(201,168,76,0.28) 0%, transparent 60%), linear-gradient(135deg, #0b1330 0%, #101a4a 100%)",
           }}
         >
-          <div aria-hidden style={{ pointerEvents: "none", position: "absolute", inset: 0, opacity: 0.4,
-            background: "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
-          }} />
-          <div style={{ position: "relative", display: "grid", gap: "1rem", justifyItems: "center" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.05)", padding: "0.25rem 0.8rem", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.18em", color: "rgba(255,255,255,0.8)" }}>
+          <div
+            aria-hidden
+            style={{
+              pointerEvents: "none",
+              position: "absolute",
+              inset: 0,
+              opacity: 0.4,
+              background:
+                "conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 30%, rgba(201,168,76,0.10) 60%, rgba(255,255,255,0.0) 100%)",
+            }}
+          />
+          <div
+            style={{ position: "relative", display: "grid", gap: "1rem", justifyItems: "center" }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.05)",
+                padding: "0.25rem 0.8rem",
+                fontSize: "0.68rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.8)",
+              }}
+            >
               {isInvestor ? "Dla inwestora" : "Dla klienta"}
             </div>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem, 2.8vw, 2rem)", fontWeight: 800, lineHeight: 1.15 }}>{ctaHeading}</h2>
-            <p style={{ margin: 0, maxWidth: "36rem", fontSize: "0.95rem", lineHeight: 1.6, color: "rgba(255,255,255,0.75)" }}>{ctaSub}</p>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "clamp(1.5rem, 2.8vw, 2rem)",
+                fontWeight: 800,
+                lineHeight: 1.15,
+              }}
+            >
+              {ctaHeading}
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                maxWidth: "36rem",
+                fontSize: "0.95rem",
+                lineHeight: 1.6,
+                color: "rgba(255,255,255,0.75)",
+              }}
+            >
+              {ctaSub}
+            </p>
             <a
               href={ctaHref}
               style={{
@@ -382,13 +537,26 @@ function ArticlePage() {
                 boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
                 transition: "transform var(--duration-base) var(--ease-out)",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+              }}
             >
               {ctaLabel}
               <span aria-hidden>→</span>
             </a>
-            <div style={{ fontSize: "0.66rem", textTransform: "uppercase", letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}>{ctaMicro}</div>
+            <div
+              style={{
+                fontSize: "0.66rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.16em",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              {ctaMicro}
+            </div>
           </div>
         </div>
 
@@ -402,18 +570,37 @@ function ArticlePage() {
       {related.length > 0 && (
         <Section tint style={{ marginTop: "3.5rem" }}>
           <div style={{ textAlign: "center" }}>
-            <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>Czytaj dalej</Eyebrow>
-            <h2 style={{ marginTop: "0.5rem", fontSize: "clamp(1.5rem, 2.6vw, 2rem)", fontWeight: 800, letterSpacing: "-0.02em" }}>
+            <Eyebrow tone="gold" style={{ letterSpacing: "0.24em" }}>
+              Czytaj dalej
+            </Eyebrow>
+            <h2
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "clamp(1.5rem, 2.6vw, 2rem)",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
               Powiązane artykuły
             </h2>
           </div>
-          <div className="fy-grid" style={{ marginTop: "2rem", display: "grid", gap: "1.2rem", gridTemplateColumns: "repeat(3, 1fr)" }}>
+          <div
+            className="fy-grid"
+            style={{
+              marginTop: "2rem",
+              display: "grid",
+              gap: "1.2rem",
+              gridTemplateColumns: "repeat(3, 1fr)",
+            }}
+          >
             {related.map((r: RelatedRow) => (
               <RelatedCard key={r.slug} r={r} />
             ))}
           </div>
           <div style={{ marginTop: "1.8rem", textAlign: "center" }}>
-            <Link to="/blog" style={{ fontSize: "0.9rem", fontWeight: 600 }}>← Wszystkie artykuły na blogu</Link>
+            <Link to="/blog" style={{ fontSize: "0.9rem", fontWeight: 600 }}>
+              ← Wszystkie artykuły na blogu
+            </Link>
           </div>
         </Section>
       )}

@@ -23,7 +23,11 @@ export const TOLERANCJA_GROSZOWA = 0.05;
 /** Parsuje kwotę zapisaną po polsku ("1 234,56") albo dziesiętnie ("1234.56"). */
 export function parseKwota(s: string | number | null | undefined): number {
   if (typeof s === "number") return s;
-  const v = parseFloat(String(s ?? "").replace(/\s/g, "").replace(",", "."));
+  const v = parseFloat(
+    String(s ?? "")
+      .replace(/\s/g, "")
+      .replace(",", "."),
+  );
   return Number.isNaN(v) ? NaN : v;
 }
 
@@ -139,7 +143,8 @@ function round2(n: number): number {
  */
 export function walidujHarmonogram(warunki: any, tolerancja = TOLERANCJA_GROSZOWA): Problem[] {
   const P: Problem[] = [];
-  const blad = (k: string) => P.push({ poziom: "BLAD", sciezka: "warunki.harmonogram", komunikat: k });
+  const blad = (k: string) =>
+    P.push({ poziom: "BLAD", sciezka: "warunki.harmonogram", komunikat: k });
 
   const h = warunki?.harmonogram ?? {};
   const raty: any[] = h.raty ?? [];
@@ -199,12 +204,16 @@ export function walidujHarmonogram(warunki: any, tolerancja = TOLERANCJA_GROSZOW
 
   // 7) terminy rosnące, pierwszy = data_pierwszej_raty
   if (h.data_pierwszej_raty && raty[0]?.termin !== h.data_pierwszej_raty)
-    blad(`Termin pierwszej raty (${raty[0]?.termin}) ≠ data_pierwszej_raty (${h.data_pierwszej_raty})`);
+    blad(
+      `Termin pierwszej raty (${raty[0]?.termin}) ≠ data_pierwszej_raty (${h.data_pierwszej_raty})`,
+    );
   for (let i = 1; i < raty.length; i++) {
     const a = parseDataPl(raty[i - 1].termin);
     const b = parseDataPl(raty[i].termin);
     if (!Number.isNaN(a) && !Number.isNaN(b) && !(b > a))
-      blad(`Terminy rat nie rosną: rata ${raty[i - 1].nr ?? i} (${raty[i - 1].termin}) ≥ rata ${raty[i].nr ?? i + 1} (${raty[i].termin})`);
+      blad(
+        `Terminy rat nie rosną: rata ${raty[i - 1].nr ?? i} (${raty[i - 1].termin}) ≥ rata ${raty[i].nr ?? i + 1} (${raty[i].termin})`,
+      );
   }
 
   // 8) harmonogram balonowy: ostatnia rata = kwota_raty_koncowej

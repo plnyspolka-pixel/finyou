@@ -55,7 +55,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     name: "Księga wieczysta (EKW)",
     category: "rejestr_publiczny",
     governmental: true,
-    purpose: "BRAMKA pipeline'u — bez poprawnie pobranej treści KW ocena nie startuje. Stan prawny: własność, obciążenia, hipoteki",
+    purpose:
+      "BRAMKA pipeline'u — bez poprawnie pobranej treści KW ocena nie startuje. Stan prawny: własność, obciążenia, hipoteki",
     provides: "Działy I–IV KW (właściciele, prawa i roszczenia, hipoteki)",
     provider: "CMD KW Engine / EKW Ministerstwa Sprawiedliwości",
     envKey: "CMD_KW_USER",
@@ -75,7 +76,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     name: "GUS BDL — ceny gruntów rolnych i lokali (pomocniczo)",
     category: "instytucja_rzadowa",
     governmental: true,
-    purpose: "dane pomocnicze wyceny — głównie działki rolne (ceny gruntów rolnych zł/ha wg klasy); dla pozostałych typów fallback",
+    purpose:
+      "dane pomocnicze wyceny — głównie działki rolne (ceny gruntów rolnych zł/ha wg klasy); dla pozostałych typów fallback",
     provides: "przeciętne ceny transakcyjne GUS (powiat → województwo → kraj)",
     provider: "GUS Bank Danych Lokalnych (API)",
     envKey: "GUS_BDL_API_KEY",
@@ -95,7 +97,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     name: "Korespondencja z klientem",
     category: "korespondencja",
     governmental: false,
-    purpose: "Ekstrakcja twardych faktów, rozbieżności z wnioskiem/KW i sygnałów ryzyka (bez oceny zaangażowania/sentymentu)",
+    purpose:
+      "Ekstrakcja twardych faktów, rozbieżności z wnioskiem/KW i sygnałów ryzyka (bez oceny zaangażowania/sentymentu)",
     provides: "E-maile, wiadomości DM/Messenger, transkrypcje rozmów (voicebot)",
     provider: "lead_communications (Gmail, Messenger, ElevenLabs)",
   },
@@ -106,7 +109,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     category: "instytucja_rzadowa",
     governmental: true,
     purpose: "Czy właściciel jest przedsiębiorcą (JDG) — czynnik obniżający ryzyko",
-    provides: "Status działalności (aktywna/zawieszona/wykreślona), NIP, REGON, data rozpoczęcia, PKD",
+    provides:
+      "Status działalności (aktywna/zawieszona/wykreślona), NIP, REGON, data rozpoczęcia, PKD",
     provider: "CEIDG API v3 (hurtownia danych biznes.gov.pl)",
     envKey: "CEIDG_JWT_TOKEN",
   },
@@ -147,7 +151,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     category: "rynek_nieruchomosci",
     governmental: false,
     purpose: "ocena płynności wyjścia z inwestycji na podstawie otoczenia 20/50 km",
-    provides: "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje turystyczne, dostępność drogowa, popyt na najem",
+    provides:
+      "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje turystyczne, dostępność drogowa, popyt na najem",
     provider: "Perplexity (sonar-pro)",
     envKey: "PERPLEXITY_API_KEY",
   },
@@ -157,7 +162,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     category: "rynek_nieruchomosci",
     governmental: false,
     purpose: "realna podaż i ceny ofertowe w okolicy — sygnał płynności zbycia",
-    provides: "aktywne ogłoszenia sprzedaży w okolicy (~10 km), udział ofert biur vs prywatnych, mediana ceny/m²",
+    provides:
+      "aktywne ogłoszenia sprzedaży w okolicy (~10 km), udział ofert biur vs prywatnych, mediana ceny/m²",
     provider: "Perplexity (otodom, olx, morizon, gratka, domiporta, nieruchomości-online)",
     envKey: "PERPLEXITY_API_KEY",
   },
@@ -167,7 +173,8 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     name: "Rynek porównawczy — deweloperuch.pl + otodom.pl (scraping, podstawa wyceny)",
     category: "rynek_nieruchomosci",
     governmental: false,
-    purpose: "PODSTAWA WYCENY: scraping miasto/miejscowość + rodzaj — deweloperuch (tylko domy i mieszkania, transakcje), otodom (mieszkania, domy i działki, oferty)",
+    purpose:
+      "PODSTAWA WYCENY: scraping miasto/miejscowość + rodzaj — deweloperuch (tylko domy i mieszkania, transakcje), otodom (mieszkania, domy i działki, oferty)",
     provides: "mediana/kwartyle zł/m², liczba transakcji, aktywne oferty w okolicy",
     provider: "Firecrawl v2 (deweloperuch.pl, otodom.pl)",
     envKey: "FIRECRAWL_API_KEY",

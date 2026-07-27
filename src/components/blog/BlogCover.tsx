@@ -17,12 +17,7 @@ export function BlogCover({ src, alt, rounded = false }: BlogCoverProps) {
     <div
       className={`relative aspect-[16/9] w-full overflow-hidden bg-muted ${rounded ? "rounded-xl" : ""}`}
     >
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        className="h-full w-full object-cover"
-      />
+      <img src={src} alt={alt} loading="lazy" className="h-full w-full object-cover" />
       {/* Subtelny gradient pod logo dla czytelności na jasnych zdjęciach */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/55 to-transparent" />
       <img

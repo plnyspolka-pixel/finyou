@@ -24,8 +24,14 @@ function normalizeName(s: string): string {
 
 function namesOverlap(a: string | null, b: string | null): boolean {
   if (!a || !b) return false;
-  const ta = new Set(normalizeName(a).split(" ").filter((t) => t.length > 1));
-  const tb = normalizeName(b).split(" ").filter((t) => t.length > 1);
+  const ta = new Set(
+    normalizeName(a)
+      .split(" ")
+      .filter((t) => t.length > 1),
+  );
+  const tb = normalizeName(b)
+    .split(" ")
+    .filter((t) => t.length > 1);
   return tb.filter((t) => ta.has(t)).length >= 2;
 }
 
@@ -71,7 +77,11 @@ export async function analyzeOwner(args: {
   city?: string | null;
   voivodeship?: string | null;
 }): Promise<OwnerProfile> {
-  const emptyLE = estimateLifeExpectancy({ age: null, sex: null, loanTermYears: args.loanTermYears ?? null });
+  const emptyLE = estimateLifeExpectancy({
+    age: null,
+    sex: null,
+    loanTermYears: args.loanTermYears ?? null,
+  });
   const base: OwnerProfile = {
     fullName: null,
     birthDate: null,
@@ -140,16 +150,23 @@ export async function analyzeOwner(args: {
   });
 
   if (!pesel.valid) {
-    if (!client.pesel) notes.push("Brak PESEL właściciela (również w dziale II KW) — nie wyznaczono wieku ani trwania życia.");
+    if (!client.pesel)
+      notes.push(
+        "Brak PESEL właściciela (również w dziale II KW) — nie wyznaczono wieku ani trwania życia.",
+      );
     else notes.push(`PESEL nieprawidłowy: ${pesel.error ?? "błąd walidacji"}.`);
   }
 
   const matchesKwOwner = nameMatchesKwOwners(fullName, args.kwLegal?.owners ?? []);
   if (matchesKwOwner === false) {
-    notes.push("Wnioskodawca nie został dopasowany do właściciela w dziale II KW — wymagana weryfikacja tytułu prawnego.");
+    notes.push(
+      "Wnioskodawca nie został dopasowany do właściciela w dziale II KW — wymagana weryfikacja tytułu prawnego.",
+    );
   }
   if (pesel.valid && pesel.age != null && pesel.age >= 75) {
-    notes.push("Zaawansowany wiek właściciela — istotne ryzyko sukcesji/spadkobrania na zabezpieczeniu.");
+    notes.push(
+      "Zaawansowany wiek właściciela — istotne ryzyko sukcesji/spadkobrania na zabezpieczeniu.",
+    );
   }
 
   // CEIDG — czy właściciel jest już przedsiębiorcą (JDG). Aktywna działalność obniża ryzyko.

@@ -19,14 +19,25 @@ export const analyzeLandingPerformance = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     const { data: landing, error: lErr } = await supabase
-      .from("ai_landings").select("*").eq("id", data.landing_id).maybeSingle();
+      .from("ai_landings")
+      .select("*")
+      .eq("id", data.landing_id)
+      .maybeSingle();
     if (lErr || !landing) throw new Error("Landing nie istnieje");
 
     const [{ data: variants }, { data: events }, { data: settings }] = await Promise.all([
       supabase.from("ai_landing_variants").select("*").eq("landing_id", data.landing_id),
-      supabase.from("ai_landing_events").select("event_type, variant_id, metadata, created_at")
-        .eq("landing_id", data.landing_id).order("created_at", { ascending: false }).limit(2000),
-      supabase.from("ai_growth_settings").select("default_model, brand_name").limit(1).maybeSingle(),
+      supabase
+        .from("ai_landing_events")
+        .select("event_type, variant_id, metadata, created_at")
+        .eq("landing_id", data.landing_id)
+        .order("created_at", { ascending: false })
+        .limit(2000),
+      supabase
+        .from("ai_growth_settings")
+        .select("default_model, brand_name")
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     // Aggregate stats
@@ -38,67 +49,88 @@ export const analyzeLandingPerformance = createServerFn({ method: "POST" })
       "i proponujesz konkretne, wykonalne optymalizacje. Zwracasz WYŁĄCZNIE wywołanie funkcji propose_optimizations. " +
       "Po polsku, zero ogólników.";
 
-    const userMsg = JSON.stringify({
-      landing: {
-        title: landing.title,
-        hero_headline: landing.hero_headline,
-        hero_subheadline: landing.hero_subheadline,
-        cta_label: landing.cta_label,
-        meta_title: landing.meta_title,
-        meta_description: landing.meta_description,
+    const userMsg = JSON.stringify(
+      {
+        landing: {
+          title: landing.title,
+          hero_headline: landing.hero_headline,
+          hero_subheadline: landing.hero_subheadline,
+          cta_label: landing.cta_label,
+          meta_title: landing.meta_title,
+          meta_description: landing.meta_description,
+        },
+        performance: stats,
+        existing_variants: (variants ?? []).map((v: any) => ({
+          label: v.label,
+          weight: v.weight,
+          is_active: v.is_active,
+        })),
       },
-      performance: stats,
-      existing_variants: (variants ?? []).map((v: any) => ({ label: v.label, weight: v.weight, is_active: v.is_active })),
-    }, null, 2);
+      null,
+      2,
+    );
 
-    const tools = [{
-      type: "function",
-      function: {
-        name: "propose_optimizations",
-        description: "Zwraca 3-6 rekomendacji optymalizacyjnych dla landingu.",
-        parameters: {
-          type: "object",
-          properties: {
-            recommendations: {
-              type: "array",
-              minItems: 1,
-              maxItems: 6,
-              items: {
-                type: "object",
-                properties: {
-                  kind: { type: "string", enum: ["variant", "copy", "settings", "seo"] },
-                  title: { type: "string", description: "Krótki tytuł rekomendacji (max 80 zn.)." },
-                  rationale: { type: "string", description: "Dlaczego — w oparciu o dane." },
-                  expected_lift_pct: { type: "number", description: "Spodziewany wzrost CR w % (estymacja)." },
-                  payload: {
-                    type: "object",
-                    description: "Konkretna zmiana. Dla 'variant' i 'copy': { hero_headline?, hero_subheadline?, cta_label? }. Dla 'seo': { meta_title?, meta_description? }. Dla 'settings': { note }.",
-                    properties: {
-                      hero_headline: { type: "string" },
-                      hero_subheadline: { type: "string" },
-                      cta_label: { type: "string" },
-                      meta_title: { type: "string" },
-                      meta_description: { type: "string" },
-                      note: { type: "string" },
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "propose_optimizations",
+          description: "Zwraca 3-6 rekomendacji optymalizacyjnych dla landingu.",
+          parameters: {
+            type: "object",
+            properties: {
+              recommendations: {
+                type: "array",
+                minItems: 1,
+                maxItems: 6,
+                items: {
+                  type: "object",
+                  properties: {
+                    kind: { type: "string", enum: ["variant", "copy", "settings", "seo"] },
+                    title: {
+                      type: "string",
+                      description: "Krótki tytuł rekomendacji (max 80 zn.).",
+                    },
+                    rationale: { type: "string", description: "Dlaczego — w oparciu o dane." },
+                    expected_lift_pct: {
+                      type: "number",
+                      description: "Spodziewany wzrost CR w % (estymacja).",
+                    },
+                    payload: {
+                      type: "object",
+                      description:
+                        "Konkretna zmiana. Dla 'variant' i 'copy': { hero_headline?, hero_subheadline?, cta_label? }. Dla 'seo': { meta_title?, meta_description? }. Dla 'settings': { note }.",
+                      properties: {
+                        hero_headline: { type: "string" },
+                        hero_subheadline: { type: "string" },
+                        cta_label: { type: "string" },
+                        meta_title: { type: "string" },
+                        meta_description: { type: "string" },
+                        note: { type: "string" },
+                      },
                     },
                   },
+                  required: ["kind", "title", "rationale", "payload"],
                 },
-                required: ["kind", "title", "rationale", "payload"],
               },
             },
+            required: ["recommendations"],
           },
-          required: ["recommendations"],
         },
       },
-    }];
+    ];
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        messages: [{ role: "system", content: system }, { role: "user", content: userMsg }],
-        tools, tool_choice: { type: "function", function: { name: "propose_optimizations" } },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userMsg },
+        ],
+        tools,
+        tool_choice: { type: "function", function: { name: "propose_optimizations" } },
       }),
     });
     if (!res.ok) {
@@ -111,9 +143,11 @@ export const analyzeLandingPerformance = createServerFn({ method: "POST" })
     const parsed = JSON.parse(call.function.arguments) as { recommendations: Recommendation[] };
 
     // Mark previous pending as superseded
-    await supabase.from("ai_landing_optimizations")
+    await supabase
+      .from("ai_landing_optimizations")
       .update({ status: "superseded" })
-      .eq("landing_id", data.landing_id).eq("status", "pending");
+      .eq("landing_id", data.landing_id)
+      .eq("status", "pending");
 
     const rows = parsed.recommendations.map((r) => ({
       landing_id: data.landing_id,
@@ -126,13 +160,18 @@ export const analyzeLandingPerformance = createServerFn({ method: "POST" })
       created_by: userId,
     }));
     const { data: inserted, error: insErr } = await supabase
-      .from("ai_landing_optimizations").insert(rows).select();
+      .from("ai_landing_optimizations")
+      .insert(rows)
+      .select();
     if (insErr) throw new Error(insErr.message);
 
     await supabase.from("ai_growth_action_log").insert({
-      module: "micro_optimizer", action: "analyze", status: "ok",
+      module: "micro_optimizer",
+      action: "analyze",
+      status: "ok",
       summary: `Wygenerowano ${rows.length} rekomendacji dla „${landing.title}"`,
-      payload: { landing_id: data.landing_id, stats }, actor: userId,
+      payload: { landing_id: data.landing_id, stats },
+      actor: userId,
     });
 
     return { recommendations: inserted, stats };
@@ -144,7 +183,10 @@ export const applyOptimization = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: opt, error } = await supabase
-      .from("ai_landing_optimizations").select("*").eq("id", data.id).maybeSingle();
+      .from("ai_landing_optimizations")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
     if (error || !opt) throw new Error("Rekomendacja nie istnieje");
     if (opt.status !== "pending") throw new Error("Rekomendacja już rozpatrzona");
 
@@ -160,9 +202,17 @@ export const applyOptimization = createServerFn({ method: "POST" })
         if (Object.keys(overrides).length === 0) throw new Error("Brak nadpisań do zastosowania");
 
         const label = opt.title.slice(0, 60);
-        const { data: v, error: vErr } = await supabase.from("ai_landing_variants").insert({
-          landing_id: opt.landing_id, label, weight: 50, overrides, is_active: true,
-        }).select().single();
+        const { data: v, error: vErr } = await supabase
+          .from("ai_landing_variants")
+          .insert({
+            landing_id: opt.landing_id,
+            label,
+            weight: 50,
+            overrides,
+            is_active: true,
+          })
+          .select()
+          .single();
         if (vErr) throw new Error(vErr.message);
         appliedVariantId = v.id;
       } else if (opt.kind === "seo") {
@@ -170,26 +220,35 @@ export const applyOptimization = createServerFn({ method: "POST" })
         if (payload.meta_title) patch.meta_title = String(payload.meta_title);
         if (payload.meta_description) patch.meta_description = String(payload.meta_description);
         if (Object.keys(patch).length === 0) throw new Error("Brak zmian SEO");
-        const { error: uErr } = await supabase.from("ai_landings").update(patch).eq("id", opt.landing_id);
+        const { error: uErr } = await supabase
+          .from("ai_landings")
+          .update(patch)
+          .eq("id", opt.landing_id);
         if (uErr) throw new Error(uErr.message);
       } else {
         // settings - just mark as applied (informational)
       }
 
-      const { error: stErr } = await supabase.from("ai_landing_optimizations")
+      const { error: stErr } = await supabase
+        .from("ai_landing_optimizations")
         .update({ status: "applied", applied_variant_id: appliedVariantId, error_message: null })
         .eq("id", data.id);
       if (stErr) throw new Error(stErr.message);
 
       await supabase.from("ai_growth_action_log").insert({
-        module: "micro_optimizer", action: "apply", status: "ok",
+        module: "micro_optimizer",
+        action: "apply",
+        status: "ok",
         summary: `Zastosowano: ${opt.title}`,
-        payload: { optimization_id: data.id, variant_id: appliedVariantId }, actor: userId,
+        payload: { optimization_id: data.id, variant_id: appliedVariantId },
+        actor: userId,
       });
       return { ok: true, variant_id: appliedVariantId };
     } catch (e: any) {
-      await supabase.from("ai_landing_optimizations")
-        .update({ error_message: e.message }).eq("id", data.id);
+      await supabase
+        .from("ai_landing_optimizations")
+        .update({ error_message: e.message })
+        .eq("id", data.id);
       throw e;
     }
   });
@@ -198,16 +257,22 @@ export const rejectOptimization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("ai_landing_optimizations")
-      .update({ status: "rejected" }).eq("id", data.id);
+    const { error } = await context.supabase
+      .from("ai_landing_optimizations")
+      .update({ status: "rejected" })
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 function aggregateStats(events: any[], variants: any[]) {
-  const variantStats: Record<string, { views: number; clicks: number; cr: number; label: string }> = {};
+  const variantStats: Record<string, { views: number; clicks: number; cr: number; label: string }> =
+    {};
   const ctrl = { views: 0, clicks: 0 };
-  let scroll25 = 0, scroll50 = 0, scroll75 = 0, scroll100 = 0;
+  let scroll25 = 0,
+    scroll50 = 0,
+    scroll75 = 0,
+    scroll100 = 0;
   const clickTargets: Record<string, number> = {};
   const times: number[] = [];
 
@@ -259,7 +324,8 @@ function aggregateStats(events: any[], variants: any[]) {
     },
     avg_time_seconds: Math.round(avgTime),
     top_click_targets: Object.entries(clickTargets)
-      .sort(([, a], [, b]) => b - a).slice(0, 10)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
       .map(([k, v]) => ({ target: k, count: v })),
   };
 }

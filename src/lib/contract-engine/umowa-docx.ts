@@ -130,13 +130,22 @@ export function buildUmowaDocumentXml(doc: Dokument, harmonogram: ScheduleRow[])
   const body: string[] = [];
 
   // Tytuł
-  body.push(para(run("UMOWA POŻYCZKI", { bold: true, size: 32 }), { align: "center", spaceAfter: 120 }));
+  body.push(
+    para(run("UMOWA POŻYCZKI", { bold: true, size: 32 }), { align: "center", spaceAfter: 120 }),
+  );
   if (doc.meta?.numer_umowy)
-    body.push(para(run(`nr ${doc.meta.numer_umowy}`, { size: 24 }), { align: "center", spaceAfter: 120 }));
+    body.push(
+      para(run(`nr ${doc.meta.numer_umowy}`, { size: 24 }), { align: "center", spaceAfter: 120 }),
+    );
 
   // Komparycja
   const k = doc.komparycja;
-  body.push(para(run(`zawarta dnia ${k.data} w ${k.miejscowosc} pomiędzy:`), { align: "both", spaceAfter: 120 }));
+  body.push(
+    para(run(`zawarta dnia ${k.data} w ${k.miejscowosc} pomiędzy:`), {
+      align: "both",
+      spaceAfter: 120,
+    }),
+  );
   k.strony.forEach((s, i) => {
     const kon = i < k.strony.length - 1 ? "," : ".";
     body.push(
@@ -148,16 +157,24 @@ export function buildUmowaDocumentXml(doc: Dokument, harmonogram: ScheduleRow[])
   for (const sek of doc.sekcje) body.push(sekcjaParas(sek));
 
   // Załączniki
-  body.push(para(run("ZAŁĄCZNIKI", { bold: true }), { align: "left", spaceBefore: 240, spaceAfter: 120 }));
+  body.push(
+    para(run("ZAŁĄCZNIKI", { bold: true }), { align: "left", spaceBefore: 240, spaceAfter: 120 }),
+  );
   for (const z of doc.zalaczniki)
     body.push(para(run(`Załącznik nr ${z.nr} — ${z.tytul}`), { indentLeft: 360, spaceAfter: 40 }));
 
   // Podpisy
-  body.push(para(run("PODPISY", { bold: true }), { align: "left", spaceBefore: 360, spaceAfter: 240 }));
+  body.push(
+    para(run("PODPISY", { bold: true }), { align: "left", spaceBefore: 360, spaceAfter: 240 }),
+  );
   for (const s of k.strony) {
     const { rola, nazwa } = etykietaPodpisu(s);
-    body.push(para(run("........................................................"), { spaceAfter: 20 }));
-    body.push(para(run(`${rola}${s.grupa ? " — " + nazwa : ""}`, { bold: true }), { spaceAfter: 200 }));
+    body.push(
+      para(run("........................................................"), { spaceAfter: 20 }),
+    );
+    body.push(
+      para(run(`${rola}${s.grupa ? " — " + nazwa : ""}`, { bold: true }), { spaceAfter: 200 }),
+    );
   }
 
   // Załącznik nr 1 — harmonogram jako tabela
@@ -202,7 +219,10 @@ const RELS =
  * @param doc wynik `renderuj()`
  * @param harmonogram wiersze harmonogramu (z `warunki.harmonogram.raty` lub payloadu)
  */
-export async function buildUmowaDocx(doc: Dokument, harmonogram: ScheduleRow[]): Promise<Uint8Array> {
+export async function buildUmowaDocx(
+  doc: Dokument,
+  harmonogram: ScheduleRow[],
+): Promise<Uint8Array> {
   const { default: PizZip } = await import("pizzip");
   const zip = new PizZip();
   zip.file("[Content_Types].xml", CONTENT_TYPES);

@@ -55,12 +55,11 @@ function LoginPage() {
     role === "inwestor"
       ? "/inwestor"
       : role === "operator"
-      ? "/admin"
-      : role === "posrednik"
-      ? "/posrednik"
-      : "/klient";
+        ? "/admin"
+        : role === "posrednik"
+          ? "/posrednik"
+          : "/klient";
   const target = next && next.startsWith("/") ? next : roleTarget;
-
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -112,11 +111,6 @@ function LoginPage() {
     });
   };
 
-
-
-
-
-
   return (
     <div className="grid min-h-screen place-items-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -129,16 +123,15 @@ function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-
           {sent ? (
             <div className="rounded-md border bg-muted/40 p-4 text-sm">
               <p className="font-medium">Sprawdź skrzynkę {email}</p>
               <p className="mt-1 text-muted-foreground">
-                Kliknij w link, by zalogować się automatycznie. Jeśli nie widzisz wiadomości, sprawdź spam.
+                Kliknij w link, by zalogować się automatycznie. Jeśli nie widzisz wiadomości,
+                sprawdź spam.
               </p>
             </div>
           ) : (
-
             <>
               <SocialSignIn labelPrefix="Zaloguj się" />
               <AuthDivider label="lub e-mailem" />
@@ -148,66 +141,68 @@ function LoginPage() {
                   <TabsTrigger value="magic">Link e-mail</TabsTrigger>
                 </TabsList>
 
+                <TabsContent value="password" className="mt-4">
+                  <form className="space-y-4" onSubmit={submitPassword}>
+                    <div className="space-y-2">
+                      <Label htmlFor="email-pw">E-mail</Label>
+                      <Input
+                        id="email-pw"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Hasło</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Logowanie…" : "Zaloguj się"}
+                    </Button>
+                    <div className="flex items-center justify-between text-sm">
+                      <Link
+                        to="/zapomniane-haslo"
+                        className="text-muted-foreground hover:underline"
+                      >
+                        Nie pamiętam hasła
+                      </Link>
+                      <Link to="/rejestracja" className="font-medium text-accent hover:underline">
+                        Zarejestruj się
+                      </Link>
+                    </div>
+                  </form>
+                </TabsContent>
 
-              <TabsContent value="password" className="mt-4">
-                <form className="space-y-4" onSubmit={submitPassword}>
-                  <div className="space-y-2">
-                    <Label htmlFor="email-pw">E-mail</Label>
-                    <Input
-                      id="email-pw"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Hasło</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Logowanie…" : "Zaloguj się"}
-                  </Button>
-                  <div className="flex items-center justify-between text-sm">
-                    <Link to="/zapomniane-haslo" className="text-muted-foreground hover:underline">
-                      Nie pamiętam hasła
-                    </Link>
-                    <Link to="/rejestracja" className="font-medium text-accent hover:underline">
-                      Zarejestruj się
-                    </Link>
-                  </div>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="magic" className="mt-4">
-                <form className="space-y-4" onSubmit={submitMagic}>
-                  <div className="space-y-2">
-                    <Label htmlFor="email-magic">E-mail</Label>
-                    <Input
-                      id="email-magic"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Wysyłanie linku…" : "Wyślij link do logowania"}
-                  </Button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    Bez haseł — kliknij link z maila, by się zalogować.
-                  </p>
-                </form>
-              </TabsContent>
+                <TabsContent value="magic" className="mt-4">
+                  <form className="space-y-4" onSubmit={submitMagic}>
+                    <div className="space-y-2">
+                      <Label htmlFor="email-magic">E-mail</Label>
+                      <Input
+                        id="email-magic"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Wysyłanie linku…" : "Wyślij link do logowania"}
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                      Bez haseł — kliknij link z maila, by się zalogować.
+                    </p>
+                  </form>
+                </TabsContent>
               </Tabs>
             </>
           )}

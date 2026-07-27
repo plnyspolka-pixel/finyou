@@ -16,13 +16,21 @@ type Prefs = { do_not_call: boolean; do_not_sms: boolean; do_not_email: boolean 
 function KlientPowiadomienia() {
   const { user } = useAuth();
   const [row, setRow] = useState<any | null>(null);
-  const [prefs, setPrefs] = useState<Prefs>({ do_not_call: false, do_not_sms: false, do_not_email: false });
+  const [prefs, setPrefs] = useState<Prefs>({
+    do_not_call: false,
+    do_not_sms: false,
+    do_not_email: false,
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      const { data } = await supabase.from("clients").select("*").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
       setRow(data);
       if (data) {
         setPrefs({
@@ -35,7 +43,10 @@ function KlientPowiadomienia() {
   }, [user]);
 
   const updatePref = async (key: keyof Prefs, value: boolean) => {
-    if (!row) { toast.error("Najpierw zapisz profil, aby zarządzać powiadomieniami"); return; }
+    if (!row) {
+      toast.error("Najpierw zapisz profil, aby zarządzać powiadomieniami");
+      return;
+    }
     setSaving(true);
     setPrefs((p) => ({ ...p, [key]: value }));
     const patch: any = { [key]: value };
@@ -55,7 +66,10 @@ function KlientPowiadomienia() {
   };
 
   const muteAll = async (mute: boolean) => {
-    if (!row) { toast.error("Najpierw zapisz profil"); return; }
+    if (!row) {
+      toast.error("Najpierw zapisz profil");
+      return;
+    }
     setSaving(true);
     const patch: any = { do_not_call: mute, do_not_sms: mute, do_not_email: mute };
     if (mute) {
@@ -65,7 +79,10 @@ function KlientPowiadomienia() {
     }
     const { error } = await supabase.from("clients").update(patch).eq("id", row.id);
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setPrefs({ do_not_call: mute, do_not_sms: mute, do_not_email: mute });
     toast.success(mute ? "Wszystkie powiadomienia wyciszone" : "Powiadomienia włączone");
   };
@@ -87,7 +104,8 @@ function KlientPowiadomienia() {
             <BellOff className="h-4 w-4" /> Wycisz wszystko
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Jednym kliknięciem wyłączasz przypomnienia SMS, e-mail i połączenia. Krytyczne informacje (np. oferta, umowa, link aktywacyjny) nadal będą dostarczane.
+            Jednym kliknięciem wyłączasz przypomnienia SMS, e-mail i połączenia. Krytyczne
+            informacje (np. oferta, umowa, link aktywacyjny) nadal będą dostarczane.
           </p>
         </CardHeader>
         <CardContent>
@@ -95,7 +113,11 @@ function KlientPowiadomienia() {
             <span className="text-sm font-medium">
               {allMuted ? "Wszystkie powiadomienia są wyciszone" : "Powiadomienia aktywne"}
             </span>
-            <Switch checked={allMuted} disabled={saving || !row} onCheckedChange={(v) => muteAll(v)} />
+            <Switch
+              checked={allMuted}
+              disabled={saving || !row}
+              onCheckedChange={(v) => muteAll(v)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -129,15 +151,31 @@ function KlientPowiadomienia() {
             disabled={saving || !row}
             onChange={(on) => updatePref("do_not_email", !on)}
           />
-          {!row && <p className="text-xs text-muted-foreground">Najpierw zapisz dane profilu w zakładce „Profil", aby móc zarządzać powiadomieniami.</p>}
+          {!row && (
+            <p className="text-xs text-muted-foreground">
+              Najpierw zapisz dane profilu w zakładce „Profil", aby móc zarządzać powiadomieniami.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function PrefRow({ icon, title, desc, checked, disabled, onChange }: {
-  icon: React.ReactNode; title: string; desc: string; checked: boolean; disabled?: boolean; onChange: (v: boolean) => void;
+function PrefRow({
+  icon,
+  title,
+  desc,
+  checked,
+  disabled,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (v: boolean) => void;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-lg border p-3">

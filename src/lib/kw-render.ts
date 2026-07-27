@@ -66,7 +66,10 @@ export interface KwExtraction {
   } | null;
   dzial1sp?: { wpisy?: string[] | null } | null;
   dzial2?: { wlasciciele?: KwExtractionOwner[] | null } | null;
-  dzial3?: { brakWpisu?: boolean | null; wpisy?: Array<{ rodzaj?: string | null; tresc?: string | null }> | null } | null;
+  dzial3?: {
+    brakWpisu?: boolean | null;
+    wpisy?: Array<{ rodzaj?: string | null; tresc?: string | null }> | null;
+  } | null;
   dzial4?: { brakWpisu?: boolean | null; hipoteki?: KwExtractionHipoteka[] | null } | null;
   uwagi?: string[] | null;
 }
@@ -83,7 +86,11 @@ export interface KwRenderedSections {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function str(v: unknown): string | null {
@@ -222,19 +229,26 @@ function renderDzial4(d: NonNullable<KwExtraction["dzial4"]>): string | null {
  * a operator dostaje o tym ostrzeżenie (parser potraktuje null jak brak danych,
  * nie jak „brak wpisów").
  */
-export function renderKwSections(x: KwExtraction, opts?: { importedAt?: string }): KwRenderedSections {
+export function renderKwSections(
+  x: KwExtraction,
+  opts?: { importedAt?: string },
+): KwRenderedSections {
   const warnings: string[] = [];
 
   const dzial_1o = x.dzial1o ? renderDzial1o(x.dzial1o) : null;
   const dzial_1s = x.dzial1sp
-    ? table("Dział I-Sp — Spis praw związanych", (x.dzial1sp.wpisy ?? []).map((w) => row("Wpis", w)).join(""))
+    ? table(
+        "Dział I-Sp — Spis praw związanych",
+        (x.dzial1sp.wpisy ?? []).map((w) => row("Wpis", w)).join(""),
+      )
     : null;
   const dzial_2 = x.dzial2 ? renderDzial2(x.dzial2) : null;
   const dzial_3 = x.dzial3 ? renderDzial3(x.dzial3) : null;
   const dzial_4 = x.dzial4 ? renderDzial4(x.dzial4) : null;
 
   if (!dzial_1o) warnings.push("Screeny nie objęły działu I-O (oznaczenie/adres nieruchomości).");
-  if (!dzial_2) warnings.push("Screeny nie objęły działu II (własność) — nie zweryfikowano właściciela.");
+  if (!dzial_2)
+    warnings.push("Screeny nie objęły działu II (własność) — nie zweryfikowano właściciela.");
   if (!dzial_3) warnings.push("Screeny nie objęły działu III (prawa/roszczenia/ograniczenia).");
   if (!dzial_4) warnings.push("Screeny nie objęły działu IV (hipoteki) — stan obciążeń NIEZNANY.");
   warnings.push(...(x.uwagi ?? []).map((u) => str(u)).filter((u): u is string => !!u));
@@ -243,7 +257,10 @@ export function renderKwSections(x: KwExtraction, opts?: { importedAt?: string }
   okladkaRows += row("Numer księgi wieczystej", x.kwNumber);
   okladkaRows += row("Typ księgi", x.typKsiegi);
   okladkaRows += row("Sąd rejonowy", x.sadRejonowy);
-  okladkaRows += row("Źródło treści", "OCR ze zrzutów ekranu (import ręczny) — nie jest to odpis z EKW");
+  okladkaRows += row(
+    "Źródło treści",
+    "OCR ze zrzutów ekranu (import ręczny) — nie jest to odpis z EKW",
+  );
   if (opts?.importedAt) okladkaRows += row("Data importu", opts.importedAt);
   const missing = [
     !dzial_1o ? "I-O" : null,

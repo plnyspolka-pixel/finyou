@@ -35,13 +35,19 @@ function InvoicePrintPage() {
   });
 
   if (isLoading) {
-    return <div className="grid min-h-screen place-items-center text-muted-foreground">Ładowanie faktury…</div>;
+    return (
+      <div className="grid min-h-screen place-items-center text-muted-foreground">
+        Ładowanie faktury…
+      </div>
+    );
   }
   if (error || !data) {
     return (
       <div className="grid min-h-screen place-items-center p-6 text-center">
         <div className="space-y-3">
-          <p className="text-sm text-destructive">{(error as Error)?.message ?? "Nie udało się wczytać faktury."}</p>
+          <p className="text-sm text-destructive">
+            {(error as Error)?.message ?? "Nie udało się wczytać faktury."}
+          </p>
           <Button variant="outline" onClick={() => router.history.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Wróć
           </Button>
@@ -53,9 +59,18 @@ function InvoicePrintPage() {
   const inv = data.invoice as any;
   const ent = data.entity as any;
   const currency = inv.currency || "PLN";
-  const items: any[] = Array.isArray(inv.items) && inv.items.length ? inv.items : [
-    { name: "Usługa", quantity: 1, unit: "szt.", unitNet: inv.net_amount, vatRate: inv.vat_rate },
-  ];
+  const items: any[] =
+    Array.isArray(inv.items) && inv.items.length
+      ? inv.items
+      : [
+          {
+            name: "Usługa",
+            quantity: 1,
+            unit: "szt.",
+            unitNet: inv.net_amount,
+            vatRate: inv.vat_rate,
+          },
+        ];
 
   const vatPct = inv.vat_rate === "zw" || inv.vat_rate === "0" ? 0 : Number(inv.vat_rate) || 0;
 
@@ -80,16 +95,27 @@ function InvoicePrintPage() {
           </div>
           <table className="text-right text-xs text-slate-600">
             <tbody>
-              <tr><td className="pr-3 text-slate-400">Data wystawienia:</td><td className="font-medium text-slate-800">{fmtDate(inv.issue_date)}</td></tr>
-              <tr><td className="pr-3 text-slate-400">Data sprzedaży:</td><td className="font-medium text-slate-800">{fmtDate(inv.sale_date)}</td></tr>
-              <tr><td className="pr-3 text-slate-400">Termin płatności:</td><td className="font-medium text-slate-800">{fmtDate(inv.due_date)}</td></tr>
+              <tr>
+                <td className="pr-3 text-slate-400">Data wystawienia:</td>
+                <td className="font-medium text-slate-800">{fmtDate(inv.issue_date)}</td>
+              </tr>
+              <tr>
+                <td className="pr-3 text-slate-400">Data sprzedaży:</td>
+                <td className="font-medium text-slate-800">{fmtDate(inv.sale_date)}</td>
+              </tr>
+              <tr>
+                <td className="pr-3 text-slate-400">Termin płatności:</td>
+                <td className="font-medium text-slate-800">{fmtDate(inv.due_date)}</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-6">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Sprzedawca</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Sprzedawca
+            </div>
             <div className="mt-1 font-semibold">{ent?.legal_name ?? ent?.name ?? "—"}</div>
             {ent?.address_street && <div>{ent.address_street}</div>}
             {(ent?.address_postal_code || ent?.address_city) && (
@@ -99,7 +125,9 @@ function InvoicePrintPage() {
             {ent?.email && <div className="text-slate-500">{ent.email}</div>}
           </div>
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Nabywca</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Nabywca
+            </div>
             <div className="mt-1 font-semibold">{inv.buyer_name ?? "—"}</div>
             {inv.buyer_street && <div>{inv.buyer_street}</div>}
             {(inv.buyer_postal_code || inv.buyer_city) && (
@@ -134,11 +162,17 @@ function InvoicePrintPage() {
                 <tr key={idx} className="border-b border-slate-200 align-top">
                   <td className="py-2 pl-2 pr-1 text-slate-500">{idx + 1}</td>
                   <td className="py-2 px-1">{it.name ?? "—"}</td>
-                  <td className="py-2 px-1 text-right tabular-nums">{qty} {it.unit ?? "szt."}</td>
+                  <td className="py-2 px-1 text-right tabular-nums">
+                    {qty} {it.unit ?? "szt."}
+                  </td>
                   <td className="py-2 px-1 text-right tabular-nums">{money(unitNet, currency)}</td>
                   <td className="py-2 px-1 text-right tabular-nums">{money(lineNet, currency)}</td>
-                  <td className="py-2 px-1 text-right tabular-nums">{it.vatRate === "zw" ? "zw." : `${pct}%`}</td>
-                  <td className="py-2 pl-1 pr-2 text-right tabular-nums">{money(lineGross, currency)}</td>
+                  <td className="py-2 px-1 text-right tabular-nums">
+                    {it.vatRate === "zw" ? "zw." : `${pct}%`}
+                  </td>
+                  <td className="py-2 pl-1 pr-2 text-right tabular-nums">
+                    {money(lineGross, currency)}
+                  </td>
                 </tr>
               );
             })}
@@ -148,15 +182,34 @@ function InvoicePrintPage() {
         <div className="mt-4 flex justify-end">
           <table className="text-[13px]">
             <tbody>
-              <tr><td className="py-0.5 pr-6 text-slate-500">Razem netto:</td><td className="py-0.5 text-right tabular-nums">{money(inv.net_amount, currency)}</td></tr>
-              <tr><td className="py-0.5 pr-6 text-slate-500">VAT {inv.vat_rate === "zw" ? "(zw.)" : `${vatPct}%`}:</td><td className="py-0.5 text-right tabular-nums">{money(inv.vat_amount, currency)}</td></tr>
-              <tr className="border-t border-slate-300"><td className="py-1 pr-6 font-bold">Do zapłaty:</td><td className="py-1 text-right text-base font-bold tabular-nums">{money(inv.gross_amount, currency)}</td></tr>
+              <tr>
+                <td className="py-0.5 pr-6 text-slate-500">Razem netto:</td>
+                <td className="py-0.5 text-right tabular-nums">
+                  {money(inv.net_amount, currency)}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-0.5 pr-6 text-slate-500">
+                  VAT {inv.vat_rate === "zw" ? "(zw.)" : `${vatPct}%`}:
+                </td>
+                <td className="py-0.5 text-right tabular-nums">
+                  {money(inv.vat_amount, currency)}
+                </td>
+              </tr>
+              <tr className="border-t border-slate-300">
+                <td className="py-1 pr-6 font-bold">Do zapłaty:</td>
+                <td className="py-1 text-right text-base font-bold tabular-nums">
+                  {money(inv.gross_amount, currency)}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
 
         <div className="mt-6 rounded-md border border-slate-300 bg-slate-50 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Płatność — przelew na rachunek</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Płatność — przelew na rachunek
+          </div>
           <div className="mt-1 font-mono text-base font-semibold tracking-wide">
             {data.bankAccount || "— brak numeru rachunku —"}
           </div>

@@ -3,7 +3,6 @@ import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createHash } from "crypto";
 
-
 const Schema = z.object({
   event: z.string().min(1).max(64),
   area: z.enum(["client", "investor"]),
@@ -20,8 +19,7 @@ const Schema = z.object({
   customData: z.record(z.string(), z.unknown()).optional(),
 });
 
-const sha = (v: string) =>
-  createHash("sha256").update(v.trim().toLowerCase()).digest("hex");
+const sha = (v: string) => createHash("sha256").update(v.trim().toLowerCase()).digest("hex");
 const normPhone = (v: string) => v.replace(/[^0-9]/g, "");
 
 export const sendFbCapiEvent = createServerFn({ method: "POST" })
@@ -33,7 +31,6 @@ export const sendFbCapiEvent = createServerFn({ method: "POST" })
       return { ok: false, error: "missing_token" as const };
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
 
     const { data: settings } = await supabaseAdmin
       .from("tracking_settings")

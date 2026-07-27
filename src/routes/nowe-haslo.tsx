@@ -4,13 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/nowe-haslo")({
@@ -76,17 +70,15 @@ function ResetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Ustaw nowe hasło</CardTitle>
-          <CardDescription>
-            Wpisz nowe hasło do swojego konta Finance You.
-          </CardDescription>
+          <CardDescription>Wpisz nowe hasło do swojego konta Finance You.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!ready ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <p className="font-medium">Weryfikuję link…</p>
               <p className="mt-1">
-                Jeżeli ta strona nie wczyta się w ciągu kilku sekund, otwórz
-                link z e-maila ponownie lub poproś o nowy na{" "}
+                Jeżeli ta strona nie wczyta się w ciągu kilku sekund, otwórz link z e-maila ponownie
+                lub poproś o nowy na{" "}
                 <Link to="/zapomniane-haslo" className="font-medium underline">
                   stronie resetu hasła
                 </Link>

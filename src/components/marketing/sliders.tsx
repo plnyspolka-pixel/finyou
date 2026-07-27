@@ -46,7 +46,12 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
     <div style={{ maxWidth: "82rem", margin: "0 auto" }}>
       <div
         className="fy-windykacja"
-        style={{ display: "grid", gridTemplateColumns: "minmax(0, 36rem) 1fr", gap: "3rem", alignItems: "center" }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 36rem) 1fr",
+          gap: "3rem",
+          alignItems: "center",
+        }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <button onClick={() => go(-1)} aria-label="Poprzedni" style={arrowStyle()}>
@@ -59,7 +64,8 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
                 position: "absolute",
                 inset: "-1rem",
                 borderRadius: "var(--radius-3xl)",
-                background: "linear-gradient(135deg, oklch(0.40 0.25 268 / .22), oklch(0.78 0.18 85 / .18))",
+                background:
+                  "linear-gradient(135deg, oklch(0.40 0.25 268 / .22), oklch(0.78 0.18 85 / .18))",
                 filter: "blur(30px)",
               }}
             />
@@ -77,7 +83,12 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
                 src={s.src}
                 alt={`${s.etap} — ${s.title}`}
                 draggable={false}
-                style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block" }}
+                style={{
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  objectFit: "cover",
+                  display: "block",
+                }}
               />
             </div>
           </div>
@@ -118,16 +129,48 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
               {s.dni} po terminie
             </div>
           ) : null}
-          <h3 style={{ marginTop: "0.4rem", fontSize: "clamp(1.5rem, 2.4vw, 2.1rem)", fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.08 }}>
+          <h3
+            style={{
+              marginTop: "0.4rem",
+              fontSize: "clamp(1.5rem, 2.4vw, 2.1rem)",
+              fontWeight: 900,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.08,
+            }}
+          >
             {s.title}
           </h3>
-          <p style={{ marginTop: "1rem", fontSize: "1rem", lineHeight: 1.65, color: "var(--muted-foreground)" }}>{s.desc}</p>
-          <div style={{ marginTop: "1.4rem", fontSize: "0.85rem", fontWeight: 700, color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
+          <p
+            style={{
+              marginTop: "1rem",
+              fontSize: "1rem",
+              lineHeight: 1.65,
+              color: "var(--muted-foreground)",
+            }}
+          >
+            {s.desc}
+          </p>
+          <div
+            style={{
+              marginTop: "1.4rem",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "var(--muted-foreground)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
             {i + 1} / {n}
           </div>
         </div>
       </div>
-      <div style={{ marginTop: "2rem", display: "grid", gridTemplateColumns: `repeat(${n}, 1fr)`, gap: "0.6rem" }}>
+      <div
+        style={{
+          marginTop: "2rem",
+          display: "grid",
+          gridTemplateColumns: `repeat(${n}, 1fr)`,
+          gap: "0.6rem",
+        }}
+      >
         {slides.map((sl, idx) => {
           const on = idx === i;
           return (
@@ -141,16 +184,34 @@ export function TwoColSlider({ slides }: { slides: TwoColSlide[] }) {
                 padding: "0.7rem 0.85rem",
                 borderRadius: "var(--radius-lg)",
                 border: `1px solid ${on ? "oklch(0.78 0.18 85 / 0.6)" : "var(--border)"}`,
-                background: on ? "linear-gradient(160deg, var(--card), oklch(0.78 0.18 85 / 0.06))" : "var(--card)",
+                background: on
+                  ? "linear-gradient(160deg, var(--card), oklch(0.78 0.18 85 / 0.06))"
+                  : "var(--card)",
                 boxShadow: on ? "var(--shadow-sm)" : "none",
                 transition: "all var(--duration-base) var(--ease-out)",
                 color: "inherit",
               }}
             >
-              <div style={{ fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: on ? "var(--gold)" : "var(--muted-foreground)" }}>
+              <div
+                style={{
+                  fontSize: "0.62rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: on ? "var(--gold)" : "var(--muted-foreground)",
+                }}
+              >
                 {sl.etap}
               </div>
-              <div style={{ marginTop: 3, fontSize: "0.8rem", fontWeight: 800, color: on ? "var(--foreground)" : "var(--muted-foreground)", fontVariantNumeric: "tabular-nums" }}>
+              <div
+                style={{
+                  marginTop: 3,
+                  fontSize: "0.8rem",
+                  fontWeight: 800,
+                  color: on ? "var(--foreground)" : "var(--muted-foreground)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {sl.dni || sl.short}
               </div>
             </button>
@@ -228,7 +289,13 @@ function soArrow(): CSSProperties {
   };
 }
 
-export function SmartOfferSlider({ style, children }: { style?: CSSProperties; children?: ReactNode }) {
+export function SmartOfferSlider({
+  style,
+  children,
+}: {
+  style?: CSSProperties;
+  children?: ReactNode;
+}) {
   const [i, setI] = useState(0);
   const n = SO_SLIDES.length;
   const s = SO_SLIDES[i];
@@ -246,21 +313,52 @@ export function SmartOfferSlider({ style, children }: { style?: CSSProperties; c
         ...style,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.24em", textTransform: "uppercase", color: SO.cyan }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          fontSize: "0.72rem",
+          fontWeight: 800,
+          letterSpacing: "0.24em",
+          textTransform: "uppercase",
+          color: SO.cyan,
+        }}
+      >
         <span style={{ width: 30, height: 2, background: SO.gold, borderRadius: 2 }} />
         Inteligentny system inwestora
       </div>
 
       <div
         className="so-grid"
-        style={{ marginTop: "clamp(1.2rem, 2.5vw, 2rem)", display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) 1fr", gap: "clamp(1.4rem, 3vw, 3rem)", alignItems: "center" }}
+        style={{
+          marginTop: "clamp(1.2rem, 2.5vw, 2rem)",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.05fr) 1fr",
+          gap: "clamp(1.4rem, 3vw, 3rem)",
+          alignItems: "center",
+        }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
           <button onClick={() => go(-1)} aria-label="Poprzedni slajd" style={soArrow()}>
             ‹
           </button>
-          <div style={{ position: "relative", flex: "1 1 auto", borderRadius: 18, overflow: "hidden", border: `1px solid ${SO.lineSoft}` }}>
-            <img key={s.src} src={s.src} alt={s.title} draggable={false} style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block" }} />
+          <div
+            style={{
+              position: "relative",
+              flex: "1 1 auto",
+              borderRadius: 18,
+              overflow: "hidden",
+              border: `1px solid ${SO.lineSoft}`,
+            }}
+          >
+            <img
+              key={s.src}
+              src={s.src}
+              alt={s.title}
+              draggable={false}
+              style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", display: "block" }}
+            />
           </div>
           <button onClick={() => go(1)} aria-label="Następny slajd" style={soArrow()}>
             ›
@@ -269,10 +367,27 @@ export function SmartOfferSlider({ style, children }: { style?: CSSProperties; c
 
         <div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-            <span style={{ fontWeight: 500, fontSize: "clamp(2.2rem, 4vw, 3.4rem)", lineHeight: 1, color: SO.goldSoft }}>
+            <span
+              style={{
+                fontWeight: 500,
+                fontSize: "clamp(2.2rem, 4vw, 3.4rem)",
+                lineHeight: 1,
+                color: SO.goldSoft,
+              }}
+            >
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: SO.cyan }}>{s.kicker}</span>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 800,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: SO.cyan,
+              }}
+            >
+              {s.kicker}
+            </span>
           </div>
           <h3
             style={{
@@ -289,15 +404,40 @@ export function SmartOfferSlider({ style, children }: { style?: CSSProperties; c
           >
             {s.title}
           </h3>
-          <p style={{ margin: "1.1rem 0 0", fontSize: "clamp(0.98rem, 1.5vw, 1.12rem)", lineHeight: 1.65, color: SO.muted, textWrap: "pretty" }}>{s.desc}</p>
+          <p
+            style={{
+              margin: "1.1rem 0 0",
+              fontSize: "clamp(0.98rem, 1.5vw, 1.12rem)",
+              lineHeight: 1.65,
+              color: SO.muted,
+              textWrap: "pretty",
+            }}
+          >
+            {s.desc}
+          </p>
 
-          <div style={{ marginTop: "1.6rem", fontSize: "0.85rem", fontWeight: 700, color: SO.faint, fontVariantNumeric: "tabular-nums" }}>
+          <div
+            style={{
+              marginTop: "1.6rem",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: SO.faint,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
             {i + 1} / {n}
           </div>
         </div>
       </div>
 
-      <div style={{ marginTop: "clamp(1.4rem, 2.6vw, 2rem)", display: "grid", gridTemplateColumns: `repeat(${n}, 1fr)`, gap: "0.6rem" }}>
+      <div
+        style={{
+          marginTop: "clamp(1.4rem, 2.6vw, 2rem)",
+          display: "grid",
+          gridTemplateColumns: `repeat(${n}, 1fr)`,
+          gap: "0.6rem",
+        }}
+      >
         {SO_SLIDES.map((sl, k) => {
           const on = k === i;
           return (
@@ -311,12 +451,33 @@ export function SmartOfferSlider({ style, children }: { style?: CSSProperties; c
                 padding: "0.7rem 0.85rem",
                 borderRadius: 14,
                 border: `1px solid ${on ? SO.goldSoft : SO.lineSoft}`,
-                background: on ? "linear-gradient(160deg, rgba(16,25,58,0.9), oklch(0.82 0.13 85 / 0.08))" : SO.panel,
+                background: on
+                  ? "linear-gradient(160deg, rgba(16,25,58,0.9), oklch(0.82 0.13 85 / 0.08))"
+                  : SO.panel,
                 transition: "all var(--duration-base, .25s)",
               }}
             >
-              <div style={{ fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: on ? SO.gold : SO.faint }}>{sl.label}</div>
-              <div style={{ marginTop: 3, fontSize: "0.8rem", fontWeight: 800, color: on ? SO.ink : SO.muted }}>{sl.short}</div>
+              <div
+                style={{
+                  fontSize: "0.62rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: on ? SO.gold : SO.faint,
+                }}
+              >
+                {sl.label}
+              </div>
+              <div
+                style={{
+                  marginTop: 3,
+                  fontSize: "0.8rem",
+                  fontWeight: 800,
+                  color: on ? SO.ink : SO.muted,
+                }}
+              >
+                {sl.short}
+              </div>
             </button>
           );
         })}

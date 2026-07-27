@@ -1,6 +1,10 @@
 // Helpery serwerowe do wyliczania postępu wniosku z bazy + planowania przypomnień.
 import { createClient } from "@supabase/supabase-js";
-import { computeLoanProgress, buildElevenLabsVariables, type ProgressResult } from "./loan-progress";
+import {
+  computeLoanProgress,
+  buildElevenLabsVariables,
+  type ProgressResult,
+} from "./loan-progress";
 
 function admin() {
   const url = process.env.SUPABASE_URL!;
@@ -17,13 +21,23 @@ export interface LoanLeadFullData {
   variables: Record<string, string>;
 }
 
-export async function loadLoanLeadData(loanApplicationId: string): Promise<LoanLeadFullData | null> {
+export async function loadLoanLeadData(
+  loanApplicationId: string,
+): Promise<LoanLeadFullData | null> {
   const s = admin();
-  const { data: loan } = await s.from("loan_applications").select("*").eq("id", loanApplicationId).maybeSingle();
+  const { data: loan } = await s
+    .from("loan_applications")
+    .select("*")
+    .eq("id", loanApplicationId)
+    .maybeSingle();
   if (!loan) return null;
 
   const [{ data: client }, { data: prop }, { data: docs }] = await Promise.all([
-    s.from("clients").select("id,first_name,last_name,phone_normalized,email,phone,do_not_call").eq("id", loan.client_id).maybeSingle(),
+    s
+      .from("clients")
+      .select("id,first_name,last_name,phone_normalized,email,phone,do_not_call")
+      .eq("id", loan.client_id)
+      .maybeSingle(),
     s.from("properties").select("*").eq("loan_application_id", loan.id).maybeSingle(),
     s.from("documents").select("id,document_type,file_name").eq("loan_application_id", loan.id),
   ]);
@@ -66,16 +80,23 @@ export async function loadLoanLeadData(loanApplicationId: string): Promise<LoanL
 /** Zwraca godzinę (0-23) podanego momentu w czasie Europe/Warsaw. */
 function warsawHour(d: Date): number {
   const p = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Warsaw", hour: "2-digit", hour12: false,
+    timeZone: "Europe/Warsaw",
+    hour: "2-digit",
+    hour12: false,
   }).formatToParts(d);
   return parseInt(p.find((x) => x.type === "hour")?.value ?? "0", 10);
 }
 
 function warsawOffsetMinutes(at: Date): number {
   const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Warsaw", hour12: false,
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    timeZone: "Europe/Warsaw",
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
   const p = Object.fromEntries(dtf.formatToParts(at).map((x) => [x.type, x.value]));
   const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
@@ -88,9 +109,14 @@ export function nextWarsawSlotAt(from: Date, hour: number, minute: number): Date
   for (let addDays = 0; addDays < 9; addDays++) {
     const off = warsawOffsetMinutes(from);
     const local = new Date(from.getTime() + off * 60000);
-    const ly = local.getUTCFullYear(), lm = local.getUTCMonth(), ld = local.getUTCDate() + addDays;
+    const ly = local.getUTCFullYear(),
+      lm = local.getUTCMonth(),
+      ld = local.getUTCDate() + addDays;
     const candidate = new Date(Date.UTC(ly, lm, ld, hour, minute, 0) - off * 60000);
-    const dow = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", weekday: "short" }).format(candidate);
+    const dow = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Warsaw",
+      weekday: "short",
+    }).format(candidate);
     if (dow === "Sun") continue;
     if (candidate.getTime() > from.getTime() + 60_000) return candidate;
   }
@@ -141,7 +167,10 @@ export function pickAlternatingCallSlot(opts: {
   let hour = range[0];
   for (let i = 0; i < range.length; i++) {
     r -= weights[i];
-    if (r <= 0) { hour = range[i]; break; }
+    if (r <= 0) {
+      hour = range[i];
+      break;
+    }
   }
   const minute = Math.floor(Math.random() * 60);
   return nextWarsawSlotAt(opts.earliest, hour, minute);
@@ -171,10 +200,13 @@ export function computeNextReminder(opts: {
   else if (a === 1) deltaH = 8;
   else if (a === 2) deltaH = 24;
   else if (a === 3) deltaH = 48;
-  else if (a <= 7) deltaH = 72;        // 3 dni
-  else if (a <= 14) deltaH = 168;      // tydzień
-  else if (a <= 25) deltaH = 336;      // 2 tygodnie
-  else deltaH = 504;                   // 3 tygodnie — kadencja podtrzymująca w nieskończoność
+  else if (a <= 7)
+    deltaH = 72; // 3 dni
+  else if (a <= 14)
+    deltaH = 168; // tydzień
+  else if (a <= 25)
+    deltaH = 336; // 2 tygodnie
+  else deltaH = 504; // 3 tygodnie — kadencja podtrzymująca w nieskończoność
   const earliest = new Date(now.getTime() + deltaH * 3600_000);
   const slot = pickAlternatingCallSlot({
     lastCallAt: now,

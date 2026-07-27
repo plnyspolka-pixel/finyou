@@ -13,7 +13,12 @@ import type {
 import { categoryLabel } from "./scoring";
 import { floodRiskInvestorText } from "./flood-risk.server";
 
-const FORBIDDEN_WORDS = ["operat", "oficjalna wycena", "gwarantowana wartość", "pewna cena sprzedaży"];
+const FORBIDDEN_WORDS = [
+  "operat",
+  "oficjalna wycena",
+  "gwarantowana wartość",
+  "pewna cena sprzedaży",
+];
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   mieszkanie: "mieszkanie",
@@ -27,7 +32,11 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
 
 function fmtPln(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return "—";
-  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN", maximumFractionDigits: 0 }).format(v);
+  return new Intl.NumberFormat("pl-PL", {
+    style: "currency",
+    currency: "PLN",
+    maximumFractionDigits: 0,
+  }).format(v);
 }
 function fmtArea(input: PropertyAnalysisInput): string {
   if (input.usableAreaM2) return `${input.usableAreaM2} m² powierzchni użytkowej`;
@@ -62,30 +71,54 @@ export interface OfferTextInput {
 }
 
 export function generateOfferText(args: OfferTextInput): InvestmentOfferText {
-  const { input, valuation, location, legal, collateralScore, sourcesUsed, rcnCount, rcnRadiusKm, weakData } = args;
+  const {
+    input,
+    valuation,
+    location,
+    legal,
+    collateralScore,
+    sourcesUsed,
+    rcnCount,
+    rcnRadiusKm,
+    weakData,
+  } = args;
   const typeLabel = PROPERTY_TYPE_LABELS[input.propertyType as string] ?? "nieruchomość";
 
-  const propertySummary =
-    `Przedmiotem zabezpieczenia jest ${typeLabel} położona w ${locationLabel(input)}, o ${fmtArea(input)}.`;
+  const propertySummary = `Przedmiotem zabezpieczenia jest ${typeLabel} położona w ${locationLabel(input)}, o ${fmtArea(input)}.`;
 
-  const sourceNames = sourcesUsed.filter(s => s.used).map(s => s.source).join(", ") || "dostępne dane wewnętrzne";
+  const sourceNames =
+    sourcesUsed
+      .filter((s) => s.used)
+      .map((s) => s.source)
+      .join(", ") || "dostępne dane wewnętrzne";
   const valuationParts = [
     `Wartość zabezpieczenia została oszacowana pomocniczo na podstawie dostępnych danych transakcyjnych i statystycznych. Program wykorzystał następujące źródła: ${sourceNames}.`,
   ];
   if (valuation.conservativeLowPln != null && valuation.conservativeHighPln != null) {
-    valuationParts.push(`Orientacyjny zakres ostrożnościowy wartości: ${fmtPln(valuation.conservativeLowPln)} – ${fmtPln(valuation.conservativeHighPln)}.`);
+    valuationParts.push(
+      `Orientacyjny zakres ostrożnościowy wartości: ${fmtPln(valuation.conservativeLowPln)} – ${fmtPln(valuation.conservativeHighPln)}.`,
+    );
   }
   if (rcnCount > 0 && rcnRadiusKm) {
-    valuationParts.push(`W okolicy odnaleziono ${rcnCount} transakcji podobnego typu w promieniu ${rcnRadiusKm} km${valuation.pricePerM2Median ? `; mediana ceny: ${fmtPln(valuation.pricePerM2Median)}/m².` : "."}`);
+    valuationParts.push(
+      `W okolicy odnaleziono ${rcnCount} transakcji podobnego typu w promieniu ${rcnRadiusKm} km${valuation.pricePerM2Median ? `; mediana ceny: ${fmtPln(valuation.pricePerM2Median)}/m².` : "."}`,
+    );
   } else if (rcnCount === 0) {
-    valuationParts.push("Brak transakcji porównawczych z RCN dla zadanej lokalizacji — wykorzystano benchmark statystyczny.");
+    valuationParts.push(
+      "Brak transakcji porównawczych z RCN dla zadanej lokalizacji — wykorzystano benchmark statystyczny.",
+    );
   }
-  if (weakData) valuationParts.push("Dostępność danych porównawczych jest ograniczona, dlatego wynik wymaga dodatkowej ręcznej weryfikacji.");
+  if (weakData)
+    valuationParts.push(
+      "Dostępność danych porównawczych jest ograniczona, dlatego wynik wymaga dodatkowej ręcznej weryfikacji.",
+    );
 
-  const locationSummary = `Analiza lokalizacji wskazuje na ${locationQualityWord(location.score)} dostępność infrastruktury codziennej. ${location.liquidityComment ?? ""}`.trim();
-  const legalRiskSummary = legal.warnings.length === 0
-    ? "Analiza dokumentów nie wykazała istotnych ryzyk prawnych."
-    : `Analiza dokumentów wykazała następujące ryzyka: ${legal.warnings.slice(0, 5).join("; ")}.`;
+  const locationSummary =
+    `Analiza lokalizacji wskazuje na ${locationQualityWord(location.score)} dostępność infrastruktury codziennej. ${location.liquidityComment ?? ""}`.trim();
+  const legalRiskSummary =
+    legal.warnings.length === 0
+      ? "Analiza dokumentów nie wykazała istotnych ryzyk prawnych."
+      : `Analiza dokumentów wykazała następujące ryzyka: ${legal.warnings.slice(0, 5).join("; ")}.`;
   const collateralScoreSummary = `Łączna ocena zabezpieczenia wyniosła ${collateralScore.total}/100, co odpowiada kategorii: ${categoryLabel(collateralScore.category)}.`;
 
   const baseInvestor = [
@@ -94,9 +127,13 @@ export function generateOfferText(args: OfferTextInput): InvestmentOfferText {
       ? `Orientacyjna wartość: ${fmtPln(valuation.conservativeLowPln)} – ${fmtPln(valuation.conservativeHighPln)}.`
       : "",
     collateralScoreSummary,
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  const floodText = args.floodRisk ? floodRiskInvestorText(args.floodRisk, !!args.floodAvailable) : null;
+  const floodText = args.floodRisk
+    ? floodRiskInvestorText(args.floodRisk, !!args.floodAvailable)
+    : null;
 
   const result: InvestmentOfferText = {
     propertySummary,
@@ -104,7 +141,9 @@ export function generateOfferText(args: OfferTextInput): InvestmentOfferText {
     locationSummary,
     legalRiskSummary,
     collateralScoreSummary,
-    investorShortSummary: floodText ? `${baseInvestor} ${floodText.shortInvestorBullet}` : baseInvestor,
+    investorShortSummary: floodText
+      ? `${baseInvestor} ${floodText.shortInvestorBullet}`
+      : baseInvestor,
     floodRiskSummary: floodText?.floodRiskSummary,
   };
   assertNoForbiddenWords(result);

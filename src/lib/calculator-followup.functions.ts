@@ -85,4 +85,3 @@ export const scheduleCalculatorEntryFollowup = createServerFn({ method: "POST" }
     }
     return { ok: true, scheduledAt };
   });
-

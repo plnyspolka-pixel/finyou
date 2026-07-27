@@ -151,9 +151,7 @@ function budujPozyczkodawce(inv: InvestorData): any {
       adres: inv.address || "",
       telefon: inv.phone,
       email: inv.email,
-      reprezentacja: rep
-        ? [czysc({ imie_nazwisko: rep, funkcja: "reprezentant" })]
-        : undefined,
+      reprezentacja: rep ? [czysc({ imie_nazwisko: rep, funkcja: "reprezentant" })] : undefined,
     });
   }
   return czysc({
@@ -181,7 +179,11 @@ function budujNieruchomosc(profile: ClientProfile, payload: LoanCalcPayload): an
     wlasciciel_ref: wlascicielRef,
     hipoteka:
       payload.mortgageAmount > 0
-        ? { kwota: kwota(payload.mortgageAmount), pierwszenstwo: "pierwsze", oproznione_miejsce_po: undefined }
+        ? {
+            kwota: kwota(payload.mortgageAmount),
+            pierwszenstwo: "pierwsze",
+            oproznione_miejsce_po: undefined,
+          }
         : undefined,
   });
 }
@@ -190,7 +192,8 @@ function budujNieruchomosc(profile: ClientProfile, payload: LoanCalcPayload): an
 
 function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
   const sched = payload.schedule ?? [];
-  const prowizjaCalk = (Number(payload.commissionPln) || 0) + (Number(payload.financeYouFeePln) || 0);
+  const prowizjaCalk =
+    (Number(payload.commissionPln) || 0) + (Number(payload.financeYouFeePln) || 0);
   const prowizjaRaty = sched.map((r) => Number(r.prow) || 0);
   const raty = payloadDoRaty(payload, prowizjaRaty);
 
@@ -277,7 +280,10 @@ export function profileToCalcPayload(profile: ClientProfile): LoanCalcPayload | 
   });
 
   const nazwa =
-    [profile.borrowerData?.firstName, profile.borrowerData?.lastName].filter(Boolean).join(" ").trim() ||
+    [profile.borrowerData?.firstName, profile.borrowerData?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
     profile.borrowerData?.companyName ||
     null;
 
@@ -317,7 +323,9 @@ export function profileToCalcPayload(profile: ClientProfile): LoanCalcPayload | 
 function dodajMiesiace(iso: string, n: number): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
-  const y0 = +m[1], mo0 = +m[2], d0 = +m[3];
+  const y0 = +m[1],
+    mo0 = +m[2],
+    d0 = +m[3];
   const total = y0 * 12 + (mo0 - 1) + n;
   const y = Math.floor(total / 12);
   const mo = (total % 12) + 1;

@@ -56,7 +56,6 @@ function readAsDataUrl(file: File): Promise<string> {
   });
 }
 
-
 const STEPS = [
   { id: 1, shortLabel: "Obiekt", label: "Nieruchomość", icon: Home },
   { id: 2, shortLabel: "Zdjęcia", label: "Zdjęcia i KW", icon: Upload },
@@ -122,7 +121,10 @@ export function LandingWizardForm() {
   const addPhotos = (files: FileList | null, bucket: string) => {
     if (!files?.length) return;
     const next: PhotoItem[] = Array.from(files).map((f) => ({
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${f.name}`,
+      id:
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${f.name}`,
       name: f.name,
       type: f.type,
       url: URL.createObjectURL(f),
@@ -152,12 +154,12 @@ export function LandingWizardForm() {
     const ph = phone.trim().replace(/\D/g, "");
     return Boolean(
       firstName.trim() &&
-        lastName.trim() &&
-        ph.length >= 9 &&
-        /.+@.+\..+/.test(email.trim()) &&
-        consentPrivacy &&
-        consentTerms &&
-        consentMarketing,
+      lastName.trim() &&
+      ph.length >= 9 &&
+      /.+@.+\..+/.test(email.trim()) &&
+      consentPrivacy &&
+      consentTerms &&
+      consentMarketing,
     );
   }, [firstName, lastName, phone, email, consentPrivacy, consentTerms, consentMarketing]);
 
@@ -175,7 +177,12 @@ export function LandingWizardForm() {
     void trackEvent(
       "Lead",
       { value: amount, currency: "PLN", content_category: secType, loan_period_months: months },
-      { email: email.trim(), phone: phone.trim(), firstName: firstName.trim(), lastName: lastName.trim() },
+      {
+        email: email.trim(),
+        phone: phone.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      },
     );
   };
 
@@ -193,13 +200,15 @@ export function LandingWizardForm() {
     if (step === 3) {
       fireLead();
     }
-    setStep((s) => (Math.min(4, s + 1) as StepId));
+    setStep((s) => Math.min(4, s + 1) as StepId);
   };
-  const goBack = () => setStep((s) => (Math.max(1, s - 1) as StepId));
+  const goBack = () => setStep((s) => Math.max(1, s - 1) as StepId);
 
   useEffect(() => {
     const handler = () => {
-      document.getElementById("landing-wizard-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById("landing-wizard-top")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener("financeyou:open-offer", handler);
     return () => window.removeEventListener("financeyou:open-offer", handler);
@@ -247,10 +256,18 @@ export function LandingWizardForm() {
       void trackEvent(
         "CompleteRegistration",
         { value: amount, currency: "PLN", content_category: secType, loan_period_months: months },
-        { email: email.trim(), phone: phone.trim(), firstName: firstName.trim(), lastName: lastName.trim() },
+        {
+          email: email.trim(),
+          phone: phone.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        },
       );
       if (res.token_hash) {
-        const { error: otpErr } = await supabase.auth.verifyOtp({ token_hash: res.token_hash, type: "magiclink" });
+        const { error: otpErr } = await supabase.auth.verifyOtp({
+          token_hash: res.token_hash,
+          type: "magiclink",
+        });
         if (!otpErr) {
           toast.success("Wniosek wysłany. Zalogowaliśmy Cię automatycznie.");
           void navigate({ to: "/klient" });
@@ -259,7 +276,6 @@ export function LandingWizardForm() {
       }
       toast.success("Wniosek wysłany! Sprawdź e-mail — wysłaliśmy dane do logowania.");
       void navigate({ to: "/" });
-
     } catch (err) {
       console.error(err);
       toast.error("Nie udało się wysłać wniosku. Spróbuj jeszcze raz.");
@@ -293,14 +309,20 @@ export function LandingWizardForm() {
                         : "border-white/15 bg-white/[0.04] hover:border-white/30"
                   }`}
                 >
-                  <span className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full text-sm font-black ring-1 ${
-                    done
-                      ? "bg-emerald-500/30 text-emerald-100 ring-emerald-300/40"
-                      : active
-                        ? "bg-white text-slate-900 ring-white/60"
-                        : "bg-white/10 text-white/80 ring-white/20"
-                  }`}>
-                    {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <Icon className="h-4 w-4" />}
+                  <span
+                    className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-full text-sm font-black ring-1 ${
+                      done
+                        ? "bg-emerald-500/30 text-emerald-100 ring-emerald-300/40"
+                        : active
+                          ? "bg-white text-slate-900 ring-white/60"
+                          : "bg-white/10 text-white/80 ring-white/20"
+                    }`}
+                  >
+                    {done ? (
+                      <Check className="h-4 w-4" strokeWidth={3} />
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
                   </span>
                   <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white leading-tight whitespace-nowrap">
                     {s.shortLabel}
@@ -324,7 +346,9 @@ export function LandingWizardForm() {
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <Home className="h-5 w-5" />
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">Krok 1 · Nieruchomość</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">
+                Krok 1 · Nieruchomość
+              </span>
             </div>
             <SecurityTypePicker
               value={typeSelected ? secType : null}
@@ -334,7 +358,10 @@ export function LandingWizardForm() {
               }}
             />
             <div className="space-y-2 pt-2">
-              <Label htmlFor="lw-city" className="flex items-center gap-2 text-base font-bold uppercase tracking-[0.14em] text-white">
+              <Label
+                htmlFor="lw-city"
+                className="flex items-center gap-2 text-base font-bold uppercase tracking-[0.14em] text-white"
+              >
                 <MapPin className="h-4 w-4" /> Miejscowość *
               </Label>
               <Input
@@ -344,7 +371,9 @@ export function LandingWizardForm() {
                 placeholder="np. Warszawa"
                 className={FANCY_INPUT_CLASS}
               />
-              <p className="text-xs text-white/75">Miasto/wieś, w której znajduje się nieruchomość.</p>
+              <p className="text-xs text-white/75">
+                Miasto/wieś, w której znajduje się nieruchomość.
+              </p>
             </div>
           </div>
         </FancyShell>
@@ -356,12 +385,16 @@ export function LandingWizardForm() {
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <Upload className="h-5 w-5" />
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">Krok 2 · Zdjęcia i numer KW</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">
+                Krok 2 · Zdjęcia i numer KW
+              </span>
             </div>
 
             {docHint && (
               <div className="rounded-xl border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-white/85">Co przygotować — {docHint.title}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-white/85">
+                  Co przygotować — {docHint.title}
+                </p>
                 <ul className="mt-1.5 space-y-1 text-xs text-white/85">
                   {docHint.docs.map((d) => (
                     <li key={d} className="flex items-start gap-2">
@@ -378,33 +411,69 @@ export function LandingWizardForm() {
                 <Upload className="h-4 w-4" /> Zdjęcia nieruchomości
               </Label>
               <div className="flex gap-2">
-                <button type="button" onClick={() => fileRef.current?.click()}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/40 bg-white/10 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/40 bg-white/10 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:border-white/70 hover:bg-white/20"
+                >
                   <Upload className="h-4 w-4" /> Dodaj plik
                 </button>
-                <button type="button" onClick={() => camRef.current?.click()}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/60 bg-white/20 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white/30 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => camRef.current?.click()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-white/60 bg-white/20 px-3 py-4 text-sm font-bold uppercase tracking-wider text-white backdrop-blur-sm transition hover:bg-white/30 sm:hidden"
+                >
                   <Camera className="h-4 w-4" /> Zrób zdjęcie
                 </button>
               </div>
-              <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
-                onChange={(e) => { addPhotos(e.target.files, "property_photos"); e.currentTarget.value = ""; }} />
-              <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
-                onChange={(e) => { addPhotos(e.target.files, "property_photos"); e.currentTarget.value = ""; }} />
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  addPhotos(e.target.files, "property_photos");
+                  e.currentTarget.value = "";
+                }}
+              />
+              <input
+                ref={camRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  addPhotos(e.target.files, "property_photos");
+                  e.currentTarget.value = "";
+                }}
+              />
               {propertyPhotos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {propertyPhotos.map((p) => (
-                    <div key={p.id} className="relative overflow-hidden rounded-md border border-white/30 bg-white/10">
+                    <div
+                      key={p.id}
+                      className="relative overflow-hidden rounded-md border border-white/30 bg-white/10"
+                    >
                       {p.type.startsWith("image/") ? (
-                        <img src={p.url} alt={p.name} className="aspect-square w-full object-cover" />
+                        <img
+                          src={p.url}
+                          alt={p.name}
+                          className="aspect-square w-full object-cover"
+                        />
                       ) : (
                         <div className="grid aspect-square place-items-center bg-white/10">
                           <FileText className="h-6 w-6 text-white/80" />
                         </div>
                       )}
-                      <button type="button" onClick={() => removePhoto(p.id)}
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(p.id)}
                         className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-xs font-bold text-foreground shadow"
-                        aria-label="Usuń">×</button>
+                        aria-label="Usuń"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -421,56 +490,100 @@ export function LandingWizardForm() {
                 placeholder="np. WA1M/00123456/7"
                 className="h-14 rounded-2xl border-2 border-white/30 bg-white/10 px-4 font-mono text-lg font-bold tracking-wider text-white placeholder:text-white/40 shadow-inner backdrop-blur-sm focus-visible:border-white/70 focus-visible:ring-2 focus-visible:ring-white/40"
               />
-              <p className="text-xs text-white/75">Numer sprawdzisz w mObywatelu. Alternatywnie dołącz akt własności.</p>
+              <p className="text-xs text-white/75">
+                Numer sprawdzisz w mObywatelu. Alternatywnie dołącz akt własności.
+              </p>
               {extraKwNumbers.map((val, idx) => (
                 <div key={idx} className="flex gap-2">
-                  <Input value={val}
+                  <Input
+                    value={val}
                     onChange={(e) => {
                       const v = e.target.value.toUpperCase();
                       setExtraKwNumbers((cur) => cur.map((x, i) => (i === idx ? v : x)));
                     }}
                     placeholder={`Dodatkowy numer KW #${idx + 2}`}
-                    className={`${FANCY_INPUT_CLASS} font-mono tracking-wider`} />
-                  <Button type="button" variant="outline" size="lg"
+                    className={`${FANCY_INPUT_CLASS} font-mono tracking-wider`}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
                     onClick={() => setExtraKwNumbers((cur) => cur.filter((_, i) => i !== idx))}
-                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                    className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm"
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                  onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}>
+                  onClick={() => setExtraKwNumbers((cur) => [...cur, ""])}
+                >
                   + Dodaj kolejny numer KW
                 </Button>
-                <Button type="button" variant="outline" size="sm"
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                  onClick={() => deedRef.current?.click()}>
+                  onClick={() => deedRef.current?.click()}
+                >
                   + Dodaj akt własności
                 </Button>
-                <input ref={deedRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
-                  onChange={(e) => { addPhotos(e.target.files, "ownership_deed"); e.currentTarget.value = ""; }} />
+                <input
+                  ref={deedRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    addPhotos(e.target.files, "ownership_deed");
+                    e.currentTarget.value = "";
+                  }}
+                />
               </div>
               {photos.some((p) => p.bucket === "ownership_deed") && (
                 <ul className="flex flex-wrap gap-2">
-                  {photos.filter((p) => p.bucket === "ownership_deed").map((p) => (
-                    <li key={p.id} className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white">
-                      <FileText className="h-3.5 w-3.5" />
-                      <span className="max-w-[160px] truncate">{p.name}</span>
-                      <button type="button" onClick={() => removePhoto(p.id)}
-                        className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground">×</button>
-                    </li>
-                  ))}
+                  {photos
+                    .filter((p) => p.bucket === "ownership_deed")
+                    .map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex items-center gap-2 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs text-white"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="max-w-[160px] truncate">{p.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(p.id)}
+                          className="grid h-5 w-5 place-items-center rounded-full bg-white/90 text-sm font-bold text-foreground"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
                 </ul>
               )}
               {BUILDING_TYPES.includes(secType) && (
                 <div className="space-y-2 pt-2">
-                  <Label className="text-white">Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span></Label>
+                  <Label className="text-white">
+                    Powierzchnia użytkowa <span className="text-white/60">(opcjonalnie)</span>
+                  </Label>
                   <div className="flex items-center gap-2">
-                    <Input type="number" inputMode="decimal" min={1} step="0.1"
-                      value={usableArea} onChange={(e) => setUsableArea(e.target.value)}
-                      placeholder="np. 58" className={`${FANCY_INPUT_CLASS} max-w-[180px]`} />
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      step="0.1"
+                      value={usableArea}
+                      onChange={(e) => setUsableArea(e.target.value)}
+                      placeholder="np. 58"
+                      className={`${FANCY_INPUT_CLASS} max-w-[180px]`}
+                    />
                     <span className="text-sm text-white/75">m²</span>
                   </div>
                 </div>
@@ -486,34 +599,114 @@ export function LandingWizardForm() {
           <div className="space-y-5">
             <div className="flex items-center gap-2 text-white/85">
               <UserRound className="h-5 w-5" />
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">Krok 3 · Dane kontaktowe</span>
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider sm:tracking-widest">
+                Krok 3 · Dane kontaktowe
+              </span>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="lw-fn" className="text-white">Imię *</Label>
-                <Input id="lw-fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Anna" className={FANCY_INPUT_CLASS} /></div>
-              <div className="space-y-2"><Label htmlFor="lw-ln" className="text-white">Nazwisko *</Label>
-                <Input id="lw-ln" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Kowalska" className={FANCY_INPUT_CLASS} /></div>
-              <div className="space-y-2"><Label htmlFor="lw-ph" className="text-white">Telefon *</Label>
-                <Input id="lw-ph" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+48 600 000 000" className={FANCY_INPUT_CLASS} /></div>
-              <div className="space-y-2"><Label htmlFor="lw-em" className="text-white">E-mail *</Label>
-                <Input id="lw-em" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="anna@example.com" className={FANCY_INPUT_CLASS} /></div>
+              <div className="space-y-2">
+                <Label htmlFor="lw-fn" className="text-white">
+                  Imię *
+                </Label>
+                <Input
+                  id="lw-fn"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Anna"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lw-ln" className="text-white">
+                  Nazwisko *
+                </Label>
+                <Input
+                  id="lw-ln"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Kowalska"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lw-ph" className="text-white">
+                  Telefon *
+                </Label>
+                <Input
+                  id="lw-ph"
+                  type="tel"
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+48 600 000 000"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lw-em" className="text-white">
+                  E-mail *
+                </Label>
+                <Input
+                  id="lw-em"
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="anna@example.com"
+                  className={FANCY_INPUT_CLASS}
+                />
+              </div>
             </div>
             <div className="space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
               <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
-                <Checkbox checked={consentPrivacy} onCheckedChange={(v) => setConsentPrivacy(v === true)}
-                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5" />
-                <span>Akceptuję <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">politykę prywatności</a> Finance You. *</span>
+                <Checkbox
+                  checked={consentPrivacy}
+                  onCheckedChange={(v) => setConsentPrivacy(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Akceptuję{" "}
+                  <a
+                    href="/polityka-prywatnosci"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-white underline underline-offset-2"
+                  >
+                    politykę prywatności
+                  </a>{" "}
+                  Finance You. *
+                </span>
               </label>
               <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
-                <Checkbox checked={consentTerms} onCheckedChange={(v) => setConsentTerms(v === true)}
-                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5" />
-                <span>Akceptuję <a href="/regulamin" target="_blank" rel="noopener noreferrer" className="font-semibold text-white underline underline-offset-2">regulamin serwisu</a>. *</span>
+                <Checkbox
+                  checked={consentTerms}
+                  onCheckedChange={(v) => setConsentTerms(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Akceptuję{" "}
+                  <a
+                    href="/regulamin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-white underline underline-offset-2"
+                  >
+                    regulamin serwisu
+                  </a>
+                  . *
+                </span>
               </label>
               <label className="flex items-start gap-3 text-xs leading-relaxed text-white">
-                <Checkbox checked={consentMarketing} onCheckedChange={(v) => setConsentMarketing(v === true)}
-                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5" />
-                <span>Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert Finance You. *</span>
+                <Checkbox
+                  checked={consentMarketing}
+                  onCheckedChange={(v) => setConsentMarketing(v === true)}
+                  className="mt-0.5 h-6 w-6 border-white/60 data-[state=checked]:bg-white data-[state=checked]:text-foreground [&_svg]:size-5"
+                />
+                <span>
+                  Wyrażam zgodę na kontakt marketingowy (e-mail, SMS, telefon) w sprawie ofert
+                  Finance You. *
+                </span>
               </label>
             </div>
           </div>
@@ -524,18 +717,31 @@ export function LandingWizardForm() {
       {step === 4 && (
         <div id="landing-wizard-calc" className="space-y-4">
           <OfferCalculatorPanel
-            amount={amount} setAmount={setAmount}
-            months={months} setMonths={setMonths}
+            amount={amount}
+            setAmount={setAmount}
+            months={months}
+            setMonths={setMonths}
             maxMonths={maxMonths}
-            canExtend={canExtend} setCanExtend={setCanExtend}
-            annualRate={annualRate} setAnnualRate={setAnnualRate}
+            canExtend={canExtend}
+            setCanExtend={setCanExtend}
+            annualRate={annualRate}
+            setAnnualRate={setAnnualRate}
             rateTouchedRef={rateTouchedRef}
-            maxPayment={maxPayment} setMaxPayment={setMaxPayment}
+            maxPayment={maxPayment}
+            setMaxPayment={setMaxPayment}
             headerLabel="Twoja wstępna oferta"
             shellVariant="gold"
           />
 
-          <div className="rounded-2xl border-2 border-amber-300/60 bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/15 p-4 backdrop-blur-sm">
+          <div
+            className="rounded-2xl p-4 backdrop-blur-sm"
+            style={{
+              border: "1px solid oklch(0.82 0.13 85 / 0.35)",
+              background:
+                "linear-gradient(160deg, rgba(16, 25, 58, 0.72), oklch(0.82 0.13 85 / 0.08))",
+              boxShadow: "0 0 24px rgba(30, 90, 200, 0.25)",
+            }}
+          >
             <Button
               type="button"
               variant="cta"
@@ -545,13 +751,18 @@ export function LandingWizardForm() {
               className="w-full text-base"
             >
               {submitting ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…</>
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Wysyłam wniosek…
+                </>
               ) : (
-                <><Send className="mr-2 h-5 w-5" /> Złóż wniosek</>
+                <>
+                  <Send className="mr-2 h-5 w-5" /> Złóż wniosek
+                </>
               )}
             </Button>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności Finance You.
+              Złożenie wniosku jest darmowe i nie zobowiązuje. Akceptujesz politykę prywatności
+              Finance You.
             </p>
           </div>
         </div>
@@ -559,13 +770,32 @@ export function LandingWizardForm() {
 
       {/* Nawigacja */}
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:rounded-2xl md:border md:bg-card md:p-4">
-        <Button type="button" variant="outline" size="lg" onClick={goBack} disabled={step === 1 || submitting}>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={goBack}
+          disabled={step === 1 || submitting}
+        >
           <ChevronLeft className="mr-1 h-5 w-5" /> Wstecz
         </Button>
         {step < 4 && (
-          <Button type="button" variant="cta" size="lg" onClick={goNext}
-            className="ml-auto flex-1 text-base md:flex-none">
-            {step === 3 ? (<>Do kalkulatora <ChevronRight className="ml-1 h-5 w-5" /></>) : (<>Dalej <ChevronRight className="ml-1 h-5 w-5" /></>)}
+          <Button
+            type="button"
+            variant="cta"
+            size="lg"
+            onClick={goNext}
+            className="ml-auto flex-1 text-base md:flex-none"
+          >
+            {step === 3 ? (
+              <>
+                Do kalkulatora <ChevronRight className="ml-1 h-5 w-5" />
+              </>
+            ) : (
+              <>
+                Dalej <ChevronRight className="ml-1 h-5 w-5" />
+              </>
+            )}
           </Button>
         )}
       </div>

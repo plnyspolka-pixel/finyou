@@ -3,7 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useLandingEngagement } from "@/hooks/use-landing-engagement";
 
-type Section = { kind: string; heading: string; body?: string; items?: { title: string; text?: string }[] };
+type Section = {
+  kind: string;
+  heading: string;
+  body?: string;
+  items?: { title: string; text?: string }[];
+};
 type Variant = { id: string; label: string; weight: number; is_active: boolean; overrides: any };
 
 function pickVariant(landingId: string, variants: Variant[]): Variant | null {
@@ -21,7 +26,10 @@ function pickVariant(landingId: string, variants: Variant[]): Variant | null {
   let r = Math.random() * total;
   let chosen = active[0];
   for (const v of active) {
-    if (r < v.weight) { chosen = v; break; }
+    if (r < v.weight) {
+      chosen = v;
+      break;
+    }
     r -= v.weight;
   }
   if (typeof window !== "undefined") sessionStorage.setItem(key, chosen.id);
@@ -48,8 +56,11 @@ export function AiLandingView({
   const heroSub = ov.hero_subheadline ?? landing.hero_subheadline;
   const ctaLabel = ov.cta_label ?? landing.cta_label ?? "Złóż wniosek";
   const cta = ov.cta_url ?? landing.cta_url ?? "https://app.financeyou.pl/embed/wniosek";
-  const sections: Section[] = Array.isArray(ov.sections) ? ov.sections
-    : Array.isArray(landing.sections) ? landing.sections : [];
+  const sections: Section[] = Array.isArray(ov.sections)
+    ? ov.sections
+    : Array.isArray(landing.sections)
+      ? landing.sections
+      : [];
 
   useEffect(() => {
     if (recorded.current) return;
@@ -78,7 +89,9 @@ export function AiLandingView({
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">{heroHeadline}</h1>
           <p className="text-lg text-muted-foreground">{heroSub}</p>
           <Button size="lg" asChild onClick={onCtaClick} data-track="hero_cta">
-            <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{ctaLabel}</a>
+            <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">
+              {ctaLabel}
+            </a>
           </Button>
         </header>
 
@@ -92,7 +105,11 @@ export function AiLandingView({
                   {s.items.map((it, j) => (
                     <li key={j} className="rounded-lg border bg-card p-4">
                       <div className="font-medium">{it.title}</div>
-                      {it.text && <div className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{it.text}</div>}
+                      {it.text && (
+                        <div className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
+                          {it.text}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -100,7 +117,9 @@ export function AiLandingView({
               {s.kind === "cta" && (
                 <div className="pt-2">
                   <Button asChild onClick={onCtaClick} data-track={`section_cta_${i}`}>
-                    <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">{ctaLabel}</a>
+                    <a href={cta} target={embedded ? "_top" : "_self"} rel="noopener">
+                      {ctaLabel}
+                    </a>
                   </Button>
                 </div>
               )}

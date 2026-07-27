@@ -7,9 +7,8 @@ import { requireCronSecret } from "@/lib/cron-auth.server";
 async function run() {
   const out: any = {};
   try {
-    const { syncMessengerConversations, backfillGraphSyncAttachments } = await import(
-      "@/lib/messenger-sync.server"
-    );
+    const { syncMessengerConversations, backfillGraphSyncAttachments } =
+      await import("@/lib/messenger-sync.server");
     const sync = await syncMessengerConversations({
       platform: "both",
       maxConversationsPerPage: 200,
@@ -32,9 +31,7 @@ async function run() {
     out.error = String(e?.message ?? e);
   }
   try {
-    const { runScheduledMessengerBackfill } = await import(
-      "@/lib/messenger-backfill.server"
-    );
+    const { runScheduledMessengerBackfill } = await import("@/lib/messenger-backfill.server");
     out.backfill = await runScheduledMessengerBackfill();
   } catch (e: any) {
     out.backfillError = String(e?.message ?? e);

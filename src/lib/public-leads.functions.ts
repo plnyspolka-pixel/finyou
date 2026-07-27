@@ -55,7 +55,8 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
     global: {
       fetch: (input, init) => {
         const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
+        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
+          h.delete("Authorization");
         h.set("apikey", key);
         return fetch(input, { ...init, headers: h });
       },
@@ -63,8 +64,16 @@ export const fetchPublicLeads = createServerFn({ method: "GET" }).handler(async 
   });
   const { data, error } = await client
     .from("loan_applications")
-    .select("id, created_at, status, loan_amount, preferred_period_months, clients(first_name), properties(property_type, city, estimated_value, land_register_number)")
-    .in("status", ["szukamy_inwestora", "warunki_zaakceptowane", "dokumenty_przygotowanie_umowy", "notariusz", "zamkniete"])
+    .select(
+      "id, created_at, status, loan_amount, preferred_period_months, clients(first_name), properties(property_type, city, estimated_value, land_register_number)",
+    )
+    .in("status", [
+      "szukamy_inwestora",
+      "warunki_zaakceptowane",
+      "dokumenty_przygotowanie_umowy",
+      "notariusz",
+      "zamkniete",
+    ])
     .order("created_at", { ascending: false })
     .limit(80);
   if (error) throw new Error(error.message);

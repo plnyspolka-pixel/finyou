@@ -102,9 +102,7 @@ export const listClientProfiles = createServerFn({ method: "POST" })
 
 export const createProfileFromApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ applicationId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ applicationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: app, error } = await supabase
@@ -121,11 +119,26 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
     const setSrc = (k: string) => (fieldSources[k] = "Wniosek");
 
     const borrowerData: BorrowerData = {};
-    if (c.first_name) { borrowerData.firstName = c.first_name; setSrc("borrowerData.firstName"); }
-    if (c.last_name) { borrowerData.lastName = c.last_name; setSrc("borrowerData.lastName"); }
-    if (c.email) { borrowerData.email = c.email; setSrc("borrowerData.email"); }
-    if (c.phone) { borrowerData.phone = c.phone; setSrc("borrowerData.phone"); }
-    if ((app as any).nip) { borrowerData.nip = (app as any).nip; setSrc("borrowerData.nip"); }
+    if (c.first_name) {
+      borrowerData.firstName = c.first_name;
+      setSrc("borrowerData.firstName");
+    }
+    if (c.last_name) {
+      borrowerData.lastName = c.last_name;
+      setSrc("borrowerData.lastName");
+    }
+    if (c.email) {
+      borrowerData.email = c.email;
+      setSrc("borrowerData.email");
+    }
+    if (c.phone) {
+      borrowerData.phone = c.phone;
+      setSrc("borrowerData.phone");
+    }
+    if ((app as any).nip) {
+      borrowerData.nip = (app as any).nip;
+      setSrc("borrowerData.nip");
+    }
     if ((app as any).situation_description) {
       borrowerData.loanPurpose = (app as any).situation_description;
       setSrc("borrowerData.loanPurpose");
@@ -164,7 +177,8 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
     if (prop.land_register_number) fieldSources["propertyData.landRegisterNumber"] = "Wniosek";
     if (prop.estimated_value) fieldSources["propertyData.estimatedValue"] = "Wniosek";
     if ((app as any).loan_amount) fieldSources["offerData.netAmountToClient"] = "Wniosek";
-    if ((app as any).max_monthly_payment) fieldSources["offerData.maxMonthlyPaymentByClient"] = "Wniosek";
+    if ((app as any).max_monthly_payment)
+      fieldSources["offerData.maxMonthlyPaymentByClient"] = "Wniosek";
     if ((app as any).preferred_period_months) fieldSources["offerData.loanTermMonths"] = "Wniosek";
 
     // upsert
@@ -190,9 +204,7 @@ export const createProfileFromApplication = createServerFn({ method: "POST" })
 
 export const createProfileFromOffer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ offerId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ offerId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
@@ -238,7 +250,12 @@ export const createProfileFromOffer = createServerFn({ method: "POST" })
       ...(existingProfile?.fieldSources ?? {}),
     };
     const isManual = (path: string) => sources[path] === "Ręcznie";
-    const setIfAuto = <T,>(path: string, current: T | undefined, value: T | undefined, src: FieldSource): T | undefined => {
+    const setIfAuto = <T>(
+      path: string,
+      current: T | undefined,
+      value: T | undefined,
+      src: FieldSource,
+    ): T | undefined => {
       if (value === undefined || value === null || value === "") return current;
       if (isManual(path)) return current;
       sources[path] = src;
@@ -246,38 +263,114 @@ export const createProfileFromOffer = createServerFn({ method: "POST" })
     };
 
     const borrower = { ...(existingProfile?.borrowerData ?? {}) };
-    borrower.firstName = setIfAuto("borrowerData.firstName", borrower.firstName, c.first_name, "Wniosek");
-    borrower.lastName = setIfAuto("borrowerData.lastName", borrower.lastName, c.last_name, "Wniosek");
+    borrower.firstName = setIfAuto(
+      "borrowerData.firstName",
+      borrower.firstName,
+      c.first_name,
+      "Wniosek",
+    );
+    borrower.lastName = setIfAuto(
+      "borrowerData.lastName",
+      borrower.lastName,
+      c.last_name,
+      "Wniosek",
+    );
     borrower.email = setIfAuto("borrowerData.email", borrower.email, c.email, "Wniosek");
     borrower.phone = setIfAuto("borrowerData.phone", borrower.phone, c.phone, "Wniosek");
     borrower.nip = setIfAuto("borrowerData.nip", borrower.nip, app.nip, "Wniosek");
-    borrower.loanPurpose = setIfAuto("borrowerData.loanPurpose", borrower.loanPurpose, app.situation_description, "Wniosek");
+    borrower.loanPurpose = setIfAuto(
+      "borrowerData.loanPurpose",
+      borrower.loanPurpose,
+      app.situation_description,
+      "Wniosek",
+    );
 
     const property = { ...(existingProfile?.propertyData ?? {}) };
-    property.type = setIfAuto("propertyData.type", property.type, prop.property_type, "Wniosek") as any;
-    property.landRegisterNumber = setIfAuto("propertyData.landRegisterNumber", property.landRegisterNumber, prop.land_register_number, "Wniosek");
-    const propAddr = [prop.street, prop.city, prop.voivodeship].filter(Boolean).join(", ") || undefined;
+    property.type = setIfAuto(
+      "propertyData.type",
+      property.type,
+      prop.property_type,
+      "Wniosek",
+    ) as any;
+    property.landRegisterNumber = setIfAuto(
+      "propertyData.landRegisterNumber",
+      property.landRegisterNumber,
+      prop.land_register_number,
+      "Wniosek",
+    );
+    const propAddr =
+      [prop.street, prop.city, prop.voivodeship].filter(Boolean).join(", ") || undefined;
     property.address = setIfAuto("propertyData.address", property.address, propAddr, "Wniosek");
     property.city = setIfAuto("propertyData.city", property.city, prop.city, "Wniosek");
-    property.voivodeship = setIfAuto("propertyData.voivodeship", property.voivodeship, prop.voivodeship, "Wniosek");
-    property.estimatedValue = setIfAuto("propertyData.estimatedValue", property.estimatedValue, prop.estimated_value, "Wniosek");
+    property.voivodeship = setIfAuto(
+      "propertyData.voivodeship",
+      property.voivodeship,
+      prop.voivodeship,
+      "Wniosek",
+    );
+    property.estimatedValue = setIfAuto(
+      "propertyData.estimatedValue",
+      property.estimatedValue,
+      prop.estimated_value,
+      "Wniosek",
+    );
     property.hasExistingMortgage = property.hasExistingMortgage ?? !!prop.has_mortgage;
-    property.description = setIfAuto("propertyData.description", property.description, prop.description, "Wniosek");
+    property.description = setIfAuto(
+      "propertyData.description",
+      property.description,
+      prop.description,
+      "Wniosek",
+    );
     property.owner = property.owner ?? { isBorrower: true };
 
     const investorData = { ...(existingProfile?.investorData ?? {}) };
     const invFullName = `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim() || undefined;
-    investorData.fullName = setIfAuto("investorData.fullName", investorData.fullName, invFullName, "Wniosek");
-    investorData.companyName = setIfAuto("investorData.companyName", investorData.companyName, inv.company_name, "Wniosek");
+    investorData.fullName = setIfAuto(
+      "investorData.fullName",
+      investorData.fullName,
+      invFullName,
+      "Wniosek",
+    );
+    investorData.companyName = setIfAuto(
+      "investorData.companyName",
+      investorData.companyName,
+      inv.company_name,
+      "Wniosek",
+    );
     investorData.email = setIfAuto("investorData.email", investorData.email, inv.email, "Wniosek");
     investorData.phone = setIfAuto("investorData.phone", investorData.phone, inv.phone, "Wniosek");
 
     const offerData = { ...(existingProfile?.offerData ?? {}) };
-    offerData.netAmountToClient = setIfAuto("offerData.netAmountToClient", offerData.netAmountToClient, Number(offer.proposed_amount ?? app.loan_amount) || undefined, "Wniosek");
-    offerData.loanTermMonths = setIfAuto("offerData.loanTermMonths", offerData.loanTermMonths, offer.period_months ?? app.preferred_period_months, "Wniosek");
-    offerData.maxMonthlyPaymentByClient = setIfAuto("offerData.maxMonthlyPaymentByClient", offerData.maxMonthlyPaymentByClient, (app.max_monthly_payment ?? Number(offer.estimated_monthly_payment)) || undefined, "Wniosek");
-    offerData.annualInterestPercent = setIfAuto("offerData.annualInterestPercent", offerData.annualInterestPercent, Number(offer.expected_yearly_yield) || undefined, "Wniosek");
-    offerData.investorMonthlyReturnAmount = setIfAuto("offerData.investorMonthlyReturnAmount", offerData.investorMonthlyReturnAmount, Number(offer.estimated_monthly_payment) || undefined, "Wniosek");
+    offerData.netAmountToClient = setIfAuto(
+      "offerData.netAmountToClient",
+      offerData.netAmountToClient,
+      Number(offer.proposed_amount ?? app.loan_amount) || undefined,
+      "Wniosek",
+    );
+    offerData.loanTermMonths = setIfAuto(
+      "offerData.loanTermMonths",
+      offerData.loanTermMonths,
+      offer.period_months ?? app.preferred_period_months,
+      "Wniosek",
+    );
+    offerData.maxMonthlyPaymentByClient = setIfAuto(
+      "offerData.maxMonthlyPaymentByClient",
+      offerData.maxMonthlyPaymentByClient,
+      (app.max_monthly_payment ?? Number(offer.estimated_monthly_payment)) || undefined,
+      "Wniosek",
+    );
+    offerData.annualInterestPercent = setIfAuto(
+      "offerData.annualInterestPercent",
+      offerData.annualInterestPercent,
+      Number(offer.expected_yearly_yield) || undefined,
+      "Wniosek",
+    );
+    offerData.investorMonthlyReturnAmount = setIfAuto(
+      "offerData.investorMonthlyReturnAmount",
+      offerData.investorMonthlyReturnAmount,
+      Number(offer.estimated_monthly_payment) || undefined,
+      "Wniosek",
+    );
     offerData.investorMonthlyReturnType = offerData.investorMonthlyReturnType ?? "amount";
 
     const profile: ClientProfile = {
@@ -366,13 +459,17 @@ export type FetchCompanyResult =
 function formatCeidgAddress(a: any): string | undefined {
   if (!a) return undefined;
   if (typeof a === "string") return a;
-  const parts = [a.ulica, a.budynek, a.lokal ? `m. ${a.lokal}` : null, a.kod, a.miasto].filter(Boolean);
+  const parts = [a.ulica, a.budynek, a.lokal ? `m. ${a.lokal}` : null, a.kod, a.miasto].filter(
+    Boolean,
+  );
   return parts.join(" ").trim() || undefined;
 }
 
 function formatKrsAddress(a: any): string | undefined {
   if (!a) return undefined;
-  const street = [a.ulica, a.nr_domu, a.nr_lokalu ? `/${a.nr_lokalu}` : ""].filter(Boolean).join(" ");
+  const street = [a.ulica, a.nr_domu, a.nr_lokalu ? `/${a.nr_lokalu}` : ""]
+    .filter(Boolean)
+    .join(" ");
   const city = [a.kod_pocztowy, a.miejscowosc].filter(Boolean).join(" ");
   return [street, city, a.kraj].filter(Boolean).join(", ") || undefined;
 }
@@ -386,26 +483,37 @@ function makeStages(): Record<StageName, Stage> {
     "Mapowanie danych",
     "Zakończono",
   ];
-  return Object.fromEntries(names.map((n) => [n, { name: n, status: "oczekuje" as StageStatus }])) as Record<StageName, Stage>;
+  return Object.fromEntries(
+    names.map((n) => [n, { name: n, status: "oczekuje" as StageStatus }]),
+  ) as Record<StageName, Stage>;
 }
 
-async function ceidgLookup(nip: string): Promise<
+async function ceidgLookup(
+  nip: string,
+): Promise<
   | { kind: "jdg"; data: Partial<BorrowerData> }
   | { kind: "none" }
   | { kind: "error"; message: string; status?: number }
 > {
   const token = process.env.CEIDG_JWT_TOKEN;
   const base = process.env.CEIDG_API_BASE_URL || "https://dane.biznes.gov.pl/api/ceidg/v3";
-  if (!token) return { kind: "error", message: "Integracja CEIDG nie jest skonfigurowana (brak tokenu)." };
+  if (!token)
+    return { kind: "error", message: "Integracja CEIDG nie jest skonfigurowana (brak tokenu)." };
 
   const res = await fetch(`${base}/firmy?nip=${encodeURIComponent(nip)}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
   if (res.status === 204) return { kind: "none" };
   if (res.status === 401 || res.status === 403)
-    return { kind: "error", message: "Token CEIDG jest nieprawidłowy lub wygasł.", status: res.status };
-  if (res.status === 429) return { kind: "error", message: "Przekroczono limit zapytań do CEIDG.", status: 429 };
-  if (!res.ok) return { kind: "error", message: `Błąd CEIDG: HTTP ${res.status}`, status: res.status };
+    return {
+      kind: "error",
+      message: "Token CEIDG jest nieprawidłowy lub wygasł.",
+      status: res.status,
+    };
+  if (res.status === 429)
+    return { kind: "error", message: "Przekroczono limit zapytań do CEIDG.", status: 429 };
+  if (!res.ok)
+    return { kind: "error", message: `Błąd CEIDG: HTTP ${res.status}`, status: res.status };
 
   const json: any = await res.json().catch(() => null);
   const list: any[] = json?.firmy ?? json?.firma ?? (Array.isArray(json) ? json : []);
@@ -472,15 +580,18 @@ async function krsLookupByKrs(krs: string): Promise<Partial<BorrowerData> | null
         ? `${kapitalNode.wartosc ?? ""} ${kapitalNode.waluta ?? ""}`.trim()
         : undefined;
 
-      const reprPersons: Array<{ imie?: string; nazwisko?: string; funkcja?: string }> = (organ?.sklad ?? [])
-        .map((s: any) => ({
-          imie: s?.imiona?.imie ?? s?.imie,
-          nazwisko: s?.nazwisko,
-          funkcja: s?.funkcjaWOrganie,
-        }));
+      const reprPersons: Array<{ imie?: string; nazwisko?: string; funkcja?: string }> = (
+        organ?.sklad ?? []
+      ).map((s: any) => ({
+        imie: s?.imiona?.imie ?? s?.imie,
+        nazwisko: s?.nazwisko,
+        funkcja: s?.funkcjaWOrganie,
+      }));
 
       const reprText = reprPersons
-        .map((p) => [p.imie, p.nazwisko, p.funkcja ? `(${p.funkcja})` : ""].filter(Boolean).join(" "))
+        .map((p) =>
+          [p.imie, p.nazwisko, p.funkcja ? `(${p.funkcja})` : ""].filter(Boolean).join(" "),
+        )
         .filter(Boolean)
         .join("; ");
 
@@ -493,7 +604,9 @@ async function krsLookupByKrs(krs: string): Promise<Partial<BorrowerData> | null
         registeredAddress: formatKrsAddress(siedziba?.adres),
         businessStatus: dane?.dzial6?.likwidacja ? "w likwidacji" : "aktywny",
         shareCapital: kapital,
-        representationDescription: [repr?.sposobReprezentacji, reprText].filter(Boolean).join(" | "),
+        representationDescription: [repr?.sposobReprezentacji, reprText]
+          .filter(Boolean)
+          .join(" | "),
       };
     } catch {
       continue;
@@ -506,7 +619,9 @@ async function krsLookupByKrs(krs: string): Promise<Partial<BorrowerData> | null
  * Biała Lista MF — darmowe publiczne API. Po NIP zwraca nazwę, REGON, KRS, adres.
  * Działa bez klucza API.
  */
-async function bialaListaLookupByNip(nip: string): Promise<
+async function bialaListaLookupByNip(
+  nip: string,
+): Promise<
   | { kind: "found"; nazwa?: string; regon?: string; krs?: string; adres?: string }
   | { kind: "none" }
   | { kind: "error"; message: string }
@@ -537,8 +652,9 @@ async function bialaListaLookupByNip(nip: string): Promise<
  * Implementacja SOAP jest złożona; bez klucza zwracamy null żeby UI pokazało
  * jasny komunikat. Jeśli klucz jest, używamy najprostszego endpointu DaneSzukajPodmioty.
  */
-async function gusLookupByNip(nip: string): Promise<
-
+async function gusLookupByNip(
+  nip: string,
+): Promise<
   | { kind: "found"; regon?: string; krs?: string; nazwa?: string; typ?: string }
   | { kind: "not_configured" }
   | { kind: "none" }
@@ -548,7 +664,9 @@ async function gusLookupByNip(nip: string): Promise<
   if (!key) return { kind: "not_configured" };
 
   // GUS BIR1.1 SOAP — minimalny request DaneSzukajPodmioty
-  const base = process.env.GUS_BIR_API_URL || "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc";
+  const base =
+    process.env.GUS_BIR_API_URL ||
+    "https://wyszukiwarkaregon.stat.gov.pl/wsBIR/UslugaBIRzewnPubl.svc";
   try {
     // 1. Zaloguj
     const login = await fetch(base, {
@@ -581,7 +699,9 @@ async function gusLookupByNip(nip: string): Promise<
 </soap:Envelope>`,
     });
     const xml = await search.text();
-    const inner = xml.match(/<DaneSzukajPodmiotyResult>([\s\S]*?)<\/DaneSzukajPodmiotyResult>/)?.[1];
+    const inner = xml.match(
+      /<DaneSzukajPodmiotyResult>([\s\S]*?)<\/DaneSzukajPodmiotyResult>/,
+    )?.[1];
     if (!inner) return { kind: "none" };
     const decoded = inner.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
     const grab = (tag: string) => decoded.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1];
@@ -677,7 +797,8 @@ export const fetchCompanyByNip = createServerFn({ method: "POST" })
 
     if (gus.kind === "found") {
       stages["Sprawdzenie GUS/REGON"].status = "sukces";
-      stages["Sprawdzenie GUS/REGON"].message = `REGON: ${gus.regon ?? "—"}${gus.nazwa ? ` · ${gus.nazwa}` : ""}`;
+      stages["Sprawdzenie GUS/REGON"].message =
+        `REGON: ${gus.regon ?? "—"}${gus.nazwa ? ` · ${gus.nazwa}` : ""}`;
       gusData = { regon: gus.regon, companyName: gus.nazwa, nip };
       if (gus.krs) resolvedKrs = gus.krs;
     } else if (gus.kind === "not_configured") {
@@ -703,7 +824,8 @@ export const fetchCompanyByNip = createServerFn({ method: "POST" })
       if (!resolvedKrs && bl.krs) resolvedKrs = bl.krs;
       if (stages["Sprawdzenie GUS/REGON"].status !== "sukces") {
         stages["Sprawdzenie GUS/REGON"].status = "sukces";
-        stages["Sprawdzenie GUS/REGON"].message = `Biała Lista MF: ${bl.nazwa ?? ""}${bl.krs ? ` · KRS ${bl.krs}` : ""}`;
+        stages["Sprawdzenie GUS/REGON"].message =
+          `Biała Lista MF: ${bl.nazwa ?? ""}${bl.krs ? ` · KRS ${bl.krs}` : ""}`;
       }
     } else if (bl.kind === "error") {
       warnings.push(bl.message);
@@ -719,11 +841,13 @@ export const fetchCompanyByNip = createServerFn({ method: "POST" })
         stages["Sprawdzenie KRS/PRS"].status = "sukces";
       } else {
         stages["Sprawdzenie KRS/PRS"].status = "brak danych";
-        stages["Sprawdzenie KRS/PRS"].message = "Nie znaleziono odpisu w KRS/PRS dla podanego numeru.";
+        stages["Sprawdzenie KRS/PRS"].message =
+          "Nie znaleziono odpisu w KRS/PRS dla podanego numeru.";
       }
     } else {
       stages["Sprawdzenie KRS/PRS"].status = "pominięto";
-      stages["Sprawdzenie KRS/PRS"].message = "Brak numeru KRS — wpisz ręcznie aby pobrać reprezentację.";
+      stages["Sprawdzenie KRS/PRS"].message =
+        "Brak numeru KRS — wpisz ręcznie aby pobrać reprezentację.";
     }
 
     // 5. Mapowanie
@@ -740,7 +864,6 @@ export const fetchCompanyByNip = createServerFn({ method: "POST" })
     }
 
     if (Object.keys(merged).length === 0) {
-
       stages["Mapowanie danych"].status = "brak danych";
       stages["Zakończono"].status = "brak danych";
       return {
@@ -772,4 +895,3 @@ export const fetchCompanyByNip = createServerFn({ method: "POST" })
       stages: stageList(),
     };
   });
-

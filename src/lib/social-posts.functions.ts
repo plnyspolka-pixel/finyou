@@ -46,10 +46,7 @@ export const saveSocialPost = createServerFn({ method: "POST" })
       ai_model: row.ai_model || null,
     };
     if (id) {
-      const { error } = await context.supabase
-        .from("social_posts")
-        .update(payload)
-        .eq("id", id);
+      const { error } = await context.supabase.from("social_posts").update(payload).eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     }
@@ -66,10 +63,7 @@ export const deleteSocialPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("social_posts")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("social_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -84,7 +78,7 @@ export const generateSocialPost = createServerFn({ method: "POST" })
         campaign: z.string().max(120).optional(),
         tone: z.string().max(200).optional(),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { generateSocialContent } = await import("./social-posts.server");

@@ -8,7 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { getReminderSchedule, updateReminderSchedule, triggerReminderEmailsNow, sendFollowupSample } from "@/lib/reminder-schedule.functions";
+import {
+  getReminderSchedule,
+  updateReminderSchedule,
+  triggerReminderEmailsNow,
+  sendFollowupSample,
+} from "@/lib/reminder-schedule.functions";
 
 const PRESETS: Array<{ label: string; expr: string }> = [
   { label: "2× dziennie (8:00 i 20:00, pn–sob)", expr: "0 8,20 * * 1-6" },
@@ -35,11 +40,17 @@ export function ReminderScheduleCard() {
       setManualResult(res);
       const r = res?.result ?? {};
       if ((res?.activeVariants ?? 0) === 0) {
-        toast.error("W bazie NIE ma aktywnych szablonów (sekwencja pusta) — migracja seedująca nie weszła. Maile nie wyjdą.");
+        toast.error(
+          "W bazie NIE ma aktywnych szablonów (sekwencja pusta) — migracja seedująca nie weszła. Maile nie wyjdą.",
+        );
       } else if (r.ok === false) {
-        toast.warning(`Batch pominięty: ${r.skipped ?? "poza oknem"} (użyto force, więc to nie okno).`);
+        toast.warning(
+          `Batch pominięty: ${r.skipped ?? "poza oknem"} (użyto force, więc to nie okno).`,
+        );
       } else {
-        toast.success(`Tick wykonany: kandydaci ${r.candidates ?? 0}, wysłano ${r.sent ?? 0}, błędy ${r.errors ?? 0}.`);
+        toast.success(
+          `Tick wykonany: kandydaci ${r.candidates ?? 0}, wysłano ${r.sent ?? 0}, błędy ${r.errors ?? 0}.`,
+        );
       }
       qc.invalidateQueries({ queryKey: ["reminder-schedule"] });
     },
@@ -55,9 +66,16 @@ export function ReminderScheduleCard() {
       if (res?.sent > 0 && errs.length === 0) {
         toast.success(`Wysłano ${res.sent}/${res.total} szablonów na ${res.to}.`);
       } else if (res?.sent > 0) {
-        toast.warning(`Wysłano ${res.sent}/${res.total}. Błędy: ${errs.map((e: any) => e.error).join("; ").slice(0, 200)}`);
+        toast.warning(
+          `Wysłano ${res.sent}/${res.total}. Błędy: ${errs
+            .map((e: any) => e.error)
+            .join("; ")
+            .slice(0, 200)}`,
+        );
       } else {
-        toast.error(`Nie wysłano nic. Błąd: ${errs[0]?.error ?? "nieznany"} (najczęściej brak kluczy Resend na środowisku).`);
+        toast.error(
+          `Nie wysłano nic. Błąd: ${errs[0]?.error ?? "nieznany"} (najczęściej brak kluczy Resend na środowisku).`,
+        );
       }
     },
     onError: (e: any) => toast.error(e?.message ?? "Błąd wysyłki próbki"),
@@ -97,7 +115,8 @@ export function ReminderScheduleCard() {
         <div>
           <h2 className="text-lg font-semibold">Autopilot maili przypominających</h2>
           <p className="text-sm text-muted-foreground">
-            Sterowanie harmonogramem wysyłki sekwencji przypomnień. Cron uderza co minutę; tu decydujesz, kiedy faktycznie się wysyła.
+            Sterowanie harmonogramem wysyłki sekwencji przypomnień. Cron uderza co minutę; tu
+            decydujesz, kiedy faktycznie się wysyła.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -119,7 +138,9 @@ export function ReminderScheduleCard() {
       </div>
 
       <div className="rounded border p-3 space-y-2 bg-muted/20">
-        <div className="text-xs text-muted-foreground">Podgląd na e-mail — wyślij pierwsze 10 szablonów z bazy przypomnień na wskazany adres</div>
+        <div className="text-xs text-muted-foreground">
+          Podgląd na e-mail — wyślij pierwsze 10 szablonów z bazy przypomnień na wskazany adres
+        </div>
         <div className="flex gap-2 flex-wrap">
           <Input
             type="email"
@@ -138,10 +159,24 @@ export function ReminderScheduleCard() {
         <div className="rounded border p-3 text-sm bg-muted/30">
           <div className="text-xs text-muted-foreground mb-1">Wynik ręcznego ticka (force)</div>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <span>Aktywne szablony w bazie: <strong className={(manualResult.activeVariants ?? 0) === 0 ? "text-destructive" : ""}>{manualResult.activeVariants ?? 0}</strong>{(manualResult.activeVariants ?? 0) === 0 ? " (seed nie wszedł!)" : " / 120"}</span>
-            <span>Kandydaci: <strong>{manualResult.result?.candidates ?? 0}</strong></span>
-            <span>Wysłano: <strong>{manualResult.result?.sent ?? 0}</strong></span>
-            <span>Błędy: <strong>{manualResult.result?.errors ?? 0}</strong></span>
+            <span>
+              Aktywne szablony w bazie:{" "}
+              <strong
+                className={(manualResult.activeVariants ?? 0) === 0 ? "text-destructive" : ""}
+              >
+                {manualResult.activeVariants ?? 0}
+              </strong>
+              {(manualResult.activeVariants ?? 0) === 0 ? " (seed nie wszedł!)" : " / 120"}
+            </span>
+            <span>
+              Kandydaci: <strong>{manualResult.result?.candidates ?? 0}</strong>
+            </span>
+            <span>
+              Wysłano: <strong>{manualResult.result?.sent ?? 0}</strong>
+            </span>
+            <span>
+              Błędy: <strong>{manualResult.result?.errors ?? 0}</strong>
+            </span>
           </div>
         </div>
       )}
@@ -203,7 +238,9 @@ export function ReminderScheduleCard() {
               <span className="text-muted-foreground">— (sprawdź wyrażenie cron)</span>
             ) : (
               nextRuns.map((r) => (
-                <Badge key={r} variant="secondary">{fmt(r)}</Badge>
+                <Badge key={r} variant="secondary">
+                  {fmt(r)}
+                </Badge>
               ))
             )}
           </div>

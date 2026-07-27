@@ -72,10 +72,14 @@ export function FancyPageHeader({
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-1.5 text-sm text-white/75 break-words [overflow-wrap:anywhere] md:text-[15px]">{subtitle}</p>
+              <p className="mt-1.5 text-sm text-white/75 break-words [overflow-wrap:anywhere] md:text-[15px]">
+                {subtitle}
+              </p>
             )}
           </div>
-          {actions && <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">{actions}</div>}
+          {actions && (
+            <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">{actions}</div>
+          )}
         </div>
       </div>
       <style>{`

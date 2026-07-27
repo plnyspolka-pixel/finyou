@@ -14,14 +14,31 @@ function round(n: number): number {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 }
 
-export async function pickEntity(db: SupabaseClient, entityId?: string | null): Promise<any | null> {
+export async function pickEntity(
+  db: SupabaseClient,
+  entityId?: string | null,
+): Promise<any | null> {
   if (entityId) {
-    const { data } = await db.from("accounting_entities").select("*").eq("id", entityId).maybeSingle();
+    const { data } = await db
+      .from("accounting_entities")
+      .select("*")
+      .eq("id", entityId)
+      .maybeSingle();
     if (data) return data;
   }
-  const { data: def } = await db.from("accounting_entities").select("*").eq("is_default", true).eq("active", true).maybeSingle();
+  const { data: def } = await db
+    .from("accounting_entities")
+    .select("*")
+    .eq("is_default", true)
+    .eq("active", true)
+    .maybeSingle();
   if (def) return def;
-  const { data: any1 } = await db.from("accounting_entities").select("*").eq("active", true).limit(1).maybeSingle();
+  const { data: any1 } = await db
+    .from("accounting_entities")
+    .select("*")
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
   return any1 ?? null;
 }
 
@@ -49,7 +66,11 @@ export async function createInvoiceFromPayment(
   },
 ): Promise<{ invoiceId: string | null; deduped?: boolean; message?: string }> {
   // Deduplikacja po identyfikatorze płatności.
-  const { data: existing } = await db.from("sales_invoices").select("id").eq("payment_id", input.paymentId).maybeSingle();
+  const { data: existing } = await db
+    .from("sales_invoices")
+    .select("id")
+    .eq("payment_id", input.paymentId)
+    .maybeSingle();
   if (existing) return { invoiceId: (existing as any).id, deduped: true };
 
   const entity = await pickEntity(db, input.entityId);
@@ -98,7 +119,10 @@ export async function createInvoiceFromPayment(
     try {
       await issueSalesInvoice(db, invoiceId);
     } catch (e) {
-      await db.from("sales_invoices").update({ error_message: `Auto-wystawienie nie powiodło się: ${(e as Error).message}` }).eq("id", invoiceId);
+      await db
+        .from("sales_invoices")
+        .update({ error_message: `Auto-wystawienie nie powiodło się: ${(e as Error).message}` })
+        .eq("id", invoiceId);
     }
   }
   return { invoiceId };

@@ -27,21 +27,19 @@ export const addSubscriber = createServerFn({ method: "POST" })
         tags: z.array(z.string().min(1).max(60)).max(20).default([]),
         source: z.string().max(60).default("manual"),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("email_subscribers")
-      .upsert(
-        {
-          email: data.email.toLowerCase().trim(),
-          first_name: data.first_name ?? null,
-          last_name: data.last_name ?? null,
-          tags: data.tags,
-          source: data.source,
-        },
-        { onConflict: "email" }
-      );
+    const { error } = await context.supabase.from("email_subscribers").upsert(
+      {
+        email: data.email.toLowerCase().trim(),
+        first_name: data.first_name ?? null,
+        last_name: data.last_name ?? null,
+        tags: data.tags,
+        source: data.source,
+      },
+      { onConflict: "email" },
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -57,14 +55,11 @@ export const updateSubscriber = createServerFn({ method: "POST" })
         tags: z.array(z.string().min(1).max(60)).max(20).optional(),
         status: z.enum(["active", "unsubscribed", "bounced"]).optional(),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data;
-    const { error } = await context.supabase
-      .from("email_subscribers")
-      .update(patch)
-      .eq("id", id);
+    const { error } = await context.supabase.from("email_subscribers").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -73,10 +68,7 @@ export const deleteSubscriber = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("email_subscribers")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("email_subscribers").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -145,7 +137,7 @@ export const saveSegment = createServerFn({ method: "POST" })
           })
           .default({}),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { resolveSegmentRecipients } = await import("./email-marketing.server");
@@ -157,10 +149,7 @@ export const saveSegment = createServerFn({ method: "POST" })
       subscriber_count: recipients.length,
     };
     if (data.id) {
-      const { error } = await context.supabase
-        .from("email_segments")
-        .update(row)
-        .eq("id", data.id);
+      const { error } = await context.supabase.from("email_segments").update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id, count: recipients.length };
     }
@@ -177,10 +166,7 @@ export const deleteSegment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("email_segments")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("email_segments").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -216,7 +202,7 @@ export const saveCampaign = createServerFn({ method: "POST" })
         segment_id: z.string().uuid().nullable().optional(),
         ai_brief: z.string().max(4000).optional(),
       })
-      .parse(d)
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const row = {
@@ -254,10 +240,7 @@ export const deleteCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("email_campaigns")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("email_campaigns").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -273,7 +256,9 @@ export const generateCampaignCopy = createServerFn({ method: "POST" })
 export const sendCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ campaign_id: z.string().uuid(), test_email: z.string().email().optional() }).parse(d)
+    z
+      .object({ campaign_id: z.string().uuid(), test_email: z.string().email().optional() })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { resolveSegmentRecipients, sendViaResend } = await import("./email-marketing.server");
@@ -293,13 +278,21 @@ export const sendCampaign = createServerFn({ method: "POST" })
         subject: `[TEST] ${campaign.subject}`,
         html: campaign.html_body,
         reply_to: campaign.reply_to ?? undefined,
-        tags: [{ name: "campaign", value: data.campaign_id }, { name: "mode", value: "test" }],
+        tags: [
+          { name: "campaign", value: data.campaign_id },
+          { name: "mode", value: "test" },
+        ],
       });
       return { sent: 1, mode: "test" };
     }
 
     // Audiencja: z segmentu lub wszyscy aktywni
-    let recipients: Array<{ id: string; email: string; first_name: string | null; last_name: string | null }>;
+    let recipients: Array<{
+      id: string;
+      email: string;
+      first_name: string | null;
+      last_name: string | null;
+    }>;
     if (campaign.segment_id) {
       const { data: seg, error: sErr } = await context.supabase
         .from("email_segments")

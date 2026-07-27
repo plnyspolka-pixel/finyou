@@ -20,11 +20,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import type { ClientProfile } from "@/lib/client-profile-types";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
-import {
-  buildUmowaData,
-  profileToCalcPayload,
-  type BuildUmowaOptions,
-} from "./profile-to-umowa";
+import { buildUmowaData, profileToCalcPayload, type BuildUmowaOptions } from "./profile-to-umowa";
 import { waliduj } from "./validator";
 import { walidujHarmonogram } from "./schedule";
 import { renderuj } from "./renderer";
@@ -155,7 +151,9 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
     }
 
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
-    const nazwa = (umowa.meta?.numer_umowy || "umowa-pozyczki").replace(/[^\p{L}\p{N}._-]+/gu, "_").slice(0, 60);
+    const nazwa = (umowa.meta?.numer_umowy || "umowa-pozyczki")
+      .replace(/[^\p{L}\p{N}._-]+/gu, "_")
+      .slice(0, 60);
     const outPath = `generated/${userId}/${ts}_${nazwa}.docx`;
 
     const { error: upErr } = await supabase.storage.from(CLIENT_FILES_BUCKET).upload(
@@ -170,9 +168,11 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
     // Wpis do rejestru dokumentów — best-effort (nie blokuje wyniku, gdy schemat
     // wymaga innych pól niż przy generacji z wzoru).
     try {
+      // Tabela nie ma kolumny client_profile_id — powiązanie z profilem
+      // trafia do form_data (Json), inaczej insert jest odrzucany.
       await supabase.from("generated_documents").insert({
         template_name: "Umowa pożyczki (silnik klauzul)",
-        client_profile_id: data.profileId,
+        form_data: { client_profile_id: data.profileId },
         docx_path: outPath,
         file_size_bytes: bytes.length,
         created_by: userId,

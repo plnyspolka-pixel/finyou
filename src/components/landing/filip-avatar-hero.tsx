@@ -128,8 +128,8 @@ export function FilipAvatarHero() {
             Cześć, jestem Filip — założyciel Finance You.
           </h2>
           <p className="mt-3 max-w-xl text-white/80">
-            Kliknij pytanie, a odpowiem Ci osobiście. Jeśli chcesz od razu zacząć —
-            wypełnij wniosek poniżej.
+            Kliknij pytanie, a odpowiem Ci osobiście. Jeśli chcesz od razu zacząć — wypełnij wniosek
+            poniżej.
           </p>
 
           {questions.length > 0 && (

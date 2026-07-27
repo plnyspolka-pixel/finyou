@@ -32,20 +32,32 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-opt-out")({
         try {
           body = await request.json();
         } catch {
-          return new Response(JSON.stringify({ ok: false, error: "invalid_json" }), { status: 400 });
+          return new Response(JSON.stringify({ ok: false, error: "invalid_json" }), {
+            status: 400,
+          });
         }
 
         const phone = typeof body.phone === "string" ? body.phone.trim() : null;
         const clientId = typeof body.client_id === "string" ? body.client_id : null;
-        const loanId = typeof body.loan_application_id === "string" ? body.loan_application_id : null;
-        const reason = typeof body.reason === "string" ? body.reason.slice(0, 500) : "Klient poprosił agenta o usunięcie numeru / zaniechanie przypomnień.";
-        const source = typeof body.source === "string" ? body.source.slice(0, 100) : "elevenlabs_agent";
+        const loanId =
+          typeof body.loan_application_id === "string" ? body.loan_application_id : null;
+        const reason =
+          typeof body.reason === "string"
+            ? body.reason.slice(0, 500)
+            : "Klient poprosił agenta o usunięcie numeru / zaniechanie przypomnień.";
+        const source =
+          typeof body.source === "string" ? body.source.slice(0, 100) : "elevenlabs_agent";
 
         if (!phone && !clientId && !loanId) {
-          return new Response(JSON.stringify({ ok: false, error: "missing_identifier" }), { status: 400 });
+          return new Response(JSON.stringify({ ok: false, error: "missing_identifier" }), {
+            status: 400,
+          });
         }
 
-        const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+        const supabase = createClient(
+          process.env.SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        );
 
         // 1. Znajdź klientów do oznaczenia.
         const clientIds = new Set<string>();
@@ -74,7 +86,11 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-opt-out")({
 
         if (clientIds.size === 0) {
           return new Response(
-            JSON.stringify({ ok: true, matched: 0, hint: "Nie znaleziono klienta po podanych danych." }),
+            JSON.stringify({
+              ok: true,
+              matched: 0,
+              hint: "Nie znaleziono klienta po podanych danych.",
+            }),
             { headers: { "content-type": "application/json" } },
           );
         }

@@ -113,8 +113,14 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-inbound")({
             if (recent?.id) {
               alreadyExists = true;
               if (conversationId) {
-                const appData = { ...(recent.application_data as any || {}), elevenlabs_conversation_id: conversationId };
-                await supabase.from("leads").update({ application_data: appData }).eq("id", recent.id);
+                const appData = {
+                  ...((recent.application_data as any) || {}),
+                  elevenlabs_conversation_id: conversationId,
+                };
+                await supabase
+                  .from("leads")
+                  .update({ application_data: appData })
+                  .eq("id", recent.id);
               }
             }
           }
@@ -181,8 +187,7 @@ export const Route = createFileRoute("/api/public/hooks/voicebot-inbound")({
       GET: async () =>
         Response.json({
           ok: true,
-          hint:
-            "POST { caller_id } z nagłówkiem x-webhook-secret. Zwraca dynamic_variables dla agenta inbound.",
+          hint: "POST { caller_id } z nagłówkiem x-webhook-secret. Zwraca dynamic_variables dla agenta inbound.",
           known_statuses: Object.keys(LOAN_STATUS_LABELS),
         }),
     },

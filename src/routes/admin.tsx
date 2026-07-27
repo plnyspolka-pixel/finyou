@@ -2,7 +2,44 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, FileText, FolderOpen, PhoneCall, Briefcase, Send, Tag, Plug, Settings, LogOut, ShieldCheck, Mic, GraduationCap, Code2, Wand2, Receipt, BookOpen, Facebook, Mail, Search, Sparkles, Link2, TrendingDown, Eye, Bot, FileCheck, Menu, FileSignature, Image as ImageIcon, Network, Coins, Share2, Wallet, Building2, MapPinned } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  FolderOpen,
+  PhoneCall,
+  Briefcase,
+  Send,
+  Tag,
+  Plug,
+  Settings,
+  LogOut,
+  ShieldCheck,
+  Mic,
+  GraduationCap,
+  Code2,
+  Wand2,
+  Receipt,
+  BookOpen,
+  Facebook,
+  Mail,
+  Search,
+  Sparkles,
+  Link2,
+  TrendingDown,
+  Eye,
+  Bot,
+  FileCheck,
+  Menu,
+  FileSignature,
+  Image as ImageIcon,
+  Network,
+  Coins,
+  Share2,
+  Wallet,
+  Building2,
+  MapPinned,
+} from "lucide-react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -52,8 +89,16 @@ const groups: Group[] = [
       { to: "/admin/program-posrednikow/zdarzenia", label: "Zdarzenia prowizyjne", icon: Send },
       { to: "/admin/program-posrednikow/prowizje", label: "Prowizje", icon: Coins },
       { to: "/admin/program-posrednikow/wyplaty", label: "Paczki wypłat", icon: Wallet },
-      { to: "/admin/program-posrednikow/rozliczenia", label: "Rozliczenia B2B / nierejestrowana", icon: FileCheck },
-      { to: "/admin/program-posrednikow/ustawienia", label: "Stawki, limity, reguły", icon: Settings },
+      {
+        to: "/admin/program-posrednikow/rozliczenia",
+        label: "Rozliczenia B2B / nierejestrowana",
+        icon: FileCheck,
+      },
+      {
+        to: "/admin/program-posrednikow/ustawienia",
+        label: "Stawki, limity, reguły",
+        icon: Settings,
+      },
     ],
   },
   {
@@ -91,7 +136,6 @@ const groups: Group[] = [
   {
     label: "Konfiguracja",
     items: [
-      
       { to: "/admin/embed", label: "Wniosek do osadzenia", icon: Code2 },
       { to: "/admin/integracje", label: "Integracje", icon: Plug },
       { to: "/admin/role", label: "Role użytkowników", icon: ShieldCheck },
@@ -110,7 +154,11 @@ const accountingGroups: Group[] = [
     items: [
       { to: "/admin/ksiegowosc/faktury", label: "Faktury sprzedaży", icon: FileText },
       { to: "/admin/ksiegowosc/podmioty", label: "Podmioty gospodarcze", icon: Building2 },
-      { to: "/admin/program-posrednikow/rozliczenia", label: "Rozliczenia B2B / nierejestrowana", icon: FileCheck },
+      {
+        to: "/admin/program-posrednikow/rozliczenia",
+        label: "Rozliczenia B2B / nierejestrowana",
+        icon: FileCheck,
+      },
     ],
   },
 ];
@@ -124,7 +172,6 @@ function AdminLayout() {
       title={isStaff ? "Panel administratora" : "Panel księgowości"}
       allow={["administrator", "ksiegowosc"]}
       groups={isStaff ? groups : isAccountant ? accountingGroups : groups}
-      
     />
   );
 }

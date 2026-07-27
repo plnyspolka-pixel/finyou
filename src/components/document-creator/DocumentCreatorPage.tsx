@@ -164,7 +164,9 @@ export function DocumentCreatorPage() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState(false);
   // Harmonogram wczytany z PDF kalkulatora → wstawiany jako tabela w [HARMONOGRAM].
-  const [importedSchedule, setImportedSchedule] = useState<LoanCalcPayload["schedule"] | null>(null);
+  const [importedSchedule, setImportedSchedule] = useState<LoanCalcPayload["schedule"] | null>(
+    null,
+  );
   const [handoffReady, setHandoffReady] = useState(false);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
@@ -359,7 +361,9 @@ export function DocumentCreatorPage() {
         else
           toast.success(
             `Wczytano dane z ${source === "app" ? "kalkulatora" : "PDF"} do ${count} pól.` +
-              (p.schedule?.length ? ` Harmonogram (${p.schedule.length} rat) wstawię w [HARMONOGRAM].` : ""),
+              (p.schedule?.length
+                ? ` Harmonogram (${p.schedule.length} rat) wstawię w [HARMONOGRAM].`
+                : ""),
           );
         return { ...v, ...mapped };
       });
@@ -383,7 +387,9 @@ export function DocumentCreatorPage() {
         const buf = await file.arrayBuffer();
         const payload = extractLoanCalcPayload(buf);
         if (!payload) {
-          toast.error("To nie jest PDF z kalkulatora Finance You — brak danych do odczytu.", { id: t });
+          toast.error("To nie jest PDF z kalkulatora Finance You — brak danych do odczytu.", {
+            id: t,
+          });
           return;
         }
         applyCalcPayload(payload, "pdf");
@@ -697,13 +703,15 @@ export function DocumentCreatorPage() {
                     </p>
                     {handoffReady && !importedSchedule && (
                       <p className="text-[11px] text-primary mt-0.5 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" /> Wykryto kalkulację z kalkulatora — kliknij „Wczytaj z kalkulatora”.
+                        <Sparkles className="h-3 w-3" /> Wykryto kalkulację z kalkulatora — kliknij
+                        „Wczytaj z kalkulatora”.
                       </p>
                     )}
                     {importedSchedule && (
                       <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Wczytano harmonogram: {importedSchedule.length}{" "}
-                        rat — zostanie wstawiony w miejsce <code className="rounded bg-muted px-1">[HARMONOGRAM]</code>.
+                        <CheckCircle2 className="h-3 w-3" /> Wczytano harmonogram:{" "}
+                        {importedSchedule.length} rat — zostanie wstawiony w miejsce{" "}
+                        <code className="rounded bg-muted px-1">[HARMONOGRAM]</code>.
                       </p>
                     )}
                   </div>
@@ -719,10 +727,18 @@ export function DocumentCreatorPage() {
                         if (pdfInputRef.current) pdfInputRef.current.value = "";
                       }}
                     />
-                    <Button variant="outline" size="sm" onClick={() => pdfInputRef.current?.click()}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pdfInputRef.current?.click()}
+                    >
                       <Upload className="mr-2 h-4 w-4" /> Z PDF
                     </Button>
-                    <Button onClick={loadFromCalculator} disabled={!handoffReady} className="shrink-0">
+                    <Button
+                      onClick={loadFromCalculator}
+                      disabled={!handoffReady}
+                      className="shrink-0"
+                    >
                       <Calculator className="mr-2 h-4 w-4" /> Wczytaj z kalkulatora
                     </Button>
                   </div>
@@ -920,7 +936,11 @@ export function DocumentCreatorPage() {
                       <p className="font-medium text-destructive">Nie można wczytać wzoru</p>
                       <p className="text-muted-foreground">{previewError}</p>
                       <p className="text-xs text-muted-foreground">
-                        Wgraj plik .docx w <a href="/admin/dokumenty" className="underline">/admin/dokumenty</a> (przycisk „Wgraj/Zamień .docx" na karcie tego wzoru).
+                        Wgraj plik .docx w{" "}
+                        <a href="/admin/dokumenty" className="underline">
+                          /admin/dokumenty
+                        </a>{" "}
+                        (przycisk „Wgraj/Zamień .docx" na karcie tego wzoru).
                       </p>
                     </div>
                   ) : (

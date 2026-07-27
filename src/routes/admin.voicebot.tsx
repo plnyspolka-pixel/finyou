@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getVoicebotSettings,
@@ -20,15 +26,23 @@ import {
 } from "@/lib/voicebot.functions";
 import { syncAndPullMetaLeads } from "@/lib/meta-leads-sync.functions";
 import { toast } from "sonner";
-import { Phone, RefreshCw, PhoneCall, Save, MessageSquare, Megaphone, DownloadCloud, Search, Sparkles } from "lucide-react";
+import {
+  Phone,
+  RefreshCw,
+  PhoneCall,
+  Save,
+  MessageSquare,
+  Megaphone,
+  DownloadCloud,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { VoicebotConversationCard } from "@/components/admin/VoicebotConversationCard";
 import { VoicebotStats } from "@/components/admin/VoicebotStats";
-
 
 export const Route = createFileRoute("/admin/voicebot")({
   component: VoicebotAdmin,
 });
-
 
 function VoicebotAdmin() {
   const [rows, setRows] = useState<any[]>([]);
@@ -71,7 +85,10 @@ function VoicebotAdmin() {
   const loadQueue = async () => {
     setLoading(true);
     try {
-      const dateFrom = days === "all" ? undefined : new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000).toISOString();
+      const dateFrom =
+        days === "all"
+          ? undefined
+          : new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000).toISOString();
       const data: any = await listConv({
         data: {
           status: filterStatus,
@@ -94,7 +111,10 @@ function VoicebotAdmin() {
     const tid = toast.loading("Odświeżam dane rozmów z ElevenLabs…");
     try {
       const r: any = await enrichPending();
-      toast.success("Zaktualizowano rozmowy", { id: tid, description: `Sprawdzono ${r.checked}, zaktualizowano ${r.updated}${r.errors?.length ? `, błędów ${r.errors.length}` : ""}` });
+      toast.success("Zaktualizowano rozmowy", {
+        id: tid,
+        description: `Sprawdzono ${r.checked}, zaktualizowano ${r.updated}${r.errors?.length ? `, błędów ${r.errors.length}` : ""}`,
+      });
       void loadQueue();
     } catch (e: any) {
       toast.error("Błąd odświeżania", { id: tid, description: e?.message });
@@ -113,20 +133,24 @@ function VoicebotAdmin() {
 
   const toggleFormVoicebot = async (id: string, value: boolean) => {
     setForms((prev) => prev.map((f) => (f.id === id ? { ...f, voicebot_enabled: value } : f)));
-    const { error } = await supabase.from("meta_lead_forms").update({ voicebot_enabled: value }).eq("id", id);
+    const { error } = await supabase
+      .from("meta_lead_forms")
+      .update({ voicebot_enabled: value })
+      .eq("id", id);
     if (error) {
       toast.error("Nie udało się zapisać", { description: error.message });
       void loadForms();
     }
   };
 
-
   useEffect(() => {
     void loadQueue();
     void loadForms();
-    fetchSettings().then((s) => {
-      if (s) setSettings({ ...settings, ...s });
-    }).catch(() => {});
+    fetchSettings()
+      .then((s) => {
+        if (s) setSettings({ ...settings, ...s });
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -184,7 +208,6 @@ function VoicebotAdmin() {
     }
   };
 
-
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
@@ -195,29 +218,48 @@ function VoicebotAdmin() {
           </p>
         </div>
         <Button variant="outline" onClick={() => void loadQueue()} disabled={loading}>
-          <RefreshCw className="mr-2 h-4 w-4" />Odśwież
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Odśwież
         </Button>
       </div>
 
       {/* KONFIGURACJA AGENTA */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><PhoneCall className="h-5 w-5" />Konfiguracja agenta</CardTitle>
-          <CardDescription>ID agenta i numeru z panelu ElevenLabs → Conversational AI.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <PhoneCall className="h-5 w-5" />
+            Konfiguracja agenta
+          </CardTitle>
+          <CardDescription>
+            ID agenta i numeru z panelu ElevenLabs → Conversational AI.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div>
             <Label>Agent ID</Label>
-            <Input value={settings.agent_id ?? ""} onChange={(e) => setSettings({ ...settings, agent_id: e.target.value })} placeholder="agent_..." />
+            <Input
+              value={settings.agent_id ?? ""}
+              onChange={(e) => setSettings({ ...settings, agent_id: e.target.value })}
+              placeholder="agent_..."
+            />
           </div>
           <div>
             <Label>Agent Phone Number ID</Label>
-            <Input value={settings.agent_phone_number_id ?? ""} onChange={(e) => setSettings({ ...settings, agent_phone_number_id: e.target.value })} placeholder="phnum_..." />
+            <Input
+              value={settings.agent_phone_number_id ?? ""}
+              onChange={(e) => setSettings({ ...settings, agent_phone_number_id: e.target.value })}
+              placeholder="phnum_..."
+            />
           </div>
           <div>
             <Label>Tryb wyzwalania połączeń</Label>
-            <Select value={settings.call_trigger} onValueChange={(v) => setSettings({ ...settings, call_trigger: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={settings.call_trigger}
+              onValueChange={(v) => setSettings({ ...settings, call_trigger: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="auto">Auto — od razu po zapisaniu leada</SelectItem>
                 <SelectItem value="auto_retry">Auto + ponawianie przy nieodebraniu</SelectItem>
@@ -227,15 +269,35 @@ function VoicebotAdmin() {
           </div>
           <div>
             <Label>Opóźnienie połączenia (s)</Label>
-            <Input type="number" min={0} value={settings.call_delay_seconds ?? 0} onChange={(e) => setSettings({ ...settings, call_delay_seconds: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              value={settings.call_delay_seconds ?? 0}
+              onChange={(e) =>
+                setSettings({ ...settings, call_delay_seconds: Number(e.target.value) })
+              }
+            />
           </div>
           <div>
             <Label>Liczba ponowień</Label>
-            <Input type="number" min={0} max={10} value={settings.retry_count ?? 1} onChange={(e) => setSettings({ ...settings, retry_count: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              value={settings.retry_count ?? 1}
+              onChange={(e) => setSettings({ ...settings, retry_count: Number(e.target.value) })}
+            />
           </div>
           <div>
             <Label>Odstęp ponowienia (min)</Label>
-            <Input type="number" min={1} value={settings.retry_delay_minutes ?? 30} onChange={(e) => setSettings({ ...settings, retry_delay_minutes: Number(e.target.value) })} />
+            <Input
+              type="number"
+              min={1}
+              value={settings.retry_delay_minutes ?? 30}
+              onChange={(e) =>
+                setSettings({ ...settings, retry_delay_minutes: Number(e.target.value) })
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -243,22 +305,33 @@ function VoicebotAdmin() {
       {/* SMS */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5" />SMS do leada</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            SMS do leada
+          </CardTitle>
           <CardDescription>
-            Wysyłka SMS przed/po rozmowie. Wymaga podłączenia Twilio w Konektorach.
-            Zmienne: <code>{"{imie}"}</code>, <code>{"{telefon}"}</code>.
+            Wysyłka SMS przed/po rozmowie. Wymaga podłączenia Twilio w Konektorach. Zmienne:{" "}
+            <code>{"{imie}"}</code>, <code>{"{telefon}"}</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
-            <Switch checked={!!settings.sms_enabled} onCheckedChange={(b) => setSettings({ ...settings, sms_enabled: b })} />
+            <Switch
+              checked={!!settings.sms_enabled}
+              onCheckedChange={(b) => setSettings({ ...settings, sms_enabled: b })}
+            />
             <Label>Włącz wysyłkę SMS</Label>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label>Kiedy wysyłać</Label>
-              <Select value={settings.sms_trigger} onValueChange={(v) => setSettings({ ...settings, sms_trigger: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={settings.sms_trigger}
+                onValueChange={(v) => setSettings({ ...settings, sms_trigger: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="off">Wyłączone</SelectItem>
                   <SelectItem value="before_call">Przed połączeniem</SelectItem>
@@ -269,38 +342,71 @@ function VoicebotAdmin() {
             </div>
             <div>
               <Label>Nadawca (alfanumeryczny lub +48...)</Label>
-              <Input value={settings.sms_from ?? ""} onChange={(e) => setSettings({ ...settings, sms_from: e.target.value })} placeholder="+48... lub FinanceYou" />
-              <p className="text-xs text-muted-foreground mt-1">Numer Twilio w formacie E.164 (np. +48123456789) lub zarejestrowany Alphanumeric Sender ID.</p>
+              <Input
+                value={settings.sms_from ?? ""}
+                onChange={(e) => setSettings({ ...settings, sms_from: e.target.value })}
+                placeholder="+48... lub FinanceYou"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Numer Twilio w formacie E.164 (np. +48123456789) lub zarejestrowany Alphanumeric
+                Sender ID.
+              </p>
             </div>
             <div>
               <Label>Opóźnienie SMS (s)</Label>
-              <Input type="number" min={0} value={settings.sms_delay_seconds ?? 0} onChange={(e) => setSettings({ ...settings, sms_delay_seconds: Number(e.target.value) })} />
+              <Input
+                type="number"
+                min={0}
+                value={settings.sms_delay_seconds ?? 0}
+                onChange={(e) =>
+                  setSettings({ ...settings, sms_delay_seconds: Number(e.target.value) })
+                }
+              />
             </div>
           </div>
           <div>
             <Label>Treść SMS</Label>
-            <Textarea rows={3} value={settings.sms_template ?? ""} onChange={(e) => setSettings({ ...settings, sms_template: e.target.value })} />
+            <Textarea
+              rows={3}
+              value={settings.sms_template ?? ""}
+              onChange={(e) => setSettings({ ...settings, sms_template: e.target.value })}
+            />
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}><Save className="mr-2 h-4 w-4" />Zapisz ustawienia</Button>
+        <Button onClick={handleSave} disabled={saving}>
+          <Save className="mr-2 h-4 w-4" />
+          Zapisz ustawienia
+        </Button>
       </div>
 
       {/* TEST */}
       <Card>
         <CardHeader>
           <CardTitle>Test połączenia</CardTitle>
-          <CardDescription>Wykonaj testowe wywołanie agentem Ania, aby zweryfikować konfigurację.</CardDescription>
+          <CardDescription>
+            Wykonaj testowe wywołanie agentem Ania, aby zweryfikować konfigurację.
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
-          <Input placeholder="+48..." value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
+          <Input
+            placeholder="+48..."
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+          />
           <Button onClick={handleTest} disabled={testing || !settings.agent_id}>
-            <Phone className="mr-2 h-4 w-4" />{testing ? "Dzwonię..." : "Zadzwoń teraz"}
+            <Phone className="mr-2 h-4 w-4" />
+            {testing ? "Dzwonię..." : "Zadzwoń teraz"}
           </Button>
-          <Button variant="outline" onClick={handleTestSms} disabled={testing || !settings.sms_from}>
-            <MessageSquare className="mr-2 h-4 w-4" />Wyślij testowy SMS
+          <Button
+            variant="outline"
+            onClick={handleTestSms}
+            disabled={testing || !settings.sms_from}
+          >
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Wyślij testowy SMS
           </Button>
         </CardContent>
       </Card>
@@ -309,12 +415,16 @@ function VoicebotAdmin() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div>
-            <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />Formularze Meta — do których dzwonić</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Formularze Meta — do których dzwonić
+            </CardTitle>
             <CardDescription>
-              Włącz przełącznik dla formularzy błyskawicznych, z których Ania ma automatycznie dzwonić do leadów.
-              Przycisk „Pobierz z Meta" odkrywa formularze ze stron, do których mamy dostęp, i ściąga nowe leady (od ostatniego pobrania)
-              — od razu zapisuje klienta, tworzy wniosek z linkiem powrotu, wysyła SMS/email i — jeśli tryb wyzwalania ≠ ręczny — zleca rozmowę Ani.
-              Nie musisz czekać na webhook.
+              Włącz przełącznik dla formularzy błyskawicznych, z których Ania ma automatycznie
+              dzwonić do leadów. Przycisk „Pobierz z Meta" odkrywa formularze ze stron, do których
+              mamy dostęp, i ściąga nowe leady (od ostatniego pobrania) — od razu zapisuje klienta,
+              tworzy wniosek z linkiem powrotu, wysyła SMS/email i — jeśli tryb wyzwalania ≠ ręczny
+              — zleca rozmowę Ani. Nie musisz czekać na webhook.
             </CardDescription>
           </div>
           <Button
@@ -334,25 +444,36 @@ function VoicebotAdmin() {
               }
             }}
           >
-            <DownloadCloud className="mr-2 h-4 w-4" />Pobierz z Meta
+            <DownloadCloud className="mr-2 h-4 w-4" />
+            Pobierz z Meta
           </Button>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {forms.map((f) => (
-              <div key={f.id} className="flex items-center justify-between border rounded-md p-3 text-sm">
+              <div
+                key={f.id}
+                className="flex items-center justify-between border rounded-md p-3 text-sm"
+              >
                 <div className="min-w-0">
-                  <div className="font-medium truncate">{f.form_name || `Formularz ${f.meta_form_id}`}</div>
+                  <div className="font-medium truncate">
+                    {f.form_name || `Formularz ${f.meta_form_id}`}
+                  </div>
                   <div className="text-muted-foreground text-xs">
                     ID: <code>{f.meta_form_id}</code>
                     {f.page_name && <> • {f.page_name}</>}
                     {f.last_lead_at && <> • Ostatni lead: {formatDateTime(f.last_lead_at)}</>}
-                    {typeof f.total_leads_pulled === "number" && <> • Leadów: {f.total_leads_pulled}</>}
+                    {typeof f.total_leads_pulled === "number" && (
+                      <> • Leadów: {f.total_leads_pulled}</>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Label className="text-xs text-muted-foreground">Ania dzwoni</Label>
-                  <Switch checked={!!f.voicebot_enabled} onCheckedChange={(b) => void toggleFormVoicebot(f.id, b)} />
+                  <Switch
+                    checked={!!f.voicebot_enabled}
+                    onCheckedChange={(b) => void toggleFormVoicebot(f.id, b)}
+                  />
                 </div>
               </div>
             ))}
@@ -374,8 +495,14 @@ function VoicebotAdmin() {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <CardTitle>Rozmowy ({rows.length})</CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => void loadQueue()} disabled={loading}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />Odśwież listę
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void loadQueue()}
+                disabled={loading}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Odśwież listę
               </Button>
               <Button size="sm" onClick={handleEnrich} disabled={enriching}>
                 <Sparkles className={`mr-2 h-4 w-4 ${enriching ? "animate-spin" : ""}`} />
@@ -389,13 +516,17 @@ function VoicebotAdmin() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void loadQueue(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void loadQueue();
+                }}
                 placeholder="Szukaj: numer, transkrypt…"
                 className="pl-8"
               />
             </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Wszystkie statusy</SelectItem>
                 <SelectItem value="oczekuje">Oczekuje</SelectItem>
@@ -407,7 +538,9 @@ function VoicebotAdmin() {
               </SelectContent>
             </Select>
             <Select value={filterSource} onValueChange={setFilterSource}>
-              <SelectTrigger><SelectValue placeholder="Źródło" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Źródło" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Wszystkie źródła</SelectItem>
                 <SelectItem value="meta_lead">Meta Ads</SelectItem>
@@ -417,7 +550,9 @@ function VoicebotAdmin() {
               </SelectContent>
             </Select>
             <Select value={days} onValueChange={setDays}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="1">Ostatnie 24h</SelectItem>
                 <SelectItem value="7">Ostatnie 7 dni</SelectItem>
@@ -432,14 +567,22 @@ function VoicebotAdmin() {
             {rows.map((r) => (
               <VoicebotConversationCard key={r.id} row={r} onChanged={loadQueue} />
             ))}
-            {rows.length === 0 && !loading && <div className="text-muted-foreground text-sm">Brak rozmów dla wybranych filtrów.</div>}
+            {rows.length === 0 && !loading && (
+              <div className="text-muted-foreground text-sm">
+                Brak rozmów dla wybranych filtrów.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <div className="text-xs text-muted-foreground space-y-1">
-        <div>Webhook ElevenLabs (po-rozmowowy): <code>/api/public/elevenlabs-webhook</code></div>
-        <div>Webhook Meta Lead Ads: <code>/api/public/meta-leads-webhook</code></div>
+        <div>
+          Webhook ElevenLabs (po-rozmowowy): <code>/api/public/elevenlabs-webhook</code>
+        </div>
+        <div>
+          Webhook Meta Lead Ads: <code>/api/public/meta-leads-webhook</code>
+        </div>
       </div>
     </div>
   );

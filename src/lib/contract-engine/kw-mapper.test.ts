@@ -18,7 +18,13 @@ function kw(over: Partial<KwExtraction> = {}): KwExtraction {
     kwNumber: "LU1I/00012345/6",
     sadRejonowy: "Sąd Rejonowy w Lublinie",
     typKsiegi: "NIERUCHOMOŚĆ GRUNTOWA",
-    dzial1o: { miejscowosc: "Lublin", ulica: "Polna", numerBudynku: "3", przeznaczenie: "BUDOWLANA", dzialki: [{ numer: "145/2" }] },
+    dzial1o: {
+      miejscowosc: "Lublin",
+      ulica: "Polna",
+      numerBudynku: "3",
+      przeznaczenie: "BUDOWLANA",
+      dzialki: [{ numer: "145/2" }],
+    },
     dzial2: { wlasciciele: [{ imiePierwsze: "Jan", nazwisko: "Kowalski", pesel: PB }] },
     dzial3: { wpisy: [] },
     dzial4: { hipoteki: [] },
@@ -44,12 +50,18 @@ describe("Mapper KW → nieruchomość", () => {
   });
 
   it("właściciel = poręczyciel (PESEL match)", () => {
-    const r = mapujKwDoNieruchomosci(kw({ dzial2: { wlasciciele: [{ nazwisko: "Nowak", pesel: POR }] } }), ctx);
+    const r = mapujKwDoNieruchomosci(
+      kw({ dzial2: { wlasciciele: [{ nazwisko: "Nowak", pesel: POR }] } }),
+      ctx,
+    );
     expect(r.nieruchomosc.wlasciciel_ref).toBe("porecziciel");
   });
 
   it("właściciel = osoba trzecia → wlasciciel_dane + ostrzeżenie o adresie", () => {
-    const r = mapujKwDoNieruchomosci(kw({ dzial2: { wlasciciele: [{ imiePierwsze: "Ewa", nazwisko: "Obca", pesel: OBCY }] } }), ctx);
+    const r = mapujKwDoNieruchomosci(
+      kw({ dzial2: { wlasciciele: [{ imiePierwsze: "Ewa", nazwisko: "Obca", pesel: OBCY }] } }),
+      ctx,
+    );
     expect(r.nieruchomosc.wlasciciel_ref).toBe("osoba_trzecia");
     expect(r.nieruchomosc.wlasciciel_dane.typ).toBe("osoba_fizyczna");
     expect(r.nieruchomosc.wlasciciel_dane.imie_nazwisko).toBe("Ewa Obca");
@@ -59,7 +71,14 @@ describe("Mapper KW → nieruchomość", () => {
 
   it("dwoje właścicieli-pożyczkobiorców → współwłasność łączna małżeńska", () => {
     const r = mapujKwDoNieruchomosci(
-      kw({ dzial2: { wlasciciele: [{ nazwisko: "Kowalski", pesel: PB }, { nazwisko: "Kowalska", pesel: "72020254321" }] } }),
+      kw({
+        dzial2: {
+          wlasciciele: [
+            { nazwisko: "Kowalski", pesel: PB },
+            { nazwisko: "Kowalska", pesel: "72020254321" },
+          ],
+        },
+      }),
       { id: "N1", pozyczkobiorcaPesele: [PB, "72020254321"], poreczicielPesel: null },
     );
     expect(r.odrzucona).toBe(false);
@@ -70,7 +89,14 @@ describe("Mapper KW → nieruchomość", () => {
 
   it("współwłasność z osobą spoza transakcji → ODRZUCENIE", () => {
     const r = mapujKwDoNieruchomosci(
-      kw({ dzial2: { wlasciciele: [{ nazwisko: "Kowalski", pesel: PB }, { nazwisko: "Obcy", pesel: OBCY }] } }),
+      kw({
+        dzial2: {
+          wlasciciele: [
+            { nazwisko: "Kowalski", pesel: PB },
+            { nazwisko: "Obcy", pesel: OBCY },
+          ],
+        },
+      }),
       ctx,
     );
     expect(r.odrzucona).toBe(true);
@@ -80,7 +106,13 @@ describe("Mapper KW → nieruchomość", () => {
 
   it("dział III: dożywocie klasyfikowane, sposob_usuniecia='brak' + ostrzeżenie ryzykowne", () => {
     const r = mapujKwDoNieruchomosci(
-      kw({ dzial3: { wpisy: [{ rodzaj: "SŁUŻEBNOŚĆ OSOBISTA DOŻYWOCIA", tresc: "dożywotnie prawo mieszkania" }] } }),
+      kw({
+        dzial3: {
+          wpisy: [
+            { rodzaj: "SŁUŻEBNOŚĆ OSOBISTA DOŻYWOCIA", tresc: "dożywotnie prawo mieszkania" },
+          ],
+        },
+      }),
       ctx,
     );
     const o = r.nieruchomosc.obciazenia.find((x: any) => x.dzial === "III");
@@ -103,7 +135,18 @@ describe("Mapper KW → nieruchomość", () => {
 
   it("dział IV: hipoteka umowna, kwota sformatowana", () => {
     const r = mapujKwDoNieruchomosci(
-      kw({ dzial4: { hipoteki: [{ rodzaj: "HIPOTEKA UMOWNA", sumaKwota: 142350, walutaSumy: "ZŁ", wierzyciel: "Bank X" }] } }),
+      kw({
+        dzial4: {
+          hipoteki: [
+            {
+              rodzaj: "HIPOTEKA UMOWNA",
+              sumaKwota: 142350,
+              walutaSumy: "ZŁ",
+              wierzyciel: "Bank X",
+            },
+          ],
+        },
+      }),
       ctx,
     );
     const o = r.nieruchomosc.obciazenia.find((x: any) => x.dzial === "IV");
@@ -115,7 +158,9 @@ describe("Mapper KW → nieruchomość", () => {
 
   it("dział IV: waluta ≠ PLN → ostrzeżenie", () => {
     const r = mapujKwDoNieruchomosci(
-      kw({ dzial4: { hipoteki: [{ rodzaj: "HIPOTEKA UMOWNA", sumaKwota: 50000, walutaSumy: "EUR" }] } }),
+      kw({
+        dzial4: { hipoteki: [{ rodzaj: "HIPOTEKA UMOWNA", sumaKwota: 50000, walutaSumy: "EUR" }] },
+      }),
       ctx,
     );
     expect(r.ostrzezenia.some((w) => w.includes("walucie EUR"))).toBe(true);
@@ -132,7 +177,11 @@ describe("Mapper KW → nieruchomość", () => {
 
   it("właściciel-podmiot jako osoba trzecia", () => {
     const r = mapujKwDoNieruchomosci(
-      kw({ dzial2: { wlasciciele: [{ nazwa: "FIRMA sp. z o.o.", regon: "123456789", siedziba: "Warszawa" }] } }),
+      kw({
+        dzial2: {
+          wlasciciele: [{ nazwa: "FIRMA sp. z o.o.", regon: "123456789", siedziba: "Warszawa" }],
+        },
+      }),
       ctx,
     );
     expect(r.nieruchomosc.wlasciciel_ref).toBe("osoba_trzecia");

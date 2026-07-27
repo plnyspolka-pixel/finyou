@@ -28,10 +28,17 @@ export default defineTool({
     if (error) {
       return { content: [{ type: "text", text: error.message }], isError: true };
     }
-    const results = (data ?? []).map((r: { title: string; slug: string; audience: string | null; published_at: string | null }) => ({
-      ...r,
-      url: `https://financeyou.pl/blog/${r.slug}`,
-    }));
+    const results = (data ?? []).map(
+      (r: {
+        title: string;
+        slug: string;
+        audience: string | null;
+        published_at: string | null;
+      }) => ({
+        ...r,
+        url: `https://financeyou.pl/blog/${r.slug}`,
+      }),
+    );
     return {
       content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
       structuredContent: { results },

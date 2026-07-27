@@ -48,7 +48,12 @@ export function IconVault(props: IconProps) {
       <rect x="2.5" y="5" width="19" height="14" rx="2.5" fill={`url(#${id}-navy)`} />
       <circle cx="15" cy="12" r="3.2" stroke={GOLD} strokeWidth="1.4" />
       <circle cx="15" cy="12" r="0.9" fill={GOLD} />
-      <path d="M15 8.2v1.2M15 14.6v1.2M11.2 12h1.2M17.6 12h1.2" stroke={GOLD} strokeWidth="1.2" strokeLinecap="round" />
+      <path
+        d="M15 8.2v1.2M15 14.6v1.2M11.2 12h1.2M17.6 12h1.2"
+        stroke={GOLD}
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
       <rect x="4.4" y="9" width="3.8" height="6" rx="1" fill={GOLD} fillOpacity="0.25" />
       <path d="M4.4 12h3.8" stroke={GOLD} strokeWidth="0.8" strokeOpacity="0.6" />
     </svg>
@@ -63,12 +68,26 @@ export function IconClock(props: IconProps) {
       <Defs id={id} />
       <circle cx="12" cy="12" r="9" fill={`url(#${id}-navy)`} />
       <circle cx="12" cy="12" r="9" stroke={GOLD} strokeOpacity="0.35" strokeWidth="0.8" />
-      <path d="M12 7v5l3.2 2" stroke={GOLD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M12 7v5l3.2 2"
+        stroke={GOLD}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <circle cx="12" cy="12" r="0.9" fill={GOLD} />
       {[0, 90, 180, 270].map((a) => (
-        <line key={a} x1="12" y1="3.6" x2="12" y2="4.8"
-          stroke={GOLD} strokeWidth="1" strokeLinecap="round"
-          transform={`rotate(${a} 12 12)`} />
+        <line
+          key={a}
+          x1="12"
+          y1="3.6"
+          x2="12"
+          y2="4.8"
+          stroke={GOLD}
+          strokeWidth="1"
+          strokeLinecap="round"
+          transform={`rotate(${a} 12 12)`}
+        />
       ))}
     </svg>
   );
@@ -81,7 +100,13 @@ export function IconLtv(props: IconProps) {
     <svg {...base(props)}>
       <Defs id={id} />
       <rect x="2.5" y="2.5" width="19" height="19" rx="3" fill={`url(#${id}-navy)`} />
-      <path d="M5 16l3.5-3.5 3 2.5 4-5L19 13" stroke={GOLD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5 16l3.5-3.5 3 2.5 4-5L19 13"
+        stroke={GOLD}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <circle cx="19" cy="13" r="1.5" fill={GOLD} />
       <path d="M5 19h14" stroke={GOLD} strokeOpacity="0.35" strokeWidth="0.8" />
     </svg>
@@ -107,8 +132,19 @@ export function IconShield(props: IconProps) {
     <svg {...base(props)}>
       <Defs id={id} />
       <path d="M12 2.5l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10v-6l8-3z" fill={`url(#${id}-navy)`} />
-      <path d="M12 2.5l8 3v6c0 5-3.5 8.5-8 10" stroke={GOLD} strokeOpacity="0.5" strokeWidth="0.8" />
-      <path d="M8.5 12l2.5 2.5 4.5-5" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M12 2.5l8 3v6c0 5-3.5 8.5-8 10"
+        stroke={GOLD}
+        strokeOpacity="0.5"
+        strokeWidth="0.8"
+      />
+      <path
+        d="M8.5 12l2.5 2.5 4.5-5"
+        stroke={GOLD}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -119,9 +155,18 @@ export function IconDoc(props: IconProps) {
   return (
     <svg {...base(props)}>
       <Defs id={id} />
-      <path d="M5.5 2.5h8L19 8v12.5a1 1 0 01-1 1H5.5a1 1 0 01-1-1V3.5a1 1 0 011-1z" fill={`url(#${id}-navy)`} />
+      <path
+        d="M5.5 2.5h8L19 8v12.5a1 1 0 01-1 1H5.5a1 1 0 01-1-1V3.5a1 1 0 011-1z"
+        fill={`url(#${id}-navy)`}
+      />
       <path d="M13.5 2.5V8H19" stroke={GOLD} strokeOpacity="0.5" strokeWidth="0.8" />
-      <path d="M8 14l2.2 2.2L15 11.5" stroke={GOLD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8 14l2.2 2.2L15 11.5"
+        stroke={GOLD}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -133,9 +178,13 @@ export function IconHandCoins(props: IconProps) {
     <svg {...base(props)}>
       <Defs id={id} />
       <circle cx="15.5" cy="6.5" r="3.5" fill={`url(#${id}-gold)`} />
-      <text x="15.5" y="8" textAnchor="middle" fontSize="4" fontWeight="700" fill={NAVY}>zł</text>
-      <path d="M3 14c2-1 4-1.5 6-1.5 1.5 0 3 .5 4.5 1.5 1 .7 2 .7 3 0l4-2v6c-3 2-6 3-9 3s-6-.7-8.5-2v-5z"
-        fill={`url(#${id}-navy)`} />
+      <text x="15.5" y="8" textAnchor="middle" fontSize="4" fontWeight="700" fill={NAVY}>
+        zł
+      </text>
+      <path
+        d="M3 14c2-1 4-1.5 6-1.5 1.5 0 3 .5 4.5 1.5 1 .7 2 .7 3 0l4-2v6c-3 2-6 3-9 3s-6-.7-8.5-2v-5z"
+        fill={`url(#${id}-navy)`}
+      />
       <path d="M9 14.5c2 0 3.5 1 5 1.5" stroke={GOLD} strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
@@ -163,12 +212,20 @@ export function IconCalc(props: IconProps) {
       <Defs id={id} />
       <rect x="3.5" y="2.5" width="17" height="19" rx="2.5" fill={`url(#${id}-navy)`} />
       <rect x="5.5" y="4.5" width="13" height="4" rx="1" fill={GOLD} fillOpacity="0.85" />
-      <text x="17" y="7.7" textAnchor="end" fontSize="3.2" fontWeight="700" fill={NAVY}>1 234</text>
+      <text x="17" y="7.7" textAnchor="end" fontSize="3.2" fontWeight="700" fill={NAVY}>
+        1 234
+      </text>
       {[0, 1, 2].map((r) =>
         [0, 1, 2, 3].map((c) => (
-          <circle key={`${r}-${c}`} cx={6.8 + c * 3} cy={11.5 + r * 3} r="1.1"
-            fill={c === 3 ? GOLD : "white"} fillOpacity={c === 3 ? 1 : 0.85} />
-        ))
+          <circle
+            key={`${r}-${c}`}
+            cx={6.8 + c * 3}
+            cy={11.5 + r * 3}
+            r="1.1"
+            fill={c === 3 ? GOLD : "white"}
+            fillOpacity={c === 3 ? 1 : 0.85}
+          />
+        )),
       )}
     </svg>
   );
@@ -183,9 +240,17 @@ export function IconApartment(props: IconProps) {
       <rect x="3.5" y="3.5" width="17" height="18" rx="2" fill={`url(#${id}-navy)`} />
       {[0, 1, 2].map((r) =>
         [0, 1, 2].map((c) => (
-          <rect key={`${r}-${c}`} x={5.5 + c * 4} y={5.5 + r * 4} width="2.6" height="2.6" rx="0.4"
-            fill={GOLD} fillOpacity={r === 1 && c === 1 ? 1 : 0.55} />
-        ))
+          <rect
+            key={`${r}-${c}`}
+            x={5.5 + c * 4}
+            y={5.5 + r * 4}
+            width="2.6"
+            height="2.6"
+            rx="0.4"
+            fill={GOLD}
+            fillOpacity={r === 1 && c === 1 ? 1 : 0.55}
+          />
+        )),
       )}
       <rect x="10.5" y="17.5" width="3" height="4" rx="0.4" fill={GOLD} />
     </svg>
@@ -211,8 +276,10 @@ export function IconShop(props: IconProps) {
   return (
     <svg {...base(props)}>
       <Defs id={id} />
-      <path d="M4 7l1-3.5h14L20 7v2a2.5 2.5 0 01-4.5 1.5A2.5 2.5 0 0112 11a2.5 2.5 0 01-3.5-.5A2.5 2.5 0 014 9V7z"
-        fill={`url(#${id}-gold)`} />
+      <path
+        d="M4 7l1-3.5h14L20 7v2a2.5 2.5 0 01-4.5 1.5A2.5 2.5 0 0112 11a2.5 2.5 0 01-3.5-.5A2.5 2.5 0 014 9V7z"
+        fill={`url(#${id}-gold)`}
+      />
       <rect x="4.5" y="11" width="15" height="10.5" rx="1" fill={`url(#${id}-navy)`} />
       <rect x="10" y="13.5" width="4" height="8" fill={GOLD} fillOpacity="0.7" />
       <rect x="6.5" y="13.5" width="2.5" height="3.5" fill={GOLD} fillOpacity="0.35" />
@@ -229,7 +296,13 @@ export function IconLand(props: IconProps) {
       <Defs id={id} />
       <path d="M2.5 18.5L8 11l4 4 3-3 6.5 6.5v2H2.5v-2z" fill={`url(#${id}-navy)`} />
       <circle cx="17" cy="6" r="2.6" fill={`url(#${id}-gold)`} />
-      <path d="M7 13c1.5-1 3.5-1 5 0M14 11.5l1.5-1" stroke={GOLD} strokeOpacity="0.45" strokeWidth="0.8" strokeLinecap="round" />
+      <path
+        d="M7 13c1.5-1 3.5-1 5 0M14 11.5l1.5-1"
+        stroke={GOLD}
+        strokeOpacity="0.45"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -240,8 +313,10 @@ export function IconPhone(props: IconProps) {
   return (
     <svg {...base(props)}>
       <Defs id={id} />
-      <path d="M5 4.5h3.5l1.5 4-2 1.2c1 2.3 2.5 3.8 4.8 4.8l1.2-2 4 1.5V18a1.5 1.5 0 01-1.5 1.5C9.7 19.5 4.5 14.3 4.5 6A1.5 1.5 0 016 4.5H5z"
-        fill={`url(#${id}-navy)`} />
+      <path
+        d="M5 4.5h3.5l1.5 4-2 1.2c1 2.3 2.5 3.8 4.8 4.8l1.2-2 4 1.5V18a1.5 1.5 0 01-1.5 1.5C9.7 19.5 4.5 14.3 4.5 6A1.5 1.5 0 016 4.5H5z"
+        fill={`url(#${id}-navy)`}
+      />
       <circle cx="17" cy="6" r="2" fill={GOLD} />
     </svg>
   );
@@ -254,7 +329,13 @@ export function IconCheck(props: IconProps) {
     <svg {...base(props)}>
       <Defs id={id} />
       <circle cx="12" cy="12" r="9.5" fill={`url(#${id}-gold)`} />
-      <path d="M7.5 12.2l3.2 3.2 6-6" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M7.5 12.2l3.2 3.2 6-6"
+        stroke={NAVY}
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -287,7 +368,14 @@ const bgBase = (props: BgProps) => ({
 export function BgMoney(props: BgProps) {
   return (
     <svg {...bgBase(props)}>
-      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+      <g
+        stroke={GOLD}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity="0.9"
+      >
         <rect x="14" y="32" width="58" height="34" rx="4" />
         <circle cx="43" cy="49" r="8" />
         <path d="M43 44v10M40 47h6M40 51h6" />
@@ -305,7 +393,14 @@ export function BgMoney(props: BgProps) {
 export function BgPeriod(props: BgProps) {
   return (
     <svg {...bgBase(props)}>
-      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+      <g
+        stroke={GOLD}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity="0.9"
+      >
         <rect x="16" y="22" width="50" height="46" rx="4" />
         <path d="M16 34h50M28 16v12M54 16v12" />
         <circle cx="32" cy="48" r="2" fill={GOLD} />
@@ -323,7 +418,14 @@ export function BgPeriod(props: BgProps) {
 export function BgScale(props: BgProps) {
   return (
     <svg {...bgBase(props)}>
-      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+      <g
+        stroke={GOLD}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity="0.9"
+      >
         <path d="M50 14v66M30 80h40" />
         <path d="M50 22l-22 22M50 22l22 22" />
         <path d="M16 44h24l-12 18a12 12 0 0024 0L40 44" />
@@ -338,7 +440,14 @@ export function BgScale(props: BgProps) {
 export function BgRocket(props: BgProps) {
   return (
     <svg {...bgBase(props)}>
-      <g stroke={GOLD} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.9">
+      <g
+        stroke={GOLD}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity="0.9"
+      >
         <path d="M50 10c12 10 18 22 18 36 0 8-3 14-6 18H38c-3-4-6-10-6-18 0-14 6-26 18-36z" />
         <circle cx="50" cy="40" r="6" />
         <path d="M38 56l-10 6 4 10 8-6M62 56l10 6-4 10-8-6" />
@@ -349,4 +458,3 @@ export function BgRocket(props: BgProps) {
     </svg>
   );
 }
-

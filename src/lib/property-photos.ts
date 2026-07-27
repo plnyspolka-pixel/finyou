@@ -37,7 +37,10 @@ const isExternalUrl = (path: string) => /^https?:\/\//i.test(path);
 
 /** Czy ścieżka to pokazywalne zdjęcie nieruchomości (obrazek, nie skan dokumentu)? */
 export function isShowablePropertyPhoto(path: string): boolean {
-  return IMAGE_EXT.test(path) && !/\/(ownership_deed|kw|documents?|dokumenty|akt|ksiega|księga)\//i.test(path);
+  return (
+    IMAGE_EXT.test(path) &&
+    !/\/(ownership_deed|kw|documents?|dokumenty|akt|ksiega|księga)\//i.test(path)
+  );
 }
 
 /** Czy wiersz z tabeli `documents` to faktyczne zdjęcie nieruchomości (a nie np. akt notarialny)? */
@@ -81,9 +84,11 @@ export async function signStoragePathsMap(
   for (const bucket of PHOTO_BUCKETS) {
     if (remaining.length === 0) break;
     const { data } = await supabase.storage.from(bucket).createSignedUrls(remaining, expiresIn);
-    (data ?? []).forEach((s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
-      if (s?.path && s?.signedUrl && !s.error) map.set(s.path, s.signedUrl);
-    });
+    (data ?? []).forEach(
+      (s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
+        if (s?.path && s?.signedUrl && !s.error) map.set(s.path, s.signedUrl);
+      },
+    );
     remaining = remaining.filter((p) => !map.has(p));
   }
   return map;
@@ -103,9 +108,11 @@ export async function resolveShowablePhotoUrls(
   for (const bucket of PHOTO_BUCKETS) {
     if (remaining.length === 0) break;
     const { data } = await supabase.storage.from(bucket).createSignedUrls(remaining, expiresIn);
-    (data ?? []).forEach((s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
-      if (s?.path && s?.signedUrl && !s.error) urlByPath.set(s.path, s.signedUrl);
-    });
+    (data ?? []).forEach(
+      (s: { path?: string | null; signedUrl?: string | null; error?: unknown }) => {
+        if (s?.path && s?.signedUrl && !s.error) urlByPath.set(s.path, s.signedUrl);
+      },
+    );
     remaining = remaining.filter((p) => !urlByPath.has(p));
   }
 
